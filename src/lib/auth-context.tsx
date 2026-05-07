@@ -19,6 +19,9 @@ type Profile = {
   venue_type: string | null;
   price_range: string | null;
   terms_accepted: boolean;
+  service_area_radius_m: number | null;
+  service_area_lat: number | null;
+  service_area_lng: number | null;
 };
 
 type Ctx = {
