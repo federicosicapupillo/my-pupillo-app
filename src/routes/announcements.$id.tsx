@@ -56,6 +56,25 @@ const STATUS_CLS: Record<string, string> = {
   expired: "bg-amber-500/15 text-amber-700",
 };
 
+const APP_STATUS_LABEL: Record<string, string> = {
+  pending: "In attesa",
+  interested: "Interessato",
+  counter_offer: "Controfferta",
+  accepted: "Accettata",
+  rejected: "Rifiutata",
+  not_interested: "Non interessato",
+  expired: "Scaduta",
+};
+const APP_STATUS_CLS: Record<string, string> = {
+  pending: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+  interested: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
+  counter_offer: "bg-orange-500/15 text-orange-700 border-orange-500/30",
+  accepted: "bg-blue-500/15 text-blue-700 border-blue-500/30",
+  rejected: "bg-red-500/15 text-red-700 border-red-500/30",
+  not_interested: "bg-muted text-muted-foreground",
+  expired: "bg-muted text-muted-foreground",
+};
+
 function AnnouncementDetail() {
   const { id } = Route.useParams();
   const { user, role } = useAuth();
