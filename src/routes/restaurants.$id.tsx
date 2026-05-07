@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { MapPin, Coins, Briefcase, Star, Phone, Mail, Globe, ArrowLeft, MessageSquare, Map as MapIcon, CalendarCheck } from "lucide-react";
+import { MapPin, Coins, Briefcase, Star, Phone, Mail, Globe, ArrowLeft, MessageSquare, Map as MapIcon, CalendarCheck, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -50,6 +50,15 @@ function RestaurantDetailPage() {
   const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [bookingResult, setBookingResult] = useState<null | {
+    applicationId: string;
+    annTitle: string;
+    when: string;
+    duration: string;
+    tariff: string;
+    note: string;
+    submittedAt: string;
+  }>(null);
 
   useEffect(() => {
     (async () => {
@@ -103,6 +112,17 @@ function RestaurantDetailPage() {
       action: { label: "Vedi messaggi", onClick: () => navigate({ to: "/messages" }) },
     });
     setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
+    setBookingResult({
+      applicationId: app!.id,
+      annTitle: confirmAnn.professional_profile || "Turno",
+      when,
+      duration: confirmAnn.duration_hours ? `${confirmAnn.duration_hours}h` : "—",
+      tariff: confirmAnn.tariff_amount != null
+        ? `€${Number(confirmAnn.tariff_amount).toFixed(2)}${confirmAnn.tariff_type === "hourly" ? "/h" : ""}`
+        : "—",
+      note: note.trim(),
+      submittedAt: new Date().toLocaleString("it-IT"),
+    });
     setConfirmAnn(null); setNote(""); setSubmitting(false);
   };
 
@@ -299,6 +319,50 @@ function RestaurantDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!bookingResult} onOpenChange={(o) => !o && setBookingResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              Prenotazione inviata
+            </DialogTitle>
+            <DialogDescription>
+              La tua richiesta è stata inviata al ristoratore. Riceverai una notifica appena risponde.
+            </DialogDescription>
+          </DialogHeader>
+          {bookingResult && (
+            <div className="space-y-3">
+              <div className="rounded-xl border bg-card p-4 space-y-2 text-sm">
+                <Row label="Turno" value={bookingResult.annTitle} />
+                <Row label="Data e ora" value={bookingResult.when} />
+                <Row label="Durata" value={bookingResult.duration} />
+                <Row label="Compenso" value={bookingResult.tariff} />
+                <Row label="Inviata il" value={bookingResult.submittedAt} />
+                <Row label="ID richiesta" value={<code className="text-xs">{bookingResult.applicationId.slice(0, 8)}</code>} />
+              </div>
+              <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 flex items-start gap-2 text-sm">
+                <Clock className="h-4 w-4 mt-0.5 text-amber-600" />
+                <div>
+                  <div className="font-medium text-amber-900">Stato: In attesa di conferma</div>
+                  <div className="text-xs text-amber-800/80">Il ristoratore ha 24 ore per rispondere. Puoi seguire la conversazione nei messaggi.</div>
+                </div>
+              </div>
+              {bookingResult.note && (
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium">La tua nota:</span> {bookingResult.note}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setBookingResult(null)} className="w-full sm:w-auto">Chiudi</Button>
+            <Button onClick={() => navigate({ to: "/messages" })} className="w-full sm:w-auto gap-1">
+              <MessageSquare className="h-4 w-4" />Vai ai messaggi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
@@ -317,6 +381,15 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
     <div className="rounded-xl bg-secondary/50 p-3">
       <div className="flex items-center justify-center gap-1 text-muted-foreground text-xs mb-1">{icon}{label}</div>
       <div className="text-xl font-bold">{value}</div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-right">{value}</span>
     </div>
   );
 }
