@@ -5,6 +5,7 @@ import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Se
 import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import pupilloLogo from "@/assets/pupillo-logo.png";
 
 
 export function AppShell({ children }: { children: ReactNode }) {
