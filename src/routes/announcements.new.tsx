@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
-import { geocodeAddress } from "@/lib/geocode";
-import { useEffect } from "react";
+import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
+import { useEffect, useRef } from "react";
+import { AlertCircle, Loader2, MapPin, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -23,7 +24,7 @@ function NewAnn() {
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [geocoding, setGeocoding] = useState(false);
+  const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
   const [f, setF] = useState({
     service_date: "", service_time: "19:00", duration_hours: "4",
     speed: "normal", tariff_type: "hourly", tariff_amount: "12",
@@ -31,16 +32,39 @@ function NewAnn() {
     languages: "",
   });
 
+  const abortRef = useRef<AbortController | null>(null);
+
+  const runGeocode = async (addr: string) => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    setGeoState({ status: "loading", attempt: 1 });
+    const r = await geocodeAddressWithRetry(addr, {
+      maxAttempts: 3,
+      signal: ctrl.signal,
+      onAttempt: (n) => setGeoState((s) => ({ ...s, status: "loading", attempt: n })),
+    });
+    if (ctrl.signal.aborted) return;
+    if (r.ok) {
+      setCoords({ lat: r.lat, lng: r.lng });
+      setGeoState({ status: "ok", attempt: 0 });
+    } else if (r.error.kind !== "aborted") {
+      setCoords(null);
+      setGeoState({ status: "error", attempt: 0, error: r.error });
+    }
+  };
+
   useEffect(() => {
     const addr = f.location_address.trim();
-    if (addr.length < 5) { setCoords(null); return; }
-    setGeocoding(true);
-    const t = setTimeout(async () => {
-      const r = await geocodeAddress(addr);
-      setCoords(r);
-      setGeocoding(false);
-    }, 700);
+    if (addr.length < 5) {
+      abortRef.current?.abort();
+      setCoords(null);
+      setGeoState({ status: "idle", attempt: 0 });
+      return;
+    }
+    const t = setTimeout(() => { runGeocode(addr); }, 700);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.location_address]);
 
   if (role !== "restaurant") {
@@ -106,9 +130,11 @@ function NewAnn() {
         <div>
           <Label>Indirizzo del servizio</Label>
           <Input required value={f.location_address} onChange={e => setF({ ...f, location_address: e.target.value })} />
-          <div className="mt-2 text-xs text-muted-foreground">
-            {geocoding ? "Ricerca posizione…" : coords ? "Posizione trovata sulla mappa" : f.location_address ? "Posizione non trovata" : ""}
-          </div>
+          <GeoStatus
+            state={geoState}
+            hasAddress={f.location_address.trim().length >= 3}
+            onRetry={() => runGeocode(f.location_address.trim())}
+          />
           {coords && (
             <div className="mt-2"><AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.location_address} /></div>
           )}
@@ -118,5 +144,41 @@ function NewAnn() {
         <Button type="submit" disabled={busy} className="w-full">{busy ? "Pubblicazione…" : "Pubblica annuncio"}</Button>
       </form>
     </AppShell>
+  );
+}
+
+function GeoStatus({
+  state, hasAddress, onRetry,
+}: {
+  state: { status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError };
+  hasAddress: boolean;
+  onRetry: () => void;
+}) {
+  if (state.status === "idle") {
+    return hasAddress ? null : <div className="mt-2 text-xs text-muted-foreground">Inserisci l'indirizzo per posizionarlo sulla mappa.</div>;
+  }
+  if (state.status === "loading") {
+    return (
+      <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Ricerca posizione{state.attempt > 1 ? ` (tentativo ${state.attempt}/3)` : ""}…
+      </div>
+    );
+  }
+  if (state.status === "ok") {
+    return (
+      <div className="mt-2 text-xs text-primary flex items-center gap-2">
+        <MapPin className="h-3 w-3" />Posizione trovata sulla mappa.
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+      <div className="flex-1">{state.error ? describeGeocodeError(state.error) : "Errore sconosciuto"}</div>
+      <Button type="button" size="sm" variant="ghost" className="h-6 px-2 gap-1 text-destructive hover:text-destructive" onClick={onRetry}>
+        <RefreshCw className="h-3 w-3" />Riprova
+      </Button>
+    </div>
   );
 }
