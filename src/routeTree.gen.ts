@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -32,6 +33,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsRoute = JobsRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/jobs': typeof JobsRoute
+  '/messages': typeof MessagesRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/workers': typeof WorkersRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/jobs': typeof JobsRoute
+  '/messages': typeof MessagesRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/workers': typeof WorkersRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/jobs': typeof JobsRoute
+  '/messages': typeof MessagesRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/workers': typeof WorkersRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/jobs'
+    | '/messages'
     | '/onboarding'
     | '/profile'
     | '/workers'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/jobs'
+    | '/messages'
     | '/onboarding'
     | '/profile'
     | '/workers'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/jobs'
+    | '/messages'
     | '/onboarding'
     | '/profile'
     | '/workers'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   JobsRoute: typeof JobsRoute
+  MessagesRoute: typeof MessagesRoute
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
   WorkersRoute: typeof WorkersRoute
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs': {
@@ -232,6 +252,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   JobsRoute: JobsRoute,
+  MessagesRoute: MessagesRoute,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
   WorkersRoute: WorkersRoute,
