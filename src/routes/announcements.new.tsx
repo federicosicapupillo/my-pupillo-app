@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
@@ -31,7 +32,7 @@ function NewAnn() {
     service_date: "", service_time: "19:00", duration_hours: "4",
     speed: "normal", tariff_type: "hourly", tariff_amount: "12",
     location_address: profile?.address ?? "", professional_profile: "",
-    languages: "",
+    languages: "", notes: "",
   });
 
   const abortRef = useRef<AbortController | null>(null);
@@ -51,6 +52,7 @@ function NewAnn() {
         location_address: data.location_address ?? prev.location_address,
         professional_profile: data.professional_profile ?? "",
         languages: (data.languages ?? []).join(", "),
+        notes: (data as any).notes ?? "",
       }));
       if (data.location_lat != null && data.location_lng != null) {
         setCoords({ lat: data.location_lat, lng: data.location_lng });
@@ -96,13 +98,13 @@ function NewAnn() {
     return <AppShell><p className="text-muted-foreground">Solo i ristoratori possono creare annunci.</p></AppShell>;
   }
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const save = async (asDraft: boolean) => {
     if (!user) return;
-    if (!coords) {
+    if (!asDraft && !coords) {
       toast.error("Posizione non valida: verifica l'indirizzo prima di pubblicare.");
       return;
     }
+    if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
     setBusy(true);
     const { error } = await supabase.from("announcements").insert({
       restaurant_id: user.id,
@@ -113,17 +115,19 @@ function NewAnn() {
       tariff_type: f.tariff_type as "hourly" | "flat",
       tariff_amount: parseFloat(f.tariff_amount),
       location_address: f.location_address,
-      location_lat: coords.lat,
-      location_lng: coords.lng,
+      location_lat: coords?.lat ?? null,
+      location_lng: coords?.lng ?? null,
       professional_profile: f.professional_profile || null,
       languages: f.languages.split(",").map(s => s.trim()).filter(Boolean),
-      status: "active",
-    });
+      notes: f.notes || null,
+      status: asDraft ? "draft" : "active",
+    } as any);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Annuncio pubblicato!");
+    toast.success(asDraft ? "Bozza salvata" : "Annuncio pubblicato!");
     nav({ to: "/announcements" });
   };
+  const submit = (e: React.FormEvent) => { e.preventDefault(); save(false); };
 
   return (
     <AppShell>
@@ -168,17 +172,36 @@ function NewAnn() {
             <div className="mt-2"><AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.location_address} /></div>
           )}
         </div>
-        <div><Label>Profilo richiesto</Label><Input placeholder="Cameriere, runner, lavapiatti…" value={f.professional_profile} onChange={e => setF({ ...f, professional_profile: e.target.value })} /></div>
+        <div>
+          <Label>Ruolo richiesto</Label>
+          <Select value={f.professional_profile} onValueChange={v => setF({ ...f, professional_profile: v })}>
+            <SelectTrigger><SelectValue placeholder="Seleziona un ruolo" /></SelectTrigger>
+            <SelectContent>
+              {["cameriere","bartender","chef","aiuto cucina","runner","lavapiatti","hostess","responsabile sala"].map(r => (
+                <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div><Label>Lingue richieste</Label><Input placeholder="Italiano, Inglese" value={f.languages} onChange={e => setF({ ...f, languages: e.target.value })} /></div>
+        <div>
+          <Label>Note operative (opzionali)</Label>
+          <Textarea rows={3} placeholder="Es. dress code nero, citofono lato cucina, chiedere di Marco…" value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} />
+        </div>
         {!coords && f.location_address.trim().length >= 3 && geoState.status !== "loading" && (
           <p className="text-xs text-destructive flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5" />
             Devi confermare una posizione valida sulla mappa per pubblicare.
           </p>
         )}
-        <Button type="submit" disabled={busy || !coords} className="w-full">
-          {busy ? "Pubblicazione…" : geoState.status === "loading" ? "Ricerca posizione…" : !coords ? "Posizione richiesta" : "Pubblica annuncio"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button type="button" variant="outline" disabled={busy} onClick={()=>save(true)} className="sm:w-auto w-full">
+            Salva come bozza
+          </Button>
+          <Button type="submit" disabled={busy || !coords} className="flex-1">
+            {busy ? "Pubblicazione…" : geoState.status === "loading" ? "Ricerca posizione…" : !coords ? "Posizione richiesta" : "Pubblica annuncio"}
+          </Button>
+        </div>
       </form>
     </AppShell>
   );
