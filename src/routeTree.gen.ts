@@ -19,6 +19,7 @@ import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -76,6 +77,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
+  '/browse': typeof BrowseRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
+  '/browse': typeof BrowseRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
+  '/browse': typeof BrowseRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/announcements'
     | '/auth'
+    | '/browse'
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/announcements'
     | '/auth'
+    | '/browse'
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/announcements'
     | '/auth'
+    | '/browse'
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AnnouncementsRoute: typeof AnnouncementsRouteWithChildren
   AuthRoute: typeof AuthRoute
+  BrowseRoute: typeof BrowseRoute
   DashboardRoute: typeof DashboardRoute
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
@@ -308,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -382,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AnnouncementsRoute: AnnouncementsRouteWithChildren,
   AuthRoute: AuthRoute,
+  BrowseRoute: BrowseRoute,
   DashboardRoute: DashboardRoute,
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
