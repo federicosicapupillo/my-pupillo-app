@@ -91,8 +91,8 @@ function AuthPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="border-b">
         <div className="mx-auto max-w-6xl px-4 py-4">
-          <Link to="/" className="flex items-center gap-2 w-fit">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">P</div>
+          <Link to="/" aria-label="Vai alla home page" className="flex items-center gap-2 w-fit cursor-pointer">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold" aria-hidden="true">P</div>
             <span className="text-xl font-semibold">Pupillo</span>
           </Link>
         </div>
