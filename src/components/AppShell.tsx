@@ -125,8 +125,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               }
             }}
           >
-            <span className="inline-flex items-center justify-center bg-white rounded-lg px-2 py-1 ring-1 ring-black/5">
-              <img src={pupilloLogo} alt="Logo Pupillo" className="h-9 w-auto object-contain" />
+            <span className="inline-flex items-center gap-2">
+              <span aria-hidden="true" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-base shadow-sm">P</span>
+              <span className="font-semibold tracking-tight text-foreground text-lg">Pupillo</span>
             </span>
           </Link>
           <div className="hidden md:flex items-center gap-1">
