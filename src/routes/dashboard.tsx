@@ -5,7 +5,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Plus, Users, MessageSquare, AlertCircle } from "lucide-react";
+import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Pupillo" }] }),
@@ -72,6 +72,24 @@ function DashboardInner() {
         <StatCard icon={Users} label="Candidature totali" value={stats.applications} />
         <StatCard icon={MessageSquare} label="Messaggi" value={stats.messages} />
       </div>
+
+      {role === "restaurant" && (
+        <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl border bg-card p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Coins className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Saldo crediti</div>
+              <div className="text-2xl font-semibold">{profile?.credits ?? 0}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                Pubblica annuncio: 1 credito · Urgente: 3 · Invita lavoratore: 2
+              </div>
+            </div>
+          </div>
+          <Link to="/billing"><Button variant="outline" className="gap-2"><Plus className="h-4 w-4" />Acquista crediti</Button></Link>
+        </div>
+      )}
 
       <div className="mt-8 rounded-2xl border bg-card p-6">
         <h2 className="font-semibold mb-2">Cosa puoi fare ora</h2>

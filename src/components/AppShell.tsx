@@ -45,6 +45,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             <span className="hidden sm:block text-xs text-muted-foreground">{profile?.full_name || user?.email}</span>
             <span className="text-xs rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
+            {role === "restaurant" && (
+              <Link to="/billing" title="Saldo crediti">
+                <span className="inline-flex items-center gap-1 text-xs rounded-full bg-primary/10 text-primary px-2 py-1 font-medium hover:bg-primary/20 transition-colors">
+                  <Coins className="h-3.5 w-3.5" />
+                  {profile?.credits ?? 0}
+                </span>
+              </Link>
+            )}
             {user && <NotificationBell />}
             <Button variant="ghost" size="icon" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
           </div>
