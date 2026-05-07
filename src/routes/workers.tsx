@@ -117,6 +117,23 @@ function WorkersPage() {
           <Button size="sm" variant={view==="map"?"secondary":"ghost"} onClick={()=>setView("map")} className="gap-1"><MapIcon className="h-4 w-4" />Mappa</Button>
         </div>
       </div>
+      {anns.length > 0 && (
+        <div className="mb-4">
+          <div className="text-xs text-muted-foreground mb-2">Clicca un annuncio per selezionarlo</div>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {anns.map(a => (
+              <button
+                key={a.id}
+                onClick={() => setSelected(a.id)}
+                className={`shrink-0 rounded-xl border px-3 py-2 text-left text-sm transition ${selected===a.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card hover:bg-accent"}`}
+              >
+                <div className="font-medium">{new Date(a.service_date).toLocaleDateString("it-IT")}</div>
+                <div className="text-xs text-muted-foreground line-clamp-1 max-w-[220px]">{a.location_address}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {view === "map" ? (
         <div className="rounded-2xl border bg-card p-2">
           {selectedAnn?.location_lat != null && selectedAnn?.location_lng != null ? (
