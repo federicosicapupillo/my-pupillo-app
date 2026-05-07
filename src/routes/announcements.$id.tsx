@@ -36,6 +36,21 @@ type Ann = {
   required_skills?: string[] | null;
   dress_code_items?: string[] | null;
   dress_code_notes?: string | null;
+  job_address?: string | null;
+  job_city?: string | null;
+  job_province?: string | null;
+  job_postal_code?: string | null;
+  job_country?: string | null;
+  job_latitude?: number | null;
+  job_longitude?: number | null;
+  job_access_restrictions?: string | null;
+  job_additional_directions?: string | null;
+  job_location_notes?: string | null;
+  job_contact_person_name?: string | null;
+  job_contact_person_phone?: string | null;
+  job_contact_person_email?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 };
 type App = {
   id: string; status: string; worker_id: string; proposed_tariff: number | null;
