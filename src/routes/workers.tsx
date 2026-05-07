@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Search, List, Map as MapIcon } from "lucide-react";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
+import { CREDIT_COSTS } from "@/lib/pricing";
+import { Coins, AlertCircle } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -29,7 +32,7 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 function WorkersPage() {
-  const { user, role } = useAuth();
+  const { user, role, profile } = useAuth();
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -90,9 +93,29 @@ function WorkersPage() {
   };
   const sorted = [...filtered].sort((a, b) => Number(inRange(b)) - Number(inRange(a)));
 
+  const credits = profile?.credits ?? 0;
+  const isPaid = profile?.plan === "pro" || profile?.plan === "business";
+  const cost = CREDIT_COSTS.assignWorker;
+  const canAfford = isPaid || credits >= cost;
+
   return (
     <AppShell>
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
+      <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
+        <div className="flex items-center gap-2">
+          <Coins className="h-4 w-4 text-primary" />
+          {isPaid ? (
+            <span>Piano <strong className="capitalize">{profile?.plan}</strong> attivo · inviti illimitati</span>
+          ) : (
+            <span>
+              Invitare un lavoratore costa <strong>{cost} crediti</strong>. Saldo: <strong>{credits}</strong>
+            </span>
+          )}
+        </div>
+        {!isPaid && !canAfford && (
+          <Link to="/billing"><Button size="sm" variant="outline" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
+        )}
+      </div>
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         <div>
           <label className="text-sm font-medium">Annuncio per cui contattare</label>
