@@ -58,6 +58,14 @@ export function NotificationBell() {
           } catch { /* noop */ }
         }
       })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
+        const n = p.new as Notif;
+        setItems(prev => prev.map(i => i.id === n.id ? { ...i, ...n } : i));
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
+        const old = p.old as Notif;
+        setItems(prev => prev.filter(i => i.id !== old.id));
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
@@ -65,11 +73,17 @@ export function NotificationBell() {
   const unread = items.filter(i => !i.read).length;
 
   const openItem = async (n: Notif) => {
-    if (!n.read) {
-      await supabase.from("notifications").update({ read: true }).eq("id", n.id);
-      setItems(prev => prev.map(i => i.id === n.id ? { ...i, read: true } : i));
-    }
     setOpen(false);
+    if (!n.read) {
+      // optimistic update
+      setItems(prev => prev.map(i => i.id === n.id ? { ...i, read: true } : i));
+      const { error } = await supabase.from("notifications").update({ read: true }).eq("id", n.id);
+      if (error) {
+        // rollback on failure
+        setItems(prev => prev.map(i => i.id === n.id ? { ...i, read: false } : i));
+        toast.error("Impossibile segnare come letta");
+      }
+    }
     if (n.link) nav({ to: n.link as never });
   };
 
