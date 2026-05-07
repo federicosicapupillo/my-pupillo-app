@@ -12,6 +12,8 @@ import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Cloc
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -53,6 +55,9 @@ function Browse() {
   const [sort, setSort] = useState<"recent"|"pay"|"date">("recent");
   const [openId, setOpenId] = useState<string | null>(null);
   const [restaurant, setRestaurant] = useState<RestaurantInfo>(null);
+  const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
@@ -115,14 +120,25 @@ function Browse() {
     }
   };
 
-  const apply = async (a: Ann) => {
-    if (!user) return;
-    const { error } = await supabase.from("applications").insert({
-      announcement_id: a.id, worker_id: user.id, restaurant_id: a.restaurant_id,
-    });
-    if (error) return toast.error(error.message);
+  const apply = (a: Ann) => { setNote(""); setConfirmAnn(a); };
+
+  const submitApplication = async () => {
+    if (!user || !confirmAnn) return;
+    setSubmitting(true);
+    const { data: app, error } = await supabase.from("applications").insert({
+      announcement_id: confirmAnn.id, worker_id: user.id, restaurant_id: confirmAnn.restaurant_id,
+    }).select("id").single();
+    if (error) { setSubmitting(false); return toast.error(error.message); }
+    if (note.trim() && app?.id) {
+      const { error: mErr } = await supabase.from("messages").insert({
+        application_id: app.id, sender_id: user.id, body: note.trim(),
+      });
+      if (mErr) toast.error("Candidatura inviata, ma nota non salvata: " + mErr.message);
+    }
     toast.success("Candidatura inviata");
-    setAppliedIds(new Set(appliedIds).add(a.id));
+    setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
+    setConfirmAnn(null); setNote(""); setSubmitting(false);
+    setOpenId(null);
   };
 
   if (role && role !== "worker") {
@@ -288,6 +304,31 @@ function Browse() {
           })()}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={!!confirmAnn} onOpenChange={(o)=>!o && !submitting && setConfirmAnn(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Conferma candidatura</DialogTitle>
+            <DialogDescription>
+              {confirmAnn && <>Stai per candidarti per <span className="capitalize font-medium">{confirmAnn.professional_profile || "questa offerta"}</span> del {new Date(confirmAnn.service_date).toLocaleDateString("it-IT")} alle {confirmAnn.service_time?.slice(0,5)}. Vuoi aggiungere una nota per il ristoratore?</>}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Es. Ho 3 anni di esperienza come cameriere in eventi serali, disponibile dalle 18…"
+            value={note}
+            onChange={(e)=>setNote(e.target.value)}
+            rows={4}
+            maxLength={500}
+          />
+          <div className="text-xs text-muted-foreground text-right">{note.length}/500</div>
+          <DialogFooter>
+            <Button variant="outline" onClick={()=>setConfirmAnn(null)} disabled={submitting}>Annulla</Button>
+            <Button onClick={submitApplication} disabled={submitting} className="gap-2">
+              <Send className="h-4 w-4" />{submitting ? "Invio…" : "Conferma e invia"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
