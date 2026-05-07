@@ -68,6 +68,18 @@ function AuthPage() {
     navigate({ to: "/dashboard" });
   };
 
+  const handleFacebook = async () => {
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "facebook",
+      options: { redirectTo: window.location.origin + "/dashboard" },
+    });
+    if (error) {
+      setBusy(false);
+      toast.error("Login Facebook non disponibile. Configura il provider nel backend.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="border-b">
@@ -93,6 +105,9 @@ function AuthPage() {
               </Button>
               <Button type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={() => handleOAuth("apple")}>
                 <AppleIcon /> Continua con Apple
+              </Button>
+              <Button type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={handleFacebook}>
+                <FacebookIcon /> Continua con Facebook
               </Button>
               <div className="flex items-center gap-2 py-1">
                 <div className="h-px flex-1 bg-border" />
@@ -152,6 +167,14 @@ function AppleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
       <path d="M16.37 1.43c0 1.14-.45 2.25-1.21 3.04-.84.89-2.2 1.59-3.34 1.49-.13-1.13.43-2.32 1.18-3.07.84-.85 2.27-1.5 3.37-1.46Zm3.79 16.27c-.59 1.36-.87 1.97-1.62 3.18-1.05 1.69-2.53 3.79-4.36 3.81-1.62.02-2.04-1.06-4.24-1.05-2.2.01-2.66 1.07-4.29 1.06-1.83-.02-3.23-1.92-4.28-3.61C-1.03 16.4-1.34 11-.04 8.04c.92-2.1 2.38-3.43 3.95-3.43 1.6 0 2.6 1.06 4.24 1.06 1.6 0 2.42-1.06 4.27-1.06 1.4 0 2.89.76 3.95 2.07-3.47 1.9-2.91 6.86 1.79 8.02Z"/>
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
+      <path fill="#1877F2" d="M24 12a12 12 0 1 0-13.88 11.85v-8.38H7.08V12h3.04V9.36c0-3 1.79-4.67 4.53-4.67 1.31 0 2.68.24 2.68.24v2.95h-1.51c-1.49 0-1.95.93-1.95 1.87V12h3.32l-.53 3.47h-2.79v8.38A12 12 0 0 0 24 12Z"/>
     </svg>
   );
 }
