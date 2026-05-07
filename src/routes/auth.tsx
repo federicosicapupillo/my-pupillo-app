@@ -58,7 +58,7 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) toast.error(error.message);
-    else { toast.success("Bentornato!"); navigate({ to: "/dashboard" }); }
+    else toast.success("Bentornato!");
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
