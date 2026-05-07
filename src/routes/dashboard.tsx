@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight } from "lucide-react";
+import pupilloLogo from "@/assets/pupillo-logo.png";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Pupillo" }] }),
@@ -66,6 +67,11 @@ function DashboardInner() {
 
   return (
     <AppShell>
+      <div className="mb-6 flex justify-center md:justify-start">
+        <Link to="/dashboard" aria-label="Vai alla home page" className="inline-flex items-center rounded-lg bg-white px-3 py-2 ring-1 ring-black/5 shadow-sm">
+          <img src={pupilloLogo} alt="Logo Pupillo" className="h-10 w-auto object-contain" />
+        </Link>
+      </div>
       <PageHeader
         title={`Ciao ${profile?.full_name || ""} 👋`}
         subtitle={role === "restaurant" ? "Gestisci i tuoi annunci e trova personale extra." : role === "worker" ? "Visualizza le offerte e gestisci le tue candidature." : "Pannello amministratore."}
