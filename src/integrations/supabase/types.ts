@@ -346,6 +346,14 @@ export type Database = {
           country: string | null
           created_at: string
           credits: number | null
+          default_beard_allowed: string | null
+          default_dress_code_items: string[] | null
+          default_dress_code_notes: string | null
+          default_language_requirements: string[] | null
+          default_license_requirement: string | null
+          default_piercings_allowed: string | null
+          default_required_skills: string[] | null
+          default_tattoos_allowed: string | null
           email: string | null
           employees_count: number | null
           experience_level:
@@ -412,6 +420,14 @@ export type Database = {
           country?: string | null
           created_at?: string
           credits?: number | null
+          default_beard_allowed?: string | null
+          default_dress_code_items?: string[] | null
+          default_dress_code_notes?: string | null
+          default_language_requirements?: string[] | null
+          default_license_requirement?: string | null
+          default_piercings_allowed?: string | null
+          default_required_skills?: string[] | null
+          default_tattoos_allowed?: string | null
           email?: string | null
           employees_count?: number | null
           experience_level?:
@@ -478,6 +494,14 @@ export type Database = {
           country?: string | null
           created_at?: string
           credits?: number | null
+          default_beard_allowed?: string | null
+          default_dress_code_items?: string[] | null
+          default_dress_code_notes?: string | null
+          default_language_requirements?: string[] | null
+          default_license_requirement?: string | null
+          default_piercings_allowed?: string | null
+          default_required_skills?: string[] | null
+          default_tattoos_allowed?: string | null
           email?: string | null
           employees_count?: number | null
           experience_level?:
