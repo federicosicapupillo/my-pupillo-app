@@ -386,6 +386,36 @@ function MapPage() {
         </div>
       )}
 
+      {debugEnabled && showA && (
+        <details className="rounded-2xl border border-dashed border-violet-400 bg-violet-50 dark:bg-violet-950/20 p-3 mb-4 text-xs" open>
+          <summary className="cursor-pointer font-mono font-semibold text-violet-900 dark:text-violet-200">
+            🛠 DEBUG sorgente coordinate annunci ({role === "admin" ? "admin" : "dev"})
+          </summary>
+          <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2 font-mono">
+            <Stat label="job_lat/lng" value={coordSourceStats.job} color="#16a34a" />
+            <Stat label="location_lat/lng" value={coordSourceStats.location} color="#2563eb" />
+            <Stat label="profilo ristoratore" value={coordSourceStats.profile} color="#d97706" />
+            <Stat label="service_area_*" value={coordSourceStats.service_area} color="#9333ea" />
+            <Stat label="mancanti" value={coordSourceStats.missing} color="#dc2626" />
+          </div>
+          <p className="mt-2 text-violet-800 dark:text-violet-300">
+            Priorità fallback: <code>job_latitude/job_longitude</code> → <code>location_lat/lng</code> → profilo ristoratore (<code>latitude/longitude</code>) → <code>service_area_lat/lng</code>. La sorgente per ogni annuncio è anche visibile nel popup del marker.
+          </p>
+          {coordSourceStats.missing > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-violet-900 dark:text-violet-200">Vedi {coordSourceStats.missing} annunci senza coordinate</summary>
+              <ul className="mt-1 max-h-40 overflow-y-auto list-disc pl-5">
+                {annsMissingCoords.slice(0, 50).map(a => (
+                  <li key={a.id}>
+                    <code>{a.id.slice(0, 8)}</code> · {a.professional_profile || "—"} · rest {a.restaurant_id.slice(0, 8)}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </details>
+      )}
+
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
         <Select value={city} onValueChange={setCity}>
