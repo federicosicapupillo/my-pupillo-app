@@ -15,8 +15,17 @@ export const Route = createFileRoute("/workers")({
   component: () => <RequireAuth><WorkersPage /></RequireAuth>,
 });
 
-type W = { id: string; full_name: string | null; age: number | null; languages: string[] | null; professional_profile: string | null };
-type Ann = { id: string; service_date: string; location_address: string };
+type W = { id: string; full_name: string | null; age: number | null; languages: string[] | null; professional_profile: string | null; service_area_lat: number | null; service_area_lng: number | null; service_area_radius_m: number | null };
+type Ann = { id: string; service_date: string; location_address: string; location_lat: number | null; location_lng: number | null };
+
+function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
 
 function WorkersPage() {
   const { user, role } = useAuth();
@@ -31,11 +40,11 @@ function WorkersPage() {
       const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "worker");
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length) {
-        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, professional_profile").in("id", ids);
+        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, professional_profile, service_area_lat, service_area_lng, service_area_radius_m").in("id", ids);
         setWorkers((data as W[]) ?? []);
       }
       if (user) {
-        const { data } = await supabase.from("announcements").select("id, service_date, location_address").eq("restaurant_id", user.id).eq("status", "active");
+        const { data } = await supabase.from("announcements").select("id, service_date, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
         setAnns((data as Ann[]) ?? []);
         if (data?.[0]) setSelected(data[0].id);
       }
@@ -66,6 +75,15 @@ function WorkersPage() {
     return true;
   });
 
+  const selectedAnn = anns.find((a) => a.id === selected);
+  const inRange = (w: W) => {
+    if (!selectedAnn?.location_lat || !selectedAnn?.location_lng) return false;
+    if (w.service_area_lat == null || w.service_area_lng == null) return false;
+    const d = distanceM(selectedAnn.location_lat, selectedAnn.location_lng, w.service_area_lat, w.service_area_lng);
+    return d <= (w.service_area_radius_m ?? 500);
+  };
+  const sorted = [...filtered].sort((a, b) => Number(inRange(b)) - Number(inRange(a)));
+
   return (
     <AppShell>
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
@@ -92,14 +110,17 @@ function WorkersPage() {
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((w) => (
-          <div key={w.id} className="rounded-2xl border bg-card p-5">
+        {sorted.map((w) => {
+          const near = inRange(w);
+          return (
+          <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">{w.full_name?.[0] ?? "?"}</div>
+              <div className={`h-12 w-12 rounded-full flex items-center justify-center font-semibold ${near ? "bg-emerald-500/20 text-emerald-700" : "bg-primary/10 text-primary"}`}>{w.full_name?.[0] ?? "?"}</div>
               <div>
                 <div className="font-semibold">{w.full_name || "Lavoratore"}</div>
                 {w.age && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
               </div>
+              {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
             {w.languages && w.languages.length > 0 && (
@@ -109,8 +130,9 @@ function WorkersPage() {
             )}
             <Button size="sm" className="mt-4 w-full" onClick={() => invite(w.id)} disabled={!selected}>Contatta</Button>
           </div>
-        ))}
-        {filtered.length === 0 && <p className="text-muted-foreground">Nessun lavoratore corrisponde ai filtri.</p>}
+          );
+        })}
+        {sorted.length === 0 && <p className="text-muted-foreground">Nessun lavoratore corrisponde ai filtri.</p>}
       </div>
     </AppShell>
   );
