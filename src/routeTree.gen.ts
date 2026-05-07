@@ -15,6 +15,7 @@ import { Route as ShiftsRouteImport } from './routes/shifts'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MappaRouteImport } from './routes/mappa'
 import { Route as JobsRouteImport } from './routes/jobs'
@@ -60,6 +61,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MessagesRoute = MessagesRouteImport.update({
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -232,6 +241,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/mappa'
     | '/messages'
+    | '/notifications'
     | '/onboarding'
     | '/profile'
     | '/reset-password'
@@ -256,6 +266,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/mappa'
     | '/messages'
+    | '/notifications'
     | '/onboarding'
     | '/profile'
     | '/reset-password'
@@ -280,6 +291,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/mappa'
     | '/messages'
+    | '/notifications'
     | '/onboarding'
     | '/profile'
     | '/reset-password'
@@ -305,6 +317,7 @@ export interface RootRouteChildren {
   JobsRoute: typeof JobsRoute
   MappaRoute: typeof MappaRoute
   MessagesRoute: typeof MessagesRouteWithChildren
+  NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -358,6 +371,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/messages': {
@@ -511,6 +531,7 @@ const rootRouteChildren: RootRouteChildren = {
   JobsRoute: JobsRoute,
   MappaRoute: MappaRoute,
   MessagesRoute: MessagesRouteWithChildren,
+  NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
