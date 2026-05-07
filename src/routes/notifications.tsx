@@ -24,6 +24,31 @@ type Notif = {
 };
 
 type Filter = "all" | "unread" | "read";
+type TypeFilter = "all" | "new_application" | "status_change" | "message" | "shift" | "other";
+type SortOrder = "newest" | "oldest" | "unread_first";
+
+function classifyType(n: Notif): Exclude<TypeFilter, "all"> {
+  const t = (n.title || "").toLowerCase();
+  if (t.includes("nuova candidatura")) return "new_application";
+  if (t.includes("messaggio")) return "message";
+  if (t.includes("turno")) return "shift";
+  if (
+    t.includes("candidatura") || t.includes("offerta") ||
+    t.includes("controfferta") || t.includes("controproposta") ||
+    t.includes("interessato") || t.includes("prenotazione") ||
+    t.includes("aggiornamento")
+  ) return "status_change";
+  return "other";
+}
+
+const TYPE_LABELS: Record<TypeFilter, string> = {
+  all: "Tutti i tipi",
+  new_application: "Nuove candidature",
+  status_change: "Cambi di stato",
+  message: "Messaggi",
+  shift: "Turni",
+  other: "Altro",
+};
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleString("it-IT", {
@@ -37,6 +62,8 @@ function NotificationsPage() {
   const [items, setItems] = useState<Notif[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [sort, setSort] = useState<SortOrder>("newest");
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,9 +95,31 @@ function NotificationsPage() {
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
-  const filtered = useMemo(() => items.filter(n =>
-    filter === "all" ? true : filter === "unread" ? !n.read : !!n.read
-  ), [items, filter]);
+  const filtered = useMemo(() => {
+    const arr = items.filter(n => {
+      const readOk = filter === "all" ? true : filter === "unread" ? !n.read : !!n.read;
+      const typeOk = typeFilter === "all" ? true : classifyType(n) === typeFilter;
+      return readOk && typeOk;
+    });
+    const sorted = [...arr];
+    if (sort === "newest") sorted.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    else if (sort === "oldest") sorted.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    else sorted.sort((a, b) => {
+      const ar = a.read ? 1 : 0; const br = b.read ? 1 : 0;
+      if (ar !== br) return ar - br;
+      return b.created_at.localeCompare(a.created_at);
+    });
+    return sorted;
+  }, [items, filter, typeFilter, sort]);
+
+  const typeCounts = useMemo(() => {
+    const c: Record<string, number> = { all: items.length };
+    for (const n of items) {
+      const k = classifyType(n);
+      c[k] = (c[k] || 0) + 1;
+    }
+    return c;
+  }, [items]);
 
   const unreadCount = items.filter(n => !n.read).length;
   const opened = items.find(n => n.id === openId) || null;
@@ -145,6 +194,36 @@ function NotificationsPage() {
             <span className="text-xs rounded-full bg-muted px-1.5 py-0.5">{t.count}</span>
           </Button>
         ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs text-muted-foreground mr-1">Tipo:</span>
+        {(Object.keys(TYPE_LABELS) as TypeFilter[]).map(k => (
+          <Button
+            key={k}
+            variant={typeFilter === k ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setTypeFilter(k)}
+            className="gap-2 h-8"
+          >
+            {TYPE_LABELS[k]}
+            <span className="text-xs rounded-full bg-muted px-1.5 py-0.5">
+              {k === "all" ? items.length : (typeCounts[k] || 0)}
+            </span>
+          </Button>
+        ))}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Ordina:</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortOrder)}
+            className="h-8 text-sm rounded-md border bg-background px-2"
+          >
+            <option value="newest">Più recenti</option>
+            <option value="oldest">Meno recenti</option>
+            <option value="unread_first">Non lette prima</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
