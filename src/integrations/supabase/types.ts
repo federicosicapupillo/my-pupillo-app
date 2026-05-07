@@ -14,16 +14,330 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      announcements: {
+        Row: {
+          assigned_worker_id: string | null
+          created_at: string
+          deposit_paid: boolean | null
+          duration_hours: number
+          expires_at: string
+          id: string
+          languages: string[] | null
+          location_address: string
+          location_lat: number | null
+          location_lng: number | null
+          professional_profile: string | null
+          restaurant_id: string
+          service_date: string
+          service_time: string
+          speed: Database["public"]["Enums"]["service_speed"]
+          status: Database["public"]["Enums"]["announcement_status"]
+          tariff_amount: number
+          tariff_type: Database["public"]["Enums"]["tariff_type"]
+        }
+        Insert: {
+          assigned_worker_id?: string | null
+          created_at?: string
+          deposit_paid?: boolean | null
+          duration_hours?: number
+          expires_at?: string
+          id?: string
+          languages?: string[] | null
+          location_address: string
+          location_lat?: number | null
+          location_lng?: number | null
+          professional_profile?: string | null
+          restaurant_id: string
+          service_date: string
+          service_time: string
+          speed?: Database["public"]["Enums"]["service_speed"]
+          status?: Database["public"]["Enums"]["announcement_status"]
+          tariff_amount: number
+          tariff_type?: Database["public"]["Enums"]["tariff_type"]
+        }
+        Update: {
+          assigned_worker_id?: string | null
+          created_at?: string
+          deposit_paid?: boolean | null
+          duration_hours?: number
+          expires_at?: string
+          id?: string
+          languages?: string[] | null
+          location_address?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          professional_profile?: string | null
+          restaurant_id?: string
+          service_date?: string
+          service_time?: string
+          speed?: Database["public"]["Enums"]["service_speed"]
+          status?: Database["public"]["Enums"]["announcement_status"]
+          tariff_amount?: number
+          tariff_type?: Database["public"]["Enums"]["tariff_type"]
+        }
+        Relationships: []
+      }
+      applications: {
+        Row: {
+          announcement_id: string
+          binding_offer: boolean | null
+          created_at: string
+          id: string
+          proposed_tariff: number | null
+          response_deadline: string
+          restaurant_id: string
+          status: Database["public"]["Enums"]["application_status"]
+          worker_id: string
+          worker_response_at: string | null
+        }
+        Insert: {
+          announcement_id: string
+          binding_offer?: boolean | null
+          created_at?: string
+          id?: string
+          proposed_tariff?: number | null
+          response_deadline?: string
+          restaurant_id: string
+          status?: Database["public"]["Enums"]["application_status"]
+          worker_id: string
+          worker_response_at?: string | null
+        }
+        Update: {
+          announcement_id?: string
+          binding_offer?: boolean | null
+          created_at?: string
+          id?: string
+          proposed_tariff?: number | null
+          response_deadline?: string
+          restaurant_id?: string
+          status?: Database["public"]["Enums"]["application_status"]
+          worker_id?: string
+          worker_response_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          application_id: string
+          body: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          application_id: string
+          body: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          application_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          read: boolean | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          age: number | null
+          business_name: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          languages: string[] | null
+          phone: string | null
+          price_range: string | null
+          professional_profile: string | null
+          profile_completed: boolean | null
+          service_area_lat: number | null
+          service_area_lng: number | null
+          service_area_radius_m: number | null
+          terms_accepted: boolean | null
+          updated_at: string
+          vat_number: string | null
+          venue_type: string | null
+          whatsapp_connected: boolean | null
+        }
+        Insert: {
+          address?: string | null
+          age?: number | null
+          business_name?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          languages?: string[] | null
+          phone?: string | null
+          price_range?: string | null
+          professional_profile?: string | null
+          profile_completed?: boolean | null
+          service_area_lat?: number | null
+          service_area_lng?: number | null
+          service_area_radius_m?: number | null
+          terms_accepted?: boolean | null
+          updated_at?: string
+          vat_number?: string | null
+          venue_type?: string | null
+          whatsapp_connected?: boolean | null
+        }
+        Update: {
+          address?: string | null
+          age?: number | null
+          business_name?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          languages?: string[] | null
+          phone?: string | null
+          price_range?: string | null
+          professional_profile?: string | null
+          profile_completed?: boolean | null
+          service_area_lat?: number | null
+          service_area_lng?: number | null
+          service_area_radius_m?: number | null
+          terms_accepted?: boolean | null
+          updated_at?: string
+          vat_number?: string | null
+          venue_type?: string | null
+          whatsapp_connected?: boolean | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_primary_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      announcement_status:
+        | "draft"
+        | "active"
+        | "expired"
+        | "assigned"
+        | "cancelled"
+      app_role: "admin" | "restaurant" | "worker"
+      application_status:
+        | "pending"
+        | "interested"
+        | "not_interested"
+        | "counter_offer"
+        | "accepted"
+        | "rejected"
+        | "expired"
+      service_speed: "normal" | "fast" | "flash"
+      tariff_type: "hourly" | "flat"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +464,26 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      announcement_status: [
+        "draft",
+        "active",
+        "expired",
+        "assigned",
+        "cancelled",
+      ],
+      app_role: ["admin", "restaurant", "worker"],
+      application_status: [
+        "pending",
+        "interested",
+        "not_interested",
+        "counter_offer",
+        "accepted",
+        "rejected",
+        "expired",
+      ],
+      service_speed: ["normal", "fast", "flash"],
+      tariff_type: ["hourly", "flat"],
+    },
   },
 } as const
