@@ -605,7 +605,7 @@ export type Database = {
       service_speed: "normal" | "fast" | "flash"
       shift_status: "scheduled" | "completed" | "no_show" | "cancelled"
       tariff_type: "hourly" | "flat"
-      user_plan: "free" | "credits" | "premium"
+      user_plan: "free" | "credits" | "premium" | "pro" | "business"
       vat_status: "pending" | "valid" | "invalid" | "error"
       worker_badge: "basic" | "pro" | "elite"
     }
@@ -758,7 +758,7 @@ export const Constants = {
       service_speed: ["normal", "fast", "flash"],
       shift_status: ["scheduled", "completed", "no_show", "cancelled"],
       tariff_type: ["hourly", "flat"],
-      user_plan: ["free", "credits", "premium"],
+      user_plan: ["free", "credits", "premium", "pro", "business"],
       vat_status: ["pending", "valid", "invalid", "error"],
       worker_badge: ["basic", "pro", "elite"],
     },
