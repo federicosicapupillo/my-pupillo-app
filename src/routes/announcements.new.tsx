@@ -72,6 +72,30 @@ function NewAnn() {
 
   const abortRef = useRef<AbortController | null>(null);
 
+  // Precompila i campi dal profilo ristoratore quando diventa disponibile
+  // (lo state iniziale viene creato prima che `profile` sia caricato dall'auth context).
+  // Non sovrascriviamo valori già editati dall'utente.
+  useEffect(() => {
+    if (!profile) return;
+    setF((prev) => ({
+      ...prev,
+      location_address: prev.location_address || (profile as any).address || "",
+      job_city: prev.job_city || (profile as any).city || "",
+      job_province: prev.job_province || (profile as any).province || "",
+      job_postal_code: prev.job_postal_code || (profile as any).postal_code || "",
+      job_country: prev.job_country || (profile as any).country || "Italia",
+      job_access_restrictions: prev.job_access_restrictions || (profile as any).access_restrictions || "",
+      job_additional_directions: prev.job_additional_directions || (profile as any).additional_directions || "",
+      job_location_notes: prev.job_location_notes || (profile as any).location_notes || "",
+      job_contact_person_name: prev.job_contact_person_name || [
+        (profile as any).contact_person_first_name,
+        (profile as any).contact_person_last_name,
+      ].filter(Boolean).join(" "),
+      job_contact_person_phone: prev.job_contact_person_phone || (profile as any).contact_person_phone || "",
+      job_contact_person_email: prev.job_contact_person_email || (profile as any).contact_person_email || "",
+    }));
+  }, [profile]);
+
   useEffect(() => {
     if (!reuse) return;
     (async () => {
