@@ -18,7 +18,12 @@ function Index() {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link to="/" aria-label="Vai alla home page" className="flex items-center gap-2 cursor-pointer">
+          <Link
+            to="/"
+            aria-label="Vai alla home page"
+            className="flex items-center gap-2 cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            onKeyDown={(e) => { if (e.key === " " || e.code === "Space") { e.preventDefault(); (e.currentTarget as HTMLAnchorElement).click(); } }}
+          >
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold" aria-hidden="true">P</div>
             <span className="text-xl font-semibold tracking-tight">Pupillo</span>
           </Link>
