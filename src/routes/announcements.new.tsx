@@ -259,6 +259,103 @@ function NewAnn() {
           <Label>Note operative (opzionali)</Label>
           <Textarea rows={3} placeholder="Es. dress code nero, citofono lato cucina, chiedere di Marco…" value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} />
         </div>
+
+        <div className="border-t pt-5 space-y-5">
+          <div>
+            <h3 className="text-base font-semibold">Requisiti e Competenze</h3>
+            <p className="text-xs text-muted-foreground">Indica requisiti operativi e disposizioni del turno. Saranno mostrati al lavoratore prima della candidatura.</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <Label>Tipo di patente</Label>
+              <Select value={f.license_requirement} onValueChange={v => setF({ ...f, license_requirement: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{LICENSE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tatuaggi ammessi</Label>
+              <Select value={f.tattoos_allowed} onValueChange={v => setF({ ...f, tattoos_allowed: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{TATTOO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Piercing ammessi</Label>
+              <Select value={f.piercings_allowed} onValueChange={v => setF({ ...f, piercings_allowed: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PIERCING_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Barba ammessa</Label>
+              <Select value={f.beard_allowed} onValueChange={v => setF({ ...f, beard_allowed: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{BEARD_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Lingue richieste</Label>
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGE_OPTIONS.map(o => {
+                const active = languageReqs.includes(o.value);
+                return (
+                  <button type="button" key={o.value}
+                    onClick={() => toggleIn(languageReqs, o.value, setLanguageReqs)}
+                    className={`px-3 py-1.5 rounded-full text-xs border transition ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}>
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Competenze richieste</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {SKILL_OPTIONS.map(o => {
+                const active = skills.includes(o.value);
+                return (
+                  <label key={o.value} className={`flex items-center gap-2 rounded-lg border p-2 text-sm cursor-pointer ${active ? "bg-primary/10 border-primary/40" : "hover:bg-accent"}`}>
+                    <Checkbox checked={active} onCheckedChange={() => toggleIn(skills, o.value, setSkills)} />
+                    <span>{o.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Disposizioni dress code</Label>
+            <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
+              {DRESS_CODE_OPTIONS.map(o => {
+                const Icon = o.icon;
+                const active = dressItems.includes(o.value);
+                return (
+                  <button type="button" key={o.value}
+                    onClick={() => toggleIn(dressItems, o.value, setDressItems)}
+                    className={`flex flex-col items-center text-center gap-1.5 rounded-xl border p-2.5 transition ${active ? "bg-primary/10 border-primary/50 ring-1 ring-primary/30" : "bg-card hover:bg-accent"}`}>
+                    <div className={`h-9 w-9 rounded-full flex items-center justify-center ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <span className="text-[11px] leading-tight">{o.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label>Note aggiuntive sul dress code</Label>
+            <Textarea rows={2} value={f.dress_code_notes}
+              onChange={e => setF({ ...f, dress_code_notes: e.target.value })}
+              placeholder="Es. Dress code come da descrizione, portare camicia bianca e pantalone nero." />
+          </div>
+        </div>
+
         {!coords && f.location_address.trim().length >= 3 && geoState.status !== "loading" && (
           <p className="text-xs text-destructive flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5" />
