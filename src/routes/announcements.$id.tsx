@@ -71,6 +71,13 @@ type Restaurant = {
   opening_hours: string | null; employees_count: number | null;
 };
 
+type JobRequest = {
+  title: string | null; role_required: string | null; workers_needed: number | null;
+  description: string | null; tasks: string | null; start_time: string | null; end_time: string | null;
+  hourly_rate: number | null; break_included: boolean | null; operational_notes: string | null;
+  restaurant_name: string | null; district: string | null; worker_notes: string | null;
+};
+
 const STATUS_LABEL: Record<string, string> = {
   draft: "Bozza", active: "Pubblicato", assigned: "Assegnato",
   completed: "Completato", cancelled: "Annullato", expired: "Scaduto",
@@ -111,6 +118,7 @@ function AnnouncementDetail() {
   const [apps, setApps] = useState<App[]>([]);
   const [workers, setWorkers] = useState<Record<string, WorkerProfile>>({});
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [jobRequest, setJobRequest] = useState<JobRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -128,6 +136,12 @@ function AnnouncementDetail() {
       .order("created_at", { ascending: false });
     const list = (ax as App[]) ?? [];
     setApps(list);
+    const { data: jr } = await (supabase as any)
+      .from("job_requests")
+      .select("title,role_required,workers_needed,description,tasks,start_time,end_time,hourly_rate,break_included,operational_notes,restaurant_name,district,worker_notes")
+      .eq("announcement_id", id)
+      .maybeSingle();
+    setJobRequest((jr as JobRequest) ?? null);
     const ids = Array.from(new Set(list.map(x => x.worker_id)));
     if (ids.length) {
       const { data: ps } = await supabase.from("profiles")
@@ -248,8 +262,8 @@ function AnnouncementDetail() {
       </div>
 
       <PageHeader
-        title={`Servizio ${ann.speed} · ${ann.duration_hours}h`}
-        subtitle={`${restaurantName}${ann.professional_profile ? ` · Ruolo: ${ann.professional_profile}` : ""}`}
+        title={jobRequest?.title || `Servizio ${ann.speed} · ${ann.duration_hours}h`}
+        subtitle={`${jobRequest?.restaurant_name || restaurantName}${jobRequest?.role_required || ann.professional_profile ? ` · Ruolo: ${jobRequest?.role_required || ann.professional_profile}` : ""}`}
         action={
           <span className={`text-xs rounded-full px-3 py-1 ${STATUS_CLS[ann.status] ?? "bg-muted text-muted-foreground"}`}>
             {STATUS_LABEL[ann.status] ?? ann.status}
@@ -261,16 +275,26 @@ function AnnouncementDetail() {
         <div className="space-y-4">
         <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
           <div className="font-medium text-base mb-1">Dettagli servizio</div>
-          <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" />{new Date(ann.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} · {ann.service_time?.slice(0,5)}</div>
+          {jobRequest?.workers_needed && <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />{jobRequest.workers_needed} lavorator{jobRequest.workers_needed === 1 ? "e" : "i"} richiest{jobRequest.workers_needed === 1 ? "o" : "i"}</div>}
+          <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" />{new Date(ann.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} · {(jobRequest?.start_time || ann.service_time)?.slice(0,5)}{jobRequest?.end_time ? `–${jobRequest.end_time.slice(0,5)}` : ""}</div>
           <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{ann.location_address}</div>
-          <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />€{ann.tariff_amount} ({ann.tariff_type === "hourly" ? "/ora" : "a servizio"})</div>
+          <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />€{jobRequest?.hourly_rate ?? ann.tariff_amount} ({ann.tariff_type === "hourly" ? "/ora" : "a servizio"})</div>
           <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.expires_at).toLocaleDateString("it-IT")}</div>
+          {jobRequest?.break_included != null && <div className="text-muted-foreground">Pausa prevista: <span className="font-medium text-foreground">{jobRequest.break_included ? "Sì" : "No"}</span></div>}
           {ann.languages && ann.languages.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {ann.languages.map(l => <Badge key={l} variant="secondary">{l}</Badge>)}
             </div>
           )}
-          {ann.notes && (
+          {(jobRequest?.description || jobRequest?.tasks || jobRequest?.operational_notes || jobRequest?.worker_notes) && (
+            <div className="pt-2 text-muted-foreground border-t mt-2 space-y-2 whitespace-pre-wrap">
+              {jobRequest.description && <p><strong className="text-foreground">Descrizione:</strong> {jobRequest.description}</p>}
+              {jobRequest.tasks && <p><strong className="text-foreground">Mansioni:</strong> {jobRequest.tasks}</p>}
+              {jobRequest.operational_notes && <p><strong className="text-foreground">Note operative:</strong> {jobRequest.operational_notes}</p>}
+              {jobRequest.worker_notes && <p><strong className="text-foreground">Note per il lavoratore:</strong> {jobRequest.worker_notes}</p>}
+            </div>
+          )}
+          {ann.notes && !jobRequest && (
             <p className="pt-2 text-muted-foreground border-t mt-2 whitespace-pre-wrap">{ann.notes}</p>
           )}
         </div>

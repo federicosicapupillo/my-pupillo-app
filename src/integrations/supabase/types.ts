@@ -269,6 +269,149 @@ export type Database = {
         }
         Relationships: []
       }
+      job_requests: {
+        Row: {
+          access_restrictions: string | null
+          additional_directions: string | null
+          address: string
+          announcement_id: string | null
+          beard_allowed: string | null
+          break_included: boolean
+          city: string | null
+          contact_person_email: string | null
+          contact_person_name: string | null
+          contact_person_phone: string | null
+          country: string | null
+          created_at: string
+          description: string | null
+          district: string | null
+          dress_code_items: string[]
+          dress_code_notes: string | null
+          end_time: string
+          hourly_rate: number
+          id: string
+          language_requirements: string[]
+          latitude: number | null
+          license_requirement: string | null
+          longitude: number | null
+          operational_notes: string | null
+          piercings_allowed: string | null
+          postal_code: string | null
+          province: string | null
+          required_skills: string[]
+          restaurant_id: string
+          restaurant_name: string | null
+          restaurant_profile_id: string
+          role_required: string
+          shift_date: string
+          start_time: string
+          status: string
+          tasks: string | null
+          tattoos_allowed: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          worker_notes: string | null
+          workers_needed: number
+        }
+        Insert: {
+          access_restrictions?: string | null
+          additional_directions?: string | null
+          address: string
+          announcement_id?: string | null
+          beard_allowed?: string | null
+          break_included?: boolean
+          city?: string | null
+          contact_person_email?: string | null
+          contact_person_name?: string | null
+          contact_person_phone?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          district?: string | null
+          dress_code_items?: string[]
+          dress_code_notes?: string | null
+          end_time: string
+          hourly_rate: number
+          id?: string
+          language_requirements?: string[]
+          latitude?: number | null
+          license_requirement?: string | null
+          longitude?: number | null
+          operational_notes?: string | null
+          piercings_allowed?: string | null
+          postal_code?: string | null
+          province?: string | null
+          required_skills?: string[]
+          restaurant_id: string
+          restaurant_name?: string | null
+          restaurant_profile_id: string
+          role_required: string
+          shift_date: string
+          start_time: string
+          status?: string
+          tasks?: string | null
+          tattoos_allowed?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          worker_notes?: string | null
+          workers_needed?: number
+        }
+        Update: {
+          access_restrictions?: string | null
+          additional_directions?: string | null
+          address?: string
+          announcement_id?: string | null
+          beard_allowed?: string | null
+          break_included?: boolean
+          city?: string | null
+          contact_person_email?: string | null
+          contact_person_name?: string | null
+          contact_person_phone?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          district?: string | null
+          dress_code_items?: string[]
+          dress_code_notes?: string | null
+          end_time?: string
+          hourly_rate?: number
+          id?: string
+          language_requirements?: string[]
+          latitude?: number | null
+          license_requirement?: string | null
+          longitude?: number | null
+          operational_notes?: string | null
+          piercings_allowed?: string | null
+          postal_code?: string | null
+          province?: string | null
+          required_skills?: string[]
+          restaurant_id?: string
+          restaurant_name?: string | null
+          restaurant_profile_id?: string
+          role_required?: string
+          shift_date?: string
+          start_time?: string
+          status?: string
+          tasks?: string | null
+          tattoos_allowed?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          worker_notes?: string | null
+          workers_needed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_requests_restaurant_profile_id_fkey"
+            columns: ["restaurant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           application_id: string

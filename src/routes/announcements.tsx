@@ -61,7 +61,7 @@ function AnnouncementsPage() {
     <AppShell>
       <PageHeader
         title={role === "restaurant" ? "I miei annunci" : "Annunci disponibili"}
-        action={role === "restaurant" && (<Link to="/announcements/new"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>)}
+        action={role === "restaurant" && (<Link to="/ristoratore/annunci/nuovo"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>)}
       />
       {role === "restaurant" && (
         <div className="flex gap-2 mb-4 overflow-x-auto">
@@ -75,7 +75,7 @@ function AnnouncementsPage() {
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : visible.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center">
           <p className="text-muted-foreground">Nessun annuncio.</p>
-          {role === "restaurant" && <Link to="/announcements/new"><Button className="mt-4">Crea il primo</Button></Link>}
+          {role === "restaurant" && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -106,7 +106,7 @@ function AnnouncementsPage() {
                 <div className="mt-3"><AnnouncementMap lat={a.location_lat} lng={a.location_lng} address={a.location_address} height={140} /></div>
               )}
               {role === "restaurant" && a.status !== "active" && (
-                <Link to="/announcements/new" search={{ reuse: a.id } as never} className="mt-3 inline-flex"><Button variant="outline" size="sm" className="gap-2"><RotateCw className="h-3 w-3" />Riusa come nuovo</Button></Link>
+                <Link to="/ristoratore/annunci/nuovo" search={{ reuse: a.id } as never} className="mt-3 inline-flex"><Button variant="outline" size="sm" className="gap-2"><RotateCw className="h-3 w-3" />Riusa come nuovo</Button></Link>
               )}
               <div className="mt-3">
                 <Link to="/announcements/$id" params={{ id: a.id }}>

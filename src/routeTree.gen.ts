@@ -31,6 +31,7 @@ import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
 import { Route as MessagesIdRouteImport } from './routes/messages.$id'
 import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
 import { Route as AnnouncementsIdRouteImport } from './routes/announcements.$id'
+import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/public/hooks/expire-stale'
 
@@ -144,6 +145,11 @@ const AnnouncementsIdRoute = AnnouncementsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AnnouncementsRoute,
 } as any)
+const RistoratoreAnnunciNuovoRoute = RistoratoreAnnunciNuovoRouteImport.update({
+  id: '/ristoratore/annunci/nuovo',
+  path: '/ristoratore/annunci/nuovo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
+  '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
+  '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
+  '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
+    | '/ristoratore/annunci/nuovo'
     | '/api/public/hooks/expire-stale'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
+    | '/ristoratore/annunci/nuovo'
     | '/api/public/hooks/expire-stale'
     | '/api/public/payments/webhook'
   id:
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
+    | '/ristoratore/annunci/nuovo'
     | '/api/public/hooks/expire-stale'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -337,6 +349,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   WorkersRoute: typeof WorkersRoute
   RestaurantsIdRoute: typeof RestaurantsIdRoute
+  RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   ApiPublicHooksExpireStaleRoute: typeof ApiPublicHooksExpireStaleRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -497,6 +510,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnnouncementsIdRouteImport
       parentRoute: typeof AnnouncementsRoute
     }
+    '/ristoratore/annunci/nuovo': {
+      id: '/ristoratore/annunci/nuovo'
+      path: '/ristoratore/annunci/nuovo'
+      fullPath: '/ristoratore/annunci/nuovo'
+      preLoaderRoute: typeof RistoratoreAnnunciNuovoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -560,6 +580,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   WorkersRoute: WorkersRoute,
   RestaurantsIdRoute: RestaurantsIdRoute,
+  RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   ApiPublicHooksExpireStaleRoute: ApiPublicHooksExpireStaleRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }

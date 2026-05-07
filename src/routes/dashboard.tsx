@@ -71,7 +71,7 @@ function DashboardInner() {
         title={`Ciao ${profile?.full_name || ""} 👋`}
         subtitle={role === "restaurant" ? "Gestisci i tuoi annunci e trova personale extra." : role === "worker" ? "Visualizza le offerte e gestisci le tue candidature." : "Pannello amministratore."}
         action={role === "restaurant" && (
-          <Link to="/announcements/new"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>
+          <Link to="/ristoratore/annunci/nuovo"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>
         )}
       />
 
