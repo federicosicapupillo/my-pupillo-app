@@ -17,6 +17,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as JobsRouteImport } from './routes/jobs'
+import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
@@ -65,6 +66,11 @@ const JobsRoute = JobsRouteImport.update({
   path: '/jobs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForbiddenRoute = ForbiddenRouteImport.update({
+  id: '/forbidden',
+  path: '/forbidden',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/auth'
     | '/dashboard'
+    | '/forbidden'
     | '/jobs'
     | '/messages'
     | '/onboarding'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/auth'
     | '/dashboard'
+    | '/forbidden'
     | '/jobs'
     | '/messages'
     | '/onboarding'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/auth'
     | '/dashboard'
+    | '/forbidden'
     | '/jobs'
     | '/messages'
     | '/onboarding'
@@ -213,6 +225,7 @@ export interface RootRouteChildren {
   AnnouncementsRoute: typeof AnnouncementsRouteWithChildren
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
   MessagesRoute: typeof MessagesRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
@@ -279,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/jobs'
       fullPath: '/jobs'
       preLoaderRoute: typeof JobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forbidden': {
+      id: '/forbidden'
+      path: '/forbidden'
+      fullPath: '/forbidden'
+      preLoaderRoute: typeof ForbiddenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -363,6 +383,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnnouncementsRoute: AnnouncementsRouteWithChildren,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
   MessagesRoute: MessagesRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
