@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkersRouteImport } from './routes/workers'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MessagesRouteImport } from './routes/messages'
@@ -25,6 +27,16 @@ import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new
 const WorkersRoute = WorkersRouteImport.update({
   id: '/workers',
   path: '/workers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -93,6 +105,8 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -107,6 +121,8 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -122,6 +138,8 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -138,6 +156,8 @@ export interface FileRouteTypes {
     | '/messages'
     | '/onboarding'
     | '/profile'
+    | '/reset-password'
+    | '/terms'
     | '/workers'
     | '/announcements/new'
     | '/messages/$id'
@@ -152,6 +172,8 @@ export interface FileRouteTypes {
     | '/messages'
     | '/onboarding'
     | '/profile'
+    | '/reset-password'
+    | '/terms'
     | '/workers'
     | '/announcements/new'
     | '/messages/$id'
@@ -166,6 +188,8 @@ export interface FileRouteTypes {
     | '/messages'
     | '/onboarding'
     | '/profile'
+    | '/reset-password'
+    | '/terms'
     | '/workers'
     | '/announcements/new'
     | '/messages/$id'
@@ -181,6 +205,8 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  TermsRoute: typeof TermsRoute
   WorkersRoute: typeof WorkersRoute
 }
 
@@ -191,6 +217,20 @@ declare module '@tanstack/react-router' {
       path: '/workers'
       fullPath: '/workers'
       preLoaderRoute: typeof WorkersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -307,6 +347,8 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  TermsRoute: TermsRoute,
   WorkersRoute: WorkersRoute,
 }
 export const routeTree = rootRouteImport
