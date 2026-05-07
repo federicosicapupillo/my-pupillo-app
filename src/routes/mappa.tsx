@@ -364,7 +364,7 @@ function MapPage() {
                           toast.info("Coordinate non disponibili per questo locale");
                         }
                       }}>Mostra sulla mappa</Button>
-                      <Link to="/workers"><Button size="sm">Dettaglio</Button></Link>
+                      <Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm">Vedi dettaglio</Button></Link>
                     </div>
                   </li>
                 );
