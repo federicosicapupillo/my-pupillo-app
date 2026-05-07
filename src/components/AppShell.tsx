@@ -41,7 +41,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             to={homeTo as never}
             aria-label="Vai alla home page"
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-2 cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow"
+            onKeyDown={(e) => {
+              if (e.key === " " || e.code === "Space") {
+                e.preventDefault();
+                nav({ to: homeTo as never });
+              }
+            }}
           >
             <img src={pupilloLogo} alt="Pupillo Home" className="h-10 w-auto" />
           </Link>
