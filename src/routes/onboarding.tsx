@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
-import { verifyVat } from "@/server/vat.functions";
+import { verifyVat } from "@/lib/vat.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { RestaurantRequirementsEditor, EMPTY_REQ, reqFromProfile, reqToProfileUpdate, type RestaurantRequirements } from "@/components/RestaurantRequirements";
 
