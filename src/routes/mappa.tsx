@@ -5,6 +5,9 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Locate } from "lucide-react";
+import { toast } from "sonner";
 import type { MapPoint } from "@/components/MapViewInner";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
@@ -21,6 +24,9 @@ function MapPage() {
   const [showW, setShowW] = useState(true);
   const [showA, setShowA] = useState(true);
   const [city, setCity] = useState("");
+  const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
+  const [radiusKm, setRadiusKm] = useState<string>("");
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -69,17 +75,48 @@ function MapPage() {
     })();
   }, []);
 
+  const locateMe = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Geolocalizzazione non supportata dal browser");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocating(false);
+        toast.success("Posizione rilevata");
+      },
+      (err) => {
+        setLocating(false);
+        toast.error("Impossibile ottenere la posizione: " + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const distKm = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+    const R = 6371, toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng);
+    const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  };
+
   const filtered = useMemo(() => {
+    const max = radiusKm ? Number(radiusKm) : null;
     return points.filter(p => {
       if (p.category === "restaurant" && !showR) return false;
       if (p.category === "worker" && !showW) return false;
       if (p.category === "announcement" && !showA) return false;
       if (city && !(p.city || "").toLowerCase().includes(city.toLowerCase()) && !(p.subtitle || "").toLowerCase().includes(city.toLowerCase())) return false;
+      if (max != null && me) {
+        if (distKm(me.lat, me.lng, p.lat, p.lng) > max) return false;
+      }
       return true;
     });
-  }, [points, showR, showW, showA, city]);
+  }, [points, showR, showW, showA, city, me, radiusKm]);
 
-  const center: [number, number] = filtered[0] ? [filtered[0].lat, filtered[0].lng] : [42.5, 12.5]; // Italia
+  const center: [number, number] = me ? [me.lat, me.lng] : filtered[0] ? [filtered[0].lat, filtered[0].lng] : [42.5, 12.5];
 
   return (
     <AppShell>
@@ -101,6 +138,28 @@ function MapPage() {
           </label>
         </div>
         <Input placeholder="Filtra per città o indirizzo" value={city} onChange={e => setCity(e.target.value)} />
+        <div className="flex items-center gap-2 md:col-span-2">
+          <Button size="sm" variant="outline" onClick={locateMe} disabled={locating} className="gap-2">
+            <Locate className="h-4 w-4" />{locating ? "Rilevo…" : me ? "Aggiorna posizione" : "Usa la mia posizione"}
+          </Button>
+          <div className="relative">
+            <Input
+              type="number"
+              placeholder="Raggio"
+              value={radiusKm}
+              onChange={e => setRadiusKm(e.target.value)}
+              disabled={!me}
+              className="w-32 pr-8"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">km</span>
+          </div>
+          {me && (
+            <Button size="sm" variant="ghost" onClick={() => { setMe(null); setRadiusKm(""); }}>
+              Rimuovi
+            </Button>
+          )}
+          {!me && <span className="text-xs text-muted-foreground">Attiva la posizione per filtrare per distanza</span>}
+        </div>
       </div>
 
       {loading ? (
@@ -116,7 +175,7 @@ function MapPage() {
       )}
 
       <div className="mt-3 text-xs text-muted-foreground">
-        {filtered.length} elementi visualizzati · OpenStreetMap
+        {filtered.length} elementi visualizzati{me && radiusKm ? ` entro ${radiusKm} km` : ""} · OpenStreetMap
       </div>
     </AppShell>
   );
