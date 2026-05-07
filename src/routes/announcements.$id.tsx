@@ -328,6 +328,8 @@ function AnnouncementDetail() {
 
       <RequirementsSection ann={ann} isOwner={isOwner} />
 
+      <LocationAccessSection ann={ann} restaurant={restaurant} isOwner={isOwner} />
+
       {isOwner && (
         <>
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
