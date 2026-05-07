@@ -5,7 +5,7 @@ export async function consumeCredits(amount: number, reason: string, referenceId
   const { data, error } = await supabase.rpc("consume_credits", {
     _amount: amount,
     _reason: reason,
-    _reference_id: referenceId ?? null,
+    ...(referenceId ? { _reference_id: referenceId } : {}),
   });
   if (error) {
     toast.error(`Errore crediti: ${error.message}`);
