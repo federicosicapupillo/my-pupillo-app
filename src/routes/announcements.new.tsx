@@ -279,6 +279,22 @@ function NewAnn() {
             <div className="mt-2"><AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.location_address} /></div>
           )}
         </div>
+        <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+          <h3 className="font-semibold flex items-center gap-2">📍 Luogo e Accesso <span className="text-xs font-normal text-muted-foreground">(precompilato dal profilo, modificabile per questo turno)</span></h3>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div><Label>Città</Label><Input value={f.job_city} onChange={e => setF({ ...f, job_city: e.target.value })} /></div>
+            <div><Label>Provincia</Label><Input maxLength={3} value={f.job_province} onChange={e => setF({ ...f, job_province: e.target.value.toUpperCase() })} /></div>
+            <div><Label>CAP</Label><Input value={f.job_postal_code} onChange={e => setF({ ...f, job_postal_code: e.target.value })} /></div>
+          </div>
+          <div><Label>Restrizioni all'ingresso</Label><Textarea rows={2} placeholder="Es. Arrivare 15 minuti prima per accreditarsi" value={f.job_access_restrictions} onChange={e => setF({ ...f, job_access_restrictions: e.target.value })} /></div>
+          <div><Label>Indicazioni aggiuntive</Label><Textarea rows={2} placeholder="Es. Entrare dall'ingresso laterale" value={f.job_additional_directions} onChange={e => setF({ ...f, job_additional_directions: e.target.value })} /></div>
+          <div><Label>Note per il lavoratore</Label><Textarea rows={2} value={f.job_location_notes} onChange={e => setF({ ...f, job_location_notes: e.target.value })} /></div>
+          <div className="grid gap-3 md:grid-cols-3 pt-2 border-t">
+            <div><Label>Referente operativo</Label><Input placeholder="Nome e cognome" value={f.job_contact_person_name} onChange={e => setF({ ...f, job_contact_person_name: e.target.value })} /></div>
+            <div><Label>Telefono referente</Label><Input value={f.job_contact_person_phone} onChange={e => setF({ ...f, job_contact_person_phone: e.target.value })} /></div>
+            <div><Label>Email referente</Label><Input type="email" value={f.job_contact_person_email} onChange={e => setF({ ...f, job_contact_person_email: e.target.value })} /></div>
+          </div>
+        </div>
         <div>
           <Label>Ruolo richiesto</Label>
           <Select value={f.professional_profile} onValueChange={v => setF({ ...f, professional_profile: v })}>
