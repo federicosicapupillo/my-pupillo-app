@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass } from "lucide-react";
+import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins } from "lucide-react";
 import { ReactNode } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 
@@ -18,6 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     role === "worker" && { to: "/browse", label: "Trova offerte", icon: Compass },
     (role === "worker" || role === "restaurant") && { to: "/shifts", label: "I miei turni", icon: CalendarClock },
     { to: "/messages", label: "Messaggi", icon: MessageSquare },
+    role === "restaurant" && { to: "/billing", label: "Crediti", icon: Coins },
     { to: "/profile", label: "Profilo", icon: Settings },
     role === "admin" && { to: "/admin", label: "Admin", icon: Shield },
   ].filter(Boolean) as { to: string; label: string; icon: typeof LayoutDashboard }[];
