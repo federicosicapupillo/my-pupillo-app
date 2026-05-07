@@ -30,6 +30,22 @@ type Profile = {
   rating_avg: number | null;
   reviews_count: number | null;
   reliability_pct: number | null;
+  city: string | null;
+  province: string | null;
+  country: string | null;
+  street: string | null;
+  street_number: string | null;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  access_restrictions: string | null;
+  additional_directions: string | null;
+  location_notes: string | null;
+  contact_person_first_name: string | null;
+  contact_person_last_name: string | null;
+  contact_person_role: string | null;
+  contact_person_phone: string | null;
+  contact_person_email: string | null;
 };
 
 type Ctx = {
