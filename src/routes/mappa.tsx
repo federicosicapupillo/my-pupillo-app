@@ -368,6 +368,15 @@ function MapPage() {
         )}
       </div>
 
+      {showA && annsMissingCoords.length > 0 && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200 dark:border-amber-800 p-3 mb-4 flex items-start gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div>
+            <strong>{annsMissingCoords.length}</strong> {annsMissingCoords.length === 1 ? "annuncio non è" : "annunci non sono"} visibili sulla mappa: nessuna coordinata disponibile (né <code>job_latitude/longitude</code>, né indirizzo dell'annuncio, né del ristoratore).
+          </div>
+        </div>
+      )}
+
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
         <Select value={city} onValueChange={setCity}>
