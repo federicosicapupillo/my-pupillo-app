@@ -294,7 +294,7 @@ function AnnouncementDetail() {
               {jobRequest.worker_notes && <p><strong className="text-foreground">Note per il lavoratore:</strong> {jobRequest.worker_notes}</p>}
             </div>
           )}
-          {ann.notes && (
+          {ann.notes && !jobRequest && (
             <p className="pt-2 text-muted-foreground border-t mt-2 whitespace-pre-wrap">{ann.notes}</p>
           )}
         </div>
