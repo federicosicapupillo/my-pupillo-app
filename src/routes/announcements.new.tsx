@@ -16,12 +16,14 @@ import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-re
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
   component: () => <RequireAuth><NewAnn /></RequireAuth>,
 });
 
 function NewAnn() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const { reuse } = Route.useSearch();
   const [busy, setBusy] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
@@ -33,6 +35,29 @@ function NewAnn() {
   });
 
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!reuse) return;
+    (async () => {
+      const { data } = await supabase.from("announcements").select("*").eq("id", reuse).maybeSingle();
+      if (!data) return;
+      setF((prev) => ({
+        ...prev,
+        service_time: data.service_time?.slice(0, 5) ?? prev.service_time,
+        duration_hours: String(data.duration_hours ?? prev.duration_hours),
+        speed: data.speed ?? prev.speed,
+        tariff_type: data.tariff_type ?? prev.tariff_type,
+        tariff_amount: String(data.tariff_amount ?? prev.tariff_amount),
+        location_address: data.location_address ?? prev.location_address,
+        professional_profile: data.professional_profile ?? "",
+        languages: (data.languages ?? []).join(", "),
+      }));
+      if (data.location_lat != null && data.location_lng != null) {
+        setCoords({ lat: data.location_lat, lng: data.location_lng });
+        setGeoState({ status: "ok", attempt: 0 });
+      }
+    })();
+  }, [reuse]);
 
   const runGeocode = async (addr: string) => {
     abortRef.current?.abort();
