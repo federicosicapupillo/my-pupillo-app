@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
+import { ClipboardList } from "lucide-react";
 
 export const Route = createFileRoute("/restaurants/$id")({
   head: () => ({ meta: [{ title: "Dettaglio ristoratore — Pupillo" }] }),
@@ -217,6 +219,12 @@ function RestaurantDetailPage() {
                 <p className="text-sm whitespace-pre-wrap">{r.bio}</p>
               </div>
             )}
+          </div>
+
+          {/* Requisiti standard */}
+          <div className="rounded-2xl border bg-card p-5">
+            <h2 className="font-semibold mb-3 flex items-center gap-2"><ClipboardList className="h-4 w-4 text-primary" />Requisiti e Competenze standard</h2>
+            <RestaurantRequirementsView value={reqFromProfile(r)} />
           </div>
 
           {/* Active announcements */}
