@@ -29,7 +29,7 @@ function AnnouncementsPage() {
   const [items, setItems] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "expired" | "cancelled">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">("all");
 
   useEffect(() => {
     if (!user) return;
@@ -59,9 +59,9 @@ function AnnouncementsPage() {
       />
       {role === "restaurant" && (
         <div className="flex gap-2 mb-4 overflow-x-auto">
-          {(["all","draft","active","assigned","expired","cancelled"] as const).map(f => (
+          {(["all","draft","active","assigned","completed","expired","cancelled"] as const).map(f => (
             <Button key={f} size="sm" variant={statusFilter === f ? "default" : "outline"} onClick={() => setStatusFilter(f)}>
-              {f === "all" ? "Tutti" : f === "draft" ? "Bozze" : f === "active" ? "Pubblicati" : f === "assigned" ? "Assegnati" : f === "expired" ? "Scaduti" : "Annullati"}
+              {f === "all" ? "Tutti" : f === "draft" ? "Bozze" : f === "active" ? "Pubblicati" : f === "assigned" ? "Assegnati" : f === "completed" ? "Completati" : f === "expired" ? "Scaduti" : "Annullati"}
             </Button>
           ))}
         </div>
@@ -102,6 +102,13 @@ function AnnouncementsPage() {
               {role === "restaurant" && a.status !== "active" && (
                 <Link to="/announcements/new" search={{ reuse: a.id } as never} className="mt-3 inline-flex"><Button variant="outline" size="sm" className="gap-2"><RotateCw className="h-3 w-3" />Riusa come nuovo</Button></Link>
               )}
+              <div className="mt-3">
+                <Link to="/announcements/$id" params={{ id: a.id }}>
+                  <Button size="sm" variant={role === "restaurant" && (counts[a.id] ?? 0) > 0 ? "default" : "outline"} className="gap-1">
+                    {role === "restaurant" ? <>Vedi candidature{(counts[a.id] ?? 0) > 0 ? ` (${counts[a.id]})` : ""}</> : "Apri dettagli"}
+                  </Button>
+                </Link>
+              </div>
             </div>
           ))}
         </div>
