@@ -25,6 +25,11 @@ type Profile = {
   vat_status: "pending" | "valid" | "invalid" | "error" | null;
   vat_company_name: string | null;
   vat_verified_at: string | null;
+  plan: string | null;
+  credits: number | null;
+  rating_avg: number | null;
+  reviews_count: number | null;
+  reliability_pct: number | null;
 };
 
 type Ctx = {
