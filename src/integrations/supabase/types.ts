@@ -47,17 +47,24 @@ export type Database = {
       announcements: {
         Row: {
           assigned_worker_id: string | null
+          beard_allowed: string | null
           created_at: string
           deposit_paid: boolean | null
+          dress_code_items: string[] | null
+          dress_code_notes: string | null
           duration_hours: number
           expires_at: string
           id: string
+          language_requirements: string[] | null
           languages: string[] | null
+          license_requirement: string | null
           location_address: string
           location_lat: number | null
           location_lng: number | null
           notes: string | null
+          piercings_allowed: string | null
           professional_profile: string | null
+          required_skills: string[] | null
           restaurant_id: string
           service_date: string
           service_time: string
@@ -65,20 +72,28 @@ export type Database = {
           status: Database["public"]["Enums"]["announcement_status"]
           tariff_amount: number
           tariff_type: Database["public"]["Enums"]["tariff_type"]
+          tattoos_allowed: string | null
         }
         Insert: {
           assigned_worker_id?: string | null
+          beard_allowed?: string | null
           created_at?: string
           deposit_paid?: boolean | null
+          dress_code_items?: string[] | null
+          dress_code_notes?: string | null
           duration_hours?: number
           expires_at?: string
           id?: string
+          language_requirements?: string[] | null
           languages?: string[] | null
+          license_requirement?: string | null
           location_address: string
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
+          piercings_allowed?: string | null
           professional_profile?: string | null
+          required_skills?: string[] | null
           restaurant_id: string
           service_date: string
           service_time: string
@@ -86,20 +101,28 @@ export type Database = {
           status?: Database["public"]["Enums"]["announcement_status"]
           tariff_amount: number
           tariff_type?: Database["public"]["Enums"]["tariff_type"]
+          tattoos_allowed?: string | null
         }
         Update: {
           assigned_worker_id?: string | null
+          beard_allowed?: string | null
           created_at?: string
           deposit_paid?: boolean | null
+          dress_code_items?: string[] | null
+          dress_code_notes?: string | null
           duration_hours?: number
           expires_at?: string
           id?: string
+          language_requirements?: string[] | null
           languages?: string[] | null
+          license_requirement?: string | null
           location_address?: string
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
+          piercings_allowed?: string | null
           professional_profile?: string | null
+          required_skills?: string[] | null
           restaurant_id?: string
           service_date?: string
           service_time?: string
@@ -107,6 +130,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["announcement_status"]
           tariff_amount?: number
           tariff_type?: Database["public"]["Enums"]["tariff_type"]
+          tattoos_allowed?: string | null
         }
         Relationships: []
       }

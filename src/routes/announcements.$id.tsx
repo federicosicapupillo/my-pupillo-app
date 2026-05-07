@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,12 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, MapPin, Euro, Clock, Users, Star, Shield,
   CheckCircle2, XCircle, MessageSquare, Award, Building2, Phone, Mail, Globe,
+  Languages as LanguagesIcon, IdCard, ListChecks, Sparkles, Info,
 } from "lucide-react";
+import {
+  LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
+  BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
+} from "@/lib/announcement-requirements";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -23,6 +28,14 @@ type Ann = {
   location_address: string; status: string; expires_at: string;
   professional_profile: string | null; languages: string[] | null; notes: string | null;
   assigned_worker_id: string | null;
+  license_requirement?: string | null;
+  language_requirements?: string[] | null;
+  tattoos_allowed?: string | null;
+  piercings_allowed?: string | null;
+  beard_allowed?: string | null;
+  required_skills?: string[] | null;
+  dress_code_items?: string[] | null;
+  dress_code_notes?: string | null;
 };
 type App = {
   id: string; status: string; worker_id: string; proposed_tariff: number | null;
@@ -298,6 +311,8 @@ function AnnouncementDetail() {
         )}
       </div>
 
+      <RequirementsSection ann={ann} isOwner={isOwner} />
+
       {isOwner && (
         <>
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -403,6 +418,78 @@ function Metric({ icon: Icon, label, value }: { icon: typeof Star; label: string
         <Icon className="h-3 w-3" /><span>{label}</span>
       </div>
       <div className="font-semibold mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function RequirementsSection({ ann, isOwner }: { ann: Ann; isOwner: boolean }) {
+  const langs = labelsOf(ann.language_requirements ?? null, LANGUAGE_OPTIONS);
+  const skills = labelsOf(ann.required_skills ?? null, SKILL_OPTIONS);
+  const dressItems = (ann.dress_code_items ?? []).map(v => DRESS_CODE_OPTIONS.find(o => o.value === v)).filter(Boolean) as typeof DRESS_CODE_OPTIONS;
+  const hasAnything = !!(ann.license_requirement || langs.length || ann.tattoos_allowed || ann.piercings_allowed || ann.beard_allowed || skills.length || dressItems.length || ann.dress_code_notes);
+  if (!hasAnything) return null;
+  return (
+    <section className="mb-6">
+      <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><ListChecks className="h-5 w-5" /> Requisiti e Competenze</h2>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border bg-card p-5 space-y-3 text-sm">
+          <ReqRow icon={IdCard} label="Tipo di patente" value={labelOf(ann.license_requirement, LICENSE_OPTIONS)} />
+          <ReqRow icon={LanguagesIcon} label="Lingue richieste" value={langs.length ? null : "—"}>
+            {langs.length > 0 && <div className="flex flex-wrap gap-1 mt-1">{langs.map(l => <Badge key={l} variant="secondary">{l}</Badge>)}</div>}
+          </ReqRow>
+          <ReqRow icon={Sparkles} label="Tatuaggi" value={labelOf(ann.tattoos_allowed, TATTOO_OPTIONS)} />
+          <ReqRow icon={Sparkles} label="Piercing" value={labelOf(ann.piercings_allowed, PIERCING_OPTIONS)} />
+          <ReqRow icon={Sparkles} label="Barba" value={labelOf(ann.beard_allowed, BEARD_OPTIONS)} />
+          <ReqRow icon={ListChecks} label="Competenze" value={skills.length ? null : "—"}>
+            {skills.length > 0 && <div className="flex flex-wrap gap-1 mt-1">{skills.map(s => <Badge key={s} variant="outline">{s}</Badge>)}</div>}
+          </ReqRow>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-5 space-y-3">
+          <div className="text-sm font-medium">Disposizioni dress code</div>
+          {dressItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nessuna disposizione specifica.</p>
+          ) : (
+            <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
+              {dressItems.map(o => {
+                const Icon = o.icon;
+                return (
+                  <div key={o.value} className="flex flex-col items-center text-center gap-1.5 rounded-xl border bg-muted/30 p-2.5">
+                    <div className="h-9 w-9 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <span className="text-[11px] leading-tight">{o.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {ann.dress_code_notes && (
+            <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground border-t pt-3 mt-1 whitespace-pre-wrap">
+              {ann.dress_code_notes}
+            </div>
+          )}
+        </div>
+      </div>
+      {!isOwner && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>Confermando la candidatura dichiari di aver letto requisiti, competenze richieste e dress code del turno.</span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ReqRow({ icon: Icon, label, value, children }: { icon: typeof Star; label: string; value: string | null; children?: ReactNode }) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        {value && <div className="font-medium">{value}</div>}
+        {children}
+      </div>
     </div>
   );
 }
