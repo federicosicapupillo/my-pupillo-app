@@ -1,8 +1,8 @@
 import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight } from "lucide-react";
-import { ReactNode, useRef, KeyboardEvent } from "react";
+import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight, Menu, X } from "lucide-react";
+import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import pupilloLogo from "@/assets/pupillo-logo.png";
@@ -57,6 +57,31 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Focus management per il menu mobile (frecce ←/→/Home/End/Esc)
   const mobileNavRef = useRef<HTMLElement | null>(null);
+  const mobileToggleRef = useRef<HTMLButtonElement | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Chiudi automaticamente al cambio di route
+  useEffect(() => { setMobileOpen(false); }, [loc.pathname]);
+
+  // Gestione globale Esc + focus sul primo link all'apertura
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMobileOpen(false);
+        mobileToggleRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    // focus al primo link
+    const t = setTimeout(() => {
+      const first = mobileNavRef.current?.querySelector<HTMLAnchorElement>("a[href]");
+      first?.focus();
+    }, 50);
+    return () => { document.removeEventListener("keydown", onKey); clearTimeout(t); };
+  }, [mobileOpen]);
+
   const handleMobileNavKey = (e: KeyboardEvent<HTMLElement>) => {
     const root = mobileNavRef.current;
     if (!root) return;
@@ -70,11 +95,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       el.scrollIntoView({ block: "nearest", inline: "nearest" });
     };
     switch (e.key) {
+      case "ArrowDown":
       case "ArrowRight": e.preventDefault(); focus(idx === -1 ? 0 : idx + 1); break;
+      case "ArrowUp":
       case "ArrowLeft": e.preventDefault(); focus(idx === -1 ? 0 : idx - 1); break;
       case "Home": e.preventDefault(); focus(0); break;
       case "End": e.preventDefault(); focus(links.length - 1); break;
-      case "Escape": if (idx !== -1) { e.preventDefault(); (active as HTMLElement).blur(); } break;
+      case "Escape":
+        e.preventDefault();
+        setMobileOpen(false);
+        mobileToggleRef.current?.focus();
+        break;
     }
   };
 
@@ -106,6 +137,24 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              ref={mobileToggleRef}
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              aria-label={mobileOpen ? "Chiudi menu" : "Apri menu"}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav"
+              onClick={() => setMobileOpen(o => !o)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " " || e.code === "Space") {
+                  e.preventDefault();
+                  setMobileOpen(o => !o);
+                }
+              }}
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
             <span className="hidden sm:block text-xs text-muted-foreground">{profile?.full_name || user?.email}</span>
             <span className="text-xs rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
             {role === "restaurant" && (
@@ -122,11 +171,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav
           ref={mobileNavRef}
+          id="mobile-nav"
+          hidden={!mobileOpen}
           className="md:hidden border-t overflow-x-auto"
           aria-label="Menu di navigazione"
           onKeyDown={handleMobileNavKey}
         >
-          <div role="menubar" aria-orientation="horizontal" className="flex gap-1 px-2 py-2">
+          <div role="menubar" aria-orientation="vertical" className="flex flex-col gap-1 px-2 py-2">
             {items.map((i) => {
               const isActive = loc.pathname.startsWith(i.to);
               return (
@@ -135,9 +186,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                   to={i.to as never}
                   role="menuitem"
                   aria-current={isActive ? "page" : undefined}
-                  className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  onClick={() => setMobileOpen(false)}
                 >
-                  <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="gap-2 whitespace-nowrap">
+                  <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap">
                     <i.icon className="h-4 w-4" />{i.label}
                   </Button>
                 </Link>
