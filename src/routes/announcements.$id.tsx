@@ -116,15 +116,45 @@ function AnnouncementDetail() {
 
   // Realtime applications changes
   useEffect(() => {
+    if (!ann) return;
+    const isOwnerNow = !!(user && ann.restaurant_id === user.id);
     const ch = supabase.channel(`ann-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "applications", filter: `announcement_id=eq.${id}` },
-        () => { load(); })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "applications", filter: `announcement_id=eq.${id}` },
+        async (p) => {
+          const n = p.new as App;
+          if (isOwnerNow) {
+            // fetch worker name for nicer toast
+            const { data: w } = await supabase.from("profiles").select("full_name").eq("id", n.worker_id).maybeSingle();
+            const who = (w as any)?.full_name || "Un lavoratore";
+            toast.success("Nuova candidatura", { description: `${who} si è candidato per questo annuncio.` });
+          }
+          load();
+        })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `announcement_id=eq.${id}` },
+        async (p) => {
+          const oldA = p.old as App;
+          const newA = p.new as App;
+          if (isOwnerNow && oldA.status !== newA.status) {
+            const { data: w } = await supabase.from("profiles").select("full_name").eq("id", newA.worker_id).maybeSingle();
+            const who = (w as any)?.full_name || "Lavoratore";
+            const label = ({
+              interested: `${who}: interessato`,
+              counter_offer: `${who}: controfferta ricevuta`,
+              not_interested: `${who}: non interessato`,
+              accepted: `${who}: candidatura accettata`,
+              rejected: `${who}: candidatura rifiutata`,
+              expired: `${who}: candidatura scaduta`,
+            } as Record<string, string>)[newA.status] || `${who}: ${newA.status}`;
+            toast.message("Aggiornamento candidatura", { description: label });
+          }
+          load();
+        })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "announcements", filter: `id=eq.${id}` },
         (p) => setAnn(prev => prev ? { ...prev, ...(p.new as Ann) } : (p.new as Ann)))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line
-  }, [id]);
+  }, [id, ann?.restaurant_id, user?.id]);
 
   const isOwner = !!(ann && user && ann.restaurant_id === user.id);
   const restaurantName = restaurant?.business_name || restaurant?.full_name || "Ristoratore";
