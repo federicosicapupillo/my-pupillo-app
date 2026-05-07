@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send } from "lucide-react";
+import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User } from "lucide-react";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { toast } from "sonner";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -23,6 +24,8 @@ type Ann = {
   location_address: string; location_lat: number | null; location_lng: number | null;
   professional_profile: string | null; status: string; created_at: string;
 };
+
+type RestaurantInfo = { id: string; full_name: string | null; business_name: string | null; venue_type: string | null; city: string | null; rating_avg: number | null } | null;
 
 const ROLES = ["cameriere","bartender","chef","aiuto cucina","runner","lavapiatti","hostess","responsabile sala"];
 const SPEEDS = [{v:"normal",l:"Standard"},{v:"urgent",l:"Urgente"},{v:"flash",l:"Flash"}];
@@ -48,6 +51,20 @@ function Browse() {
   const [onlyNotApplied, setOnlyNotApplied] = useState(false);
   const [onlyFav, setOnlyFav] = useState(false);
   const [sort, setSort] = useState<"recent"|"pay"|"date">("recent");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [restaurant, setRestaurant] = useState<RestaurantInfo>(null);
+
+  const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
+
+  useEffect(() => {
+    if (!selected) { setRestaurant(null); return; }
+    (async () => {
+      const { data } = await supabase.from("profiles")
+        .select("id, full_name, business_name, venue_type, city, rating_avg")
+        .eq("id", selected.restaurant_id).maybeSingle();
+      setRestaurant((data as RestaurantInfo) ?? null);
+    })();
+  }, [selected]);
 
   const load = async () => {
     setLoading(true);
@@ -199,6 +216,7 @@ function Browse() {
                   ) : (
                     <Button size="sm" className="flex-1 gap-2" onClick={()=>apply(a)}><Send className="h-4 w-4" />Candidati</Button>
                   )}
+                  <Button size="sm" variant="outline" onClick={()=>setOpenId(a.id)}>Dettagli</Button>
                 </div>
               </div>
             );
@@ -215,6 +233,73 @@ function Browse() {
           <div className="p-3 text-xs text-muted-foreground">Vista mappa: mostra la prima offerta con coordinate. Usa la lista per candidarti.</div>
         </div>
       )}
+
+      <Sheet open={!!openId} onOpenChange={(o)=>!o && setOpenId(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          {selected && (() => {
+            const applied = appliedIds.has(selected.id);
+            const fav = favIds.has(selected.id);
+            const dist = (profile?.service_area_lat != null && profile?.service_area_lng != null && selected.location_lat != null && selected.location_lng != null)
+              ? distKm(profile.service_area_lat, profile.service_area_lng, selected.location_lat, selected.location_lng) : null;
+            return (
+              <>
+                <SheetHeader>
+                  <SheetTitle className="capitalize">{selected.professional_profile || "Offerta di lavoro"}</SheetTitle>
+                  <SheetDescription>
+                    {restaurant?.business_name || restaurant?.full_name || "Ristoratore"}
+                    {restaurant?.rating_avg ? ` · ★ ${restaurant.rating_avg}` : ""}
+                  </SheetDescription>
+                </SheetHeader>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-secondary px-2 py-1 text-xs capitalize">{selected.speed}</span>
+                  <span className="rounded-full bg-accent text-accent-foreground px-2 py-1 text-xs">{selected.duration_hours}h</span>
+                  <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">€{selected.tariff_amount}{selected.tariff_type==="hourly"?"/h":""}</span>
+                  {dist != null && <span className="rounded-full bg-muted px-2 py-1 text-xs">{dist.toFixed(1)} km</span>}
+                </div>
+
+                <div className="mt-5 space-y-3 text-sm">
+                  <Row icon={Calendar} label="Data" value={new Date(selected.service_date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" })} />
+                  <Row icon={Clock} label="Orario" value={`${selected.service_time?.slice(0,5)} · durata ${selected.duration_hours}h`} />
+                  <Row icon={Euro} label="Compenso" value={`€${selected.tariff_amount} ${selected.tariff_type==="hourly"?"all'ora":"a servizio"}`} />
+                  <Row icon={Zap} label="Tipologia" value={selected.speed} />
+                  <Row icon={MapPin} label="Indirizzo" value={selected.location_address} />
+                  {restaurant?.venue_type && <Row icon={User} label="Locale" value={restaurant.venue_type} />}
+                </div>
+
+                {selected.location_lat != null && selected.location_lng != null && (
+                  <div className="mt-4">
+                    <AnnouncementMap lat={selected.location_lat} lng={selected.location_lng} address={selected.location_address} height={200} />
+                  </div>
+                )}
+
+                <div className="mt-6 flex gap-2 sticky bottom-0 bg-background pt-3">
+                  <Button variant="outline" size="icon" onClick={()=>toggleFav(selected.id)} aria-label="Preferiti">
+                    <Heart className={`h-5 w-5 ${fav?"fill-primary text-primary":""}`} />
+                  </Button>
+                  {applied ? (
+                    <Button disabled variant="secondary" className="flex-1">Candidatura già inviata</Button>
+                  ) : (
+                    <Button className="flex-1 gap-2" onClick={()=>apply(selected)}><Send className="h-4 w-4" />Candidati ora</Button>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </AppShell>
+  );
+}
+
+function Row({ icon: Icon, label, value }: { icon: typeof Calendar; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <Icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
+      <div className="flex-1">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="capitalize">{value}</div>
+      </div>
+    </div>
   );
 }
