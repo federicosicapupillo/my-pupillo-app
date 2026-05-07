@@ -59,7 +59,7 @@ type FormState = {
   hourly_rate: string;
   break_included: boolean;
   operational_notes: string;
-  status: "draft" | "published";
+  status: "bozza" | "pubblicato";
   restaurant_name: string;
   address: string;
   city: string;
@@ -118,7 +118,7 @@ function NewRestaurantJobRequest() {
     hourly_rate: "12",
     break_included: false,
     operational_notes: "",
-    status: "draft",
+    status: "bozza",
     restaurant_name: "",
     address: "",
     city: "",
@@ -260,10 +260,10 @@ function NewRestaurantJobRequest() {
     return true;
   };
 
-  const save = async (status: "draft" | "published") => {
+  const save = async (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
     setBusy(true);
-    const announcementStatus = status === "published" ? "active" : "draft";
+    const announcementStatus = status === "pubblicato" ? "active" : "draft";
     const locationAddress = [f.address, f.district, f.city, f.province, f.postal_code, f.country].filter(Boolean).join(", ");
     const announcementPayload = {
       restaurant_id: user.id,
@@ -366,7 +366,7 @@ function NewRestaurantJobRequest() {
     }
 
     setBusy(false);
-    toast.success(status === "draft" ? "Bozza salvata correttamente" : "Annuncio pubblicato correttamente");
+    toast.success(status === "bozza" ? "Bozza salvata correttamente" : "Annuncio pubblicato correttamente");
     nav({ to: "/announcements" });
   };
 
@@ -407,8 +407,8 @@ function NewRestaurantJobRequest() {
               <Select value={f.status} onValueChange={v => setField("status", v as FormState["status"])}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Bozza</SelectItem>
-                  <SelectItem value="published">Pubblicato</SelectItem>
+                  <SelectItem value="bozza">Bozza</SelectItem>
+                  <SelectItem value="pubblicato">Pubblicato</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -504,8 +504,8 @@ function NewRestaurantJobRequest() {
             <Link to="/announcements" className="sm:mr-auto"><Button type="button" variant="ghost" className="w-full gap-2" disabled={busy}><X className="h-4 w-4" />Annulla</Button></Link>
             <Link to="/announcements"><Button type="button" variant="outline" className="w-full">Torna agli annunci</Button></Link>
             <Button type="button" variant="outline" className="gap-2" onClick={showPreview}><Eye className="h-4 w-4" />Anteprima</Button>
-            <Button type="button" variant="outline" className="gap-2" disabled={busy} onClick={() => save("draft")}><Save className="h-4 w-4" />Salva bozza</Button>
-            <Button type="button" className="gap-2" disabled={busy} onClick={() => save("published")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Pubblica annuncio</Button>
+            <Button type="button" variant="outline" className="gap-2" disabled={busy} onClick={() => save("bozza")}><Save className="h-4 w-4" />Salva bozza</Button>
+            <Button type="button" className="gap-2" disabled={busy} onClick={() => save("pubblicato")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Pubblica annuncio</Button>
           </div>
         </div>
       </form>
