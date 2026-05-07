@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -481,7 +481,7 @@ function RequirementsSection({ ann, isOwner }: { ann: Ann; isOwner: boolean }) {
   );
 }
 
-function ReqRow({ icon: Icon, label, value, children }: { icon: typeof Star; label: string; value: string | null; children?: React.ReactNode }) {
+function ReqRow({ icon: Icon, label, value, children }: { icon: typeof Star; label: string; value: string | null; children?: ReactNode }) {
   return (
     <div className="flex items-start gap-2">
       <Icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
