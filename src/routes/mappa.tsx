@@ -95,9 +95,6 @@ function MapPage() {
   const [annCounts, setAnnCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  // Sorgente coordinate per ogni annuncio (debug)
-  const [coordSources, setCoordSources] = useState<Record<string, "job" | "location" | "profile" | "service_area">>({});
-
   // search & filters
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("any");
