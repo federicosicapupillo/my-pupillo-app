@@ -218,21 +218,46 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status"] | null
           address: string | null
           age: number | null
+          badge: Database["public"]["Enums"]["worker_badge"] | null
           business_name: string | null
+          busy_days: string[] | null
+          city: string | null
+          completed_shifts: number | null
           created_at: string
+          credits: number | null
           email: string | null
+          employees_count: number | null
+          experience_level:
+            | Database["public"]["Enums"]["experience_level"]
+            | null
+          experience_years: number | null
           full_name: string | null
+          hourly_availability: string | null
+          hourly_rate: number | null
           id: string
+          is_motorized: boolean | null
           languages: string[] | null
+          last_active_at: string | null
+          neighborhood: string | null
+          no_shows: number | null
+          opening_hours: string | null
           phone: string | null
+          plan: Database["public"]["Enums"]["user_plan"] | null
           price_range: string | null
+          primary_role: string | null
           professional_profile: string | null
           profile_completed: boolean | null
+          rating_avg: number | null
+          reliability_pct: number | null
+          reviews_count: number | null
+          secondary_roles: string[] | null
           service_area_lat: number | null
           service_area_lng: number | null
           service_area_radius_m: number | null
+          short_bio: string | null
           terms_accepted: boolean | null
           updated_at: string
           vat_company_name: string | null
@@ -240,24 +265,50 @@ export type Database = {
           vat_status: Database["public"]["Enums"]["vat_status"] | null
           vat_verified_at: string | null
           venue_type: string | null
+          weekly_availability: string[] | null
           whatsapp_connected: boolean | null
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"] | null
           address?: string | null
           age?: number | null
+          badge?: Database["public"]["Enums"]["worker_badge"] | null
           business_name?: string | null
+          busy_days?: string[] | null
+          city?: string | null
+          completed_shifts?: number | null
           created_at?: string
+          credits?: number | null
           email?: string | null
+          employees_count?: number | null
+          experience_level?:
+            | Database["public"]["Enums"]["experience_level"]
+            | null
+          experience_years?: number | null
           full_name?: string | null
+          hourly_availability?: string | null
+          hourly_rate?: number | null
           id: string
+          is_motorized?: boolean | null
           languages?: string[] | null
+          last_active_at?: string | null
+          neighborhood?: string | null
+          no_shows?: number | null
+          opening_hours?: string | null
           phone?: string | null
+          plan?: Database["public"]["Enums"]["user_plan"] | null
           price_range?: string | null
+          primary_role?: string | null
           professional_profile?: string | null
           profile_completed?: boolean | null
+          rating_avg?: number | null
+          reliability_pct?: number | null
+          reviews_count?: number | null
+          secondary_roles?: string[] | null
           service_area_lat?: number | null
           service_area_lng?: number | null
           service_area_radius_m?: number | null
+          short_bio?: string | null
           terms_accepted?: boolean | null
           updated_at?: string
           vat_company_name?: string | null
@@ -265,24 +316,50 @@ export type Database = {
           vat_status?: Database["public"]["Enums"]["vat_status"] | null
           vat_verified_at?: string | null
           venue_type?: string | null
+          weekly_availability?: string[] | null
           whatsapp_connected?: boolean | null
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status"] | null
           address?: string | null
           age?: number | null
+          badge?: Database["public"]["Enums"]["worker_badge"] | null
           business_name?: string | null
+          busy_days?: string[] | null
+          city?: string | null
+          completed_shifts?: number | null
           created_at?: string
+          credits?: number | null
           email?: string | null
+          employees_count?: number | null
+          experience_level?:
+            | Database["public"]["Enums"]["experience_level"]
+            | null
+          experience_years?: number | null
           full_name?: string | null
+          hourly_availability?: string | null
+          hourly_rate?: number | null
           id?: string
+          is_motorized?: boolean | null
           languages?: string[] | null
+          last_active_at?: string | null
+          neighborhood?: string | null
+          no_shows?: number | null
+          opening_hours?: string | null
           phone?: string | null
+          plan?: Database["public"]["Enums"]["user_plan"] | null
           price_range?: string | null
+          primary_role?: string | null
           professional_profile?: string | null
           profile_completed?: boolean | null
+          rating_avg?: number | null
+          reliability_pct?: number | null
+          reviews_count?: number | null
+          secondary_roles?: string[] | null
           service_area_lat?: number | null
           service_area_lng?: number | null
           service_area_radius_m?: number | null
+          short_bio?: string | null
           terms_accepted?: boolean | null
           updated_at?: string
           vat_company_name?: string | null
@@ -290,7 +367,74 @@ export type Database = {
           vat_status?: Database["public"]["Enums"]["vat_status"] | null
           vat_verified_at?: string | null
           venue_type?: string | null
+          weekly_availability?: string[] | null
           whatsapp_connected?: boolean | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          author_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          shift_id: string | null
+          target_id: string
+        }
+        Insert: {
+          author_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          shift_id?: string | null
+          target_id: string
+        }
+        Update: {
+          author_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          shift_id?: string | null
+          target_id?: string
+        }
+        Relationships: []
+      }
+      shifts: {
+        Row: {
+          amount: number | null
+          announcement_id: string | null
+          created_at: string
+          hours: number
+          id: string
+          restaurant_id: string
+          shift_date: string
+          status: Database["public"]["Enums"]["shift_status"]
+          worker_id: string
+        }
+        Insert: {
+          amount?: number | null
+          announcement_id?: string | null
+          created_at?: string
+          hours?: number
+          id?: string
+          restaurant_id: string
+          shift_date: string
+          status?: Database["public"]["Enums"]["shift_status"]
+          worker_id: string
+        }
+        Update: {
+          amount?: number | null
+          announcement_id?: string | null
+          created_at?: string
+          hours?: number
+          id?: string
+          restaurant_id?: string
+          shift_date?: string
+          status?: Database["public"]["Enums"]["shift_status"]
+          worker_id?: string
         }
         Relationships: []
       }
@@ -330,6 +474,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_status: "active" | "pending" | "suspended"
       announcement_status:
         | "draft"
         | "active"
@@ -345,9 +490,13 @@ export type Database = {
         | "accepted"
         | "rejected"
         | "expired"
+      experience_level: "junior" | "intermediate" | "senior"
       service_speed: "normal" | "fast" | "flash"
+      shift_status: "scheduled" | "completed" | "no_show" | "cancelled"
       tariff_type: "hourly" | "flat"
+      user_plan: "free" | "credits" | "premium"
       vat_status: "pending" | "valid" | "invalid" | "error"
+      worker_badge: "basic" | "pro" | "elite"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -475,6 +624,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: ["active", "pending", "suspended"],
       announcement_status: [
         "draft",
         "active",
@@ -492,9 +642,13 @@ export const Constants = {
         "rejected",
         "expired",
       ],
+      experience_level: ["junior", "intermediate", "senior"],
       service_speed: ["normal", "fast", "flash"],
+      shift_status: ["scheduled", "completed", "no_show", "cancelled"],
       tariff_type: ["hourly", "flat"],
+      user_plan: ["free", "credits", "premium"],
       vat_status: ["pending", "valid", "invalid", "error"],
+      worker_badge: ["basic", "pro", "elite"],
     },
   },
 } as const
