@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
+import { verifyVat } from "@/server/vat.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -21,6 +23,7 @@ export const Route = createFileRoute("/onboarding")({
 function Onboarding() {
   const { user, role, profile, refresh } = useAuth();
   const nav = useNavigate();
+  const verifyVatFn = useServerFn(verifyVat);
   const [form, setForm] = useState({
     full_name: "", phone: "", age: "", professional_profile: "", languages: "",
     business_name: "", vat_number: "", venue_type: "", address: "", price_range: "",
@@ -72,8 +75,18 @@ function Onboarding() {
       ...serviceArea,
     };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
-    setBusy(false);
     if (error) { toast.error(error.message); return; }
+    if (role === "restaurant" && form.vat_number.trim()) {
+      try {
+        const r = await verifyVatFn({ data: { vat_number: form.vat_number.trim() } });
+        if (r.status === "valid") toast.success(`P.IVA verificata${r.companyName ? `: ${r.companyName}` : ""}`);
+        else if (r.status === "invalid") toast.error("Partita IVA non valida");
+        else toast.warning("Verifica P.IVA non disponibile, riproveremo più tardi");
+      } catch (e) {
+        toast.warning("Verifica P.IVA non riuscita");
+      }
+    }
+    setBusy(false);
     toast.success("Profilo completato!");
     await refresh();
     nav({ to: "/dashboard" });

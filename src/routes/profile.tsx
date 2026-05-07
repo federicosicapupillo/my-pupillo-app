@@ -58,6 +58,8 @@ function Profile() {
         {role === "restaurant" && (<>
           <Row label="Nome locale" value={profile?.business_name} />
           <Row label="Partita IVA" value={profile?.vat_number} />
+          <Row label="Stato verifica P.IVA" value={vatStatusLabel(profile?.vat_status)} />
+          {profile?.vat_company_name && <Row label="Ragione sociale (VIES)" value={profile.vat_company_name} />}
           <Row label="Tipo locale" value={profile?.venue_type} />
           <Row label="Indirizzo" value={profile?.address} />
           <Row label="Fascia prezzo" value={profile?.price_range} />
@@ -98,4 +100,12 @@ function Row({ label, value }: { label: string; value?: string | null }) {
       <span className="text-sm font-medium text-right">{value || "—"}</span>
     </div>
   );
+}
+
+function vatStatusLabel(s?: string | null) {
+  if (!s) return null;
+  if (s === "valid") return "Verificata ✓";
+  if (s === "invalid") return "Non valida ✗";
+  if (s === "pending") return "In verifica…";
+  return "Errore di verifica";
 }
