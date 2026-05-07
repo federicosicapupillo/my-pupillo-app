@@ -192,7 +192,7 @@ function MapPage() {
           title: a.professional_profile || "Annuncio",
           subtitle: a.location_address || undefined,
           status: a.status,
-          link: "/browse",
+          link: `/announcements/${a.id}`,
         });
       });
     }
