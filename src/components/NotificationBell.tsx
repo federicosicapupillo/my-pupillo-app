@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Bell } from "lucide-react";
+import { Bell, BellOff, BellRing } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner";
 
 type Notif = { id: string; title: string; body: string | null; link: string | null; read: boolean | null; created_at: string };
+
+function canUseBrowserPush() {
+  return typeof window !== "undefined" && "Notification" in window;
+}
 
 export function NotificationBell() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [items, setItems] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
+  const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">(
+    canUseBrowserPush() ? Notification.permission : "unsupported"
+  );
 
   const load = async () => {
     if (!user) return;
@@ -32,7 +40,23 @@ export function NotificationBell() {
     const ch = supabase
       .channel(`notif-${user.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
-        setItems(prev => [p.new as Notif, ...prev]);
+        const n = p.new as Notif;
+        setItems(prev => [n, ...prev]);
+        // In-app toast
+        toast.message(n.title, {
+          description: n.body || undefined,
+          action: n.link ? { label: "Apri", onClick: () => nav({ to: n.link as never }) } : undefined,
+        });
+        // Browser push if granted and tab not focused
+        if (canUseBrowserPush() && Notification.permission === "granted" && document.visibilityState !== "visible") {
+          try {
+            const browserNotif = new Notification(n.title, { body: n.body || "", tag: n.id });
+            browserNotif.onclick = () => {
+              window.focus();
+              if (n.link) nav({ to: n.link as never });
+            };
+          } catch { /* noop */ }
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -55,6 +79,21 @@ export function NotificationBell() {
     setItems(prev => prev.map(i => ({ ...i, read: true })));
   };
 
+  const requestPush = async () => {
+    if (!canUseBrowserPush()) {
+      toast.error("Il tuo browser non supporta le notifiche push.");
+      return;
+    }
+    const res = await Notification.requestPermission();
+    setPushPerm(res);
+    if (res === "granted") {
+      toast.success("Notifiche push attivate");
+      try { new Notification("Pupillo", { body: "Riceverai qui le notifiche importanti." }); } catch {}
+    } else if (res === "denied") {
+      toast.error("Notifiche push bloccate dal browser. Abilitale dalle impostazioni del sito.");
+    }
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -72,6 +111,13 @@ export function NotificationBell() {
           <span className="font-medium text-sm">Notifiche</span>
           {unread > 0 && <button onClick={markAll} className="text-xs text-primary hover:underline">Segna tutte lette</button>}
         </div>
+        {pushPerm !== "unsupported" && pushPerm !== "granted" && (
+          <div className="px-3 py-2 border-b bg-primary/5">
+            <button onClick={requestPush} className="flex items-center gap-2 text-xs text-primary hover:underline">
+              {pushPerm === "denied" ? <><BellOff className="h-3.5 w-3.5" />Notifiche bloccate — abilitale nel browser</> : <><BellRing className="h-3.5 w-3.5" />Attiva notifiche push del browser</>}
+            </button>
+          </div>
+        )}
         <div className="max-h-96 overflow-y-auto">
           {items.length === 0 ? (
             <p className="p-6 text-sm text-center text-muted-foreground">Nessuna notifica</p>
