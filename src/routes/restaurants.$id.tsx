@@ -58,6 +58,8 @@ function RestaurantDetailPage() {
     tariff: string;
     note: string;
     submittedAt: string;
+    status: string;
+    statusUpdatedAt?: string;
   }>(null);
 
   useEffect(() => {
@@ -122,9 +124,36 @@ function RestaurantDetailPage() {
         : "—",
       note: note.trim(),
       submittedAt: new Date().toLocaleString("it-IT"),
+      status: "pending",
     });
     setConfirmAnn(null); setNote(""); setSubmitting(false);
   };
+
+  // Realtime: subscribe to status changes of the just-submitted application
+  useEffect(() => {
+    if (!bookingResult?.applicationId) return;
+    const ch = supabase
+      .channel(`booking-${bookingResult.applicationId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "applications", filter: `id=eq.${bookingResult.applicationId}` },
+        (payload) => {
+          const next = (payload.new as any)?.status as string | undefined;
+          if (!next) return;
+          setBookingResult((prev) => prev ? { ...prev, status: next, statusUpdatedAt: new Date().toLocaleString("it-IT") } : prev);
+          const labels: Record<string, string> = {
+            interested: "Il ristoratore ha mostrato interesse",
+            accepted: "Prenotazione confermata!",
+            rejected: "Prenotazione rifiutata",
+            counter_offer: "Hai ricevuto una controproposta",
+            expired: "Offerta scaduta",
+          };
+          if (labels[next]) toast.message(labels[next]);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [bookingResult?.applicationId]);
 
   if (loading) {
     return <AppShell><div className="p-8 text-sm text-muted-foreground">Caricamento…</div></AppShell>;
@@ -341,13 +370,7 @@ function RestaurantDetailPage() {
                 <Row label="Inviata il" value={bookingResult.submittedAt} />
                 <Row label="ID richiesta" value={<code className="text-xs">{bookingResult.applicationId.slice(0, 8)}</code>} />
               </div>
-              <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 flex items-start gap-2 text-sm">
-                <Clock className="h-4 w-4 mt-0.5 text-amber-600" />
-                <div>
-                  <div className="font-medium text-amber-900">Stato: In attesa di conferma</div>
-                  <div className="text-xs text-amber-800/80">Il ristoratore ha 24 ore per rispondere. Puoi seguire la conversazione nei messaggi.</div>
-                </div>
-              </div>
+              <StatusBanner status={bookingResult.status} updatedAt={bookingResult.statusUpdatedAt} />
               {bookingResult.note && (
                 <div className="text-xs text-muted-foreground">
                   <span className="font-medium">La tua nota:</span> {bookingResult.note}
@@ -390,6 +413,31 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="flex items-start justify-between gap-3">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium text-right">{value}</span>
+    </div>
+  );
+}
+
+function StatusBanner({ status, updatedAt }: { status: string; updatedAt?: string }) {
+  const map: Record<string, { title: string; desc: string; cls: string }> = {
+    pending: { title: "In attesa di conferma", desc: "Il ristoratore ha 24 ore per rispondere.", cls: "bg-amber-500/10 border-amber-500/30 text-amber-900" },
+    interested: { title: "Interesse mostrato", desc: "Il ristoratore ha visto la tua richiesta ed è interessato.", cls: "bg-sky-500/10 border-sky-500/30 text-sky-900" },
+    counter_offer: { title: "Controproposta ricevuta", desc: "Apri i messaggi per vedere la nuova offerta.", cls: "bg-indigo-500/10 border-indigo-500/30 text-indigo-900" },
+    accepted: { title: "Prenotazione confermata", desc: "Il turno è tuo. Trovi i dettagli nei messaggi.", cls: "bg-emerald-500/10 border-emerald-500/30 text-emerald-900" },
+    rejected: { title: "Richiesta rifiutata", desc: "Il ristoratore ha rifiutato la candidatura.", cls: "bg-red-500/10 border-red-500/30 text-red-900" },
+    expired: { title: "Offerta scaduta", desc: "Non è stata accettata in tempo.", cls: "bg-muted border-border text-muted-foreground" },
+  };
+  const s = map[status] || map.pending;
+  return (
+    <div className={`rounded-xl border p-3 flex items-start gap-2 text-sm ${s.cls}`}>
+      <Clock className="h-4 w-4 mt-0.5" />
+      <div className="flex-1">
+        <div className="font-medium flex items-center gap-2">
+          {s.title}
+          <span className="inline-flex h-2 w-2 rounded-full bg-current animate-pulse" aria-hidden />
+        </div>
+        <div className="text-xs opacity-80">{s.desc}</div>
+        {updatedAt && <div className="text-[10px] opacity-60 mt-1">Aggiornato {updatedAt}</div>}
+      </div>
     </div>
   );
 }
