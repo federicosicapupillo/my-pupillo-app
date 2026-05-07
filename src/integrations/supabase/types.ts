@@ -55,6 +55,19 @@ export type Database = {
           duration_hours: number
           expires_at: string
           id: string
+          job_access_restrictions: string | null
+          job_additional_directions: string | null
+          job_address: string | null
+          job_city: string | null
+          job_contact_person_email: string | null
+          job_contact_person_name: string | null
+          job_contact_person_phone: string | null
+          job_country: string | null
+          job_latitude: number | null
+          job_location_notes: string | null
+          job_longitude: number | null
+          job_postal_code: string | null
+          job_province: string | null
           language_requirements: string[] | null
           languages: string[] | null
           license_requirement: string | null
@@ -84,6 +97,19 @@ export type Database = {
           duration_hours?: number
           expires_at?: string
           id?: string
+          job_access_restrictions?: string | null
+          job_additional_directions?: string | null
+          job_address?: string | null
+          job_city?: string | null
+          job_contact_person_email?: string | null
+          job_contact_person_name?: string | null
+          job_contact_person_phone?: string | null
+          job_country?: string | null
+          job_latitude?: number | null
+          job_location_notes?: string | null
+          job_longitude?: number | null
+          job_postal_code?: string | null
+          job_province?: string | null
           language_requirements?: string[] | null
           languages?: string[] | null
           license_requirement?: string | null
@@ -113,6 +139,19 @@ export type Database = {
           duration_hours?: number
           expires_at?: string
           id?: string
+          job_access_restrictions?: string | null
+          job_additional_directions?: string | null
+          job_address?: string | null
+          job_city?: string | null
+          job_contact_person_email?: string | null
+          job_contact_person_name?: string | null
+          job_contact_person_phone?: string | null
+          job_country?: string | null
+          job_latitude?: number | null
+          job_location_notes?: string | null
+          job_longitude?: number | null
+          job_postal_code?: string | null
+          job_province?: string | null
           language_requirements?: string[] | null
           languages?: string[] | null
           license_requirement?: string | null
@@ -289,7 +328,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_restrictions: string | null
           account_status: Database["public"]["Enums"]["account_status"] | null
+          additional_directions: string | null
           address: string | null
           age: number | null
           badge: Database["public"]["Enums"]["worker_badge"] | null
@@ -297,6 +338,12 @@ export type Database = {
           busy_days: string[] | null
           city: string | null
           completed_shifts: number | null
+          contact_person_email: string | null
+          contact_person_first_name: string | null
+          contact_person_last_name: string | null
+          contact_person_phone: string | null
+          contact_person_role: string | null
+          country: string | null
           created_at: string
           credits: number | null
           email: string | null
@@ -312,15 +359,20 @@ export type Database = {
           is_motorized: boolean | null
           languages: string[] | null
           last_active_at: string | null
+          latitude: number | null
+          location_notes: string | null
+          longitude: number | null
           neighborhood: string | null
           no_shows: number | null
           opening_hours: string | null
           phone: string | null
           plan: Database["public"]["Enums"]["user_plan"] | null
+          postal_code: string | null
           price_range: string | null
           primary_role: string | null
           professional_profile: string | null
           profile_completed: boolean | null
+          province: string | null
           rating_avg: number | null
           reliability_pct: number | null
           reviews_count: number | null
@@ -329,6 +381,8 @@ export type Database = {
           service_area_lng: number | null
           service_area_radius_m: number | null
           short_bio: string | null
+          street: string | null
+          street_number: string | null
           terms_accepted: boolean | null
           updated_at: string
           vat_company_name: string | null
@@ -340,7 +394,9 @@ export type Database = {
           whatsapp_connected: boolean | null
         }
         Insert: {
+          access_restrictions?: string | null
           account_status?: Database["public"]["Enums"]["account_status"] | null
+          additional_directions?: string | null
           address?: string | null
           age?: number | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
@@ -348,6 +404,12 @@ export type Database = {
           busy_days?: string[] | null
           city?: string | null
           completed_shifts?: number | null
+          contact_person_email?: string | null
+          contact_person_first_name?: string | null
+          contact_person_last_name?: string | null
+          contact_person_phone?: string | null
+          contact_person_role?: string | null
+          country?: string | null
           created_at?: string
           credits?: number | null
           email?: string | null
@@ -363,15 +425,20 @@ export type Database = {
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
+          latitude?: number | null
+          location_notes?: string | null
+          longitude?: number | null
           neighborhood?: string | null
           no_shows?: number | null
           opening_hours?: string | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"] | null
+          postal_code?: string | null
           price_range?: string | null
           primary_role?: string | null
           professional_profile?: string | null
           profile_completed?: boolean | null
+          province?: string | null
           rating_avg?: number | null
           reliability_pct?: number | null
           reviews_count?: number | null
@@ -380,6 +447,8 @@ export type Database = {
           service_area_lng?: number | null
           service_area_radius_m?: number | null
           short_bio?: string | null
+          street?: string | null
+          street_number?: string | null
           terms_accepted?: boolean | null
           updated_at?: string
           vat_company_name?: string | null
@@ -391,7 +460,9 @@ export type Database = {
           whatsapp_connected?: boolean | null
         }
         Update: {
+          access_restrictions?: string | null
           account_status?: Database["public"]["Enums"]["account_status"] | null
+          additional_directions?: string | null
           address?: string | null
           age?: number | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
@@ -399,6 +470,12 @@ export type Database = {
           busy_days?: string[] | null
           city?: string | null
           completed_shifts?: number | null
+          contact_person_email?: string | null
+          contact_person_first_name?: string | null
+          contact_person_last_name?: string | null
+          contact_person_phone?: string | null
+          contact_person_role?: string | null
+          country?: string | null
           created_at?: string
           credits?: number | null
           email?: string | null
@@ -414,15 +491,20 @@ export type Database = {
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
+          latitude?: number | null
+          location_notes?: string | null
+          longitude?: number | null
           neighborhood?: string | null
           no_shows?: number | null
           opening_hours?: string | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"] | null
+          postal_code?: string | null
           price_range?: string | null
           primary_role?: string | null
           professional_profile?: string | null
           profile_completed?: boolean | null
+          province?: string | null
           rating_avg?: number | null
           reliability_pct?: number | null
           reviews_count?: number | null
@@ -431,6 +513,8 @@ export type Database = {
           service_area_lng?: number | null
           service_area_radius_m?: number | null
           short_bio?: string | null
+          street?: string | null
+          street_number?: string | null
           terms_accepted?: boolean | null
           updated_at?: string
           vat_company_name?: string | null
