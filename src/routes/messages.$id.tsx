@@ -20,8 +20,51 @@ type App = {
   announcement_id: string; proposed_tariff: number | null;
 };
 type Ann = { id: string; tariff_amount: number; tariff_type: string };
+type LogEvent = {
+  id: string;
+  action: string;
+  created_at: string;
+  user_id: string | null;
+  metadata: { tariff?: number; note?: string; by_role?: string } | null;
+};
 
 const TERMINAL = ["accepted", "rejected", "expired"];
+
+type TimelineEvent = { at: string; label: string; note?: string; tone: "neutral" | "success" | "error" };
+
+const ACTION_LABELS: Record<string, { label: string; tone: TimelineEvent["tone"] }> = {
+  created: { label: "Richiesta inviata", tone: "neutral" },
+  interested: { label: "Lavoratore interessato", tone: "success" },
+  not_interested: { label: "Lavoratore non interessato", tone: "error" },
+  counter_offer: { label: "Controfferta inviata", tone: "neutral" },
+  accepted: { label: "Lavoratore assegnato", tone: "success" },
+  rejected: { label: "Candidatura rifiutata", tone: "error" },
+  expired: { label: "Offerta scaduta", tone: "error" },
+};
+
+function formatTs(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function buildEventList(app: App, events: LogEvent[]): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
+  if (events.length === 0 || !events.some(e => e.action === "created")) {
+    out.push({ at: (app as any).created_at ?? new Date().toISOString(), label: "Richiesta inviata", tone: "neutral" });
+  }
+  for (const e of events) {
+    const meta = ACTION_LABELS[e.action] ?? { label: e.action, tone: "neutral" as const };
+    const role = e.metadata?.by_role;
+    const tariff = e.metadata?.tariff;
+    const note = [
+      role && `da ${role === "restaurant" ? "ristoratore" : role === "worker" ? "lavoratore" : role}`,
+      tariff != null && `€${tariff}`,
+      e.metadata?.note,
+    ].filter(Boolean).join(" · ") || undefined;
+    out.push({ at: e.created_at, label: meta.label, tone: meta.tone, note });
+  }
+  return out.sort((a, b) => a.at.localeCompare(b.at));
+}
 
 type StepState = "done" | "current" | "todo" | "error";
 type Step = { key: string; label: string; icon: typeof Send; state: StepState };
@@ -59,6 +102,7 @@ function Thread() {
   const [other, setOther] = useState<{ name: string } | null>(null);
   const [counterOpen, setCounterOpen] = useState(false);
   const [counterValue, setCounterValue] = useState("");
+  const [events, setEvents] = useState<LogEvent[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,12 +120,18 @@ function Thread() {
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
       setMsgs((m as Msg[]) ?? []);
+      const { data: ev } = await supabase.from("activity_logs")
+        .select("*").eq("entity_type", "application").eq("entity_id", id)
+        .order("created_at");
+      setEvents((ev as LogEvent[]) ?? []);
     })();
     const ch = supabase.channel(`thread-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `application_id=eq.${id}` },
         (p) => setMsgs(prev => [...prev, p.new as Msg]))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `id=eq.${id}` },
         (p) => setApp(p.new as App))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs", filter: `entity_id=eq.${id}` },
+        (p) => setEvents(prev => [...prev, p.new as LogEvent]))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [id, user]);
@@ -109,6 +159,7 @@ function Thread() {
     if (next === "accepted" && app.announcement_id) {
       await supabase.from("announcements").update({ status: "assigned", assigned_worker_id: app.worker_id }).eq("id", app.announcement_id);
     }
+    await logEvent(next, { by_role: role ?? undefined });
     const labels: Record<string, string> = {
       interested: "Interesse confermato",
       not_interested: "Offerta rifiutata",
@@ -132,6 +183,7 @@ function Thread() {
       application_id: id, sender_id: user.id,
       body: `💶 Controfferta: €${v} ${ann?.tariff_type === "hourly" ? "/ora" : "a servizio"}`,
     });
+    await logEvent("counter_offer", { tariff: v, by_role: role ?? undefined });
     setApp({ ...app, status: "counter_offer", proposed_tariff: v });
     setCounterOpen(false);
     setCounterValue("");
@@ -142,6 +194,14 @@ function Thread() {
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
   const steps = buildTimeline(app?.status);
+
+  const logEvent = async (action: string, metadata: Record<string, unknown>) => {
+    if (!user) return;
+    await supabase.from("activity_logs").insert({
+      user_id: user.id, action, entity_type: "application", entity_id: id,
+      metadata: metadata as never,
+    });
+  };
 
   return (
     <AppShell>
@@ -185,6 +245,26 @@ function Thread() {
                 </li>
               ))}
             </ol>
+            {(() => {
+              const ts = buildEventList(app, events);
+              if (ts.length === 0) return null;
+              return (
+                <ul className="mt-5 border-t pt-4 space-y-3">
+                  {ts.map((e: TimelineEvent, i: number) => (
+                    <li key={i} className="flex gap-3 text-sm">
+                      <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${e.tone === "error" ? "bg-destructive" : e.tone === "success" ? "bg-primary" : "bg-muted-foreground"}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-medium">{e.label}</span>
+                          <span className="text-[11px] text-muted-foreground">{formatTs(e.at)}</span>
+                        </div>
+                        {e.note && <div className="text-xs text-muted-foreground">{e.note}</div>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()}
           </div>
         )}
 
