@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { Map as MapIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,7 +59,11 @@ function Admin() {
 
   return (
     <AppShell>
-      <PageHeader title="Pannello Admin" subtitle="Statistiche piattaforma" />
+      <PageHeader
+        title="Pannello Admin"
+        subtitle="Statistiche piattaforma"
+        action={<Link to="/mappa"><Button variant="outline" size="sm" className="gap-2"><MapIcon className="h-4 w-4" />Cerca ristoratori sulla mappa</Button></Link>}
+      />
       <div className="grid gap-4 md:grid-cols-4">
         {[
           { l: "Utenti totali", v: k.users },
