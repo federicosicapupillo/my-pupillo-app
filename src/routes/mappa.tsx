@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
 import { useAuth } from "@/lib/auth-context";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
@@ -305,19 +306,36 @@ function MapPage() {
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
   }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled]);
 
-  // Conteggio annunci senza alcuna coordinata disponibile (per warning UI)
-  const annsMissingCoords = useMemo(() => {
+  // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
+  type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
+  const annsQuality = useMemo<QualityRow[]>(() => {
     const restById = new Map(restaurants.map(r => [r.id, r]));
-    return anns.filter(a => {
+    return anns.map(a => {
       const rest = restById.get(a.restaurant_id);
-      const hasAny =
-        (a.job_latitude != null && a.job_longitude != null) ||
-        (a.location_lat != null && a.location_lng != null) ||
-        (rest?.latitude != null && rest?.longitude != null) ||
-        (rest?.service_area_lat != null && rest?.service_area_lng != null);
-      return !hasAny;
+      const checks: Array<{ key: string; ok: boolean }> = [
+        { key: "job_lat/lng", ok: a.job_latitude != null && a.job_longitude != null },
+        { key: "location_lat/lng", ok: a.location_lat != null && a.location_lng != null },
+        { key: "profilo ristoratore", ok: rest?.latitude != null && rest?.longitude != null },
+        { key: "service_area_*", ok: rest?.service_area_lat != null && rest?.service_area_lng != null },
+      ];
+      return {
+        id: a.id,
+        title: a.professional_profile || "Annuncio",
+        restaurant_id: a.restaurant_id,
+        missing: checks.filter(c => !c.ok).map(c => c.key),
+        available: checks.filter(c => c.ok).map(c => c.key),
+      };
     });
   }, [anns, restaurants]);
+
+  const annsMissingCoords = useMemo(
+    () => annsQuality.filter(q => q.available.length === 0),
+    [annsQuality]
+  );
+  const annsPartialCoords = useMemo(
+    () => annsQuality.filter(q => q.missing.length > 0 && q.available.length > 0),
+    [annsQuality]
+  );
 
   const center: [number, number] = searchCenter
     ? [searchCenter.lat, searchCenter.lng]
