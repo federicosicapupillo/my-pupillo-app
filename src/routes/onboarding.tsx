@@ -48,22 +48,18 @@ function Onboarding() {
     if (!user) return;
     if (!form.terms_accepted) { toast.error("Devi accettare le condizioni d'uso"); return; }
     setBusy(true);
-    const update: Record<string, unknown> = {
+    const update = role === "restaurant" ? {
       full_name: form.full_name, phone: form.phone,
       terms_accepted: true, profile_completed: true,
+      business_name: form.business_name, vat_number: form.vat_number,
+      venue_type: form.venue_type, address: form.address, price_range: form.price_range,
+    } : {
+      full_name: form.full_name, phone: form.phone,
+      terms_accepted: true, profile_completed: true,
+      age: form.age ? parseInt(form.age) : null,
+      professional_profile: form.professional_profile,
+      languages: form.languages.split(",").map((s) => s.trim()).filter(Boolean),
     };
-    if (role === "restaurant") {
-      Object.assign(update, {
-        business_name: form.business_name, vat_number: form.vat_number,
-        venue_type: form.venue_type, address: form.address, price_range: form.price_range,
-      });
-    } else {
-      Object.assign(update, {
-        age: form.age ? parseInt(form.age) : null,
-        professional_profile: form.professional_profile,
-        languages: form.languages.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-    }
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
