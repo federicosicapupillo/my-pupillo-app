@@ -162,7 +162,8 @@ function Thread() {
   const logEvent = async (action: string, metadata: Record<string, unknown>) => {
     if (!user) return;
     await supabase.from("activity_logs").insert({
-      user_id: user.id, action, entity_type: "application", entity_id: id, metadata,
+      user_id: user.id, action, entity_type: "application", entity_id: id,
+      metadata: metadata as never,
     });
   };
 
