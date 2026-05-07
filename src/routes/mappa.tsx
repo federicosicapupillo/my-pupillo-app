@@ -655,3 +655,13 @@ function MapPage() {
 function Dot({ color }: { color: string }) {
   return <span style={{ background: color, width: 10, height: 10, borderRadius: 9999, display: "inline-block" }} />;
 }
+
+function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="rounded-md border bg-card px-2 py-1.5 flex items-center gap-2">
+      <span style={{ background: color, width: 8, height: 8, borderRadius: 9999, display: "inline-block", flexShrink: 0 }} />
+      <span className="flex-1 truncate text-[11px] text-muted-foreground">{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
