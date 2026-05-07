@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useRef, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import pupilloLogo from "@/assets/pupillo-logo.png";
@@ -55,6 +55,29 @@ export function AppShell({ children }: { children: ReactNode }) {
       ? `Sei in ${homeLabel}`
       : null;
 
+  // Focus management per il menu mobile (frecce ←/→/Home/End/Esc)
+  const mobileNavRef = useRef<HTMLElement | null>(null);
+  const handleMobileNavKey = (e: KeyboardEvent<HTMLElement>) => {
+    const root = mobileNavRef.current;
+    if (!root) return;
+    const links = Array.from(root.querySelectorAll<HTMLAnchorElement>("a[href]"));
+    if (links.length === 0) return;
+    const active = document.activeElement as HTMLElement | null;
+    const idx = active ? links.indexOf(active as HTMLAnchorElement) : -1;
+    const focus = (i: number) => {
+      const el = links[(i + links.length) % links.length];
+      el.focus();
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+    switch (e.key) {
+      case "ArrowRight": e.preventDefault(); focus(idx === -1 ? 0 : idx + 1); break;
+      case "ArrowLeft": e.preventDefault(); focus(idx === -1 ? 0 : idx - 1); break;
+      case "Home": e.preventDefault(); focus(0); break;
+      case "End": e.preventDefault(); focus(links.length - 1); break;
+      case "Escape": if (idx !== -1) { e.preventDefault(); (active as HTMLElement).blur(); } break;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <PaymentTestModeBanner />
@@ -97,15 +120,29 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button variant="ghost" size="icon" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
           </div>
         </div>
-        <nav className="md:hidden border-t overflow-x-auto">
-          <div className="flex gap-1 px-2 py-2">
-            {items.map((i) => (
-              <Link key={i.to} to={i.to as never}>
-                <Button variant={loc.pathname.startsWith(i.to) ? "secondary" : "ghost"} size="sm" className="gap-2 whitespace-nowrap">
-                  <i.icon className="h-4 w-4" />{i.label}
-                </Button>
-              </Link>
-            ))}
+        <nav
+          ref={mobileNavRef}
+          className="md:hidden border-t overflow-x-auto"
+          aria-label="Menu di navigazione"
+          onKeyDown={handleMobileNavKey}
+        >
+          <div role="menubar" aria-orientation="horizontal" className="flex gap-1 px-2 py-2">
+            {items.map((i) => {
+              const isActive = loc.pathname.startsWith(i.to);
+              return (
+                <Link
+                  key={i.to}
+                  to={i.to as never}
+                  role="menuitem"
+                  aria-current={isActive ? "page" : undefined}
+                  className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="gap-2 whitespace-nowrap">
+                    <i.icon className="h-4 w-4" />{i.label}
+                  </Button>
+                </Link>
+              );
+            })}
           </div>
         </nav>
       </header>
