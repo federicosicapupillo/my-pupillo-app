@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import pupilloLogo from "@/assets/pupillo-logo.png";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
 import { lovable } from "@/integrations/lovable";
