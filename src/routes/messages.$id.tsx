@@ -209,6 +209,26 @@ function Thread() {
                 </li>
               ))}
             </ol>
+            {(() => {
+              const ts = buildEventList(app, events);
+              if (ts.length === 0) return null;
+              return (
+                <ul className="mt-5 border-t pt-4 space-y-3">
+                  {ts.map((e, i) => (
+                    <li key={i} className="flex gap-3 text-sm">
+                      <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${e.tone === "error" ? "bg-destructive" : e.tone === "success" ? "bg-primary" : "bg-muted-foreground"}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-medium">{e.label}</span>
+                          <span className="text-[11px] text-muted-foreground">{formatTs(e.at)}</span>
+                        </div>
+                        {e.note && <div className="text-xs text-muted-foreground">{e.note}</div>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()}
           </div>
         )}
 
