@@ -6,13 +6,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar, MapPin, Euro, Clock } from "lucide-react";
+import { AnnouncementMap } from "@/components/AnnouncementMap";
 
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
 });
 
-type Ann = { id: string; service_date: string; service_time: string; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; status: string; expires_at: string };
+type Ann = { id: string; service_date: string; service_time: string; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string };
 
 function AnnouncementsPage() {
   const { user, role } = useAuth();
@@ -56,6 +57,9 @@ function AnnouncementsPage() {
                 <div className="flex items-center gap-2"><Euro className="h-4 w-4" />€{a.tariff_amount} ({a.tariff_type === 'hourly' ? "orario" : "a servizio"})</div>
                 <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.expires_at).toLocaleDateString("it-IT")}</div>
               </div>
+              {a.location_lat != null && a.location_lng != null && (
+                <div className="mt-3"><AnnouncementMap lat={a.location_lat} lng={a.location_lng} address={a.location_address} height={140} /></div>
+              )}
             </div>
           ))}
         </div>
