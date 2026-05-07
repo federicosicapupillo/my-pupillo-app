@@ -26,6 +26,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
 import { Route as MessagesIdRouteImport } from './routes/messages.$id'
 import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -116,6 +117,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RestaurantsIdRoute = RestaurantsIdRouteImport.update({
+  id: '/restaurants/$id',
+  path: '/restaurants/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MessagesIdRoute = MessagesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
+  '/restaurants/$id': typeof RestaurantsIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
+  '/restaurants/$id': typeof RestaurantsIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
+  '/restaurants/$id': typeof RestaurantsIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/workers'
     | '/announcements/new'
     | '/messages/$id'
+    | '/restaurants/$id'
     | '/api/public/hooks/expire-stale'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/workers'
     | '/announcements/new'
     | '/messages/$id'
+    | '/restaurants/$id'
     | '/api/public/hooks/expire-stale'
     | '/api/public/payments/webhook'
   id:
@@ -277,6 +288,7 @@ export interface FileRouteTypes {
     | '/workers'
     | '/announcements/new'
     | '/messages/$id'
+    | '/restaurants/$id'
     | '/api/public/hooks/expire-stale'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -299,6 +311,7 @@ export interface RootRouteChildren {
   ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
   WorkersRoute: typeof WorkersRoute
+  RestaurantsIdRoute: typeof RestaurantsIdRoute
   ApiPublicHooksExpireStaleRoute: typeof ApiPublicHooksExpireStaleRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -424,6 +437,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/restaurants/$id': {
+      id: '/restaurants/$id'
+      path: '/restaurants/$id'
+      fullPath: '/restaurants/$id'
+      preLoaderRoute: typeof RestaurantsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/messages/$id': {
       id: '/messages/$id'
       path: '/$id'
@@ -497,9 +517,20 @@ const rootRouteChildren: RootRouteChildren = {
   ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
   WorkersRoute: WorkersRoute,
+  RestaurantsIdRoute: RestaurantsIdRoute,
   ApiPublicHooksExpireStaleRoute: ApiPublicHooksExpireStaleRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
