@@ -18,6 +18,11 @@ import { consumeCredits } from "@/lib/credits";
 import { CREDIT_COSTS } from "@/lib/pricing";
 import { Link } from "@tanstack/react-router";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
+  BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
+} from "@/lib/announcement-requirements";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -38,7 +43,19 @@ function NewAnn() {
     speed: "normal", tariff_type: "hourly", tariff_amount: "12",
     location_address: profile?.address ?? "", professional_profile: "",
     languages: "", notes: "",
+    license_requirement: "nessuna",
+    tattoos_allowed: "indifferente",
+    piercings_allowed: "indifferente",
+    beard_allowed: "solo_curata",
+    dress_code_notes: "",
   });
+  const [languageReqs, setLanguageReqs] = useState<string[]>([]);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [dressItems, setDressItems] = useState<string[]>([]);
+
+  const toggleIn = (arr: string[], v: string, setter: (v: string[]) => void) => {
+    setter(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
+  };
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -58,7 +75,15 @@ function NewAnn() {
         professional_profile: data.professional_profile ?? "",
         languages: (data.languages ?? []).join(", "),
         notes: (data as any).notes ?? "",
+        license_requirement: (data as any).license_requirement ?? prev.license_requirement,
+        tattoos_allowed: (data as any).tattoos_allowed ?? prev.tattoos_allowed,
+        piercings_allowed: (data as any).piercings_allowed ?? prev.piercings_allowed,
+        beard_allowed: (data as any).beard_allowed ?? prev.beard_allowed,
+        dress_code_notes: (data as any).dress_code_notes ?? "",
       }));
+      setLanguageReqs((data as any).language_requirements ?? []);
+      setSkills((data as any).required_skills ?? []);
+      setDressItems((data as any).dress_code_items ?? []);
       if (data.location_lat != null && data.location_lng != null) {
         setCoords({ lat: data.location_lat, lng: data.location_lng });
         setGeoState({ status: "ok", attempt: 0 });
@@ -139,6 +164,14 @@ function NewAnn() {
       languages: f.languages.split(",").map(s => s.trim()).filter(Boolean),
       notes: f.notes || null,
       status: asDraft ? "draft" : "active",
+      license_requirement: f.license_requirement,
+      language_requirements: languageReqs,
+      tattoos_allowed: f.tattoos_allowed,
+      piercings_allowed: f.piercings_allowed,
+      beard_allowed: f.beard_allowed,
+      required_skills: skills,
+      dress_code_items: dressItems,
+      dress_code_notes: f.dress_code_notes || null,
     } as any);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
