@@ -235,7 +235,16 @@ function NewAnn() {
     } as any);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(asDraft ? "Bozza salvata" : "Annuncio pubblicato!");
+    if (asDraft) {
+      toast.success("Bozza salvata", {
+        description: "La trovi nella sezione \"Bozze\" dei tuoi annunci. Pubblicala quando vuoi renderla visibile.",
+      });
+    } else {
+      toast.success("Annuncio pubblicato · stato: Attivo", {
+        description: "Visibile subito nella tua dashboard, nell'elenco annunci, sulla mappa e ai lavoratori in zona.",
+        duration: 6000,
+      });
+    }
     nav({ to: "/announcements" });
   };
   const submit = (e: React.FormEvent) => {
