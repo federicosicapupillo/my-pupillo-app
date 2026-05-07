@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
-import { KeyRound, Trash2, FileText } from "lucide-react";
+import { KeyRound, Trash2, FileText, Coins, Star } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -82,6 +82,38 @@ function Profile() {
       <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6 space-y-4">
         <h2 className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4" />Documenti</h2>
         <Link to="/terms" className="text-sm text-primary underline">Leggi le condizioni d'uso e la privacy policy</Link>
+      </div>
+
+      <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
+        <h2 className="font-semibold flex items-center gap-2"><Coins className="h-4 w-4" />Piano e crediti</h2>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border p-3">
+            <div className="text-xs text-muted-foreground">Piano attuale</div>
+            <div className="mt-1 text-lg font-semibold capitalize">{profile?.plan ?? "free"}</div>
+          </div>
+          <div className="rounded-xl border p-3">
+            <div className="text-xs text-muted-foreground">Crediti disponibili</div>
+            <div className="mt-1 text-lg font-semibold">{profile?.credits ?? 0}</div>
+          </div>
+        </div>
+        {role === "restaurant" && (
+          <p className="text-xs text-muted-foreground mt-3">I crediti vengono usati per pubblicare annunci urgenti e contattare lavoratori.</p>
+        )}
+        {role === "worker" && (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border p-3 flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-500" />
+              <div>
+                <div className="text-xs text-muted-foreground">Valutazione</div>
+                <div className="text-sm font-semibold">{Number(profile?.rating_avg ?? 0).toFixed(1)} · {profile?.reviews_count ?? 0} recensioni</div>
+              </div>
+            </div>
+            <div className="rounded-xl border p-3">
+              <div className="text-xs text-muted-foreground">Affidabilità</div>
+              <div className="text-sm font-semibold">{profile?.reliability_pct ?? 100}%</div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 max-w-2xl rounded-2xl border border-destructive/30 bg-destructive/5 p-6">

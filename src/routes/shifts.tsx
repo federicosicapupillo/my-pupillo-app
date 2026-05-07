@@ -7,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi } from "lucide-react";
+import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -41,6 +42,10 @@ function ShiftsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
   const [live, setLive] = useState(false);
+  const [reviewed, setReviewed] = useState<Set<string>>(new Set());
+  const [reviewOpen, setReviewOpen] = useState<string | null>(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
 
   const load = async () => {
     if (!user || !role) return;
@@ -59,6 +64,11 @@ function ShiftsPage() {
       const map: Record<string, Profile> = {};
       (ps ?? []).forEach((p: any) => { map[p.id] = p; });
       setProfiles(map);
+    }
+    const shiftIds = list.map(s => s.id);
+    if (shiftIds.length && user) {
+      const { data: rs } = await supabase.from("reviews").select("shift_id").eq("author_id", user.id).in("shift_id", shiftIds);
+      setReviewed(new Set((rs ?? []).map((r: any) => r.shift_id)));
     }
     setLoading(false);
   };
@@ -90,6 +100,20 @@ function ShiftsPage() {
     const { error } = await supabase.from("shifts").update({ status: newStatus }).eq("id", s.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Stato turno aggiornato");
+  };
+
+  const submitReview = async (s: Shift) => {
+    if (!user) return;
+    const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
+    const { error } = await supabase.from("reviews").insert({
+      author_id: user.id, target_id: targetId, shift_id: s.id, rating, comment: comment.trim() || null,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Recensione inviata");
+    setReviewed(prev => new Set(prev).add(s.id));
+    setReviewOpen(null);
+    setRating(5);
+    setComment("");
   };
 
   const filtered = useMemo(() => {
@@ -183,6 +207,33 @@ function ShiftsPage() {
                           <XCircle className="h-4 w-4" /> Annulla
                         </Button>
                       </>
+                    )}
+                  </div>
+                )}
+
+                {s.status === "completed" && (
+                  <div className="mt-4 border-t pt-3">
+                    {reviewed.has(s.id) ? (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Star className="h-3 w-3" /> Recensione inviata</p>
+                    ) : reviewOpen === s.id ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1">
+                          {[1,2,3,4,5].map(n => (
+                            <button key={n} type="button" onClick={() => setRating(n)} className="p-1">
+                              <Star className={`h-5 w-5 ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                            </button>
+                          ))}
+                        </div>
+                        <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => submitReview(s)}>Invia recensione</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setReviewOpen(null)}>Annulla</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" className="gap-1" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); }}>
+                        <Star className="h-4 w-4" /> Lascia recensione
+                      </Button>
                     )}
                   </div>
                 )}

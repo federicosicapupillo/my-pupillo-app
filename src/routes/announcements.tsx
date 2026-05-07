@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users } from "lucide-react";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 
 export const Route = createFileRoute("/announcements")({
@@ -28,16 +28,28 @@ function AnnouncementsPage() {
   const { user, role } = useAuth();
   const [items, setItems] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "expired" | "cancelled">("all");
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       const base = supabase.from("announcements").select("*").order("created_at", { ascending: false });
       const { data } = role === "restaurant" ? await base.eq("restaurant_id", user.id) : await base.eq("status", "active");
-      setItems((data as Ann[]) ?? []);
+      const list = (data as Ann[]) ?? [];
+      setItems(list);
+      if (role === "restaurant" && list.length) {
+        const ids = list.map(a => a.id);
+        const { data: apps } = await supabase.from("applications").select("announcement_id").in("announcement_id", ids);
+        const map: Record<string, number> = {};
+        (apps ?? []).forEach((a: any) => { map[a.announcement_id] = (map[a.announcement_id] ?? 0) + 1; });
+        setCounts(map);
+      }
       setLoading(false);
     })();
   }, [user, role]);
+
+  const visible = items.filter(a => statusFilter === "all" ? true : a.status === statusFilter);
 
   return (
     <AppShell>
@@ -45,14 +57,23 @@ function AnnouncementsPage() {
         title={role === "restaurant" ? "I miei annunci" : "Annunci disponibili"}
         action={role === "restaurant" && (<Link to="/announcements/new"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>)}
       />
-      {loading ? <p className="text-muted-foreground">Caricamento…</p> : items.length === 0 ? (
+      {role === "restaurant" && (
+        <div className="flex gap-2 mb-4 overflow-x-auto">
+          {(["all","draft","active","assigned","expired","cancelled"] as const).map(f => (
+            <Button key={f} size="sm" variant={statusFilter === f ? "default" : "outline"} onClick={() => setStatusFilter(f)}>
+              {f === "all" ? "Tutti" : f === "draft" ? "Bozze" : f === "active" ? "Pubblicati" : f === "assigned" ? "Assegnati" : f === "expired" ? "Scaduti" : "Annullati"}
+            </Button>
+          ))}
+        </div>
+      )}
+      {loading ? <p className="text-muted-foreground">Caricamento…</p> : visible.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center">
           <p className="text-muted-foreground">Nessun annuncio.</p>
           {role === "restaurant" && <Link to="/announcements/new"><Button className="mt-4">Crea il primo</Button></Link>}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {items.map((a) => (
+          {visible.map((a) => (
             <div key={a.id} className="rounded-2xl border bg-card p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -71,6 +92,9 @@ function AnnouncementsPage() {
                 <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
                 <div className="flex items-center gap-2"><Euro className="h-4 w-4" />€{a.tariff_amount} ({a.tariff_type === 'hourly' ? "orario" : "a servizio"})</div>
                 <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.expires_at).toLocaleDateString("it-IT")}</div>
+                {role === "restaurant" && (
+                  <div className="flex items-center gap-2"><Users className="h-4 w-4" />{counts[a.id] ?? 0} candidatur{(counts[a.id] ?? 0) === 1 ? "a" : "e"}</div>
+                )}
               </div>
               {a.location_lat != null && a.location_lng != null && (
                 <div className="mt-3"><AnnouncementMap lat={a.location_lat} lng={a.location_lng} address={a.location_address} height={140} /></div>

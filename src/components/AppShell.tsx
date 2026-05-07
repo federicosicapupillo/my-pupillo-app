@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass } from "lucide-react";
 import { ReactNode } from "react";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { profile, role, signOut, user } = useAuth();
@@ -41,6 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             <span className="hidden sm:block text-xs text-muted-foreground">{profile?.full_name || user?.email}</span>
             <span className="text-xs rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
+            {user && <NotificationBell />}
             <Button variant="ghost" size="icon" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
           </div>
         </div>
