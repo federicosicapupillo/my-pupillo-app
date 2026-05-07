@@ -11,6 +11,7 @@ import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle } from "l
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
+import { useAuth } from "@/lib/auth-context";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
@@ -85,6 +86,9 @@ function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
 }
 
 function MapPage() {
+  const { role } = useAuth();
+  const isDev = typeof import.meta !== "undefined" && (import.meta as any).env?.DEV === true;
+  const debugEnabled = role === "admin" || isDev;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
@@ -205,8 +209,10 @@ function MapPage() {
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
-  const points: MapPoint[] = useMemo(() => {
+  const { points, coordSourceStats, coordSourceById } = useMemo(() => {
     const pts: MapPoint[] = [];
+    const stats: Record<string, number> = { job: 0, location: 0, profile: 0, service_area: 0, missing: 0 };
+    const byId: Record<string, "job" | "location" | "profile" | "service_area"> = {};
     if (showR) {
       filteredRestaurants.forEach(r => {
         if (r.service_area_lat == null || r.service_area_lng == null) return;
@@ -260,8 +266,10 @@ function MapPage() {
           [rest?.service_area_lat, rest?.service_area_lng, "service_area"],
         ];
         const picked = candidates.find(([la, ln]) => la != null && ln != null);
-        if (!picked) return; // nessuna coordinata disponibile → conteggiato a parte
-        const [lat, lng] = picked as [number, number, string];
+        if (!picked) { stats.missing++; return; }
+        const [lat, lng, source] = picked as [number, number, "job" | "location" | "profile" | "service_area"];
+        stats[source]++;
+        byId[a.id] = source;
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
         if (query || city !== "any" || district || venue !== "any" || planF !== "any" || statusF !== "any" || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
@@ -289,12 +297,13 @@ function MapPage() {
             contactPhone,
             contactEmail,
             contactRole,
+            coordSource: debugEnabled ? source : undefined,
           } as any,
         });
       });
     }
-    return pts;
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me]);
+    return { points: pts, coordSourceStats: stats, coordSourceById: byId };
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled]);
 
   // Conteggio annunci senza alcuna coordinata disponibile (per warning UI)
   const annsMissingCoords = useMemo(() => {
@@ -375,6 +384,36 @@ function MapPage() {
             <strong>{annsMissingCoords.length}</strong> {annsMissingCoords.length === 1 ? "annuncio non è" : "annunci non sono"} visibili sulla mappa: nessuna coordinata disponibile (né <code>job_latitude/longitude</code>, né indirizzo dell'annuncio, né del ristoratore).
           </div>
         </div>
+      )}
+
+      {debugEnabled && showA && (
+        <details className="rounded-2xl border border-dashed border-violet-400 bg-violet-50 dark:bg-violet-950/20 p-3 mb-4 text-xs" open>
+          <summary className="cursor-pointer font-mono font-semibold text-violet-900 dark:text-violet-200">
+            🛠 DEBUG sorgente coordinate annunci ({role === "admin" ? "admin" : "dev"})
+          </summary>
+          <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2 font-mono">
+            <Stat label="job_lat/lng" value={coordSourceStats.job} color="#16a34a" />
+            <Stat label="location_lat/lng" value={coordSourceStats.location} color="#2563eb" />
+            <Stat label="profilo ristoratore" value={coordSourceStats.profile} color="#d97706" />
+            <Stat label="service_area_*" value={coordSourceStats.service_area} color="#9333ea" />
+            <Stat label="mancanti" value={coordSourceStats.missing} color="#dc2626" />
+          </div>
+          <p className="mt-2 text-violet-800 dark:text-violet-300">
+            Priorità fallback: <code>job_latitude/job_longitude</code> → <code>location_lat/lng</code> → profilo ristoratore (<code>latitude/longitude</code>) → <code>service_area_lat/lng</code>. La sorgente per ogni annuncio è anche visibile nel popup del marker.
+          </p>
+          {coordSourceStats.missing > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-violet-900 dark:text-violet-200">Vedi {coordSourceStats.missing} annunci senza coordinate</summary>
+              <ul className="mt-1 max-h-40 overflow-y-auto list-disc pl-5">
+                {annsMissingCoords.slice(0, 50).map(a => (
+                  <li key={a.id}>
+                    <code>{a.id.slice(0, 8)}</code> · {a.professional_profile || "—"} · rest {a.restaurant_id.slice(0, 8)}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </details>
       )}
 
       {/* FILTERS */}
@@ -615,4 +654,14 @@ function MapPage() {
 
 function Dot({ color }: { color: string }) {
   return <span style={{ background: color, width: 10, height: 10, borderRadius: 9999, display: "inline-block" }} />;
+}
+
+function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="rounded-md border bg-card px-2 py-1.5 flex items-center gap-2">
+      <span style={{ background: color, width: 8, height: 8, borderRadius: 9999, display: "inline-block", flexShrink: 0 }} />
+      <span className="flex-1 truncate text-[11px] text-muted-foreground">{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
 }
