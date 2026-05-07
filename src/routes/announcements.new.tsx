@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
 import { useEffect, useRef } from "react";
-import { AlertCircle, CheckCircle2, Loader2, MapPin, RefreshCw, Search } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-react";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
