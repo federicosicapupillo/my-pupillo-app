@@ -1,0 +1,281 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { RequireAuth } from "@/components/RequireAuth";
+import { AppShell, PageHeader } from "@/components/AppShell";
+import { useAuth } from "@/lib/auth-context";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import {
+  ArrowLeft, Calendar, MapPin, Euro, Clock, Users, Star, Shield,
+  CheckCircle2, XCircle, MessageSquare, Award,
+} from "lucide-react";
+
+export const Route = createFileRoute("/announcements/$id")({
+  head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
+  component: () => <RequireAuth><AnnouncementDetail /></RequireAuth>,
+});
+
+type Ann = {
+  id: string; restaurant_id: string; service_date: string; service_time: string;
+  duration_hours: number; speed: string; tariff_type: string; tariff_amount: number;
+  location_address: string; status: string; expires_at: string;
+  professional_profile: string | null; languages: string[] | null; notes: string | null;
+  assigned_worker_id: string | null;
+};
+type App = {
+  id: string; status: string; worker_id: string; proposed_tariff: number | null;
+  created_at: string;
+};
+type WorkerProfile = {
+  id: string; full_name: string | null; age: number | null; city: string | null;
+  professional_profile: string | null; languages: string[] | null;
+  rating_avg: number | null; reviews_count: number | null; badge: string | null;
+  reliability_pct: number | null; experience_years: number | null;
+  completed_shifts: number | null;
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: "Bozza", active: "Pubblicato", assigned: "Assegnato",
+  completed: "Completato", cancelled: "Annullato", expired: "Scaduto",
+};
+const STATUS_CLS: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  active: "bg-emerald-500/15 text-emerald-700",
+  assigned: "bg-blue-500/15 text-blue-700",
+  completed: "bg-violet-500/15 text-violet-700",
+  cancelled: "bg-red-500/15 text-red-700",
+  expired: "bg-amber-500/15 text-amber-700",
+};
+
+function AnnouncementDetail() {
+  const { id } = Route.useParams();
+  const { user, role } = useAuth();
+  const nav = useNavigate();
+  const [ann, setAnn] = useState<Ann | null>(null);
+  const [apps, setApps] = useState<App[]>([]);
+  const [workers, setWorkers] = useState<Record<string, WorkerProfile>>({});
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = async () => {
+    const { data: a } = await supabase.from("announcements").select("*").eq("id", id).maybeSingle();
+    setAnn(a as Ann | null);
+    if (!a) { setLoading(false); return; }
+    const { data: ax } = await supabase.from("applications")
+      .select("id,status,worker_id,proposed_tariff,created_at")
+      .eq("announcement_id", id)
+      .order("created_at", { ascending: false });
+    const list = (ax as App[]) ?? [];
+    setApps(list);
+    const ids = Array.from(new Set(list.map(x => x.worker_id)));
+    if (ids.length) {
+      const { data: ps } = await supabase.from("profiles")
+        .select("id,full_name,age,city,professional_profile,languages,rating_avg,reviews_count,badge,reliability_pct,experience_years,completed_shifts")
+        .in("id", ids);
+      const map: Record<string, WorkerProfile> = {};
+      (ps ?? []).forEach((p: any) => { map[p.id] = p; });
+      setWorkers(map);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+
+  // Realtime applications changes
+  useEffect(() => {
+    const ch = supabase.channel(`ann-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications", filter: `announcement_id=eq.${id}` },
+        () => { load(); })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "announcements", filter: `id=eq.${id}` },
+        (p) => setAnn(prev => prev ? { ...prev, ...(p.new as Ann) } : (p.new as Ann)))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line
+  }, [id]);
+
+  const isOwner = !!(ann && user && ann.restaurant_id === user.id);
+
+  const accept = async (app: App) => {
+    setBusyId(app.id);
+    const { error } = await supabase.from("applications").update({ status: "accepted" }).eq("id", app.id);
+    setBusyId(null);
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("announcements")
+      .update({ status: "assigned", assigned_worker_id: app.worker_id })
+      .eq("id", id);
+    toast.success("Lavoratore assegnato!");
+  };
+  const reject = async (app: App) => {
+    setBusyId(app.id);
+    const { error } = await supabase.from("applications").update({ status: "rejected" }).eq("id", app.id);
+    setBusyId(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Candidatura rifiutata");
+  };
+
+  const publishDraft = async () => {
+    if (!ann) return;
+    const { error } = await supabase.from("announcements").update({ status: "active" }).eq("id", ann.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Annuncio pubblicato");
+  };
+
+  const cancelAnnouncement = async () => {
+    if (!ann) return;
+    if (!confirm("Vuoi davvero annullare l'annuncio? Le candidature aperte verranno chiuse.")) return;
+    const { error } = await supabase.from("announcements").update({ status: "cancelled" }).eq("id", ann.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Annuncio annullato");
+  };
+
+  const counts = useMemo(() => ({
+    total: apps.length,
+    pending: apps.filter(a => ["pending","interested","counter_offer"].includes(a.status)).length,
+    accepted: apps.filter(a => a.status === "accepted").length,
+    rejected: apps.filter(a => ["rejected","not_interested","expired"].includes(a.status)).length,
+  }), [apps]);
+
+  if (loading) return <AppShell><p className="text-muted-foreground">Caricamento…</p></AppShell>;
+  if (!ann) return <AppShell><p className="text-muted-foreground">Annuncio non trovato.</p></AppShell>;
+
+  return (
+    <AppShell>
+      <div className="mb-4">
+        <Link to="/announcements"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Torna agli annunci</Button></Link>
+      </div>
+
+      <PageHeader
+        title={`Servizio ${ann.speed} · ${ann.duration_hours}h`}
+        subtitle={ann.professional_profile ? `Ruolo: ${ann.professional_profile}` : undefined}
+        action={
+          <span className={`text-xs rounded-full px-3 py-1 ${STATUS_CLS[ann.status] ?? "bg-muted text-muted-foreground"}`}>
+            {STATUS_LABEL[ann.status] ?? ann.status}
+          </span>
+        }
+      />
+
+      <div className="grid gap-4 md:grid-cols-[1fr_320px] mb-6">
+        <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
+          <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" />{new Date(ann.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} · {ann.service_time?.slice(0,5)}</div>
+          <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{ann.location_address}</div>
+          <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />€{ann.tariff_amount} ({ann.tariff_type === "hourly" ? "/ora" : "a servizio"})</div>
+          <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.expires_at).toLocaleDateString("it-IT")}</div>
+          {ann.languages && ann.languages.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {ann.languages.map(l => <Badge key={l} variant="secondary">{l}</Badge>)}
+            </div>
+          )}
+          {ann.notes && (
+            <p className="pt-2 text-muted-foreground border-t mt-2 whitespace-pre-wrap">{ann.notes}</p>
+          )}
+        </div>
+
+        {isOwner && (
+          <div className="rounded-2xl border bg-card p-5 space-y-3">
+            <div className="text-sm font-medium">Azioni</div>
+            {ann.status === "draft" && (
+              <Button className="w-full" onClick={publishDraft}>Pubblica annuncio</Button>
+            )}
+            {(ann.status === "active" || ann.status === "assigned") && (
+              <Button variant="outline" className="w-full text-destructive hover:text-destructive" onClick={cancelAnnouncement}>
+                Annulla annuncio
+              </Button>
+            )}
+            <Link to="/shifts"><Button variant="ghost" className="w-full">Vai ai turni</Button></Link>
+            <div className="border-t pt-3 grid grid-cols-3 gap-2 text-center text-xs">
+              <div><div className="text-lg font-semibold">{counts.total}</div><div className="text-muted-foreground">Tot</div></div>
+              <div><div className="text-lg font-semibold text-emerald-600">{counts.pending}</div><div className="text-muted-foreground">Aperte</div></div>
+              <div><div className="text-lg font-semibold text-blue-600">{counts.accepted}</div><div className="text-muted-foreground">Acc.</div></div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {isOwner && (
+        <>
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Users className="h-5 w-5" /> Candidati ({counts.total})
+          </h2>
+          {apps.length === 0 ? (
+            <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
+              Nessuna candidatura ricevuta. Condividi l'annuncio o invita lavoratori dal motore di ricerca.
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {apps.map(a => {
+                const w = workers[a.worker_id];
+                const tariff = a.proposed_tariff ?? ann.tariff_amount;
+                const isAccepted = a.status === "accepted";
+                const isRejected = ["rejected","not_interested","expired"].includes(a.status);
+                const canAct = ann.status === "active" && !isAccepted && !isRejected;
+                return (
+                  <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate flex items-center gap-2">
+                          {w?.full_name ?? "Lavoratore"}
+                          {w?.badge === "pro" && <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/20"><Award className="h-3 w-3 mr-0.5" />Pro</Badge>}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {[w?.professional_profile, w?.city, w?.age && `${w.age} anni`].filter(Boolean).join(" · ") || "—"}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="capitalize">{a.status.replace("_", " ")}</Badge>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                      <Metric icon={Star} label="Rating" value={w?.rating_avg ? `${Number(w.rating_avg).toFixed(1)} (${w.reviews_count ?? 0})` : "—"} />
+                      <Metric icon={Shield} label="Affidabilità" value={w?.reliability_pct != null ? `${w.reliability_pct}%` : "—"} />
+                      <Metric icon={Award} label="Esperienza" value={w?.experience_years != null ? `${w.experience_years}a` : (w?.completed_shifts ? `${w.completed_shifts} turni` : "—")} />
+                    </div>
+
+                    {w?.languages && w.languages.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-3">
+                        {w.languages.slice(0, 4).map(l => <Badge key={l} variant="secondary" className="text-[10px]">{l}</Badge>)}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between mt-3 text-xs">
+                      <span className="text-muted-foreground">Tariffa proposta</span>
+                      <strong>€{tariff} {ann.tariff_type === "hourly" ? "/ora" : ""}</strong>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+                      <Button size="sm" variant="outline" className="gap-1"
+                        onClick={() => nav({ to: "/messages/$id", params: { id: a.id } })}>
+                        <MessageSquare className="h-3.5 w-3.5" />Chat
+                      </Button>
+                      {canAct && (
+                        <>
+                          <Button size="sm" className="gap-1" disabled={busyId === a.id} onClick={() => accept(a)}>
+                            <CheckCircle2 className="h-3.5 w-3.5" />Assegna
+                          </Button>
+                          <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" disabled={busyId === a.id} onClick={() => reject(a)}>
+                            <XCircle className="h-3.5 w-3.5" />Rifiuta
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </AppShell>
+  );
+}
+
+function Metric({ icon: Icon, label, value }: { icon: typeof Star; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border bg-muted/30 p-2 text-center">
+      <div className="flex items-center justify-center gap-1 text-muted-foreground">
+        <Icon className="h-3 w-3" /><span>{label}</span>
+      </div>
+      <div className="font-semibold mt-0.5">{value}</div>
+    </div>
+  );
+}

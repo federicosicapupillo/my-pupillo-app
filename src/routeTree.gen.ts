@@ -30,6 +30,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
 import { Route as MessagesIdRouteImport } from './routes/messages.$id'
 import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
+import { Route as AnnouncementsIdRouteImport } from './routes/announcements.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/public/hooks/expire-stale'
 
@@ -138,6 +139,11 @@ const AnnouncementsNewRoute = AnnouncementsNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AnnouncementsRoute,
 } as any)
+const AnnouncementsIdRoute = AnnouncementsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AnnouncementsRoute,
+} as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -170,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
+  '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
@@ -195,6 +202,7 @@ export interface FileRoutesByTo {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
+  '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
+  '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/shifts'
     | '/terms'
     | '/workers'
+    | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
@@ -273,6 +283,7 @@ export interface FileRouteTypes {
     | '/shifts'
     | '/terms'
     | '/workers'
+    | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/shifts'
     | '/terms'
     | '/workers'
+    | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
@@ -478,6 +490,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnnouncementsNewRouteImport
       parentRoute: typeof AnnouncementsRoute
     }
+    '/announcements/$id': {
+      id: '/announcements/$id'
+      path: '/$id'
+      fullPath: '/announcements/$id'
+      preLoaderRoute: typeof AnnouncementsIdRouteImport
+      parentRoute: typeof AnnouncementsRoute
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -496,10 +515,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AnnouncementsRouteChildren {
+  AnnouncementsIdRoute: typeof AnnouncementsIdRoute
   AnnouncementsNewRoute: typeof AnnouncementsNewRoute
 }
 
 const AnnouncementsRouteChildren: AnnouncementsRouteChildren = {
+  AnnouncementsIdRoute: AnnouncementsIdRoute,
   AnnouncementsNewRoute: AnnouncementsNewRoute,
 }
 
