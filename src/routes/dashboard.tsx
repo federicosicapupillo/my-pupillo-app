@@ -28,10 +28,20 @@ function DashboardInner() {
       if (role === "restaurant") {
         const { count: active } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "active");
         const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id);
-        setStats({ active: active ?? 0, applications: apps ?? 0, messages: 0 });
+        const { data: appIds } = await supabase.from("applications").select("id").eq("restaurant_id", user.id);
+        const ids = (appIds ?? []).map((a) => a.id);
+        const { count: msgs } = ids.length
+          ? await supabase.from("messages").select("*", { count: "exact", head: true }).in("application_id", ids)
+          : { count: 0 };
+        setStats({ active: active ?? 0, applications: apps ?? 0, messages: msgs ?? 0 });
       } else if (role === "worker") {
         const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("worker_id", user.id);
-        setStats({ active: 0, applications: apps ?? 0, messages: 0 });
+        const { data: appIds } = await supabase.from("applications").select("id").eq("worker_id", user.id);
+        const ids = (appIds ?? []).map((a) => a.id);
+        const { count: msgs } = ids.length
+          ? await supabase.from("messages").select("*", { count: "exact", head: true }).in("application_id", ids)
+          : { count: 0 };
+        setStats({ active: 0, applications: apps ?? 0, messages: msgs ?? 0 });
       }
     })();
   }, [user, role]);
