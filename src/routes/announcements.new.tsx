@@ -229,8 +229,10 @@ function NewAnn() {
           <Button type="button" variant="outline" disabled={busy} onClick={()=>save(true)} className="sm:w-auto w-full">
             Salva come bozza
           </Button>
-          <Button type="submit" disabled={busy || !coords} className="flex-1">
-            {busy ? "Pubblicazione…" : geoState.status === "loading" ? "Ricerca posizione…" : !coords ? "Posizione richiesta" : "Pubblica annuncio"}
+          <Button type="submit" disabled={busy || !coords || !canAfford} className="flex-1 gap-1">
+            {busy ? "Pubblicazione…" : geoState.status === "loading" ? "Ricerca posizione…" : !coords ? "Posizione richiesta" : !canAfford ? "Crediti insufficienti" : (
+              <>Pubblica annuncio {!isPaid && <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span>}</>
+            )}
           </Button>
         </div>
       </form>
