@@ -173,6 +173,12 @@ function Onboarding() {
                 </div>
               </div>
             </div>
+
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">📋 Requisiti e Competenze standard</h3>
+              <p className="text-xs text-muted-foreground -mt-1">Imposta i requisiti standard del locale: verranno precompilati automaticamente in ogni nuovo annuncio.</p>
+              <RestaurantRequirementsEditor value={requirements} onChange={setRequirements} />
+            </div>
           </>
         ) : (
           <>
