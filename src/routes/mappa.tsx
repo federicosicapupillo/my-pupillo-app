@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Locate, Search, MapPin, Coins, Briefcase, Star } from "lucide-react";
+import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
@@ -251,10 +251,17 @@ function MapPage() {
       const restById = new Map(restaurants.map(r => [r.id, r]));
       anns.forEach(a => {
         const rest = restById.get(a.restaurant_id);
-        // Priorità: job_lat/lng → location_lat/lng → ristoratore.latitude/longitude → service_area_*
-        const lat = a.job_latitude ?? a.location_lat ?? rest?.latitude ?? rest?.service_area_lat ?? null;
-        const lng = a.job_longitude ?? a.location_lng ?? rest?.longitude ?? rest?.service_area_lng ?? null;
-        if (lat == null || lng == null) return;
+        // Fallback ordinato: job_latitude/job_longitude (sempre prioritari se presenti)
+        // → location_lat/lng dell'annuncio → coordinate del profilo ristoratore → service_area_*
+        const candidates: Array<[number | null | undefined, number | null | undefined, string]> = [
+          [a.job_latitude, a.job_longitude, "job"],
+          [a.location_lat, a.location_lng, "location"],
+          [rest?.latitude, rest?.longitude, "profile"],
+          [rest?.service_area_lat, rest?.service_area_lng, "service_area"],
+        ];
+        const picked = candidates.find(([la, ln]) => la != null && ln != null);
+        if (!picked) return; // nessuna coordinata disponibile → conteggiato a parte
+        const [lat, lng] = picked as [number, number, string];
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
         if (query || city !== "any" || district || venue !== "any" || planF !== "any" || statusF !== "any" || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
@@ -288,6 +295,20 @@ function MapPage() {
     }
     return pts;
   }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me]);
+
+  // Conteggio annunci senza alcuna coordinata disponibile (per warning UI)
+  const annsMissingCoords = useMemo(() => {
+    const restById = new Map(restaurants.map(r => [r.id, r]));
+    return anns.filter(a => {
+      const rest = restById.get(a.restaurant_id);
+      const hasAny =
+        (a.job_latitude != null && a.job_longitude != null) ||
+        (a.location_lat != null && a.location_lng != null) ||
+        (rest?.latitude != null && rest?.longitude != null) ||
+        (rest?.service_area_lat != null && rest?.service_area_lng != null);
+      return !hasAny;
+    });
+  }, [anns, restaurants]);
 
   const center: [number, number] = searchCenter
     ? [searchCenter.lat, searchCenter.lng]
@@ -346,6 +367,15 @@ function MapPage() {
           <p className="mt-2 text-xs text-muted-foreground">📍 {searchCenter.label}</p>
         )}
       </div>
+
+      {showA && annsMissingCoords.length > 0 && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200 dark:border-amber-800 p-3 mb-4 flex items-start gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div>
+            <strong>{annsMissingCoords.length}</strong> {annsMissingCoords.length === 1 ? "annuncio non è" : "annunci non sono"} visibili sulla mappa: nessuna coordinata disponibile (né <code>job_latitude/longitude</code>, né indirizzo dell'annuncio, né del ristoratore).
+          </div>
+        </div>
+      )}
 
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
