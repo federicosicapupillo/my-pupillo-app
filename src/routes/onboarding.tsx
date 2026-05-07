@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -97,7 +98,7 @@ function Onboarding() {
         )}
         <label className="flex items-start gap-2 text-sm">
           <Checkbox checked={form.terms_accepted} onCheckedChange={(v) => setForm({ ...form, terms_accepted: !!v })} />
-          <span>Ho letto e accetto le condizioni d'uso e la privacy policy.</span>
+          <span>Ho letto e accetto le <Link to="/terms" className="underline hover:text-primary" target="_blank">condizioni d'uso e la privacy policy</Link>.</span>
         </label>
         <Button type="submit" disabled={busy}>{busy ? "Salvataggio..." : "Salva e continua"}</Button>
       </form>

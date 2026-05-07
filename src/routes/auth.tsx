@@ -77,6 +77,7 @@ function AuthPage() {
                 <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
                 <div><Label>Password</Label><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
                 <Button type="submit" className="w-full" disabled={busy}>{busy ? "Attendi..." : "Accedi"}</Button>
+                <Link to="/reset-password" className="block text-center text-xs text-muted-foreground hover:text-foreground">Password dimenticata?</Link>
               </form>
             </TabsContent>
             <TabsContent value="signup">
@@ -96,7 +97,9 @@ function AuthPage() {
                   </RadioGroup>
                 </div>
                 <Button type="submit" className="w-full" disabled={busy}>{busy ? "Attendi..." : "Crea account"}</Button>
-                <p className="text-xs text-muted-foreground text-center">Accettando, confermi le condizioni d'uso e la privacy policy.</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Accettando, confermi le <Link to="/terms" className="underline hover:text-foreground">condizioni d'uso e la privacy policy</Link>.
+                </p>
               </form>
             </TabsContent>
           </Tabs>
