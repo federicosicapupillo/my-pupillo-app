@@ -14,6 +14,7 @@ import { Link } from "@tanstack/react-router";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import { verifyVat } from "@/server/vat.functions";
 import { useServerFn } from "@tanstack/react-start";
+import { RestaurantRequirementsEditor, EMPTY_REQ, reqFromProfile, reqToProfileUpdate, type RestaurantRequirements } from "@/components/RestaurantRequirements";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -35,6 +36,7 @@ function Onboarding() {
     terms_accepted: false,
   });
   const [busy, setBusy] = useState(false);
+  const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
 
   useEffect(() => {
     if (profile) setForm((f) => ({
@@ -64,6 +66,7 @@ function Onboarding() {
       contact_person_email: (profile as any).contact_person_email ?? "",
       terms_accepted: profile.terms_accepted,
     }));
+    if (profile) setRequirements(reqFromProfile(profile));
   }, [profile]);
 
   const submit = async (e: React.FormEvent) => {
@@ -102,6 +105,7 @@ function Onboarding() {
       contact_person_role: form.contact_person_role || null,
       contact_person_phone: form.contact_person_phone || null,
       contact_person_email: form.contact_person_email || null,
+      ...reqToProfileUpdate(requirements),
     } : {
       full_name: form.full_name, phone: form.phone,
       terms_accepted: true, profile_completed: true,
