@@ -170,7 +170,13 @@ function MapPage() {
         </div>
       ) : (
         <Suspense fallback={<div className="rounded-xl bg-muted animate-pulse" style={{ height: 600 }} />}>
-          <MapViewInner points={filtered} height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600} center={center} />
+          <MapViewInner
+            points={filtered}
+            height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
+            center={center}
+            me={me}
+            radiusKm={radiusKm ? Number(radiusKm) : null}
+          />
         </Suspense>
       )}
 
