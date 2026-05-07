@@ -20,6 +20,13 @@ type App = {
   announcement_id: string; proposed_tariff: number | null;
 };
 type Ann = { id: string; tariff_amount: number; tariff_type: string };
+type LogEvent = {
+  id: string;
+  action: string;
+  created_at: string;
+  user_id: string | null;
+  metadata: { tariff?: number; note?: string; by_role?: string } | null;
+};
 
 const TERMINAL = ["accepted", "rejected", "expired"];
 
@@ -59,6 +66,7 @@ function Thread() {
   const [other, setOther] = useState<{ name: string } | null>(null);
   const [counterOpen, setCounterOpen] = useState(false);
   const [counterValue, setCounterValue] = useState("");
+  const [events, setEvents] = useState<LogEvent[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,12 +84,18 @@ function Thread() {
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
       setMsgs((m as Msg[]) ?? []);
+      const { data: ev } = await supabase.from("activity_logs")
+        .select("*").eq("entity_type", "application").eq("entity_id", id)
+        .order("created_at");
+      setEvents((ev as LogEvent[]) ?? []);
     })();
     const ch = supabase.channel(`thread-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `application_id=eq.${id}` },
         (p) => setMsgs(prev => [...prev, p.new as Msg]))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `id=eq.${id}` },
         (p) => setApp(p.new as App))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs", filter: `entity_id=eq.${id}` },
+        (p) => setEvents(prev => [...prev, p.new as LogEvent]))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [id, user]);
@@ -109,6 +123,7 @@ function Thread() {
     if (next === "accepted" && app.announcement_id) {
       await supabase.from("announcements").update({ status: "assigned", assigned_worker_id: app.worker_id }).eq("id", app.announcement_id);
     }
+    await logEvent(next, { by_role: role ?? undefined });
     const labels: Record<string, string> = {
       interested: "Interesse confermato",
       not_interested: "Offerta rifiutata",
@@ -132,6 +147,7 @@ function Thread() {
       application_id: id, sender_id: user.id,
       body: `💶 Controfferta: €${v} ${ann?.tariff_type === "hourly" ? "/ora" : "a servizio"}`,
     });
+    await logEvent("counter_offer", { tariff: v, by_role: role ?? undefined });
     setApp({ ...app, status: "counter_offer", proposed_tariff: v });
     setCounterOpen(false);
     setCounterValue("");
@@ -142,6 +158,13 @@ function Thread() {
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
   const steps = buildTimeline(app?.status);
+
+  const logEvent = async (action: string, metadata: Record<string, unknown>) => {
+    if (!user) return;
+    await supabase.from("activity_logs").insert({
+      user_id: user.id, action, entity_type: "application", entity_id: id, metadata,
+    });
+  };
 
   return (
     <AppShell>
