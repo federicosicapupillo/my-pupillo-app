@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
 import { useEffect, useRef } from "react";
-import { AlertCircle, Loader2, MapPin, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-react";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -74,6 +74,10 @@ function NewAnn() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!coords) {
+      toast.error("Posizione non valida: verifica l'indirizzo prima di pubblicare.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.from("announcements").insert({
       restaurant_id: user.id,
@@ -84,8 +88,8 @@ function NewAnn() {
       tariff_type: f.tariff_type as "hourly" | "flat",
       tariff_amount: parseFloat(f.tariff_amount),
       location_address: f.location_address,
-      location_lat: coords?.lat ?? null,
-      location_lng: coords?.lng ?? null,
+      location_lat: coords.lat,
+      location_lng: coords.lng,
       professional_profile: f.professional_profile || null,
       languages: f.languages.split(",").map(s => s.trim()).filter(Boolean),
       status: "active",
@@ -130,7 +134,7 @@ function NewAnn() {
         <div>
           <Label>Indirizzo del servizio</Label>
           <Input required value={f.location_address} onChange={e => setF({ ...f, location_address: e.target.value })} />
-          <GeoStatus
+          <GeoBadge
             state={geoState}
             hasAddress={f.location_address.trim().length >= 3}
             onRetry={() => runGeocode(f.location_address.trim())}
@@ -141,41 +145,62 @@ function NewAnn() {
         </div>
         <div><Label>Profilo richiesto</Label><Input placeholder="Cameriere, runner, lavapiatti…" value={f.professional_profile} onChange={e => setF({ ...f, professional_profile: e.target.value })} /></div>
         <div><Label>Lingue richieste</Label><Input placeholder="Italiano, Inglese" value={f.languages} onChange={e => setF({ ...f, languages: e.target.value })} /></div>
-        <Button type="submit" disabled={busy} className="w-full">{busy ? "Pubblicazione…" : "Pubblica annuncio"}</Button>
+        {!coords && f.location_address.trim().length >= 3 && geoState.status !== "loading" && (
+          <p className="text-xs text-destructive flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5" />
+            Devi confermare una posizione valida sulla mappa per pubblicare.
+          </p>
+        )}
+        <Button type="submit" disabled={busy || !coords} className="w-full">
+          {busy ? "Pubblicazione…" : geoState.status === "loading" ? "Ricerca posizione…" : !coords ? "Posizione richiesta" : "Pubblica annuncio"}
+        </Button>
       </form>
     </AppShell>
   );
 }
 
-function GeoStatus({
+function GeoBadge({
   state, hasAddress, onRetry,
 }: {
   state: { status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError };
   hasAddress: boolean;
   onRetry: () => void;
 }) {
-  if (state.status === "idle") {
-    return hasAddress ? null : <div className="mt-2 text-xs text-muted-foreground">Inserisci l'indirizzo per posizionarlo sulla mappa.</div>;
+  // Idle: nothing to lookup yet
+  if (state.status === "idle" || (state.status !== "loading" && !hasAddress)) {
+    return (
+      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+        <Search className="h-3 w-3" />
+        In attesa dell'indirizzo
+      </div>
+    );
   }
+
   if (state.status === "loading") {
     return (
-      <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Ricerca posizione{state.attempt > 1 ? ` (tentativo ${state.attempt}/3)` : ""}…
+        Ricerca in corso{state.attempt > 1 ? ` · tentativo ${state.attempt}/3` : ""}
       </div>
     );
   }
+
   if (state.status === "ok") {
     return (
-      <div className="mt-2 text-xs text-primary flex items-center gap-2">
-        <MapPin className="h-3 w-3" />Posizione trovata sulla mappa.
+      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700 dark:text-emerald-400">
+        <CheckCircle2 className="h-3 w-3" />
+        Posizione trovata
       </div>
     );
   }
+
   return (
     <div className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
       <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-      <div className="flex-1">{state.error ? describeGeocodeError(state.error) : "Errore sconosciuto"}</div>
+      <div className="flex-1">
+        <div className="font-medium">Posizione non trovata</div>
+        <div className="opacity-90">{state.error ? describeGeocodeError(state.error) : "Errore sconosciuto"}</div>
+      </div>
       <Button type="button" size="sm" variant="ghost" className="h-6 px-2 gap-1 text-destructive hover:text-destructive" onClick={onRetry}>
         <RefreshCw className="h-3 w-3" />Riprova
       </Button>
