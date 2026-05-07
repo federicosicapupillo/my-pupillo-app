@@ -10,7 +10,12 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, MapPin, Euro, Clock, Users, Star, Shield,
   CheckCircle2, XCircle, MessageSquare, Award, Building2, Phone, Mail, Globe,
+  Languages as LanguagesIcon, IdCard, ListChecks, Sparkles, Info,
 } from "lucide-react";
+import {
+  LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
+  BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
+} from "@/lib/announcement-requirements";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -23,6 +28,14 @@ type Ann = {
   location_address: string; status: string; expires_at: string;
   professional_profile: string | null; languages: string[] | null; notes: string | null;
   assigned_worker_id: string | null;
+  license_requirement?: string | null;
+  language_requirements?: string[] | null;
+  tattoos_allowed?: string | null;
+  piercings_allowed?: string | null;
+  beard_allowed?: string | null;
+  required_skills?: string[] | null;
+  dress_code_items?: string[] | null;
+  dress_code_notes?: string | null;
 };
 type App = {
   id: string; status: string; worker_id: string; proposed_tariff: number | null;
