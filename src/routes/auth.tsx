@@ -21,7 +21,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, role: userRole, loading } = useAuth();
   const { role: roleParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
@@ -31,8 +31,11 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/dashboard" });
-  }, [user, loading, navigate]);
+    if (loading || !user) return;
+    if (userRole === "admin") navigate({ to: "/admin" });
+    else if (userRole === "restaurant") navigate({ to: "/dashboard" });
+    else if (userRole === "worker") navigate({ to: "/jobs" });
+  }, [user, userRole, loading, navigate]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +58,7 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) toast.error(error.message);
-    else { toast.success("Bentornato!"); navigate({ to: "/dashboard" }); }
+    else toast.success("Bentornato!");
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
