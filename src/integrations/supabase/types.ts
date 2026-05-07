@@ -594,6 +594,7 @@ export type Database = {
         | "expired"
         | "assigned"
         | "cancelled"
+        | "completed"
       app_role: "admin" | "restaurant" | "worker"
       application_status:
         | "pending"
@@ -745,6 +746,7 @@ export const Constants = {
         "expired",
         "assigned",
         "cancelled",
+        "completed",
       ],
       app_role: ["admin", "restaurant", "worker"],
       application_status: [
