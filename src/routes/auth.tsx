@@ -68,6 +68,18 @@ function AuthPage() {
     navigate({ to: "/dashboard" });
   };
 
+  const handleFacebook = async () => {
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "facebook",
+      options: { redirectTo: window.location.origin + "/dashboard" },
+    });
+    if (error) {
+      setBusy(false);
+      toast.error("Login Facebook non disponibile. Configura il provider nel backend.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="border-b">
@@ -93,6 +105,9 @@ function AuthPage() {
               </Button>
               <Button type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={() => handleOAuth("apple")}>
                 <AppleIcon /> Continua con Apple
+              </Button>
+              <Button type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={handleFacebook}>
+                <FacebookIcon /> Continua con Facebook
               </Button>
               <div className="flex items-center gap-2 py-1">
                 <div className="h-px flex-1 bg-border" />
