@@ -56,6 +56,7 @@ export type Database = {
           location_address: string
           location_lat: number | null
           location_lng: number | null
+          notes: string | null
           professional_profile: string | null
           restaurant_id: string
           service_date: string
@@ -76,6 +77,7 @@ export type Database = {
           location_address: string
           location_lat?: number | null
           location_lng?: number | null
+          notes?: string | null
           professional_profile?: string | null
           restaurant_id: string
           service_date: string
@@ -96,6 +98,7 @@ export type Database = {
           location_address?: string
           location_lat?: number | null
           location_lng?: number | null
+          notes?: string | null
           professional_profile?: string | null
           restaurant_id?: string
           service_date?: string
