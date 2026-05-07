@@ -117,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             to={homeTo as never}
             aria-label="Vai alla home page"
-            className="flex items-center gap-2 cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow"
+            className="flex items-center cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow"
             onKeyDown={(e) => {
               if (e.key === " " || e.code === "Space") {
                 e.preventDefault();
@@ -125,7 +125,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               }
             }}
           >
-            <img src={pupilloLogo} alt="Pupillo Home" className="h-10 w-auto" />
+            <span className="inline-flex items-center justify-center bg-white rounded-lg px-2 py-1 ring-1 ring-black/5">
+              <img src={pupilloLogo} alt="Logo Pupillo" className="h-9 w-auto object-contain" />
+            </span>
           </Link>
           <div className="hidden md:flex items-center gap-1">
             {items.map((i) => (

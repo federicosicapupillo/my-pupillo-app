@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ChefHat, Users, Sparkles, MapPin, Clock, ShieldCheck } from "lucide-react";
+import pupilloLogo from "@/assets/pupillo-logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -21,11 +22,12 @@ function Index() {
           <Link
             to="/"
             aria-label="Vai alla home page"
-            className="flex items-center gap-2 cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="inline-flex items-center cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             onKeyDown={(e) => { if (e.key === " " || e.code === "Space") { e.preventDefault(); (e.currentTarget as HTMLAnchorElement).click(); } }}
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold" aria-hidden="true">P</div>
-            <span className="text-xl font-semibold tracking-tight">Pupillo</span>
+            <span className="inline-flex items-center justify-center bg-white rounded-lg px-2 py-1 ring-1 ring-black/5">
+              <img src={pupilloLogo} alt="Logo Pupillo" className="h-10 w-auto object-contain" />
+            </span>
           </Link>
           <div className="flex items-center gap-2">
             <Link to="/auth"><Button variant="ghost">Accedi</Button></Link>
