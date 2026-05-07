@@ -457,6 +457,9 @@ function NewAnn() {
           </p>
         )}
         <div className="flex flex-col sm:flex-row gap-2">
+          <Link to="/announcements" className="sm:w-auto w-full">
+            <Button type="button" variant="ghost" disabled={busy} className="w-full">Annulla</Button>
+          </Link>
           <Button type="button" variant="outline" disabled={busy} onClick={()=>save(true)} className="sm:w-auto w-full">
             Salva come bozza
           </Button>
