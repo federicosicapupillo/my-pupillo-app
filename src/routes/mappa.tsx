@@ -542,7 +542,7 @@ function MapPage() {
             </Suspense>
           )}
           <div className="mt-2 text-xs text-muted-foreground">
-            {points.length} marker · {filteredRestaurants.length} ristoratori{ref && radiusKm !== "any" ? ` entro ${radiusKm} km` : ""} · OpenStreetMap
+            {points.length} marker · {filteredRestaurants.length} ristoratori · {filteredWorkers.length} lavoratori{ref && radiusKm !== "any" ? ` entro ${radiusKm} km` : ""} · OpenStreetMap
           </div>
         </div>
       </div>
