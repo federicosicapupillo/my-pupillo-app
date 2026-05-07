@@ -36,6 +36,21 @@ type Ann = {
   required_skills?: string[] | null;
   dress_code_items?: string[] | null;
   dress_code_notes?: string | null;
+  job_address?: string | null;
+  job_city?: string | null;
+  job_province?: string | null;
+  job_postal_code?: string | null;
+  job_country?: string | null;
+  job_latitude?: number | null;
+  job_longitude?: number | null;
+  job_access_restrictions?: string | null;
+  job_additional_directions?: string | null;
+  job_location_notes?: string | null;
+  job_contact_person_name?: string | null;
+  job_contact_person_phone?: string | null;
+  job_contact_person_email?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 };
 type App = {
   id: string; status: string; worker_id: string; proposed_tariff: number | null;
@@ -313,6 +328,8 @@ function AnnouncementDetail() {
 
       <RequirementsSection ann={ann} isOwner={isOwner} />
 
+      <LocationAccessSection ann={ann} restaurant={restaurant} isOwner={isOwner} />
+
       {isOwner && (
         <>
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -489,6 +506,80 @@ function ReqRow({ icon: Icon, label, value, children }: { icon: typeof Star; lab
         <div className="text-xs text-muted-foreground">{label}</div>
         {value && <div className="font-medium">{value}</div>}
         {children}
+      </div>
+    </div>
+  );
+}
+function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
+  const R = 6371, toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng);
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function LocationAccessSection({ ann, restaurant, isOwner }: { ann: Ann; restaurant: any; isOwner: boolean }) {
+  const lat = ann.job_latitude ?? ann.location_lat ?? restaurant?.latitude ?? restaurant?.service_area_lat ?? null;
+  const lng = ann.job_longitude ?? ann.location_lng ?? restaurant?.longitude ?? restaurant?.service_area_lng ?? null;
+  const address = ann.job_address || ann.location_address;
+  const cityLine = [ann.job_city || restaurant?.city, ann.job_province || restaurant?.province, ann.job_country || restaurant?.country].filter(Boolean).join(", ");
+  const restrictions = ann.job_access_restrictions ?? restaurant?.access_restrictions;
+  const directions = ann.job_additional_directions ?? restaurant?.additional_directions;
+  const notes = ann.job_location_notes ?? restaurant?.location_notes;
+  const contactName = ann.job_contact_person_name || [restaurant?.contact_person_first_name, restaurant?.contact_person_last_name].filter(Boolean).join(" ");
+  const contactPhone = ann.job_contact_person_phone ?? restaurant?.contact_person_phone;
+  const contactEmail = ann.job_contact_person_email ?? restaurant?.contact_person_email;
+
+  const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation || lat == null || lng == null) return;
+    navigator.geolocation.getCurrentPosition(
+      (p) => setMe({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => {},
+      { timeout: 8000 }
+    );
+  }, [lat, lng]);
+
+  const dist = me && lat != null && lng != null ? distKm(me.lat, me.lng, lat, lng) : null;
+  const mapsUrl = lat != null && lng != null
+    ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`
+    : `https://www.openstreetmap.org/search?query=${encodeURIComponent(address || "")}`;
+  const directionsUrl = lat != null && lng != null
+    ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address || "")}`;
+
+  return (
+    <div className="rounded-2xl border bg-card p-6 mb-6">
+      <h2 className="text-2xl font-bold text-primary mb-4">Luogo e Accesso</h2>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex items-center gap-2 text-base">
+          <MapPin className="h-5 w-5 text-primary" />
+          <span className="font-medium">{address}{cityLine ? `, ${cityLine}` : ""}</span>
+        </div>
+        {dist != null && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-destructive text-destructive-foreground text-xs font-bold px-3 py-1">
+            <MapPin className="h-3 w-3" />{dist < 1 ? `${Math.round(dist*1000)} m` : `${dist.toFixed(dist < 10 ? 1 : 0)} km`}
+          </span>
+        )}
+      </div>
+      <div className="space-y-3 text-sm">
+        {restrictions && <p><strong>Restrizioni all'ingresso:</strong> {restrictions}</p>}
+        {directions && <p><strong>Indicazioni aggiuntive:</strong> {directions}</p>}
+        {notes && <p><strong>Note:</strong> {notes}</p>}
+        {contactName && (
+          <p><strong>Referente:</strong> {contactName}
+            {contactPhone && !isOwner && <> · <a href={`tel:${contactPhone}`} className="text-primary hover:underline">{contactPhone}</a></>}
+            {contactPhone && isOwner && <> · {contactPhone}</>}
+            {contactEmail && <> · <a href={`mailto:${contactEmail}`} className="text-primary hover:underline">{contactEmail}</a></>}
+          </p>
+        )}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm hover:bg-accent">
+          <MapPin className="h-4 w-4" />Apri sulla mappa
+        </a>
+        <a href={directionsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-sm hover:opacity-90">
+          Calcola percorso
+        </a>
       </div>
     </div>
   );

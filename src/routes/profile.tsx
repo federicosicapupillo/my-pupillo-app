@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
-import { KeyRound, Trash2, FileText, Coins, Star } from "lucide-react";
+import { KeyRound, Trash2, FileText, Coins, Star, MapPin, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -71,6 +71,43 @@ function Profile() {
         </>)}
       </div>
 
+      {role === "restaurant" && (
+        <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h2 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" />Luogo e Accesso</h2>
+              <p className="text-sm text-muted-foreground mt-1">Informazioni operative usate negli annunci e mostrate ai lavoratori.</p>
+            </div>
+            <Link to="/onboarding"><Button size="sm" variant="outline">Modifica</Button></Link>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Indirizzo</div>
+              <p className="text-base font-medium">{[profile?.address, profile?.city, profile?.province, profile?.country].filter(Boolean).join(", ") || "—"}</p>
+              {(profile as any)?.latitude != null && (profile as any)?.longitude != null && (
+                <a className="text-xs text-primary inline-flex items-center gap-1 mt-1" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${(profile as any).latitude}&mlon=${(profile as any).longitude}#map=17/${(profile as any).latitude}/${(profile as any).longitude}`}>
+                  <ExternalLink className="h-3 w-3" />Apri sulla mappa
+                </a>
+              )}
+            </div>
+            <Field label="Restrizioni all'ingresso" value={(profile as any)?.access_restrictions} />
+            <Field label="Indicazioni aggiuntive" value={(profile as any)?.additional_directions} />
+            <Field label="Note per il lavoratore" value={(profile as any)?.location_notes} />
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Referente operativo</div>
+              <p className="text-base font-medium">
+                {[(profile as any)?.contact_person_first_name, (profile as any)?.contact_person_last_name].filter(Boolean).join(" ") || "—"}
+                {(profile as any)?.contact_person_role && <span className="text-muted-foreground font-normal"> · {(profile as any).contact_person_role}</span>}
+              </p>
+              <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3">
+                {(profile as any)?.contact_person_phone && <span>📞 {(profile as any).contact_person_phone}</span>}
+                {(profile as any)?.contact_person_email && <span>✉️ {(profile as any).contact_person_email}</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
         <h2 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4" />Cambia password</h2>
         <form onSubmit={changePassword} className="mt-3 flex flex-col sm:flex-row gap-2">
@@ -130,6 +167,15 @@ function Row({ label, value }: { label: string; value?: string | null }) {
     <div className="flex justify-between gap-4 py-2 border-b last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium text-right">{value || "—"}</span>
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">{label}</div>
+      <p className="text-sm">{value || <span className="text-muted-foreground">—</span>}</p>
     </div>
   );
 }
