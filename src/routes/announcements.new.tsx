@@ -48,6 +48,19 @@ function NewAnn() {
     piercings_allowed: "indifferente",
     beard_allowed: "solo_curata",
     dress_code_notes: "",
+    job_city: (profile as any)?.city ?? "",
+    job_province: (profile as any)?.province ?? "",
+    job_postal_code: (profile as any)?.postal_code ?? "",
+    job_country: (profile as any)?.country ?? "Italia",
+    job_access_restrictions: (profile as any)?.access_restrictions ?? "",
+    job_additional_directions: (profile as any)?.additional_directions ?? "",
+    job_location_notes: (profile as any)?.location_notes ?? "",
+    job_contact_person_name: [
+      (profile as any)?.contact_person_first_name,
+      (profile as any)?.contact_person_last_name,
+    ].filter(Boolean).join(" "),
+    job_contact_person_phone: (profile as any)?.contact_person_phone ?? "",
+    job_contact_person_email: (profile as any)?.contact_person_email ?? "",
   });
   const [languageReqs, setLanguageReqs] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
@@ -80,6 +93,16 @@ function NewAnn() {
         piercings_allowed: (data as any).piercings_allowed ?? prev.piercings_allowed,
         beard_allowed: (data as any).beard_allowed ?? prev.beard_allowed,
         dress_code_notes: (data as any).dress_code_notes ?? "",
+        job_city: (data as any).job_city ?? prev.job_city,
+        job_province: (data as any).job_province ?? prev.job_province,
+        job_postal_code: (data as any).job_postal_code ?? prev.job_postal_code,
+        job_country: (data as any).job_country ?? prev.job_country,
+        job_access_restrictions: (data as any).job_access_restrictions ?? prev.job_access_restrictions,
+        job_additional_directions: (data as any).job_additional_directions ?? prev.job_additional_directions,
+        job_location_notes: (data as any).job_location_notes ?? prev.job_location_notes,
+        job_contact_person_name: (data as any).job_contact_person_name ?? prev.job_contact_person_name,
+        job_contact_person_phone: (data as any).job_contact_person_phone ?? prev.job_contact_person_phone,
+        job_contact_person_email: (data as any).job_contact_person_email ?? prev.job_contact_person_email,
       }));
       setLanguageReqs((data as any).language_requirements ?? []);
       setSkills((data as any).required_skills ?? []);
@@ -172,6 +195,19 @@ function NewAnn() {
       required_skills: skills,
       dress_code_items: dressItems,
       dress_code_notes: f.dress_code_notes || null,
+      job_address: f.location_address,
+      job_city: f.job_city || null,
+      job_province: f.job_province || null,
+      job_postal_code: f.job_postal_code || null,
+      job_country: f.job_country || null,
+      job_latitude: coords?.lat ?? null,
+      job_longitude: coords?.lng ?? null,
+      job_access_restrictions: f.job_access_restrictions || null,
+      job_additional_directions: f.job_additional_directions || null,
+      job_location_notes: f.job_location_notes || null,
+      job_contact_person_name: f.job_contact_person_name || null,
+      job_contact_person_phone: f.job_contact_person_phone || null,
+      job_contact_person_email: f.job_contact_person_email || null,
     } as any);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
