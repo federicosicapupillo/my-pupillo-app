@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown } from "lucide-react";
+import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban } from "lucide-react";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -115,6 +115,8 @@ function Thread() {
   const isTerminal = app ? TERMINAL.includes(app.status) : true;
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
+  const steps = buildTimeline(app?.status);
+
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto">
@@ -134,6 +136,31 @@ function Thread() {
             )}
           </div>
         </div>
+
+        {app && (
+          <div className="rounded-2xl border bg-card p-4 mb-4">
+            <div className="text-xs font-medium text-muted-foreground mb-3">Stato della richiesta</div>
+            <ol className="flex items-start justify-between gap-2">
+              {steps.map((s, i) => (
+                <li key={s.key} className="flex-1 flex flex-col items-center text-center min-w-0">
+                  <div className="flex items-center w-full">
+                    <div className={`h-px flex-1 ${i === 0 ? "invisible" : s.state === "todo" ? "bg-border" : "bg-primary"}`} />
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 border-2 ${
+                      s.state === "done" ? "bg-primary border-primary text-primary-foreground" :
+                      s.state === "current" ? "bg-primary/15 border-primary text-primary" :
+                      s.state === "error" ? "bg-destructive border-destructive text-destructive-foreground" :
+                      "bg-card border-border text-muted-foreground"
+                    }`}>
+                      <s.icon className="h-4 w-4" />
+                    </div>
+                    <div className={`h-px flex-1 ${i === steps.length - 1 ? "invisible" : s.state === "done" ? "bg-primary" : "bg-border"}`} />
+                  </div>
+                  <div className={`mt-2 text-[11px] leading-tight ${s.state === "current" ? "font-semibold text-foreground" : "text-muted-foreground"}`}>{s.label}</div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
 
         {!isTerminal && app && (
           <div className="mb-4 space-y-2">
