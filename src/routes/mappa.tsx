@@ -209,8 +209,10 @@ function MapPage() {
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
-  const points: MapPoint[] = useMemo(() => {
+  const { points, coordSourceStats, coordSourceById } = useMemo(() => {
     const pts: MapPoint[] = [];
+    const stats: Record<string, number> = { job: 0, location: 0, profile: 0, service_area: 0, missing: 0 };
+    const byId: Record<string, "job" | "location" | "profile" | "service_area"> = {};
     if (showR) {
       filteredRestaurants.forEach(r => {
         if (r.service_area_lat == null || r.service_area_lng == null) return;
@@ -264,8 +266,10 @@ function MapPage() {
           [rest?.service_area_lat, rest?.service_area_lng, "service_area"],
         ];
         const picked = candidates.find(([la, ln]) => la != null && ln != null);
-        if (!picked) return; // nessuna coordinata disponibile → conteggiato a parte
-        const [lat, lng] = picked as [number, number, string];
+        if (!picked) { stats.missing++; return; }
+        const [lat, lng, source] = picked as [number, number, "job" | "location" | "profile" | "service_area"];
+        stats[source]++;
+        byId[a.id] = source;
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
         if (query || city !== "any" || district || venue !== "any" || planF !== "any" || statusF !== "any" || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
@@ -293,12 +297,13 @@ function MapPage() {
             contactPhone,
             contactEmail,
             contactRole,
+            coordSource: debugEnabled ? source : undefined,
           } as any,
         });
       });
     }
-    return pts;
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me]);
+    return { points: pts, coordSourceStats: stats, coordSourceById: byId };
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled]);
 
   // Conteggio annunci senza alcuna coordinata disponibile (per warning UI)
   const annsMissingCoords = useMemo(() => {
