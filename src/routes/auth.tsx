@@ -13,17 +13,21 @@ import { lovable } from "@/integrations/lovable";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    role: s.role === "worker" || s.role === "restaurant" ? s.role : undefined,
+  }),
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const [tab, setTab] = useState<"login" | "signup">("login");
+  const { role: roleParam } = Route.useSearch();
+  const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"restaurant" | "worker">("restaurant");
+  const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {

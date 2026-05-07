@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
+import { geocodeAddressWithRetry } from "@/lib/geocode";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -23,6 +24,7 @@ function Onboarding() {
   const [form, setForm] = useState({
     full_name: "", phone: "", age: "", professional_profile: "", languages: "",
     business_name: "", vat_number: "", venue_type: "", address: "", price_range: "",
+    service_area_address: "", service_area_radius_m: "500",
     terms_accepted: false,
   });
   const [busy, setBusy] = useState(false);
@@ -40,6 +42,7 @@ function Onboarding() {
       venue_type: profile.venue_type ?? "",
       address: profile.address ?? "",
       price_range: profile.price_range ?? "",
+      service_area_radius_m: String(profile.service_area_radius_m ?? 500),
       terms_accepted: profile.terms_accepted,
     }));
   }, [profile]);
@@ -49,6 +52,11 @@ function Onboarding() {
     if (!user) return;
     if (!form.terms_accepted) { toast.error("Devi accettare le condizioni d'uso"); return; }
     setBusy(true);
+    let serviceArea: { service_area_lat: number | null; service_area_lng: number | null } = { service_area_lat: null, service_area_lng: null };
+    if (role === "worker" && form.service_area_address.trim().length >= 3) {
+      const r = await geocodeAddressWithRetry(form.service_area_address.trim(), { maxAttempts: 2 });
+      if (r.ok) serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
+    }
     const update = role === "restaurant" ? {
       full_name: form.full_name, phone: form.phone,
       terms_accepted: true, profile_completed: true,
@@ -60,6 +68,8 @@ function Onboarding() {
       age: form.age ? parseInt(form.age) : null,
       professional_profile: form.professional_profile,
       languages: form.languages.split(",").map((s) => s.trim()).filter(Boolean),
+      service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
+      ...serviceArea,
     };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
     setBusy(false);
@@ -94,6 +104,11 @@ function Onboarding() {
               <div><Label>Lingue parlate (separate da virgola)</Label><Input placeholder="Italiano, Inglese" value={form.languages} onChange={(e) => setForm({ ...form, languages: e.target.value })} /></div>
             </div>
             <div><Label>Profilo professionale</Label><Textarea rows={4} value={form.professional_profile} onChange={(e) => setForm({ ...form, professional_profile: e.target.value })} /></div>
+            <div className="grid gap-4 md:grid-cols-[1fr_140px]">
+              <div><Label>Area di interesse (indirizzo)</Label><Input placeholder="es. Via Roma 1, Milano" value={form.service_area_address} onChange={(e) => setForm({ ...form, service_area_address: e.target.value })} /></div>
+              <div><Label>Raggio (m)</Label><Input type="number" min="100" step="100" value={form.service_area_radius_m} onChange={(e) => setForm({ ...form, service_area_radius_m: e.target.value })} /></div>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-3">Verrai mostrato in <span className="text-emerald-600 font-medium">verde</span> ai ristoratori il cui locale rientra nella tua area.</p>
           </>
         )}
         <label className="flex items-start gap-2 text-sm">
