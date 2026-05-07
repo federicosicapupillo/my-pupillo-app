@@ -4,8 +4,7 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 const files = fs.readdirSync('/tmp').filter(f => /^seed_\d\.sql$/.test(f)).sort();
 for (const f of files) {
   const sql = fs.readFileSync('/tmp/'+f,'utf8');
-  console.log(f, sql.length);
   const { error } = await sb.rpc('_tmp_exec_sql', { sql });
   if (error) { console.error(f, error); process.exit(1); }
+  console.log(f,'OK');
 }
-console.log('ALL OK');
