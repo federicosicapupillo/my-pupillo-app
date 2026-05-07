@@ -27,6 +27,7 @@ export type MapPoint = {
     contactRole?: string | null;
     contactPhone?: string | null;
     contactEmail?: string | null;
+    coordSource?: "job" | "location" | "profile" | "service_area";
   };
 };
 
@@ -105,6 +106,11 @@ export default function MapViewInner({ points, height, center, me, radiusKm }: {
                     )}
                     {p.meta.contactEmail && (
                       <div>✉️ <a href={`mailto:${p.meta.contactEmail}`} style={{ color: COLORS[p.category] }}>{p.meta.contactEmail}</a></div>
+                    )}
+                    {p.meta.coordSource && (
+                      <div style={{ marginTop: 4, fontFamily: "monospace", fontSize: 10, color: "#7c3aed" }}>
+                        🛠 coord: {p.meta.coordSource}
+                      </div>
                     )}
                   </div>
                 )}
