@@ -5,6 +5,7 @@ import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Se
 import { ReactNode } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import pupilloLogo from "@/assets/pupillo-logo.png";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { profile, role, signOut, user } = useAuth();
@@ -30,8 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">P</div>
-            <span className="font-semibold">Pupillo</span>
+            <img src={pupilloLogo} alt="Pupillo" className="h-10 w-auto" />
           </Link>
           <div className="hidden md:flex items-center gap-1">
             {items.map((i) => (
