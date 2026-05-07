@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon } from "lucide-react";
+import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight } from "lucide-react";
 import { ReactNode } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
@@ -32,6 +32,28 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/profile", label: "Profilo", icon: Settings },
     role === "admin" && { to: "/admin", label: "Admin", icon: Shield },
   ].filter(Boolean) as { to: string; label: string; icon: typeof LayoutDashboard }[];
+
+  // Breadcrumbs basati sul path corrente
+  const labelByPath: Record<string, string> = items.reduce((acc, i) => ({ ...acc, [i.to]: i.label }), {} as Record<string, string>);
+  const homeLabel = role === "admin" ? "Admin" : "Dashboard";
+  const segments = loc.pathname.split("/").filter(Boolean);
+  const crumbs: { to: string; label: string }[] = [];
+  let acc = "";
+  segments.forEach((seg, idx) => {
+    acc += "/" + seg;
+    // salta segmenti dinamici (es. ID) per chiarezza
+    if (idx > 0 && /^[0-9a-f-]{8,}$/i.test(seg)) {
+      crumbs.push({ to: acc, label: "Dettaglio" });
+    } else {
+      crumbs.push({ to: acc, label: labelByPath[acc] || seg.charAt(0).toUpperCase() + seg.slice(1) });
+    }
+  });
+  const showBreadcrumbs = !!user && loc.pathname !== "/" && loc.pathname !== homeTo;
+  const homeIndicator = !user
+    ? "Sei in Home"
+    : loc.pathname === homeTo
+      ? `Sei in ${homeLabel}`
+      : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,6 +109,34 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </nav>
       </header>
+      {(showBreadcrumbs || homeIndicator) && (
+        <div className="border-b bg-muted/40">
+          <nav aria-label="Breadcrumb" className="mx-auto max-w-7xl px-4 py-2 text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+            <Link
+              to={homeTo as never}
+              className="inline-flex items-center gap-1 hover:text-foreground transition-colors rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Home className="h-3.5 w-3.5" />
+              <span>{!user ? "Home" : homeLabel}</span>
+            </Link>
+            {homeIndicator && (
+              <span className="ml-1 inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
+                {homeIndicator}
+              </span>
+            )}
+            {showBreadcrumbs && crumbs.map((c, i) => (
+              <span key={c.to + i} className="inline-flex items-center gap-1.5">
+                <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                {i === crumbs.length - 1 ? (
+                  <span aria-current="page" className="text-foreground font-medium">{c.label}</span>
+                ) : (
+                  <Link to={c.to as never} className="hover:text-foreground transition-colors">{c.label}</Link>
+                )}
+              </span>
+            ))}
+          </nav>
+        </div>
+      )}
       <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
     </div>
   );
