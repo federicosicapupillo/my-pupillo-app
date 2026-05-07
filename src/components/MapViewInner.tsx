@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -30,7 +30,7 @@ const makeIcon = (category: MapCategory) =>
     iconAnchor: [11, 22],
   });
 
-export default function MapViewInner({ points, height, center }: { points: MapPoint[]; height: number; center: [number, number] }) {
+export default function MapViewInner({ points, height, center, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
   return (
     <div className="overflow-hidden rounded-xl border" style={{ height }}>
       <MapContainer center={center} zoom={6} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
@@ -38,6 +38,24 @@ export default function MapViewInner({ points, height, center }: { points: MapPo
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {me && (
+          <>
+            <CircleMarker
+              center={[me.lat, me.lng]}
+              radius={7}
+              pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#2563eb", fillOpacity: 1 }}
+            >
+              <Popup>La tua posizione</Popup>
+            </CircleMarker>
+            {radiusKm && radiusKm > 0 && (
+              <Circle
+                center={[me.lat, me.lng]}
+                radius={radiusKm * 1000}
+                pathOptions={{ color: "#2563eb", weight: 2, fillColor: "#2563eb", fillOpacity: 0.08 }}
+              />
+            )}
+          </>
+        )}
         {points.map((p) => (
           <Marker key={`${p.category}-${p.id}`} position={[p.lat, p.lng]} icon={makeIcon(p.category)}>
             <Popup>
