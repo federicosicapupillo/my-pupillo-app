@@ -11,6 +11,7 @@ import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle } from "l
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
+import { useAuth } from "@/lib/auth-context";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
@@ -85,11 +86,17 @@ function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
 }
 
 function MapPage() {
+  const { role } = useAuth();
+  const isDev = typeof import.meta !== "undefined" && (import.meta as any).env?.DEV === true;
+  const debugEnabled = role === "admin" || isDev;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [annCounts, setAnnCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+
+  // Sorgente coordinate per ogni annuncio (debug)
+  const [coordSources, setCoordSources] = useState<Record<string, "job" | "location" | "profile" | "service_area">>({});
 
   // search & filters
   const [query, setQuery] = useState("");
