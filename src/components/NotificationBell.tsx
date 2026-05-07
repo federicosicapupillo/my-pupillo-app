@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bell, BellOff, BellRing } from "lucide-react";
@@ -123,7 +124,10 @@ export function NotificationBell() {
       <PopoverContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-3 py-2 border-b">
           <span className="font-medium text-sm">Notifiche</span>
-          {unread > 0 && <button onClick={markAll} className="text-xs text-primary hover:underline">Segna tutte lette</button>}
+          <div className="flex items-center gap-3">
+            {unread > 0 && <button onClick={markAll} className="text-xs text-primary hover:underline">Segna lette</button>}
+            <Link to="/notifications" onClick={() => setOpen(false)} className="text-xs text-primary hover:underline">Vedi tutte</Link>
+          </div>
         </div>
         {pushPerm !== "unsupported" && pushPerm !== "granted" && (
           <div className="px-3 py-2 border-b bg-primary/5">
