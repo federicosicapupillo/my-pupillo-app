@@ -93,7 +93,15 @@ function RestaurantDetailPage() {
         application_id: app.id, sender_id: user.id, body: note.trim(),
       });
     }
-    toast.success("Richiesta inviata");
+    const when = [confirmAnn.service_date, confirmAnn.service_time].filter(Boolean).join(" · ") || "data da definire";
+    const dur = confirmAnn.duration_hours ? ` (${confirmAnn.duration_hours}h)` : "";
+    toast.success("Prenotazione inviata", {
+      description:
+        `${confirmAnn.professional_profile || "Turno"} — ${when}${dur}\n` +
+        `Stato iniziale: In attesa di conferma del ristoratore.`,
+      duration: 7000,
+      action: { label: "Vedi messaggi", onClick: () => navigate({ to: "/messages" }) },
+    });
     setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
     setConfirmAnn(null); setNote(""); setSubmitting(false);
   };
