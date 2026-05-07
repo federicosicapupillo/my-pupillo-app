@@ -425,7 +425,7 @@ function MapPage() {
               <ul className="mt-1 max-h-40 overflow-y-auto list-disc pl-5">
                 {annsMissingCoords.slice(0, 50).map(a => (
                   <li key={a.id}>
-                    <code>{a.id.slice(0, 8)}</code> · {a.professional_profile || "—"} · rest {a.restaurant_id.slice(0, 8)}
+                    <code>{a.id.slice(0, 8)}</code> · {a.title} · rest {a.restaurant_id.slice(0, 8)}
                   </li>
                 ))}
               </ul>
