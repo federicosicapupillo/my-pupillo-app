@@ -235,7 +235,10 @@ export type Database = {
           service_area_radius_m: number | null
           terms_accepted: boolean | null
           updated_at: string
+          vat_company_name: string | null
           vat_number: string | null
+          vat_status: Database["public"]["Enums"]["vat_status"] | null
+          vat_verified_at: string | null
           venue_type: string | null
           whatsapp_connected: boolean | null
         }
@@ -257,7 +260,10 @@ export type Database = {
           service_area_radius_m?: number | null
           terms_accepted?: boolean | null
           updated_at?: string
+          vat_company_name?: string | null
           vat_number?: string | null
+          vat_status?: Database["public"]["Enums"]["vat_status"] | null
+          vat_verified_at?: string | null
           venue_type?: string | null
           whatsapp_connected?: boolean | null
         }
@@ -279,7 +285,10 @@ export type Database = {
           service_area_radius_m?: number | null
           terms_accepted?: boolean | null
           updated_at?: string
+          vat_company_name?: string | null
           vat_number?: string | null
+          vat_status?: Database["public"]["Enums"]["vat_status"] | null
+          vat_verified_at?: string | null
           venue_type?: string | null
           whatsapp_connected?: boolean | null
         }
@@ -338,6 +347,7 @@ export type Database = {
         | "expired"
       service_speed: "normal" | "fast" | "flash"
       tariff_type: "hourly" | "flat"
+      vat_status: "pending" | "valid" | "invalid" | "error"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -484,6 +494,7 @@ export const Constants = {
       ],
       service_speed: ["normal", "fast", "flash"],
       tariff_type: ["hourly", "flat"],
+      vat_status: ["pending", "valid", "invalid", "error"],
     },
   },
 } as const

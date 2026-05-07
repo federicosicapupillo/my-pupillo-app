@@ -22,6 +22,9 @@ type Profile = {
   service_area_radius_m: number | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
+  vat_status: "pending" | "valid" | "invalid" | "error" | null;
+  vat_company_name: string | null;
+  vat_verified_at: string | null;
 };
 
 type Ctx = {
