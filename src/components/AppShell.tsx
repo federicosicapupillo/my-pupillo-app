@@ -12,6 +12,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = useNavigate();
   const loc = useLocation();
 
+  // Home dinamica in base al ruolo dell'utente
+  const homeTo: string = !user
+    ? "/"
+    : role === "admin"
+      ? "/admin"
+      : "/dashboard";
+
   const items = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     role === "restaurant" && { to: "/announcements", label: "I miei annunci", icon: Briefcase },
@@ -31,8 +38,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <PaymentTestModeBanner />
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <img src={pupilloLogo} alt="Pupillo" className="h-10 w-auto" />
+          <Link
+            to={homeTo as never}
+            aria-label="Vai alla home page"
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <img src={pupilloLogo} alt="Pupillo Home" className="h-10 w-auto" />
           </Link>
           <div className="hidden md:flex items-center gap-1">
             {items.map((i) => (
