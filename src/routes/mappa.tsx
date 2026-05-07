@@ -29,6 +29,13 @@ type Restaurant = {
   neighborhood: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  contact_person_first_name: string | null;
+  contact_person_last_name: string | null;
+  contact_person_role: string | null;
+  contact_person_phone: string | null;
+  contact_person_email: string | null;
   account_status: string | null;
   plan: string | null;
   credits: number | null;
@@ -60,6 +67,12 @@ type Ann = {
   location_address: string | null;
   location_lat: number | null;
   location_lng: number | null;
+  job_latitude: number | null;
+  job_longitude: number | null;
+  job_address: string | null;
+  job_contact_person_name: string | null;
+  job_contact_person_phone: string | null;
+  job_contact_person_email: string | null;
   status: string | null;
   restaurant_id: string;
 };
@@ -110,7 +123,7 @@ function MapPage() {
       setLoading(true);
       const [{ data: r }, { data: w }, { data: a }] = await Promise.all([
         supabase.from("profiles")
-          .select("id, business_name, full_name, venue_type, address, city, neighborhood, service_area_lat, service_area_lng, account_status, plan, credits, rating_avg")
+          .select("id, business_name, full_name, venue_type, address, city, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
         supabase
@@ -119,7 +132,7 @@ function MapPage() {
           .eq("role", "worker")
           .limit(2000),
         supabase.from("announcements")
-          .select("id, professional_profile, location_address, location_lat, location_lng, status, restaurant_id")
+          .select("id, professional_profile, location_address, location_lat, location_lng, job_latitude, job_longitude, job_address, job_contact_person_name, job_contact_person_phone, job_contact_person_email, status, restaurant_id")
           .eq("status", "active")
           .limit(1000),
       ]);
@@ -235,26 +248,46 @@ function MapPage() {
       });
     }
     if (showA) {
+      const restById = new Map(restaurants.map(r => [r.id, r]));
       anns.forEach(a => {
-        if (a.location_lat == null || a.location_lng == null) return;
+        const rest = restById.get(a.restaurant_id);
+        // Priorità: job_lat/lng → location_lat/lng → ristoratore.latitude/longitude → service_area_*
+        const lat = a.job_latitude ?? a.location_lat ?? rest?.latitude ?? rest?.service_area_lat ?? null;
+        const lng = a.job_longitude ?? a.location_lng ?? rest?.longitude ?? rest?.service_area_lng ?? null;
+        if (lat == null || lng == null) return;
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
         if (query || city !== "any" || district || venue !== "any" || planF !== "any" || statusF !== "any" || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
         }
+        const refPoint = searchCenter || me;
+        const distance = refPoint ? distKm(refPoint.lat, refPoint.lng, lat, lng) : null;
+        const contactName = a.job_contact_person_name
+          || [rest?.contact_person_first_name, rest?.contact_person_last_name].filter(Boolean).join(" ").trim()
+          || null;
+        const contactPhone = a.job_contact_person_phone || rest?.contact_person_phone || null;
+        const contactEmail = a.job_contact_person_email || rest?.contact_person_email || null;
+        const contactRole = rest?.contact_person_role || null;
         pts.push({
           id: a.id,
-          lat: a.location_lat,
-          lng: a.location_lng,
+          lat,
+          lng,
           category: "announcement",
           title: a.professional_profile || "Annuncio",
-          subtitle: a.location_address || undefined,
+          subtitle: a.job_address || a.location_address || undefined,
           status: a.status,
           link: `/announcements/${a.id}`,
+          meta: {
+            distanceKm: distance,
+            contactName,
+            contactPhone,
+            contactEmail,
+            contactRole,
+          } as any,
         });
       });
     }
     return pts;
-  }, [filteredRestaurants, filteredWorkers, anns, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me]);
 
   const center: [number, number] = searchCenter
     ? [searchCenter.lat, searchCenter.lng]
