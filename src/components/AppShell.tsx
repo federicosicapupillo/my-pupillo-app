@@ -125,10 +125,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               }
             }}
           >
-            <span className="inline-flex items-center gap-2">
-              <span aria-hidden="true" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-base shadow-sm">P</span>
-              <span className="font-semibold tracking-tight text-foreground text-lg">Pupillo</span>
-            </span>
+            <img
+              src={pupilloLogo}
+              alt="Logo Pupillo"
+              className="h-10 w-auto object-contain md:h-12"
+            />
           </Link>
           <div className="hidden md:flex items-center gap-1">
             {items.map((i) => (
