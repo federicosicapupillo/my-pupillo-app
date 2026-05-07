@@ -71,6 +71,13 @@ type Restaurant = {
   opening_hours: string | null; employees_count: number | null;
 };
 
+type JobRequest = {
+  title: string | null; role_required: string | null; workers_needed: number | null;
+  description: string | null; tasks: string | null; start_time: string | null; end_time: string | null;
+  hourly_rate: number | null; break_included: boolean | null; operational_notes: string | null;
+  restaurant_name: string | null; district: string | null; worker_notes: string | null;
+};
+
 const STATUS_LABEL: Record<string, string> = {
   draft: "Bozza", active: "Pubblicato", assigned: "Assegnato",
   completed: "Completato", cancelled: "Annullato", expired: "Scaduto",
@@ -111,6 +118,7 @@ function AnnouncementDetail() {
   const [apps, setApps] = useState<App[]>([]);
   const [workers, setWorkers] = useState<Record<string, WorkerProfile>>({});
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [jobRequest, setJobRequest] = useState<JobRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -128,6 +136,12 @@ function AnnouncementDetail() {
       .order("created_at", { ascending: false });
     const list = (ax as App[]) ?? [];
     setApps(list);
+    const { data: jr } = await (supabase as any)
+      .from("job_requests")
+      .select("title,role_required,workers_needed,description,tasks,start_time,end_time,hourly_rate,break_included,operational_notes,restaurant_name,district,worker_notes")
+      .eq("announcement_id", id)
+      .maybeSingle();
+    setJobRequest((jr as JobRequest) ?? null);
     const ids = Array.from(new Set(list.map(x => x.worker_id)));
     if (ids.length) {
       const { data: ps } = await supabase.from("profiles")
