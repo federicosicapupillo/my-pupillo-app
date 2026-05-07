@@ -13,9 +13,10 @@ import { toast } from "sonner";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
 import { useEffect, useRef } from "react";
-import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search, Coins } from "lucide-react";
 import { consumeCredits } from "@/lib/credits";
 import { CREDIT_COSTS } from "@/lib/pricing";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -100,6 +101,12 @@ function NewAnn() {
     return <AppShell><p className="text-muted-foreground">Solo i ristoratori possono creare annunci.</p></AppShell>;
   }
 
+  const isUrgent = f.speed === "flash" || f.speed === "fast";
+  const cost = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
+  const credits = profile?.credits ?? 0;
+  const isPaid = profile?.plan === "pro" || profile?.plan === "business";
+  const canAfford = isPaid || credits >= cost;
+
   const save = async (asDraft: boolean) => {
     if (!user) return;
     if (!asDraft && !coords) {
@@ -141,6 +148,21 @@ function NewAnn() {
   return (
     <AppShell>
       <PageHeader title="Nuovo annuncio" subtitle="Pubblica una richiesta di personale extra" />
+      <div className={`mb-4 max-w-2xl flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
+        <div className="flex items-center gap-2">
+          <Coins className="h-4 w-4 text-primary" />
+          {isPaid ? (
+            <span>Piano <strong className="capitalize">{profile?.plan}</strong> attivo · pubblicazioni illimitate</span>
+          ) : (
+            <span>
+              Costo pubblicazione: <strong>{cost} {cost === 1 ? "credito" : "crediti"}</strong>{isUrgent && " (urgente)"} · Saldo: <strong>{credits}</strong>
+            </span>
+          )}
+        </div>
+        {!isPaid && !canAfford && (
+          <Link to="/billing"><Button size="sm" variant="outline" type="button" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
+        )}
+      </div>
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-2">
           <div><Label>Data servizio</Label><Input type="date" required value={f.service_date} onChange={e => setF({ ...f, service_date: e.target.value })} /></div>
@@ -207,8 +229,10 @@ function NewAnn() {
           <Button type="button" variant="outline" disabled={busy} onClick={()=>save(true)} className="sm:w-auto w-full">
             Salva come bozza
           </Button>
-          <Button type="submit" disabled={busy || !coords} className="flex-1">
-            {busy ? "Pubblicazione…" : geoState.status === "loading" ? "Ricerca posizione…" : !coords ? "Posizione richiesta" : "Pubblica annuncio"}
+          <Button type="submit" disabled={busy || !coords || !canAfford} className="flex-1 gap-1">
+            {busy ? "Pubblicazione…" : geoState.status === "loading" ? "Ricerca posizione…" : !coords ? "Posizione richiesta" : !canAfford ? "Crediti insufficienti" : (
+              <>Pubblica annuncio {!isPaid && <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span>}</>
+            )}
           </Button>
         </div>
       </form>
