@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle } from "lucide-react";
+import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle, Info } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
@@ -395,13 +395,67 @@ function MapPage() {
         )}
       </div>
 
-      {showA && annsMissingCoords.length > 0 && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200 dark:border-amber-800 p-3 mb-4 flex items-start gap-2 text-sm">
-          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-          <div>
-            <strong>{annsMissingCoords.length}</strong> {annsMissingCoords.length === 1 ? "annuncio non è" : "annunci non sono"} visibili sulla mappa: nessuna coordinata disponibile (né <code>job_latitude/longitude</code>, né indirizzo dell'annuncio, né del ristoratore).
+      {showA && (annsMissingCoords.length > 0 || annsPartialCoords.length > 0) && (
+        <TooltipProvider delayDuration={150}>
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200 dark:border-amber-800 p-3 mb-4 text-sm space-y-2">
+            {annsMissingCoords.length > 0 && (
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <strong>{annsMissingCoords.length}</strong>{" "}
+                  {annsMissingCoords.length === 1 ? "annuncio non è visibile" : "annunci non sono visibili"} sulla mappa (nessuna coordinata disponibile).
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="inline-flex items-center gap-1 text-xs underline underline-offset-2">
+                      <Info className="h-3.5 w-3.5" /> Dettagli
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="end" className="max-w-xs text-xs">
+                    <div className="font-semibold mb-1">Campi mancanti per ogni annuncio:</div>
+                    <ul className="space-y-1 max-h-60 overflow-y-auto">
+                      {annsMissingCoords.slice(0, 20).map(a => (
+                        <li key={a.id}>
+                          <code>{a.id.slice(0, 8)}</code> · {a.title}
+                          <div className="text-muted-foreground">manca: {a.missing.join(", ")}</div>
+                        </li>
+                      ))}
+                      {annsMissingCoords.length > 20 && <li>… e altri {annsMissingCoords.length - 20}</li>}
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+            {annsPartialCoords.length > 0 && (
+              <div className="flex items-start gap-2 border-t border-amber-200 dark:border-amber-800 pt-2">
+                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <strong>{annsPartialCoords.length}</strong> {annsPartialCoords.length === 1 ? "annuncio mostrato" : "annunci mostrati"} con sorgente di fallback (alcuni campi mancanti).
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="inline-flex items-center gap-1 text-xs underline underline-offset-2">
+                      <Info className="h-3.5 w-3.5" /> Dettagli
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="end" className="max-w-xs text-xs">
+                    <div className="font-semibold mb-1">Campi disponibili / mancanti:</div>
+                    <ul className="space-y-1 max-h-60 overflow-y-auto">
+                      {annsPartialCoords.slice(0, 20).map(a => (
+                        <li key={a.id}>
+                          <code>{a.id.slice(0, 8)}</code> · {a.title}
+                          <div className="text-emerald-600">ok: {a.available.join(", ")}</div>
+                          <div className="text-amber-600">manca: {a.missing.join(", ")}</div>
+                        </li>
+                      ))}
+                      {annsPartialCoords.length > 20 && <li>… e altri {annsPartialCoords.length - 20}</li>}
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
           </div>
-        </div>
+        </TooltipProvider>
       )}
 
       {debugEnabled && showA && (
