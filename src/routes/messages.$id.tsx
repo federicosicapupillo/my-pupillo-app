@@ -167,7 +167,7 @@ function Thread() {
           <div className="rounded-2xl border bg-card p-4 mb-4">
             <div className="text-xs font-medium text-muted-foreground mb-3">Stato della richiesta</div>
             <ol className="flex items-start justify-between gap-2">
-              {steps.map((s, i) => (
+              {steps.map((s: Step, i: number) => (
                 <li key={s.key} className="flex-1 flex flex-col items-center text-center min-w-0">
                   <div className="flex items-center w-full">
                     <div className={`h-px flex-1 ${i === 0 ? "invisible" : s.state === "todo" ? "bg-border" : "bg-primary"}`} />
