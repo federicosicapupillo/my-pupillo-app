@@ -57,7 +57,7 @@ async function handleSubscriptionUpsert(subscription: any, env: StripeEnv) {
   if (planMap) {
     await getSupabase()
       .from("profiles")
-      .update({ plan: isActive ? planMap.plan : "free", updated_at: new Date().toISOString() })
+      .update({ plan: (isActive ? planMap.plan : "free") as any, updated_at: new Date().toISOString() })
       .eq("id", userId);
   }
 }
