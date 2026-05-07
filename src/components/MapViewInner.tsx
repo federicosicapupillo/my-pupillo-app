@@ -22,6 +22,11 @@ export type MapPoint = {
     hourlyRate?: number | null;
     availability?: string[];
     badge?: string | null;
+    distanceKm?: number | null;
+    contactName?: string | null;
+    contactRole?: string | null;
+    contactPhone?: string | null;
+    contactEmail?: string | null;
   };
 };
 
@@ -85,6 +90,21 @@ export default function MapViewInner({ points, height, center, me, radiusKm }: {
                     {p.meta.hourlyRate != null && <div>Tariffa: € {Number(p.meta.hourlyRate).toFixed(0)}/h</div>}
                     {p.meta.availability && p.meta.availability.length > 0 && (
                       <div>Disponibile: {p.meta.availability.join(", ")}</div>
+                    )}
+                    {p.meta.distanceKm != null && (
+                      <div>📍 {p.meta.distanceKm < 1 ? `${Math.round(p.meta.distanceKm * 1000)} m` : `${p.meta.distanceKm.toFixed(1)} km`} da te</div>
+                    )}
+                    {p.meta.contactName && (
+                      <div style={{ marginTop: 4 }}>
+                        <strong>Referente:</strong> {p.meta.contactName}
+                        {p.meta.contactRole ? ` (${p.meta.contactRole})` : ""}
+                      </div>
+                    )}
+                    {p.meta.contactPhone && (
+                      <div>📞 <a href={`tel:${p.meta.contactPhone}`} style={{ color: COLORS[p.category] }}>{p.meta.contactPhone}</a></div>
+                    )}
+                    {p.meta.contactEmail && (
+                      <div>✉️ <a href={`mailto:${p.meta.contactEmail}`} style={{ color: COLORS[p.category] }}>{p.meta.contactEmail}</a></div>
                     )}
                   </div>
                 )}
