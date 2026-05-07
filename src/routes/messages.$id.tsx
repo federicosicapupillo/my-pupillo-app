@@ -23,6 +23,32 @@ type Ann = { id: string; tariff_amount: number; tariff_type: string };
 
 const TERMINAL = ["accepted", "rejected", "expired"];
 
+type StepState = "done" | "current" | "todo" | "error";
+type Step = { key: string; label: string; icon: typeof Send; state: StepState };
+
+function buildTimeline(status?: string): Step[] {
+  const s = status ?? "pending";
+  const isReject = s === "rejected" || s === "not_interested";
+  const isCounter = s === "counter_offer";
+  const isAccepted = s === "accepted";
+  const isInterested = s === "interested";
+  const isExpired = s === "expired";
+
+  const mark = (cond: boolean, isCurrent: boolean): StepState =>
+    cond ? "done" : isCurrent ? "current" : "todo";
+
+  return [
+    { key: "sent", label: "Inviata", icon: Send, state: "done" },
+    { key: "interest", label: "Interesse", icon: ThumbsUp,
+      state: isReject ? "error" : mark(isInterested || isCounter || isAccepted, s === "pending") },
+    { key: "counter", label: "Controfferta", icon: Handshake,
+      state: isCounter ? "current" : (isAccepted ? "done" : "todo") },
+    { key: "outcome", label: isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
+      icon: isReject || isExpired ? Ban : Check,
+      state: isAccepted ? "done" : (isReject || isExpired) ? "error" : "todo" },
+  ];
+}
+
 function Thread() {
   const { id } = Route.useParams();
   const { user, role } = useAuth();
