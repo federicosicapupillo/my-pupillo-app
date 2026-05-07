@@ -4,8 +4,11 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { MapPin, Coins, Briefcase, Star, Phone, Mail, Globe, ArrowLeft, MessageSquare, Map as MapIcon } from "lucide-react";
+import { MapPin, Coins, Briefcase, Star, Phone, Mail, Globe, ArrowLeft, MessageSquare, Map as MapIcon, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-context";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/restaurants/$id")({
   head: () => ({ meta: [{ title: "Dettaglio ristoratore — Pupillo" }] }),
@@ -39,9 +42,14 @@ function statusBadge(s?: string | null) {
 function RestaurantDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
+  const { user, role } = useAuth();
   const [r, setR] = useState<Restaurant | null>(null);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -61,6 +69,35 @@ function RestaurantDetailPage() {
     })();
   }, [id]);
 
+  useEffect(() => {
+    if (!user || anns.length === 0) return;
+    (async () => {
+      const ids = anns.map(a => a.id);
+      const { data } = await supabase.from("applications")
+        .select("announcement_id").eq("worker_id", user.id).in("announcement_id", ids);
+      setAppliedIds(new Set((data || []).map((x: any) => x.announcement_id)));
+    })();
+  }, [user, anns]);
+
+  const submitBooking = async () => {
+    if (!user || !confirmAnn) return;
+    setSubmitting(true);
+    const { data: app, error } = await supabase.from("applications").insert({
+      announcement_id: confirmAnn.id,
+      worker_id: user.id,
+      restaurant_id: id,
+    }).select("id").single();
+    if (error) { setSubmitting(false); return toast.error(error.message); }
+    if (note.trim() && app?.id) {
+      await supabase.from("messages").insert({
+        application_id: app.id, sender_id: user.id, body: note.trim(),
+      });
+    }
+    toast.success("Richiesta inviata");
+    setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
+    setConfirmAnn(null); setNote(""); setSubmitting(false);
+  };
+
   if (loading) {
     return <AppShell><div className="p-8 text-sm text-muted-foreground">Caricamento…</div></AppShell>;
   }
@@ -79,6 +116,7 @@ function RestaurantDetailPage() {
   const name = r.business_name || r.full_name || "Locale";
   const fullAddress = [r.address, r.neighborhood, r.city].filter(Boolean).join(", ");
   const activeAnns = anns.filter(a => a.status === "active");
+  const canBook = role === "worker" && r.account_status === "active";
 
   return (
     <AppShell>
@@ -156,6 +194,19 @@ function RestaurantDetailPage() {
                         </span>
                       )}
                     </div>
+                    {canBook && (
+                      <div className="mt-3 flex justify-end">
+                        {appliedIds.has(a.id) ? (
+                          <Button size="sm" variant="outline" disabled className="gap-1">
+                            <CalendarCheck className="h-4 w-4" />Già prenotato
+                          </Button>
+                        ) : (
+                          <Button size="sm" className="gap-1" onClick={() => { setNote(""); setConfirmAnn(a); }}>
+                            <CalendarCheck className="h-4 w-4" />Prenota turno
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -176,11 +227,24 @@ function RestaurantDetailPage() {
             <h3 className="font-semibold text-sm">Azioni</h3>
             {r.account_status === "active" ? (
               <>
+                {canBook && activeAnns.length > 0 && (
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => { setNote(""); setConfirmAnn(activeAnns[0]); }}
+                  >
+                    <CalendarCheck className="h-4 w-4" />Prenota turno
+                  </Button>
+                )}
+                {canBook && activeAnns.length === 0 && (
+                  <Button className="w-full gap-2" variant="outline" disabled>
+                    <CalendarCheck className="h-4 w-4" />Nessun turno disponibile
+                  </Button>
+                )}
                 <Link to="/messages" className="block">
-                  <Button className="w-full gap-2"><MessageSquare className="h-4 w-4" />Contatta</Button>
+                  <Button variant="outline" className="w-full gap-2"><MessageSquare className="h-4 w-4" />Contatta</Button>
                 </Link>
                 <Link to="/browse" className="block">
-                  <Button variant="outline" className="w-full gap-2"><Briefcase className="h-4 w-4" />Vedi richieste</Button>
+                  <Button variant="ghost" className="w-full gap-2"><Briefcase className="h-4 w-4" />Vedi tutte le richieste</Button>
                 </Link>
               </>
             ) : r.account_status === "pending" ? (
@@ -193,9 +257,40 @@ function RestaurantDetailPage() {
                 <Button variant="ghost" className="w-full gap-2"><MapIcon className="h-4 w-4" />Mostra sulla mappa</Button>
               </Link>
             )}
+            {role && role !== "worker" && r.account_status === "active" && (
+              <p className="text-xs text-muted-foreground pt-1">La prenotazione turni è disponibile per i lavoratori.</p>
+            )}
           </div>
         </aside>
       </div>
+
+      <Dialog open={!!confirmAnn} onOpenChange={(o) => !o && setConfirmAnn(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Prenota turno</DialogTitle>
+            <DialogDescription>
+              {confirmAnn?.professional_profile || "Annuncio"} · {confirmAnn?.service_date || "data da definire"}
+              {confirmAnn?.service_time ? ` · ${confirmAnn.service_time}` : ""}
+              {confirmAnn?.duration_hours ? ` · ${confirmAnn.duration_hours}h` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Nota per il ristoratore (opzionale)</label>
+            <Textarea
+              placeholder="Presentati brevemente o aggiungi dettagli utili"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmAnn(null)} disabled={submitting}>Annulla</Button>
+            <Button onClick={submitBooking} disabled={submitting} className="gap-1">
+              <CalendarCheck className="h-4 w-4" />{submitting ? "Invio…" : "Conferma prenotazione"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
