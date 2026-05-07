@@ -250,7 +250,7 @@ function Thread() {
               if (ts.length === 0) return null;
               return (
                 <ul className="mt-5 border-t pt-4 space-y-3">
-                  {ts.map((e, i) => (
+                  {ts.map((e: TimelineEvent, i: number) => (
                     <li key={i} className="flex gap-3 text-sm">
                       <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${e.tone === "error" ? "bg-destructive" : e.tone === "success" ? "bg-primary" : "bg-muted-foreground"}`} />
                       <div className="flex-1 min-w-0">
