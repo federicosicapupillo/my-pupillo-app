@@ -202,7 +202,9 @@ function WorkersPage() {
                 {w.languages.map((l) => <span key={l} className="text-xs bg-secondary px-2 py-0.5 rounded-full">{l}</span>)}
               </div>
             )}
-            <Button size="sm" className="mt-4 w-full" onClick={() => invite(w.id)} disabled={!selected}>Contatta</Button>
+            <Button size="sm" className="mt-4 w-full gap-1" onClick={() => invite(w.id)} disabled={!selected || !canAfford}>
+              Contatta {!isPaid && <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span>}
+            </Button>
           </div>
           );
         })}
