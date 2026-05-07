@@ -17,6 +17,7 @@ import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search, Coins } from "lu
 import { consumeCredits } from "@/lib/credits";
 import { CREDIT_COSTS } from "@/lib/pricing";
 import { Link } from "@tanstack/react-router";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -30,6 +31,7 @@ function NewAnn() {
   const { reuse } = Route.useSearch();
   const [busy, setBusy] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
   const [f, setF] = useState({
     service_date: "", service_time: "19:00", duration_hours: "4",
@@ -143,7 +145,12 @@ function NewAnn() {
     toast.success(asDraft ? "Bozza salvata" : "Annuncio pubblicato!");
     nav({ to: "/announcements" });
   };
-  const submit = (e: React.FormEvent) => { e.preventDefault(); save(false); };
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
+    if (!coords) { toast.error("Posizione non valida"); return; }
+    setConfirmOpen(true);
+  };
 
   return (
     <AppShell>
@@ -236,6 +243,40 @@ function NewAnn() {
           </Button>
         </div>
       </form>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2"><Coins className="h-5 w-5 text-primary" />Conferma pubblicazione</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                {isPaid ? (
+                  <p>Il tuo piano <strong className="capitalize">{profile?.plan}</strong> include pubblicazioni illimitate. Nessun credito verrà scalato.</p>
+                ) : (
+                  <>
+                    <p>Stai per pubblicare un annuncio{isUrgent ? " urgente" : ""}.</p>
+                    <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1.5">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Costo pubblicazione</span><strong>{cost} {cost === 1 ? "credito" : "crediti"}</strong></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Saldo attuale</span><strong>{credits}</strong></div>
+                      <div className="flex justify-between border-t pt-1.5"><span className="text-muted-foreground">Saldo dopo</span><strong className={credits - cost < 0 ? "text-destructive" : ""}>{credits - cost}</strong></div>
+                    </div>
+                    {!canAfford && <p className="text-destructive text-sm">Crediti insufficienti. Acquista crediti per continuare.</p>}
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Annulla</AlertDialogCancel>
+            {!isPaid && !canAfford ? (
+              <Link to="/billing"><Button>Acquista crediti</Button></Link>
+            ) : (
+              <AlertDialogAction disabled={busy} onClick={async () => { await save(false); setConfirmOpen(false); }}>
+                {busy ? "Pubblicazione…" : "Conferma e pubblica"}
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
