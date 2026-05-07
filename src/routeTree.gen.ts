@@ -12,10 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MessagesIdRouteImport } from './routes/messages.$id'
+import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
 
 const WorkersRoute = WorkersRouteImport.update({
   id: '/workers',
@@ -30,6 +35,16 @@ const ProfileRoute = ProfileRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsRoute = JobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -47,75 +62,123 @@ const AnnouncementsRoute = AnnouncementsRouteImport.update({
   path: '/announcements',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MessagesIdRoute = MessagesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => MessagesRoute,
+} as any)
+const AnnouncementsNewRoute = AnnouncementsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AnnouncementsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/announcements': typeof AnnouncementsRoute
+  '/admin': typeof AdminRoute
+  '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/jobs': typeof JobsRoute
+  '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/workers': typeof WorkersRoute
+  '/announcements/new': typeof AnnouncementsNewRoute
+  '/messages/$id': typeof MessagesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/announcements': typeof AnnouncementsRoute
+  '/admin': typeof AdminRoute
+  '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/jobs': typeof JobsRoute
+  '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/workers': typeof WorkersRoute
+  '/announcements/new': typeof AnnouncementsNewRoute
+  '/messages/$id': typeof MessagesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/announcements': typeof AnnouncementsRoute
+  '/admin': typeof AdminRoute
+  '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/jobs': typeof JobsRoute
+  '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/workers': typeof WorkersRoute
+  '/announcements/new': typeof AnnouncementsNewRoute
+  '/messages/$id': typeof MessagesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/announcements'
     | '/auth'
     | '/dashboard'
+    | '/jobs'
+    | '/messages'
     | '/onboarding'
     | '/profile'
     | '/workers'
+    | '/announcements/new'
+    | '/messages/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/announcements'
     | '/auth'
     | '/dashboard'
+    | '/jobs'
+    | '/messages'
     | '/onboarding'
     | '/profile'
     | '/workers'
+    | '/announcements/new'
+    | '/messages/$id'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/announcements'
     | '/auth'
     | '/dashboard'
+    | '/jobs'
+    | '/messages'
     | '/onboarding'
     | '/profile'
     | '/workers'
+    | '/announcements/new'
+    | '/messages/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnnouncementsRoute: typeof AnnouncementsRoute
+  AdminRoute: typeof AdminRoute
+  AnnouncementsRoute: typeof AnnouncementsRouteWithChildren
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  JobsRoute: typeof JobsRoute
+  MessagesRoute: typeof MessagesRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
   WorkersRoute: typeof WorkersRoute
@@ -144,6 +207,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs': {
+      id: '/jobs'
+      path: '/jobs'
+      fullPath: '/jobs'
+      preLoaderRoute: typeof JobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -165,6 +242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnnouncementsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -172,14 +256,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/messages/$id': {
+      id: '/messages/$id'
+      path: '/$id'
+      fullPath: '/messages/$id'
+      preLoaderRoute: typeof MessagesIdRouteImport
+      parentRoute: typeof MessagesRoute
+    }
+    '/announcements/new': {
+      id: '/announcements/new'
+      path: '/new'
+      fullPath: '/announcements/new'
+      preLoaderRoute: typeof AnnouncementsNewRouteImport
+      parentRoute: typeof AnnouncementsRoute
+    }
   }
 }
 
+interface AnnouncementsRouteChildren {
+  AnnouncementsNewRoute: typeof AnnouncementsNewRoute
+}
+
+const AnnouncementsRouteChildren: AnnouncementsRouteChildren = {
+  AnnouncementsNewRoute: AnnouncementsNewRoute,
+}
+
+const AnnouncementsRouteWithChildren = AnnouncementsRoute._addFileChildren(
+  AnnouncementsRouteChildren,
+)
+
+interface MessagesRouteChildren {
+  MessagesIdRoute: typeof MessagesIdRoute
+}
+
+const MessagesRouteChildren: MessagesRouteChildren = {
+  MessagesIdRoute: MessagesIdRoute,
+}
+
+const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
+  MessagesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnnouncementsRoute: AnnouncementsRoute,
+  AdminRoute: AdminRoute,
+  AnnouncementsRoute: AnnouncementsRouteWithChildren,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  JobsRoute: JobsRoute,
+  MessagesRoute: MessagesRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
   WorkersRoute: WorkersRoute,
