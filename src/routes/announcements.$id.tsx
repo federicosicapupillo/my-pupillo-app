@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, MapPin, Euro, Clock, Users, Star, Shield,
-  CheckCircle2, XCircle, MessageSquare, Award,
+  CheckCircle2, XCircle, MessageSquare, Award, Building2, Phone, Mail, Globe,
 } from "lucide-react";
 
 export const Route = createFileRoute("/announcements/$id")({
@@ -35,6 +35,13 @@ type WorkerProfile = {
   reliability_pct: number | null; experience_years: number | null;
   completed_shifts: number | null;
 };
+type Restaurant = {
+  id: string; full_name: string | null; business_name: string | null;
+  venue_type: string | null; address: string | null; city: string | null;
+  neighborhood: string | null; price_range: string | null; phone: string | null;
+  email: string | null; rating_avg: number | null; reviews_count: number | null;
+  opening_hours: string | null; employees_count: number | null;
+};
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Bozza", active: "Pubblicato", assigned: "Assegnato",
@@ -56,6 +63,7 @@ function AnnouncementDetail() {
   const [ann, setAnn] = useState<Ann | null>(null);
   const [apps, setApps] = useState<App[]>([]);
   const [workers, setWorkers] = useState<Record<string, WorkerProfile>>({});
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -63,6 +71,10 @@ function AnnouncementDetail() {
     const { data: a } = await supabase.from("announcements").select("*").eq("id", id).maybeSingle();
     setAnn(a as Ann | null);
     if (!a) { setLoading(false); return; }
+    const { data: r } = await supabase.from("profiles")
+      .select("id,full_name,business_name,venue_type,address,city,neighborhood,price_range,phone,email,rating_avg,reviews_count,opening_hours,employees_count")
+      .eq("id", (a as Ann).restaurant_id).maybeSingle();
+    setRestaurant(r as Restaurant | null);
     const { data: ax } = await supabase.from("applications")
       .select("id,status,worker_id,proposed_tariff,created_at")
       .eq("announcement_id", id)
@@ -96,6 +108,7 @@ function AnnouncementDetail() {
   }, [id]);
 
   const isOwner = !!(ann && user && ann.restaurant_id === user.id);
+  const restaurantName = restaurant?.business_name || restaurant?.full_name || "Ristoratore";
 
   const accept = async (app: App) => {
     setBusyId(app.id);
@@ -148,7 +161,7 @@ function AnnouncementDetail() {
 
       <PageHeader
         title={`Servizio ${ann.speed} · ${ann.duration_hours}h`}
-        subtitle={ann.professional_profile ? `Ruolo: ${ann.professional_profile}` : undefined}
+        subtitle={`${restaurantName}${ann.professional_profile ? ` · Ruolo: ${ann.professional_profile}` : ""}`}
         action={
           <span className={`text-xs rounded-full px-3 py-1 ${STATUS_CLS[ann.status] ?? "bg-muted text-muted-foreground"}`}>
             {STATUS_LABEL[ann.status] ?? ann.status}
@@ -157,7 +170,9 @@ function AnnouncementDetail() {
       />
 
       <div className="grid gap-4 md:grid-cols-[1fr_320px] mb-6">
+        <div className="space-y-4">
         <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
+          <div className="font-medium text-base mb-1">Dettagli servizio</div>
           <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" />{new Date(ann.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} · {ann.service_time?.slice(0,5)}</div>
           <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{ann.location_address}</div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />€{ann.tariff_amount} ({ann.tariff_type === "hourly" ? "/ora" : "a servizio"})</div>
@@ -170,6 +185,36 @@ function AnnouncementDetail() {
           {ann.notes && (
             <p className="pt-2 text-muted-foreground border-t mt-2 whitespace-pre-wrap">{ann.notes}</p>
           )}
+        </div>
+
+        {restaurant && (
+          <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
+            <div className="flex items-center justify-between mb-1">
+              <div className="font-medium text-base flex items-center gap-2"><Building2 className="h-4 w-4" />{restaurantName}</div>
+              <Link to="/restaurants/$id" params={{ id: restaurant.id }}>
+                <Button size="sm" variant="ghost">Vedi profilo</Button>
+              </Link>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {[restaurant.venue_type, restaurant.price_range].filter(Boolean).join(" · ") || "—"}
+            </div>
+            {(restaurant.address || restaurant.city) && (
+              <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{[restaurant.address, restaurant.neighborhood, restaurant.city].filter(Boolean).join(", ")}</div>
+            )}
+            {restaurant.opening_hours && (
+              <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />{restaurant.opening_hours}</div>
+            )}
+            {restaurant.phone && (
+              <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{restaurant.phone}</div>
+            )}
+            {restaurant.email && (
+              <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" />{restaurant.email}</div>
+            )}
+            {restaurant.rating_avg != null && Number(restaurant.rating_avg) > 0 && (
+              <div className="flex items-center gap-2"><Star className="h-4 w-4 text-amber-500" />{Number(restaurant.rating_avg).toFixed(1)} ({restaurant.reviews_count ?? 0} recensioni)</div>
+            )}
+          </div>
+        )}
         </div>
 
         {isOwner && (
