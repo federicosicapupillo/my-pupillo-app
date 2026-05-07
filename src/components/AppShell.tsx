@@ -95,7 +95,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       el.scrollIntoView({ block: "nearest", inline: "nearest" });
     };
     switch (e.key) {
+      case "ArrowDown":
       case "ArrowRight": e.preventDefault(); focus(idx === -1 ? 0 : idx + 1); break;
+      case "ArrowUp":
       case "ArrowLeft": e.preventDefault(); focus(idx === -1 ? 0 : idx - 1); break;
       case "Home": e.preventDefault(); focus(0); break;
       case "End": e.preventDefault(); focus(links.length - 1); break;
