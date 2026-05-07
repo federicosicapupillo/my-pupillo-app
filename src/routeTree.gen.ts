@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as ShiftsRouteImport } from './routes/shifts'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -32,6 +33,11 @@ const WorkersRoute = WorkersRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsRoute = ShiftsRouteImport.update({
+  id: '/shifts',
+  path: '/shifts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/workers': typeof WorkersRoute
   '/announcements/new': typeof AnnouncementsNewRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/reset-password'
+    | '/shifts'
     | '/terms'
     | '/workers'
     | '/announcements/new'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/reset-password'
+    | '/shifts'
     | '/terms'
     | '/workers'
     | '/announcements/new'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/profile'
     | '/reset-password'
+    | '/shifts'
     | '/terms'
     | '/workers'
     | '/announcements/new'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
   WorkersRoute: typeof WorkersRoute
 }
@@ -224,6 +237,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts': {
+      id: '/shifts'
+      path: '/shifts'
+      fullPath: '/shifts'
+      preLoaderRoute: typeof ShiftsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -348,9 +368,20 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
   WorkersRoute: WorkersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
