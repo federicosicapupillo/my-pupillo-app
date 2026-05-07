@@ -144,15 +144,7 @@ export type Database = {
           worker_id?: string
           worker_response_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "applications_announcement_id_fkey"
-            columns: ["announcement_id"]
-            isOneToOne: false
-            referencedRelation: "announcements"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       messages: {
         Row: {
@@ -176,15 +168,7 @@ export type Database = {
           id?: string
           sender_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "messages_application_id_fkey"
-            columns: ["application_id"]
-            isOneToOne: false
-            referencedRelation: "applications"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       notifications: {
         Row: {
