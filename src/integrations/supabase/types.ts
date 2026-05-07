@@ -237,6 +237,7 @@ export type Database = {
           id: string
           link: string | null
           read: boolean | null
+          read_at: string | null
           title: string
           user_id: string
         }
@@ -246,6 +247,7 @@ export type Database = {
           id?: string
           link?: string | null
           read?: boolean | null
+          read_at?: string | null
           title: string
           user_id: string
         }
@@ -255,6 +257,7 @@ export type Database = {
           id?: string
           link?: string | null
           read?: boolean | null
+          read_at?: string | null
           title?: string
           user_id?: string
         }

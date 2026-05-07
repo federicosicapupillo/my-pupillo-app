@@ -20,6 +20,7 @@ type Notif = {
   link: string | null;
   read: boolean | null;
   created_at: string;
+  read_at?: string | null;
 };
 
 type Filter = "all" | "unread" | "read";
@@ -172,7 +173,12 @@ function NotificationsPage() {
                         {!n.read && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
                       </div>
                       {n.body && <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{n.body}</div>}
-                      <div className="text-[10px] text-muted-foreground mt-1">{fmt(n.created_at)}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1 flex flex-wrap gap-x-2">
+                        <span>{fmt(n.created_at)}</span>
+                        {n.read && n.read_at && (
+                          <span className="text-primary/80">· Letta il {fmt(n.read_at)}</span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 </li>
@@ -192,6 +198,9 @@ function NotificationsPage() {
               <div>
                 <div className="text-xs text-muted-foreground">{fmt(opened.created_at)}</div>
                 <h2 className="font-semibold text-base mt-1">{opened.title}</h2>
+                {opened.read && opened.read_at && (
+                  <div className="text-xs text-primary mt-1">Letta il {fmt(opened.read_at)}</div>
+                )}
               </div>
               {opened.body && (
                 <p className="text-sm whitespace-pre-wrap text-muted-foreground">{opened.body}</p>

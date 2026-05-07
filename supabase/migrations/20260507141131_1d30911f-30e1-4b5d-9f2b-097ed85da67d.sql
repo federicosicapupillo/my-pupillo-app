@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.set_notification_read_at() FROM PUBLIC, anon, authenticated;
