@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins } from "lucide-react";
+import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon } from "lucide-react";
 import { ReactNode } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
@@ -19,6 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     role === "worker" && { to: "/jobs", label: "Offerte ricevute", icon: Briefcase },
     role === "worker" && { to: "/browse", label: "Trova offerte", icon: Compass },
     (role === "worker" || role === "restaurant") && { to: "/shifts", label: "I miei turni", icon: CalendarClock },
+    (role === "worker" || role === "restaurant") && { to: "/mappa", label: "Mappa", icon: MapIcon },
     { to: "/messages", label: "Messaggi", icon: MessageSquare },
     role === "restaurant" && { to: "/billing", label: "Crediti", icon: Coins },
     { to: "/profile", label: "Profilo", icon: Settings },

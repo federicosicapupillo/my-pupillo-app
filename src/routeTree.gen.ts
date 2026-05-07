@@ -16,6 +16,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as MappaRouteImport } from './routes/mappa'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -63,6 +64,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MappaRoute = MappaRouteImport.update({
+  id: '/mappa',
+  path: '/mappa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsRoute = JobsRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
+  '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
+  '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
+  '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
+    | '/mappa'
     | '/messages'
     | '/onboarding'
     | '/profile'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
+    | '/mappa'
     | '/messages'
     | '/onboarding'
     | '/profile'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
+    | '/mappa'
     | '/messages'
     | '/onboarding'
     | '/profile'
@@ -279,6 +291,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
+  MappaRoute: typeof MappaRoute
   MessagesRoute: typeof MessagesRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
@@ -339,6 +352,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mappa': {
+      id: '/mappa'
+      path: '/mappa'
+      fullPath: '/mappa'
+      preLoaderRoute: typeof MappaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs': {
@@ -469,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
+  MappaRoute: MappaRoute,
   MessagesRoute: MessagesRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
