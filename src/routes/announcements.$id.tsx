@@ -56,6 +56,25 @@ const STATUS_CLS: Record<string, string> = {
   expired: "bg-amber-500/15 text-amber-700",
 };
 
+const APP_STATUS_LABEL: Record<string, string> = {
+  pending: "In attesa",
+  interested: "Interessato",
+  counter_offer: "Controfferta",
+  accepted: "Accettata",
+  rejected: "Rifiutata",
+  not_interested: "Non interessato",
+  expired: "Scaduta",
+};
+const APP_STATUS_CLS: Record<string, string> = {
+  pending: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+  interested: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
+  counter_offer: "bg-orange-500/15 text-orange-700 border-orange-500/30",
+  accepted: "bg-blue-500/15 text-blue-700 border-blue-500/30",
+  rejected: "bg-red-500/15 text-red-700 border-red-500/30",
+  not_interested: "bg-muted text-muted-foreground",
+  expired: "bg-muted text-muted-foreground",
+};
+
 function AnnouncementDetail() {
   const { id } = Route.useParams();
   const { user, role } = useAuth();
@@ -149,6 +168,17 @@ function AnnouncementDetail() {
     accepted: apps.filter(a => a.status === "accepted").length,
     rejected: apps.filter(a => ["rejected","not_interested","expired"].includes(a.status)).length,
   }), [apps]);
+
+  const sortedApps = useMemo(() => {
+    const order: Record<string, number> = {
+      accepted: 0, counter_offer: 1, interested: 2, pending: 3,
+      rejected: 4, not_interested: 5, expired: 6,
+    };
+    return [...apps].sort((a, b) =>
+      (order[a.status] ?? 9) - (order[b.status] ?? 9) ||
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [apps]);
 
   if (loading) return <AppShell><p className="text-muted-foreground">Caricamento…</p></AppShell>;
   if (!ann) return <AppShell><p className="text-muted-foreground">Annuncio non trovato.</p></AppShell>;
@@ -249,12 +279,13 @@ function AnnouncementDetail() {
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
-              {apps.map(a => {
+              {sortedApps.map(a => {
                 const w = workers[a.worker_id];
+                const hasCounter = a.proposed_tariff != null && Number(a.proposed_tariff) !== Number(ann.tariff_amount);
                 const tariff = a.proposed_tariff ?? ann.tariff_amount;
                 const isAccepted = a.status === "accepted";
                 const isRejected = ["rejected","not_interested","expired"].includes(a.status);
-                const canAct = ann.status === "active" && !isAccepted && !isRejected;
+                const canAct = (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
                 return (
                   <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -267,7 +298,9 @@ function AnnouncementDetail() {
                           {[w?.professional_profile, w?.city, w?.age && `${w.age} anni`].filter(Boolean).join(" · ") || "—"}
                         </div>
                       </div>
-                      <Badge variant="outline" className="capitalize">{a.status.replace("_", " ")}</Badge>
+                      <Badge variant="outline" className={APP_STATUS_CLS[a.status] ?? ""}>
+                        {APP_STATUS_LABEL[a.status] ?? a.status}
+                      </Badge>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
@@ -282,9 +315,20 @@ function AnnouncementDetail() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between mt-3 text-xs">
-                      <span className="text-muted-foreground">Tariffa proposta</span>
-                      <strong>€{tariff} {ann.tariff_type === "hourly" ? "/ora" : ""}</strong>
+                    <div className="mt-3 rounded-lg bg-muted/30 p-2 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Tariffa annuncio</span>
+                        <span>€{ann.tariff_amount} {ann.tariff_type === "hourly" ? "/ora" : ""}</span>
+                      </div>
+                      {hasCounter && (
+                        <div className="flex items-center justify-between text-orange-700">
+                          <span>Controproposta</span>
+                          <strong>€{a.proposed_tariff} {ann.tariff_type === "hourly" ? "/ora" : ""}</strong>
+                        </div>
+                      )}
+                      <div className="text-[10px] text-muted-foreground pt-0.5 border-t">
+                        Candidatura del {new Date(a.created_at).toLocaleDateString("it-IT")}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
@@ -295,12 +339,20 @@ function AnnouncementDetail() {
                       {canAct && (
                         <>
                           <Button size="sm" className="gap-1" disabled={busyId === a.id} onClick={() => accept(a)}>
-                            <CheckCircle2 className="h-3.5 w-3.5" />Assegna
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            {hasCounter ? `Accetta €${a.proposed_tariff}` : "Assegna"}
                           </Button>
                           <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" disabled={busyId === a.id} onClick={() => reject(a)}>
                             <XCircle className="h-3.5 w-3.5" />Rifiuta
                           </Button>
                         </>
+                      )}
+                      {isAccepted && (
+                        <Link to="/shifts">
+                          <Button size="sm" variant="secondary" className="gap-1">
+                            <Calendar className="h-3.5 w-3.5" />Vai al turno
+                          </Button>
+                        </Link>
                       )}
                     </div>
                   </div>
