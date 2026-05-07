@@ -39,9 +39,19 @@ type Worker = {
   id: string;
   full_name: string | null;
   primary_role: string | null;
+  secondary_roles: string[] | null;
   city: string | null;
+  neighborhood: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
+  badge: string | null;
+  rating_avg: number | null;
+  reliability_pct: number | null;
+  completed_shifts: number | null;
+  hourly_rate: number | null;
+  experience_level: string | null;
+  weekly_availability: string[] | null;
+  account_status: string | null;
 };
 
 type Ann = {
@@ -80,6 +90,14 @@ function MapPage() {
   const [showW, setShowW] = useState(true);
   const [showA, setShowA] = useState(true);
 
+  // worker filters
+  const [wRole, setWRole] = useState("any");
+  const [wBadge, setWBadge] = useState("any");
+  const [wMinRating, setWMinRating] = useState("any");
+  const [wMinReliab, setWMinReliab] = useState("any");
+  const [wExp, setWExp] = useState("any");
+  const [view, setView] = useState<"restaurants" | "workers">("restaurants");
+
   // location
   const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
   const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number; label?: string } | null>(null);
@@ -95,18 +113,19 @@ function MapPage() {
           .select("id, business_name, full_name, venue_type, address, city, neighborhood, service_area_lat, service_area_lng, account_status, plan, credits, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
-        supabase.from("profiles")
-          .select("id, full_name, primary_role, city, service_area_lat, service_area_lng")
-          .eq("primary_role", "worker")
-          .eq("account_status", "active")
-          .limit(1000),
+        supabase
+          .from("user_roles")
+          .select("user_id, profiles:profiles!inner(id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status)")
+          .eq("role", "worker")
+          .limit(2000),
         supabase.from("announcements")
           .select("id, professional_profile, location_address, location_lat, location_lng, status, restaurant_id")
           .eq("status", "active")
           .limit(1000),
       ]);
       setRestaurants((r as Restaurant[]) || []);
-      setWorkers((w as Worker[]) || []);
+      const wsRaw = ((w as any[]) || []).map(x => x.profiles).filter(Boolean) as Worker[];
+      setWorkers(wsRaw);
       setAnns((a as Ann[]) || []);
       const counts: Record<string, number> = {};
       (a || []).forEach((x: any) => { counts[x.restaurant_id] = (counts[x.restaurant_id] || 0) + 1; });
@@ -117,6 +136,34 @@ function MapPage() {
 
   const cities = useMemo(() => Array.from(new Set(restaurants.map(r => r.city).filter(Boolean))) as string[], [restaurants]);
   const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
+  const workerRoles = useMemo(() => Array.from(new Set(workers.map(w => w.primary_role).filter(Boolean))) as string[], [workers]);
+
+  const matchesWorkerQuery = (w: Worker) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return [w.full_name, w.primary_role, w.city, w.neighborhood, w.badge, w.experience_level, ...(w.secondary_roles || [])]
+      .some(v => (v || "").toString().toLowerCase().includes(q));
+  };
+
+  const filteredWorkers = useMemo(() => {
+    const max = radiusKm !== "any" ? Number(radiusKm) : null;
+    const ref = searchCenter || me;
+    return workers.filter(w => {
+      if (!matchesWorkerQuery(w)) return false;
+      if (city !== "any" && w.city !== city) return false;
+      if (district && !(w.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
+      if (wRole !== "any" && w.primary_role !== wRole) return false;
+      if (wBadge !== "any" && w.badge !== wBadge) return false;
+      if (wExp !== "any" && w.experience_level !== wExp) return false;
+      if (wMinRating !== "any" && Number(w.rating_avg || 0) < Number(wMinRating)) return false;
+      if (wMinReliab !== "any" && Number(w.reliability_pct || 0) < Number(wMinReliab)) return false;
+      if (statusF !== "any" && w.account_status !== statusF) return false;
+      if (max != null && ref && w.service_area_lat != null && w.service_area_lng != null) {
+        if (distKm(ref.lat, ref.lng, w.service_area_lat, w.service_area_lng) > max) return false;
+      }
+      return true;
+    });
+  }, [workers, query, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, statusF, radiusKm, searchCenter, me]);
 
   const matchesQuery = (r: Restaurant) => {
     if (!query.trim()) return true;
@@ -163,7 +210,7 @@ function MapPage() {
       });
     }
     if (showW) {
-      workers.forEach(w => {
+      filteredWorkers.forEach(w => {
         if (w.service_area_lat == null || w.service_area_lng == null) return;
         pts.push({
           id: w.id,
@@ -171,9 +218,19 @@ function MapPage() {
           lng: w.service_area_lng,
           category: "worker",
           title: w.full_name || "Lavoratore",
-          subtitle: w.primary_role || "Lavoratore",
-          city: w.city,
-          link: "/workers",
+          subtitle: [w.primary_role, w.badge ? `· ${w.badge}` : null].filter(Boolean).join(" "),
+          city: [w.neighborhood, w.city].filter(Boolean).join(", ") || w.city,
+          status: w.account_status,
+          link: `/workers?focus=${w.id}`,
+          meta: {
+            secondaryRoles: w.secondary_roles || [],
+            rating: w.rating_avg,
+            reliability: w.reliability_pct,
+            completedShifts: w.completed_shifts,
+            hourlyRate: w.hourly_rate,
+            availability: w.weekly_availability || [],
+            badge: w.badge,
+          },
         });
       });
     }
@@ -197,7 +254,7 @@ function MapPage() {
       });
     }
     return pts;
-  }, [filteredRestaurants, workers, anns, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests]);
+  }, [filteredRestaurants, filteredWorkers, anns, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests]);
 
   const center: [number, number] = searchCenter
     ? [searchCenter.lat, searchCenter.lng]
