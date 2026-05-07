@@ -18,10 +18,11 @@ type Ann = {
   professional_profile: string | null;
   location_address: string | null;
   status: string | null;
-  shift_date: string | null;
-  start_time: string | null;
-  end_time: string | null;
-  hourly_rate: number | null;
+  service_date: string | null;
+  service_time: string | null;
+  duration_hours: number | null;
+  tariff_amount: number | null;
+  tariff_type: string | null;
   created_at: string | null;
 };
 
@@ -48,7 +49,7 @@ function RestaurantDetailPage() {
       const [{ data: prof, error }, { data: a }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
         supabase.from("announcements")
-          .select("id, professional_profile, location_address, status, shift_date, start_time, end_time, hourly_rate, created_at")
+          .select("id, professional_profile, location_address, status, service_date, service_time, duration_hours, tariff_amount, tariff_type, created_at")
           .eq("restaurant_id", id)
           .order("created_at", { ascending: false })
           .limit(50),
@@ -139,8 +140,9 @@ function RestaurantDetailPage() {
                       <div className="min-w-0">
                         <div className="font-medium text-sm">{a.professional_profile || "Annuncio"}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {a.shift_date || "Data da definire"}
-                          {a.start_time && a.end_time ? ` · ${a.start_time}–${a.end_time}` : ""}
+                          {a.service_date || "Data da definire"}
+                          {a.service_time ? ` · ${a.service_time}` : ""}
+                          {a.duration_hours ? ` · ${a.duration_hours}h` : ""}
                         </div>
                         {a.location_address && (
                           <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
@@ -148,9 +150,9 @@ function RestaurantDetailPage() {
                           </div>
                         )}
                       </div>
-                      {a.hourly_rate != null && (
+                      {a.tariff_amount != null && (
                         <span className="text-xs rounded-full bg-emerald-500/15 text-emerald-700 px-2 py-0.5 whitespace-nowrap">
-                          €{Number(a.hourly_rate).toFixed(2)}/h
+                          €{Number(a.tariff_amount).toFixed(2)}{a.tariff_type === "hourly" ? "/h" : ""}
                         </span>
                       )}
                     </div>
