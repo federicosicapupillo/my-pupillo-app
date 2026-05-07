@@ -10,6 +10,9 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    status: typeof s.status === "string" ? s.status : undefined,
+  }),
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
 });
 
@@ -26,10 +29,13 @@ function expiresLabel(iso: string) {
 
 function AnnouncementsPage() {
   const { user, role } = useAuth();
+  const { status: initialStatus } = Route.useSearch();
   const [items, setItems] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
+    (initialStatus as any) || "all"
+  );
 
   useEffect(() => {
     if (!user) return;
