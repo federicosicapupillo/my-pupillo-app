@@ -529,11 +529,11 @@ function LocationAccessSection({ ann, restaurant, isOwner }: { ann: Ann; restaur
   const contactPhone = ann.job_contact_person_phone ?? restaurant?.contact_person_phone;
   const contactEmail = ann.job_contact_person_email ?? restaurant?.contact_person_email;
 
-  const [me, setMe] = (typeof window !== "undefined" ? require("react").useState : () => [null, () => {}])(null) as any;
-  (typeof window !== "undefined" ? require("react").useEffect : () => {})(() => {
-    if (!navigator.geolocation || lat == null || lng == null) return;
+  const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation || lat == null || lng == null) return;
     navigator.geolocation.getCurrentPosition(
-      (p: GeolocationPosition) => setMe({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      (p) => setMe({ lat: p.coords.latitude, lng: p.coords.longitude }),
       () => {},
       { timeout: 8000 }
     );
