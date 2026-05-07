@@ -149,6 +149,42 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_transactions: {
+        Row: {
+          balance_after: number
+          created_at: string
+          delta: number
+          id: string
+          kind: Database["public"]["Enums"]["credit_tx_kind"]
+          metadata: Json | null
+          reason: string | null
+          reference_id: string | null
+          user_id: string
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          delta: number
+          id?: string
+          kind: Database["public"]["Enums"]["credit_tx_kind"]
+          metadata?: Json | null
+          reason?: string | null
+          reference_id?: string | null
+          user_id: string
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          delta?: number
+          id?: string
+          kind?: Database["public"]["Enums"]["credit_tx_kind"]
+          metadata?: Json | null
+          reason?: string | null
+          reference_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           announcement_id: string
@@ -446,6 +482,54 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          id: string
+          price_id: string
+          product_id: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          price_id: string
+          product_id: string
+          status?: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          price_id?: string
+          product_id?: string
+          status?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -469,9 +553,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_credits: {
+        Args: { _amount: number; _reason: string; _reference_id?: string }
+        Returns: boolean
+      }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      grant_credits: {
+        Args: {
+          _amount: number
+          _kind: Database["public"]["Enums"]["credit_tx_kind"]
+          _reason: string
+          _reference_id?: string
+          _user_id: string
+        }
+        Returns: number
+      }
+      has_active_subscription: {
+        Args: { check_env?: string; user_uuid: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -498,6 +600,7 @@ export type Database = {
         | "accepted"
         | "rejected"
         | "expired"
+      credit_tx_kind: "purchase" | "grant" | "consume" | "refund" | "plan_bonus"
       experience_level: "junior" | "intermediate" | "senior"
       service_speed: "normal" | "fast" | "flash"
       shift_status: "scheduled" | "completed" | "no_show" | "cancelled"
@@ -650,6 +753,7 @@ export const Constants = {
         "rejected",
         "expired",
       ],
+      credit_tx_kind: ["purchase", "grant", "consume", "refund", "plan_bonus"],
       experience_level: ["junior", "intermediate", "senior"],
       service_speed: ["normal", "fast", "flash"],
       shift_status: ["scheduled", "completed", "no_show", "cancelled"],
