@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, List, Map as MapIcon } from "lucide-react";
+import { AnnouncementMap } from "@/components/AnnouncementMap";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -34,6 +35,7 @@ function WorkersPage() {
   const [selected, setSelected] = useState<string>("");
   const [q, setQ] = useState("");
   const [lang, setLang] = useState("");
+  const [view, setView] = useState<"list" | "map">("list");
 
   useEffect(() => {
     (async () => {
@@ -109,6 +111,24 @@ function WorkersPage() {
           <Input className="mt-1" placeholder="es. Inglese" value={lang} onChange={e => setLang(e.target.value)} />
         </div>
       </div>
+      <div className="mb-4 flex justify-end">
+        <div className="inline-flex rounded-lg border p-0.5">
+          <Button size="sm" variant={view==="list"?"secondary":"ghost"} onClick={()=>setView("list")} className="gap-1"><List className="h-4 w-4" />Lista</Button>
+          <Button size="sm" variant={view==="map"?"secondary":"ghost"} onClick={()=>setView("map")} className="gap-1"><MapIcon className="h-4 w-4" />Mappa</Button>
+        </div>
+      </div>
+      {view === "map" ? (
+        <div className="rounded-2xl border bg-card p-2">
+          {selectedAnn?.location_lat != null && selectedAnn?.location_lng != null ? (
+            <>
+              <AnnouncementMap lat={selectedAnn.location_lat} lng={selectedAnn.location_lng} address={selectedAnn.location_address} height={420} />
+              <div className="p-3 text-xs text-muted-foreground">Posizione dell'annuncio selezionato. I lavoratori "in zona" sono evidenziati nella vista lista.</div>
+            </>
+          ) : (
+            <div className="p-12 text-center text-muted-foreground">Seleziona un annuncio con coordinate per vederne la posizione sulla mappa.</div>
+          )}
+        </div>
+      ) : (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sorted.map((w) => {
           const near = inRange(w);
@@ -134,6 +154,7 @@ function WorkersPage() {
         })}
         {sorted.length === 0 && <p className="text-muted-foreground">Nessun lavoratore corrisponde ai filtri.</p>}
       </div>
+      )}
     </AppShell>
   );
 }
