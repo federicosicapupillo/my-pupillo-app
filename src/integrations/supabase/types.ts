@@ -445,7 +445,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      _tmp_exec_sql: { Args: { sql: string }; Returns: undefined }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
