@@ -30,6 +30,42 @@ type LogEvent = {
 
 const TERMINAL = ["accepted", "rejected", "expired"];
 
+type TimelineEvent = { at: string; label: string; note?: string; tone: "neutral" | "success" | "error" };
+
+const ACTION_LABELS: Record<string, { label: string; tone: TimelineEvent["tone"] }> = {
+  created: { label: "Richiesta inviata", tone: "neutral" },
+  interested: { label: "Lavoratore interessato", tone: "success" },
+  not_interested: { label: "Lavoratore non interessato", tone: "error" },
+  counter_offer: { label: "Controfferta inviata", tone: "neutral" },
+  accepted: { label: "Lavoratore assegnato", tone: "success" },
+  rejected: { label: "Candidatura rifiutata", tone: "error" },
+  expired: { label: "Offerta scaduta", tone: "error" },
+};
+
+function formatTs(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function buildEventList(app: App, events: LogEvent[]): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
+  if (events.length === 0 || !events.some(e => e.action === "created")) {
+    out.push({ at: (app as any).created_at ?? new Date().toISOString(), label: "Richiesta inviata", tone: "neutral" });
+  }
+  for (const e of events) {
+    const meta = ACTION_LABELS[e.action] ?? { label: e.action, tone: "neutral" as const };
+    const role = e.metadata?.by_role;
+    const tariff = e.metadata?.tariff;
+    const note = [
+      role && `da ${role === "restaurant" ? "ristoratore" : role === "worker" ? "lavoratore" : role}`,
+      tariff != null && `€${tariff}`,
+      e.metadata?.note,
+    ].filter(Boolean).join(" · ") || undefined;
+    out.push({ at: e.created_at, label: meta.label, tone: meta.tone, note });
+  }
+  return out.sort((a, b) => a.at.localeCompare(b.at));
+}
+
 type StepState = "done" | "current" | "todo" | "error";
 type Step = { key: string; label: string; icon: typeof Send; state: StepState };
 
