@@ -93,7 +93,16 @@ function NewAnn() {
       ].filter(Boolean).join(" "),
       job_contact_person_phone: prev.job_contact_person_phone || (profile as any).contact_person_phone || "",
       job_contact_person_email: prev.job_contact_person_email || (profile as any).contact_person_email || "",
+      // Requisiti standard del locale
+      license_requirement: (profile as any).default_license_requirement ?? prev.license_requirement,
+      tattoos_allowed: (profile as any).default_tattoos_allowed ?? prev.tattoos_allowed,
+      piercings_allowed: (profile as any).default_piercings_allowed ?? prev.piercings_allowed,
+      beard_allowed: (profile as any).default_beard_allowed ?? prev.beard_allowed,
+      dress_code_notes: prev.dress_code_notes || (profile as any).default_dress_code_notes || "",
     }));
+    setLanguageReqs((prev) => prev.length ? prev : ((profile as any).default_language_requirements ?? []));
+    setSkills((prev) => prev.length ? prev : ((profile as any).default_required_skills ?? []));
+    setDressItems((prev) => prev.length ? prev : ((profile as any).default_dress_code_items ?? []));
   }, [profile]);
 
   useEffect(() => {
