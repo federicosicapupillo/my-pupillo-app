@@ -76,7 +76,7 @@ function Thread() {
     extra?: Record<string, unknown>,
   ) => {
     if (!app || !user) return;
-    const patch: Record<string, unknown> = { status: next, ...extra };
+    const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
     const { error } = await supabase.from("applications").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
