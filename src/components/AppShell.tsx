@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins } from "lucide-react";
 import { ReactNode } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { profile, role, signOut, user } = useAuth();
@@ -25,6 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
+      <PaymentTestModeBanner />
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4">
           <Link to="/dashboard" className="flex items-center gap-2">

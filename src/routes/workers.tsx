@@ -57,6 +57,10 @@ function WorkersPage() {
 
   const invite = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
+    const { consumeCredits } = await import("@/lib/credits");
+    const { CREDIT_COSTS } = await import("@/lib/pricing");
+    const ok = await consumeCredits(CREDIT_COSTS.assignWorker, "assign_worker", selected);
+    if (!ok) return;
     const { error } = await supabase.from("applications").insert({
       announcement_id: selected,
       worker_id: workerId,

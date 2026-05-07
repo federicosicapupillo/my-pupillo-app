@@ -14,6 +14,8 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
 import { useEffect, useRef } from "react";
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Search } from "lucide-react";
+import { consumeCredits } from "@/lib/credits";
+import { CREDIT_COSTS } from "@/lib/pricing";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -106,6 +108,13 @@ function NewAnn() {
     }
     if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
     setBusy(true);
+    // Consume credits only when publishing (not draft). Urgent (flash/fast) costs more.
+    if (!asDraft) {
+      const isUrgent = f.speed === "flash" || f.speed === "fast";
+      const cost = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
+      const ok = await consumeCredits(cost, isUrgent ? "publish_urgent_announcement" : "publish_announcement");
+      if (!ok) { setBusy(false); return; }
+    }
     const { error } = await supabase.from("announcements").insert({
       restaurant_id: user.id,
       service_date: f.service_date,
