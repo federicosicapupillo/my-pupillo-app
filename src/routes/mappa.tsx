@@ -291,7 +291,7 @@ function MapPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Mappa" subtitle="Cerca ristoratori per indirizzo, città o zona" />
+      <PageHeader title="Mappa" subtitle="Ristoratori, lavoratori e richieste attive in tempo reale" />
 
       {/* SEARCH BAR */}
       <div className="rounded-2xl border bg-card p-4 mb-4">
@@ -300,7 +300,7 @@ function MapPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9 h-11 text-base"
-              placeholder="Inserisci indirizzo, città o zona"
+              placeholder="Cerca lavoratore, ruolo, città o zona"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
@@ -377,12 +377,104 @@ function MapPage() {
         </div>
       </div>
 
+      {/* WORKER FILTERS */}
+      {showW && (
+        <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
+          <Select value={wRole} onValueChange={setWRole}>
+            <SelectTrigger><SelectValue placeholder="Ruolo lavoratore" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Tutti i ruoli</SelectItem>
+              {workerRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={wBadge} onValueChange={setWBadge}>
+            <SelectTrigger><SelectValue placeholder="Badge" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Tutti i badge</SelectItem>
+              <SelectItem value="basic">Basic</SelectItem>
+              <SelectItem value="pro">Pro</SelectItem>
+              <SelectItem value="elite">Elite</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={wExp} onValueChange={setWExp}>
+            <SelectTrigger><SelectValue placeholder="Esperienza" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Qualsiasi esperienza</SelectItem>
+              <SelectItem value="junior">Junior</SelectItem>
+              <SelectItem value="middle">Middle</SelectItem>
+              <SelectItem value="senior">Senior</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={wMinRating} onValueChange={setWMinRating}>
+            <SelectTrigger><SelectValue placeholder="Rating minimo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Qualsiasi rating</SelectItem>
+              <SelectItem value="3">≥ 3.0</SelectItem>
+              <SelectItem value="4">≥ 4.0</SelectItem>
+              <SelectItem value="4.5">≥ 4.5</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={wMinReliab} onValueChange={setWMinReliab}>
+            <SelectTrigger><SelectValue placeholder="Affidabilità minima" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Qualsiasi affidabilità</SelectItem>
+              <SelectItem value="70">≥ 70%</SelectItem>
+              <SelectItem value="85">≥ 85%</SelectItem>
+              <SelectItem value="95">≥ 95%</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2 text-sm">
+            <Button size="sm" variant={view === "restaurants" ? "secondary" : "ghost"} onClick={() => setView("restaurants")}>Lista ristoratori</Button>
+            <Button size="sm" variant={view === "workers" ? "secondary" : "ghost"} onClick={() => setView("workers")}>Lista lavoratori</Button>
+          </div>
+        </div>
+      )}
+
       {/* LAYOUT: list + map */}
       <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
         {/* LIST */}
         <div className="rounded-2xl border bg-card p-3 max-h-[700px] overflow-y-auto order-2 lg:order-1">
           {loading ? (
             <p className="p-4 text-sm text-muted-foreground">Caricamento…</p>
+          ) : view === "workers" ? (
+            filteredWorkers.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Nessun lavoratore trovato.</div>
+            ) : (
+              <ul className="space-y-2">
+                {filteredWorkers.slice(0, 200).map(w => {
+                  const d = ref && w.service_area_lat != null && w.service_area_lng != null
+                    ? distKm(ref.lat, ref.lng, w.service_area_lat, w.service_area_lng) : null;
+                  return (
+                    <li key={w.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{w.full_name || "Lavoratore"}</div>
+                          <div className="text-xs text-muted-foreground capitalize">{w.primary_role || "—"}</div>
+                        </div>
+                        {d != null && <span className="text-xs rounded-full bg-secondary px-2 py-0.5 whitespace-nowrap">{d.toFixed(1)} km</span>}
+                      </div>
+                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{[w.neighborhood, w.city].filter(Boolean).join(", ") || "—"}</div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {w.badge && <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{w.badge}</span>}
+                          {w.rating_avg ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{Number(w.rating_avg).toFixed(1)}</span> : null}
+                          {w.reliability_pct != null && <span>{w.reliability_pct}% affid.</span>}
+                          {w.hourly_rate != null && <span>€ {Number(w.hourly_rate).toFixed(0)}/h</span>}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => {
+                          if (w.service_area_lat != null && w.service_area_lng != null) {
+                            setSearchCenter({ lat: w.service_area_lat, lng: w.service_area_lng, label: w.full_name || undefined });
+                          } else { toast.info("Coordinate non disponibili"); }
+                        }}>Mostra sulla mappa</Button>
+                        <Link to="/workers"><Button size="sm">Vedi profilo</Button></Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )
           ) : filteredRestaurants.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               Nessun ristoratore trovato per questa zona. Prova con un altro indirizzo, città o quartiere.
