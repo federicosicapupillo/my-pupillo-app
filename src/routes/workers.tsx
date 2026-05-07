@@ -138,7 +138,17 @@ function WorkersPage() {
         <div className="rounded-2xl border bg-card p-2">
           {selectedAnn?.location_lat != null && selectedAnn?.location_lng != null ? (
             <>
-              <AnnouncementMap lat={selectedAnn.location_lat} lng={selectedAnn.location_lng} address={selectedAnn.location_address} height={420} />
+              <AnnouncementMap
+                lat={selectedAnn.location_lat}
+                lng={selectedAnn.location_lng}
+                address={selectedAnn.location_address}
+                height={420}
+                selectedId={selectedAnn.id}
+                onSelect={(id) => setSelected(id)}
+                markers={anns
+                  .filter((a) => a.location_lat != null && a.location_lng != null)
+                  .map((a) => ({ id: a.id, lat: a.location_lat as number, lng: a.location_lng as number, address: a.location_address }))}
+              />
               <div className="p-3 text-xs text-muted-foreground">Posizione dell'annuncio selezionato. I lavoratori "in zona" sono evidenziati nella vista lista.</div>
             </>
           ) : (
