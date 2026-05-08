@@ -10,13 +10,15 @@ import { DEFAULT_PHONE_PREFIX, isValidPhone, splitPhone } from "@/lib/phone-pref
 import { startPhoneVerification, verifyPhoneOtp, resendPhoneOtp } from "@/lib/phone-verification.functions";
 import { toast } from "sonner";
 
+const TEST_OTP_ENABLED = import.meta.env.VITE_ENABLE_TEST_OTP === "true" && import.meta.env.PROD !== true;
+
 export const Route = createFileRoute("/verify-phone")({
   head: () => ({ meta: [{ title: "Conferma numero WhatsApp — Pupillo" }] }),
   component: VerifyPhonePage,
 });
 
 function VerifyPhonePage() {
-  const { user, profile, loading, refresh } = useAuth();
+  const { user, profile, role, loading, refresh } = useAuth();
   const nav = useNavigate();
   const start = useServerFn(startPhoneVerification);
   const verify = useServerFn(verifyPhoneOtp);
@@ -29,6 +31,12 @@ function VerifyPhonePage() {
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
+
+  const homeHref = (() => {
+    if (!user) return "/";
+    if (role === "admin") return "/admin";
+    return "/dashboard";
+  })();
 
   useEffect(() => {
     if (loading) return;
@@ -100,7 +108,12 @@ function VerifyPhonePage() {
       }
       toast.success("Codice verificato correttamente.");
       await refresh();
-      nav({ to: profile?.profile_completed ? "/dashboard" : "/onboarding" });
+      const dest = role === "admin"
+        ? "/admin"
+        : profile?.profile_completed
+          ? "/dashboard"
+          : "/onboarding";
+      nav({ to: dest as any });
     } finally {
       setBusy(false);
     }
@@ -186,12 +199,22 @@ function VerifyPhonePage() {
                   Cambia numero
                 </button>
               </div>
+              {TEST_OTP_ENABLED && (
+                <p className="text-[11px] text-muted-foreground/80 text-center pt-1">
+                  Modalità test attiva: usa il codice <strong>123456</strong> per completare la verifica.
+                </p>
+              )}
             </div>
           </>
         )}
-        <p className="mt-6 text-xs text-muted-foreground text-center">
-          <Link to="/auth" className="underline hover:text-foreground">Torna al login</Link>
-        </p>
+        <div className="mt-6 flex flex-col items-center gap-2 text-xs text-muted-foreground">
+          <Link to={homeHref as any} className="underline hover:text-foreground">
+            ← Torna al menu principale
+          </Link>
+          {!user && (
+            <Link to="/auth" className="hover:text-foreground">Torna al login</Link>
+          )}
+        </div>
       </div>
     </div>
   );

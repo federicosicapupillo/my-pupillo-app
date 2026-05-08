@@ -8,6 +8,14 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const OTP_TTL_MINUTES = 10;
 const MAX_ATTEMPTS = 3;
 const RESEND_COOLDOWN_SECONDS = 60;
+const TEST_OTP_CODE = "123456";
+
+function isTestOtpEnabled(): boolean {
+  // NEVER enable in production. Even if the env var is set,
+  // require NODE_ENV !== 'production' as a hard guard.
+  if (process.env.NODE_ENV === "production") return false;
+  return process.env.ENABLE_TEST_OTP === "true";
+}
 
 function hashOtp(code: string, userId: string): string {
   // Salted with user id; sufficient for short-lived 6-digit OTP
@@ -198,6 +206,26 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    // TEST MODE: accept fixed code without an active OTP row (dev-only)
+    if (isTestOtpEnabled() && data.code === TEST_OTP_CODE) {
+      const now = new Date().toISOString();
+      if (row) {
+        await supabaseAdmin
+          .from("phone_verifications")
+          .update({ status: "verified", verified_at: now })
+          .eq("id", row.id);
+      }
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          phone_verified: true,
+          phone_verified_at: now,
+          whatsapp_confirmation_status: "verified_test",
+        })
+        .eq("id", userId);
+      return { ok: true, testMode: true };
+    }
 
     if (!row) return { ok: false, error: "Nessun codice attivo. Richiedine uno nuovo." };
 
