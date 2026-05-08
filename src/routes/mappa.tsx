@@ -498,11 +498,18 @@ function MapPage() {
 
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
+        <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); }}>
+          <SelectTrigger><SelectValue placeholder="Provincia" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">Tutte le province</SelectItem>
+            {ITALIAN_LOCATIONS.map((p) => <SelectItem key={p.province_code} value={p.province}>{p.province}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={city} onValueChange={setCity}>
           <SelectTrigger><SelectValue placeholder="Città" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="any">Tutte le città</SelectItem>
-            {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            {(province !== "any" ? citiesForProvince(province) : cities).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
         <Input placeholder="Zona / quartiere" value={district} onChange={e => setDistrict(e.target.value)} />
