@@ -14,7 +14,13 @@ import { Link } from "@tanstack/react-router";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import { verifyVat } from "@/lib/vat.functions";
 import { useServerFn } from "@tanstack/react-start";
-import { RestaurantRequirementsEditor, EMPTY_REQ, reqFromProfile, reqToProfileUpdate, type RestaurantRequirements } from "@/components/RestaurantRequirements";
+import {
+  RestaurantRequirementsEditor,
+  EMPTY_REQ,
+  reqFromProfile,
+  reqToProfileUpdate,
+  type RestaurantRequirements,
+} from "@/components/RestaurantRequirements";
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
@@ -24,7 +30,11 @@ import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
-  component: () => <RequireAuth><Onboarding /></RequireAuth>,
+  component: () => (
+    <RequireAuth>
+      <Onboarding />
+    </RequireAuth>
+  ),
 });
 
 function Onboarding() {
@@ -32,14 +42,35 @@ function Onboarding() {
   const nav = useNavigate();
   const verifyVatFn = useServerFn(verifyVat);
   const [form, setForm] = useState({
-    full_name: "", phone_code: DEFAULT_PHONE_PREFIX, phone_number: "", age: "", professional_profile: "", languages: "",
-    business_name: "", vat_number: "", venue_type: "", venue_type_other: "", address: "", price_range: "",
-    service_area_address: "", service_area_radius_m: "500",
-    street_number: "", district: "",
-    city: "", province: "", postal_code: "", country: "Italia",
-    access_restrictions: "", additional_directions: "", location_notes: "",
-    contact_person_first_name: "", contact_person_last_name: "", contact_person_role: "",
-    contact_person_phone_code: DEFAULT_PHONE_PREFIX, contact_person_phone_number: "", contact_person_email: "",
+    full_name: "",
+    phone_code: DEFAULT_PHONE_PREFIX,
+    phone_number: "",
+    age: "",
+    professional_profile: "",
+    languages: "",
+    business_name: "",
+    vat_number: "",
+    venue_type: "",
+    venue_type_other: "",
+    address: "",
+    price_range: "",
+    service_area_address: "",
+    service_area_radius_m: "500",
+    street_number: "",
+    district: "",
+    city: "",
+    province: "",
+    postal_code: "",
+    country: "Italia",
+    access_restrictions: "",
+    additional_directions: "",
+    location_notes: "",
+    contact_person_first_name: "",
+    contact_person_last_name: "",
+    contact_person_role: "",
+    contact_person_phone_code: DEFAULT_PHONE_PREFIX,
+    contact_person_phone_number: "",
+    contact_person_email: "",
     representative_age: "",
     terms_accepted: false,
   });
@@ -47,7 +78,9 @@ function Onboarding() {
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
   const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
   const [vatChecking, setVatChecking] = useState(false);
-  const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(null);
+  const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(
+    null,
+  );
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
   const vatValid = vatDigits.length === 11;
@@ -86,38 +119,39 @@ function Onboarding() {
       const ph = splitPhone((profile as any).phone_full ?? profile.phone);
       const cph = splitPhone((profile as any).contact_person_phone);
       setForm((f) => ({
-      ...f,
-      full_name: profile.full_name ?? "",
-      phone_code: (profile as any).phone_country_code || ph.code,
-      phone_number: (profile as any).phone_number || ph.number,
-      age: profile.age?.toString() ?? "",
-      professional_profile: profile.professional_profile ?? "",
-      languages: (profile.languages ?? []).join(", "),
-      business_name: profile.business_name ?? "",
-      vat_number: profile.vat_number ?? "",
-      venue_type: profile.venue_type ?? "",
-      venue_type_other: (profile as any).venue_type_other ?? "",
-      address: profile.address ?? "",
-      price_range: profile.price_range ?? "",
-      service_area_radius_m: String(profile.service_area_radius_m ?? 500),
-      street_number: (profile as any).street_number ?? "",
-      district: (profile as any).neighborhood ?? "",
-      city: (profile as any).city ?? "",
-      province: (profile as any).province ?? "",
-      postal_code: (profile as any).postal_code ?? "",
-      country: (profile as any).country ?? "Italia",
-      access_restrictions: (profile as any).access_restrictions ?? "",
-      additional_directions: (profile as any).additional_directions ?? "",
-      location_notes: (profile as any).location_notes ?? "",
-      contact_person_first_name: (profile as any).contact_person_first_name ?? "",
-      contact_person_last_name: (profile as any).contact_person_last_name ?? "",
-      contact_person_role: (profile as any).contact_person_role ?? "",
-      contact_person_phone_code: cph.code,
-      contact_person_phone_number: cph.number,
-      contact_person_email: (profile as any).contact_person_email ?? "",
-      representative_age: (profile as any).representative_age != null ? String((profile as any).representative_age) : "",
-      terms_accepted: profile.terms_accepted,
-    }));
+        ...f,
+        full_name: profile.full_name ?? "",
+        phone_code: (profile as any).phone_country_code || ph.code,
+        phone_number: (profile as any).phone_number || ph.number,
+        age: profile.age?.toString() ?? "",
+        professional_profile: profile.professional_profile ?? "",
+        languages: (profile.languages ?? []).join(", "),
+        business_name: profile.business_name ?? "",
+        vat_number: profile.vat_number ?? "",
+        venue_type: profile.venue_type ?? "",
+        venue_type_other: (profile as any).venue_type_other ?? "",
+        address: profile.address ?? "",
+        price_range: profile.price_range ?? "",
+        service_area_radius_m: String(profile.service_area_radius_m ?? 500),
+        street_number: (profile as any).street_number ?? "",
+        district: (profile as any).neighborhood ?? "",
+        city: (profile as any).city ?? "",
+        province: (profile as any).province ?? "",
+        postal_code: (profile as any).postal_code ?? "",
+        country: (profile as any).country ?? "Italia",
+        access_restrictions: (profile as any).access_restrictions ?? "",
+        additional_directions: (profile as any).additional_directions ?? "",
+        location_notes: (profile as any).location_notes ?? "",
+        contact_person_first_name: (profile as any).contact_person_first_name ?? "",
+        contact_person_last_name: (profile as any).contact_person_last_name ?? "",
+        contact_person_role: (profile as any).contact_person_role ?? "",
+        contact_person_phone_code: cph.code,
+        contact_person_phone_number: cph.number,
+        contact_person_email: (profile as any).contact_person_email ?? "",
+        representative_age:
+          (profile as any).representative_age != null ? String((profile as any).representative_age) : "",
+        terms_accepted: profile.terms_accepted,
+      }));
     }
     if (profile) setRequirements(reqFromProfile(profile));
     if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
@@ -126,7 +160,10 @@ function Onboarding() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!form.terms_accepted) { toast.error("Devi accettare le condizioni d'uso"); return; }
+    if (!form.terms_accepted) {
+      toast.error("Devi accettare le condizioni d'uso");
+      return;
+    }
     if (!isValidPhone(form.phone_code, form.phone_number)) {
       toast.error("Inserisci un numero di telefono valido.");
       return;
@@ -169,7 +206,10 @@ function Onboarding() {
     setBusy(true);
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
     const contactPhoneFull = buildPhoneFull(form.contact_person_phone_code, form.contact_person_phone_number);
-    let serviceArea: { service_area_lat: number | null; service_area_lng: number | null } = { service_area_lat: null, service_area_lng: null };
+    let serviceArea: { service_area_lat: number | null; service_area_lng: number | null } = {
+      service_area_lat: null,
+      service_area_lng: null,
+    };
     let restCoords: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
     if (role === "worker" && form.service_area_address.trim().length >= 3) {
       const r = await geocodeAddressWithRetry(form.service_area_address.trim(), { maxAttempts: 2 });
@@ -181,67 +221,82 @@ function Onboarding() {
         form.city,
         form.postal_code,
         form.country,
-      ].filter(Boolean).join(", ");
+      ]
+        .filter(Boolean)
+        .join(", ");
       const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 2 });
       if (r.ok) {
         restCoords = { latitude: r.lat, longitude: r.lng };
         serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
       }
     }
-    const update = role === "restaurant" ? {
-      full_name: form.full_name,
-      phone: phoneFull,
-      phone_country_code: form.phone_code,
-      phone_number: form.phone_number,
-      phone_full: phoneFull,
-      terms_accepted: true, profile_completed: true,
-      business_name: form.business_name, vat_number: vatDigits,
-      venue_type: form.venue_type,
-      venue_type_other: form.venue_type === "Altro" ? form.venue_type_other.trim() : null,
-      address: form.address, price_range: form.price_range,
-      street_number: form.street_number || null,
-      neighborhood: form.district || null,
-      city: form.city || null, province: form.province || null,
-      province_code: provinceCode(form.province),
-      postal_code: form.postal_code || null, country: form.country || null,
-      latitude: restCoords.latitude, longitude: restCoords.longitude,
-      service_area_lat: serviceArea.service_area_lat, service_area_lng: serviceArea.service_area_lng,
-      access_restrictions: form.access_restrictions || null,
-      additional_directions: form.additional_directions || null,
-      location_notes: form.location_notes || null,
-      contact_person_first_name: form.contact_person_first_name || null,
-      contact_person_last_name: form.contact_person_last_name || null,
-      contact_person_role: form.contact_person_role || null,
-      contact_person_phone: contactPhoneFull || null,
-      contact_person_email: form.contact_person_email || null,
-      representative_age: form.representative_age ? Number(form.representative_age) : null,
-      ...reqToProfileUpdate(requirements),
-    } : {
-      full_name: form.full_name,
-      phone: phoneFull,
-      phone_country_code: form.phone_code,
-      phone_number: form.phone_number,
-      phone_full: phoneFull,
-      terms_accepted: true, profile_completed: true,
-      age: form.age ? parseInt(form.age) : null,
-      professional_profile: form.professional_profile,
-      languages: spokenLanguages.map(s => s.language),
-      spoken_languages: spokenLanguages,
-      service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
-      ...serviceArea,
-    };
+    const update =
+      role === "restaurant"
+        ? {
+            full_name: form.full_name,
+            phone: phoneFull,
+            phone_country_code: form.phone_code,
+            phone_number: form.phone_number,
+            phone_full: phoneFull,
+            terms_accepted: true,
+            profile_completed: true,
+            business_name: form.business_name,
+            vat_number: vatDigits,
+            venue_type: form.venue_type,
+            venue_type_other: form.venue_type === "Altro" ? form.venue_type_other.trim() : null,
+            address: form.address,
+            price_range: form.price_range,
+            street_number: form.street_number || null,
+            neighborhood: form.district || null,
+            city: form.city || null,
+            province: form.province || null,
+            province_code: provinceCode(form.province),
+            postal_code: form.postal_code || null,
+            country: form.country || null,
+            latitude: restCoords.latitude,
+            longitude: restCoords.longitude,
+            service_area_lat: serviceArea.service_area_lat,
+            service_area_lng: serviceArea.service_area_lng,
+            access_restrictions: form.access_restrictions || null,
+            additional_directions: form.additional_directions || null,
+            location_notes: form.location_notes || null,
+            contact_person_first_name: form.contact_person_first_name || null,
+            contact_person_last_name: form.contact_person_last_name || null,
+            contact_person_role: form.contact_person_role || null,
+            contact_person_phone: contactPhoneFull || null,
+            contact_person_email: form.contact_person_email || null,
+            representative_age: form.representative_age ? Number(form.representative_age) : null,
+            ...reqToProfileUpdate(requirements),
+          }
+        : {
+            full_name: form.full_name,
+            phone: phoneFull,
+            phone_country_code: form.phone_code,
+            phone_number: form.phone_number,
+            phone_full: phoneFull,
+            terms_accepted: true,
+            profile_completed: true,
+            age: form.age ? parseInt(form.age) : null,
+            professional_profile: form.professional_profile,
+            languages: spokenLanguages.map((s) => s.language),
+            spoken_languages: spokenLanguages,
+            service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
+            ...serviceArea,
+          };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
     if (error) {
       setBusy(false);
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("profiles_vat_number_unique") || msg.includes("duplicate key")) {
-        toast.error("Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.");
+        toast.error(
+          "Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.",
+        );
       } else {
         toast.error(error.message);
       }
       return;
     }
-    if (role === "restaurant" && vatValid && (vatResult?.status !== "valid")) {
+    if (role === "restaurant" && vatValid && vatResult?.status !== "valid") {
       try {
         await verifyVatFn({ data: { vat_number: vatDigits } });
       } catch {}
@@ -254,10 +309,18 @@ function Onboarding() {
 
   return (
     <AppShell>
-      <PageHeader title="Completa il tuo profilo" subtitle={role === "restaurant" ? "Aggiungi i dati del tuo locale" : "Aggiungi le tue informazioni professionali"} />
+      <PageHeader
+        title="Completa il tuo profilo"
+        subtitle={
+          role === "restaurant" ? "Aggiungi i dati del tuo locale" : "Aggiungi le tue informazioni professionali"
+        }
+      />
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <div><Label>Nome completo</Label><Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
+          <div>
+            <Label>Nome completo</Label>
+            <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+          </div>
           <div>
             <Label>Telefono *</Label>
             <PhoneInput
@@ -272,7 +335,14 @@ function Onboarding() {
         {role === "restaurant" ? (
           <>
             <div className="grid gap-4 md:grid-cols-2">
-              <div><Label>Nome locale</Label><Input required value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} /></div>
+              <div>
+                <Label>Nome locale</Label>
+                <Input
+                  required
+                  value={form.business_name}
+                  onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                />
+              </div>
               <div className="md:col-span-1">
                 <Label>Partita IVA *</Label>
                 <div className="flex gap-2">
@@ -297,7 +367,9 @@ function Onboarding() {
                   <p className="text-xs text-destructive mt-1">La Partita IVA deve contenere 11 cifre numeriche.</p>
                 )}
                 {vatResult && (
-                  <p className={`text-xs mt-1 ${vatResult.status === "valid" ? "text-emerald-600" : vatResult.status === "invalid" ? "text-destructive" : "text-muted-foreground"}`}>
+                  <p
+                    className={`text-xs mt-1 ${vatResult.status === "valid" ? "text-emerald-600" : vatResult.status === "invalid" ? "text-destructive" : "text-muted-foreground"}`}
+                  >
                     {vatResult.message}
                     {vatResult.companyName ? ` (${vatResult.companyName})` : ""}
                   </p>
@@ -308,11 +380,21 @@ function Onboarding() {
                 <select
                   required
                   value={form.venue_type}
-                  onChange={(e) => setForm({ ...form, venue_type: e.target.value, venue_type_other: e.target.value === "Altro" ? form.venue_type_other : "" })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      venue_type: e.target.value,
+                      venue_type_other: e.target.value === "Altro" ? form.venue_type_other : "",
+                    })
+                  }
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">Seleziona la tipologia del locale</option>
-                  {VENUE_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
+                  {VENUE_TYPES.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
                 </select>
                 {form.venue_type === "Altro" && (
                   <Input
@@ -342,8 +424,17 @@ function Onboarding() {
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-[1fr_140px]">
-              <div><Label>Indirizzo *</Label><Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
-              <div><Label>N. civico</Label><Input value={form.street_number} onChange={(e) => setForm({ ...form, street_number: e.target.value })} /></div>
+              <div>
+                <Label>Indirizzo *</Label>
+                <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              </div>
+              <div>
+                <Label>N. civico</Label>
+                <Input
+                  value={form.street_number}
+                  onChange={(e) => setForm({ ...form, street_number: e.target.value })}
+                />
+              </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
@@ -356,7 +447,9 @@ function Onboarding() {
                 >
                   <option value="">Seleziona provincia</option>
                   {ITALIAN_LOCATIONS.map((p) => (
-                    <option key={p.province_code} value={p.province}>{p.province} ({p.province_code})</option>
+                    <option key={p.province_code} value={p.province}>
+                      {p.province} ({p.province_code})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -371,29 +464,85 @@ function Onboarding() {
                 >
                   <option value="">{form.province ? "Seleziona città" : "Seleziona prima la provincia"}</option>
                   {citiesForProvince(form.province).map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
-              <div><Label>Zona / quartiere</Label><Input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} /></div>
-              <div><Label>CAP</Label><Input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} /></div>
-              <div><Label>Paese</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div>
+              <div>
+                <Label>Zona / quartiere</Label>
+                <Input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} />
+              </div>
+              <div>
+                <Label>CAP</Label>
+                <Input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} />
+              </div>
+              <div>
+                <Label>Paese</Label>
+                <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
+              </div>
             </div>
 
             <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
               <h3 className="font-semibold flex items-center gap-2">📍 Luogo e Accesso</h3>
-              <p className="text-xs text-muted-foreground -mt-2">Queste informazioni vengono mostrate ai lavoratori candidati e precompilate negli annunci.</p>
-              <div><Label>Restrizioni all'ingresso</Label><Textarea rows={2} placeholder="Es. Arrivare 15 minuti prima per accreditarsi" value={form.access_restrictions} onChange={(e) => setForm({ ...form, access_restrictions: e.target.value })} /></div>
-              <div><Label>Indicazioni aggiuntive</Label><Textarea rows={2} placeholder="Es. Entrare dall'ingresso laterale, chiedere del responsabile di sala" value={form.additional_directions} onChange={(e) => setForm({ ...form, additional_directions: e.target.value })} /></div>
-              <div><Label>Note per il lavoratore</Label><Textarea rows={2} placeholder="Informazioni utili che il lavoratore deve sapere prima di arrivare sul posto" value={form.location_notes} onChange={(e) => setForm({ ...form, location_notes: e.target.value })} /></div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Queste informazioni vengono mostrate ai lavoratori candidati e precompilate negli annunci.
+              </p>
+              <div>
+                <Label>Restrizioni all'ingresso</Label>
+                <Textarea
+                  rows={2}
+                  placeholder="Es. Arrivare 15 minuti prima per accreditarsi"
+                  value={form.access_restrictions}
+                  onChange={(e) => setForm({ ...form, access_restrictions: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Indicazioni aggiuntive</Label>
+                <Textarea
+                  rows={2}
+                  placeholder="Es. Entrare dall'ingresso laterale, chiedere del responsabile di sala"
+                  value={form.additional_directions}
+                  onChange={(e) => setForm({ ...form, additional_directions: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Note per il lavoratore</Label>
+                <Textarea
+                  rows={2}
+                  placeholder="Informazioni utili che il lavoratore deve sapere prima di arrivare sul posto"
+                  value={form.location_notes}
+                  onChange={(e) => setForm({ ...form, location_notes: e.target.value })}
+                />
+              </div>
               <div className="pt-2 border-t">
                 <Label className="text-sm font-semibold">Referente operativo</Label>
                 <div className="grid gap-3 md:grid-cols-2 mt-2">
-                  <div><Label className="text-xs">Nome</Label><Input value={form.contact_person_first_name} onChange={(e) => setForm({ ...form, contact_person_first_name: e.target.value })} /></div>
-                  <div><Label className="text-xs">Cognome</Label><Input value={form.contact_person_last_name} onChange={(e) => setForm({ ...form, contact_person_last_name: e.target.value })} /></div>
-                  <div><Label className="text-xs">Ruolo</Label><Input placeholder="Es. Maitre, Direttore" value={form.contact_person_role} onChange={(e) => setForm({ ...form, contact_person_role: e.target.value })} /></div>
+                  <div>
+                    <Label className="text-xs">Nome</Label>
+                    <Input
+                      value={form.contact_person_first_name}
+                      onChange={(e) => setForm({ ...form, contact_person_first_name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Cognome</Label>
+                    <Input
+                      value={form.contact_person_last_name}
+                      onChange={(e) => setForm({ ...form, contact_person_last_name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Ruolo</Label>
+                    <Input
+                      placeholder="Es. Maitre, Direttore"
+                      value={form.contact_person_role}
+                      onChange={(e) => setForm({ ...form, contact_person_role: e.target.value })}
+                    />
+                  </div>
                   <div>
                     <Label className="text-xs">Telefono</Label>
                     <PhoneInput
@@ -403,53 +552,84 @@ function Onboarding() {
                       onNumberChange={(n) => setForm({ ...form, contact_person_phone_number: n })}
                     />
                   </div>
-                  <div className="md:col-span-2"><Label className="text-xs">Email</Label><Input type="email" value={form.contact_person_email} onChange={(e) => setForm({ ...form, contact_person_email: e.target.value })} /></div>
-                </div>
-                <div className="mt-3">
-                  <Label className="text-xs">Età del referente *</Label>
-                  <select
-                    required
-                    value={form.representative_age}
-                    onChange={(e) => setForm({ ...form, representative_age: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">Seleziona età…</option>
-                    {Array.from({ length: 82 }, (_, i) => 18 + i).map((a) => (
-                      <option key={a} value={a}>{a}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground mt-1">Dato privato. Devi avere almeno 18 anni per creare un account ristoratore.</p>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs">Email</Label>
+                    <Input
+                      type="email"
+                      value={form.contact_person_email}
+                      onChange={(e) => setForm({ ...form, contact_person_email: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
               <h3 className="font-semibold flex items-center gap-2">📋 Requisiti e Competenze standard</h3>
-              <p className="text-xs text-muted-foreground -mt-1">Imposta i requisiti standard del locale: verranno precompilati automaticamente in ogni nuovo annuncio.</p>
+              <p className="text-xs text-muted-foreground -mt-1">
+                Imposta i requisiti standard del locale: verranno precompilati automaticamente in ogni nuovo annuncio.
+              </p>
               <RestaurantRequirementsEditor value={requirements} onChange={setRequirements} />
             </div>
           </>
         ) : (
           <>
-            <div><Label>Età</Label><Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
-            <div><Label>Profilo professionale</Label><Textarea rows={4} value={form.professional_profile} onChange={(e) => setForm({ ...form, professional_profile: e.target.value })} /></div>
+            <div>
+              <Label>Età</Label>
+              <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
+            </div>
+            <div>
+              <Label>Profilo professionale</Label>
+              <Textarea
+                rows={4}
+                value={form.professional_profile}
+                onChange={(e) => setForm({ ...form, professional_profile: e.target.value })}
+              />
+            </div>
             <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
               <Label className="font-semibold">Lingue parlate</Label>
               <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
               <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
             </div>
             <div className="grid gap-4 md:grid-cols-[1fr_140px]">
-              <div><Label>Area di interesse (indirizzo)</Label><Input placeholder="es. Via Roma 1, Milano" value={form.service_area_address} onChange={(e) => setForm({ ...form, service_area_address: e.target.value })} /></div>
-              <div><Label>Raggio (m)</Label><Input type="number" min="100" step="100" value={form.service_area_radius_m} onChange={(e) => setForm({ ...form, service_area_radius_m: e.target.value })} /></div>
+              <div>
+                <Label>Area di interesse (indirizzo)</Label>
+                <Input
+                  placeholder="es. Via Roma 1, Milano"
+                  value={form.service_area_address}
+                  onChange={(e) => setForm({ ...form, service_area_address: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Raggio (m)</Label>
+                <Input
+                  type="number"
+                  min="100"
+                  step="100"
+                  value={form.service_area_radius_m}
+                  onChange={(e) => setForm({ ...form, service_area_radius_m: e.target.value })}
+                />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground -mt-3">Verrai mostrato in <span className="text-emerald-600 font-medium">verde</span> ai ristoratori il cui locale rientra nella tua area.</p>
+            <p className="text-xs text-muted-foreground -mt-3">
+              Verrai mostrato in <span className="text-emerald-600 font-medium">verde</span> ai ristoratori il cui
+              locale rientra nella tua area.
+            </p>
           </>
         )}
         <label className="flex items-start gap-2 text-sm">
           <Checkbox checked={form.terms_accepted} onCheckedChange={(v) => setForm({ ...form, terms_accepted: !!v })} />
-          <span>Ho letto e accetto le <Link to="/terms" className="underline hover:text-primary" target="_blank">condizioni d'uso e la privacy policy</Link>.</span>
+          <span>
+            Ho letto e accetto le{" "}
+            <Link to="/terms" className="underline hover:text-primary" target="_blank">
+              condizioni d'uso e la privacy policy
+            </Link>
+            .
+          </span>
         </label>
-        <Button type="submit" disabled={busy}>{busy ? "Salvataggio..." : "Salva e continua"}</Button>
+        <Button type="submit" disabled={busy}>
+          {busy ? "Salvataggio..." : "Salva e continua"}
+        </Button>
       </form>
     </AppShell>
   );
