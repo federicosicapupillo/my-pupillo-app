@@ -20,7 +20,6 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MappaRouteImport } from './routes/mappa'
-import { Route as LavoratoriRouteImport } from './routes/lavoratori'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -91,11 +90,6 @@ const MessagesRoute = MessagesRouteImport.update({
 const MappaRoute = MappaRouteImport.update({
   id: '/mappa',
   path: '/mappa',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LavoratoriRoute = LavoratoriRouteImport.update({
-  id: '/lavoratori',
-  path: '/lavoratori',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsRoute = JobsRouteImport.update({
@@ -191,7 +185,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
-  '/lavoratori': typeof LavoratoriRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -221,7 +214,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
-  '/lavoratori': typeof LavoratoriRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -252,7 +244,6 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
-  '/lavoratori': typeof LavoratoriRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -284,7 +275,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
-    | '/lavoratori'
     | '/mappa'
     | '/messages'
     | '/notifications'
@@ -314,7 +304,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
-    | '/lavoratori'
     | '/mappa'
     | '/messages'
     | '/notifications'
@@ -344,7 +333,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
-    | '/lavoratori'
     | '/mappa'
     | '/messages'
     | '/notifications'
@@ -375,7 +363,6 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
-  LavoratoriRoute: typeof LavoratoriRoute
   MappaRoute: typeof MappaRoute
   MessagesRoute: typeof MessagesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
@@ -470,13 +457,6 @@ declare module '@tanstack/react-router' {
       path: '/mappa'
       fullPath: '/mappa'
       preLoaderRoute: typeof MappaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lavoratori': {
-      id: '/lavoratori'
-      path: '/lavoratori'
-      fullPath: '/lavoratori'
-      preLoaderRoute: typeof LavoratoriRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs': {
@@ -630,7 +610,6 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
-  LavoratoriRoute: LavoratoriRoute,
   MappaRoute: MappaRoute,
   MessagesRoute: MessagesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
@@ -650,3 +629,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
