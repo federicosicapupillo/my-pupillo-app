@@ -13,6 +13,7 @@ import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
 import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
@@ -27,6 +28,7 @@ type Restaurant = {
   full_name: string | null;
   venue_type: string | null;
   venue_type_other?: string | null;
+  price_range: string | null;
   address: string | null;
   city: string | null;
   neighborhood: string | null;
@@ -102,6 +104,7 @@ function MapPage() {
   const [city, setCity] = useState("any");
   const [district, setDistrict] = useState("");
   const [venue, setVenue] = useState("any");
+  const [priceF, setPriceF] = useState("any");
   const [planF, setPlanF] = useState("any");
   const [statusF, setStatusF] = useState("any");
   const [withRequests, setWithRequests] = useState(false);
@@ -129,7 +132,7 @@ function MapPage() {
       setLoading(true);
       const [{ data: r }, { data: w }, { data: a }] = await Promise.all([
         supabase.from("profiles")
-          .select("id, business_name, full_name, venue_type, venue_type_other, address, city, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
+          .select("id, business_name, full_name, venue_type, venue_type_other, price_range, address, city, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
         supabase
@@ -199,6 +202,7 @@ function MapPage() {
       if (city !== "any" && r.city !== city) return false;
       if (district && !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
       if (venue !== "any" && r.venue_type !== venue) return false;
+      if (priceF !== "any" && r.price_range !== priceF) return false;
       if (planF !== "any" && r.plan !== planF) return false;
       if (statusF !== "any" && r.account_status !== statusF) return false;
       if (withRequests && !annCounts[r.id]) return false;
@@ -207,7 +211,7 @@ function MapPage() {
       }
       return true;
     });
-  }, [restaurants, query, city, district, venue, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me]);
+  }, [restaurants, query, city, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
@@ -224,7 +228,7 @@ function MapPage() {
           lng: r.service_area_lng,
           category: "restaurant",
           title: r.business_name || r.full_name || "Locale",
-          subtitle: [r.venue_type, r.address].filter(Boolean).join(" · "),
+          subtitle: [r.venue_type, r.price_range ? `Fascia: ${priceRangeLabel(r.price_range)}` : null, [r.neighborhood, r.city].filter(Boolean).join(", "), `${annCounts[r.id] || 0} annunci attivi`].filter(Boolean).join(" · "),
           city: [r.neighborhood, r.city].filter(Boolean).join(", ") || r.city,
           status: r.account_status,
         });
