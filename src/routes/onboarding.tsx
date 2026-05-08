@@ -243,7 +243,27 @@ function Onboarding() {
                   </p>
                 )}
               </div>
-              <div><Label>Tipologia locale</Label><Input placeholder="Pizzeria, Ristorante…" value={form.venue_type} onChange={(e) => setForm({ ...form, venue_type: e.target.value })} /></div>
+              <div>
+                <Label>Tipologia locale *</Label>
+                <select
+                  required
+                  value={form.venue_type}
+                  onChange={(e) => setForm({ ...form, venue_type: e.target.value, venue_type_other: e.target.value === "Altro" ? form.venue_type_other : "" })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Seleziona la tipologia del locale</option>
+                  {VENUE_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+                {form.venue_type === "Altro" && (
+                  <Input
+                    className="mt-2"
+                    required
+                    placeholder="Specifica tipologia locale"
+                    value={form.venue_type_other}
+                    onChange={(e) => setForm({ ...form, venue_type_other: e.target.value })}
+                  />
+                )}
+              </div>
               <div><Label>Fascia di prezzo</Label><Input placeholder="€, €€, €€€" value={form.price_range} onChange={(e) => setForm({ ...form, price_range: e.target.value })} /></div>
             </div>
             <div><Label>Indirizzo</Label><Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
