@@ -46,6 +46,15 @@ type Profile = {
   contact_person_role: string | null;
   contact_person_phone: string | null;
   contact_person_email: string | null;
+  phone_verified: boolean | null;
+  phone_verified_at: string | null;
+  phone_full: string | null;
+  phone_country_code: string | null;
+  phone_number: string | null;
+  whatsapp_confirmation_sent_at: string | null;
+  whatsapp_confirmation_status: string | null;
+  email_summary_sent_at: string | null;
+  email_summary_status: string | null;
 };
 
 type Ctx = {
