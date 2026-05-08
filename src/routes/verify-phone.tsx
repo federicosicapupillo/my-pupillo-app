@@ -108,7 +108,12 @@ function VerifyPhonePage() {
       }
       toast.success("Codice verificato correttamente.");
       await refresh();
-      nav({ to: profile?.profile_completed ? "/dashboard" : "/onboarding" });
+      const dest = role === "admin"
+        ? "/admin"
+        : profile?.profile_completed
+          ? "/dashboard"
+          : "/onboarding";
+      nav({ to: dest as any });
     } finally {
       setBusy(false);
     }
