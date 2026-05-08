@@ -13,6 +13,7 @@ import { KeyRound, Trash2, FileText, Coins, Star, MapPin, ExternalLink } from "l
 import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
+import { priceRangeLabel } from "@/lib/price-range";
 import { ClipboardList } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
@@ -66,7 +67,7 @@ function Profile() {
           {profile?.vat_company_name && <Row label="Ragione sociale (VIES)" value={profile.vat_company_name} />}
           <Row label="Tipologia locale" value={venueTypeLabel(profile?.venue_type, (profile as any)?.venue_type_other)} />
           <Row label="Indirizzo" value={profile?.address} />
-          <Row label="Fascia prezzo" value={profile?.price_range} />
+          <Row label="Fascia di prezzo" value={priceRangeLabel(profile?.price_range)} />
         </>)}
         {role === "worker" && (<>
           <Row label="Età" value={profile?.age?.toString()} />

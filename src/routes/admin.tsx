@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { VENUE_TYPES, venueTypeLabel } from "@/lib/venue-types";
+import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Pupillo" }] }),
@@ -28,6 +29,8 @@ function Admin() {
   const [vatSearch, setVatSearch] = useState("");
   const [vatVenueFilter, setVatVenueFilter] = useState<string>("all");
   const [byVenue, setByVenue] = useState<Record<string, number>>({});
+  const [vatPriceFilter, setVatPriceFilter] = useState<string>("all");
+  const [byPrice, setByPrice] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (role !== "admin") return;
@@ -64,7 +67,7 @@ function Admin() {
       if (restaurantIds.length) {
         const { data: rows } = await supabase
           .from("profiles")
-          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city")
+          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,price_range")
           .in("id", restaurantIds)
           .order("vat_verified_at", { ascending: false });
         setVatList(rows ?? []);
@@ -74,6 +77,14 @@ function Admin() {
           if (label && label !== "—") bv[label] = (bv[label] || 0) + 1;
         });
         setByVenue(bv);
+        const bpr: Record<string, number> = {};
+        (rows ?? []).forEach((r: any) => {
+          if (r.price_range) {
+            const label = priceRangeLabel(r.price_range);
+            bpr[label] = (bpr[label] || 0) + 1;
+          }
+        });
+        setByPrice(bpr);
       }
     })();
   }, [role]);
@@ -108,6 +119,7 @@ function Admin() {
         <Breakdown title="Lavoratori per badge" data={byBadge} />
         <Breakdown title="Ristoratori per piano" data={byPlan} />
         <Breakdown title="Ristoratori per tipologia locale" data={byVenue} />
+        <Breakdown title="Ristoratori per fascia di prezzo" data={byPrice} />
         <Breakdown title="Annunci per città" data={byCity} />
         <Breakdown title="Annunci per ruolo" data={byRole} />
       </div>
@@ -128,12 +140,18 @@ function Admin() {
               <option value="all">Tutte le tipologie</option>
               {VENUE_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
+            <select value={vatPriceFilter} onChange={(e)=>setVatPriceFilter(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+              <option value="all">Tutte le fasce di prezzo</option>
+              {PRICE_RANGE_OPTIONS.map((p) => (
+                <option key={p.value} value={p.value}>{p.symbol ? `${p.symbol} — ${p.label}` : p.label}</option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-muted-foreground">
-              <tr><th className="py-2 pr-3">Ristoratore</th><th className="pr-3">Ragione sociale</th><th className="pr-3">Tipologia</th><th className="pr-3">P.IVA</th><th className="pr-3">Stato</th><th className="pr-3">Verificata il</th><th>Azioni</th></tr>
+              <tr><th className="py-2 pr-3">Ristoratore</th><th className="pr-3">Ragione sociale</th><th className="pr-3">Tipologia</th><th className="pr-3">Fascia prezzo</th><th className="pr-3">P.IVA</th><th className="pr-3">Stato</th><th className="pr-3">Verificata il</th><th>Azioni</th></tr>
             </thead>
             <tbody>
               {vatList
@@ -142,6 +160,7 @@ function Admin() {
                   if (vatFilter === "none") return !r.vat_number;
                   if (vatFilter !== "all" && status !== vatFilter) return false;
                   if (vatVenueFilter !== "all" && r.venue_type !== vatVenueFilter) return false;
+                  if (vatPriceFilter !== "all" && r.price_range !== vatPriceFilter) return false;
                   if (vatSearch.trim()) {
                     const q = vatSearch.trim().toLowerCase();
                     return (r.vat_number ?? "").toLowerCase().includes(q) || (r.business_name ?? "").toLowerCase().includes(q) || (r.vat_company_name ?? "").toLowerCase().includes(q);
@@ -154,6 +173,7 @@ function Admin() {
                   <td className="py-2 pr-3">{r.full_name ?? "—"}</td>
                   <td className="pr-3">{r.business_name ?? r.vat_company_name ?? "—"}</td>
                   <td className="pr-3">{venueTypeLabel(r.venue_type, r.venue_type_other)}</td>
+                  <td className="pr-3">{priceRangeLabel(r.price_range)}</td>
                   <td className="pr-3 font-mono">{r.vat_number ?? "—"}</td>
                   <td className="pr-3">{statusBadge(r.vat_status, r.vat_number)}</td>
                   <td className="pr-3">{r.vat_verified_at ? new Date(r.vat_verified_at).toLocaleDateString("it-IT") : "—"}</td>
@@ -167,7 +187,7 @@ function Admin() {
                 </tr>
               ))}
               {vatList.length === 0 && (
-                <tr><td colSpan={7} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>
+                <tr><td colSpan={8} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>
               )}
             </tbody>
           </table>
