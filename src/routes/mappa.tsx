@@ -31,6 +31,7 @@ type Restaurant = {
   price_range: string | null;
   address: string | null;
   city: string | null;
+  province: string | null;
   neighborhood: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
