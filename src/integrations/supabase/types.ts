@@ -584,6 +584,9 @@ export type Database = {
           province: string | null
           province_code: string | null
           rating_avg: number | null
+          referral_code: string | null
+          referral_credits_earned: number
+          referred_by_user_id: string | null
           registered_office_address: string | null
           registered_office_city: string | null
           registered_office_postal_code: string | null
@@ -685,6 +688,9 @@ export type Database = {
           province?: string | null
           province_code?: string | null
           rating_avg?: number | null
+          referral_code?: string | null
+          referral_credits_earned?: number
+          referred_by_user_id?: string | null
           registered_office_address?: string | null
           registered_office_city?: string | null
           registered_office_postal_code?: string | null
@@ -786,6 +792,9 @@ export type Database = {
           province?: string | null
           province_code?: string | null
           rating_avg?: number | null
+          referral_code?: string | null
+          referral_credits_earned?: number
+          referred_by_user_id?: string | null
           registered_office_address?: string | null
           registered_office_city?: string | null
           registered_office_postal_code?: string | null
@@ -814,6 +823,45 @@ export type Database = {
           whatsapp_confirmation_sent_at?: string | null
           whatsapp_confirmation_status?: string | null
           whatsapp_connected?: boolean | null
+        }
+        Relationships: []
+      }
+      referral_invites: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          credits_amount: number
+          credits_awarded: boolean
+          id: string
+          referral_code: string
+          referred_email: string | null
+          referred_user_id: string | null
+          referrer_user_id: string
+          status: Database["public"]["Enums"]["referral_status"]
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          credits_amount?: number
+          credits_awarded?: boolean
+          id?: string
+          referral_code: string
+          referred_email?: string | null
+          referred_user_id?: string | null
+          referrer_user_id: string
+          status?: Database["public"]["Enums"]["referral_status"]
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          credits_amount?: number
+          credits_awarded?: boolean
+          id?: string
+          referral_code?: string
+          referred_email?: string | null
+          referred_user_id?: string | null
+          referrer_user_id?: string
+          status?: Database["public"]["Enums"]["referral_status"]
         }
         Relationships: []
       }
@@ -954,10 +1002,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_referral_credits: {
+        Args: { _referred_user_id: string }
+        Returns: undefined
+      }
       consume_credits: {
         Args: { _amount: number; _reason: string; _reference_id?: string }
         Returns: boolean
       }
+      generate_referral_code: { Args: never; Returns: string }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -984,6 +1037,10 @@ export type Database = {
         Returns: boolean
       }
       normalize_vat: { Args: { _v: string }; Returns: string }
+      register_referral: {
+        Args: { _code: string; _new_user: string }
+        Returns: string
+      }
     }
     Enums: {
       account_status: "active" | "pending" | "suspended"
@@ -1011,6 +1068,12 @@ export type Database = {
         | "verified"
         | "expired"
         | "failed"
+      referral_status:
+        | "pending"
+        | "registered"
+        | "verified"
+        | "completed"
+        | "rejected"
       service_speed: "normal" | "fast" | "flash"
       shift_status: "scheduled" | "completed" | "no_show" | "cancelled"
       tariff_type: "hourly" | "flat"
@@ -1171,6 +1234,13 @@ export const Constants = {
         "verified",
         "expired",
         "failed",
+      ],
+      referral_status: [
+        "pending",
+        "registered",
+        "verified",
+        "completed",
+        "rejected",
       ],
       service_speed: ["normal", "fast", "flash"],
       shift_status: ["scheduled", "completed", "no_show", "cancelled"],
