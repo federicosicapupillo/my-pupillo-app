@@ -529,6 +529,7 @@ export type Database = {
           province: string | null
           rating_avg: number | null
           reliability_pct: number | null
+          representative_age: number | null
           reviews_count: number | null
           secondary_roles: string[] | null
           service_area_lat: number | null
@@ -606,6 +607,7 @@ export type Database = {
           province?: string | null
           rating_avg?: number | null
           reliability_pct?: number | null
+          representative_age?: number | null
           reviews_count?: number | null
           secondary_roles?: string[] | null
           service_area_lat?: number | null
@@ -683,6 +685,7 @@ export type Database = {
           province?: string | null
           rating_avg?: number | null
           reliability_pct?: number | null
+          representative_age?: number | null
           reviews_count?: number | null
           secondary_roles?: string[] | null
           service_area_lat?: number | null
