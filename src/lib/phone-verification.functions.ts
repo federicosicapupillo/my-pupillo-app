@@ -27,39 +27,79 @@ function genOtp(): string {
 }
 
 async function sendWhatsAppMessage(phoneFull: string, code: string): Promise<{ ok: boolean; provider: string; error?: string }> {
-  const provider = process.env.WHATSAPP_PROVIDER_URL || "simulated";
   const token = process.env.WHATSAPP_API_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const apiVersion = process.env.WHATSAPP_API_VERSION || "v20.0";
+  const baseUrl = process.env.WHATSAPP_PROVIDER_URL || `https://graph.facebook.com/${apiVersion}`;
+  // Authentication template (recommended by Meta for OTPs).
+  // Defaults to Meta's pre-approved "authentication" sample template.
+  const templateName = process.env.WHATSAPP_TEMPLATE_NAME || "";
+  const templateLang = process.env.WHATSAPP_TEMPLATE_LANG || "it";
 
-  // Real provider integration placeholder. Wire when credentials are available.
-  if (provider !== "simulated" && token && phoneNumberId) {
-    try {
-      // Example shape (Meta WhatsApp Cloud API). Adapt as needed.
-      const res = await fetch(`${provider}/${phoneNumberId}/messages`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: phoneFull.replace(/^\+/, ""),
-          type: "text",
-          text: {
-            body: `Ciao, benvenuto su Pupillo. Il tuo codice di conferma è: ${code}. Inseriscilo nell'app per completare la registrazione.\n\nSe non hai richiesto tu questa registrazione, ignora questo messaggio.`,
-          },
-        }),
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        return { ok: false, provider, error: `Provider ${res.status}: ${txt}` };
-      }
-      return { ok: true, provider };
-    } catch (e) {
-      return { ok: false, provider, error: e instanceof Error ? e.message : String(e) };
-    }
+  // No credentials → simulation mode (dev / fallback)
+  if (!token || !phoneNumberId) {
+    console.log(`[whatsapp:simulated] to=${phoneFull} code=${code}`);
+    return { ok: true, provider: "simulated" };
   }
 
-  // Simulation mode
-  console.log(`[whatsapp:simulated] to=${phoneFull} code=${code}`);
-  return { ok: true, provider: "simulated" };
+  const to = phoneFull.replace(/^\+/, "");
+  const url = `${baseUrl}/${phoneNumberId}/messages`;
+
+  // If a template name is configured → use authentication template (works outside 24h window).
+  // Otherwise → send a plain text (only works inside the 24h customer-service window or in test numbers).
+  const body = templateName
+    ? {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: templateLang },
+          components: [
+            {
+              type: "body",
+              parameters: [{ type: "text", text: code }],
+            },
+            {
+              type: "button",
+              sub_type: "url",
+              index: "0",
+              parameters: [{ type: "text", text: code }],
+            },
+          ],
+        },
+      }
+    : {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "text",
+        text: {
+          body: `Pupillo: il tuo codice di conferma è ${code}. Valido ${OTP_TTL_MINUTES} minuti. Se non l'hai richiesto, ignora questo messaggio.`,
+        },
+      };
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    const txt = await res.text();
+    if (!res.ok) {
+      console.error(`[whatsapp:meta] ${res.status} ${txt}`);
+      return { ok: false, provider: "meta", error: `Meta API ${res.status}: ${txt}` };
+    }
+    return { ok: true, provider: "meta" };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[whatsapp:meta] network error: ${msg}`);
+    return { ok: false, provider: "meta", error: msg };
+  }
 }
 
 async function sendSummaryEmail(params: {
