@@ -1,5 +1,34 @@
+/**
+ * Single source of truth for password rules.
+ * UI hints, validation, and tests all read from PASSWORD_RULES.
+ * If a rule changes, update it here AND the snapshot test will guide the UI text.
+ */
+export type PasswordRule = {
+  id: "min-length" | "has-letter" | "has-digit";
+  label: string;
+  test: (password: string) => boolean;
+};
+
+export const PASSWORD_RULES: readonly PasswordRule[] = [
+  {
+    id: "min-length",
+    label: "Almeno 8 caratteri",
+    test: (p) => p.length >= 8,
+  },
+  {
+    id: "has-letter",
+    label: "Almeno una lettera",
+    test: (p) => /[A-Za-z]/.test(p),
+  },
+  {
+    id: "has-digit",
+    label: "Almeno un numero",
+    test: (p) => /\d/.test(p),
+  },
+] as const;
+
 export function isPasswordStrongEnough(password: string): boolean {
-  return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+  return PASSWORD_RULES.every((r) => r.test(password));
 }
 
 export function doPasswordsMatch(password: string, confirm: string): boolean {
@@ -8,13 +37,13 @@ export function doPasswordsMatch(password: string, confirm: string): boolean {
 
 export type PasswordValidation = {
   ok: boolean;
-  error?: "too_short" | "missing_letter" | "missing_digit" | "mismatch";
+  error?: PasswordRule["id"] | "mismatch";
 };
 
 export function validatePasswordPair(password: string, confirm: string): PasswordValidation {
-  if (password.length < 8) return { ok: false, error: "too_short" };
-  if (!/[A-Za-z]/.test(password)) return { ok: false, error: "missing_letter" };
-  if (!/\d/.test(password)) return { ok: false, error: "missing_digit" };
+  for (const rule of PASSWORD_RULES) {
+    if (!rule.test(password)) return { ok: false, error: rule.id };
+  }
   if (password !== confirm) return { ok: false, error: "mismatch" };
   return { ok: true };
 }
