@@ -296,11 +296,6 @@ function Onboarding() {
       }
       return;
     }
-    if (role === "restaurant" && vatValid && vatResult?.status !== "valid") {
-      try {
-        await verifyVatFn({ data: { vat_number: vatDigits } });
-      } catch {}
-    }
     setBusy(false);
     toast.success("Profilo completato!");
     await refresh();
