@@ -207,6 +207,26 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
+    // TEST MODE: accept fixed code without an active OTP row (dev-only)
+    if (isTestOtpEnabled() && data.code === TEST_OTP_CODE) {
+      const now = new Date().toISOString();
+      if (row) {
+        await supabaseAdmin
+          .from("phone_verifications")
+          .update({ status: "verified", verified_at: now })
+          .eq("id", row.id);
+      }
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          phone_verified: true,
+          phone_verified_at: now,
+          whatsapp_confirmation_status: "verified_test",
+        })
+        .eq("id", userId);
+      return { ok: true, testMode: true };
+    }
+
     if (!row) return { ok: false, error: "Nessun codice attivo. Richiedine uno nuovo." };
 
     if (new Date(row.expires_at).getTime() < Date.now()) {
