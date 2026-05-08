@@ -248,6 +248,89 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_codes: {
+        Row: {
+          applies_to: Database["public"]["Enums"]["discount_applies_to"]
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          updated_at: string
+          used_count: number
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: Database["public"]["Enums"]["discount_type"]
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      discount_redemptions: {
+        Row: {
+          discount_amount: number | null
+          discount_code_id: string
+          id: string
+          order_id: string | null
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          discount_amount?: number | null
+          discount_code_id: string
+          id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          discount_amount?: number | null
+          discount_code_id?: string
+          id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_redemptions_discount_code_id_fkey"
+            columns: ["discount_code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           announcement_id: string
@@ -1037,9 +1120,22 @@ export type Database = {
         Returns: boolean
       }
       normalize_vat: { Args: { _v: string }; Returns: string }
+      redeem_discount_code: {
+        Args: {
+          _applies_to: string
+          _code: string
+          _discount_amount: number
+          _order_id: string
+        }
+        Returns: Json
+      }
       register_referral: {
         Args: { _code: string; _new_user: string }
         Returns: string
+      }
+      validate_discount_code: {
+        Args: { _applies_to?: string; _code: string }
+        Returns: Json
       }
     }
     Enums: {
@@ -1061,6 +1157,8 @@ export type Database = {
         | "rejected"
         | "expired"
       credit_tx_kind: "purchase" | "grant" | "consume" | "refund" | "plan_bonus"
+      discount_applies_to: "credits" | "premium" | "all"
+      discount_type: "percentage" | "fixed_amount" | "free_credits"
       experience_level: "junior" | "intermediate" | "senior"
       phone_verification_status:
         | "pending"
@@ -1227,6 +1325,8 @@ export const Constants = {
         "expired",
       ],
       credit_tx_kind: ["purchase", "grant", "consume", "refund", "plan_bonus"],
+      discount_applies_to: ["credits", "premium", "all"],
+      discount_type: ["percentage", "fixed_amount", "free_credits"],
       experience_level: ["junior", "intermediate", "senior"],
       phone_verification_status: [
         "pending",
