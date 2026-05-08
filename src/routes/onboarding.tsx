@@ -183,6 +183,11 @@ function Onboarding() {
                   <div><Label className="text-xs">Telefono</Label><Input value={form.contact_person_phone} onChange={(e) => setForm({ ...form, contact_person_phone: e.target.value })} /></div>
                   <div className="md:col-span-2"><Label className="text-xs">Email</Label><Input type="email" value={form.contact_person_email} onChange={(e) => setForm({ ...form, contact_person_email: e.target.value })} /></div>
                 </div>
+                <div className="mt-3">
+                  <Label className="text-xs">Data di nascita del referente *</Label>
+                  <Input type="date" required value={form.birth_date} max={new Date().toISOString().split("T")[0]} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
+                  <p className="text-xs text-muted-foreground mt-1">Dato privato. Devi avere almeno 18 anni per creare un account ristoratore.</p>
+                </div>
               </div>
             </div>
 
