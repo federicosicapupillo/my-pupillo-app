@@ -127,7 +127,7 @@ function AnnouncementDetail() {
     setAnn(a as Ann | null);
     if (!a) { setLoading(false); return; }
     const { data: r } = await supabase.from("profiles")
-      .select("id,full_name,business_name,venue_type,address,city,neighborhood,price_range,phone,email,rating_avg,reviews_count,opening_hours,employees_count")
+      .select("id,full_name,business_name,venue_type,venue_type_other,address,city,neighborhood,price_range,phone,email,rating_avg,reviews_count,opening_hours,employees_count")
       .eq("id", (a as Ann).restaurant_id).maybeSingle();
     setRestaurant(r as Restaurant | null);
     const { data: ax } = await supabase.from("applications")
