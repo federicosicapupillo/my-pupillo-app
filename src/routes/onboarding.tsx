@@ -207,10 +207,7 @@ function Onboarding() {
           </>
         ) : (
           <>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div><Label>Età</Label><Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
-              <div><Label>Lingue parlate (separate da virgola)</Label><Input placeholder="Italiano, Inglese" value={form.languages} onChange={(e) => setForm({ ...form, languages: e.target.value })} /></div>
-            </div>
+            <div><Label>Età</Label><Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
             <div><Label>Profilo professionale</Label><Textarea rows={4} value={form.professional_profile} onChange={(e) => setForm({ ...form, professional_profile: e.target.value })} /></div>
             <div className="grid gap-4 md:grid-cols-[1fr_140px]">
               <div><Label>Area di interesse (indirizzo)</Label><Input placeholder="es. Via Roma 1, Milano" value={form.service_area_address} onChange={(e) => setForm({ ...form, service_area_address: e.target.value })} /></div>
