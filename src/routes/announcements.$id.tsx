@@ -65,7 +65,7 @@ type WorkerProfile = {
 };
 type Restaurant = {
   id: string; full_name: string | null; business_name: string | null;
-  venue_type: string | null; address: string | null; city: string | null;
+ venue_type: string | null; venue_type_other?: string | null; address: string | null; city: string | null;
   neighborhood: string | null; price_range: string | null; phone: string | null;
   email: string | null; rating_avg: number | null; reviews_count: number | null;
   opening_hours: string | null; employees_count: number | null;
