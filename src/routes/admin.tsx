@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { VENUE_TYPES, venueTypeLabel } from "@/lib/venue-types";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Pupillo" }] }),
@@ -25,6 +26,8 @@ function Admin() {
   const [vatList, setVatList] = useState<any[]>([]);
   const [vatFilter, setVatFilter] = useState<"all" | "valid" | "invalid" | "pending" | "none">("all");
   const [vatSearch, setVatSearch] = useState("");
+  const [vatVenueFilter, setVatVenueFilter] = useState<string>("all");
+  const [byVenue, setByVenue] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (role !== "admin") return;
@@ -61,10 +64,16 @@ function Admin() {
       if (restaurantIds.length) {
         const { data: rows } = await supabase
           .from("profiles")
-          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at")
+          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city")
           .in("id", restaurantIds)
           .order("vat_verified_at", { ascending: false });
         setVatList(rows ?? []);
+        const bv: Record<string, number> = {};
+        (rows ?? []).forEach((r: any) => {
+          const label = venueTypeLabel(r.venue_type, r.venue_type_other);
+          if (label && label !== "—") bv[label] = (bv[label] || 0) + 1;
+        });
+        setByVenue(bv);
       }
     })();
   }, [role]);
@@ -98,6 +107,7 @@ function Admin() {
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         <Breakdown title="Lavoratori per badge" data={byBadge} />
         <Breakdown title="Ristoratori per piano" data={byPlan} />
+        <Breakdown title="Ristoratori per tipologia locale" data={byVenue} />
         <Breakdown title="Annunci per città" data={byCity} />
         <Breakdown title="Annunci per ruolo" data={byRole} />
       </div>
@@ -114,12 +124,16 @@ function Admin() {
               <option value="pending">In attesa</option>
               <option value="none">Mancante</option>
             </select>
+            <select value={vatVenueFilter} onChange={(e)=>setVatVenueFilter(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+              <option value="all">Tutte le tipologie</option>
+              {VENUE_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-muted-foreground">
-              <tr><th className="py-2 pr-3">Ristoratore</th><th className="pr-3">Ragione sociale</th><th className="pr-3">P.IVA</th><th className="pr-3">Stato</th><th className="pr-3">Verificata il</th><th>Azioni</th></tr>
+              <tr><th className="py-2 pr-3">Ristoratore</th><th className="pr-3">Ragione sociale</th><th className="pr-3">Tipologia</th><th className="pr-3">P.IVA</th><th className="pr-3">Stato</th><th className="pr-3">Verificata il</th><th>Azioni</th></tr>
             </thead>
             <tbody>
               {vatList
@@ -127,6 +141,7 @@ function Admin() {
                   const status = r.vat_status ?? (r.vat_number ? "" : "none");
                   if (vatFilter === "none") return !r.vat_number;
                   if (vatFilter !== "all" && status !== vatFilter) return false;
+                  if (vatVenueFilter !== "all" && r.venue_type !== vatVenueFilter) return false;
                   if (vatSearch.trim()) {
                     const q = vatSearch.trim().toLowerCase();
                     return (r.vat_number ?? "").toLowerCase().includes(q) || (r.business_name ?? "").toLowerCase().includes(q) || (r.vat_company_name ?? "").toLowerCase().includes(q);
@@ -138,6 +153,7 @@ function Admin() {
                 <tr key={r.id} className="border-t">
                   <td className="py-2 pr-3">{r.full_name ?? "—"}</td>
                   <td className="pr-3">{r.business_name ?? r.vat_company_name ?? "—"}</td>
+                  <td className="pr-3">{venueTypeLabel(r.venue_type, r.venue_type_other)}</td>
                   <td className="pr-3 font-mono">{r.vat_number ?? "—"}</td>
                   <td className="pr-3">{statusBadge(r.vat_status, r.vat_number)}</td>
                   <td className="pr-3">{r.vat_verified_at ? new Date(r.vat_verified_at).toLocaleDateString("it-IT") : "—"}</td>
@@ -151,7 +167,7 @@ function Admin() {
                 </tr>
               ))}
               {vatList.length === 0 && (
-                <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>
+                <tr><td colSpan={7} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>
               )}
             </tbody>
           </table>
