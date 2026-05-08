@@ -43,6 +43,18 @@ function Onboarding() {
   const { user, role, profile, refresh } = useAuth();
   const nav = useNavigate();
   const verifyVatFn = useServerFn(verifyVat);
+
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.phone_verified === false) {
+      nav({ to: "/verify-phone" });
+      return;
+    }
+    if (profile.profile_completed) {
+      nav({ to: "/dashboard" });
+    }
+  }, [profile, nav]);
+
   const [form, setForm] = useState({
     full_name: "",
     phone_code: DEFAULT_PHONE_PREFIX,
