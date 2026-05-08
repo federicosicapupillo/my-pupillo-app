@@ -113,7 +113,7 @@ export function PupilloAvatar({
     <span
       className={
         "relative inline-flex items-center justify-center rounded-full p-[2px] " +
-        "bg-[conic-gradient(from_140deg,hsl(var(--primary)),hsl(var(--accent)),hsl(var(--primary-glow,var(--primary))),hsl(var(--primary)))] " +
+        "bg-gradient-to-br from-primary via-accent to-primary " +
         "shadow-sm transition-transform duration-200 hover:scale-[1.04] focus-visible:scale-[1.04] " +
         className
       }
