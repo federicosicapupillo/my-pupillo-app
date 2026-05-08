@@ -5,6 +5,15 @@ import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Se
 import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 
 
@@ -55,6 +64,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     : loc.pathname === homeTo
       ? `Sei in ${homeLabel}`
       : null;
+
+  const initials = (profile?.full_name || user?.email || "U")
+    .split(/\s+/)
+    .map((s) => s[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   // Focus management per il menu mobile (frecce ←/→/Home/End/Esc)
   const mobileNavRef = useRef<HTMLElement | null>(null);
@@ -113,12 +130,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <PaymentTestModeBanner />
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto max-w-7xl px-4 h-16 flex items-center gap-3">
           <Link
             to={homeTo as never}
             aria-label="Vai alla home page"
-            className="flex items-center cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow"
+            className="flex items-center gap-2 shrink-0 cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all hover:opacity-90"
             onKeyDown={(e) => {
               if (e.key === " " || e.code === "Space") {
                 e.preventDefault();
@@ -129,19 +146,35 @@ export function AppShell({ children }: { children: ReactNode }) {
             <img
               src={pupilloLogo}
               alt="Logo Pupillo"
-              className="h-10 w-auto object-contain md:h-12"
+              className="h-9 w-auto object-contain md:h-10"
             />
+            <span className="hidden sm:inline-block font-semibold tracking-tight text-base bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
+              Pupillo
+            </span>
           </Link>
-          <div className="hidden md:flex items-center gap-1">
-            {items.map((i) => (
-              <Link key={i.to} to={i.to as never}>
-                <Button variant={loc.pathname.startsWith(i.to) ? "secondary" : "ghost"} size="sm" className="gap-2">
-                  <i.icon className="h-4 w-4" />{i.label}
-                </Button>
-              </Link>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
+          <nav aria-label="Navigazione principale" className="hidden md:flex flex-1 items-center justify-center">
+            <div className="flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1 shadow-sm">
+              {items.map((i) => {
+                const isActive = loc.pathname === i.to || (i.to !== "/" && loc.pathname.startsWith(i.to + "/")) || loc.pathname === i.to;
+                return (
+                  <Link
+                    key={i.to}
+                    to={i.to as never}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`group relative inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      isActive
+                        ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                    }`}
+                  >
+                    <i.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                    <span className="whitespace-nowrap">{i.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+          <div className="flex items-center gap-1.5 ml-auto">
             <Button
               ref={mobileToggleRef}
               variant="ghost"
@@ -160,29 +193,65 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-            <span className="hidden sm:block text-xs text-muted-foreground">{profile?.full_name || user?.email}</span>
-            <span className="text-xs rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
             {role === "restaurant" && (
-              <Link to="/billing" title="Saldo crediti">
-                <span className="inline-flex items-center gap-1 text-xs rounded-full bg-primary/10 text-primary px-2 py-1 font-medium hover:bg-primary/20 transition-colors">
+              <Link to="/billing" title="Saldo crediti" className="hidden sm:inline-flex">
+                <span className="inline-flex items-center gap-1 text-xs rounded-full bg-primary/10 text-primary px-2.5 py-1 font-semibold hover:bg-primary/20 transition-colors">
                   <Coins className="h-3.5 w-3.5" />
                   {profile?.credits ?? 0}
                 </span>
               </Link>
             )}
             {user && <NotificationBell />}
-            <Button variant="ghost" size="icon" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    aria-label="Menu account"
+                    className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 pl-1 pr-2.5 py-1 hover:bg-muted transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={(profile as { avatar_url?: string } | null)?.avatar_url || undefined} alt="" />
+                      <AvatarFallback className="text-xs bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline-block text-xs font-medium capitalize text-muted-foreground">{role}</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="flex flex-col">
+                    <span className="text-sm font-medium truncate">{profile?.full_name || user.email}</span>
+                    <span className="text-xs text-muted-foreground capitalize">{role}</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => nav({ to: "/profile" })}>
+                    <Settings className="h-4 w-4 mr-2" /> Profilo
+                  </DropdownMenuItem>
+                  {role === "restaurant" && (
+                    <DropdownMenuItem onClick={() => nav({ to: "/billing" })}>
+                      <Coins className="h-4 w-4 mr-2" /> Crediti ({profile?.credits ?? 0})
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={async () => { await signOut(); nav({ to: "/" }); }}>
+                    <LogOut className="h-4 w-4 mr-2" /> Esci
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" size="icon" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
+            )}
           </div>
         </div>
         <nav
           ref={mobileNavRef}
           id="mobile-nav"
           hidden={!mobileOpen}
-          className="md:hidden border-t overflow-x-auto"
+          className="md:hidden border-t bg-background/95 backdrop-blur"
           aria-label="Menu di navigazione"
           onKeyDown={handleMobileNavKey}
         >
-          <div role="menubar" aria-orientation="vertical" className="flex flex-col gap-1 px-2 py-2">
+          <div role="menubar" aria-orientation="vertical" className="flex flex-col gap-1 px-3 py-3">
             {items.map((i) => {
               const isActive = loc.pathname.startsWith(i.to);
               return (
@@ -191,12 +260,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                   to={i.to as never}
                   role="menuitem"
                   aria-current={isActive ? "page" : undefined}
-                  className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground hover:bg-muted"
+                  }`}
                   onClick={() => setMobileOpen(false)}
                 >
-                  <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap">
-                    <i.icon className="h-4 w-4" />{i.label}
-                  </Button>
+                  <i.icon className="h-4 w-4 shrink-0" />
+                  <span>{i.label}</span>
                 </Link>
               );
             })}
