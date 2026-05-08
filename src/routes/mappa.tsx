@@ -678,6 +678,7 @@ function MapPage() {
                       <div className="min-w-0">
                         <div className="font-semibold truncate">{r.business_name || r.full_name || "Locale"}</div>
                         <div className="text-xs text-muted-foreground capitalize">{r.venue_type || "—"}</div>
+                        {r.price_range && <div className="text-xs text-muted-foreground">Fascia: {priceRangeLabel(r.price_range)}</div>}
                       </div>
                       {d != null && <span className="text-xs rounded-full bg-secondary px-2 py-0.5 whitespace-nowrap">{d.toFixed(1)} km</span>}
                     </div>
