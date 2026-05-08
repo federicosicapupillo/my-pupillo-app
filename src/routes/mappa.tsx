@@ -510,6 +510,15 @@ function MapPage() {
             {venues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={priceF} onValueChange={setPriceF}>
+          <SelectTrigger><SelectValue placeholder="Fascia di prezzo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">Tutte le fasce</SelectItem>
+            {PRICE_RANGE_OPTIONS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>{p.symbol ? `${p.symbol} — ${p.label}` : p.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={planF} onValueChange={setPlanF}>
           <SelectTrigger><SelectValue placeholder="Piano" /></SelectTrigger>
           <SelectContent>
