@@ -13,6 +13,7 @@ import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShiftsRouteImport } from './routes/shifts'
+import { Route as RistoratoriRouteImport } from './routes/ristoratori'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegistrationSuccessRouteImport } from './routes/registration-success'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -20,7 +21,6 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MappaRouteImport } from './routes/mappa'
-import { Route as LavoratoriRouteImport } from './routes/lavoratori'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -58,6 +58,11 @@ const ShiftsRoute = ShiftsRouteImport.update({
   path: '/shifts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RistoratoriRoute = RistoratoriRouteImport.update({
+  id: '/ristoratori',
+  path: '/ristoratori',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -91,11 +96,6 @@ const MessagesRoute = MessagesRouteImport.update({
 const MappaRoute = MappaRouteImport.update({
   id: '/mappa',
   path: '/mappa',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LavoratoriRoute = LavoratoriRouteImport.update({
-  id: '/lavoratori',
-  path: '/lavoratori',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsRoute = JobsRouteImport.update({
@@ -191,7 +191,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
-  '/lavoratori': typeof LavoratoriRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -199,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
@@ -221,7 +221,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
-  '/lavoratori': typeof LavoratoriRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -229,6 +228,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
@@ -252,7 +252,6 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
-  '/lavoratori': typeof LavoratoriRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -260,6 +259,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
@@ -284,7 +284,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
-    | '/lavoratori'
     | '/mappa'
     | '/messages'
     | '/notifications'
@@ -292,6 +291,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/registration-success'
     | '/reset-password'
+    | '/ristoratori'
     | '/shifts'
     | '/terms'
     | '/verify-phone'
@@ -314,7 +314,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
-    | '/lavoratori'
     | '/mappa'
     | '/messages'
     | '/notifications'
@@ -322,6 +321,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/registration-success'
     | '/reset-password'
+    | '/ristoratori'
     | '/shifts'
     | '/terms'
     | '/verify-phone'
@@ -344,7 +344,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
-    | '/lavoratori'
     | '/mappa'
     | '/messages'
     | '/notifications'
@@ -352,6 +351,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/registration-success'
     | '/reset-password'
+    | '/ristoratori'
     | '/shifts'
     | '/terms'
     | '/verify-phone'
@@ -375,7 +375,6 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
-  LavoratoriRoute: typeof LavoratoriRoute
   MappaRoute: typeof MappaRoute
   MessagesRoute: typeof MessagesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
@@ -383,6 +382,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RegistrationSuccessRoute: typeof RegistrationSuccessRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  RistoratoriRoute: typeof RistoratoriRoute
   ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
   VerifyPhoneRoute: typeof VerifyPhoneRoute
@@ -421,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/shifts'
       fullPath: '/shifts'
       preLoaderRoute: typeof ShiftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ristoratori': {
+      id: '/ristoratori'
+      path: '/ristoratori'
+      fullPath: '/ristoratori'
+      preLoaderRoute: typeof RistoratoriRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -470,13 +477,6 @@ declare module '@tanstack/react-router' {
       path: '/mappa'
       fullPath: '/mappa'
       preLoaderRoute: typeof MappaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lavoratori': {
-      id: '/lavoratori'
-      path: '/lavoratori'
-      fullPath: '/lavoratori'
-      preLoaderRoute: typeof LavoratoriRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs': {
@@ -630,7 +630,6 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
-  LavoratoriRoute: LavoratoriRoute,
   MappaRoute: MappaRoute,
   MessagesRoute: MessagesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
@@ -638,6 +637,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RegistrationSuccessRoute: RegistrationSuccessRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  RistoratoriRoute: RistoratoriRoute,
   ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
   VerifyPhoneRoute: VerifyPhoneRoute,
@@ -650,3 +650,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
