@@ -27,6 +27,8 @@ import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
 import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince } from "@/lib/italian-locations";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
+import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -68,6 +70,7 @@ function Onboarding() {
     contact_person_first_name: "",
     contact_person_last_name: "",
     contact_person_role: "",
+    contact_person_role_other: "",
     contact_person_phone_code: DEFAULT_PHONE_PREFIX,
     contact_person_phone_number: "",
     contact_person_email: "",
@@ -145,6 +148,7 @@ function Onboarding() {
         contact_person_first_name: (profile as any).contact_person_first_name ?? "",
         contact_person_last_name: (profile as any).contact_person_last_name ?? "",
         contact_person_role: (profile as any).contact_person_role ?? "",
+        contact_person_role_other: (profile as any).contact_person_role_other ?? "",
         contact_person_phone_code: cph.code,
         contact_person_phone_number: cph.number,
         contact_person_email: (profile as any).contact_person_email ?? "",
@@ -200,6 +204,18 @@ function Onboarding() {
       }
       if (!isCityInProvince(form.city, form.province)) {
         toast.error("La città selezionata non appartiene alla provincia scelta.");
+        return;
+      }
+      if (!form.contact_person_role) {
+        toast.error("Seleziona il ruolo del referente.");
+        return;
+      }
+      if (form.contact_person_role === "Altro" && !form.contact_person_role_other.trim()) {
+        toast.error("Specifica il ruolo del referente.");
+        return;
+      }
+      if (form.contact_person_email && !isValidEmail(form.contact_person_email)) {
+        toast.error("Inserisci un indirizzo email valido.");
         return;
       }
     }
@@ -263,6 +279,8 @@ function Onboarding() {
             contact_person_first_name: form.contact_person_first_name || null,
             contact_person_last_name: form.contact_person_last_name || null,
             contact_person_role: form.contact_person_role || null,
+            contact_person_role_other:
+              form.contact_person_role === "Altro" ? form.contact_person_role_other.trim() || null : null,
             contact_person_phone: contactPhoneFull || null,
             contact_person_email: form.contact_person_email || null,
             representative_age: form.representative_age ? Number(form.representative_age) : null,
@@ -532,11 +550,27 @@ function Onboarding() {
                   </div>
                   <div>
                     <Label className="text-xs">Ruolo</Label>
-                    <Input
-                      placeholder="Es. Maitre, Direttore"
+                    <Select
                       value={form.contact_person_role}
-                      onChange={(e) => setForm({ ...form, contact_person_role: e.target.value })}
-                    />
+                      onValueChange={(v) => setForm({ ...form, contact_person_role: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona ruolo referente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CONTACT_ROLES.map((r) => (
+                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.contact_person_role === "Altro" && (
+                      <Input
+                        className="mt-2"
+                        placeholder="Specifica ruolo referente"
+                        value={form.contact_person_role_other}
+                        onChange={(e) => setForm({ ...form, contact_person_role_other: e.target.value })}
+                      />
+                    )}
                   </div>
                   <div>
                     <Label className="text-xs">Telefono</Label>
@@ -551,9 +585,13 @@ function Onboarding() {
                     <Label className="text-xs">Email</Label>
                     <Input
                       type="email"
+                      placeholder="esempio@email.com"
                       value={form.contact_person_email}
                       onChange={(e) => setForm({ ...form, contact_person_email: e.target.value })}
                     />
+                    {form.contact_person_email && !isValidEmail(form.contact_person_email) && (
+                      <p className="text-xs text-destructive mt-1">Inserisci un indirizzo email valido.</p>
+                    )}
                   </div>
                 </div>
               </div>
