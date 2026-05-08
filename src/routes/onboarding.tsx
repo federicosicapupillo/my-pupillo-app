@@ -40,6 +40,40 @@ function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
   const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
+  const [vatChecking, setVatChecking] = useState(false);
+  const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(null);
+
+  const vatDigits = form.vat_number.replace(/\D/g, "");
+  const vatValid = vatDigits.length === 11;
+
+  const handleVerifyVat = async () => {
+    if (!vatValid) {
+      toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
+      return;
+    }
+    setVatChecking(true);
+    setVatResult(null);
+    try {
+      const r = await verifyVatFn({ data: { vat_number: vatDigits } });
+      setVatResult({ status: r.status, message: r.message ?? "", companyName: r.companyName });
+      if (r.status === "valid") {
+        toast.success(r.message || "Partita IVA verificata");
+        if (r.companyName && !form.business_name.trim()) {
+          setForm((f) => ({ ...f, business_name: r.companyName as string }));
+        }
+      } else if ((r as any).duplicate) {
+        toast.error(r.message);
+      } else if (r.status === "invalid") {
+        toast.error(r.message || "Partita IVA non valida");
+      } else {
+        toast.message(r.message || "Verifica non disponibile, formato valido.");
+      }
+    } catch (e: any) {
+      toast.error("Verifica non riuscita");
+    } finally {
+      setVatChecking(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) setForm((f) => ({
@@ -82,6 +116,10 @@ function Onboarding() {
       const age = Number(form.representative_age);
       if (!form.representative_age || isNaN(age) || age < 18 || age > 99) {
         toast.error("Seleziona l'età del referente. Devi avere almeno 18 anni per creare un account ristoratore.");
+        return;
+      }
+      if (!vatValid) {
+        toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
         return;
       }
     }
