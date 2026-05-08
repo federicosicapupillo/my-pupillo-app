@@ -175,7 +175,7 @@ function Onboarding() {
     if (role === "restaurant") {
       const age = Number(form.representative_age);
       if (!form.representative_age || isNaN(age) || age < 18 || age > 99) {
-        toast.error("Seleziona l'età del referente. Devi avere almeno 18 anni per creare un account ristoratore.");
+        toast.error("Seleziona l'età del referente. Deve avere almeno 18 anni.");
         return;
       }
       if (!vatValid) {
@@ -559,7 +559,9 @@ function Onboarding() {
                       </SelectTrigger>
                       <SelectContent>
                         {CONTACT_ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                          <SelectItem key={r} value={r}>
+                            {r}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
