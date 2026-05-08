@@ -17,6 +17,7 @@ import {
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
 } from "@/lib/announcement-requirements";
 import { venueTypeLabel } from "@/lib/venue-types";
+import { priceRangeLabel } from "@/lib/price-range";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -311,7 +312,7 @@ function AnnouncementDetail() {
             <div className="text-xs text-muted-foreground">
               {[
                 restaurant.venue_type ? `Tipologia locale: ${venueTypeLabel(restaurant.venue_type, restaurant.venue_type_other)}` : null,
-                restaurant.price_range,
+                restaurant.price_range ? `Fascia di prezzo locale: ${priceRangeLabel(restaurant.price_range)}` : null,
               ].filter(Boolean).join(" · ") || "—"}
             </div>
             {(restaurant.address || restaurant.city) && (

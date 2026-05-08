@@ -17,6 +17,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { RestaurantRequirementsEditor, EMPTY_REQ, reqFromProfile, reqToProfileUpdate, type RestaurantRequirements } from "@/components/RestaurantRequirements";
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
+import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -130,6 +131,10 @@ function Onboarding() {
       }
       if (form.venue_type === "Altro" && !form.venue_type_other.trim()) {
         toast.error("Specifica la tipologia del locale.");
+        return;
+      }
+      if (!form.price_range) {
+        toast.error("Seleziona la fascia di prezzo del locale.");
         return;
       }
     }
@@ -264,7 +269,22 @@ function Onboarding() {
                   />
                 )}
               </div>
-              <div><Label>Fascia di prezzo</Label><Input placeholder="€, €€, €€€" value={form.price_range} onChange={(e) => setForm({ ...form, price_range: e.target.value })} /></div>
+              <div>
+                <Label>Fascia di prezzo *</Label>
+                <select
+                  required
+                  value={form.price_range}
+                  onChange={(e) => setForm({ ...form, price_range: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Seleziona fascia di prezzo</option>
+                  {PRICE_RANGE_OPTIONS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.symbol ? `${p.symbol} — ${p.label}` : p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div><Label>Indirizzo</Label><Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
             <div className="grid gap-4 md:grid-cols-3">
