@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
 import { lovable } from "@/integrations/lovable";
 import pupilloLogo from "@/assets/pupillo-logo.png";
+import { isPasswordStrongEnough, doPasswordsMatch } from "@/lib/password-validation";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -38,8 +39,8 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
-  const passwordStrongEnough = password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
-  const passwordsMatch = password.length > 0 && password === confirmPassword;
+  const passwordStrongEnough = isPasswordStrongEnough(password);
+  const passwordsMatch = doPasswordsMatch(password, confirmPassword);
 
   useEffect(() => {
     if (loading || !user) return;
