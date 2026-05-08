@@ -29,6 +29,7 @@ import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -340,6 +341,7 @@ function Onboarding() {
           role === "restaurant" ? "Aggiungi i dati del tuo locale" : "Aggiungi le tue informazioni professionali"
         }
       />
+      <ProfileStatusBanner />
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-2">
           <div>

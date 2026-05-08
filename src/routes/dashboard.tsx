@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight } from "lucide-react";
+import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -74,6 +75,8 @@ function DashboardInner() {
           <Link to="/ristoratore/annunci/nuovo"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>
         )}
       />
+
+      <ProfileStatusBanner />
 
       {profile && !profile.profile_completed && (
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-yellow-300 bg-yellow-50 p-4">
