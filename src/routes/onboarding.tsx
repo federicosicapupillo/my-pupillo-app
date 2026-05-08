@@ -201,7 +201,36 @@ function Onboarding() {
           <>
             <div className="grid gap-4 md:grid-cols-2">
               <div><Label>Nome locale</Label><Input required value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} /></div>
-              <div><Label>Partita IVA</Label><Input required value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value })} /></div>
+              <div className="md:col-span-1">
+                <Label>Partita IVA *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    required
+                    inputMode="numeric"
+                    pattern="\d{11}"
+                    maxLength={11}
+                    placeholder="Inserisci la Partita IVA"
+                    value={form.vat_number}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "").slice(0, 11);
+                      setForm({ ...form, vat_number: v });
+                      setVatResult(null);
+                    }}
+                  />
+                  <Button type="button" variant="outline" disabled={!vatValid || vatChecking} onClick={handleVerifyVat}>
+                    {vatChecking ? "Verifico…" : "Verifica"}
+                  </Button>
+                </div>
+                {!vatValid && form.vat_number.length > 0 && (
+                  <p className="text-xs text-destructive mt-1">La Partita IVA deve contenere 11 cifre numeriche.</p>
+                )}
+                {vatResult && (
+                  <p className={`text-xs mt-1 ${vatResult.status === "valid" ? "text-emerald-600" : vatResult.status === "invalid" ? "text-destructive" : "text-muted-foreground"}`}>
+                    {vatResult.message}
+                    {vatResult.companyName ? ` (${vatResult.companyName})` : ""}
+                  </p>
+                )}
+              </div>
               <div><Label>Tipologia locale</Label><Input placeholder="Pizzeria, Ristorante…" value={form.venue_type} onChange={(e) => setForm({ ...form, venue_type: e.target.value })} /></div>
               <div><Label>Fascia di prezzo</Label><Input placeholder="€, €€, €€€" value={form.price_range} onChange={(e) => setForm({ ...form, price_range: e.target.value })} /></div>
             </div>
