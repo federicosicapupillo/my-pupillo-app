@@ -79,6 +79,8 @@ type FormState = {
   contact_person_name: string;
   contact_person_phone: string;
   contact_person_email: string;
+  contact_person_role: string;
+  contact_person_role_other: string;
   worker_notes: string;
   license_requirement: string;
   tattoos_allowed: string;
@@ -142,6 +144,8 @@ function NewRestaurantJobRequest() {
     contact_person_name: "",
     contact_person_phone: "",
     contact_person_email: "",
+    contact_person_role: "",
+    contact_person_role_other: "",
     worker_notes: "",
     license_requirement: "nessuna",
     tattoos_allowed: "indifferente",
@@ -181,6 +185,8 @@ function NewRestaurantJobRequest() {
       contact_person_name: prev.contact_person_name || contactName,
       contact_person_phone: prev.contact_person_phone || p.contact_person_phone || p.phone || "",
       contact_person_email: prev.contact_person_email || p.contact_person_email || p.email || "",
+      contact_person_role: prev.contact_person_role || p.contact_person_role || "",
+      contact_person_role_other: prev.contact_person_role_other || p.contact_person_role_other || "",
       worker_notes: prev.worker_notes || p.location_notes || "",
       license_requirement: p.default_license_requirement ?? prev.license_requirement,
       tattoos_allowed: p.default_tattoos_allowed ?? prev.tattoos_allowed,
@@ -274,6 +280,15 @@ function NewRestaurantJobRequest() {
       toast.error("La città selezionata non appartiene alla provincia scelta.");
       return false;
     }
+    if (!f.contact_person_role) { toast.error("Seleziona il ruolo del referente."); return false; }
+    if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim()) {
+      toast.error("Specifica il ruolo del referente.");
+      return false;
+    }
+    if (f.contact_person_email && !isValidEmail(f.contact_person_email)) {
+      toast.error("Inserisci un indirizzo email valido.");
+      return false;
+    }
     return true;
   };
 
@@ -363,6 +378,9 @@ function NewRestaurantJobRequest() {
       contact_person_name: f.contact_person_name || null,
       contact_person_phone: f.contact_person_phone || null,
       contact_person_email: f.contact_person_email || null,
+      contact_person_role: f.contact_person_role || null,
+      contact_person_role_other:
+        f.contact_person_role === "Altro" ? f.contact_person_role_other.trim() || null : null,
       worker_notes: f.worker_notes || null,
       license_requirement: f.license_requirement,
       language_requirements: languageReqs,
