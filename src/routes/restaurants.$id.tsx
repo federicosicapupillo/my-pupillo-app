@@ -206,6 +206,7 @@ function RestaurantDetailPage() {
             <dl className="grid gap-3 sm:grid-cols-2 text-sm">
               <Field icon={<MapPin className="h-4 w-4" />} label="Indirizzo" value={fullAddress || "—"} />
               <Field label="Tipologia" value={r.venue_type || "—"} />
+              <Field label="Fascia di prezzo" value={priceRangeLabel(r.price_range)} />
               <Field label="Città" value={r.city || "—"} />
               <Field label="Zona" value={r.neighborhood || "—"} />
               <Field icon={<Phone className="h-4 w-4" />} label="Telefono" value={r.phone || "—"} />
