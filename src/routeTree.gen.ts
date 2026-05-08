@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkersRouteImport } from './routes/workers'
+import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShiftsRouteImport } from './routes/shifts'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -38,6 +39,11 @@ import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/publ
 const WorkersRoute = WorkersRouteImport.update({
   id: '/workers',
   path: '/workers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyPhoneRoute = VerifyPhoneRouteImport.update({
+  id: '/verify-phone',
+  path: '/verify-phone',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
+  '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
@@ -208,6 +215,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
+  '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
@@ -236,6 +244,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
+  '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
@@ -265,6 +274,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/shifts'
     | '/terms'
+    | '/verify-phone'
     | '/workers'
     | '/announcements/$id'
     | '/announcements/new'
@@ -292,6 +302,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/shifts'
     | '/terms'
+    | '/verify-phone'
     | '/workers'
     | '/announcements/$id'
     | '/announcements/new'
@@ -319,6 +330,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/shifts'
     | '/terms'
+    | '/verify-phone'
     | '/workers'
     | '/announcements/$id'
     | '/announcements/new'
@@ -347,6 +359,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
+  VerifyPhoneRoute: typeof VerifyPhoneRoute
   WorkersRoute: typeof WorkersRoute
   RestaurantsIdRoute: typeof RestaurantsIdRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
@@ -361,6 +374,13 @@ declare module '@tanstack/react-router' {
       path: '/workers'
       fullPath: '/workers'
       preLoaderRoute: typeof WorkersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-phone': {
+      id: '/verify-phone'
+      path: '/verify-phone'
+      fullPath: '/verify-phone'
+      preLoaderRoute: typeof VerifyPhoneRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -578,6 +598,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
+  VerifyPhoneRoute: VerifyPhoneRoute,
   WorkersRoute: WorkersRoute,
   RestaurantsIdRoute: RestaurantsIdRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
@@ -587,3 +608,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
