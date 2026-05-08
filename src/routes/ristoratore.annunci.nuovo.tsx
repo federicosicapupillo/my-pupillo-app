@@ -556,6 +556,22 @@ function NewRestaurantJobRequest() {
             <Field label="Restrizioni all’ingresso"><Textarea rows={2} value={f.access_restrictions} onChange={e => setField("access_restrictions", e.target.value)} /></Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
             <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
+            <Field label="Ruolo del referente">
+              <Select value={f.contact_person_role} onValueChange={(v) => setField("contact_person_role", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona ruolo referente" /></SelectTrigger>
+                <SelectContent>
+                  {CONTACT_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {f.contact_person_role === "Altro" && (
+                <Input
+                  className="mt-2"
+                  placeholder="Specifica ruolo referente"
+                  value={f.contact_person_role_other}
+                  onChange={(e) => setField("contact_person_role_other", e.target.value)}
+                />
+              )}
+            </Field>
             <Field label="Telefono referente">
               {(() => {
                 const split = splitPhone(f.contact_person_phone);
