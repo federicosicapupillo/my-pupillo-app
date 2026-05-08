@@ -10,13 +10,15 @@ import { DEFAULT_PHONE_PREFIX, isValidPhone, splitPhone } from "@/lib/phone-pref
 import { startPhoneVerification, verifyPhoneOtp, resendPhoneOtp } from "@/lib/phone-verification.functions";
 import { toast } from "sonner";
 
+const TEST_OTP_ENABLED = import.meta.env.VITE_ENABLE_TEST_OTP === "true" && import.meta.env.PROD !== true;
+
 export const Route = createFileRoute("/verify-phone")({
   head: () => ({ meta: [{ title: "Conferma numero WhatsApp — Pupillo" }] }),
   component: VerifyPhonePage,
 });
 
 function VerifyPhonePage() {
-  const { user, profile, loading, refresh } = useAuth();
+  const { user, profile, role, loading, refresh } = useAuth();
   const nav = useNavigate();
   const start = useServerFn(startPhoneVerification);
   const verify = useServerFn(verifyPhoneOtp);
@@ -29,6 +31,12 @@ function VerifyPhonePage() {
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
+
+  const homeHref = (() => {
+    if (!user) return "/";
+    if (role === "admin") return "/admin";
+    return "/dashboard";
+  })();
 
   useEffect(() => {
     if (loading) return;
