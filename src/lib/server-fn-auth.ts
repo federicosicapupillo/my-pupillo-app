@@ -1,22 +1,24 @@
-// Client-only: intercept fetch calls to TanStack Start server functions
+// Intercept fetch calls to TanStack Start server functions
 // (`/_serverFn/...`) and inject the current Supabase access token as a
 // Bearer Authorization header. Required because server fns guarded by
 // `requireSupabaseAuth` read `request.headers.get('authorization')` and
 // useServerFn() does not auto-forward the Supabase session.
+import { createIsomorphicFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 
 declare global {
   interface Window { __pupilloServerFnFetchPatched?: boolean }
 }
 
-export function installServerFnAuthFetch(): void {
-  if (typeof window === "undefined") return;
-  if (window.__pupilloServerFnFetchPatched) return;
-  window.__pupilloServerFnFetchPatched = true;
+export const installServerFnAuthFetch = createIsomorphicFn()
+  .server(() => {})
+  .client(() => {
+    if (window.__pupilloServerFnFetchPatched) return;
+    window.__pupilloServerFnFetchPatched = true;
 
-  const originalFetch = window.fetch.bind(window);
+    const originalFetch = window.fetch.bind(window);
 
-  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     try {
       const url =
         typeof input === "string"
@@ -37,5 +39,5 @@ export function installServerFnAuthFetch(): void {
       // fall through to original fetch on any error
     }
     return originalFetch(input, init);
-  };
-}
+    };
+  });

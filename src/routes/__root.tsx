@@ -13,11 +13,9 @@ import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "sonner";
 import { PhoneVerificationGate } from "@/components/PhoneVerificationGate";
 import { StalePreviewOverlay } from "@/components/StalePreviewOverlay";
-import { installServerFnAuthFetch } from "@/lib/server-fn-auth.client";
+import { installServerFnAuthFetch } from "@/lib/server-fn-auth";
 
-if (typeof window !== "undefined") {
-  installServerFnAuthFetch();
-}
+installServerFnAuthFetch();
 
 function NotFoundComponent() {
   return (
