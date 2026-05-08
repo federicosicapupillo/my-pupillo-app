@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { VENUE_TYPES, venueTypeLabel } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
+import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Pupillo" }] }),
