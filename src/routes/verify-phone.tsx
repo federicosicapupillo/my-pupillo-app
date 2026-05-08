@@ -34,8 +34,11 @@ function VerifyPhonePage() {
     if (loading) return;
     if (!user) { nav({ to: "/auth" }); return; }
     if (profile?.phone_verified) {
-      const r = (profile as any)?.role;
-      nav({ to: "/onboarding" });
+      if (profile?.profile_completed) {
+        nav({ to: "/dashboard" });
+      } else {
+        nav({ to: "/onboarding" });
+      }
       return;
     }
     if (profile?.phone_full) {
@@ -97,7 +100,7 @@ function VerifyPhonePage() {
       }
       toast.success("Codice verificato correttamente.");
       await refresh();
-      nav({ to: "/onboarding" });
+      nav({ to: profile?.profile_completed ? "/dashboard" : "/onboarding" });
     } finally {
       setBusy(false);
     }
