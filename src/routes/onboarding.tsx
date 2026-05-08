@@ -186,11 +186,6 @@ function Onboarding() {
       return;
     }
     if (role === "restaurant") {
-      const age = Number(form.representative_age);
-      if (!form.representative_age || isNaN(age) || age < 18 || age > 99) {
-        toast.error("Seleziona l'età del referente. Deve avere almeno 18 anni.");
-        return;
-      }
       if (!vatValid) {
         toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
         return;
