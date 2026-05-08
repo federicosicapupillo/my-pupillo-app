@@ -18,13 +18,12 @@ export function PhoneInput({ code, number, onCodeChange, onNumberChange, require
       <select
         value={safeCode}
         onChange={(e) => onCodeChange(e.target.value)}
-        className="h-9 w-[6.5rem] shrink-0 rounded-md border border-input bg-background px-2 text-sm sm:basis-1/4 sm:w-auto"
+        className="h-9 w-[5.5rem] shrink-0 rounded-md border border-input bg-background px-2 text-sm"
         aria-label="Prefisso internazionale"
       >
         {PHONE_PREFIXES.map((p) => (
           <option key={p.code} value={p.code}>
-            {p.flag ? `${p.flag} ` : ""}
-            {p.code} {p.country}
+            {p.flag ? `${p.flag} ` : ""}{p.code}
           </option>
         ))}
       </select>
@@ -37,7 +36,7 @@ export function PhoneInput({ code, number, onCodeChange, onNumberChange, require
         placeholder={placeholder ?? "Inserisci numero di cellulare"}
         value={number}
         onChange={(e) => onNumberChange(e.target.value.replace(/\D/g, ""))}
-        className="flex-1 min-w-0 sm:basis-3/4"
+        className="flex-1 min-w-0"
       />
     </div>
   );
