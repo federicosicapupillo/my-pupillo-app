@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 import { useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
@@ -28,12 +29,17 @@ function AuthPage() {
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
+  const passwordStrongEnough = password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
 
   useEffect(() => {
     if (loading || !user) return;
@@ -50,6 +56,14 @@ function AuthPage() {
         toast.error("Seleziona l'età del referente. Devi avere almeno 18 anni per creare un account ristoratore.");
         return;
       }
+    }
+    if (!passwordStrongEnough) {
+      toast.error("La password deve contenere almeno 8 caratteri, una lettera e un numero.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error("Le password non coincidono.");
+      return;
     }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
