@@ -476,7 +476,10 @@ export type Database = {
           additional_directions: string | null
           address: string | null
           age: number | null
+          age_verified: boolean
+          age_verified_at: string | null
           badge: Database["public"]["Enums"]["worker_badge"] | null
+          birth_date: string | null
           business_name: string | null
           busy_days: string[] | null
           city: string | null
@@ -550,7 +553,10 @@ export type Database = {
           additional_directions?: string | null
           address?: string | null
           age?: number | null
+          age_verified?: boolean
+          age_verified_at?: string | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
+          birth_date?: string | null
           business_name?: string | null
           busy_days?: string[] | null
           city?: string | null
@@ -624,7 +630,10 @@ export type Database = {
           additional_directions?: string | null
           address?: string | null
           age?: number | null
+          age_verified?: boolean
+          age_verified_at?: string | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
+          birth_date?: string | null
           business_name?: string | null
           busy_days?: string[] | null
           city?: string | null
