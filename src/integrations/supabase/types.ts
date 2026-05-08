@@ -475,6 +475,42 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_verifications: {
+        Row: {
+          attempts_count: number
+          created_at: string
+          expires_at: string
+          id: string
+          otp_code_hash: string
+          phone_full: string
+          status: Database["public"]["Enums"]["phone_verification_status"]
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          attempts_count?: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          otp_code_hash: string
+          phone_full: string
+          status?: Database["public"]["Enums"]["phone_verification_status"]
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          attempts_count?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          otp_code_hash?: string
+          phone_full?: string
+          status?: Database["public"]["Enums"]["phone_verification_status"]
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           access_restrictions: string | null
@@ -512,6 +548,8 @@ export type Database = {
           default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
           email: string | null
+          email_summary_sent_at: string | null
+          email_summary_status: string | null
           employees_count: number | null
           experience_level:
             | Database["public"]["Enums"]["experience_level"]
@@ -535,6 +573,8 @@ export type Database = {
           phone_country_code: string | null
           phone_full: string | null
           phone_number: string | null
+          phone_verified: boolean
+          phone_verified_at: string | null
           plan: Database["public"]["Enums"]["user_plan"] | null
           postal_code: string | null
           price_range: string | null
@@ -569,6 +609,8 @@ export type Database = {
           venue_type: string | null
           venue_type_other: string | null
           weekly_availability: string[] | null
+          whatsapp_confirmation_sent_at: string | null
+          whatsapp_confirmation_status: string | null
           whatsapp_connected: boolean | null
         }
         Insert: {
@@ -607,6 +649,8 @@ export type Database = {
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
           email?: string | null
+          email_summary_sent_at?: string | null
+          email_summary_status?: string | null
           employees_count?: number | null
           experience_level?:
             | Database["public"]["Enums"]["experience_level"]
@@ -630,6 +674,8 @@ export type Database = {
           phone_country_code?: string | null
           phone_full?: string | null
           phone_number?: string | null
+          phone_verified?: boolean
+          phone_verified_at?: string | null
           plan?: Database["public"]["Enums"]["user_plan"] | null
           postal_code?: string | null
           price_range?: string | null
@@ -664,6 +710,8 @@ export type Database = {
           venue_type?: string | null
           venue_type_other?: string | null
           weekly_availability?: string[] | null
+          whatsapp_confirmation_sent_at?: string | null
+          whatsapp_confirmation_status?: string | null
           whatsapp_connected?: boolean | null
         }
         Update: {
@@ -702,6 +750,8 @@ export type Database = {
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
           email?: string | null
+          email_summary_sent_at?: string | null
+          email_summary_status?: string | null
           employees_count?: number | null
           experience_level?:
             | Database["public"]["Enums"]["experience_level"]
@@ -725,6 +775,8 @@ export type Database = {
           phone_country_code?: string | null
           phone_full?: string | null
           phone_number?: string | null
+          phone_verified?: boolean
+          phone_verified_at?: string | null
           plan?: Database["public"]["Enums"]["user_plan"] | null
           postal_code?: string | null
           price_range?: string | null
@@ -759,6 +811,8 @@ export type Database = {
           venue_type?: string | null
           venue_type_other?: string | null
           weekly_availability?: string[] | null
+          whatsapp_confirmation_sent_at?: string | null
+          whatsapp_confirmation_status?: string | null
           whatsapp_connected?: boolean | null
         }
         Relationships: []
@@ -951,6 +1005,12 @@ export type Database = {
         | "expired"
       credit_tx_kind: "purchase" | "grant" | "consume" | "refund" | "plan_bonus"
       experience_level: "junior" | "intermediate" | "senior"
+      phone_verification_status:
+        | "pending"
+        | "sent"
+        | "verified"
+        | "expired"
+        | "failed"
       service_speed: "normal" | "fast" | "flash"
       shift_status: "scheduled" | "completed" | "no_show" | "cancelled"
       tariff_type: "hourly" | "flat"
@@ -1105,6 +1165,13 @@ export const Constants = {
       ],
       credit_tx_kind: ["purchase", "grant", "consume", "refund", "plan_bonus"],
       experience_level: ["junior", "intermediate", "senior"],
+      phone_verification_status: [
+        "pending",
+        "sent",
+        "verified",
+        "expired",
+        "failed",
+      ],
       service_speed: ["normal", "fast", "flash"],
       shift_status: ["scheduled", "completed", "no_show", "cancelled"],
       tariff_type: ["hourly", "flat"],
