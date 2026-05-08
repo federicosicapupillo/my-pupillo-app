@@ -30,20 +30,10 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
-  const [birthDate, setBirthDate] = useState("");
+  const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
-
-  const calcAge = (iso: string) => {
-    if (!iso) return NaN;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return NaN;
-    const today = new Date();
-    let age = today.getFullYear() - d.getFullYear();
-    const m = today.getMonth() - d.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
-    return age;
-  };
-  const restaurantAgeOk = role !== "restaurant" || (birthDate !== "" && calcAge(birthDate) >= 18);
+  const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
+  const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
 
   useEffect(() => {
     if (loading || !user) return;
@@ -55,16 +45,18 @@ function AuthPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (role === "restaurant") {
-      const age = calcAge(birthDate);
-      if (!birthDate || isNaN(age)) { toast.error("Inserisci la data di nascita"); return; }
-      if (age < 18) { toast.error("Per registrarti come ristoratore devi avere almeno 18 anni."); return; }
+      const age = Number(repAge);
+      if (!repAge || isNaN(age) || age < 18 || age > 99) {
+        toast.error("Seleziona l'età del referente. Devi avere almeno 18 anni per creare un account ristoratore.");
+        return;
+      }
     }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email, password,
       options: {
         emailRedirectTo: window.location.origin + "/dashboard",
-        data: { full_name: fullName, role, birth_date: role === "restaurant" ? birthDate : null },
+        data: { full_name: fullName, role, representative_age: role === "restaurant" ? Number(repAge) : null },
       },
     });
     setBusy(false);
@@ -172,12 +164,17 @@ function AuthPage() {
                 </div>
                 {role === "restaurant" && (
                   <div>
-                    <Label>Data di nascita</Label>
-                    <Input type="date" required value={birthDate} onChange={(e) => setBirthDate(e.target.value)} max={new Date().toISOString().split("T")[0]} />
+                    <Label>Età del referente</Label>
+                    <select
+                      required
+                      value={repAge}
+                      onChange={(e) => setRepAge(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="">Seleziona…</option>
+                      {ageOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+                    </select>
                     <p className="text-xs text-muted-foreground mt-1">Devi avere almeno 18 anni per creare un account ristoratore.</p>
-                    {birthDate && calcAge(birthDate) < 18 && (
-                      <p className="text-xs text-destructive mt-1">Per registrarti come ristoratore devi avere almeno 18 anni.</p>
-                    )}
                   </div>
                 )}
                 <Button type="submit" className="w-full" disabled={busy || !restaurantAgeOk}>{busy ? "Attendi..." : "Crea account"}</Button>
