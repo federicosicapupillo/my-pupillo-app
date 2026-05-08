@@ -26,6 +26,7 @@ type Restaurant = {
   business_name: string | null;
   full_name: string | null;
   venue_type: string | null;
+  venue_type_other?: string | null;
   address: string | null;
   city: string | null;
   neighborhood: string | null;
