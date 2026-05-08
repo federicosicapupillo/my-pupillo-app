@@ -53,6 +53,11 @@ function Index() {
             <Button size="lg" variant="outline" className="gap-2"><Users className="h-4 w-4" /> Sono un lavoratore</Button>
           </Link>
         </div>
+        <div className="mt-4 text-sm">
+          <Link to="/lavoratori" className="text-primary underline-offset-4 hover:underline">
+            Sei un lavoratore? Scopri come trovare turni →
+          </Link>
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-20">
