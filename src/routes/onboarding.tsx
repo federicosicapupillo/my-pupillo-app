@@ -33,6 +33,7 @@ function Onboarding() {
     access_restrictions: "", additional_directions: "", location_notes: "",
     contact_person_first_name: "", contact_person_last_name: "", contact_person_role: "",
     contact_person_phone: "", contact_person_email: "",
+    birth_date: "",
     terms_accepted: false,
   });
   const [busy, setBusy] = useState(false);
@@ -64,6 +65,7 @@ function Onboarding() {
       contact_person_role: (profile as any).contact_person_role ?? "",
       contact_person_phone: (profile as any).contact_person_phone ?? "",
       contact_person_email: (profile as any).contact_person_email ?? "",
+      birth_date: (profile as any).birth_date ?? "",
       terms_accepted: profile.terms_accepted,
     }));
     if (profile) setRequirements(reqFromProfile(profile));
@@ -73,6 +75,15 @@ function Onboarding() {
     e.preventDefault();
     if (!user) return;
     if (!form.terms_accepted) { toast.error("Devi accettare le condizioni d'uso"); return; }
+    if (role === "restaurant") {
+      if (!form.birth_date) { toast.error("Inserisci la data di nascita"); return; }
+      const d = new Date(form.birth_date);
+      const today = new Date();
+      let age = today.getFullYear() - d.getFullYear();
+      const m = today.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+      if (age < 18) { toast.error("Per registrarti come ristoratore devi avere almeno 18 anni."); return; }
+    }
     setBusy(true);
     let serviceArea: { service_area_lat: number | null; service_area_lng: number | null } = { service_area_lat: null, service_area_lng: null };
     let restCoords: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
@@ -105,6 +116,7 @@ function Onboarding() {
       contact_person_role: form.contact_person_role || null,
       contact_person_phone: form.contact_person_phone || null,
       contact_person_email: form.contact_person_email || null,
+      birth_date: form.birth_date || null,
       ...reqToProfileUpdate(requirements),
     } : {
       full_name: form.full_name, phone: form.phone,
@@ -170,6 +182,11 @@ function Onboarding() {
                   <div><Label className="text-xs">Ruolo</Label><Input placeholder="Es. Maitre, Direttore" value={form.contact_person_role} onChange={(e) => setForm({ ...form, contact_person_role: e.target.value })} /></div>
                   <div><Label className="text-xs">Telefono</Label><Input value={form.contact_person_phone} onChange={(e) => setForm({ ...form, contact_person_phone: e.target.value })} /></div>
                   <div className="md:col-span-2"><Label className="text-xs">Email</Label><Input type="email" value={form.contact_person_email} onChange={(e) => setForm({ ...form, contact_person_email: e.target.value })} /></div>
+                </div>
+                <div className="mt-3">
+                  <Label className="text-xs">Data di nascita del referente *</Label>
+                  <Input type="date" required value={form.birth_date} max={new Date().toISOString().split("T")[0]} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
+                  <p className="text-xs text-muted-foreground mt-1">Dato privato. Devi avere almeno 18 anni per creare un account ristoratore.</p>
                 </div>
               </div>
             </div>
