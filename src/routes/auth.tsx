@@ -15,6 +15,10 @@ import { lovable } from "@/integrations/lovable";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { isPasswordStrongEnough, doPasswordsMatch, PASSWORD_RULES } from "@/lib/password-validation";
 import { Check, X } from "lucide-react";
+import { PhoneInput } from "@/components/PhoneInput";
+import { DEFAULT_PHONE_PREFIX, isValidPhone, buildPhoneFull } from "@/lib/phone-prefixes";
+import { startPhoneVerification } from "@/lib/phone-verification.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -26,7 +30,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { user, role: userRole, loading } = useAuth();
+  const { user, role: userRole, profile, loading, refresh } = useAuth();
   const { role: roleParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
@@ -38,17 +42,26 @@ function AuthPage() {
   const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const startVerification = useServerFn(startPhoneVerification);
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
   const passwordStrongEnough = isPasswordStrongEnough(password);
   const passwordsMatch = doPasswordsMatch(password, confirmPassword);
+  const phoneOk = isValidPhone(phoneCode, phoneNumber);
 
   useEffect(() => {
     if (loading || !user) return;
+    // If user just signed up but phone not verified, send them to OTP
+    if (profile && profile.phone_verified === false) {
+      navigate({ to: "/verify-phone" });
+      return;
+    }
     if (userRole === "admin") navigate({ to: "/admin" });
     else if (userRole === "restaurant") navigate({ to: "/dashboard" });
     else if (userRole === "worker") navigate({ to: "/jobs" });
-  }, [user, userRole, loading, navigate]);
+  }, [user, userRole, profile, loading, navigate]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,21 +80,52 @@ function AuthPage() {
       toast.error("Le password non coincidono.");
       return;
     }
+    if (!phoneOk) {
+      toast.error("Inserisci un numero WhatsApp valido (prefisso + cifre).");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin + "/dashboard",
+        emailRedirectTo: window.location.origin + "/registration-success",
         data: { full_name: fullName, role, representative_age: role === "restaurant" ? Number(repAge) : null },
       },
     });
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Account creato! Controlla la mail per confermare.");
-      setTab("login");
+    if (error) {
+      setBusy(false);
+      toast.error(error.message);
+      return;
     }
+    // Auto-confirm is enabled, so we can sign in immediately
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInErr) {
+      setBusy(false);
+      toast.success("Account creato! Accedi per continuare.");
+      setTab("login");
+      return;
+    }
+    // Fire WhatsApp OTP + summary email
+    try {
+      const phoneFull = buildPhoneFull(phoneCode, phoneNumber);
+      await supabase
+        .from("profiles")
+        .update({
+          phone_country_code: phoneCode,
+          phone_number: phoneNumber,
+          phone_full: phoneFull,
+          phone: phoneFull,
+        })
+        .eq("id", (await supabase.auth.getUser()).data.user!.id);
+      await startVerification({ data: { phoneCountryCode: phoneCode, phoneNumber, sendSummary: true } });
+    } catch (err) {
+      console.error("OTP/email summary kickoff failed", err);
+    }
+    await refresh();
+    setBusy(false);
+    toast.success("Registrazione ricevuta!");
+    navigate({ to: "/registration-success" });
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -306,7 +350,7 @@ function AuthPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={busy || !restaurantAgeOk || !passwordStrongEnough || !passwordsMatch}
+                  disabled={busy || !restaurantAgeOk || !passwordStrongEnough || !passwordsMatch || !phoneOk}
                 >
                   {busy ? "Attendi..." : "Crea account"}
                 </Button>
