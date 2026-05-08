@@ -190,6 +190,10 @@ function Onboarding() {
         toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
         return;
       }
+      if (!form.business_name.trim()) {
+        toast.error("Inserisci il nome del locale.");
+        return;
+      }
       if (!form.venue_type) {
         toast.error("Seleziona la tipologia del locale.");
         return;
@@ -200,6 +204,10 @@ function Onboarding() {
       }
       if (!form.price_range) {
         toast.error("Seleziona la fascia di prezzo del locale.");
+        return;
+      }
+      if (!form.address.trim()) {
+        toast.error("Inserisci l'indirizzo del locale.");
         return;
       }
       if (!form.province) {
@@ -214,6 +222,14 @@ function Onboarding() {
         toast.error("La città selezionata non appartiene alla provincia scelta.");
         return;
       }
+      if (!form.postal_code.trim()) {
+        toast.error("Inserisci il CAP.");
+        return;
+      }
+      if (!form.contact_person_first_name.trim() || !form.contact_person_last_name.trim()) {
+        toast.error("Inserisci nome e cognome del referente.");
+        return;
+      }
       if (!form.contact_person_role) {
         toast.error("Seleziona il ruolo del referente.");
         return;
@@ -222,7 +238,11 @@ function Onboarding() {
         toast.error("Specifica il ruolo del referente.");
         return;
       }
-      if (form.contact_person_email && !isValidEmail(form.contact_person_email)) {
+      if (!isValidPhone(form.contact_person_phone_code, form.contact_person_phone_number)) {
+        toast.error("Inserisci un numero di telefono valido per il referente.");
+        return;
+      }
+      if (!form.contact_person_email.trim() || !isValidEmail(form.contact_person_email)) {
         toast.error("Inserisci un indirizzo email valido.");
         return;
       }
