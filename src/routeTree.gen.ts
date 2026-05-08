@@ -13,6 +13,7 @@ import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShiftsRouteImport } from './routes/shifts'
+import { Route as RistoratoriRouteImport } from './routes/ristoratori'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegistrationSuccessRouteImport } from './routes/registration-success'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -55,6 +56,11 @@ const TermsRoute = TermsRouteImport.update({
 const ShiftsRoute = ShiftsRouteImport.update({
   id: '/shifts',
   path: '/shifts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RistoratoriRoute = RistoratoriRouteImport.update({
+  id: '/ristoratori',
+  path: '/ristoratori',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
@@ -221,6 +228,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
@@ -282,6 +291,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/registration-success'
     | '/reset-password'
+    | '/ristoratori'
     | '/shifts'
     | '/terms'
     | '/verify-phone'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/registration-success'
     | '/reset-password'
+    | '/ristoratori'
     | '/shifts'
     | '/terms'
     | '/verify-phone'
@@ -340,6 +351,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/registration-success'
     | '/reset-password'
+    | '/ristoratori'
     | '/shifts'
     | '/terms'
     | '/verify-phone'
@@ -370,6 +382,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RegistrationSuccessRoute: typeof RegistrationSuccessRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  RistoratoriRoute: typeof RistoratoriRoute
   ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
   VerifyPhoneRoute: typeof VerifyPhoneRoute
@@ -408,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/shifts'
       fullPath: '/shifts'
       preLoaderRoute: typeof ShiftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ristoratori': {
+      id: '/ristoratori'
+      path: '/ristoratori'
+      fullPath: '/ristoratori'
+      preLoaderRoute: typeof RistoratoriRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -617,6 +637,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RegistrationSuccessRoute: RegistrationSuccessRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  RistoratoriRoute: RistoratoriRoute,
   ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
   VerifyPhoneRoute: VerifyPhoneRoute,
