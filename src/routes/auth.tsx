@@ -53,6 +53,13 @@ function AuthPage() {
 
   useEffect(() => {
     if (loading || !user) return;
+    // If user came from the home CTA with intent to register a new account
+    // but a stale session exists with unverified phone, sign out so the
+    // signup form is shown instead of redirecting to OTP.
+    if (roleParam && profile && profile.phone_verified === false) {
+      supabase.auth.signOut();
+      return;
+    }
     // If user just signed up but phone not verified, send them to OTP
     if (profile && profile.phone_verified === false) {
       navigate({ to: "/verify-phone" });
@@ -61,7 +68,7 @@ function AuthPage() {
     if (userRole === "admin") navigate({ to: "/admin" });
     else if (userRole === "restaurant") navigate({ to: "/dashboard" });
     else if (userRole === "worker") navigate({ to: "/jobs" });
-  }, [user, userRole, profile, loading, navigate]);
+  }, [user, userRole, profile, loading, navigate, roleParam]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
