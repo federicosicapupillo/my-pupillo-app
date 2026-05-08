@@ -28,6 +28,7 @@ import {
   labelsOf,
 } from "@/lib/announcement-requirements";
 import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince } from "@/lib/italian-locations";
+import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 
