@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Bell, BellOff, BellRing } from "lucide-react";
+import { BellOff, BellRing } from "lucide-react";
+import { PupilloBell } from "@/components/PupilloIcons";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
@@ -112,10 +113,10 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="relative group">
+          <PupilloBell size={22} ringing={unread > 0} className="transition-transform duration-200 group-hover:-rotate-12" />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] px-1 flex items-center justify-center">
+            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] px-1 flex items-center justify-center ring-2 ring-card">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
