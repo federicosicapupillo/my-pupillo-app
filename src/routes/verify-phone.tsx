@@ -194,12 +194,22 @@ function VerifyPhonePage() {
                   Cambia numero
                 </button>
               </div>
+              {TEST_OTP_ENABLED && (
+                <p className="text-[11px] text-muted-foreground/80 text-center pt-1">
+                  Modalità test attiva: usa il codice <strong>123456</strong> per completare la verifica.
+                </p>
+              )}
             </div>
           </>
         )}
-        <p className="mt-6 text-xs text-muted-foreground text-center">
-          <Link to="/auth" className="underline hover:text-foreground">Torna al login</Link>
-        </p>
+        <div className="mt-6 flex flex-col items-center gap-2 text-xs text-muted-foreground">
+          <Link to={homeHref as any} className="underline hover:text-foreground">
+            ← Torna al menu principale
+          </Link>
+          {!user && (
+            <Link to="/auth" className="hover:text-foreground">Torna al login</Link>
+          )}
+        </div>
       </div>
     </div>
   );
