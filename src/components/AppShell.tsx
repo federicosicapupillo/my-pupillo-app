@@ -1,7 +1,8 @@
 import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight, Menu, X } from "lucide-react";
+import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight } from "lucide-react";
+import { PupilloMenu, PupilloClose, PupilloAvatar } from "@/components/PupilloIcons";
 import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
@@ -158,10 +159,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 }
               }}
             >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileOpen ? <PupilloClose size={22} /> : <PupilloMenu size={22} />}
             </Button>
             <span className="hidden sm:block text-xs text-muted-foreground">{profile?.full_name || user?.email}</span>
-            <span className="text-xs rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
+            {role && (
+              <span className="hidden sm:inline-flex text-[10px] rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
+            )}
             {role === "restaurant" && (
               <Link to="/billing" title="Saldo crediti">
                 <span className="inline-flex items-center gap-1 text-xs rounded-full bg-primary/10 text-primary px-2 py-1 font-medium hover:bg-primary/20 transition-colors">
@@ -171,6 +174,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             )}
             {user && <NotificationBell />}
+            {user && (
+              <Link
+                to="/profile"
+                aria-label="Vai al profilo"
+                className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <PupilloAvatar name={profile?.full_name} email={user.email} />
+              </Link>
+            )}
             <Button variant="ghost" size="icon" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
           </div>
         </div>
