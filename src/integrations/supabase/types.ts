@@ -481,8 +481,10 @@ export type Database = {
           badge: Database["public"]["Enums"]["worker_badge"] | null
           birth_date: string | null
           business_name: string | null
+          business_status: string | null
           busy_days: string[] | null
           city: string | null
+          company_tax_code: string | null
           completed_shifts: number | null
           contact_person_email: string | null
           contact_person_first_name: string | null
@@ -519,6 +521,7 @@ export type Database = {
           neighborhood: string | null
           no_shows: number | null
           opening_hours: string | null
+          pec_email: string | null
           phone: string | null
           plan: Database["public"]["Enums"]["user_plan"] | null
           postal_code: string | null
@@ -528,9 +531,14 @@ export type Database = {
           profile_completed: boolean | null
           province: string | null
           rating_avg: number | null
+          registered_office_address: string | null
+          registered_office_city: string | null
+          registered_office_postal_code: string | null
+          registered_office_province: string | null
           reliability_pct: number | null
           representative_age: number | null
           reviews_count: number | null
+          sdi_code: string | null
           secondary_roles: string[] | null
           service_area_lat: number | null
           service_area_lng: number | null
@@ -560,8 +568,10 @@ export type Database = {
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
           business_name?: string | null
+          business_status?: string | null
           busy_days?: string[] | null
           city?: string | null
+          company_tax_code?: string | null
           completed_shifts?: number | null
           contact_person_email?: string | null
           contact_person_first_name?: string | null
@@ -598,6 +608,7 @@ export type Database = {
           neighborhood?: string | null
           no_shows?: number | null
           opening_hours?: string | null
+          pec_email?: string | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"] | null
           postal_code?: string | null
@@ -607,9 +618,14 @@ export type Database = {
           profile_completed?: boolean | null
           province?: string | null
           rating_avg?: number | null
+          registered_office_address?: string | null
+          registered_office_city?: string | null
+          registered_office_postal_code?: string | null
+          registered_office_province?: string | null
           reliability_pct?: number | null
           representative_age?: number | null
           reviews_count?: number | null
+          sdi_code?: string | null
           secondary_roles?: string[] | null
           service_area_lat?: number | null
           service_area_lng?: number | null
@@ -639,8 +655,10 @@ export type Database = {
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
           business_name?: string | null
+          business_status?: string | null
           busy_days?: string[] | null
           city?: string | null
+          company_tax_code?: string | null
           completed_shifts?: number | null
           contact_person_email?: string | null
           contact_person_first_name?: string | null
@@ -677,6 +695,7 @@ export type Database = {
           neighborhood?: string | null
           no_shows?: number | null
           opening_hours?: string | null
+          pec_email?: string | null
           phone?: string | null
           plan?: Database["public"]["Enums"]["user_plan"] | null
           postal_code?: string | null
@@ -686,9 +705,14 @@ export type Database = {
           profile_completed?: boolean | null
           province?: string | null
           rating_avg?: number | null
+          registered_office_address?: string | null
+          registered_office_city?: string | null
+          registered_office_postal_code?: string | null
+          registered_office_province?: string | null
           reliability_pct?: number | null
           representative_age?: number | null
           reviews_count?: number | null
+          sdi_code?: string | null
           secondary_roles?: string[] | null
           service_area_lat?: number | null
           service_area_lng?: number | null
@@ -875,6 +899,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      normalize_vat: { Args: { _v: string }; Returns: string }
     }
     Enums: {
       account_status: "active" | "pending" | "suspended"
