@@ -110,7 +110,13 @@ function Profile() {
               <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Referente operativo</div>
               <p className="text-base font-medium">
                 {[(profile as any)?.contact_person_first_name, (profile as any)?.contact_person_last_name].filter(Boolean).join(" ") || "—"}
-                {(profile as any)?.contact_person_role && <span className="text-muted-foreground font-normal"> · {(profile as any).contact_person_role}</span>}
+                {(profile as any)?.contact_person_role && (
+                  <span className="text-muted-foreground font-normal"> · {
+                    (profile as any).contact_person_role === "Altro"
+                      ? ((profile as any).contact_person_role_other || "Altro")
+                      : (profile as any).contact_person_role
+                  }</span>
+                )}
               </p>
               <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3">
                 {(profile as any)?.contact_person_phone && <span>📞 {(profile as any).contact_person_phone}</span>}

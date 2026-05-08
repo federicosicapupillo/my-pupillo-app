@@ -28,6 +28,7 @@ import {
   labelsOf,
 } from "@/lib/announcement-requirements";
 import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince } from "@/lib/italian-locations";
+import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 
@@ -79,6 +80,8 @@ type FormState = {
   contact_person_name: string;
   contact_person_phone: string;
   contact_person_email: string;
+  contact_person_role: string;
+  contact_person_role_other: string;
   worker_notes: string;
   license_requirement: string;
   tattoos_allowed: string;
@@ -142,6 +145,8 @@ function NewRestaurantJobRequest() {
     contact_person_name: "",
     contact_person_phone: "",
     contact_person_email: "",
+    contact_person_role: "",
+    contact_person_role_other: "",
     worker_notes: "",
     license_requirement: "nessuna",
     tattoos_allowed: "indifferente",
@@ -181,6 +186,8 @@ function NewRestaurantJobRequest() {
       contact_person_name: prev.contact_person_name || contactName,
       contact_person_phone: prev.contact_person_phone || p.contact_person_phone || p.phone || "",
       contact_person_email: prev.contact_person_email || p.contact_person_email || p.email || "",
+      contact_person_role: prev.contact_person_role || p.contact_person_role || "",
+      contact_person_role_other: prev.contact_person_role_other || p.contact_person_role_other || "",
       worker_notes: prev.worker_notes || p.location_notes || "",
       license_requirement: p.default_license_requirement ?? prev.license_requirement,
       tattoos_allowed: p.default_tattoos_allowed ?? prev.tattoos_allowed,
@@ -274,6 +281,15 @@ function NewRestaurantJobRequest() {
       toast.error("La città selezionata non appartiene alla provincia scelta.");
       return false;
     }
+    if (!f.contact_person_role) { toast.error("Seleziona il ruolo del referente."); return false; }
+    if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim()) {
+      toast.error("Specifica il ruolo del referente.");
+      return false;
+    }
+    if (f.contact_person_email && !isValidEmail(f.contact_person_email)) {
+      toast.error("Inserisci un indirizzo email valido.");
+      return false;
+    }
     return true;
   };
 
@@ -363,6 +379,9 @@ function NewRestaurantJobRequest() {
       contact_person_name: f.contact_person_name || null,
       contact_person_phone: f.contact_person_phone || null,
       contact_person_email: f.contact_person_email || null,
+      contact_person_role: f.contact_person_role || null,
+      contact_person_role_other:
+        f.contact_person_role === "Altro" ? f.contact_person_role_other.trim() || null : null,
       worker_notes: f.worker_notes || null,
       license_requirement: f.license_requirement,
       language_requirements: languageReqs,
@@ -537,6 +556,22 @@ function NewRestaurantJobRequest() {
             <Field label="Restrizioni all’ingresso"><Textarea rows={2} value={f.access_restrictions} onChange={e => setField("access_restrictions", e.target.value)} /></Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
             <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
+            <Field label="Ruolo del referente">
+              <Select value={f.contact_person_role} onValueChange={(v) => setField("contact_person_role", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona ruolo referente" /></SelectTrigger>
+                <SelectContent>
+                  {CONTACT_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {f.contact_person_role === "Altro" && (
+                <Input
+                  className="mt-2"
+                  placeholder="Specifica ruolo referente"
+                  value={f.contact_person_role_other}
+                  onChange={(e) => setField("contact_person_role_other", e.target.value)}
+                />
+              )}
+            </Field>
             <Field label="Telefono referente">
               {(() => {
                 const split = splitPhone(f.contact_person_phone);
@@ -550,7 +585,17 @@ function NewRestaurantJobRequest() {
                 );
               })()}
             </Field>
-            <Field label="Email referente"><Input type="email" value={f.contact_person_email} onChange={e => setField("contact_person_email", e.target.value)} /></Field>
+            <Field label="Email referente">
+              <Input
+                type="email"
+                placeholder="esempio@email.com"
+                value={f.contact_person_email}
+                onChange={e => setField("contact_person_email", e.target.value)}
+              />
+              {f.contact_person_email && !isValidEmail(f.contact_person_email) && (
+                <p className="text-xs text-destructive mt-1">Inserisci un indirizzo email valido.</p>
+              )}
+            </Field>
             <Field label="Note per il lavoratore"><Textarea rows={2} value={f.worker_notes} onChange={e => setField("worker_notes", e.target.value)} /></Field>
           </div>
           <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />

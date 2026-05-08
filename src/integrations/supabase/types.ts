@@ -281,6 +281,8 @@ export type Database = {
           contact_person_email: string | null
           contact_person_name: string | null
           contact_person_phone: string | null
+          contact_person_role: string | null
+          contact_person_role_other: string | null
           country: string | null
           created_at: string
           description: string | null
@@ -325,6 +327,8 @@ export type Database = {
           contact_person_email?: string | null
           contact_person_name?: string | null
           contact_person_phone?: string | null
+          contact_person_role?: string | null
+          contact_person_role_other?: string | null
           country?: string | null
           created_at?: string
           description?: string | null
@@ -369,6 +373,8 @@ export type Database = {
           contact_person_email?: string | null
           contact_person_name?: string | null
           contact_person_phone?: string | null
+          contact_person_role?: string | null
+          contact_person_role_other?: string | null
           country?: string | null
           created_at?: string
           description?: string | null
@@ -492,6 +498,7 @@ export type Database = {
           contact_person_last_name: string | null
           contact_person_phone: string | null
           contact_person_role: string | null
+          contact_person_role_other: string | null
           country: string | null
           created_at: string
           credits: number | null
@@ -586,6 +593,7 @@ export type Database = {
           contact_person_last_name?: string | null
           contact_person_phone?: string | null
           contact_person_role?: string | null
+          contact_person_role_other?: string | null
           country?: string | null
           created_at?: string
           credits?: number | null
@@ -680,6 +688,7 @@ export type Database = {
           contact_person_last_name?: string | null
           contact_person_phone?: string | null
           contact_person_role?: string | null
+          contact_person_role_other?: string | null
           country?: string | null
           created_at?: string
           credits?: number | null
