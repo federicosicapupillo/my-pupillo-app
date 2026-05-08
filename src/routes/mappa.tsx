@@ -14,6 +14,7 @@ import type { MapPoint } from "@/components/MapViewInner";
 import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
+import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
