@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight } from "lucide-react";
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
+import { ReferralCard } from "@/components/ReferralCard";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -194,6 +195,10 @@ function DashboardInner() {
           </>}
           {role === "admin" && <li>Apri il pannello Admin per gestire utenti e annunci</li>}
         </ul>
+      </div>
+
+      <div className="mt-6">
+        <ReferralCard />
       </div>
     </AppShell>
   );
