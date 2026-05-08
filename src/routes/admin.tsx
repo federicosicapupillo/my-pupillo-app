@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { VENUE_TYPES, venueTypeLabel } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
 import { hasSavedDefaults } from "@/lib/restaurant-defaults";
+import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Pupillo" }] }),
@@ -32,6 +33,8 @@ function Admin() {
   const [byVenue, setByVenue] = useState<Record<string, number>>({});
   const [vatPriceFilter, setVatPriceFilter] = useState<string>("all");
   const [byPrice, setByPrice] = useState<Record<string, number>>({});
+  const [vatProvinceFilter, setVatProvinceFilter] = useState<string>("all");
+  const [vatCityFilter, setVatCityFilter] = useState<string>("all");
 
   useEffect(() => {
     if (role !== "admin") return;
@@ -68,7 +71,7 @@ function Admin() {
       if (restaurantIds.length) {
         const { data: rows } = await supabase
           .from("profiles")
-          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes")
+          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,province,province_code,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes")
           .in("id", restaurantIds)
           .order("vat_verified_at", { ascending: false });
         setVatList(rows ?? []);
@@ -147,6 +150,16 @@ function Admin() {
                 <option key={p.value} value={p.value}>{p.symbol ? `${p.symbol} — ${p.label}` : p.label}</option>
               ))}
             </select>
+            <select value={vatProvinceFilter} onChange={(e)=>{ setVatProvinceFilter(e.target.value); setVatCityFilter("all"); }} className="h-9 rounded-md border bg-background px-2 text-sm">
+              <option value="all">Tutte le province</option>
+              {ITALIAN_LOCATIONS.map((p) => <option key={p.province_code} value={p.province}>{p.province}</option>)}
+            </select>
+            <select value={vatCityFilter} onChange={(e)=>setVatCityFilter(e.target.value)} disabled={vatProvinceFilter==="all"} className="h-9 rounded-md border bg-background px-2 text-sm disabled:opacity-50">
+              <option value="all">{vatProvinceFilter==="all" ? "Seleziona prima la provincia" : "Tutte le città"}</option>
+              {vatProvinceFilter !== "all" && citiesForProvince(vatProvinceFilter).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -162,6 +175,8 @@ function Admin() {
                   if (vatFilter !== "all" && status !== vatFilter) return false;
                   if (vatVenueFilter !== "all" && r.venue_type !== vatVenueFilter) return false;
                   if (vatPriceFilter !== "all" && r.price_range !== vatPriceFilter) return false;
+                  if (vatProvinceFilter !== "all" && r.province !== vatProvinceFilter) return false;
+                  if (vatCityFilter !== "all" && r.city !== vatCityFilter) return false;
                   if (vatSearch.trim()) {
                     const q = vatSearch.trim().toLowerCase();
                     return (r.vat_number ?? "").toLowerCase().includes(q) || (r.business_name ?? "").toLowerCase().includes(q) || (r.vat_company_name ?? "").toLowerCase().includes(q);
