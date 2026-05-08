@@ -14,6 +14,17 @@ export function ProfileStatusBanner() {
   const allDone = phoneVerified && profileCompleted;
   const role = (profile as any).role as "restaurant" | "worker" | "admin" | undefined;
 
+  // Whitelist: route "fuori dal flusso operativo" da cui ha senso suggerire
+  // "Vai alla dashboard". Su qualsiasi altra route (dashboard, jobs, browse,
+  // messages, shifts, ecc.) il CTA resta contestuale al ruolo per evitare
+  // di rimandare l'utente indietro durante un task.
+  const BACK_TO_DASHBOARD_ROUTES = new Set<string>([
+    "/onboarding",
+    "/verify-phone",
+    "/registration-success",
+  ]);
+  const shouldOfferDashboard = BACK_TO_DASHBOARD_ROUTES.has(loc.pathname);
+
   // Logica prossimo step:
   // 1) telefono non verificato → /verify-phone
   // 2) profilo incompleto → /onboarding
@@ -31,7 +42,7 @@ export function ProfileStatusBanner() {
       to: "/onboarding",
       description: "Aggiungi le informazioni mancanti per iniziare a usare Pupillo.",
     };
-  } else if (loc.pathname !== "/dashboard") {
+  } else if (shouldOfferDashboard) {
     nextStep = { label: "Vai alla dashboard", to: "/dashboard" };
   } else if (role === "restaurant") {
     nextStep = {
