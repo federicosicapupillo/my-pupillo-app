@@ -501,6 +501,7 @@ export type Database = {
           default_license_requirement: string | null
           default_piercings_allowed: string | null
           default_required_skills: string[] | null
+          default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
           email: string | null
           employees_count: number | null
@@ -589,6 +590,7 @@ export type Database = {
           default_license_requirement?: string | null
           default_piercings_allowed?: string | null
           default_required_skills?: string[] | null
+          default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
           email?: string | null
           employees_count?: number | null
@@ -677,6 +679,7 @@ export type Database = {
           default_license_requirement?: string | null
           default_piercings_allowed?: string | null
           default_required_skills?: string[] | null
+          default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
           email?: string | null
           employees_count?: number | null

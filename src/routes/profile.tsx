@@ -15,6 +15,8 @@ import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/Spok
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
 import { ClipboardList } from "lucide-react";
+import { hasSavedDefaults } from "@/lib/restaurant-defaults";
+import { Settings2 } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -135,6 +137,10 @@ function Profile() {
         </div>
       )}
 
+      {role === "restaurant" && (
+        <DefaultsSection profile={profile} userId={user?.id} />
+      )}
+
       <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
         <h2 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4" />Cambia password</h2>
         <form onSubmit={changePassword} className="mt-3 flex flex-col sm:flex-row gap-2">
@@ -213,4 +219,76 @@ function vatStatusLabel(s?: string | null) {
   if (s === "invalid") return "Partita IVA non verificata ✗";
   if (s === "pending") return "Verifica in attesa…";
   return "Verifica non disponibile";
+}
+
+function DefaultsSection({ profile, userId }: { profile: any; userId?: string }) {
+  const has = hasSavedDefaults(profile);
+  const updatedAt = profile?.default_settings_updated_at
+    ? new Date(profile.default_settings_updated_at).toLocaleString("it-IT")
+    : null;
+
+  const clearDefaults = async () => {
+    if (!userId) return;
+    if (!confirm("Cancellare le impostazioni predefinite degli annunci?")) return;
+    const { error } = await supabase.from("profiles").update({
+      default_license_requirement: null,
+      default_language_requirements: [],
+      default_tattoos_allowed: null,
+      default_piercings_allowed: null,
+      default_beard_allowed: null,
+      default_required_skills: [],
+      default_dress_code_items: [],
+      default_dress_code_notes: null,
+      default_settings_updated_at: null,
+    } as any).eq("id", userId);
+    if (error) toast.error(error.message);
+    else { toast.success("Impostazioni predefinite cancellate"); window.location.reload(); }
+  };
+
+  const restoreFromProfile = async () => {
+    if (!userId || !profile) return;
+    const update: any = {
+      default_settings_updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("profiles").update(update).eq("id", userId);
+    if (error) toast.error(error.message);
+    else { toast.success("Impostazioni ripristinate dai dati del profilo"); window.location.reload(); }
+  };
+
+  return (
+    <div className="mt-6 max-w-4xl rounded-2xl border bg-card p-6">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 className="font-semibold text-lg flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" />Impostazioni predefinite annunci</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {has
+              ? `Queste impostazioni vengono caricate automaticamente quando crei un nuovo annuncio.${updatedAt ? ` Ultimo aggiornamento: ${updatedAt}.` : ""}`
+              : "Non hai ancora salvato impostazioni predefinite. Compila un annuncio e seleziona “Salva come predefinite” per crearle."}
+          </p>
+        </div>
+      </div>
+      {has && (
+        <div className="space-y-3 text-sm">
+          <Field label="Luogo predefinito" value={[profile?.address, profile?.neighborhood, profile?.city, profile?.province, profile?.postal_code, profile?.country].filter(Boolean).join(", ")} />
+          <Field label="Referente predefinito" value={[
+            [profile?.contact_person_first_name, profile?.contact_person_last_name].filter(Boolean).join(" "),
+            profile?.contact_person_phone,
+            profile?.contact_person_email,
+          ].filter(Boolean).join(" · ")} />
+          <Field label="Tipologia locale" value={venueTypeLabel(profile?.venue_type, profile?.venue_type_other)} />
+          <Field label="Fascia di prezzo" value={priceRangeLabel(profile?.price_range)} />
+          <Field label="Lingue richieste" value={(profile?.default_language_requirements || []).join(", ")} />
+          <Field label="Patente richiesta" value={profile?.default_license_requirement} />
+          <Field label="Competenze richieste" value={(profile?.default_required_skills || []).join(", ")} />
+          <Field label="Dress code" value={(profile?.default_dress_code_items || []).join(", ")} />
+          <Field label="Note dress code" value={profile?.default_dress_code_notes} />
+        </div>
+      )}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link to="/onboarding"><Button size="sm" variant="outline">Modifica impostazioni predefinite</Button></Link>
+        {has && <Button size="sm" variant="outline" onClick={restoreFromProfile}>Ripristina dai dati del profilo</Button>}
+        {has && <Button size="sm" variant="destructive" onClick={clearDefaults}>Cancella impostazioni predefinite</Button>}
+      </div>
+    </div>
+  );
 }
