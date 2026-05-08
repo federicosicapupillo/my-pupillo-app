@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight } from "lucide-react";
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
+import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -24,6 +25,31 @@ function DashboardInner() {
     if (!user || !role) return;
     if (profile && !profile.profile_completed) nav({ to: "/onboarding" });
   }, [user, role, profile, nav]);
+
+  // Promemoria: toast una volta per sessione se profilo incompleto o telefono non verificato.
+  useEffect(() => {
+    if (!profile) return;
+    if (typeof window === "undefined") return;
+    const phoneOk = !!profile.phone_verified;
+    const profileOk = !!profile.profile_completed;
+    if (phoneOk && profileOk) return;
+    const key = !phoneOk ? "reminder:phone" : "reminder:profile";
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    if (!phoneOk) {
+      toast.warning("Numero WhatsApp non verificato", {
+        description: "Conferma il numero per attivare completamente l'account.",
+        action: { label: "Verifica", onClick: () => nav({ to: "/verify-phone" }) },
+        duration: 8000,
+      });
+    } else {
+      toast.message("Profilo da completare", {
+        description: "Aggiungi le informazioni mancanti per pubblicare e candidarti.",
+        action: { label: "Completa", onClick: () => nav({ to: "/onboarding" }) },
+        duration: 8000,
+      });
+    }
+  }, [profile, nav]);
 
   useEffect(() => {
     if (!user || !role) return;
