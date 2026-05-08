@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from "@/components/ui/textarea";
 import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
 import { ClipboardList } from "lucide-react";
+import { priceRangeLabel } from "@/lib/price-range";
 
 export const Route = createFileRoute("/restaurants/$id")({
   head: () => ({ meta: [{ title: "Dettaglio ristoratore — Pupillo" }] }),
