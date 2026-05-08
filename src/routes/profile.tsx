@@ -106,6 +106,12 @@ function Profile() {
                 {(profile as any)?.contact_person_email && <span>✉️ {(profile as any).contact_person_email}</span>}
               </div>
             </div>
+            {(profile as any)?.birth_date && (
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Data di nascita (privata)</div>
+                <p className="text-base">{new Date((profile as any).birth_date).toLocaleDateString("it-IT")} {(profile as any)?.age_verified && <span className="text-xs text-emerald-600">· verificata</span>}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
