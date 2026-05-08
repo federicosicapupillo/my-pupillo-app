@@ -27,78 +27,60 @@ function genOtp(): string {
 }
 
 async function sendWhatsAppMessage(phoneFull: string, code: string): Promise<{ ok: boolean; provider: string; error?: string }> {
-  const token = process.env.WHATSAPP_API_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const apiVersion = process.env.WHATSAPP_API_VERSION || "v20.0";
-  const baseUrl = process.env.WHATSAPP_PROVIDER_URL || `https://graph.facebook.com/${apiVersion}`;
-  // Authentication template (recommended by Meta for OTPs).
-  // Defaults to Meta's pre-approved "authentication" sample template.
-  const templateName = process.env.WHATSAPP_TEMPLATE_NAME || "";
-  const templateLang = process.env.WHATSAPP_TEMPLATE_LANG || "it";
+  // Twilio WhatsApp via Lovable connector gateway.
+  // Requires LOVABLE_API_KEY + TWILIO_API_KEY (auto-injected when Twilio connector is linked).
+  // TWILIO_WHATSAPP_FROM must be a Twilio WhatsApp-enabled sender, e.g. "whatsapp:+14155238886" (sandbox).
+  // Optional: TWILIO_CONTENT_SID + TWILIO_MESSAGING_SERVICE_SID for approved template messages
+  // (required outside the 24h session window in production).
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const twilioKey = process.env.TWILIO_API_KEY;
+  const from = process.env.TWILIO_WHATSAPP_FROM;
+  const contentSid = process.env.TWILIO_CONTENT_SID;
+  const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
 
-  // No credentials → simulation mode (dev / fallback)
-  if (!token || !phoneNumberId) {
+  if (!lovableKey || !twilioKey || !from) {
     console.log(`[whatsapp:simulated] to=${phoneFull} code=${code}`);
     return { ok: true, provider: "simulated" };
   }
 
-  const to = phoneFull.replace(/^\+/, "");
-  const url = `${baseUrl}/${phoneNumberId}/messages`;
+  const to = `whatsapp:${phoneFull}`;
+  const params = new URLSearchParams();
+  params.set("To", to);
 
-  // If a template name is configured → use authentication template (works outside 24h window).
-  // Otherwise → send a plain text (only works inside the 24h customer-service window or in test numbers).
-  const body = templateName
-    ? {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to,
-        type: "template",
-        template: {
-          name: templateName,
-          language: { code: templateLang },
-          components: [
-            {
-              type: "body",
-              parameters: [{ type: "text", text: code }],
-            },
-            {
-              type: "button",
-              sub_type: "url",
-              index: "0",
-              parameters: [{ type: "text", text: code }],
-            },
-          ],
-        },
-      }
-    : {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to,
-        type: "text",
-        text: {
-          body: `Pupillo: il tuo codice di conferma è ${code}. Valido ${OTP_TTL_MINUTES} minuti. Se non l'hai richiesto, ignora questo messaggio.`,
-        },
-      };
+  if (contentSid) {
+    // Template-based (works outside 24h window). ContentVariables maps to your template placeholders.
+    if (messagingServiceSid) params.set("MessagingServiceSid", messagingServiceSid);
+    else params.set("From", from);
+    params.set("ContentSid", contentSid);
+    params.set("ContentVariables", JSON.stringify({ "1": code }));
+  } else {
+    params.set("From", from);
+    params.set(
+      "Body",
+      `Pupillo: il tuo codice di conferma è ${code}. Valido ${OTP_TTL_MINUTES} minuti. Se non l'hai richiesto, ignora questo messaggio.`,
+    );
+  }
 
   try {
-    const res = await fetch(url, {
+    const res = await fetch("https://connector-gateway.lovable.dev/twilio/Messages.json", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": twilioKey,
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify(body),
+      body: params.toString(),
     });
     const txt = await res.text();
     if (!res.ok) {
-      console.error(`[whatsapp:meta] ${res.status} ${txt}`);
-      return { ok: false, provider: "meta", error: `Meta API ${res.status}: ${txt}` };
+      console.error(`[whatsapp:twilio] ${res.status} ${txt}`);
+      return { ok: false, provider: "twilio", error: `Twilio API ${res.status}: ${txt}` };
     }
-    return { ok: true, provider: "meta" };
+    return { ok: true, provider: "twilio" };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error(`[whatsapp:meta] network error: ${msg}`);
-    return { ok: false, provider: "meta", error: msg };
+    console.error(`[whatsapp:twilio] network error: ${msg}`);
+    return { ok: false, provider: "twilio", error: msg };
   }
 }
 
