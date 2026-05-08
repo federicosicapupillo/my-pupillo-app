@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
 import { AlertCircle, CheckCircle2, Eye, Loader2, MapPin, RefreshCw, Save, Send, X } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { buildDefaultsUpdate, hasSavedDefaults } from "@/lib/restaurant-defaults";
 import {
   BEARD_OPTIONS,
   DRESS_CODE_OPTIONS,
@@ -102,6 +104,10 @@ function NewRestaurantJobRequest() {
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(true);
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [defaultsLoaded, setDefaultsLoaded] = useState(false);
+  const [confirmDefaultsOpen, setConfirmDefaultsOpen] = useState(false);
+  const pendingStatusRef = useRef<"bozza" | "pubblicato" | null>(null);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
   const [languageReqs, setLanguageReqs] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
@@ -182,6 +188,10 @@ function NewRestaurantJobRequest() {
     setLanguageReqs(prev => prev.length ? prev : (p.default_language_requirements ?? []));
     setSkills(prev => prev.length ? prev : (p.default_required_skills ?? []));
     setDressItems(prev => prev.length ? prev : (p.default_dress_code_items ?? []));
+    if (!defaultsLoaded && hasSavedDefaults(p)) {
+      toast.info("Abbiamo caricato le tue impostazioni predefinite. Puoi modificarle per questo annuncio.");
+    }
+    setDefaultsLoaded(true);
   }, [profile]);
 
   useEffect(() => {
@@ -367,7 +377,59 @@ function NewRestaurantJobRequest() {
 
     setBusy(false);
     toast.success(status === "bozza" ? "Bozza salvata correttamente" : "Annuncio pubblicato correttamente");
+
+    if (saveAsDefault) {
+      const update = buildDefaultsUpdate({
+        location: {
+          address: f.address, city: f.city, district: f.district, province: f.province,
+          postal_code: f.postal_code, country: f.country,
+          latitude: coords?.lat ?? null, longitude: coords?.lng ?? null,
+          access_restrictions: f.access_restrictions,
+          additional_directions: f.additional_directions,
+          location_notes: f.worker_notes,
+          contact_person_name: f.contact_person_name,
+          contact_person_phone: f.contact_person_phone,
+          contact_person_email: f.contact_person_email,
+        },
+        requirements: {
+          license_requirement: f.license_requirement,
+          language_requirements: languageReqs,
+          tattoos_allowed: f.tattoos_allowed,
+          piercings_allowed: f.piercings_allowed,
+          beard_allowed: f.beard_allowed,
+          required_skills: skills,
+          dress_code_items: dressItems,
+          dress_code_notes: f.dress_code_notes,
+        },
+        venue: {
+          venue_type: (profile as any)?.venue_type ?? null,
+          venue_type_other: (profile as any)?.venue_type_other ?? null,
+          price_range: (profile as any)?.price_range ?? null,
+        },
+      });
+      const { error: defErr } = await supabase.from("profiles").update(update as any).eq("id", user.id);
+      if (defErr) toast.error("Annuncio salvato, ma impostazioni predefinite non aggiornate: " + defErr.message);
+      else toast.success("Annuncio salvato e impostazioni predefinite aggiornate.");
+    }
+
     nav({ to: "/announcements" });
+  };
+
+  const requestSave = (status: "bozza" | "pubblicato") => {
+    if (!validate() || !user) return;
+    if (saveAsDefault) {
+      pendingStatusRef.current = status;
+      setConfirmDefaultsOpen(true);
+      return;
+    }
+    void save(status);
+  };
+
+  const confirmAndSave = () => {
+    const s = pendingStatusRef.current;
+    setConfirmDefaultsOpen(false);
+    pendingStatusRef.current = null;
+    if (s) void save(s);
   };
 
   const showPreview = () => {
@@ -504,11 +566,27 @@ function NewRestaurantJobRequest() {
             <Link to="/announcements" className="sm:mr-auto"><Button type="button" variant="ghost" className="w-full gap-2" disabled={busy}><X className="h-4 w-4" />Annulla</Button></Link>
             <Link to="/announcements"><Button type="button" variant="outline" className="w-full">Torna agli annunci</Button></Link>
             <Button type="button" variant="outline" className="gap-2" onClick={showPreview}><Eye className="h-4 w-4" />Anteprima</Button>
-            <Button type="button" variant="outline" className="gap-2" disabled={busy} onClick={() => save("bozza")}><Save className="h-4 w-4" />Salva bozza</Button>
-            <Button type="button" className="gap-2" disabled={busy} onClick={() => save("pubblicato")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Pubblica annuncio</Button>
+            <Button type="button" variant="outline" className="gap-2" disabled={busy} onClick={() => requestSave("bozza")}><Save className="h-4 w-4" />Salva bozza</Button>
+            <Button type="button" className="gap-2" disabled={busy} onClick={() => requestSave("pubblicato")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Pubblica annuncio</Button>
           </div>
         </div>
       </form>
+      <AlertDialog open={confirmDefaultsOpen} onOpenChange={setConfirmDefaultsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Salva come impostazioni predefinite?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {hasSavedDefaults(profile)
+                ? "Hai già impostazioni predefinite salvate. Vuoi aggiornarle con i dati di questo annuncio? Gli annunci già pubblicati non verranno modificati."
+                : "Vuoi salvare questi dati come impostazioni predefinite per i prossimi annunci?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { pendingStatusRef.current = null; }}>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmAndSave}>Conferma</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
