@@ -67,7 +67,7 @@ function Admin() {
       if (restaurantIds.length) {
         const { data: rows } = await supabase
           .from("profiles")
-          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,price_range")
+          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes")
           .in("id", restaurantIds)
           .order("vat_verified_at", { ascending: false });
         setVatList(rows ?? []);
@@ -151,7 +151,7 @@ function Admin() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-muted-foreground">
-              <tr><th className="py-2 pr-3">Ristoratore</th><th className="pr-3">Ragione sociale</th><th className="pr-3">Tipologia</th><th className="pr-3">Fascia prezzo</th><th className="pr-3">P.IVA</th><th className="pr-3">Stato</th><th className="pr-3">Verificata il</th><th>Azioni</th></tr>
+              <tr><th className="py-2 pr-3">Ristoratore</th><th className="pr-3">Ragione sociale</th><th className="pr-3">Tipologia</th><th className="pr-3">Fascia prezzo</th><th className="pr-3">P.IVA</th><th className="pr-3">Stato</th><th className="pr-3">Verificata il</th><th className="pr-3">Default annunci</th><th>Azioni</th></tr>
             </thead>
             <tbody>
               {vatList
@@ -177,6 +177,7 @@ function Admin() {
                   <td className="pr-3 font-mono">{r.vat_number ?? "—"}</td>
                   <td className="pr-3">{statusBadge(r.vat_status, r.vat_number)}</td>
                   <td className="pr-3">{r.vat_verified_at ? new Date(r.vat_verified_at).toLocaleDateString("it-IT") : "—"}</td>
+                  <td className="pr-3">{defaultsCell(r)}</td>
                   <td>
                     <Button size="sm" variant="outline" onClick={async () => {
                       const { error } = await supabase.from("profiles").update({ vat_status: "valid", vat_verified_at: new Date().toISOString() }).eq("id", r.id);
@@ -187,7 +188,7 @@ function Admin() {
                 </tr>
               ))}
               {vatList.length === 0 && (
-                <tr><td colSpan={8} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>
+                <tr><td colSpan={9} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>
               )}
             </tbody>
           </table>
@@ -203,6 +204,23 @@ function statusBadge(s: string | null | undefined, vat: string | null | undefine
   if (s === "pending") return <span className="text-xs text-amber-600">In attesa</span>;
   if (s === "invalid") return <span className="text-xs text-destructive">Non verificata</span>;
   return <span className="text-xs text-muted-foreground">Non verificata</span>;
+}
+
+function defaultsCell(r: any) {
+  if (!hasSavedDefaults(r)) return <span className="text-xs text-muted-foreground">—</span>;
+  const when = r.default_settings_updated_at
+    ? new Date(r.default_settings_updated_at).toLocaleDateString("it-IT")
+    : null;
+  const summary: string[] = [];
+  if ((r.default_required_skills || []).length) summary.push(`${r.default_required_skills.length} comp.`);
+  if ((r.default_dress_code_items || []).length) summary.push(`${r.default_dress_code_items.length} dress`);
+  if ((r.default_language_requirements || []).length) summary.push(`${r.default_language_requirements.length} lingue`);
+  return (
+    <div className="text-xs">
+      <div className="text-emerald-600 font-medium">Attive{when ? ` · ${when}` : ""}</div>
+      {summary.length > 0 && <div className="text-muted-foreground">{summary.join(" · ")}</div>}
+    </div>
+  );
 }
 
 function Breakdown({ title, data }: { title: string; data: Record<string, number> }) {
