@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,7 @@ function AuthPage() {
   const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
   const [phoneNumber, setPhoneNumber] = useState("");
   const startVerification = useServerFn(startPhoneVerification);
+  const justSignedUpRef = useRef(false);
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
   const passwordStrongEnough = isPasswordStrongEnough(password);
@@ -53,6 +54,9 @@ function AuthPage() {
 
   useEffect(() => {
     if (loading || !user) return;
+    // If the user just submitted the signup form, skip auto-redirects
+    // here — handleSignup will navigate to the OTP page itself.
+    if (justSignedUpRef.current) return;
     // If user came from the home CTA with intent to register a new account
     // but a stale session exists with unverified phone, sign out so the
     // signup form is shown instead of redirecting to OTP.
@@ -91,7 +95,16 @@ function AuthPage() {
       toast.error("Inserisci un numero WhatsApp valido (prefisso + cifre).");
       return;
     }
+    if (!fullName.trim()) {
+      toast.error("Inserisci nome e cognome.");
+      return;
+    }
+    if (!email.trim()) {
+      toast.error("Inserisci un'email valida.");
+      return;
+    }
     setBusy(true);
+    justSignedUpRef.current = true;
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -102,6 +115,7 @@ function AuthPage() {
     });
     if (error) {
       setBusy(false);
+      justSignedUpRef.current = false;
       toast.error(error.message);
       return;
     }
@@ -109,6 +123,7 @@ function AuthPage() {
     const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
     if (signInErr) {
       setBusy(false);
+      justSignedUpRef.current = false;
       toast.success("Account creato! Accedi per continuare.");
       setTab("login");
       return;
@@ -131,8 +146,8 @@ function AuthPage() {
     }
     await refresh();
     setBusy(false);
-    toast.success("Registrazione ricevuta!");
-    navigate({ to: "/registration-success" });
+    toast.success("Registrazione ricevuta! Conferma il numero WhatsApp.");
+    navigate({ to: "/verify-phone" });
   };
 
   const handleLogin = async (e: React.FormEvent) => {
