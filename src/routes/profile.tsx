@@ -18,6 +18,7 @@ import { ClipboardList } from "lucide-react";
 import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 import { Settings2 } from "lucide-react";
 import { provinceCode } from "@/lib/italian-locations";
+import { ReferralCard } from "@/components/ReferralCard";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -149,6 +150,10 @@ function Profile() {
       {role === "restaurant" && (
         <DefaultsSection profile={profile} userId={user?.id} />
       )}
+
+      <div className="mt-6 max-w-4xl">
+        <ReferralCard />
+      </div>
 
       <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
         <h2 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4" />Cambia password</h2>

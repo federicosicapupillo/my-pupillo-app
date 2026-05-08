@@ -24,6 +24,7 @@ export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     role: s.role === "worker" || s.role === "restaurant" ? s.role : undefined,
+    ref: typeof s.ref === "string" ? s.ref : undefined,
   }),
   component: AuthPage,
 });
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { user, role: userRole, profile, loading, refresh } = useAuth();
-  const { role: roleParam } = Route.useSearch();
+  const { role: roleParam, ref: refParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -145,6 +146,17 @@ function AuthPage() {
       console.error("OTP/email summary kickoff failed", err);
     }
     await refresh();
+    // Register referral if a code was passed via ?ref=
+    if (refParam) {
+      try {
+        const { data: uid } = await supabase.auth.getUser();
+        if (uid.user?.id) {
+          await supabase.rpc("register_referral", { _new_user: uid.user.id, _code: refParam });
+        }
+      } catch (err) {
+        console.error("register_referral failed", err);
+      }
+    }
     setBusy(false);
     toast.success("Registrazione ricevuta! Conferma il numero WhatsApp.");
     navigate({ to: "/verify-phone" });

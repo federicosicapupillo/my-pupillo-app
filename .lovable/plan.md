@@ -1,59 +1,61 @@
+## Piano: Sistema Referral + Codici Sconto
 
-# Audit e correzione flusso RISTORATORE
+Funzionalità grande e trasversale (DB, frontend ristoratore/lavoratore, checkout, admin). La divido in 4 fasi con migrazioni separate.
 
-Questa è un'attività ampia: tocca DB, routing, UI e logiche di stato. Voglio condividere il piano prima di iniziare per concordare le priorità (ed evitare di rifare a vuoto parti che vuoi tenere come sono).
+### Fase 1 — Database
 
-## 1. Fase di analisi (lettura, niente modifiche)
+**Migrazione 1: Referral**
+- `profiles`: aggiungere `referral_code` (text unique), `referred_by_user_id` (uuid), `referral_credits_earned` (int default 0)
+- Trigger su INSERT profiles → genera codice tipo `PUPILLO-XXXXXX` (6 char random)
+- Backfill codici per utenti esistenti
+- Nuova tabella `referral_invites` (id, referrer_user_id, referred_user_id, referral_code, status enum [pending/registered/verified/completed/rejected], credits_awarded bool, credits_amount int, created_at, completed_at)
+- RLS: utente vede i propri inviti
+- Funzione `award_referral_credits(_referred_user_id)` SECURITY DEFINER:
+  - controlla referred_by_user_id sul profilo
+  - controlla profile_completed && phone_verified
+  - controlla che non esista già una riga `completed` per quel referred
+  - chiama `grant_credits(referrer, 5, 'referral', ...)`
+  - aggiorna `referral_invites` → completed
+- Trigger su `profiles` AFTER UPDATE: quando `phone_verified` o `profile_completed` passa a true e `referred_by_user_id` non null → chiama `award_referral_credits`
 
-- Mappare tutte le route attuali sotto `src/routes/` lato ristoratore: dashboard, onboarding, profilo locale, creazione annuncio, lista annunci, dettaglio annuncio, candidature, messaggi, turni, recensioni, crediti, billing, notifiche.
-- Confrontare ogni nodo del diagramma con le schermate reali e produrre una matrice "nodo diagramma → route/componente → stato (OK / parziale / mancante)".
-- Rileggere tabelle (`announcements`, `applications`, `shifts`, `reviews`, `notifications`, `profiles`, `credit_transactions`, `subscriptions`, `activity_logs`) e confrontarle con gli stati richiesti.
+**Migrazione 2: Codici sconto**
+- Tabella `discount_codes` (code unique citext o lower-saved, description, discount_type enum [percentage/fixed_amount/free_credits], discount_value numeric, max_uses int, used_count int default 0, valid_from, valid_until, is_active bool, applies_to enum [credits/premium/all])
+- Tabella `discount_redemptions` (discount_code_id, user_id, order_id text, used_at, discount_amount numeric)
+- RLS: lettura codici a tutti gli autenticati (necessario per validare); scrittura solo admin; redemptions visibili al proprietario, insert da service_role
+- Funzione `validate_discount_code(_code, _applies_to)` STABLE → restituisce JSON { valid, type, value, message }
+- Seed dei 3 codici demo: PUPILLO10, START20, CREDITI5
 
-## 2. Aree che mi aspetto di toccare nel DB
+### Fase 2 — Frontend Referral
 
-Sulla base dello schema attuale e del diagramma:
+- Componente `ReferralCard.tsx` riusabile con: codice, link (`${origin}/auth?role=...&ref=CODE`), copia codice, copia link, condividi WhatsApp, statistiche (invitati, registrati, in attesa, crediti)
+- Inserito in: `/dashboard` (sia ristoratore che lavoratore), `/profile`
+- Hook `useReferralStats()` che legge da `referral_invites`
+- In `/auth` (signup): leggere `?ref=` da URL, mostrare badge "Codice referral applicato: XXX", al submit salvare in `profiles.referred_by_user_id` (lookup tramite `referral_code`)
+- Validazione anti-abuso lato client: non può essere il proprio codice (ma controllo finale lato DB tramite trigger)
 
-- **`announcements.status`**: oggi ha `active`. Il diagramma chiede stati: bozza, pubblicata, in attesa candidati, candidature ricevute, lavoratore selezionato, confermata, completata, annullata. Aggiungerei almeno `draft`, `assigned`, `completed`, `cancelled` (gli intermedi "in attesa / candidature ricevute" sono derivabili dal conteggio `applications`, evito stati ridondanti).
-- **`applications`**: aggiungere campo `seen_at` (stato "vista") + trigger che aggiorna `announcements.status` quando viene accettata una candidatura (→ `assigned`) o quando il turno è completato (→ `completed`).
-- **`shifts`**: aggiungere transizione `in_progress` quando `now() >= shift_date+ora` e stato non finale (calcolo lato client va bene, oppure colonna derivata).
-- **Verifica notifiche**: i trigger esistono già (`notify_application_insert`, `notify_application_status`, `notify_shift_status`). Controllo che coprano i passaggi chiave del diagramma; se manca "annullamento richiesta" o "richiesta scaduta", aggiungo trigger.
-- **`activity_logs`**: aggiungo log per pubblicazione/annullamento richiesta e per recensione.
+### Fase 3 — Codice sconto in checkout
 
-Niente tabelle nuove (`matches` esiste già concettualmente come `applications` accettata + `shifts`, evito di duplicare).
+- File `src/routes/billing.tsx` (e/o `StripeEmbeddedCheckout`): aggiungere input "Codice sconto" + bottone "Applica"
+- Server function `validateDiscountCode` (`src/lib/discounts.functions.ts`) → chiama RPC `validate_discount_code`
+- Mostrare riepilogo sconto + totale aggiornato
+- Per Stripe: passare `discount` o creare coupon dinamico — semplificazione: per ora applichiamo lo sconto come `coupon` Stripe via API (creo coupon one-shot in `createCheckoutSession` se viene passato `discountCode`). Per `free_credits` invece: bypass Stripe, chiamare direttamente `grant_credits` se max_uses ok.
+- Aggiornare `createCheckoutSession` per accettare opzionale `discountCode`
+- Insert in `discount_redemptions` dopo conferma pagamento (nel webhook `/api/public/payments/webhook.ts`) + increment `used_count`
 
-## 3. Aree UI da sistemare lato ristoratore
+### Fase 4 — Admin
 
-In ordine di priorità, dopo l'audit:
+- In `/admin` aggiungere tab "Referral e Sconti"
+- Tabella inviti: join referrer/referred profiles
+- CRUD codici sconto (form crea/modifica, toggle is_active)
+- RLS già limita ad admin via `has_role`
 
-1. **Onboarding ristoratore** — verificare che dopo signup venga forzata la compilazione di: business_name, vat_number, venue_type, address, price_range, opening_hours. Redirect a `/onboarding` se `profile_completed=false`.
-2. **Dashboard ristoratore** — KPI: annunci attivi, candidature da rivedere, prossimi turni, crediti, piano. CTA grandi: "Nuova richiesta", "Vedi candidature".
-3. **Creazione richiesta** — wizard a step (ruolo → data/ora → luogo → tariffa → note → riepilogo+pubblica). Salvataggio bozza (`status='draft'`).
-4. **Lista annunci** — filtri per stato (bozza / pubblicata / assegnata / completata / annullata) con conteggio candidature.
-5. **Dettaglio annuncio + candidature** — lista candidati con rating, badge, affidabilità, esperienza; pulsanti "Accetta" / "Rifiuta" / "Controproposta"; quando si accetta uno, gli altri passano a `rejected` automaticamente.
-6. **Match confermato** — banner di conferma con dati turno; collegamento alla chat e ai turni.
-7. **Turni** — segna completato, segna no-show, annulla; CTA "Lascia recensione" dopo `completed`.
-8. **Recensioni** — form già esistente, verifico collegamento da turno completato.
-9. **Storico** — tab "Completati" + "Annullati" su annunci e turni.
-10. **Crediti & piano** — pagina già presente (`/billing`), aggiungere widget compatto in dashboard.
-11. **Notifiche** — già completate nelle iterazioni precedenti, solo verifica collegamenti.
+### Note tecniche
+- I controlli anti-abuso (no auto-referral, codice unico per utente, no doppio accredito) sono nei trigger DB, non solo client.
+- `referral_code` univoco, formato `PUPILLO-` + 6 char alfanumerici uppercase.
+- Codici sconto case-insensitive: salvare upper, query upper.
 
-## 4. Test finale
+### Limitazioni / cose da chiarire
+- Per i codici `free_credits` durante l'acquisto crediti: aggiungo i crediti gratis al pacchetto invece di scontare il prezzo.
+- Per ora i refresh dei crediti referral avvengono via trigger su `profiles` (quando `phone_verified` diventa true E `profile_completed` true). Non includo email confirmation.
 
-Script manuale che simulo via lettura del codice + console del preview:
-- signup ristoratore demo → onboarding → creazione annuncio → pubblicazione → (con un worker demo) candidatura → accettazione → turno → completamento → recensione → storico → crediti.
-
-## 5. Output finale
-
-Report strutturato con i 9 punti che hai chiesto.
-
----
-
-## Domanda prima di partire
-
-Questa attività è grande (potenzialmente 3–6 migrazioni e 10+ file UI modificati, costo crediti significativo). **Vuoi che proceda così come descritto sopra**, oppure preferisci che io spezzi il lavoro in 2–3 iterazioni più piccole, per esempio:
-
-- **Iterazione A**: solo audit + report scritto, senza modifiche, così decidi tu cosa correggere.
-- **Iterazione B**: solo DB + stati + onboarding obbligatorio.
-- **Iterazione C**: solo UI dashboard + wizard creazione richiesta + gestione candidature.
-
-Indicami quale strada preferisci e procedo.
+Procedo con questo piano?

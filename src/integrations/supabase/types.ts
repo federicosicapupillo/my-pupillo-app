@@ -248,6 +248,89 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_codes: {
+        Row: {
+          applies_to: Database["public"]["Enums"]["discount_applies_to"]
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          updated_at: string
+          used_count: number
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          applies_to?: Database["public"]["Enums"]["discount_applies_to"]
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: Database["public"]["Enums"]["discount_type"]
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          updated_at?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      discount_redemptions: {
+        Row: {
+          discount_amount: number | null
+          discount_code_id: string
+          id: string
+          order_id: string | null
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          discount_amount?: number | null
+          discount_code_id: string
+          id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          discount_amount?: number | null
+          discount_code_id?: string
+          id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_redemptions_discount_code_id_fkey"
+            columns: ["discount_code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           announcement_id: string
@@ -584,6 +667,9 @@ export type Database = {
           province: string | null
           province_code: string | null
           rating_avg: number | null
+          referral_code: string | null
+          referral_credits_earned: number
+          referred_by_user_id: string | null
           registered_office_address: string | null
           registered_office_city: string | null
           registered_office_postal_code: string | null
@@ -685,6 +771,9 @@ export type Database = {
           province?: string | null
           province_code?: string | null
           rating_avg?: number | null
+          referral_code?: string | null
+          referral_credits_earned?: number
+          referred_by_user_id?: string | null
           registered_office_address?: string | null
           registered_office_city?: string | null
           registered_office_postal_code?: string | null
@@ -786,6 +875,9 @@ export type Database = {
           province?: string | null
           province_code?: string | null
           rating_avg?: number | null
+          referral_code?: string | null
+          referral_credits_earned?: number
+          referred_by_user_id?: string | null
           registered_office_address?: string | null
           registered_office_city?: string | null
           registered_office_postal_code?: string | null
@@ -814,6 +906,45 @@ export type Database = {
           whatsapp_confirmation_sent_at?: string | null
           whatsapp_confirmation_status?: string | null
           whatsapp_connected?: boolean | null
+        }
+        Relationships: []
+      }
+      referral_invites: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          credits_amount: number
+          credits_awarded: boolean
+          id: string
+          referral_code: string
+          referred_email: string | null
+          referred_user_id: string | null
+          referrer_user_id: string
+          status: Database["public"]["Enums"]["referral_status"]
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          credits_amount?: number
+          credits_awarded?: boolean
+          id?: string
+          referral_code: string
+          referred_email?: string | null
+          referred_user_id?: string | null
+          referrer_user_id: string
+          status?: Database["public"]["Enums"]["referral_status"]
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          credits_amount?: number
+          credits_awarded?: boolean
+          id?: string
+          referral_code?: string
+          referred_email?: string | null
+          referred_user_id?: string | null
+          referrer_user_id?: string
+          status?: Database["public"]["Enums"]["referral_status"]
         }
         Relationships: []
       }
@@ -954,10 +1085,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_referral_credits: {
+        Args: { _referred_user_id: string }
+        Returns: undefined
+      }
       consume_credits: {
         Args: { _amount: number; _reason: string; _reference_id?: string }
         Returns: boolean
       }
+      generate_referral_code: { Args: never; Returns: string }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -984,6 +1120,23 @@ export type Database = {
         Returns: boolean
       }
       normalize_vat: { Args: { _v: string }; Returns: string }
+      redeem_discount_code: {
+        Args: {
+          _applies_to: string
+          _code: string
+          _discount_amount: number
+          _order_id: string
+        }
+        Returns: Json
+      }
+      register_referral: {
+        Args: { _code: string; _new_user: string }
+        Returns: string
+      }
+      validate_discount_code: {
+        Args: { _applies_to?: string; _code: string }
+        Returns: Json
+      }
     }
     Enums: {
       account_status: "active" | "pending" | "suspended"
@@ -1004,6 +1157,8 @@ export type Database = {
         | "rejected"
         | "expired"
       credit_tx_kind: "purchase" | "grant" | "consume" | "refund" | "plan_bonus"
+      discount_applies_to: "credits" | "premium" | "all"
+      discount_type: "percentage" | "fixed_amount" | "free_credits"
       experience_level: "junior" | "intermediate" | "senior"
       phone_verification_status:
         | "pending"
@@ -1011,6 +1166,12 @@ export type Database = {
         | "verified"
         | "expired"
         | "failed"
+      referral_status:
+        | "pending"
+        | "registered"
+        | "verified"
+        | "completed"
+        | "rejected"
       service_speed: "normal" | "fast" | "flash"
       shift_status: "scheduled" | "completed" | "no_show" | "cancelled"
       tariff_type: "hourly" | "flat"
@@ -1164,6 +1325,8 @@ export const Constants = {
         "expired",
       ],
       credit_tx_kind: ["purchase", "grant", "consume", "refund", "plan_bonus"],
+      discount_applies_to: ["credits", "premium", "all"],
+      discount_type: ["percentage", "fixed_amount", "free_credits"],
       experience_level: ["junior", "intermediate", "senior"],
       phone_verification_status: [
         "pending",
@@ -1171,6 +1334,13 @@ export const Constants = {
         "verified",
         "expired",
         "failed",
+      ],
+      referral_status: [
+        "pending",
+        "registered",
+        "verified",
+        "completed",
+        "rejected",
       ],
       service_speed: ["normal", "fast", "flash"],
       shift_status: ["scheduled", "completed", "no_show", "cancelled"],
