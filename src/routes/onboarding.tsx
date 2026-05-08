@@ -141,7 +141,7 @@ function Onboarding() {
     const update = role === "restaurant" ? {
       full_name: form.full_name, phone: form.phone,
       terms_accepted: true, profile_completed: true,
-      business_name: form.business_name, vat_number: form.vat_number,
+      business_name: form.business_name, vat_number: vatDigits,
       venue_type: form.venue_type, address: form.address, price_range: form.price_range,
       city: form.city || null, province: form.province || null,
       postal_code: form.postal_code || null, country: form.country || null,
@@ -168,16 +168,20 @@ function Onboarding() {
       ...serviceArea,
     };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
-    if (error) { toast.error(error.message); return; }
-    if (role === "restaurant" && form.vat_number.trim()) {
-      try {
-        const r = await verifyVatFn({ data: { vat_number: form.vat_number.trim() } });
-        if (r.status === "valid") toast.success(`P.IVA verificata${r.companyName ? `: ${r.companyName}` : ""}`);
-        else if (r.status === "invalid") toast.error("Partita IVA non valida");
-        else toast.warning("Verifica P.IVA non disponibile, riproveremo più tardi");
-      } catch (e) {
-        toast.warning("Verifica P.IVA non riuscita");
+    if (error) {
+      setBusy(false);
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("profiles_vat_number_unique") || msg.includes("duplicate key")) {
+        toast.error("Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.");
+      } else {
+        toast.error(error.message);
       }
+      return;
+    }
+    if (role === "restaurant" && vatValid && (vatResult?.status !== "valid")) {
+      try {
+        await verifyVatFn({ data: { vat_number: vatDigits } });
+      } catch {}
     }
     setBusy(false);
     toast.success("Profilo completato!");
