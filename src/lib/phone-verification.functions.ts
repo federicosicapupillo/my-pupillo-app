@@ -115,6 +115,7 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const phoneFull = `${data.phoneCountryCode}${data.phoneNumber}`;
+    try {
 
     // Cooldown: latest pending/sent within RESEND_COOLDOWN_SECONDS
     const { data: latest } = await supabaseAdmin
@@ -211,6 +212,11 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
     }
 
     return { ok: send.ok, provider: send.provider, simulated: send.provider === "simulated" };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[startPhoneVerification] runtime error:", e);
+      return { ok: false, error: `Errore interno: ${msg}` };
+    }
   });
 
 // ===== VERIFY =====
@@ -219,6 +225,7 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ code: z.string().regex(/^\d{6}$/) }).parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    try {
 
     const { data: row } = await supabaseAdmin
       .from("phone_verifications")
@@ -291,6 +298,11 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
       .eq("id", userId);
 
     return { ok: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[verifyPhoneOtp] runtime error:", e);
+      return { ok: false, error: `Errore interno: ${msg}` };
+    }
   });
 
 // ===== RESEND =====
@@ -298,6 +310,7 @@ export const resendPhoneOtp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
+    try {
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("phone_country_code, phone_number")
@@ -310,4 +323,9 @@ export const resendPhoneOtp = createServerFn({ method: "POST" })
     return await startPhoneVerification({
       data: { phoneCountryCode: profile.phone_country_code, phoneNumber: profile.phone_number },
     });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[resendPhoneOtp] runtime error:", e);
+      return { ok: false, error: `Errore interno: ${msg}` };
+    }
   });
