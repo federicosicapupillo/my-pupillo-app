@@ -515,6 +515,7 @@ function NewRestaurantJobRequest() {
             <Field label="Email referente"><Input type="email" value={f.contact_person_email} onChange={e => setField("contact_person_email", e.target.value)} /></Field>
             <Field label="Note per il lavoratore"><Textarea rows={2} value={f.worker_notes} onChange={e => setField("worker_notes", e.target.value)} /></Field>
           </div>
+          <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />
         </section>
 
         <section className="rounded-2xl border bg-card p-5 space-y-4">
@@ -527,6 +528,7 @@ function NewRestaurantJobRequest() {
           </div>
           <ChoiceGroup title="Lingue richieste" items={LANGUAGE_OPTIONS} selected={languageReqs} onToggle={v => toggleIn(languageReqs, v, setLanguageReqs)} />
           <ChoiceGroup title="Competenze richieste" items={SKILL_OPTIONS} selected={skills} onToggle={v => toggleIn(skills, v, setSkills)} />
+          <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />
         </section>
 
         <section className="rounded-2xl border bg-card p-5 space-y-4">
@@ -544,6 +546,7 @@ function NewRestaurantJobRequest() {
             })}
           </div>
           <Field label="Note aggiuntive sul dress code"><Textarea rows={3} value={f.dress_code_notes} onChange={e => setField("dress_code_notes", e.target.value)} /></Field>
+          <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />
         </section>
 
         {previewVisible && (
@@ -632,6 +635,15 @@ function PreviewItem({ label, value, wide }: { label: string; value: string; wid
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 whitespace-pre-wrap font-medium">{value}</div>
     </div>
+  );
+}
+
+function SaveDefaultToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm cursor-pointer">
+      <Checkbox checked={checked} onCheckedChange={(v) => onChange(!!v)} />
+      <span>Salva queste impostazioni come predefinite per i prossimi annunci</span>
+    </label>
   );
 }
 
