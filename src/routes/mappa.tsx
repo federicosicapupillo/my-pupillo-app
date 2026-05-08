@@ -103,6 +103,7 @@ function MapPage() {
   // search & filters
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("any");
+  const [province, setProvince] = useState("any");
   const [district, setDistrict] = useState("");
   const [venue, setVenue] = useState("any");
   const [priceF, setPriceF] = useState("any");
@@ -200,6 +201,7 @@ function MapPage() {
     const ref = searchCenter || me;
     return restaurants.filter(r => {
       if (!matchesQuery(r)) return false;
+      if (province !== "any" && r.province !== province) return false;
       if (city !== "any" && r.city !== city) return false;
       if (district && !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
       if (venue !== "any" && r.venue_type !== venue) return false;
@@ -212,7 +214,7 @@ function MapPage() {
       }
       return true;
     });
-  }, [restaurants, query, city, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me]);
+  }, [restaurants, query, city, province, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
