@@ -14,6 +14,7 @@ import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShiftsRouteImport } from './routes/shifts'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RegistrationSuccessRouteImport } from './routes/registration-success'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -59,6 +60,11 @@ const ShiftsRoute = ShiftsRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistrationSuccessRoute = RegistrationSuccessRouteImport.update({
+  id: '/registration-success',
+  path: '/registration-success',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/profile': typeof ProfileRoute
+  '/registration-success': typeof RegistrationSuccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/onboarding'
     | '/profile'
+    | '/registration-success'
     | '/reset-password'
     | '/shifts'
     | '/terms'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/onboarding'
     | '/profile'
+    | '/registration-success'
     | '/reset-password'
     | '/shifts'
     | '/terms'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/onboarding'
     | '/profile'
+    | '/registration-success'
     | '/reset-password'
     | '/shifts'
     | '/terms'
@@ -356,6 +368,7 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
   ProfileRoute: typeof ProfileRoute
+  RegistrationSuccessRoute: typeof RegistrationSuccessRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
@@ -402,6 +415,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registration-success': {
+      id: '/registration-success'
+      path: '/registration-success'
+      fullPath: '/registration-success'
+      preLoaderRoute: typeof RegistrationSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -595,6 +615,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
   ProfileRoute: ProfileRoute,
+  RegistrationSuccessRoute: RegistrationSuccessRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
@@ -608,3 +629,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
