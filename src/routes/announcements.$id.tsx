@@ -16,6 +16,7 @@ import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
 } from "@/lib/announcement-requirements";
+import { venueTypeLabel } from "@/lib/venue-types";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -308,7 +309,10 @@ function AnnouncementDetail() {
               </Link>
             </div>
             <div className="text-xs text-muted-foreground">
-              {[restaurant.venue_type, restaurant.price_range].filter(Boolean).join(" · ") || "—"}
+              {[
+                restaurant.venue_type ? `Tipologia locale: ${venueTypeLabel(restaurant.venue_type, restaurant.venue_type_other)}` : null,
+                restaurant.price_range,
+              ].filter(Boolean).join(" · ") || "—"}
             </div>
             {(restaurant.address || restaurant.city) && (
               <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{[restaurant.address, restaurant.neighborhood, restaurant.city].filter(Boolean).join(", ")}</div>
