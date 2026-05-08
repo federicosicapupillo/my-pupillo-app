@@ -554,6 +554,7 @@ export type Database = {
           vat_status: Database["public"]["Enums"]["vat_status"] | null
           vat_verified_at: string | null
           venue_type: string | null
+          venue_type_other: string | null
           weekly_availability: string[] | null
           whatsapp_connected: boolean | null
         }
@@ -641,6 +642,7 @@ export type Database = {
           vat_status?: Database["public"]["Enums"]["vat_status"] | null
           vat_verified_at?: string | null
           venue_type?: string | null
+          venue_type_other?: string | null
           weekly_availability?: string[] | null
           whatsapp_connected?: boolean | null
         }
@@ -728,6 +730,7 @@ export type Database = {
           vat_status?: Database["public"]["Enums"]["vat_status"] | null
           vat_verified_at?: string | null
           venue_type?: string | null
+          venue_type_other?: string | null
           weekly_availability?: string[] | null
           whatsapp_connected?: boolean | null
         }
