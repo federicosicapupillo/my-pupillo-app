@@ -17,6 +17,7 @@ import { priceRangeLabel } from "@/lib/price-range";
 import { ClipboardList } from "lucide-react";
 import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 import { Settings2 } from "lucide-react";
+import { provinceCode } from "@/lib/italian-locations";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -61,13 +62,15 @@ function Profile() {
         <Row label="Email" value={user?.email} />
         <Row label="Ruolo" value={role} />
         <Row label="Nome" value={profile?.full_name} />
-        <Row label="Telefono" value={profile?.phone} />
+        <Row label="Telefono" value={(profile as any)?.phone_full || profile?.phone} />
         {role === "restaurant" && (<>
           <Row label="Nome locale" value={profile?.business_name} />
           <Row label="Partita IVA" value={profile?.vat_number} />
           <Row label="Stato verifica P.IVA" value={vatStatusLabel(profile?.vat_status)} />
           {profile?.vat_company_name && <Row label="Ragione sociale (VIES)" value={profile.vat_company_name} />}
           <Row label="Tipologia locale" value={venueTypeLabel(profile?.venue_type, (profile as any)?.venue_type_other)} />
+          <Row label="Provincia" value={(profile as any)?.province ? `${(profile as any).province}${(profile as any)?.province_code || provinceCode((profile as any).province) ? ` (${(profile as any)?.province_code || provinceCode((profile as any).province)})` : ""}` : null} />
+          <Row label="Città" value={(profile as any)?.city} />
           <Row label="Indirizzo" value={profile?.address} />
           <Row label="Fascia di prezzo" value={priceRangeLabel(profile?.price_range)} />
         </>)}

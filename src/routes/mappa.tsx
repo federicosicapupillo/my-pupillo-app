@@ -14,6 +14,7 @@ import type { MapPoint } from "@/components/MapViewInner";
 import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
+import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
@@ -31,6 +32,7 @@ type Restaurant = {
   price_range: string | null;
   address: string | null;
   city: string | null;
+  province: string | null;
   neighborhood: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
@@ -102,6 +104,7 @@ function MapPage() {
   // search & filters
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("any");
+  const [province, setProvince] = useState("any");
   const [district, setDistrict] = useState("");
   const [venue, setVenue] = useState("any");
   const [priceF, setPriceF] = useState("any");
@@ -132,7 +135,7 @@ function MapPage() {
       setLoading(true);
       const [{ data: r }, { data: w }, { data: a }] = await Promise.all([
         supabase.from("profiles")
-          .select("id, business_name, full_name, venue_type, venue_type_other, price_range, address, city, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
+          .select("id, business_name, full_name, venue_type, venue_type_other, price_range, address, city, province, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
         supabase
@@ -199,6 +202,7 @@ function MapPage() {
     const ref = searchCenter || me;
     return restaurants.filter(r => {
       if (!matchesQuery(r)) return false;
+      if (province !== "any" && r.province !== province) return false;
       if (city !== "any" && r.city !== city) return false;
       if (district && !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
       if (venue !== "any" && r.venue_type !== venue) return false;
@@ -211,7 +215,7 @@ function MapPage() {
       }
       return true;
     });
-  }, [restaurants, query, city, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me]);
+  }, [restaurants, query, city, province, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
@@ -495,11 +499,18 @@ function MapPage() {
 
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
+        <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); }}>
+          <SelectTrigger><SelectValue placeholder="Provincia" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">Tutte le province</SelectItem>
+            {ITALIAN_LOCATIONS.map((p) => <SelectItem key={p.province_code} value={p.province}>{p.province}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={city} onValueChange={setCity}>
           <SelectTrigger><SelectValue placeholder="Città" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="any">Tutte le città</SelectItem>
-            {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            {(province !== "any" ? citiesForProvince(province) : cities).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
         <Input placeholder="Zona / quartiere" value={district} onChange={e => setDistrict(e.target.value)} />

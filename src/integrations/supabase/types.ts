@@ -484,6 +484,7 @@ export type Database = {
           business_status: string | null
           busy_days: string[] | null
           city: string | null
+          city_code: string | null
           company_tax_code: string | null
           completed_shifts: number | null
           contact_person_email: string | null
@@ -524,6 +525,9 @@ export type Database = {
           opening_hours: string | null
           pec_email: string | null
           phone: string | null
+          phone_country_code: string | null
+          phone_full: string | null
+          phone_number: string | null
           plan: Database["public"]["Enums"]["user_plan"] | null
           postal_code: string | null
           price_range: string | null
@@ -531,6 +535,7 @@ export type Database = {
           professional_profile: string | null
           profile_completed: boolean | null
           province: string | null
+          province_code: string | null
           rating_avg: number | null
           registered_office_address: string | null
           registered_office_city: string | null
@@ -573,6 +578,7 @@ export type Database = {
           business_status?: string | null
           busy_days?: string[] | null
           city?: string | null
+          city_code?: string | null
           company_tax_code?: string | null
           completed_shifts?: number | null
           contact_person_email?: string | null
@@ -613,6 +619,9 @@ export type Database = {
           opening_hours?: string | null
           pec_email?: string | null
           phone?: string | null
+          phone_country_code?: string | null
+          phone_full?: string | null
+          phone_number?: string | null
           plan?: Database["public"]["Enums"]["user_plan"] | null
           postal_code?: string | null
           price_range?: string | null
@@ -620,6 +629,7 @@ export type Database = {
           professional_profile?: string | null
           profile_completed?: boolean | null
           province?: string | null
+          province_code?: string | null
           rating_avg?: number | null
           registered_office_address?: string | null
           registered_office_city?: string | null
@@ -662,6 +672,7 @@ export type Database = {
           business_status?: string | null
           busy_days?: string[] | null
           city?: string | null
+          city_code?: string | null
           company_tax_code?: string | null
           completed_shifts?: number | null
           contact_person_email?: string | null
@@ -702,6 +713,9 @@ export type Database = {
           opening_hours?: string | null
           pec_email?: string | null
           phone?: string | null
+          phone_country_code?: string | null
+          phone_full?: string | null
+          phone_number?: string | null
           plan?: Database["public"]["Enums"]["user_plan"] | null
           postal_code?: string | null
           price_range?: string | null
@@ -709,6 +723,7 @@ export type Database = {
           professional_profile?: string | null
           profile_completed?: boolean | null
           province?: string | null
+          province_code?: string | null
           rating_avg?: number | null
           registered_office_address?: string | null
           registered_office_city?: string | null

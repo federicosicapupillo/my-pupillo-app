@@ -27,6 +27,9 @@ import {
   labelOf,
   labelsOf,
 } from "@/lib/announcement-requirements";
+import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince } from "@/lib/italian-locations";
+import { PhoneInput } from "@/components/PhoneInput";
+import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 
 export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
   head: () => ({ meta: [{ title: "Crea Nuovo Annuncio — Pupillo" }] }),
@@ -267,6 +270,10 @@ function NewRestaurantJobRequest() {
     if (!f.start_time || !f.end_time || durationHours <= 0) { toast.error("Inserisci un orario valido"); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
     if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
+    if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
+      toast.error("La città selezionata non appartiene alla provincia scelta.");
+      return false;
+    }
     return true;
   };
 
@@ -491,9 +498,28 @@ function NewRestaurantJobRequest() {
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Nome locale"><Input value={f.restaurant_name} onChange={e => setField("restaurant_name", e.target.value)} /></Field>
             <Field label="Indirizzo"><Input required value={f.address} onChange={e => setField("address", e.target.value)} /></Field>
-            <Field label="Città"><Input value={f.city} onChange={e => setField("city", e.target.value)} /></Field>
+            <Field label="Provincia">
+              <select
+                value={f.province}
+                onChange={(e) => { setField("province", e.target.value); setField("city", ""); }}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Seleziona provincia</option>
+                {ITALIAN_LOCATIONS.map((p) => <option key={p.province_code} value={p.province}>{p.province} ({p.province_code})</option>)}
+              </select>
+            </Field>
+            <Field label="Città">
+              <select
+                value={f.city}
+                disabled={!f.province}
+                onChange={(e) => setField("city", e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+              >
+                <option value="">{f.province ? "Seleziona città" : "Seleziona prima la provincia"}</option>
+                {citiesForProvince(f.province).map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
             <Field label="Zona/quartiere"><Input value={f.district} onChange={e => setField("district", e.target.value)} /></Field>
-            <Field label="Provincia"><Input maxLength={3} value={f.province} onChange={e => setField("province", e.target.value.toUpperCase())} /></Field>
             <Field label="CAP"><Input value={f.postal_code} onChange={e => setField("postal_code", e.target.value)} /></Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
             <div className="flex items-end">
@@ -511,7 +537,19 @@ function NewRestaurantJobRequest() {
             <Field label="Restrizioni all’ingresso"><Textarea rows={2} value={f.access_restrictions} onChange={e => setField("access_restrictions", e.target.value)} /></Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
             <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
-            <Field label="Telefono referente"><Input value={f.contact_person_phone} onChange={e => setField("contact_person_phone", e.target.value)} /></Field>
+            <Field label="Telefono referente">
+              {(() => {
+                const split = splitPhone(f.contact_person_phone);
+                return (
+                  <PhoneInput
+                    code={split.code}
+                    number={split.number}
+                    onCodeChange={(c) => setField("contact_person_phone", buildPhoneFull(c, split.number))}
+                    onNumberChange={(n) => setField("contact_person_phone", buildPhoneFull(split.code, n))}
+                  />
+                );
+              })()}
+            </Field>
             <Field label="Email referente"><Input type="email" value={f.contact_person_email} onChange={e => setField("contact_person_email", e.target.value)} /></Field>
             <Field label="Note per il lavoratore"><Textarea rows={2} value={f.worker_notes} onChange={e => setField("worker_notes", e.target.value)} /></Field>
           </div>
