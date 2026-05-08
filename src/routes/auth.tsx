@@ -13,7 +13,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
 import { lovable } from "@/integrations/lovable";
 import pupilloLogo from "@/assets/pupillo-logo.png";
-import { isPasswordStrongEnough, doPasswordsMatch } from "@/lib/password-validation";
+import { isPasswordStrongEnough, doPasswordsMatch, PASSWORD_RULES } from "@/lib/password-validation";
+import { Check, X } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -226,9 +227,20 @@ function AuthPage() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Almeno 8 caratteri, con almeno una lettera maiuscola, una lettera minuscola e un numero.
-                  </p>
+                  <ul className="mt-1 space-y-0.5 text-xs">
+                    {PASSWORD_RULES.map((rule) => {
+                      const ok = rule.test(password);
+                      return (
+                        <li
+                          key={rule.id}
+                          className={`flex items-center gap-1.5 ${ok ? "text-emerald-600" : "text-muted-foreground"}`}
+                        >
+                          {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          {rule.label}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
                 <div>
                   <Label>Conferma password</Label>
