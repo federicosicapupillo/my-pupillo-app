@@ -164,7 +164,54 @@ function AuthPage() {
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
                 <div><Label>Nome completo</Label><Input required value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
                 <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                <div><Label>Password</Label><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+                <div>
+                  <Label>Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={8}
+                      placeholder="Inserisci password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Nascondi password" : "Mostra password"}
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Almeno 8 caratteri, una lettera e un numero.</p>
+                </div>
+                <div>
+                  <Label>Conferma password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      minLength={8}
+                      placeholder="Conferma password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showConfirmPassword ? "Nascondi password" : "Mostra password"}
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword.length > 0 && !passwordsMatch && (
+                    <p className="text-xs text-destructive mt-1">Le password non coincidono.</p>
+                  )}
+                </div>
                 <div>
                   <Label className="mb-2 block">Sono un</Label>
                   <RadioGroup value={role} onValueChange={(v) => setRole(v as "restaurant" | "worker")} className="grid grid-cols-2 gap-3">
@@ -191,7 +238,7 @@ function AuthPage() {
                     <p className="text-xs text-muted-foreground mt-1">Devi avere almeno 18 anni per creare un account ristoratore.</p>
                   </div>
                 )}
-                <Button type="submit" className="w-full" disabled={busy || !restaurantAgeOk}>{busy ? "Attendi..." : "Crea account"}</Button>
+                <Button type="submit" className="w-full" disabled={busy || !restaurantAgeOk || !passwordStrongEnough || !passwordsMatch}>{busy ? "Attendi..." : "Crea account"}</Button>
                 <p className="text-xs text-muted-foreground text-center">
                   Accettando, confermi le <Link to="/terms" className="underline hover:text-foreground">condizioni d'uso e la privacy policy</Link>.
                 </p>
