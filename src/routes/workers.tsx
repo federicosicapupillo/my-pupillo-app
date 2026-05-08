@@ -13,13 +13,14 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
 import { Coins, AlertCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
   component: () => <RequireAuth><WorkersPage /></RequireAuth>,
 });
 
-type W = { id: string; full_name: string | null; age: number | null; languages: string[] | null; professional_profile: string | null; service_area_lat: number | null; service_area_lng: number | null; service_area_radius_m: number | null };
+type W = { id: string; full_name: string | null; age: number | null; languages: string[] | null; spoken_languages: any; professional_profile: string | null; service_area_lat: number | null; service_area_lng: number | null; service_area_radius_m: number | null };
 type Ann = { id: string; service_date: string; location_address: string; location_lat: number | null; location_lng: number | null };
 
 function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -45,7 +46,7 @@ function WorkersPage() {
       const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "worker");
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length) {
-        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, professional_profile, service_area_lat, service_area_lng, service_area_radius_m").in("id", ids);
+        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, spoken_languages, professional_profile, service_area_lat, service_area_lng, service_area_radius_m").in("id", ids);
         setWorkers((data as W[]) ?? []);
       }
       if (user) {
@@ -80,7 +81,12 @@ function WorkersPage() {
   const filtered = workers.filter(w => {
     const text = `${w.full_name ?? ""} ${w.professional_profile ?? ""}`.toLowerCase();
     if (q && !text.includes(q.toLowerCase())) return false;
-    if (lang && !(w.languages ?? []).some(l => l.toLowerCase().includes(lang.toLowerCase()))) return false;
+    if (lang) {
+      const spoken = normalizeSpokenLanguages(w.spoken_languages).map(s => s.language.toLowerCase());
+      const legacy = (w.languages ?? []).map(s => s.toLowerCase());
+      const all = [...spoken, ...legacy];
+      if (!all.some(l => l.includes(lang.toLowerCase()))) return false;
+    }
     return true;
   });
 
@@ -135,7 +141,13 @@ function WorkersPage() {
         </div>
         <div>
           <label className="text-sm font-medium">Lingua</label>
-          <Input className="mt-1" placeholder="es. Inglese" value={lang} onChange={e => setLang(e.target.value)} />
+          <Select value={lang || "__all"} onValueChange={(v) => setLang(v === "__all" ? "" : v)}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Tutte" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Tutte le lingue</SelectItem>
+              {LANGUAGE_OPTIONS.filter(l => l !== "Altro").map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="mb-4 flex justify-end">
@@ -197,11 +209,13 @@ function WorkersPage() {
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
-            {w.languages && w.languages.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {w.languages.map((l) => <span key={l} className="text-xs bg-secondary px-2 py-0.5 rounded-full">{l}</span>)}
-              </div>
-            )}
+            {(() => {
+              const langs: SpokenLanguage[] = normalizeSpokenLanguages(w.spoken_languages);
+              const legacy = (langs.length === 0 ? (w.languages ?? []).map(l => ({ language: l })) : langs);
+              return legacy.length > 0 ? (
+                <div className="mt-2"><SpokenLanguagesView value={legacy} /></div>
+              ) : null;
+            })()}
             <Button size="sm" className="mt-4 w-full gap-1" onClick={() => invite(w.id)} disabled={!selected || !canAfford}>
               Contatta {!isPaid && <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span>}
             </Button>

@@ -536,6 +536,7 @@ export type Database = {
           service_area_lng: number | null
           service_area_radius_m: number | null
           short_bio: string | null
+          spoken_languages: Json
           street: string | null
           street_number: string | null
           terms_accepted: boolean | null
@@ -614,6 +615,7 @@ export type Database = {
           service_area_lng?: number | null
           service_area_radius_m?: number | null
           short_bio?: string | null
+          spoken_languages?: Json
           street?: string | null
           street_number?: string | null
           terms_accepted?: boolean | null
@@ -692,6 +694,7 @@ export type Database = {
           service_area_lng?: number | null
           service_area_radius_m?: number | null
           short_bio?: string | null
+          spoken_languages?: Json
           street?: string | null
           street_number?: string | null
           terms_accepted?: boolean | null

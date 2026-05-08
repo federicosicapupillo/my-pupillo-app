@@ -15,6 +15,7 @@ import { geocodeAddressWithRetry } from "@/lib/geocode";
 import { verifyVat } from "@/lib/vat.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { RestaurantRequirementsEditor, EMPTY_REQ, reqFromProfile, reqToProfileUpdate, type RestaurantRequirements } from "@/components/RestaurantRequirements";
+import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -38,6 +39,7 @@ function Onboarding() {
   });
   const [busy, setBusy] = useState(false);
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
+  const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
 
   useEffect(() => {
     if (profile) setForm((f) => ({
@@ -69,6 +71,7 @@ function Onboarding() {
       terms_accepted: profile.terms_accepted,
     }));
     if (profile) setRequirements(reqFromProfile(profile));
+    if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
   }, [profile]);
 
   const submit = async (e: React.FormEvent) => {
@@ -121,7 +124,8 @@ function Onboarding() {
       terms_accepted: true, profile_completed: true,
       age: form.age ? parseInt(form.age) : null,
       professional_profile: form.professional_profile,
-      languages: form.languages.split(",").map((s) => s.trim()).filter(Boolean),
+      languages: spokenLanguages.map(s => s.language),
+      spoken_languages: spokenLanguages,
       service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
       ...serviceArea,
     };
@@ -209,6 +213,11 @@ function Onboarding() {
           <>
             <div><Label>Età</Label><Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
             <div><Label>Profilo professionale</Label><Textarea rows={4} value={form.professional_profile} onChange={(e) => setForm({ ...form, professional_profile: e.target.value })} /></div>
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+              <Label className="font-semibold">Lingue parlate</Label>
+              <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
+              <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
+            </div>
             <div className="grid gap-4 md:grid-cols-[1fr_140px]">
               <div><Label>Area di interesse (indirizzo)</Label><Input placeholder="es. Via Roma 1, Milano" value={form.service_area_address} onChange={(e) => setForm({ ...form, service_area_address: e.target.value })} /></div>
               <div><Label>Raggio (m)</Label><Input type="number" min="100" step="100" value={form.service_area_radius_m} onChange={(e) => setForm({ ...form, service_area_radius_m: e.target.value })} /></div>

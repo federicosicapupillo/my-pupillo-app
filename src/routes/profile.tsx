@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { KeyRound, Trash2, FileText, Coins, Star, MapPin, ExternalLink } from "lucide-react";
 import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
+import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { ClipboardList } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
@@ -68,8 +69,11 @@ function Profile() {
         </>)}
         {role === "worker" && (<>
           <Row label="Età" value={profile?.age?.toString()} />
-          <Row label="Lingue" value={profile?.languages?.join(", ")} />
           <Row label="Profilo professionale" value={profile?.professional_profile} />
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Lingue parlate</div>
+            <SpokenLanguagesView value={normalizeSpokenLanguages((profile as any)?.spoken_languages)} />
+          </div>
         </>)}
       </div>
 
