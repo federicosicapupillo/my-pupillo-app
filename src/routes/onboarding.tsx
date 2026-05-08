@@ -16,6 +16,7 @@ import { verifyVat } from "@/lib/vat.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { RestaurantRequirementsEditor, EMPTY_REQ, reqFromProfile, reqToProfileUpdate, type RestaurantRequirements } from "@/components/RestaurantRequirements";
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
+import { VENUE_TYPES } from "@/lib/venue-types";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -28,7 +29,7 @@ function Onboarding() {
   const verifyVatFn = useServerFn(verifyVat);
   const [form, setForm] = useState({
     full_name: "", phone: "", age: "", professional_profile: "", languages: "",
-    business_name: "", vat_number: "", venue_type: "", address: "", price_range: "",
+    business_name: "", vat_number: "", venue_type: "", venue_type_other: "", address: "", price_range: "",
     service_area_address: "", service_area_radius_m: "500",
     city: "", province: "", postal_code: "", country: "Italia",
     access_restrictions: "", additional_directions: "", location_notes: "",
@@ -86,6 +87,7 @@ function Onboarding() {
       business_name: profile.business_name ?? "",
       vat_number: profile.vat_number ?? "",
       venue_type: profile.venue_type ?? "",
+      venue_type_other: (profile as any).venue_type_other ?? "",
       address: profile.address ?? "",
       price_range: profile.price_range ?? "",
       service_area_radius_m: String(profile.service_area_radius_m ?? 500),
@@ -122,6 +124,14 @@ function Onboarding() {
         toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
         return;
       }
+      if (!form.venue_type) {
+        toast.error("Seleziona la tipologia del locale.");
+        return;
+      }
+      if (form.venue_type === "Altro" && !form.venue_type_other.trim()) {
+        toast.error("Specifica la tipologia del locale.");
+        return;
+      }
     }
     setBusy(true);
     let serviceArea: { service_area_lat: number | null; service_area_lng: number | null } = { service_area_lat: null, service_area_lng: null };
@@ -142,7 +152,9 @@ function Onboarding() {
       full_name: form.full_name, phone: form.phone,
       terms_accepted: true, profile_completed: true,
       business_name: form.business_name, vat_number: vatDigits,
-      venue_type: form.venue_type, address: form.address, price_range: form.price_range,
+      venue_type: form.venue_type,
+      venue_type_other: form.venue_type === "Altro" ? form.venue_type_other.trim() : null,
+      address: form.address, price_range: form.price_range,
       city: form.city || null, province: form.province || null,
       postal_code: form.postal_code || null, country: form.country || null,
       latitude: restCoords.latitude, longitude: restCoords.longitude,
@@ -231,7 +243,27 @@ function Onboarding() {
                   </p>
                 )}
               </div>
-              <div><Label>Tipologia locale</Label><Input placeholder="Pizzeria, Ristorante…" value={form.venue_type} onChange={(e) => setForm({ ...form, venue_type: e.target.value })} /></div>
+              <div>
+                <Label>Tipologia locale *</Label>
+                <select
+                  required
+                  value={form.venue_type}
+                  onChange={(e) => setForm({ ...form, venue_type: e.target.value, venue_type_other: e.target.value === "Altro" ? form.venue_type_other : "" })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Seleziona la tipologia del locale</option>
+                  {VENUE_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+                {form.venue_type === "Altro" && (
+                  <Input
+                    className="mt-2"
+                    required
+                    placeholder="Specifica tipologia locale"
+                    value={form.venue_type_other}
+                    onChange={(e) => setForm({ ...form, venue_type_other: e.target.value })}
+                  />
+                )}
+              </div>
               <div><Label>Fascia di prezzo</Label><Input placeholder="€, €€, €€€" value={form.price_range} onChange={(e) => setForm({ ...form, price_range: e.target.value })} /></div>
             </div>
             <div><Label>Indirizzo</Label><Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>

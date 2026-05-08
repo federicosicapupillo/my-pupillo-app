@@ -16,6 +16,7 @@ import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
 } from "@/lib/announcement-requirements";
+import { venueTypeLabel } from "@/lib/venue-types";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -65,7 +66,7 @@ type WorkerProfile = {
 };
 type Restaurant = {
   id: string; full_name: string | null; business_name: string | null;
-  venue_type: string | null; address: string | null; city: string | null;
+ venue_type: string | null; venue_type_other?: string | null; address: string | null; city: string | null;
   neighborhood: string | null; price_range: string | null; phone: string | null;
   email: string | null; rating_avg: number | null; reviews_count: number | null;
   opening_hours: string | null; employees_count: number | null;
@@ -127,7 +128,7 @@ function AnnouncementDetail() {
     setAnn(a as Ann | null);
     if (!a) { setLoading(false); return; }
     const { data: r } = await supabase.from("profiles")
-      .select("id,full_name,business_name,venue_type,address,city,neighborhood,price_range,phone,email,rating_avg,reviews_count,opening_hours,employees_count")
+      .select("id,full_name,business_name,venue_type,venue_type_other,address,city,neighborhood,price_range,phone,email,rating_avg,reviews_count,opening_hours,employees_count")
       .eq("id", (a as Ann).restaurant_id).maybeSingle();
     setRestaurant(r as Restaurant | null);
     const { data: ax } = await supabase.from("applications")
@@ -308,7 +309,10 @@ function AnnouncementDetail() {
               </Link>
             </div>
             <div className="text-xs text-muted-foreground">
-              {[restaurant.venue_type, restaurant.price_range].filter(Boolean).join(" · ") || "—"}
+              {[
+                restaurant.venue_type ? `Tipologia locale: ${venueTypeLabel(restaurant.venue_type, restaurant.venue_type_other)}` : null,
+                restaurant.price_range,
+              ].filter(Boolean).join(" · ") || "—"}
             </div>
             {(restaurant.address || restaurant.city) && (
               <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{[restaurant.address, restaurant.neighborhood, restaurant.city].filter(Boolean).join(", ")}</div>

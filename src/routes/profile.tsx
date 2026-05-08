@@ -12,6 +12,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { KeyRound, Trash2, FileText, Coins, Star, MapPin, ExternalLink } from "lucide-react";
 import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
+import { venueTypeLabel } from "@/lib/venue-types";
 import { ClipboardList } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
@@ -63,7 +64,7 @@ function Profile() {
           <Row label="Partita IVA" value={profile?.vat_number} />
           <Row label="Stato verifica P.IVA" value={vatStatusLabel(profile?.vat_status)} />
           {profile?.vat_company_name && <Row label="Ragione sociale (VIES)" value={profile.vat_company_name} />}
-          <Row label="Tipo locale" value={profile?.venue_type} />
+          <Row label="Tipologia locale" value={venueTypeLabel(profile?.venue_type, (profile as any)?.venue_type_other)} />
           <Row label="Indirizzo" value={profile?.address} />
           <Row label="Fascia prezzo" value={profile?.price_range} />
         </>)}

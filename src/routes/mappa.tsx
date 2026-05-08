@@ -26,6 +26,7 @@ type Restaurant = {
   business_name: string | null;
   full_name: string | null;
   venue_type: string | null;
+  venue_type_other?: string | null;
   address: string | null;
   city: string | null;
   neighborhood: string | null;
@@ -128,7 +129,7 @@ function MapPage() {
       setLoading(true);
       const [{ data: r }, { data: w }, { data: a }] = await Promise.all([
         supabase.from("profiles")
-          .select("id, business_name, full_name, venue_type, address, city, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
+          .select("id, business_name, full_name, venue_type, venue_type_other, address, city, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
         supabase
