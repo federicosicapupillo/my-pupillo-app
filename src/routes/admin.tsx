@@ -7,6 +7,8 @@ import { Map as MapIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Pupillo" }] }),
@@ -20,6 +22,9 @@ function Admin() {
   const [byPlan, setByPlan] = useState<Record<string, number>>({});
   const [byCity, setByCity] = useState<Record<string, number>>({});
   const [byRole, setByRole] = useState<Record<string, number>>({});
+  const [vatList, setVatList] = useState<any[]>([]);
+  const [vatFilter, setVatFilter] = useState<"all" | "valid" | "invalid" | "pending" | "none">("all");
+  const [vatSearch, setVatSearch] = useState("");
 
   useEffect(() => {
     if (role !== "admin") return;
@@ -52,6 +57,15 @@ function Admin() {
         if (an.professional_profile) br[an.professional_profile] = (br[an.professional_profile]||0)+1;
       });
       setByBadge(bb); setByPlan(bp); setByCity(bc); setByRole(br);
+      const restaurantIds = (await supabase.from("user_roles").select("user_id").eq("role","restaurant")).data?.map((r:any)=>r.user_id) ?? [];
+      if (restaurantIds.length) {
+        const { data: rows } = await supabase
+          .from("profiles")
+          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at")
+          .in("id", restaurantIds)
+          .order("vat_verified_at", { ascending: false });
+        setVatList(rows ?? []);
+      }
     })();
   }, [role]);
 
@@ -87,8 +101,72 @@ function Admin() {
         <Breakdown title="Annunci per città" data={byCity} />
         <Breakdown title="Annunci per ruolo" data={byRole} />
       </div>
+
+      <div className="mt-8 rounded-2xl border bg-card p-5">
+        <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
+          <div className="font-medium">Verifica Partita IVA ristoratori</div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Input placeholder="Cerca P.IVA o ragione sociale" value={vatSearch} onChange={(e)=>setVatSearch(e.target.value)} className="h-9 w-64" />
+            <select value={vatFilter} onChange={(e)=>setVatFilter(e.target.value as any)} className="h-9 rounded-md border bg-background px-2 text-sm">
+              <option value="all">Tutti</option>
+              <option value="valid">Verificata</option>
+              <option value="invalid">Non verificata</option>
+              <option value="pending">In attesa</option>
+              <option value="none">Mancante</option>
+            </select>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-muted-foreground">
+              <tr><th className="py-2 pr-3">Ristoratore</th><th className="pr-3">Ragione sociale</th><th className="pr-3">P.IVA</th><th className="pr-3">Stato</th><th className="pr-3">Verificata il</th><th>Azioni</th></tr>
+            </thead>
+            <tbody>
+              {vatList
+                .filter((r) => {
+                  const status = r.vat_status ?? (r.vat_number ? "" : "none");
+                  if (vatFilter === "none") return !r.vat_number;
+                  if (vatFilter !== "all" && status !== vatFilter) return false;
+                  if (vatSearch.trim()) {
+                    const q = vatSearch.trim().toLowerCase();
+                    return (r.vat_number ?? "").toLowerCase().includes(q) || (r.business_name ?? "").toLowerCase().includes(q) || (r.vat_company_name ?? "").toLowerCase().includes(q);
+                  }
+                  return true;
+                })
+                .slice(0, 200)
+                .map((r:any) => (
+                <tr key={r.id} className="border-t">
+                  <td className="py-2 pr-3">{r.full_name ?? "—"}</td>
+                  <td className="pr-3">{r.business_name ?? r.vat_company_name ?? "—"}</td>
+                  <td className="pr-3 font-mono">{r.vat_number ?? "—"}</td>
+                  <td className="pr-3">{statusBadge(r.vat_status, r.vat_number)}</td>
+                  <td className="pr-3">{r.vat_verified_at ? new Date(r.vat_verified_at).toLocaleDateString("it-IT") : "—"}</td>
+                  <td>
+                    <Button size="sm" variant="outline" onClick={async () => {
+                      const { error } = await supabase.from("profiles").update({ vat_status: "valid", vat_verified_at: new Date().toISOString() }).eq("id", r.id);
+                      if (error) toast.error(error.message);
+                      else { toast.success("Segnata come verificata"); setVatList(l => l.map(x => x.id===r.id?{...x,vat_status:"valid",vat_verified_at:new Date().toISOString()}:x)); }
+                    }}>Segna come verificata</Button>
+                  </td>
+                </tr>
+              ))}
+              {vatList.length === 0 && (
+                <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </AppShell>
   );
+}
+
+function statusBadge(s: string | null | undefined, vat: string | null | undefined) {
+  if (!vat) return <span className="text-xs text-muted-foreground">Mancante</span>;
+  if (s === "valid") return <span className="text-xs text-emerald-600 font-medium">Verificata</span>;
+  if (s === "pending") return <span className="text-xs text-amber-600">In attesa</span>;
+  if (s === "invalid") return <span className="text-xs text-destructive">Non verificata</span>;
+  return <span className="text-xs text-muted-foreground">Non verificata</span>;
 }
 
 function Breakdown({ title, data }: { title: string; data: Record<string, number> }) {

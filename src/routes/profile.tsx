@@ -206,9 +206,9 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 }
 
 function vatStatusLabel(s?: string | null) {
-  if (!s) return null;
-  if (s === "valid") return "Verificata ✓";
-  if (s === "invalid") return "Non valida ✗";
-  if (s === "pending") return "In verifica…";
-  return "Errore di verifica";
+  if (!s) return "Non verificata";
+  if (s === "valid") return "Partita IVA verificata ✓";
+  if (s === "invalid") return "Partita IVA non verificata ✗";
+  if (s === "pending") return "Verifica in attesa…";
+  return "Verifica non disponibile";
 }

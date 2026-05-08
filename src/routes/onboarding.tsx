@@ -40,6 +40,40 @@ function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
   const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
+  const [vatChecking, setVatChecking] = useState(false);
+  const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(null);
+
+  const vatDigits = form.vat_number.replace(/\D/g, "");
+  const vatValid = vatDigits.length === 11;
+
+  const handleVerifyVat = async () => {
+    if (!vatValid) {
+      toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
+      return;
+    }
+    setVatChecking(true);
+    setVatResult(null);
+    try {
+      const r = await verifyVatFn({ data: { vat_number: vatDigits } });
+      setVatResult({ status: r.status, message: r.message ?? "", companyName: r.companyName });
+      if (r.status === "valid") {
+        toast.success(r.message || "Partita IVA verificata");
+        if (r.companyName && !form.business_name.trim()) {
+          setForm((f) => ({ ...f, business_name: r.companyName as string }));
+        }
+      } else if ((r as any).duplicate) {
+        toast.error(r.message);
+      } else if (r.status === "invalid") {
+        toast.error(r.message || "Partita IVA non valida");
+      } else {
+        toast.message(r.message || "Verifica non disponibile, formato valido.");
+      }
+    } catch (e: any) {
+      toast.error("Verifica non riuscita");
+    } finally {
+      setVatChecking(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) setForm((f) => ({
@@ -84,6 +118,10 @@ function Onboarding() {
         toast.error("Seleziona l'età del referente. Devi avere almeno 18 anni per creare un account ristoratore.");
         return;
       }
+      if (!vatValid) {
+        toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
+        return;
+      }
     }
     setBusy(true);
     let serviceArea: { service_area_lat: number | null; service_area_lng: number | null } = { service_area_lat: null, service_area_lng: null };
@@ -103,7 +141,7 @@ function Onboarding() {
     const update = role === "restaurant" ? {
       full_name: form.full_name, phone: form.phone,
       terms_accepted: true, profile_completed: true,
-      business_name: form.business_name, vat_number: form.vat_number,
+      business_name: form.business_name, vat_number: vatDigits,
       venue_type: form.venue_type, address: form.address, price_range: form.price_range,
       city: form.city || null, province: form.province || null,
       postal_code: form.postal_code || null, country: form.country || null,
@@ -130,16 +168,20 @@ function Onboarding() {
       ...serviceArea,
     };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
-    if (error) { toast.error(error.message); return; }
-    if (role === "restaurant" && form.vat_number.trim()) {
-      try {
-        const r = await verifyVatFn({ data: { vat_number: form.vat_number.trim() } });
-        if (r.status === "valid") toast.success(`P.IVA verificata${r.companyName ? `: ${r.companyName}` : ""}`);
-        else if (r.status === "invalid") toast.error("Partita IVA non valida");
-        else toast.warning("Verifica P.IVA non disponibile, riproveremo più tardi");
-      } catch (e) {
-        toast.warning("Verifica P.IVA non riuscita");
+    if (error) {
+      setBusy(false);
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("profiles_vat_number_unique") || msg.includes("duplicate key")) {
+        toast.error("Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.");
+      } else {
+        toast.error(error.message);
       }
+      return;
+    }
+    if (role === "restaurant" && vatValid && (vatResult?.status !== "valid")) {
+      try {
+        await verifyVatFn({ data: { vat_number: vatDigits } });
+      } catch {}
     }
     setBusy(false);
     toast.success("Profilo completato!");
@@ -159,7 +201,36 @@ function Onboarding() {
           <>
             <div className="grid gap-4 md:grid-cols-2">
               <div><Label>Nome locale</Label><Input required value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} /></div>
-              <div><Label>Partita IVA</Label><Input required value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value })} /></div>
+              <div className="md:col-span-1">
+                <Label>Partita IVA *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    required
+                    inputMode="numeric"
+                    pattern="\d{11}"
+                    maxLength={11}
+                    placeholder="Inserisci la Partita IVA"
+                    value={form.vat_number}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "").slice(0, 11);
+                      setForm({ ...form, vat_number: v });
+                      setVatResult(null);
+                    }}
+                  />
+                  <Button type="button" variant="outline" disabled={!vatValid || vatChecking} onClick={handleVerifyVat}>
+                    {vatChecking ? "Verifico…" : "Verifica"}
+                  </Button>
+                </div>
+                {!vatValid && form.vat_number.length > 0 && (
+                  <p className="text-xs text-destructive mt-1">La Partita IVA deve contenere 11 cifre numeriche.</p>
+                )}
+                {vatResult && (
+                  <p className={`text-xs mt-1 ${vatResult.status === "valid" ? "text-emerald-600" : vatResult.status === "invalid" ? "text-destructive" : "text-muted-foreground"}`}>
+                    {vatResult.message}
+                    {vatResult.companyName ? ` (${vatResult.companyName})` : ""}
+                  </p>
+                )}
+              </div>
               <div><Label>Tipologia locale</Label><Input placeholder="Pizzeria, Ristorante…" value={form.venue_type} onChange={(e) => setForm({ ...form, venue_type: e.target.value })} /></div>
               <div><Label>Fascia di prezzo</Label><Input placeholder="€, €€, €€€" value={form.price_range} onChange={(e) => setForm({ ...form, price_range: e.target.value })} /></div>
             </div>
