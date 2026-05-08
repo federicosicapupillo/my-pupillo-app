@@ -585,7 +585,17 @@ function NewRestaurantJobRequest() {
                 );
               })()}
             </Field>
-            <Field label="Email referente"><Input type="email" value={f.contact_person_email} onChange={e => setField("contact_person_email", e.target.value)} /></Field>
+            <Field label="Email referente">
+              <Input
+                type="email"
+                placeholder="esempio@email.com"
+                value={f.contact_person_email}
+                onChange={e => setField("contact_person_email", e.target.value)}
+              />
+              {f.contact_person_email && !isValidEmail(f.contact_person_email) && (
+                <p className="text-xs text-destructive mt-1">Inserisci un indirizzo email valido.</p>
+              )}
+            </Field>
             <Field label="Note per il lavoratore"><Textarea rows={2} value={f.worker_notes} onChange={e => setField("worker_notes", e.target.value)} /></Field>
           </div>
           <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />
