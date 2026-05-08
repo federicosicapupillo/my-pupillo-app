@@ -27,9 +27,8 @@ function Index() {
           >
             <img src={pupilloLogo} alt="Logo Pupillo" className="h-10 w-auto object-contain md:h-12" />
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <Link to="/auth"><Button variant="ghost">Accedi</Button></Link>
-            <Link to="/auth"><Button>Inizia ora</Button></Link>
           </div>
         </div>
       </header>
