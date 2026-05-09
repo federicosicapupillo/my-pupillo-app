@@ -5,6 +5,7 @@ import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Se
 import { PupilloMenu, PupilloClose, PupilloAvatar } from "@/components/PupilloIcons";
 import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import pupilloLogo from "@/assets/pupillo-logo.png";
@@ -209,6 +210,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             )}
             {user && <NotificationBell />}
+            <ThemeToggle />
             {user && (
               <Link
                 to="/profile"
