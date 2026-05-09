@@ -34,6 +34,7 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 function WorkersPage() {
   const { user, role, profile } = useAuth();
+  const nav = useNavigate();
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -61,21 +62,31 @@ function WorkersPage() {
 
   const invite = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
+    // If a conversation already exists for this restaurant + worker + announcement, just open it.
+    const { data: existing } = await supabase
+      .from("applications")
+      .select("id")
+      .eq("announcement_id", selected)
+      .eq("worker_id", workerId)
+      .eq("restaurant_id", user.id)
+      .maybeSingle();
+    if (existing?.id) {
+      nav({ to: "/messages/$id", params: { id: existing.id } });
+      return;
+    }
     const { consumeCredits } = await import("@/lib/credits");
     const { CREDIT_COSTS } = await import("@/lib/pricing");
     const ok = await consumeCredits(CREDIT_COSTS.assignWorker, "assign_worker", selected);
     if (!ok) return;
-    const { error } = await supabase.from("applications").insert({
-      announcement_id: selected,
-      worker_id: workerId,
-      restaurant_id: user.id,
-      status: "pending",
-    });
-    if (error) toast.error(error.message);
-    else {
-      await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: "/jobs" });
-      toast.success("Lavoratore contattato!");
-    }
+    const { data: created, error } = await supabase
+      .from("applications")
+      .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
+      .select("id")
+      .single();
+    if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
+    await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: `/messages/${created.id}` });
+    toast.success("Lavoratore contattato! Apro la chat…");
+    nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
   const filtered = workers.filter(w => {
