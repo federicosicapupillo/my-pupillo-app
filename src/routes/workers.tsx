@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search, List, Map as MapIcon } from "lucide-react";
+import { Search, List, Map as MapIcon, RotateCcw } from "lucide-react";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
 import { Coins, AlertCircle, MessageSquare } from "lucide-react";
@@ -20,7 +20,53 @@ export const Route = createFileRoute("/workers")({
   component: () => <RequireAuth><WorkersPage /></RequireAuth>,
 });
 
-type W = { id: string; full_name: string | null; age: number | null; languages: string[] | null; spoken_languages: any; professional_profile: string | null; service_area_lat: number | null; service_area_lng: number | null; service_area_radius_m: number | null };
+type W = {
+  id: string;
+  full_name: string | null;
+  age: number | null;
+  languages: string[] | null;
+  spoken_languages: any;
+  professional_profile: string | null;
+  short_bio: string | null;
+  primary_role: string | null;
+  secondary_roles: string[] | null;
+  city: string | null;
+  neighborhood: string | null;
+  badge: string | null;
+  service_area_lat: number | null;
+  service_area_lng: number | null;
+  service_area_radius_m: number | null;
+};
+
+type SearchType = "all" | "first_name" | "last_name" | "profile" | "role" | "skill" | "language" | "city" | "zone" | "badge" | "custom";
+
+const SEARCH_TYPE_LABEL: Record<SearchType, string> = {
+  all: "Tutto",
+  first_name: "Nome",
+  last_name: "Cognome",
+  profile: "Profilo",
+  role: "Ruolo",
+  skill: "Competenza",
+  language: "Lingua parlata",
+  city: "Città",
+  zone: "Zona",
+  badge: "Badge",
+  custom: "Personalizzato",
+};
+
+const SEARCH_PLACEHOLDER: Record<SearchType, string> = {
+  all: "Cerca nome, profilo o parola chiave",
+  first_name: "Scrivi nome lavoratore",
+  last_name: "Scrivi cognome lavoratore",
+  profile: "Cerca nel profilo lavoratore",
+  role: "Es. cameriere, bartender, chef",
+  skill: "Es. banqueting, cocktail, fine dining",
+  language: "Es. inglese, francese, spagnolo",
+  city: "Es. Milano, Roma",
+  zone: "Es. Navigli, Trastevere",
+  badge: "Basic, Pro o Elite",
+  custom: "Scrivi nome, ruolo, città o parola chiave",
+};
 type Ann = { id: string; service_date: string; location_address: string; location_lat: number | null; location_lng: number | null };
 
 function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -38,6 +84,8 @@ function WorkersPage() {
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
+  const [searchType, setSearchType] = useState<SearchType>("all");
+  const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [lang, setLang] = useState("");
   const [view, setView] = useState<"list" | "map">("list");
@@ -47,7 +95,7 @@ function WorkersPage() {
       const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "worker");
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length) {
-        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, spoken_languages, professional_profile, service_area_lat, service_area_lng, service_area_radius_m").in("id", ids);
+        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, badge, service_area_lat, service_area_lng, service_area_radius_m").in("id", ids);
         setWorkers((data as W[]) ?? []);
       }
       if (user) {
@@ -89,9 +137,41 @@ function WorkersPage() {
     nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
+  const matchesSearch = (w: W, term: string, type: SearchType): boolean => {
+    if (!term) return true;
+    const t = term.toLowerCase().trim();
+    const fullName = (w.full_name ?? "").toLowerCase();
+    const [first = "", ...rest] = fullName.split(" ");
+    const last = rest.join(" ");
+    const profileText = `${w.professional_profile ?? ""} ${w.short_bio ?? ""}`.toLowerCase();
+    const roles = [w.primary_role ?? "", ...(w.secondary_roles ?? [])].join(" ").toLowerCase();
+    const skills = profileText; // skills not stored as separate field; search inside profile/bio
+    const langsAll = [
+      ...normalizeSpokenLanguages(w.spoken_languages).map((s) => s.language),
+      ...(w.languages ?? []),
+    ].join(" ").toLowerCase();
+    const city = (w.city ?? "").toLowerCase();
+    const zone = (w.neighborhood ?? "").toLowerCase();
+    const badge = (w.badge ?? "").toLowerCase();
+    const allText = [fullName, profileText, roles, langsAll, city, zone, badge].join(" ");
+    switch (type) {
+      case "first_name": return first.includes(t);
+      case "last_name": return last.includes(t);
+      case "profile": return profileText.includes(t);
+      case "role": return roles.includes(t);
+      case "skill": return skills.includes(t);
+      case "language": return langsAll.includes(t);
+      case "city": return city.includes(t);
+      case "zone": return zone.includes(t);
+      case "badge": return badge.includes(t);
+      case "all":
+      case "custom":
+      default: return allText.includes(t);
+    }
+  };
+
   const filtered = workers.filter(w => {
-    const text = `${w.full_name ?? ""} ${w.professional_profile ?? ""}`.toLowerCase();
-    if (q && !text.includes(q.toLowerCase())) return false;
+    if (!matchesSearch(w, q, searchType)) return false;
     if (lang) {
       const spoken = normalizeSpokenLanguages(w.spoken_languages).map(s => s.language.toLowerCase());
       const legacy = (w.languages ?? []).map(s => s.toLowerCase());
@@ -100,6 +180,9 @@ function WorkersPage() {
     }
     return true;
   });
+  const runSearch = () => setQ(qInput);
+  const resetFilters = () => { setSearchType("all"); setQInput(""); setQ(""); setLang(""); };
+
 
   const selectedAnn = anns.find((a) => a.id === selected);
   const inRange = (w: W) => {
@@ -143,22 +226,32 @@ function WorkersPage() {
             </SelectContent>
           </Select>
         </div>
-        <div>
-          <label className="text-sm font-medium">Cerca per nome/profilo</label>
-          <Select value={q || "__all"} onValueChange={(v) => setQ(v === "__all" ? "" : v)}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder="Tutti" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all">Tutti i lavoratori</SelectItem>
-              {workers
-                .filter((w) => w.full_name)
-                .map((w) => (
-                  <SelectItem key={w.id} value={w.full_name as string}>
-                    {w.full_name}
-                    {w.professional_profile ? ` · ${w.professional_profile}` : ""}
-                  </SelectItem>
+        <div className="md:col-span-1">
+          <label className="text-sm font-medium">Cerca lavoratore</label>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+            <Select value={searchType} onValueChange={(v) => setSearchType(v as SearchType)}>
+              <SelectTrigger className="sm:w-[150px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(SEARCH_TYPE_LABEL) as SearchType[]).map((k) => (
+                  <SelectItem key={k} value={k}>{SEARCH_TYPE_LABEL[k]}</SelectItem>
                 ))}
-            </SelectContent>
-          </Select>
+              </SelectContent>
+            </Select>
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-8"
+                placeholder={SEARCH_PLACEHOLDER[searchType]}
+                value={qInput}
+                onChange={(e) => { setQInput(e.target.value); setQ(e.target.value); }}
+                onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
+              />
+            </div>
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Button size="sm" onClick={runSearch} className="gap-1"><Search className="h-3.5 w-3.5" />Cerca</Button>
+            <Button size="sm" variant="outline" onClick={resetFilters} className="gap-1"><RotateCcw className="h-3.5 w-3.5" />Reset filtri</Button>
+          </div>
         </div>
         <div>
           <label className="text-sm font-medium">Lingua</label>
@@ -244,7 +337,7 @@ function WorkersPage() {
           </div>
           );
         })}
-        {sorted.length === 0 && <p className="text-muted-foreground">Nessun lavoratore corrisponde ai filtri.</p>}
+        {sorted.length === 0 && <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a cambiare tipo di ricerca o parola chiave.</p>}
       </div>
       )}
     </AppShell>
