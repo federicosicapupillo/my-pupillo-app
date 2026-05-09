@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { createHash, randomInt } from "crypto";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -11,12 +12,25 @@ const RESEND_COOLDOWN_SECONDS = 60;
 const TEST_OTP_CODE = "123456";
 
 function isTestOtpEnabled(): boolean {
-  // NEVER enable on the published app. In Lovable preview/dev the server runtime
-  // can still expose NODE_ENV="production", so use the explicit test flag plus
-  // sandbox/dev signals instead of NODE_ENV alone.
-  const enabled = process.env.ENABLE_TEST_OTP === "true" || process.env.VITE_ENABLE_TEST_OTP === "true";
-  const isSafeRuntime = process.env.NODE_ENV !== "production" || process.env.LOVABLE_SANDBOX === "true" || process.env.LOVABLE === "true";
-  return enabled && isSafeRuntime;
+  const readFlag = (value: unknown) => String(value ?? "").replace(/^['\"]|['\"]$/g, "").trim().toLowerCase() === "true";
+  const enabled =
+    readFlag(process.env.ENABLE_TEST_OTP) ||
+    readFlag(process.env.VITE_ENABLE_TEST_OTP) ||
+    readFlag(import.meta.env.VITE_ENABLE_TEST_OTP);
+
+  if (!enabled) return false;
+
+  // NODE_ENV can be "production" in preview builds too. Allow only local/preview
+  // hosts and block the published app even if a test flag is accidentally set.
+  const host = getRequest()?.headers.get("host") ?? "";
+  const isPublishedHost = host === "my-pupillo-app.lovable.app" || (host.endsWith(".lovable.app") && !host.includes("preview"));
+  const isPreviewOrLocalHost =
+    host.includes("preview") ||
+    host.endsWith(".lovableproject.com") ||
+    host.startsWith("localhost") ||
+    host.startsWith("127.0.0.1");
+
+  return !isPublishedHost && (process.env.NODE_ENV !== "production" || isPreviewOrLocalHost || process.env.LOVABLE_SANDBOX === "true");
 }
 
 function hashOtp(code: string, userId: string): string {
@@ -147,7 +161,7 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
       return { ok: false, error: "Questo numero risulta già registrato. Accedi con il tuo account oppure usa un altro numero." };
     }
 
-    const code = genOtp();
+    const code = isTestOtpEnabled() ? TEST_OTP_CODE : genOtp();
     const codeHash = hashOtp(code, userId);
     const expires = new Date(Date.now() + OTP_TTL_MINUTES * 60_000).toISOString();
 
