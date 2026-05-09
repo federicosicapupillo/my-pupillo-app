@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Search, List, Map as MapIcon } from "lucide-react";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
-import { Coins, AlertCircle } from "lucide-react";
+import { Coins, AlertCircle, MessageSquare } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
 
