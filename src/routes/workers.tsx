@@ -145,10 +145,20 @@ function WorkersPage() {
         </div>
         <div>
           <label className="text-sm font-medium">Cerca per nome/profilo</label>
-          <div className="relative mt-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-8" placeholder="es. cameriere" value={q} onChange={e => setQ(e.target.value)} />
-          </div>
+          <Select value={q || "__all"} onValueChange={(v) => setQ(v === "__all" ? "" : v)}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Tutti" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">Tutti i lavoratori</SelectItem>
+              {workers
+                .filter((w) => w.full_name)
+                .map((w) => (
+                  <SelectItem key={w.id} value={w.full_name as string}>
+                    {w.full_name}
+                    {w.professional_profile ? ` · ${w.professional_profile}` : ""}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <label className="text-sm font-medium">Lingua</label>
