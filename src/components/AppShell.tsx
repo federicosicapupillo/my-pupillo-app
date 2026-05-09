@@ -130,7 +130,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <img
               src={pupilloLogo}
               alt="Logo Pupillo"
-              className="h-10 w-auto object-contain md:h-12"
+              className="h-10 w-auto object-contain md:h-12 drop-shadow-[0_0_12px_oklch(0.93_0.22_120/0.35)]"
             />
           </Link>
           <div className="hidden md:flex items-center gap-1">
