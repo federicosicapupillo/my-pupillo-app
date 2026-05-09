@@ -58,22 +58,19 @@ function AuthPage() {
     // If the user just submitted the signup form, skip auto-redirects
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
-    // If user came from the home CTA with intent to register a new account
-    // but a stale session exists with unverified phone, sign out so the
-    // signup form is shown instead of redirecting to OTP.
-    if (roleParam && profile && profile.phone_verified === false) {
-      supabase.auth.signOut();
-      return;
-    }
-    // If user just signed up but phone not verified, send them to OTP
+    // On /auth we NEVER auto-redirect to /verify-phone. If a stale session
+    // exists with phone not yet verified, sign it out so the user can
+    // freely fill the signup/login form without being yanked to OTP while
+    // typing the phone number. The PhoneVerificationGate still protects
+    // private pages for genuinely unverified accounts.
     if (profile && profile.phone_verified === false) {
-      navigate({ to: "/verify-phone" });
+      supabase.auth.signOut();
       return;
     }
     if (userRole === "admin") navigate({ to: "/admin" });
     else if (userRole === "restaurant") navigate({ to: "/dashboard" });
     else if (userRole === "worker") navigate({ to: "/jobs" });
-  }, [user, userRole, profile, loading, navigate, roleParam]);
+  }, [user, userRole, profile, loading, navigate]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
