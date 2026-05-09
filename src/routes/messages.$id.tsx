@@ -507,24 +507,122 @@ function Thread() {
 
         <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
-          {msgs.map(m => (
-            <div key={m.id} className={`flex ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
-              <div className={`rounded-2xl px-4 py-2 max-w-[75%] text-sm ${m.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.body}</div>
-            </div>
-          ))}
+          {msgs.map(m => {
+            const isSystem = m.body.startsWith("⚙️ Sistema:");
+            if (isSystem) {
+              return (
+                <div key={m.id} className="flex justify-center">
+                  <div className="rounded-full px-3 py-1 text-xs bg-muted text-muted-foreground border">
+                    {m.body.replace(/^⚙️ /, "")}
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={m.id} className={`flex ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
+                <div className={`rounded-2xl px-4 py-2 max-w-[75%] text-sm ${m.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.body}</div>
+              </div>
+            );
+          })}
           <div ref={endRef} />
         </div>
-        <form onSubmit={send} className="mt-4 flex gap-2 items-end">
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={onComposerKeyDown}
-            placeholder="Scrivi un messaggio… (Invio per inviare, Shift+Invio per andare a capo)"
-            rows={1}
-            className="min-h-[44px] max-h-40 resize-none"
-          />
-          <Button type="submit" className="shrink-0 gap-2"><Send className="h-4 w-4" />Invia</Button>
-        </form>
+        <TemplatePicker
+          role={role === "restaurant" ? "restaurant" : "worker"}
+          category={tplCategory}
+          setCategory={setTplCategory}
+          selected={selectedTpl}
+          setSelected={setSelectedTpl}
+          onSend={sendTemplate}
+          sending={sending}
+          ann={ann}
+          otherName={other?.name ?? null}
+          disabled={isTerminal}
+        />
       </div>
+  );
+}
+
+function TemplatePicker(props: {
+  role: "restaurant" | "worker";
+  category: TemplateCategory;
+  setCategory: (c: TemplateCategory) => void;
+  selected: MsgTemplate | null;
+  setSelected: (t: MsgTemplate | null) => void;
+  onSend: () => void;
+  sending: boolean;
+  ann: Ann | null;
+  otherName: string | null;
+  disabled?: boolean;
+}) {
+  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, disabled } = props;
+  const available = TEMPLATES.filter(t => (t.role === role || t.role === "both"));
+  const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
+  const inCat = available.filter(t => t.category === category);
+
+  return (
+    <div className="mt-4 rounded-2xl border bg-card p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h3 className="font-semibold text-sm">Scegli un messaggio</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Per la sicurezza di tutti, in chat si possono inviare solo messaggi preimpostati. Non è possibile scrivere testo libero.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {categories.map(c => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => { setCategory(c); setSelected(null); }}
+            className={`text-xs rounded-full px-3 py-1 border transition ${category === c ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground hover:bg-secondary/80"}`}
+          >
+            {CATEGORY_LABELS[c]}
+          </button>
+        ))}
+      </div>
+      {inCat.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          Nessun messaggio preimpostato disponibile per questa fase.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {inCat.map(t => {
+            const isSelected = selected?.key === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setSelected(t)}
+                className={`text-left text-sm rounded-xl border px-3 py-2 transition ${isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary/40"}`}
+              >
+                {renderTemplate(t.text, ann, otherName)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {selected && (
+        <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
+          <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
+          {renderTemplate(selected.text, ann, otherName)}
+        </div>
+      )}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          onClick={onSend}
+          disabled={!selected || sending || disabled}
+          className="gap-2"
+        >
+          <Send className="h-4 w-4" />
+          {sending ? "Invio…" : "Invia messaggio"}
+        </Button>
+      </div>
+      {disabled && (
+        <p className="text-xs text-muted-foreground text-center">
+          Conversazione chiusa: non è possibile inviare nuovi messaggi.
+        </p>
+      )}
+    </div>
   );
 }
