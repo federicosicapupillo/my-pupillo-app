@@ -75,7 +75,6 @@ export function AdminRequiredReviewsSection() {
       toast.error(error.message);
       return;
     }
-    await (supabase as any).rpc("recompute_review_block", { _restaurant_id: r.restaurant_user_id });
     if (user) {
       await supabase.from("activity_logs").insert({
         user_id: user.id,
