@@ -768,6 +768,7 @@ function TemplatePicker(props: {
   const available = TEMPLATES.filter(t => (t.role === role || t.role === "both"));
   const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
   const inCat = available.filter(t => t.category === category);
+  const isClosureForRestaurant = role === "restaurant" && category === "post_shift";
 
   return (
     <div className="mt-4 rounded-2xl border bg-card p-4 space-y-3">
@@ -790,7 +791,14 @@ function TemplatePicker(props: {
           </button>
         ))}
       </div>
-      {inCat.length === 0 ? (
+      {isClosureForRestaurant ? (
+        <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm">
+          <div className="font-semibold mb-1">Chiusura turno</div>
+          <p className="text-muted-foreground text-xs">
+            Conferma la fine del servizio e lascia una recensione al lavoratore nel blocco qui sotto.
+          </p>
+        </div>
+      ) : inCat.length === 0 ? (
         <p className="text-sm text-muted-foreground py-4 text-center">
           Nessun messaggio preimpostato disponibile per questa fase.
         </p>
@@ -811,12 +819,13 @@ function TemplatePicker(props: {
           })}
         </div>
       )}
-      {selected && (
+      {selected && !isClosureForRestaurant && (
         <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
           <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
           {renderTemplate(selected.text, ann, otherName)}
         </div>
       )}
+      {!isClosureForRestaurant && (
       <div className="flex justify-end">
         <Button
           type="button"
@@ -828,6 +837,7 @@ function TemplatePicker(props: {
           {sending ? "Invio in corso…" : "Invia messaggio"}
         </Button>
       </div>
+      )}
       {disabled && (
         <p className="text-xs text-muted-foreground text-center">
           Conversazione chiusa: non è possibile inviare nuovi messaggi.
