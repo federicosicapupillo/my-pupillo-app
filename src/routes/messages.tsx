@@ -52,6 +52,7 @@ function Inbox() {
   const { user, role } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "unread">("all");
 
   const load = async () => {
     if (!user) return;
@@ -127,18 +128,41 @@ function Inbox() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, role]);
 
+  const totalUnread = threads.reduce((n, t) => n + (t.unread > 0 ? 1 : 0), 0);
+  const visible = filter === "unread" ? threads.filter((t) => t.unread > 0) : threads;
+
   return (
     <AppShell>
       <PageHeader title="Messaggi" subtitle="Le tue conversazioni" />
+      <div className="mb-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setFilter("all")}
+          className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
+        >
+          Tutte ({threads.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilter("unread")}
+          className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "unread" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
+        >
+          Non lette ({totalUnread})
+        </button>
+      </div>
       {loading ? (
         <p className="text-muted-foreground">Caricamento…</p>
       ) : threads.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
           Nessun messaggio ancora. Le conversazioni appariranno qui quando nascerà un contatto tra ristoratore e lavoratore.
         </div>
+      ) : visible.length === 0 ? (
+        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
+          Nessuna conversazione con messaggi non letti.
+        </div>
       ) : (
         <div className="space-y-2 max-w-2xl">
-          {threads.map((t) => (
+          {visible.map((t) => (
             <Link
               key={t.id}
               to="/messages/$id"
