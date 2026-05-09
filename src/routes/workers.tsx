@@ -125,17 +125,54 @@ function WorkersPage() {
   const [subDraft, setSubDraft] = useState<string>("");
   const [searching, setSearching] = useState(false);
   const [lang, setLang] = useState("");
+  const [langDraft, setLangDraft] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
+
+  const runSearch = async (overrides?: { category?: Category; subcategory?: string; text?: string; language?: string }) => {
+    const nextCategory = overrides?.category ?? catDraft;
+    const nextSubcategory = overrides?.subcategory ?? subDraft;
+    const nextText = overrides?.text ?? qInput;
+    const nextLanguage = overrides?.language ?? langDraft;
+    setSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m")
+        .eq("account_status", "active")
+        .not("primary_role", "is", null)
+        .order("last_active_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      const results = ((data as W[]) ?? []).filter((worker) => {
+        if (!matchesSubcategory(worker, nextCategory, nextSubcategory)) return false;
+        if (!matchesText(worker, nextText, nextCategory, nextSubcategory)) return false;
+        if (nextLanguage) {
+          const spoken = normalizeSpokenLanguages(worker.spoken_languages).map((item) => item.language.toLowerCase());
+          const legacy = (worker.languages ?? []).map((item) => item.toLowerCase());
+          if (![...spoken, ...legacy].some((item) => item.includes(nextLanguage.toLowerCase()))) return false;
+        }
+        return true;
+      });
+      setWorkers((results as W[]) ?? []);
+      setCategory(nextCategory);
+      setSubcategory(nextSubcategory);
+      setQ(nextText);
+      setLang(nextLanguage);
+      setHasSearched(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Errore durante la ricerca lavoratori");
+      setWorkers([]);
+      setHasSearched(true);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
-      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "worker");
-      const ids = (roles ?? []).map((r) => r.user_id);
-      if (ids.length) {
-        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m").in("id", ids);
-        setWorkers((data as W[]) ?? []);
-      }
       if (user) {
+        await runSearch({ category: "all", subcategory: "", text: "", language: "" });
         const { data } = await supabase.from("announcements").select("id, service_date, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
         setAnns((data as Ann[]) ?? []);
         if (data?.[0]) setSelected(data[0].id);
@@ -200,11 +237,26 @@ function WorkersPage() {
     if (!sub) return true;
     const f = fieldsOf(w);
     const s = sub.toLowerCase();
+    const roleAliases: Record<string, string[]> = {
+      cameriere: ["cameriere", "camerieri", "cameriera", "cameriere di sala", "commis di sala", "responsabile di sala"],
+      bartender: ["bartender", "barman", "barlady", "cocktail"],
+      barista: ["barista", "caffetteria", "banconista"],
+      chef: ["chef", "cuoco", "cucina"],
+      "aiuto cucina": ["aiuto cucina", "commis di cucina", "cucina", "preparazione linea"],
+      runner: ["runner", "sala"],
+      lavapiatti: ["lavapiatti", "lavaggio"],
+    };
+    const skillAliases: Record<string, string[]> = {
+      "preparazione cocktail": ["cocktail", "bartender", "barman"],
+      caffetteria: ["caffetteria", "barista", "banconista"],
+      "servizio al tavolo": ["servizio al tavolo", "cameriere", "sala"],
+      "preparazione linea": ["preparazione linea", "aiuto cucina", "commis di cucina"],
+    };
     switch (cat) {
       case "all": return true; // sub controls sort, not filter
       case "name_profile": return true; // sub determines which field free-text targets
-      case "role": return f.roles.includes(s) || s === "altro ruolo";
-      case "skill": return s === "altro" ? true : (f.title + " " + f.description).includes(s);
+      case "role": return s === "altro ruolo" || (roleAliases[s] ?? [s]).some((alias) => f.roles.includes(alias));
+      case "skill": return s === "altro" || (skillAliases[s] ?? [s]).some((alias) => (f.title + " " + f.description + " " + f.roles).includes(alias));
       case "language": return s === "altro" ? true : f.langs.includes(s);
       case "location":
         if (s === "vicino a me" || s.startsWith("entro")) return true; // handled by inRange
@@ -268,36 +320,19 @@ function WorkersPage() {
     return allText.includes(t); // all + custom
   };
 
-  const filtered = workers.filter(w => {
-    if (!matchesSubcategory(w, category, subcategory)) return false;
-    if (!matchesText(w, q, category, subcategory)) return false;
-    if (lang) {
-      const spoken = normalizeSpokenLanguages(w.spoken_languages).map(s => s.language.toLowerCase());
-      const legacy = (w.languages ?? []).map(s => s.toLowerCase());
-      const all = [...spoken, ...legacy];
-      if (!all.some(l => l.includes(lang.toLowerCase()))) return false;
-    }
-    return true;
-  });
-  const runSearch = () => {
-    setSearching(true);
-    setCategory(catDraft);
-    setSubcategory(subDraft);
-    setQ(qInput);
-    // Brief feedback so the loading state is visible to the user.
-    setTimeout(() => setSearching(false), 250);
-  };
+  const filtered = workers;
   const resetFilters = () => {
     setCatDraft("all"); setSubDraft("");
     setCategory("all"); setSubcategory("");
     setQInput(""); setQ("");
-    setLang("");
+    setLang(""); setLangDraft(""); setHasSearched(false);
+    void runSearch({ category: "all", subcategory: "", text: "", language: "" });
   };
   const onChangeCategory = (c: Category) => { setCatDraft(c); setSubDraft(""); };
-  const removeCategoryChip = () => { setCatDraft("all"); setSubDraft(""); setCategory("all"); setSubcategory(""); };
-  const removeSubChip = () => { setSubDraft(""); setSubcategory(""); };
-  const removeQChip = () => { setQInput(""); setQ(""); };
-  const removeLangChip = () => setLang("");
+  const removeCategoryChip = () => { setCatDraft("all"); setSubDraft(""); void runSearch({ category: "all", subcategory: "" }); };
+  const removeSubChip = () => { setSubDraft(""); void runSearch({ subcategory: "" }); };
+  const removeQChip = () => { setQInput(""); void runSearch({ text: "" }); };
+  const removeLangChip = () => { setLangDraft(""); void runSearch({ language: "" }); };
 
 
   const selectedAnn = anns.find((a) => a.id === selected);
@@ -366,7 +401,7 @@ function WorkersPage() {
         </div>
         <div>
           <label className="text-sm font-medium">Lingua (filtro rapido)</label>
-          <Select value={lang || "__all"} onValueChange={(v) => setLang(v === "__all" ? "" : v)}>
+          <Select value={langDraft || "__all"} onValueChange={(v) => setLangDraft(v === "__all" ? "" : v)}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Tutte" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__all">Tutte le lingue</SelectItem>
@@ -404,11 +439,11 @@ function WorkersPage() {
               placeholder={PLACEHOLDER_BY_CATEGORY[catDraft]}
               value={qInput}
               onChange={(e) => setQInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={runSearch} disabled={searching} className="gap-1">
+            <Button onClick={() => void runSearch()} disabled={searching} className="gap-1">
               <Search className="h-4 w-4" />{searching ? "Sto cercando…" : "Cerca"}
             </Button>
             <Button variant="outline" onClick={resetFilters} className="gap-1"><RotateCcw className="h-4 w-4" />Reset</Button>
@@ -516,7 +551,7 @@ function WorkersPage() {
           </div>
           );
         })}
-        {sorted.length === 0 && <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a cambiare categoria, sottocategoria o parola chiave.</p>}
+        {hasSearched && !searching && sorted.length === 0 && <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a cambiare categoria, sottocategoria o parola chiave.</p>}
       </div>
       )}
     </AppShell>
