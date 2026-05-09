@@ -161,7 +161,7 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
       return { ok: false, error: "Questo numero risulta già registrato. Accedi con il tuo account oppure usa un altro numero." };
     }
 
-    const code = genOtp();
+    const code = isTestOtpEnabled() ? TEST_OTP_CODE : genOtp();
     const codeHash = hashOtp(code, userId);
     const expires = new Date(Date.now() + OTP_TTL_MINUTES * 60_000).toISOString();
 
