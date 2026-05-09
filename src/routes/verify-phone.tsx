@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ function VerifyPhonePage() {
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
+  const userChangedPhoneRef = useRef(false);
 
 
   useEffect(() => {
@@ -46,7 +47,7 @@ function VerifyPhonePage() {
       }
       return;
     }
-    if (profile?.phone_full) {
+    if (profile?.phone_full && !userChangedPhoneRef.current) {
       const sp = splitPhone(profile.phone_full);
       setPhoneCode(sp.code);
       setPhoneNumber(sp.number);
