@@ -101,6 +101,7 @@ function Thread() {
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string } | null>(null);
+  const [otherId, setOtherId] = useState<string | null>(null);
   const [counterOpen, setCounterOpen] = useState(false);
   const [counterValue, setCounterValue] = useState("");
   const [events, setEvents] = useState<LogEvent[]>([]);
@@ -112,6 +113,7 @@ function Thread() {
       setApp(a as App | null);
       if (a) {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
+        setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
           supabase.from("profiles").select("full_name, business_name").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, tariff_amount, tariff_type").eq("id", a.announcement_id).maybeSingle(),
@@ -229,7 +231,18 @@ function Thread() {
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div>
-            <div className="font-semibold">{other?.name ?? "—"}</div>
+            {otherId ? (
+              <Link
+                to="/messages"
+                search={{ with: otherId }}
+                className="font-semibold text-primary hover:underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                title="Vedi tutte le conversazioni con questa persona"
+              >
+                {other?.name ?? "—"}
+              </Link>
+            ) : (
+              <div className="font-semibold">{other?.name ?? "—"}</div>
+            )}
             {currentTariff != null && (
               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                 <Euro className="h-3 w-3" />

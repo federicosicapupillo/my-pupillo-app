@@ -6,9 +6,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
+  validateSearch: zodValidator(
+    z.object({ with: fallback(z.string(), "").default("") }),
+  ),
   component: () => <RequireAuth><Inbox /></RequireAuth>,
 });
 
@@ -50,6 +55,7 @@ function formatWhen(iso: string | null) {
 
 function Inbox() {
   const { user, role } = useAuth();
+  const { with: withUser } = Route.useSearch();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -137,12 +143,25 @@ function Inbox() {
   const visible = threads.filter((t) => {
     if (filter === "unread" && t.unread === 0) return false;
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (withUser && t.other.id !== withUser) return false;
     return true;
   });
+  const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
 
   return (
     <AppShell>
       <PageHeader title="Messaggi" subtitle="Le tue conversazioni" />
+      {withUser && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
+          <span>
+            Conversazioni con <span className="font-semibold">{focusedName ?? "questo utente"}</span>
+            {visible.length > 0 && <span className="ml-1 text-muted-foreground">({visible.length})</span>}
+          </span>
+          <Link to="/messages" search={{ with: "" }} className="text-xs text-primary hover:underline">
+            Mostra tutte
+          </Link>
+        </div>
+      )}
       <div className="mb-3 flex items-center gap-2 flex-wrap">
         <button
           type="button"
@@ -200,7 +219,7 @@ function Inbox() {
               key={t.id}
               to="/messages/$id"
               params={{ id: t.id }}
-              className="flex items-center gap-3 rounded-2xl border bg-card p-4 hover:bg-accent transition"
+              className="group flex items-center gap-3 rounded-2xl border bg-card p-4 hover:bg-accent transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <div className="relative h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <MessageSquare className="h-4 w-4 text-primary" />
@@ -212,7 +231,9 @@ function Inbox() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between gap-2">
-                  <div className={`truncate ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>{t.other.name}</div>
+                  <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                    {t.other.name}
+                  </div>
                   <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
                 </div>
                 <div className="flex items-center justify-between gap-2 mt-0.5">
