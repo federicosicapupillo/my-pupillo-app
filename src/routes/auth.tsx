@@ -58,13 +58,11 @@ function AuthPage() {
     // If the user just submitted the signup form, skip auto-redirects
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
-    // On /auth we NEVER auto-redirect to /verify-phone. If a stale session
-    // exists with phone not yet verified, sign it out so the user can
-    // freely fill the signup/login form without being yanked to OTP while
-    // typing the phone number. The PhoneVerificationGate still protects
-    // private pages for genuinely unverified accounts.
+    // If phone not yet verified, send to OTP page (do NOT silently sign out —
+    // that broke the login button: user clicked Accedi and got logged out
+    // with no message).
     if (profile && profile.phone_verified === false) {
-      supabase.auth.signOut();
+      navigate({ to: "/verify-phone" });
       return;
     }
     if (userRole === "admin") navigate({ to: "/admin" });
@@ -161,11 +159,32 @@ function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim()) {
+      toast.error("Inserisci la tua email.");
+      return;
+    }
+    if (!password) {
+      toast.error("Inserisci la password.");
+      return;
+    }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success("Bentornato!");
+    if (error) {
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("invalid login") || msg.includes("invalid credentials")) {
+        toast.error("Email o password non corretti.");
+      } else if (msg.includes("not found") || msg.includes("user not")) {
+        toast.error("Account non trovato.");
+      } else if (msg.includes("email not confirmed")) {
+        toast.error("Email non confermata. Controlla la tua casella di posta.");
+      } else {
+        toast.error("Errore durante l'accesso. Riprova.");
+      }
+      return;
+    }
+    toast.success("Bentornato!");
+    // Redirect handled by useEffect once profile/role are loaded.
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
