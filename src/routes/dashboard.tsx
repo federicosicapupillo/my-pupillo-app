@@ -429,25 +429,35 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
             <span className="text-[11px] text-muted-foreground">Dopo la chiusura potrai lasciare la recensione al lavoratore.</span>
           </>
         ) : status === "completed" && !item.has_review ? (
-          <Link to="/messages/$id" params={{ id: item.app_id ?? "" }} disabled={!item.app_id} as={item.app_id ? undefined : "span" as never}>
-            <Button size="sm" variant={isOverdue ? "destructive" : "default"} className="gap-1" disabled={!item.app_id}>
+          item.app_id ? (
+            <Link to="/messages/$id" params={{ id: item.app_id }}>
+              <Button size="sm" variant={isOverdue ? "destructive" : "default"} className="gap-1">
+                <Star className="h-4 w-4" /> {isOverdue ? "Recensione scaduta — agisci ora" : "Lascia recensione"}
+              </Button>
+            </Link>
+          ) : (
+            <Button size="sm" variant={isOverdue ? "destructive" : "default"} className="gap-1" disabled>
               <Star className="h-4 w-4" /> {isOverdue ? "Recensione scaduta — agisci ora" : "Lascia recensione"}
             </Button>
-          </Link>
+          )
         ) : status === "completed" && item.has_review ? (
+          item.app_id ? (
           <Link to="/messages/$id" params={{ id: item.app_id ?? "" }}>
-            <Button size="sm" variant="outline" className="gap-1" disabled={!item.app_id}>
+            <Button size="sm" variant="outline" className="gap-1">
               <Star className="h-4 w-4" /> Vedi recensione
             </Button>
           </Link>
+          ) : null
         ) : status === "cancelled" ? (
           <span className="text-xs text-muted-foreground">Turno annullato</span>
         ) : status === "no_show" ? (
+          item.app_id ? (
           <Link to="/messages/$id" params={{ id: item.app_id ?? "" }}>
-            <Button size="sm" variant="outline" className="gap-1" disabled={!item.app_id}>
+            <Button size="sm" variant="outline" className="gap-1">
               <AlertTriangle className="h-4 w-4" /> Gestisci segnalazione
             </Button>
           </Link>
+          ) : null
         ) : null}
         <Link to="/announcements/$id" params={{ id: item.ann_id }} className="ml-auto">
           <Button size="sm" variant="ghost" className="gap-1">Dettagli <ArrowRight className="h-3.5 w-3.5" /></Button>
