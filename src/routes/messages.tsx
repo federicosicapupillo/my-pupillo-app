@@ -122,7 +122,7 @@ function Inbox() {
           return prev.map((t) => (t.id === row.id ? { ...t, status: row.status } : t));
         });
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => { load(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => { load(); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
