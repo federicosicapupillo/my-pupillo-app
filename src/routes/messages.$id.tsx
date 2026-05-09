@@ -817,7 +817,7 @@ function TemplatePicker(props: {
   disabled?: boolean;
 }) {
   const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, disabled } = props;
-  const available = TEMPLATES.filter(t => (t.role === role || t.role === "both"));
+  const available = TEMPLATES.filter(t => (t.role === role || t.role === "both") && t.category !== "post_shift");
   const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
   const inCat = available.filter(t => t.category === category);
   const isClosureForRestaurant = role === "restaurant" && category === "post_shift";
