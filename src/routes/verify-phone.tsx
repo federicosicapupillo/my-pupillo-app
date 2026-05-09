@@ -34,11 +34,6 @@ function VerifyPhonePage() {
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
 
-  const homeHref = (() => {
-    if (!user) return "/";
-    if (role === "admin") return "/admin";
-    return "/dashboard";
-  })();
 
   useEffect(() => {
     if (loading) return;
