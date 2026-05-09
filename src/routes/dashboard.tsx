@@ -459,9 +459,15 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
           </Link>
           ) : null
         ) : null}
-        <Link to="/announcements/$id" params={{ id: item.ann_id }} className="ml-auto">
-          <Button size="sm" variant="ghost" className="gap-1">Dettagli <ArrowRight className="h-3.5 w-3.5" /></Button>
-        </Link>
+        {item.shift_id ? (
+          <Link to="/ristoratore/turni/$shiftId" params={{ shiftId: item.shift_id }} className="ml-auto">
+            <Button size="sm" variant="ghost" className="gap-1">Dettagli <ArrowRight className="h-3.5 w-3.5" /></Button>
+          </Link>
+        ) : (
+          <Link to="/announcements/$id" params={{ id: item.ann_id }} className="ml-auto">
+            <Button size="sm" variant="ghost" className="gap-1">Dettagli <ArrowRight className="h-3.5 w-3.5" /></Button>
+          </Link>
+        )}
       </div>
     </li>
   );
