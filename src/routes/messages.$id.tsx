@@ -98,7 +98,7 @@ const CATEGORY_LABELS: Record<TemplateCategory, string> = {
   shift_organization: "Organizzazione turno",
   dress_code_access: "Dress code e accesso",
   shift_changes: "Modifiche turno",
-  post_shift: "Post turno",
+  post_shift: "Chiusura turno",
   issue_report: "Problemi / segnalazioni",
 };
 
