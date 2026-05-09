@@ -150,6 +150,25 @@ function VerifyPhonePage() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm">
         <h1 className="text-2xl font-semibold">Conferma il tuo numero</h1>
+        {TEST_OTP_ENABLED && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mt-3 flex items-start gap-3 rounded-xl border border-[oklch(0.92_0.18_115)]/40 bg-[oklch(0.92_0.18_115)]/10 px-3 py-2.5 text-xs"
+          >
+            <span
+              aria-hidden
+              className="mt-0.5 inline-flex h-5 shrink-0 items-center rounded-md bg-[oklch(0.92_0.18_115)] px-1.5 text-[10px] font-bold uppercase tracking-wide text-black"
+            >
+              Test
+            </span>
+            <span className="text-foreground">
+              Modalità OTP di test attiva — usa il codice{" "}
+              <strong className="font-mono text-sm tracking-widest">123456</strong>{" "}
+              per completare la verifica senza WhatsApp.
+            </span>
+          </div>
+        )}
         {phase === "phone" ? (
           <>
             <p className="text-sm text-muted-foreground mt-2">
@@ -216,11 +235,6 @@ function VerifyPhonePage() {
                   </button>
                 </div>
               </div>
-              {TEST_OTP_ENABLED && (
-                <p className="text-[11px] text-muted-foreground/80 text-center pt-1">
-                  Modalità test attiva: usa il codice <strong>123456</strong> per completare la verifica.
-                </p>
-              )}
             </div>
           </>
         )}
