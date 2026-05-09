@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { useRequiredReviews } from "@/lib/required-reviews";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -40,12 +42,20 @@ function ShiftsPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
+  const [filter, setFilter] = useState<"all" | "upcoming" | "past" | "to-review">(
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "all"
+  );
   const [live, setLive] = useState(false);
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const { items: requiredReviews } = useRequiredReviews();
+  const reqByShift = useMemo(() => {
+    const m: Record<string, { status: string; due_date: string }> = {};
+    requiredReviews.forEach((r) => { if (r.shift_id) m[r.shift_id] = { status: r.status, due_date: r.due_date }; });
+    return m;
+  }, [requiredReviews]);
 
   const load = async () => {
     if (!user || !role) return;
@@ -120,8 +130,9 @@ function ShiftsPage() {
     const today = new Date().toISOString().slice(0, 10);
     if (filter === "upcoming") return shifts.filter(s => s.shift_date >= today);
     if (filter === "past") return shifts.filter(s => s.shift_date < today);
+    if (filter === "to-review") return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
     return shifts;
-  }, [shifts, filter]);
+  }, [shifts, filter, reqByShift]);
 
   const stats = useMemo(() => ({
     total: shifts.length,
@@ -144,12 +155,14 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["all", "upcoming", "past"] as const).map(f => (
+        {(["all", "upcoming", "past", "to-review"] as const).map(f => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
-            {f === "all" ? "Tutti" : f === "upcoming" ? "In arrivo" : "Passati"}
+            {f === "all" ? "Tutti" : f === "upcoming" ? "In arrivo" : f === "past" ? "Passati" : `Da recensire${requiredReviews.length ? ` (${requiredReviews.length})` : ""}`}
           </Button>
         ))}
       </div>
+
+      {role === "restaurant" && <RequiredReviewsBanner />}
 
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
         <div className="rounded-2xl border bg-card p-8 text-center">
