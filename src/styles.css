@@ -152,14 +152,25 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    /* Pupillo home-grade neon atmosphere applied globally so every page
-     * inherits the same dark/neon mood as the landing page. */
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Pupillo neon atmosphere — only in dark mode */
+  html:not(.light) body {
     background-image:
       radial-gradient(1200px 600px at 80% -10%, oklch(0.65 0.25 310 / 20%), transparent 60%),
       radial-gradient(800px 500px at -10% 30%, oklch(0.7 0.27 350 / 15%), transparent 60%),
       radial-gradient(900px 600px at 50% 110%, oklch(0.82 0.16 195 / 12%), transparent 60%);
     background-attachment: fixed;
-    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Light mode: soft Pupillo daylight gradient (subtle accents, high contrast) */
+  html.light body {
+    background-image:
+      radial-gradient(1000px 500px at 85% -10%, oklch(0.65 0.25 310 / 8%), transparent 60%),
+      radial-gradient(800px 500px at -10% 20%, oklch(0.82 0.16 195 / 8%), transparent 60%),
+      radial-gradient(900px 600px at 50% 110%, oklch(0.93 0.22 120 / 10%), transparent 60%);
+    background-attachment: fixed;
   }
 
   /* Subtle neon focus ring across all interactive elements */
@@ -173,47 +184,50 @@
  * Dark-neon compatibility layer
  * Remap legacy hardcoded Tailwind light-surface utilities to translucent
  * neon tints so existing pages stay readable without per-file edits.
+ * Scoped to dark mode only — light mode keeps the original Tailwind colors.
  * ---------------------------------------------------------------------- */
 @layer utilities {
   /* Pure white surfaces -> elevated dark card */
-  .bg-white { background-color: var(--card) !important; }
-  .text-black { color: var(--foreground) !important; }
+  html:not(.light) .bg-white { background-color: var(--card) !important; }
+  html:not(.light) .text-black { color: var(--foreground) !important; }
 
   /* Soft pastel surfaces -> translucent neon tint on dark */
-  .bg-yellow-50,  .bg-yellow-100  { background-color: oklch(0.93 0.22 120 / 10%) !important; }
-  .bg-green-50,   .bg-green-100,
-  .bg-emerald-50, .bg-emerald-100 { background-color: oklch(0.82 0.16 195 / 10%) !important; }
-  .bg-blue-50,    .bg-blue-100    { background-color: oklch(0.65 0.25 250 / 12%) !important; }
-  .bg-red-50,     .bg-red-100     { background-color: oklch(0.65 0.27 10 / 12%) !important; }
-  .bg-orange-50,  .bg-orange-100  { background-color: oklch(0.78 0.2 50 / 12%) !important; }
-  .bg-purple-50,  .bg-purple-100,
-  .bg-violet-50,  .bg-violet-100  { background-color: oklch(0.65 0.25 310 / 14%) !important; }
-  .bg-pink-50,    .bg-pink-100    { background-color: oklch(0.7 0.27 350 / 12%) !important; }
-  .bg-gray-50, .bg-gray-100, .bg-slate-50, .bg-slate-100,
-  .bg-zinc-50, .bg-zinc-100, .bg-neutral-50, .bg-neutral-100 {
+  html:not(.light) .bg-yellow-50,  html:not(.light) .bg-yellow-100  { background-color: oklch(0.93 0.22 120 / 10%) !important; }
+  html:not(.light) .bg-green-50,   html:not(.light) .bg-green-100,
+  html:not(.light) .bg-emerald-50, html:not(.light) .bg-emerald-100 { background-color: oklch(0.82 0.16 195 / 10%) !important; }
+  html:not(.light) .bg-blue-50,    html:not(.light) .bg-blue-100    { background-color: oklch(0.65 0.25 250 / 12%) !important; }
+  html:not(.light) .bg-red-50,     html:not(.light) .bg-red-100     { background-color: oklch(0.65 0.27 10 / 12%) !important; }
+  html:not(.light) .bg-orange-50,  html:not(.light) .bg-orange-100  { background-color: oklch(0.78 0.2 50 / 12%) !important; }
+  html:not(.light) .bg-purple-50,  html:not(.light) .bg-purple-100,
+  html:not(.light) .bg-violet-50,  html:not(.light) .bg-violet-100  { background-color: oklch(0.65 0.25 310 / 14%) !important; }
+  html:not(.light) .bg-pink-50,    html:not(.light) .bg-pink-100    { background-color: oklch(0.7 0.27 350 / 12%) !important; }
+  html:not(.light) .bg-gray-50, html:not(.light) .bg-gray-100,
+  html:not(.light) .bg-slate-50, html:not(.light) .bg-slate-100,
+  html:not(.light) .bg-zinc-50, html:not(.light) .bg-zinc-100,
+  html:not(.light) .bg-neutral-50, html:not(.light) .bg-neutral-100 {
     background-color: var(--muted) !important;
   }
 
   /* Dark text on light bg -> bright neon accent on dark */
-  .text-yellow-700, .text-yellow-800, .text-yellow-900   { color: oklch(0.93 0.22 120) !important; }
-  .text-green-700, .text-green-800, .text-green-900,
-  .text-emerald-600, .text-emerald-700, .text-emerald-800,
-  .text-emerald-900                                       { color: oklch(0.82 0.16 195) !important; }
-  .text-blue-700, .text-blue-800, .text-blue-900          { color: oklch(0.78 0.18 240) !important; }
-  .text-red-700, .text-red-800, .text-red-900             { color: oklch(0.75 0.22 15) !important; }
-  .text-orange-700, .text-orange-800, .text-orange-900    { color: oklch(0.82 0.2 55) !important; }
-  .text-purple-700, .text-purple-800, .text-purple-900,
-  .text-violet-700, .text-violet-800, .text-violet-900    { color: oklch(0.78 0.2 310) !important; }
+  html:not(.light) .text-yellow-700, html:not(.light) .text-yellow-800, html:not(.light) .text-yellow-900   { color: oklch(0.93 0.22 120) !important; }
+  html:not(.light) .text-green-700, html:not(.light) .text-green-800, html:not(.light) .text-green-900,
+  html:not(.light) .text-emerald-600, html:not(.light) .text-emerald-700, html:not(.light) .text-emerald-800,
+  html:not(.light) .text-emerald-900                                       { color: oklch(0.82 0.16 195) !important; }
+  html:not(.light) .text-blue-700, html:not(.light) .text-blue-800, html:not(.light) .text-blue-900          { color: oklch(0.78 0.18 240) !important; }
+  html:not(.light) .text-red-700, html:not(.light) .text-red-800, html:not(.light) .text-red-900             { color: oklch(0.75 0.22 15) !important; }
+  html:not(.light) .text-orange-700, html:not(.light) .text-orange-800, html:not(.light) .text-orange-900    { color: oklch(0.82 0.2 55) !important; }
+  html:not(.light) .text-purple-700, html:not(.light) .text-purple-800, html:not(.light) .text-purple-900,
+  html:not(.light) .text-violet-700, html:not(.light) .text-violet-800, html:not(.light) .text-violet-900    { color: oklch(0.78 0.2 310) !important; }
 
   /* Pastel borders -> neon translucent borders */
-  .border-yellow-200, .border-yellow-300                  { border-color: oklch(0.93 0.22 120 / 30%) !important; }
-  .border-green-200, .border-green-300,
-  .border-emerald-200, .border-emerald-300                { border-color: oklch(0.82 0.16 195 / 30%) !important; }
-  .border-blue-200, .border-blue-300                      { border-color: oklch(0.65 0.25 250 / 30%) !important; }
-  .border-red-200, .border-red-300                        { border-color: oklch(0.65 0.27 10 / 30%) !important; }
-  .border-orange-200, .border-orange-300                  { border-color: oklch(0.78 0.2 50 / 30%) !important; }
-  .border-purple-200, .border-purple-300,
-  .border-violet-200, .border-violet-300                  { border-color: oklch(0.65 0.25 310 / 30%) !important; }
+  html:not(.light) .border-yellow-200, html:not(.light) .border-yellow-300                  { border-color: oklch(0.93 0.22 120 / 30%) !important; }
+  html:not(.light) .border-green-200, html:not(.light) .border-green-300,
+  html:not(.light) .border-emerald-200, html:not(.light) .border-emerald-300                { border-color: oklch(0.82 0.16 195 / 30%) !important; }
+  html:not(.light) .border-blue-200, html:not(.light) .border-blue-300                      { border-color: oklch(0.65 0.25 250 / 30%) !important; }
+  html:not(.light) .border-red-200, html:not(.light) .border-red-300                        { border-color: oklch(0.65 0.27 10 / 30%) !important; }
+  html:not(.light) .border-orange-200, html:not(.light) .border-orange-300                  { border-color: oklch(0.78 0.2 50 / 30%) !important; }
+  html:not(.light) .border-purple-200, html:not(.light) .border-purple-300,
+  html:not(.light) .border-violet-200, html:not(.light) .border-violet-300                  { border-color: oklch(0.65 0.25 310 / 30%) !important; }
 }
 
 /* ----------------------------------------------------------------------
@@ -260,10 +274,16 @@
 }
 
 /* Top header polish: subtle glass + neon hairline */
-header.sticky {
+html:not(.light) header.sticky {
   backdrop-filter: blur(12px);
   background-color: oklch(0.13 0.02 280 / 75%) !important;
   border-bottom-color: oklch(0.93 0.22 120 / 14%) !important;
+}
+
+html.light header.sticky {
+  backdrop-filter: blur(12px);
+  background-color: oklch(1 0 0 / 80%) !important;
+  border-bottom-color: oklch(0.65 0.25 310 / 22%) !important;
 }
 
 /* ----------------------------------------------------------------------
@@ -271,36 +291,128 @@ header.sticky {
  * transparent so the global neon gradient shows through.
  * ---------------------------------------------------------------------- */
 @layer utilities {
-  .bg-background { background-color: transparent !important; }
+  html:not(.light) .bg-background { background-color: transparent !important; }
+  html.light .bg-background { background-color: var(--background) !important; }
 }
 
 /* ----------------------------------------------------------------------
  * Leaflet dark-neon overrides
  * ---------------------------------------------------------------------- */
-.leaflet-container {
+html:not(.light) .leaflet-container {
   background: oklch(0.1 0.02 280) !important;
   font-family: inherit;
 }
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
+html:not(.light) .leaflet-popup-content-wrapper,
+html:not(.light) .leaflet-popup-tip {
   background: oklch(0.18 0.025 280) !important;
   color: oklch(0.97 0.01 100) !important;
   border: 1px solid oklch(0.97 0.01 100 / 10%);
   box-shadow: 0 10px 40px -10px oklch(0.65 0.25 310 / 45%) !important;
 }
-.leaflet-popup-content { color: oklch(0.97 0.01 100); }
-.leaflet-popup-close-button { color: oklch(0.97 0.01 100 / 70%) !important; }
-.leaflet-control-zoom a {
+html:not(.light) .leaflet-popup-content { color: oklch(0.97 0.01 100); }
+html:not(.light) .leaflet-popup-close-button { color: oklch(0.97 0.01 100 / 70%) !important; }
+html:not(.light) .leaflet-control-zoom a {
   background: oklch(0.18 0.025 280) !important;
   color: oklch(0.97 0.01 100) !important;
   border-color: oklch(0.97 0.01 100 / 12%) !important;
 }
-.leaflet-control-zoom a:hover {
+html:not(.light) .leaflet-control-zoom a:hover {
   background: oklch(0.22 0.04 290) !important;
   color: oklch(0.93 0.22 120) !important;
 }
-.leaflet-control-attribution {
+html:not(.light) .leaflet-control-attribution {
   background: oklch(0.13 0.02 280 / 80%) !important;
   color: oklch(0.72 0.03 280) !important;
 }
-.leaflet-control-attribution a { color: oklch(0.93 0.22 120) !important; }
+html:not(.light) .leaflet-control-attribution a { color: oklch(0.93 0.22 120) !important; }
+
+/* ----------------------------------------------------------------------
+ * Pupillo Light Mode — readable daylight palette with brand neon accents.
+ * Activated via `html.light`. Defaults to dark when class is absent.
+ * ---------------------------------------------------------------------- */
+html.light {
+  --background: oklch(0.98 0.005 280);            /* #F7F8FC-ish */
+  --foreground: oklch(0.21 0.04 265);             /* deep navy #111827 */
+  --card: oklch(1 0 0);                           /* pure white */
+  --card-foreground: oklch(0.21 0.04 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.04 265);
+  --primary: oklch(0.78 0.20 130);                /* lime, darker for AA on white */
+  --primary-foreground: oklch(0.18 0.04 265);
+  --secondary: oklch(0.96 0.01 280);              /* very light surface */
+  --secondary-foreground: oklch(0.21 0.04 265);
+  --muted: oklch(0.95 0.01 280);
+  --muted-foreground: oklch(0.45 0.02 265);       /* #4B5563 */
+  --accent: oklch(0.55 0.25 310);                 /* electric violet */
+  --accent-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.55 0.24 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.85 0.01 270);                 /* #CBD5E1 */
+  --input: oklch(0.82 0.01 270);                  /* #D1D5DB */
+  --ring: oklch(0.65 0.18 200);                   /* cyan focus */
+  --chart-1: oklch(0.78 0.20 130);
+  --chart-2: oklch(0.55 0.25 310);
+  --chart-3: oklch(0.6 0.25 350);
+  --chart-4: oklch(0.65 0.18 200);
+  --chart-5: oklch(0.7 0.18 50);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.21 0.04 265);
+  --sidebar-primary: oklch(0.78 0.20 130);
+  --sidebar-primary-foreground: oklch(0.18 0.04 265);
+  --sidebar-accent: oklch(0.96 0.01 280);
+  --sidebar-accent-foreground: oklch(0.21 0.04 265);
+  --sidebar-border: oklch(0.85 0.01 270);
+  --sidebar-ring: oklch(0.65 0.18 200);
+}
+
+/* Light-mode form & data input emphasis — high contrast, brand focus ring. */
+html.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.light textarea,
+html.light select,
+html.light [data-slot="input"],
+html.light [data-slot="textarea"],
+html.light [data-slot="select-trigger"] {
+  background-color: oklch(1 0 0) !important;
+  color: oklch(0.18 0.04 265) !important;
+  border-color: oklch(0.82 0.01 270) !important;
+}
+html.light input::placeholder,
+html.light textarea::placeholder { color: oklch(0.55 0.02 265) !important; }
+html.light input:focus-visible,
+html.light textarea:focus-visible,
+html.light select:focus-visible,
+html.light [data-slot="select-trigger"]:focus-visible {
+  border-color: oklch(0.55 0.25 310) !important;
+  outline-color: oklch(0.65 0.18 200) !important;
+}
+
+/* Light-mode card emphasis — soft shadow + visible border */
+html.light [data-slot="card"],
+html.light .card {
+  background-color: oklch(1 0 0) !important;
+  border: 1px solid oklch(0.88 0.01 270);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 4%), 0 8px 24px -16px oklch(0.21 0.04 265 / 14%);
+}
+
+/* Light-mode popover/dropdown — solid white, dark text (no light-on-light) */
+html.light [data-slot="popover-content"],
+html.light [data-slot="dropdown-menu-content"],
+html.light [data-slot="select-content"],
+html.light [data-slot="command"],
+html.light [role="listbox"],
+html.light [role="menu"] {
+  background-color: oklch(1 0 0) !important;
+  color: oklch(0.18 0.04 265) !important;
+  border: 1px solid oklch(0.85 0.01 270) !important;
+  box-shadow: 0 10px 30px -10px oklch(0.21 0.04 265 / 18%) !important;
+}
+
+/* Light-mode leaflet — clean light tiles backdrop */
+html.light .leaflet-container { background: oklch(0.96 0.005 280) !important; font-family: inherit; }
+html.light .leaflet-popup-content-wrapper,
+html.light .leaflet-popup-tip {
+  background: oklch(1 0 0) !important;
+  color: oklch(0.18 0.04 265) !important;
+  border: 1px solid oklch(0.85 0.01 270);
+  box-shadow: 0 10px 30px -10px oklch(0.21 0.04 265 / 18%) !important;
+}
