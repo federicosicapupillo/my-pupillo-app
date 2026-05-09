@@ -115,6 +115,7 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const { isBlocked, overdueCount } = useRequiredReviews();
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -186,6 +187,11 @@ function WorkersPage() {
 
   const invite = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
+    if (isBlocked) {
+      toast.error("Per contattare nuovi lavoratori devi prima completare le recensioni obbligatorie dei turni conclusi.");
+      nav({ to: "/shifts", search: { tab: "to-review" } as never });
+      return;
+    }
     // If a conversation already exists for this restaurant + worker + announcement, just open it.
     const { data: existing } = await supabase
       .from("applications")
