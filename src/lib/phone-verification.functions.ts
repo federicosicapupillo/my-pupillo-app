@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { createHash, randomInt } from "crypto";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -11,12 +12,19 @@ const RESEND_COOLDOWN_SECONDS = 60;
 const TEST_OTP_CODE = "123456";
 
 function isTestOtpEnabled(): boolean {
-  // NEVER enable on the published app. In Lovable preview/dev the server runtime
-  // can still expose NODE_ENV="production", so use the explicit test flag plus
-  // sandbox/dev signals instead of NODE_ENV alone.
-  const enabled = process.env.ENABLE_TEST_OTP === "true" || process.env.VITE_ENABLE_TEST_OTP === "true";
-  const isSafeRuntime = process.env.NODE_ENV !== "production" || process.env.LOVABLE_SANDBOX === "true" || process.env.LOVABLE === "true";
-  return enabled && isSafeRuntime;
+  const readFlag = (value: unknown) => String(value ?? "").replace(/^['\"]|['\"]$/g, "").trim().toLowerCase() === "true";
+  const enabled =
+    readFlag(process.env.ENABLE_TEST_OTP) ||
+    readFlag(process.env.VITE_ENABLE_TEST_OTP) ||
+    readFlag(import.meta.env.VITE_ENABLE_TEST_OTP);
+
+  if (!enabled) return false;
+
+  // NODE_ENV can be "production" in preview builds too. Block only the known
+  // published host, while allowing local/preview test environments.
+  const host = getRequest()?.headers.get("host") ?? "";
+  const isPublishedHost = host === "my-pupillo-app.lovable.app";
+  return !isPublishedHost;
 }
 
 function hashOtp(code: string, userId: string): string {
