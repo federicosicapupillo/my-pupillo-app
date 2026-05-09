@@ -152,7 +152,12 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    background-image: var(--gradient-night);
+    /* Pupillo home-grade neon atmosphere applied globally so every page
+     * inherits the same dark/neon mood as the landing page. */
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, oklch(0.65 0.25 310 / 20%), transparent 60%),
+      radial-gradient(800px 500px at -10% 30%, oklch(0.7 0.27 350 / 15%), transparent 60%),
+      radial-gradient(900px 600px at 50% 110%, oklch(0.82 0.16 195 / 12%), transparent 60%);
     background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
   }
@@ -259,6 +264,14 @@ header.sticky {
   backdrop-filter: blur(12px);
   background-color: oklch(0.13 0.02 280 / 75%) !important;
   border-bottom-color: oklch(0.93 0.22 120 / 14%) !important;
+}
+
+/* ----------------------------------------------------------------------
+ * Page-level dark surfaces — keep auth, onboarding, dashboard wrappers
+ * transparent so the global neon gradient shows through.
+ * ---------------------------------------------------------------------- */
+@layer utilities {
+  .bg-background { background-color: transparent !important; }
 }
 
 /* ----------------------------------------------------------------------
