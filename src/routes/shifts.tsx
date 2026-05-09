@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { useRequiredReviews } from "@/lib/required-reviews";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -40,12 +42,20 @@ function ShiftsPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
+  const [filter, setFilter] = useState<"all" | "upcoming" | "past" | "to-review">(
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "all"
+  );
   const [live, setLive] = useState(false);
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const { items: requiredReviews } = useRequiredReviews();
+  const reqByShift = useMemo(() => {
+    const m: Record<string, { status: string; due_date: string }> = {};
+    requiredReviews.forEach((r) => { if (r.shift_id) m[r.shift_id] = { status: r.status, due_date: r.due_date }; });
+    return m;
+  }, [requiredReviews]);
 
   const load = async () => {
     if (!user || !role) return;
@@ -120,8 +130,9 @@ function ShiftsPage() {
     const today = new Date().toISOString().slice(0, 10);
     if (filter === "upcoming") return shifts.filter(s => s.shift_date >= today);
     if (filter === "past") return shifts.filter(s => s.shift_date < today);
+    if (filter === "to-review") return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
     return shifts;
-  }, [shifts, filter]);
+  }, [shifts, filter, reqByShift]);
 
   const stats = useMemo(() => ({
     total: shifts.length,
@@ -144,12 +155,14 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["all", "upcoming", "past"] as const).map(f => (
+        {(["all", "upcoming", "past", "to-review"] as const).map(f => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
-            {f === "all" ? "Tutti" : f === "upcoming" ? "In arrivo" : "Passati"}
+            {f === "all" ? "Tutti" : f === "upcoming" ? "In arrivo" : f === "past" ? "Passati" : `Da recensire${requiredReviews.length ? ` (${requiredReviews.length})` : ""}`}
           </Button>
         ))}
       </div>
+
+      {role === "restaurant" && <RequiredReviewsBanner />}
 
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
         <div className="rounded-2xl border bg-card p-8 text-center">
@@ -213,6 +226,19 @@ function ShiftsPage() {
 
                 {s.status === "completed" && (
                   <div className="mt-4 border-t pt-3">
+                    {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (() => {
+                      const due = new Date(reqByShift[s.id].due_date).getTime();
+                      const now = Date.now();
+                      const overdue = reqByShift[s.id].status === "overdue" || due < now;
+                      const soon = !overdue && (due - now) < 24 * 60 * 60 * 1000;
+                      return (
+                        <div className={`mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          overdue ? "bg-destructive/15 text-destructive" : soon ? "bg-amber-500/15 text-amber-700" : "bg-muted text-muted-foreground"
+                        }`}>
+                          {overdue ? "Scaduta" : soon ? "In scadenza" : `Entro il ${new Date(reqByShift[s.id].due_date).toLocaleDateString("it-IT")}`}
+                        </div>
+                      );
+                    })()}
                     {reviewed.has(s.id) ? (
                       <p className="text-xs text-muted-foreground flex items-center gap-1"><Star className="h-3 w-3" /> Recensione inviata</p>
                     ) : reviewOpen === s.id ? (

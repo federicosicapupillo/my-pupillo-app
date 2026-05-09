@@ -8,6 +8,7 @@ import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -168,6 +169,7 @@ function MessagesLayout() {
   return (
     <AppShell>
       <PageHeader title="Messaggi" subtitle="Le tue conversazioni" />
+      <RequiredReviewsBanner />
       <div className="grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]">
         <section className={`${selectedId ? "hidden lg:block" : "block"} min-w-0`} aria-label="Lista conversazioni">
           {withUser && (
