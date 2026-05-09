@@ -181,25 +181,32 @@ function DashboardInner() {
 
   const concludeShift = async () => {
     if (!closingItem || !user) return;
+    if (!closingItem.worker_id) {
+      toast.error("Lavoratore non collegato al turno.");
+      return;
+    }
     setClosing(true);
     try {
       let shiftId = closingItem.shift_id;
+      const completedAt = new Date().toISOString();
       if (!shiftId) {
         // crea il turno se mancante
         const { data: created, error } = await supabase.from("shifts").insert({
           announcement_id: closingItem.ann_id,
           restaurant_id: user.id,
-          worker_id: closingItem.worker_id!,
+          worker_id: closingItem.worker_id,
           shift_date: closingItem.service_date,
           hours: closingItem.duration_hours ?? 4,
           status: "completed",
+          completed_at: completedAt,
         } as never).select("id").single();
         if (error) throw error;
         shiftId = (created as any).id;
       } else {
         const { error } = await supabase.from("shifts")
-          .update({ status: "completed", completed_at: new Date().toISOString() })
-          .eq("id", shiftId);
+          .update({ status: "completed", completed_at: completedAt })
+          .eq("id", shiftId)
+          .eq("restaurant_id", user.id);
         if (error) throw error;
       }
       toast.success("Turno concluso. Lascia ora la recensione.");
@@ -212,7 +219,12 @@ function DashboardInner() {
         nav({ to: "/messages/$id", params: { id: closingItem.app_id } });
       }
     } catch (e: any) {
-      toast.error(e?.message ?? "Errore durante la chiusura del turno");
+      const msg = String(e?.message ?? "");
+      toast.error(
+        msg.includes("required_reviews") || msg.includes("ON CONFLICT")
+          ? "Impossibile creare la recensione obbligatoria. Riprova."
+          : msg || "Errore durante la chiusura del turno"
+      );
     } finally {
       setClosing(false);
     }
