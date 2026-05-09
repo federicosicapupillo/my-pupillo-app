@@ -168,6 +168,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link key={i.to} to={i.to as never}>
                 <Button variant={loc.pathname.startsWith(i.to) ? "secondary" : "ghost"} size="sm" className="gap-2">
                   <i.icon className="h-4 w-4" />{i.label}
+                  {i.to === "/messages" && unreadMsgs > 0 && (
+                    <span className="ml-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                      {unreadMsgs > 9 ? "9+" : unreadMsgs}
+                    </span>
+                  )}
                 </Button>
               </Link>
             ))}
@@ -238,6 +243,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap">
                     <i.icon className="h-4 w-4" />{i.label}
+                    {i.to === "/messages" && unreadMsgs > 0 && (
+                      <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                        {unreadMsgs > 9 ? "9+" : unreadMsgs}
+                      </span>
+                    )}
                   </Button>
                 </Link>
               );
