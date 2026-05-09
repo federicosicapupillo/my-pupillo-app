@@ -521,6 +521,68 @@ function Thread() {
     });
   };
 
+  const submitReview = async (rating: number, text: string, tags: string[]) => {
+    if (!user || !app) return;
+    if (role !== "restaurant") {
+      toast.error("Solo il ristoratore può lasciare una recensione.");
+      return;
+    }
+    if (!rating) { toast.error("Seleziona una valutazione."); return; }
+    const trimmed = text.trim();
+    if (!trimmed) { toast.error("Scrivi una recensione prima di confermare il turno."); return; }
+    if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
+    if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
+
+    // Crea il turno se non esiste (caso in cui non sia mai stato confermato)
+    let shiftId = shift?.id ?? null;
+    if (!shiftId && app.announcement_id && ann) {
+      const { data: created, error: createErr } = await supabase.from("shifts").insert({
+        announcement_id: app.announcement_id,
+        restaurant_id: app.restaurant_id,
+        worker_id: app.worker_id,
+        shift_date: ann.service_date,
+        hours: 4,
+        amount: app.proposed_tariff ?? ann.tariff_amount ?? null,
+        status: "completed",
+      } as never).select("*").single();
+      if (createErr) { toast.error("Impossibile creare il turno: " + createErr.message); return; }
+      shiftId = (created as any).id;
+      setShift(created as Shift);
+    }
+
+    const { data, error } = await supabase.from("reviews").insert({
+      author_id: user.id,
+      target_id: app.worker_id,
+      shift_id: shiftId,
+      rating,
+      comment: trimmed,
+      tags,
+      application_id: app.id,
+      announcement_id: app.announcement_id,
+      is_visible_to_restaurants: true,
+      is_visible_to_worker: true,
+    } as never).select("*").single();
+    if (error) {
+      if (String(error.message).toLowerCase().includes("uniq_reviews_shift_author") || (error as any).code === "23505") {
+        toast.error("Hai già recensito questo turno.");
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
+    setExistingReview(data as Review);
+    // Messaggio di sistema in chat
+    try {
+      await insertSystemMessage(`il turno è stato completato e il lavoratore ha ricevuto una recensione. Valutazione: ${rating} ${rating === 1 ? "stella" : "stelle"}.`, "complete_shift");
+    } catch (e) { /* non bloccante */ }
+    // Marca l'annuncio come completato
+    if (app.announcement_id) {
+      await supabase.from("announcements").update({ status: "completed" } as never).eq("id", app.announcement_id);
+    }
+    setReviewOpen(false);
+    toast.success("Turno completato e recensione inviata al lavoratore.");
+  };
+
   if (loading) {
     return <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">Caricamento chat…</div>;
   }
@@ -675,6 +737,17 @@ function Thread() {
           otherName={other?.name ?? null}
           disabled={isConversationClosed}
         />
+
+        {role === "restaurant" && tplCategory === "post_shift" && app && (
+          <ReviewBlock
+            id="review-block"
+            existing={existingReview}
+            workerName={other?.name ?? null}
+            shift={shift}
+            forceOpen={reviewOpen}
+            onSubmit={submitReview}
+          />
+        )}
       </div>
   );
 }
