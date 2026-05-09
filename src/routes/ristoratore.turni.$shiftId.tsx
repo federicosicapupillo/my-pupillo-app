@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -12,11 +13,14 @@ import {
 import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
-  XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro,
+  XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check,
 } from "lucide-react";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
+  validateSearch: (s: Record<string, unknown>): { section?: "recensione" } => ({
+    section: s.section === "recensione" ? "recensione" : undefined,
+  }),
   component: () => <RequireAuth><ShiftDetailPage /></RequireAuth>,
 });
 
@@ -85,8 +89,22 @@ const shiftStatusMeta: Record<Shift["status"], { label: string; cls: string; Ico
   no_show: { label: "No-show", cls: "bg-orange-500/10 text-orange-700 border-orange-500/30", Icon: AlertTriangle },
 };
 
+const POSITIVE_TAGS = [
+  "Puntuale", "Professionale", "Affidabile", "Ordinato", "Veloce",
+  "Collaborativo", "Ha rispettato il dress code", "Buona comunicazione",
+  "Esperienza adeguata", "Da richiamare",
+];
+const CRITICAL_TAGS = [
+  "In ritardo", "Poco comunicativo", "Dress code non rispettato",
+  "Esperienza non adeguata", "Da migliorare", "Non richiamare",
+];
+const RATING_LABELS: Record<number, string> = {
+  1: "Insufficiente", 2: "Da migliorare", 3: "Buono", 4: "Molto buono", 5: "Eccellente",
+};
+
 function ShiftDetailPage() {
   const { shiftId } = Route.useParams();
+  const search = Route.useSearch();
   const { user, role } = useAuth();
   const nav = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -99,10 +117,12 @@ function ShiftDetailPage() {
   const [jobReq, setJobReq] = useState<JobReq | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
   const [appCount, setAppCount] = useState<number>(0);
-  const [hasReview, setHasReview] = useState(false);
+  const [existingReview, setExistingReview] = useState<{ id: string; rating: number; comment: string | null; tags: string[] | null } | null>(null);
+  const hasReview = !!existingReview;
   const [requiredReview, setRequiredReview] = useState<{ status: string; due_date: string } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  const reviewRef = useRef<HTMLDivElement | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -127,7 +147,9 @@ function ShiftDetailPage() {
       s.announcement_id
         ? supabase.from("applications").select("id, worker_id, status").eq("announcement_id", s.announcement_id)
         : Promise.resolve({ data: [] as any[] }),
-      user ? supabase.from("reviews").select("id").eq("shift_id", s.id).eq("author_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+      user
+        ? supabase.from("reviews").select("id, rating, comment, tags").eq("shift_id", s.id).eq("author_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
       (supabase as any).from("required_reviews").select("status, due_date").eq("shift_id", s.id).maybeSingle(),
     ]);
     setAnn((annRes.data as Announcement) ?? null);
@@ -137,7 +159,7 @@ function ShiftDetailPage() {
     setAppCount(apps.length);
     const matchedApp = apps.find((a) => a.worker_id === s.worker_id) ?? null;
     setAppId(matchedApp?.id ?? null);
-    setHasReview(!!revsRes.data);
+    setExistingReview((revsRes.data as any) ?? null);
     setRequiredReview((reqRes as any).data ?? null);
     if (s.announcement_id) {
       const { data: jr } = await supabase
@@ -151,6 +173,15 @@ function ShiftDetailPage() {
 
   useEffect(() => { if (user) load(); /* eslint-disable-next-line */ }, [user, shiftId]);
 
+  // Auto-scroll alla sezione recensione quando arrivi con ?section=recensione
+  useEffect(() => {
+    if (loading || !shift) return;
+    if (search.section === "recensione" && reviewRef.current) {
+      // piccolo delay per attendere il render
+      setTimeout(() => reviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    }
+  }, [loading, shift, search.section]);
+
   const concludeShift = async () => {
     if (!shift) return;
     setClosing(true);
@@ -162,7 +193,43 @@ function ShiftDetailPage() {
     toast.success("Turno concluso. Lascia ora la recensione.");
     setConfirmOpen(false);
     await load();
-    if (appId) nav({ to: "/messages/$id", params: { id: appId } });
+    // resta sul dettaglio turno e apri direttamente il blocco recensione
+    nav({ to: "/ristoratore/turni/$shiftId", params: { shiftId: shift.id }, search: { section: "recensione" } });
+  };
+
+  const submitReview = async (rating: number, text: string, tags: string[]) => {
+    if (!user || !shift) return;
+    if (rating < 1 || rating > 5) { toast.error("Seleziona una valutazione."); return; }
+    const trimmed = text.trim();
+    if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
+    if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
+    // Anti-duplicato
+    const { data: dup } = await supabase.from("reviews").select("id").eq("shift_id", shift.id).eq("author_id", user.id).maybeSingle();
+    if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
+    const { data: created, error } = await supabase.from("reviews").insert({
+      author_id: user.id,
+      target_id: shift.worker_id,
+      shift_id: shift.id,
+      announcement_id: shift.announcement_id,
+      application_id: appId,
+      rating,
+      comment: trimmed,
+      tags,
+    } as never).select("id, rating, comment, tags").single();
+    if (error) { toast.error(error.message); return; }
+    // Messaggio di sistema in chat (best effort)
+    if (appId) {
+      await supabase.from("messages").insert({
+        application_id: appId,
+        sender_id: user.id,
+        body: "Sistema: il turno è stato completato e il lavoratore ha ricevuto una recensione.",
+        message_type: "system",
+        action_type: "review_submitted",
+      } as never);
+    }
+    toast.success("Recensione inviata");
+    setExistingReview(created as any);
+    await load();
   };
 
   if (loading) {
@@ -346,25 +413,13 @@ function ShiftDetailPage() {
       )}
 
       {/* Card 4 — Azioni turno */}
-      <div className="mt-4 rounded-2xl border bg-card p-5">
+      <div ref={reviewRef} className={`mt-4 rounded-2xl border bg-card p-5 ${search.section === "recensione" ? "ring-2 ring-primary/40" : ""}`}>
         <div className="text-sm font-semibold mb-3">Azioni turno</div>
         <div className="flex flex-wrap gap-2">
           {shift.status === "scheduled" && worker && (
             <Button onClick={() => setConfirmOpen(true)} className="gap-1">
               <CheckCheck className="h-4 w-4" /> Concludi turno
             </Button>
-          )}
-          {shift.status === "completed" && !hasReview && appId && (
-            <Link to="/messages/$id" params={{ id: appId }}>
-              <Button variant={isOverdue ? "destructive" : "default"} className="gap-1">
-                <Star className="h-4 w-4" /> {isOverdue ? "Recensione scaduta — agisci ora" : "Lascia recensione"}
-              </Button>
-            </Link>
-          )}
-          {shift.status === "completed" && hasReview && appId && (
-            <Link to="/messages/$id" params={{ id: appId }}>
-              <Button variant="outline" className="gap-1"><Star className="h-4 w-4" /> Vedi recensione</Button>
-            </Link>
           )}
           {shift.status === "cancelled" && (
             <span className="text-sm text-muted-foreground">Turno annullato</span>
@@ -382,6 +437,19 @@ function ShiftDetailPage() {
           <p className="mt-2 text-xs text-muted-foreground">
             Dopo la chiusura potrai lasciare la recensione al lavoratore.
           </p>
+        )}
+
+        {/* Blocco recensione inline */}
+        {shift.status === "completed" && (
+          <div className="mt-5 border-t pt-5">
+            <ReviewSection
+              existing={existingReview}
+              workerName={worker?.full_name ?? null}
+              isOverdue={isOverdue}
+              dueDate={requiredReview?.due_date ?? null}
+              onSubmit={submitReview}
+            />
+          </div>
         )}
       </div>
 
@@ -425,6 +493,172 @@ function EmptyState({ title, hint }: { title: string; hint: string }) {
       <div className="font-medium">{title}</div>
       <p className="text-sm text-muted-foreground mt-1">{hint}</p>
       <Link to="/dashboard"><Button size="sm" variant="outline" className="mt-4 gap-1"><ArrowLeft className="h-4 w-4" /> Torna alla dashboard</Button></Link>
+    </div>
+  );
+}
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="flex items-center gap-1" role="radiogroup" aria-label="Valutazione">
+      {[1, 2, 3, 4, 5].map((n) => {
+        const active = (hover || value) >= n;
+        return (
+          <button key={n} type="button" role="radio" aria-checked={value === n}
+            onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)}
+            onClick={() => onChange(n)}
+            className="p-1 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            aria-label={`${n} stelle`}>
+            <Star className={`h-7 w-7 transition ${active ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} strokeWidth={1.5} />
+          </button>
+        );
+      })}
+      <span className="ml-2 text-sm text-muted-foreground">
+        {value ? RATING_LABELS[value] : "Seleziona valutazione"}
+      </span>
+    </div>
+  );
+}
+
+function ReviewSection({
+  existing,
+  workerName,
+  isOverdue,
+  dueDate,
+  onSubmit,
+}: {
+  existing: { id: string; rating: number; comment: string | null; tags: string[] | null } | null;
+  workerName: string | null;
+  isOverdue: boolean;
+  dueDate: string | null;
+  onSubmit: (rating: number, text: string, tags: string[]) => Promise<void>;
+}) {
+  const [rating, setRating] = useState(0);
+  const [text, setText] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (existing) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+          <h3 className="font-semibold text-sm">Recensione inviata</h3>
+        </div>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star key={n} className={`h-5 w-5 ${n <= existing.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} strokeWidth={1.5} />
+          ))}
+          <span className="ml-2 text-sm font-medium">{existing.rating}.0 — {RATING_LABELS[existing.rating]}</span>
+        </div>
+        {existing.comment && <p className="text-sm">{existing.comment}</p>}
+        {existing.tags && existing.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {existing.tags.map((t) => (
+              <span key={t} className="text-[11px] rounded-full bg-secondary px-2 py-0.5">{t}</span>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Hai già recensito questo turno. Non è possibile modificarla.</p>
+      </div>
+    );
+  }
+
+  const charCount = text.trim().length;
+  const canSubmit = rating > 0 && charCount >= 20 && charCount <= 500 && !submitting;
+  const toggleTag = (t: string) => setTags((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try { await onSubmit(rating, text, tags); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className={`rounded-lg border p-3 text-sm ${
+        isOverdue
+          ? "border-destructive/40 bg-destructive/10 text-destructive"
+          : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
+      }`}>
+        <div className="font-semibold">{isOverdue ? "Recensione scaduta" : "Recensione obbligatoria"}</div>
+        <div className="text-xs mt-0.5">
+          {isOverdue
+            ? "Questa recensione è scaduta. Completarla riattiverà il contatto con nuovi lavoratori."
+            : `Per chiudere correttamente il turno devi lasciare una valutazione al lavoratore${
+                dueDate ? ` entro il ${new Date(dueDate).toLocaleDateString("it-IT")}` : " entro 3 giorni"
+              }.`}
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+          <h3 className="font-semibold text-base">Com'è andato il turno{workerName ? ` con ${workerName}` : ""}?</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">Conferma la fine del turno e lascia una recensione al lavoratore.</p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium mb-2">Valutazione *</label>
+        <StarPicker value={rating} onChange={setRating} />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-medium">Recensione *</label>
+          <span className={`text-[11px] ${charCount > 500 ? "text-destructive" : "text-muted-foreground"}`}>{charCount}/500</span>
+        </div>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Scrivi una recensione chiara e utile sul lavoratore."
+          rows={4}
+          maxLength={500}
+        />
+        {charCount > 0 && charCount < 20 && (
+          <p className="text-[11px] text-destructive mt-1">Minimo 20 caratteri ({20 - charCount} mancanti).</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium mb-2">Tag rapidi (opzionali)</label>
+        <div className="space-y-2">
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1">Positivi</div>
+            <div className="flex flex-wrap gap-1.5">
+              {POSITIVE_TAGS.map((t) => {
+                const active = tags.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTag(t)}
+                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1">Critici</div>
+            <div className="flex flex-wrap gap-1.5">
+              {CRITICAL_TAGS.map((t) => {
+                const active = tags.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTag(t)}
+                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-destructive/20 border-destructive text-destructive" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Button type="button" onClick={handleSubmit} disabled={!canSubmit} className="w-full gap-2">
+        <Check className="h-4 w-4" />
+        {submitting ? "Invio in corso…" : "Conferma fine turno e invia recensione"}
+      </Button>
     </div>
   );
 }

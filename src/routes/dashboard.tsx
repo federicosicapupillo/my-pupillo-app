@@ -205,11 +205,11 @@ function DashboardInner() {
       toast.success("Turno concluso. Lascia ora la recensione.");
       setClosingItem(null);
       await loadAssigned(user.id);
-      // porta al thread messaggi (post-turno) se possibile, altrimenti pagina turni
-      if (closingItem.app_id) {
+      // porta direttamente alla pagina dettaglio turno con sezione recensione aperta
+      if (shiftId) {
+        nav({ to: "/ristoratore/turni/$shiftId", params: { shiftId }, search: { section: "recensione" } as never });
+      } else if (closingItem.app_id) {
         nav({ to: "/messages/$id", params: { id: closingItem.app_id } });
-      } else {
-        nav({ to: "/shifts", search: { tab: "to-review" } as never });
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Errore durante la chiusura del turno");
