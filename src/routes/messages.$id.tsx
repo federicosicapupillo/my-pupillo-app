@@ -728,7 +728,15 @@ function Thread() {
         <TemplatePicker
           role={role === "restaurant" ? "restaurant" : "worker"}
           category={tplCategory}
-          setCategory={setTplCategory}
+          setCategory={(c) => {
+            setTplCategory(c);
+            if (role === "restaurant" && c === "post_shift") {
+              setReviewOpen(true);
+              setTimeout(() => {
+                document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 60);
+            }
+          }}
           selected={selectedTpl}
           setSelected={setSelectedTpl}
           onSend={sendTemplate}
