@@ -189,7 +189,6 @@ function Thread() {
   const { id } = Route.useParams();
   const { user, role } = useAuth();
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [text, setText] = useState("");
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string } | null>(null);
@@ -199,6 +198,9 @@ function Thread() {
   const [counterOpen, setCounterOpen] = useState(false);
   const [counterValue, setCounterValue] = useState("");
   const [events, setEvents] = useState<LogEvent[]>([]);
+  const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
+  const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
+  const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -254,19 +256,75 @@ function Thread() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  const send = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!text.trim() || !user) return;
-    const body = text.trim();
-    setText("");
-    const { error } = await supabase.from("messages").insert({ application_id: id, sender_id: user.id, body });
-    if (error) toast.error(error.message);
+  const insertSystemMessage = async (text: string) => {
+    if (!user) return;
+    await supabase.from("messages").insert({
+      application_id: id, sender_id: user.id, body: `⚙️ Sistema: ${text}`,
+    });
   };
 
-  const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
+  const sendTemplate = async () => {
+    if (!selectedTpl || !user || sending) return;
+    setSending(true);
+    try {
+      const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null);
+      const { error } = await supabase.from("messages").insert({
+        application_id: id, sender_id: user.id, body,
+      });
+      if (error) { toast.error(error.message); return; }
+
+      // Trigger collegate alle azioni
+      switch (selectedTpl.action) {
+        case "accept_application":
+          if (role === "restaurant") {
+            await transition("accepted");
+            await insertSystemMessage("candidatura accettata.");
+          }
+          break;
+        case "reject_application":
+          if (role === "restaurant") {
+            await transition("rejected");
+            await insertSystemMessage("candidatura rifiutata.");
+          }
+          break;
+        case "withdraw_application":
+          if (role === "worker") {
+            await transition("not_interested");
+            await insertSystemMessage("il lavoratore ha ritirato la candidatura.");
+          }
+          break;
+        case "confirm_shift":
+          if (app?.announcement_id) {
+            await supabase.from("shifts").update({ status: "scheduled" })
+              .eq("announcement_id", app.announcement_id);
+            await insertSystemMessage("turno confermato.");
+          }
+          break;
+        case "cancel_shift":
+          if (app?.announcement_id) {
+            await supabase.from("shifts").update({ status: "cancelled" })
+              .eq("announcement_id", app.announcement_id);
+            await insertSystemMessage("turno annullato.");
+          }
+          break;
+        case "complete_shift":
+          if (app?.announcement_id) {
+            await supabase.from("shifts").update({ status: "completed" })
+              .eq("announcement_id", app.announcement_id);
+            await insertSystemMessage("turno completato.");
+          }
+          break;
+        case "confirm_arrival":
+          await insertSystemMessage("il lavoratore ha confermato la presenza.");
+          break;
+        case "report_issue":
+          await insertSystemMessage("è stato segnalato un problema sul turno.");
+          break;
+      }
+      setSelectedTpl(null);
+      toast.success("Messaggio inviato");
+    } finally {
+      setSending(false);
     }
   };
 
