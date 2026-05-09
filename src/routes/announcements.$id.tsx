@@ -425,7 +425,7 @@ function AnnouncementDetail() {
                     <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
                       <Button size="sm" variant="outline" className="gap-1"
                         onClick={() => nav({ to: "/messages/$id", params: { id: a.id } })}>
-                        <MessageSquare className="h-3.5 w-3.5" />Chat
+                        <MessageSquare className="h-3.5 w-3.5" />Messaggia
                       </Button>
                       {canAct && (
                         <>
