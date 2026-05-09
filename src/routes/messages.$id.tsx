@@ -356,34 +356,40 @@ function Thread() {
           break;
         case "confirm_shift":
           if (app?.announcement_id) {
-            await supabase.from("shifts").update({ status: "scheduled" })
+            const { error: shiftError } = await supabase.from("shifts").update({ status: "scheduled" })
               .eq("announcement_id", app.announcement_id);
-            await insertSystemMessage("turno confermato.");
+            if (shiftError) throw shiftError;
+            await insertSystemMessage("turno confermato.", selectedTpl.action);
           }
           break;
         case "cancel_shift":
           if (app?.announcement_id) {
-            await supabase.from("shifts").update({ status: "cancelled" })
+            const { error: shiftError } = await supabase.from("shifts").update({ status: "cancelled" })
               .eq("announcement_id", app.announcement_id);
-            await insertSystemMessage("turno annullato.");
+            if (shiftError) throw shiftError;
+            await insertSystemMessage("turno annullato.", selectedTpl.action);
           }
           break;
         case "complete_shift":
           if (app?.announcement_id) {
-            await supabase.from("shifts").update({ status: "completed" })
+            const { error: shiftError } = await supabase.from("shifts").update({ status: "completed" })
               .eq("announcement_id", app.announcement_id);
-            await insertSystemMessage("turno completato.");
+            if (shiftError) throw shiftError;
+            await insertSystemMessage("turno completato.", selectedTpl.action);
           }
           break;
         case "confirm_arrival":
-          await insertSystemMessage("il lavoratore ha confermato la presenza.");
+          await insertSystemMessage("il lavoratore ha confermato la presenza.", selectedTpl.action);
           break;
         case "report_issue":
-          await insertSystemMessage("è stato segnalato un problema sul turno.");
+          await insertSystemMessage("è stato segnalato un problema sul turno.", selectedTpl.action);
           break;
       }
       setSelectedTpl(null);
-      toast.success("Messaggio inviato");
+      toast.success("Messaggio inviato.");
+    } catch (error) {
+      console.error("Errore invio messaggio template", error);
+      toast.error("Errore durante l’invio del messaggio. Riprova.");
     } finally {
       setSending(false);
     }
