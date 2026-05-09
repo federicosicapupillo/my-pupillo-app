@@ -438,23 +438,3 @@ function Scribbles() {
   );
 }
 
-function CitySkyline() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 400 120"
-      className="absolute bottom-[18%] left-1/2 -z-10 w-[110%] -translate-x-1/2 opacity-50"
-    >
-      <defs>
-        <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#8B5CF6" stopOpacity="0.0" />
-          <stop offset="1" stopColor="#1A0B2E" stopOpacity="0.9" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M0,120 L0,80 L20,80 L20,60 L40,60 L40,90 L60,90 L60,50 L80,50 L80,70 L100,70 L100,40 L120,40 L120,80 L150,80 L150,55 L175,55 L175,75 L200,75 L200,45 L220,45 L220,65 L240,65 L240,35 L265,35 L265,70 L290,70 L290,50 L315,50 L315,80 L340,80 L340,60 L365,60 L365,75 L400,75 L400,120 Z"
-        fill="url(#sky)"
-      />
-    </svg>
-  );
-}
