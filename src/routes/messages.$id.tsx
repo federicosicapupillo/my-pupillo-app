@@ -725,6 +725,50 @@ function Thread() {
           })}
           <div ref={endRef} />
         </div>
+        {role === "restaurant" && app && shift && (() => {
+          const reviewed = !!existingReview;
+          const completed = shift.status === "completed";
+          const isCancelled = shift.status === "cancelled" || shift.status === "no_show";
+          if (isCancelled) return null;
+          let title = "Chiusura turno";
+          let subtitle = "Quando il servizio è finito, chiudi il turno e lascia la recensione al lavoratore.";
+          let cta = "Chiudi turno e recensisci";
+          if (reviewed) {
+            title = "Recensione inviata";
+            subtitle = "Hai già recensito questo turno. Puoi rivedere la valutazione qui sotto.";
+            cta = "Vedi recensione";
+          } else if (completed) {
+            title = "Lascia recensione";
+            subtitle = "Il turno è stato completato. Lascia ora la valutazione al lavoratore.";
+            cta = "Lascia recensione";
+          }
+          const openClosure = () => {
+            setTplCategory("post_shift");
+            setReviewOpen(true);
+            setTimeout(() => {
+              document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 60);
+          };
+          return (
+            <button
+              type="button"
+              onClick={openClosure}
+              className="mt-4 w-full text-left rounded-2xl border-2 border-primary bg-primary/15 hover:bg-primary/25 transition p-4 flex items-start gap-3 shadow-[0_0_24px_-6px_hsl(var(--primary)/0.55)] focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <div className="shrink-0 rounded-xl bg-primary text-primary-foreground p-2.5 flex items-center justify-center">
+                <Star className="h-5 w-5" fill="currentColor" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-base sm:text-lg leading-tight">{title}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mt-0.5">{subtitle}</div>
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
+                  <Check className="h-3.5 w-3.5" />
+                  {cta}
+                </div>
+              </div>
+            </button>
+          );
+        })()}
         <TemplatePicker
           role={role === "restaurant" ? "restaurant" : "worker"}
           category={tplCategory}
