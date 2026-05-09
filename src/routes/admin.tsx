@@ -13,6 +13,7 @@ import { VENUE_TYPES, venueTypeLabel } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
 import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
+import { AdminRequiredReviewsSection } from "@/components/AdminRequiredReviewsSection";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Pupillo" }] }),
@@ -210,6 +211,7 @@ function Admin() {
           </table>
         </div>
       </div>
+      <AdminRequiredReviewsSection />
     </AppShell>
   );
 }
