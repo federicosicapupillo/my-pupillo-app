@@ -396,7 +396,7 @@ function AuthPage() {
                   className="w-full"
                   disabled={busy || !restaurantAgeOk || !passwordStrongEnough || !passwordsMatch || !phoneOk}
                 >
-                  {busy ? "Attendi..." : "Crea account"}
+                  {busy ? "Attendi..." : "Crea profilo"}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   Accettando, confermi le{" "}
