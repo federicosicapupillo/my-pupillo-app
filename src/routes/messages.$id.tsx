@@ -19,6 +19,100 @@ type App = {
   announcement_id: string; proposed_tariff: number | null;
 };
 type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string };
+
+type TemplateCategory =
+  | "application"
+  | "availability"
+  | "shift_organization"
+  | "dress_code_access"
+  | "shift_changes"
+  | "post_shift"
+  | "issue_report";
+
+type TemplateAction =
+  | "none"
+  | "accept_application"
+  | "reject_application"
+  | "confirm_shift"
+  | "cancel_shift"
+  | "complete_shift"
+  | "withdraw_application"
+  | "confirm_arrival"
+  | "report_issue";
+
+type MsgTemplate = {
+  key: string;
+  role: "restaurant" | "worker" | "both";
+  category: TemplateCategory;
+  text: string; // may include {{vars}}
+  action: TemplateAction;
+};
+
+const CATEGORY_LABELS: Record<TemplateCategory, string> = {
+  application: "Candidatura",
+  availability: "Conferma disponibilità",
+  shift_organization: "Organizzazione turno",
+  dress_code_access: "Dress code e accesso",
+  shift_changes: "Modifiche turno",
+  post_shift: "Post turno",
+  issue_report: "Problemi / segnalazioni",
+};
+
+const TEMPLATES: MsgTemplate[] = [
+  // Restaurant — application
+  { key: "r_app_seen", role: "restaurant", category: "application", text: "Ciao, ho visto la tua candidatura.", action: "none" },
+  { key: "r_app_avail", role: "restaurant", category: "application", text: "Sei disponibile per il turno del {{shift_date}} alle {{start_time}}?", action: "none" },
+  { key: "r_app_exp", role: "restaurant", category: "application", text: "Hai esperienza in questo ruolo?", action: "none" },
+  { key: "r_app_similar", role: "restaurant", category: "application", text: "Hai già lavorato in un locale simile?", action: "none" },
+  { key: "r_app_confirm_avail", role: "restaurant", category: "application", text: "Puoi confermare la tua disponibilità?", action: "none" },
+  { key: "r_app_selected", role: "restaurant", category: "application", text: "Ti abbiamo selezionato per questo turno.", action: "accept_application" },
+  { key: "r_app_other", role: "restaurant", category: "application", text: "Al momento abbiamo scelto un altro candidato.", action: "reject_application" },
+  // Restaurant — shift organization
+  { key: "r_org_15", role: "restaurant", category: "shift_organization", text: "Presentati 15 minuti prima dell'orario di inizio.", action: "none" },
+  { key: "r_org_ref", role: "restaurant", category: "shift_organization", text: "Chiedi del referente indicato nell'annuncio.", action: "none" },
+  { key: "r_org_dress", role: "restaurant", category: "dress_code_access", text: "Ricorda di rispettare il dress code indicato.", action: "none" },
+  { key: "r_org_tools", role: "restaurant", category: "shift_organization", text: "Porta con te gli strumenti richiesti nell'annuncio.", action: "none" },
+  { key: "r_org_confirmed", role: "restaurant", category: "shift_organization", text: "Il turno del {{shift_date}} alle {{start_time}} è confermato.", action: "confirm_shift" },
+  { key: "r_org_modified", role: "restaurant", category: "shift_changes", text: "Il turno è stato modificato. Controlla i dettagli.", action: "none" },
+  { key: "r_org_cancelled", role: "restaurant", category: "shift_changes", text: "Il turno è stato annullato.", action: "cancel_shift" },
+  // Restaurant — post shift
+  { key: "r_post_thanks", role: "restaurant", category: "post_shift", text: "Grazie per il lavoro svolto.", action: "none" },
+  { key: "r_post_completed", role: "restaurant", category: "post_shift", text: "Confermo che il turno è stato completato.", action: "complete_shift" },
+  { key: "r_post_again", role: "restaurant", category: "post_shift", text: "Ci piacerebbe collaborare ancora con te.", action: "none" },
+  { key: "r_post_issue", role: "restaurant", category: "issue_report", text: "Segnalo un problema sul turno.", action: "report_issue" },
+
+  // Worker — application
+  { key: "w_app_interest", role: "worker", category: "application", text: "Ciao, confermo il mio interesse per il turno.", action: "none" },
+  { key: "w_app_avail", role: "worker", category: "availability", text: "Sono disponibile per questo turno.", action: "none" },
+  { key: "w_app_exp", role: "worker", category: "application", text: "Ho esperienza in questo ruolo.", action: "none" },
+  { key: "w_app_details", role: "worker", category: "application", text: "Vorrei maggiori dettagli sul turno.", action: "none" },
+  { key: "w_app_dress_read", role: "worker", category: "dress_code_access", text: "Confermo di aver letto requisiti e dress code.", action: "none" },
+  { key: "w_app_withdraw", role: "worker", category: "application", text: "Non sono più disponibile per questo turno.", action: "withdraw_application" },
+  // Worker — shift organization
+  { key: "w_org_present", role: "worker", category: "shift_organization", text: "Confermo la mia presenza.", action: "confirm_arrival" },
+  { key: "w_org_15", role: "worker", category: "shift_organization", text: "Arriverò 15 minuti prima.", action: "none" },
+  { key: "w_org_access", role: "worker", category: "dress_code_access", text: "Ho letto le indicazioni di accesso.", action: "none" },
+  { key: "w_org_dress", role: "worker", category: "dress_code_access", text: "Ho letto il dress code richiesto.", action: "none" },
+  { key: "w_org_coming", role: "worker", category: "shift_organization", text: "Sono in arrivo.", action: "none" },
+  { key: "w_org_arrived", role: "worker", category: "shift_organization", text: "Sono arrivato sul posto.", action: "none" },
+  { key: "w_org_help", role: "worker", category: "issue_report", text: "Ho bisogno di chiarimenti sull'ingresso.", action: "none" },
+  // Worker — post shift
+  { key: "w_post_done", role: "worker", category: "post_shift", text: "Il turno è stato completato.", action: "none" },
+  { key: "w_post_thanks", role: "worker", category: "post_shift", text: "Grazie per l'opportunità.", action: "none" },
+  { key: "w_post_more", role: "worker", category: "post_shift", text: "Sono disponibile per altri turni.", action: "none" },
+  { key: "w_post_issue", role: "worker", category: "issue_report", text: "Vorrei segnalare un problema.", action: "report_issue" },
+];
+
+function renderTemplate(text: string, ann: Ann | null, otherName: string | null): string {
+  const date = ann?.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "—";
+  const time = ann?.service_time ? ann.service_time.slice(0, 5) : "—";
+  const address = ann?.location_address ?? "—";
+  return text
+    .replace(/{{shift_date}}/g, date)
+    .replace(/{{start_time}}/g, time)
+    .replace(/{{address}}/g, address)
+    .replace(/{{restaurant_name}}/g, otherName ?? "—");
+}
 type LogEvent = {
   id: string;
   action: string;
