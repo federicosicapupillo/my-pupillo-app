@@ -29,7 +29,7 @@ import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
+import { OnboardingStatusCard, type OnboardingStep } from "@/components/OnboardingStatusCard";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -100,6 +100,125 @@ function Onboarding() {
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
   const vatValid = vatDigits.length === 11;
+
+  const steps: OnboardingStep[] = (() => {
+    const accountDone = !!user;
+    const phoneDone = !!profile?.phone_verified;
+    const allDone = !!profile?.profile_completed;
+
+    if (role === "restaurant") {
+      const businessDone =
+        !!form.business_name.trim() &&
+        !!form.venue_type &&
+        !!form.price_range &&
+        (form.venue_type !== "Altro" || !!form.venue_type_other.trim());
+      const vatDone = vatValid;
+      const locationDone =
+        !!form.address.trim() && !!form.province && !!form.city && !!form.postal_code.trim();
+      const contactDone =
+        !!form.contact_person_first_name.trim() &&
+        !!form.contact_person_last_name.trim() &&
+        !!form.contact_person_role &&
+        isValidPhone(form.contact_person_phone_code, form.contact_person_phone_number) &&
+        !!form.contact_person_email.trim() &&
+        isValidEmail(form.contact_person_email);
+      const finalDone = allDone;
+      const finalLocked = !(businessDone && vatDone && locationDone && contactDone);
+      return [
+        { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
+        {
+          id: "phone",
+          label: "Numero WhatsApp verificato",
+          status: phoneDone ? "done" : "todo",
+          href: phoneDone ? undefined : "/verify-phone",
+        },
+        {
+          id: "business",
+          label: "Profilo del locale",
+          hint: "Nome, tipologia e fascia di prezzo",
+          status: businessDone ? "done" : "todo",
+          href: "#sec-business",
+        },
+        {
+          id: "vat",
+          label: "Partita IVA",
+          hint: "11 cifre, verifica automatica",
+          status: vatDone ? "done" : "todo",
+          href: "#sec-vat",
+        },
+        {
+          id: "location",
+          label: "Luogo e accesso",
+          hint: "Indirizzo, provincia, città, CAP",
+          status: locationDone ? "done" : "todo",
+          href: "#sec-location",
+        },
+        {
+          id: "contact",
+          label: "Referente operativo",
+          hint: "Persona di riferimento per i lavoratori",
+          status: contactDone ? "done" : "todo",
+          href: "#sec-contact",
+        },
+        {
+          id: "first-ad",
+          label: "Pronto per il primo annuncio",
+          status: finalDone ? "done" : finalLocked ? "locked" : "todo",
+          href: finalDone ? "/ristoratore/annunci/nuovo" : undefined,
+        },
+      ];
+    }
+
+    // worker (default)
+    const personalDone = !!form.full_name.trim() && !!form.age && Number(form.age) >= 16;
+    const experienceDone = !!form.professional_profile.trim();
+    const languagesDone = spokenLanguages.length > 0;
+    const availabilityDone =
+      !!form.service_area_address.trim() && !!form.service_area_radius_m;
+    const finalLocked = !(personalDone && experienceDone && languagesDone);
+    return [
+      { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
+      {
+        id: "phone",
+        label: "Numero WhatsApp verificato",
+        status: phoneDone ? "done" : "todo",
+        href: phoneDone ? undefined : "/verify-phone",
+      },
+      {
+        id: "personal",
+        label: "Profilo personale",
+        hint: "Nome ed età",
+        status: personalDone ? "done" : "todo",
+        href: "#sec-personal",
+      },
+      {
+        id: "experience",
+        label: "Esperienza e ruoli",
+        hint: "Racconta il tuo profilo professionale",
+        status: experienceDone ? "done" : "todo",
+        href: "#sec-experience",
+      },
+      {
+        id: "languages",
+        label: "Lingue parlate",
+        status: languagesDone ? "done" : "todo",
+        href: "#sec-languages",
+      },
+      {
+        id: "availability",
+        label: "Disponibilità",
+        hint: "Zona di interesse e raggio",
+        status: availabilityDone ? "done" : "todo",
+        href: "#sec-availability",
+      },
+      {
+        id: "ready",
+        label: "Pronto a candidarti",
+        status: allDone ? "done" : finalLocked ? "locked" : "todo",
+        href: allDone ? "/browse" : undefined,
+      },
+    ];
+  })();
 
   const handleVerifyVat = async () => {
     if (!vatValid) {
@@ -356,9 +475,17 @@ function Onboarding() {
           role === "restaurant" ? "Aggiungi i dati del tuo locale" : "Aggiungi le tue informazioni professionali"
         }
       />
-      <ProfileStatusBanner />
+      <OnboardingStatusCard
+        role={role}
+        steps={steps}
+        subtitle={
+          role === "restaurant"
+            ? "Completa i dati del locale per iniziare a pubblicare annunci."
+            : "Completa il tuo profilo per candidarti agli annunci vicino a te."
+        }
+      />
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div id="sec-personal" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
           <div>
             <Label>Nome completo</Label>
             <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
@@ -376,7 +503,7 @@ function Onboarding() {
         </div>
         {role === "restaurant" ? (
           <>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div id="sec-business" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
               <div>
                 <Label>Nome locale</Label>
                 <Input
@@ -385,7 +512,7 @@ function Onboarding() {
                   onChange={(e) => setForm({ ...form, business_name: e.target.value })}
                 />
               </div>
-              <div className="md:col-span-1">
+              <div id="sec-vat" className="md:col-span-1 scroll-mt-24">
                 <Label>Partita IVA *</Label>
                 <div className="flex gap-2">
                   <Input
@@ -465,7 +592,7 @@ function Onboarding() {
                 </select>
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-[1fr_140px]">
+            <div id="sec-location" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
               <div>
                 <Label>Indirizzo *</Label>
                 <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
@@ -528,7 +655,7 @@ function Onboarding() {
               </div>
             </div>
 
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+            <div id="sec-contact" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold flex items-center gap-2">📍 Luogo e Accesso</h3>
               <p className="text-xs text-muted-foreground -mt-2">
                 Queste informazioni vengono mostrate ai lavoratori candidati e precompilate negli annunci.
@@ -628,7 +755,7 @@ function Onboarding() {
               </div>
             </div>
 
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+            <div id="sec-requirements" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold flex items-center gap-2">📋 Requisiti e Competenze standard</h3>
               <p className="text-xs text-muted-foreground -mt-1">
                 Imposta i requisiti standard del locale: verranno precompilati automaticamente in ogni nuovo annuncio.
@@ -638,7 +765,7 @@ function Onboarding() {
           </>
         ) : (
           <>
-            <div>
+            <div id="sec-experience" className="scroll-mt-24">
               <Label>Età</Label>
               <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
             </div>
@@ -650,12 +777,12 @@ function Onboarding() {
                 onChange={(e) => setForm({ ...form, professional_profile: e.target.value })}
               />
             </div>
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+            <div id="sec-languages" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Lingue parlate</Label>
               <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
               <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
             </div>
-            <div className="grid gap-4 md:grid-cols-[1fr_140px]">
+            <div id="sec-availability" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
               <div>
                 <Label>Area di interesse (indirizzo)</Label>
                 <Input
