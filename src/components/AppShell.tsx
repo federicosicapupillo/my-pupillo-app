@@ -112,9 +112,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <PaymentTestModeBanner />
-      <header className="border-b bg-card sticky top-0 z-10">
+      <header className="sticky top-0 z-10 border-b border-white/10 bg-[oklch(0.13_0.02_280/0.65)] backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4">
           <Link
             to={homeTo as never}
@@ -216,7 +216,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
       {(showBreadcrumbs || homeIndicator) && (
-        <div className="border-b bg-muted/40">
+        <div className="border-b border-white/5 bg-[oklch(0.13_0.02_280/0.4)] backdrop-blur-md">
           <nav aria-label="Breadcrumb" className="mx-auto max-w-7xl px-4 py-2 text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
             <Link
               to={homeTo as never}
