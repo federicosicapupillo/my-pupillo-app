@@ -231,7 +231,9 @@ function Inbox() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between gap-2">
-                  <div className={`truncate ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>{t.other.name}</div>
+                  <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                    {t.other.name}
+                  </div>
                   <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
                 </div>
                 <div className="flex items-center justify-between gap-2 mt-0.5">
