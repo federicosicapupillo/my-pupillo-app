@@ -20,11 +20,17 @@ function isTestOtpEnabled(): boolean {
 
   if (!enabled) return false;
 
-  // NODE_ENV can be "production" in preview builds too. Block only the known
-  // published host, while allowing local/preview test environments.
+  // NODE_ENV can be "production" in preview builds too. Allow only local/preview
+  // hosts and block the published app even if a test flag is accidentally set.
   const host = getRequest()?.headers.get("host") ?? "";
-  const isPublishedHost = host === "my-pupillo-app.lovable.app";
-  return !isPublishedHost;
+  const isPublishedHost = host === "my-pupillo-app.lovable.app" || (host.endsWith(".lovable.app") && !host.includes("preview"));
+  const isPreviewOrLocalHost =
+    host.includes("preview") ||
+    host.endsWith(".lovableproject.com") ||
+    host.startsWith("localhost") ||
+    host.startsWith("127.0.0.1");
+
+  return !isPublishedHost && (process.env.NODE_ENV !== "production" || isPreviewOrLocalHost || process.env.LOVABLE_SANDBOX === "true");
 }
 
 function hashOtp(code: string, userId: string): string {
