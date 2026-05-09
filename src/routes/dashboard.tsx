@@ -441,8 +441,8 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
             <span className="text-[11px] text-muted-foreground">Dopo la chiusura potrai lasciare la recensione al lavoratore.</span>
           </>
         ) : status === "completed" && !item.has_review ? (
-          item.app_id ? (
-            <Link to="/messages/$id" params={{ id: item.app_id }}>
+          item.shift_id ? (
+            <Link to="/ristoratore/turni/$shiftId" params={{ shiftId: item.shift_id }} search={{ section: "recensione" } as never}>
               <Button size="sm" variant={isOverdue ? "destructive" : "default"} className="gap-1">
                 <Star className="h-4 w-4" /> {isOverdue ? "Recensione scaduta — agisci ora" : "Lascia recensione"}
               </Button>
@@ -453,8 +453,8 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
             </Button>
           )
         ) : status === "completed" && item.has_review ? (
-          item.app_id ? (
-          <Link to="/messages/$id" params={{ id: item.app_id ?? "" }}>
+          item.shift_id ? (
+          <Link to="/ristoratore/turni/$shiftId" params={{ shiftId: item.shift_id }} search={{ section: "recensione" } as never}>
             <Button size="sm" variant="outline" className="gap-1">
               <Star className="h-4 w-4" /> Vedi recensione
             </Button>
