@@ -120,6 +120,10 @@ function WorkersPage() {
   const [subcategory, setSubcategory] = useState<string>("");
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
+  // Draft (form) state — committed only on "Cerca"
+  const [catDraft, setCatDraft] = useState<Category>("all");
+  const [subDraft, setSubDraft] = useState<string>("");
+  const [searching, setSearching] = useState(false);
   const [lang, setLang] = useState("");
   const [view, setView] = useState<"list" | "map">("list");
 
@@ -275,9 +279,25 @@ function WorkersPage() {
     }
     return true;
   });
-  const runSearch = () => setQ(qInput);
-  const resetFilters = () => { setCategory("all"); setSubcategory(""); setQInput(""); setQ(""); setLang(""); };
-  const onChangeCategory = (c: Category) => { setCategory(c); setSubcategory(""); };
+  const runSearch = () => {
+    setSearching(true);
+    setCategory(catDraft);
+    setSubcategory(subDraft);
+    setQ(qInput);
+    // Brief feedback so the loading state is visible to the user.
+    setTimeout(() => setSearching(false), 250);
+  };
+  const resetFilters = () => {
+    setCatDraft("all"); setSubDraft("");
+    setCategory("all"); setSubcategory("");
+    setQInput(""); setQ("");
+    setLang("");
+  };
+  const onChangeCategory = (c: Category) => { setCatDraft(c); setSubDraft(""); };
+  const removeCategoryChip = () => { setCatDraft("all"); setSubDraft(""); setCategory("all"); setSubcategory(""); };
+  const removeSubChip = () => { setSubDraft(""); setSubcategory(""); };
+  const removeQChip = () => { setQInput(""); setQ(""); };
+  const removeLangChip = () => setLang("");
 
 
   const selectedAnn = anns.find((a) => a.id === selected);
@@ -360,7 +380,7 @@ function WorkersPage() {
       <div className="mb-4 rounded-2xl border bg-card p-3 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_15%,transparent)]">
         <label className="mb-2 block text-sm font-medium">Ricerca avanzata lavoratori</label>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
-          <Select value={category} onValueChange={(v) => onChangeCategory(v as Category)}>
+          <Select value={catDraft} onValueChange={(v) => onChangeCategory(v as Category)}>
             <SelectTrigger className="lg:w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
@@ -368,11 +388,11 @@ function WorkersPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={subcategory || "__none"} onValueChange={(v) => setSubcategory(v === "__none" ? "" : v)}>
+          <Select value={subDraft || "__none"} onValueChange={(v) => setSubDraft(v === "__none" ? "" : v)}>
             <SelectTrigger className="lg:w-[220px]"><SelectValue placeholder="Sottocategoria" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">— nessuna —</SelectItem>
-              {SUBCATEGORIES[category].map((s) => (
+              {SUBCATEGORIES[catDraft].map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
             </SelectContent>
@@ -381,14 +401,16 @@ function WorkersPage() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-8"
-              placeholder={PLACEHOLDER_BY_CATEGORY[category]}
+              placeholder={PLACEHOLDER_BY_CATEGORY[catDraft]}
               value={qInput}
-              onChange={(e) => { setQInput(e.target.value); setQ(e.target.value); }}
+              onChange={(e) => setQInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={runSearch} className="gap-1"><Search className="h-4 w-4" />Cerca</Button>
+            <Button onClick={runSearch} disabled={searching} className="gap-1">
+              <Search className="h-4 w-4" />{searching ? "Sto cercando…" : "Cerca"}
+            </Button>
             <Button variant="outline" onClick={resetFilters} className="gap-1"><RotateCcw className="h-4 w-4" />Reset</Button>
           </div>
         </div>
@@ -396,29 +418,32 @@ function WorkersPage() {
         {(category !== "all" || subcategory || q || lang) && (
           <div className="mt-3 flex flex-wrap gap-2">
             {category !== "all" && (
-              <button onClick={() => onChangeCategory("all")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
+              <button onClick={removeCategoryChip} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
                 {CATEGORY_LABEL[category]} <X className="h-3 w-3" />
               </button>
             )}
             {subcategory && (
-              <button onClick={() => setSubcategory("")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
+              <button onClick={removeSubChip} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
                 {subcategory} <X className="h-3 w-3" />
               </button>
             )}
             {q && (
-              <button onClick={() => { setQ(""); setQInput(""); }} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
+              <button onClick={removeQChip} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
                 "{q}" <X className="h-3 w-3" />
               </button>
             )}
             {lang && (
-              <button onClick={() => setLang("")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
+              <button onClick={removeLangChip} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
                 Lingua: {lang} <X className="h-3 w-3" />
               </button>
             )}
           </div>
         )}
       </div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {searching ? "Ricerca in corso…" : `${sorted.length} ${sorted.length === 1 ? "lavoratore trovato" : "lavoratori trovati"}`}
+        </p>
         <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view==="list"?"secondary":"ghost"} onClick={()=>setView("list")} className="gap-1"><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view==="map"?"secondary":"ghost"} onClick={()=>setView("map")} className="gap-1"><MapIcon className="h-4 w-4" />Mappa</Button>
