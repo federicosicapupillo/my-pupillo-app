@@ -14,17 +14,19 @@ const TEST_OTP_ENABLED = import.meta.env.VITE_ENABLE_TEST_OTP === "true" && impo
 
 export const Route = createFileRoute("/verify-phone")({
   head: () => ({ meta: [{ title: "Conferma numero WhatsApp — Pupillo" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ phase: s.phase === "code" ? "code" as const : undefined }),
   component: VerifyPhonePage,
 });
 
 function VerifyPhonePage() {
   const { user, profile, role, loading, refresh } = useAuth();
   const nav = useNavigate();
+  const search = Route.useSearch();
   const start = useServerFn(startPhoneVerification);
   const verify = useServerFn(verifyPhoneOtp);
   const resend = useServerFn(resendPhoneOtp);
 
-  const [phase, setPhase] = useState<"phone" | "code">("phone");
+  const [phase, setPhase] = useState<"phone" | "code">(search.phase === "code" ? "code" : "phone");
   const [code, setCode] = useState("");
   const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
   const [phoneNumber, setPhoneNumber] = useState("");
