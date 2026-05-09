@@ -12,7 +12,14 @@ export const Route = createFileRoute("/messages")({
   component: () => <RequireAuth><Inbox /></RequireAuth>,
 });
 
-type Thread = { id: string; status: string; other: { id: string; name: string } };
+type Thread = {
+  id: string;
+  status: string;
+  other: { id: string; name: string };
+  lastBody: string | null;
+  lastAt: string | null;
+  unread: number;
+};
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "In attesa",
@@ -31,68 +38,131 @@ const STATUS_CLS: Record<string, string> = {
   expired: "bg-muted text-muted-foreground",
 };
 
+function formatWhen(iso: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const today = new Date();
+  const sameDay = d.toDateString() === today.toDateString();
+  return sameDay
+    ? d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+}
+
 function Inbox() {
   const { user, role } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = async () => {
     if (!user) return;
-    (async () => {
-      const col = role === "restaurant" ? "restaurant_id" : "worker_id";
-      const otherCol = role === "restaurant" ? "worker_id" : "restaurant_id";
-      const { data: apps } = await supabase.from("applications").select(`id, status, ${otherCol}`).eq(col, user.id);
-      const others = (apps ?? []).map((a: any) => a[otherCol]);
-      const { data: profs } = others.length ? await supabase.from("profiles").select("id, full_name, business_name").in("id", others) : { data: [] as any[] };
-      const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
-      setThreads((apps ?? []).map((a: any) => {
-        const p = pmap.get(a[otherCol]);
-        return { id: a.id, status: a.status, other: { id: a[otherCol], name: p?.business_name || p?.full_name || "Utente" } };
-      }));
-      setLoading(false);
-    })();
-  }, [user, role]);
+    const col = role === "restaurant" ? "restaurant_id" : "worker_id";
+    const otherCol = role === "restaurant" ? "worker_id" : "restaurant_id";
+    const { data: apps } = await supabase
+      .from("applications")
+      .select(`id, status, ${otherCol}`)
+      .eq(col, user.id);
+    const list = (apps ?? []) as any[];
+    const others = list.map((a) => a[otherCol]);
+    const ids = list.map((a) => a.id);
+    const [{ data: profs }, { data: msgs }] = await Promise.all([
+      others.length
+        ? supabase.from("profiles").select("id, full_name, business_name").in("id", others)
+        : Promise.resolve({ data: [] as any[] }),
+      ids.length
+        ? supabase
+            .from("messages")
+            .select("application_id, sender_id, body, created_at, read_at")
+            .in("application_id", ids)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+    const lastByApp = new Map<string, any>();
+    const unreadByApp = new Map<string, number>();
+    for (const m of (msgs ?? []) as any[]) {
+      if (!lastByApp.has(m.application_id)) lastByApp.set(m.application_id, m);
+      if (m.sender_id !== user.id && !m.read_at) {
+        unreadByApp.set(m.application_id, (unreadByApp.get(m.application_id) ?? 0) + 1);
+      }
+    }
+    const next: Thread[] = list.map((a) => {
+      const p = pmap.get(a[otherCol]);
+      const last = lastByApp.get(a.id);
+      return {
+        id: a.id,
+        status: a.status,
+        other: { id: a[otherCol], name: p?.business_name || p?.full_name || "Utente" },
+        lastBody: last?.body ?? null,
+        lastAt: last?.created_at ?? null,
+        unread: unreadByApp.get(a.id) ?? 0,
+      };
+    });
+    next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
+    setThreads(next);
+    setLoading(false);
+  };
 
-  // Realtime: keep thread statuses in sync
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user, role]);
+
+  // Realtime: status updates + new messages
   useEffect(() => {
     if (!user) return;
     const col = role === "restaurant" ? "restaurant_id" : "worker_id";
     const ch = supabase
       .channel(`inbox-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "applications", filter: `${col}=eq.${user.id}` },
-        (payload) => {
-          const row: any = payload.new || payload.old;
-          if (!row) return;
-          setThreads((prev) => {
-            const next = prev.map(t => t.id === row.id ? { ...t, status: row.status } : t);
-            const prevStatus = prev.find(t => t.id === row.id)?.status;
-            if (prevStatus && row.status && prevStatus !== row.status && STATUS_LABELS[row.status]) {
-              toast.message(`Stato aggiornato: ${STATUS_LABELS[row.status]}`);
-            }
-            return next;
-          });
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications", filter: `${col}=eq.${user.id}` }, (payload) => {
+        const row: any = payload.new || payload.old;
+        if (!row) return;
+        setThreads((prev) => {
+          const prevStatus = prev.find((t) => t.id === row.id)?.status;
+          if (prevStatus && row.status && prevStatus !== row.status && STATUS_LABELS[row.status]) {
+            toast.message(`Stato aggiornato: ${STATUS_LABELS[row.status]}`);
+          }
+          return prev.map((t) => (t.id === row.id ? { ...t, status: row.status } : t));
+        });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => { load(); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, role]);
 
   return (
     <AppShell>
       <PageHeader title="Messaggi" subtitle="Le tue conversazioni" />
-      {loading ? <p className="text-muted-foreground">Caricamento…</p> : threads.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">Nessuna conversazione.</div>
+      {loading ? (
+        <p className="text-muted-foreground">Caricamento…</p>
+      ) : threads.length === 0 ? (
+        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
+          Nessun messaggio ancora. Le conversazioni appariranno qui quando nascerà un contatto tra ristoratore e lavoratore.
+        </div>
       ) : (
         <div className="space-y-2 max-w-2xl">
-          {threads.map(t => (
-            <Link key={t.id} to="/messages/$id" params={{ id: t.id }} className="flex items-center gap-3 rounded-2xl border bg-card p-4 hover:bg-accent transition">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><MessageSquare className="h-4 w-4 text-primary" /></div>
-              <div className="flex-1">
-                <div className="font-medium">{t.other.name}</div>
-                <div className="mt-0.5">
-                  <span className={`inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
+          {threads.map((t) => (
+            <Link
+              key={t.id}
+              to="/messages/$id"
+              params={{ id: t.id }}
+              className="flex items-center gap-3 rounded-2xl border bg-card p-4 hover:bg-accent transition"
+            >
+              <div className="relative h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                {t.unread > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                    {t.unread > 9 ? "9+" : t.unread}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className={`truncate ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>{t.other.name}</div>
+                  <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
+                </div>
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                    {t.lastBody ?? "Nessun messaggio"}
+                  </div>
+                  <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
                     {STATUS_LABELS[t.status] || t.status}
                   </span>
                 </div>

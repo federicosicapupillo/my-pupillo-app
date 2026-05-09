@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban } from "lucide-react";
 
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/messages/$id")({
   component: () => <RequireAuth><Thread /></RequireAuth>,
 });
 
-type Msg = { id: string; sender_id: string; body: string; created_at: string };
+type Msg = { id: string; sender_id: string; body: string; created_at: string; read_at: string | null };
 type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
@@ -120,6 +121,15 @@ function Thread() {
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
       setMsgs((m as Msg[]) ?? []);
+      // Mark received messages as read
+      if (user) {
+        const unreadIds = ((m as Msg[]) ?? [])
+          .filter((x) => x.sender_id !== user.id && !x.read_at)
+          .map((x) => x.id);
+        if (unreadIds.length) {
+          await supabase.from("messages").update({ read_at: new Date().toISOString() }).in("id", unreadIds);
+        }
+      }
       const { data: ev } = await supabase.from("activity_logs")
         .select("*").eq("entity_type", "application").eq("entity_id", id)
         .order("created_at");
@@ -138,13 +148,20 @@ function Thread() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  const send = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const send = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!text.trim() || !user) return;
     const body = text.trim();
     setText("");
     const { error } = await supabase.from("messages").insert({ application_id: id, sender_id: user.id, body });
     if (error) toast.error(error.message);
+  };
+
+  const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
   };
 
   const transition = async (
@@ -302,9 +319,16 @@ function Thread() {
           ))}
           <div ref={endRef} />
         </div>
-        <form onSubmit={send} className="mt-4 flex gap-2">
-          <Input value={text} onChange={e => setText(e.target.value)} placeholder="Scrivi un messaggio…" />
-          <Button type="submit">Invia</Button>
+        <form onSubmit={send} className="mt-4 flex gap-2 items-end">
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={onComposerKeyDown}
+            placeholder="Scrivi un messaggio… (Invio per inviare, Shift+Invio per andare a capo)"
+            rows={1}
+            className="min-h-[44px] max-h-40 resize-none"
+          />
+          <Button type="submit" className="shrink-0 gap-2"><Send className="h-4 w-4" />Invia</Button>
         </form>
       </div>
     </AppShell>

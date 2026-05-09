@@ -6,6 +6,7 @@ import { PupilloMenu, PupilloClose, PupilloAvatar } from "@/components/PupilloIc
 import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { supabase } from "@/integrations/supabase/client";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 
 
@@ -61,6 +62,35 @@ export function AppShell({ children }: { children: ReactNode }) {
   const mobileNavRef = useRef<HTMLElement | null>(null);
   const mobileToggleRef = useRef<HTMLButtonElement | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Unread messages count (across all the user's applications)
+  const [unreadMsgs, setUnreadMsgs] = useState(0);
+  useEffect(() => {
+    if (!user) { setUnreadMsgs(0); return; }
+    let cancelled = false;
+    const load = async () => {
+      const col = role === "restaurant" ? "restaurant_id" : "worker_id";
+      const { data: apps } = await supabase
+        .from("applications")
+        .select("id")
+        .eq(col, user.id);
+      const ids = (apps ?? []).map((a: any) => a.id);
+      if (ids.length === 0) { if (!cancelled) setUnreadMsgs(0); return; }
+      const { count } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .in("application_id", ids)
+        .neq("sender_id", user.id)
+        .is("read_at", null);
+      if (!cancelled) setUnreadMsgs(count ?? 0);
+    };
+    load();
+    const ch = supabase
+      .channel(`unread-msgs-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => load())
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [user, role]);
 
   // Chiudi automaticamente al cambio di route
   useEffect(() => { setMobileOpen(false); }, [loc.pathname]);
@@ -138,6 +168,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link key={i.to} to={i.to as never}>
                 <Button variant={loc.pathname.startsWith(i.to) ? "secondary" : "ghost"} size="sm" className="gap-2">
                   <i.icon className="h-4 w-4" />{i.label}
+                  {i.to === "/messages" && unreadMsgs > 0 && (
+                    <span className="ml-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                      {unreadMsgs > 9 ? "9+" : unreadMsgs}
+                    </span>
+                  )}
                 </Button>
               </Link>
             ))}
@@ -208,6 +243,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap">
                     <i.icon className="h-4 w-4" />{i.label}
+                    {i.to === "/messages" && unreadMsgs > 0 && (
+                      <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                        {unreadMsgs > 9 ? "9+" : unreadMsgs}
+                      </span>
+                    )}
                   </Button>
                 </Link>
               );
