@@ -123,6 +123,7 @@ const TEMPLATES: MsgTemplate[] = [
   { key: "r_post_thanks", role: "restaurant", category: "post_shift", text: "Grazie per il lavoro svolto.", action: "none" },
   { key: "r_post_completed", role: "restaurant", category: "post_shift", text: "Confermo che il turno è stato completato.", action: "complete_shift" },
   { key: "r_post_again", role: "restaurant", category: "post_shift", text: "Ci piacerebbe collaborare ancora con te.", action: "none" },
+  { key: "r_post_review", role: "restaurant", category: "post_shift", text: "Lascia recensione", action: "none" },
   { key: "r_post_issue", role: "restaurant", category: "issue_report", text: "Segnalo un problema sul turno.", action: "report_issue" },
 
   // Worker — application
