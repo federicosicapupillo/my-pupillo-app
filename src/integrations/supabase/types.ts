@@ -179,10 +179,13 @@ export type Database = {
           binding_offer: boolean | null
           created_at: string
           id: string
+          last_message_at: string | null
+          last_message_preview: string | null
           proposed_tariff: number | null
           response_deadline: string
           restaurant_id: string
           status: Database["public"]["Enums"]["application_status"]
+          updated_at: string
           worker_id: string
           worker_response_at: string | null
         }
@@ -191,10 +194,13 @@ export type Database = {
           binding_offer?: boolean | null
           created_at?: string
           id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
           proposed_tariff?: number | null
           response_deadline?: string
           restaurant_id: string
           status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
           worker_id: string
           worker_response_at?: string | null
         }
@@ -203,10 +209,13 @@ export type Database = {
           binding_offer?: boolean | null
           created_at?: string
           id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
           proposed_tariff?: number | null
           response_deadline?: string
           restaurant_id?: string
           status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
           worker_id?: string
           worker_response_at?: string | null
         }
@@ -503,28 +512,40 @@ export type Database = {
       }
       messages: {
         Row: {
+          action_type: string | null
           application_id: string
           body: string
           created_at: string
           id: string
+          message_type: string
           read_at: string | null
+          receiver_id: string | null
           sender_id: string
+          template_id: string | null
         }
         Insert: {
+          action_type?: string | null
           application_id: string
           body: string
           created_at?: string
           id?: string
+          message_type?: string
           read_at?: string | null
+          receiver_id?: string | null
           sender_id: string
+          template_id?: string | null
         }
         Update: {
+          action_type?: string | null
           application_id?: string
           body?: string
           created_at?: string
           id?: string
+          message_type?: string
           read_at?: string | null
+          receiver_id?: string | null
           sender_id?: string
+          template_id?: string | null
         }
         Relationships: []
       }
@@ -534,6 +555,7 @@ export type Database = {
           created_at: string
           id: string
           link: string | null
+          metadata: Json | null
           read: boolean | null
           read_at: string | null
           title: string
@@ -544,6 +566,7 @@ export type Database = {
           created_at?: string
           id?: string
           link?: string | null
+          metadata?: Json | null
           read?: boolean | null
           read_at?: string | null
           title: string
@@ -554,6 +577,7 @@ export type Database = {
           created_at?: string
           id?: string
           link?: string | null
+          metadata?: Json | null
           read?: boolean | null
           read_at?: string | null
           title?: string

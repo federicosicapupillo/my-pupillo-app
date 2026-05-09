@@ -13,7 +13,18 @@ export const Route = createFileRoute("/messages/$id")({
   component: () => <RequireAuth><Thread /></RequireAuth>,
 });
 
-type Msg = { id: string; sender_id: string; body: string; created_at: string; read_at: string | null };
+type Msg = {
+  id: string;
+  application_id: string;
+  sender_id: string;
+  receiver_id?: string | null;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+  template_id?: string | null;
+  message_type?: "template" | "system" | string | null;
+  action_type?: string | null;
+};
 type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
@@ -245,7 +256,7 @@ function Thread() {
     })();
     const ch = supabase.channel(`thread-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `application_id=eq.${id}` },
-        (p) => setMsgs(prev => [...prev, p.new as Msg]))
+        (p) => setMsgs(prev => prev.some(m => m.id === (p.new as Msg).id) ? prev : [...prev, p.new as Msg]))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `id=eq.${id}` },
         (p) => setApp(p.new as App))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs", filter: `entity_id=eq.${id}` },
@@ -256,73 +267,129 @@ function Thread() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  const insertSystemMessage = async (text: string) => {
-    if (!user) return;
-    await supabase.from("messages").insert({
-      application_id: id, sender_id: user.id, body: `⚙️ Sistema: ${text}`,
-    });
+  const pushMessage = (message: Msg) => {
+    setMsgs(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
+  };
+
+  const insertSystemMessage = async (text: string, actionType?: TemplateAction) => {
+    if (!user || !app) return;
+    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+    const createdAt = new Date().toISOString();
+    const { data, error } = await supabase.from("messages").insert({
+      application_id: id,
+      sender_id: user.id,
+      receiver_id: receiverId,
+      body: `⚙️ Sistema: ${text}`,
+      created_at: createdAt,
+      read_at: null,
+      template_id: null,
+      message_type: "system",
+      action_type: actionType ?? null,
+    } as never).select("*").single();
+    if (error) throw error;
+    if (data) pushMessage(data as Msg);
   };
 
   const sendTemplate = async () => {
-    if (!selectedTpl || !user || sending) return;
+    if (sending) return;
+    if (!app) {
+      toast.error("Seleziona una conversazione prima di inviare un messaggio.");
+      return;
+    }
+    if (!selectedTpl) {
+      toast.error("Seleziona un messaggio da inviare.");
+      return;
+    }
+    if (!user) {
+      toast.error("Accedi per inviare un messaggio.");
+      return;
+    }
+    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+    if (!receiverId || receiverId === user.id) {
+      toast.error("Seleziona una conversazione prima di inviare un messaggio.");
+      return;
+    }
     setSending(true);
     try {
       const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null);
-      const { error } = await supabase.from("messages").insert({
-        application_id: id, sender_id: user.id, body,
-      });
-      if (error) { toast.error(error.message); return; }
+      const createdAt = new Date().toISOString();
+      const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
+      const { data, error } = await supabase.from("messages").insert({
+        application_id: app.id,
+        sender_id: user.id,
+        receiver_id: receiverId,
+        body,
+        created_at: createdAt,
+        read_at: null,
+        template_id: selectedTpl.key,
+        message_type: "template",
+        action_type: actionType,
+      } as never).select("*").single();
+      if (error) throw error;
+      if (data) pushMessage(data as Msg);
+
+      const { error: conversationError } = await supabase.from("applications").update({
+        last_message_preview: body,
+        last_message_at: createdAt,
+      } as never).eq("id", app.id);
+      if (conversationError) throw conversationError;
 
       // Trigger collegate alle azioni
       switch (selectedTpl.action) {
         case "accept_application":
           if (role === "restaurant") {
             await transition("accepted");
-            await insertSystemMessage("candidatura accettata.");
+            await insertSystemMessage("candidatura accettata.", selectedTpl.action);
           }
           break;
         case "reject_application":
           if (role === "restaurant") {
             await transition("rejected");
-            await insertSystemMessage("candidatura rifiutata.");
+            await insertSystemMessage("candidatura rifiutata.", selectedTpl.action);
           }
           break;
         case "withdraw_application":
           if (role === "worker") {
             await transition("not_interested");
-            await insertSystemMessage("il lavoratore ha ritirato la candidatura.");
+            await insertSystemMessage("candidatura ritirata.", selectedTpl.action);
           }
           break;
         case "confirm_shift":
           if (app?.announcement_id) {
-            await supabase.from("shifts").update({ status: "scheduled" })
+            const { error: shiftError } = await supabase.from("shifts").update({ status: "scheduled" })
               .eq("announcement_id", app.announcement_id);
-            await insertSystemMessage("turno confermato.");
+            if (shiftError) throw shiftError;
+            await insertSystemMessage("turno confermato.", selectedTpl.action);
           }
           break;
         case "cancel_shift":
           if (app?.announcement_id) {
-            await supabase.from("shifts").update({ status: "cancelled" })
+            const { error: shiftError } = await supabase.from("shifts").update({ status: "cancelled" })
               .eq("announcement_id", app.announcement_id);
-            await insertSystemMessage("turno annullato.");
+            if (shiftError) throw shiftError;
+            await insertSystemMessage("turno annullato.", selectedTpl.action);
           }
           break;
         case "complete_shift":
           if (app?.announcement_id) {
-            await supabase.from("shifts").update({ status: "completed" })
+            const { error: shiftError } = await supabase.from("shifts").update({ status: "completed" })
               .eq("announcement_id", app.announcement_id);
-            await insertSystemMessage("turno completato.");
+            if (shiftError) throw shiftError;
+            await insertSystemMessage("turno completato.", selectedTpl.action);
           }
           break;
         case "confirm_arrival":
-          await insertSystemMessage("il lavoratore ha confermato la presenza.");
+          await insertSystemMessage("il lavoratore ha confermato la presenza.", selectedTpl.action);
           break;
         case "report_issue":
-          await insertSystemMessage("è stato segnalato un problema sul turno.");
+          await insertSystemMessage("è stato segnalato un problema sul turno.", selectedTpl.action);
           break;
       }
       setSelectedTpl(null);
-      toast.success("Messaggio inviato");
+      toast.success("Messaggio inviato.");
+    } catch (error) {
+      console.error("Errore invio messaggio template", error);
+      toast.error("Errore durante l’invio del messaggio. Riprova.");
     } finally {
       setSending(false);
     }
@@ -371,7 +438,8 @@ function Thread() {
     toast.success("Controfferta inviata");
   };
 
-  const isTerminal = app ? TERMINAL.includes(app.status) : true;
+  const canChangeStatus = app ? TERMINAL.includes(app.status) === false : false;
+  const isConversationClosed = app?.status === "expired";
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
   const steps = buildTimeline(app?.status);
@@ -480,7 +548,7 @@ function Thread() {
           </div>
         )}
 
-        {!isTerminal && app && (
+        {canChangeStatus && app && (
           <div className="mb-4 space-y-2">
             <div className="flex flex-wrap gap-2">
               {role === "worker" && app.status === "pending" && (<>
@@ -508,7 +576,7 @@ function Thread() {
         <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
-            const isSystem = m.body.startsWith("⚙️ Sistema:");
+            const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             if (isSystem) {
               return (
                 <div key={m.id} className="flex justify-center">
@@ -536,7 +604,7 @@ function Thread() {
           sending={sending}
           ann={ann}
           otherName={other?.name ?? null}
-          disabled={isTerminal}
+          disabled={isConversationClosed}
         />
       </div>
   );
@@ -615,7 +683,7 @@ function TemplatePicker(props: {
           className="gap-2"
         >
           <Send className="h-4 w-4" />
-          {sending ? "Invio…" : "Invia messaggio"}
+          {sending ? "Invio in corso…" : "Invia messaggio"}
         </Button>
       </div>
       {disabled && (
