@@ -62,6 +62,35 @@ export function AppShell({ children }: { children: ReactNode }) {
   const mobileToggleRef = useRef<HTMLButtonElement | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Unread messages count (across all the user's applications)
+  const [unreadMsgs, setUnreadMsgs] = useState(0);
+  useEffect(() => {
+    if (!user) { setUnreadMsgs(0); return; }
+    let cancelled = false;
+    const load = async () => {
+      const col = role === "restaurant" ? "restaurant_id" : "worker_id";
+      const { data: apps } = await supabase
+        .from("applications")
+        .select("id")
+        .eq(col, user.id);
+      const ids = (apps ?? []).map((a: any) => a.id);
+      if (ids.length === 0) { if (!cancelled) setUnreadMsgs(0); return; }
+      const { count } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .in("application_id", ids)
+        .neq("sender_id", user.id)
+        .is("read_at", null);
+      if (!cancelled) setUnreadMsgs(count ?? 0);
+    };
+    load();
+    const ch = supabase
+      .channel(`unread-msgs-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => load())
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [user, role]);
+
   // Chiudi automaticamente al cambio di route
   useEffect(() => { setMobileOpen(false); }, [loc.pathname]);
 
