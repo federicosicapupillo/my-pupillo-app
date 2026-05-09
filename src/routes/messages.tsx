@@ -6,9 +6,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
+  validateSearch: zodValidator(
+    z.object({ with: fallback(z.string(), "").default("") }),
+  ),
   component: () => <RequireAuth><Inbox /></RequireAuth>,
 });
 
@@ -50,6 +55,7 @@ function formatWhen(iso: string | null) {
 
 function Inbox() {
   const { user, role } = useAuth();
+  const { with: withUser } = Route.useSearch();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -137,12 +143,25 @@ function Inbox() {
   const visible = threads.filter((t) => {
     if (filter === "unread" && t.unread === 0) return false;
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (withUser && t.other.id !== withUser) return false;
     return true;
   });
+  const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
 
   return (
     <AppShell>
       <PageHeader title="Messaggi" subtitle="Le tue conversazioni" />
+      {withUser && (
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
+          <span>
+            Conversazioni con <span className="font-semibold">{focusedName ?? "questo utente"}</span>
+            {visible.length > 0 && <span className="ml-1 text-muted-foreground">({visible.length})</span>}
+          </span>
+          <Link to="/messages" search={{ with: "" }} className="text-xs text-primary hover:underline">
+            Mostra tutte
+          </Link>
+        </div>
+      )}
       <div className="mb-3 flex items-center gap-2 flex-wrap">
         <button
           type="button"
