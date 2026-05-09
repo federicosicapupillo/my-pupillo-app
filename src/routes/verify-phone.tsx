@@ -41,7 +41,13 @@ function VerifyPhonePage() {
   useEffect(() => {
     if (loading) return;
     if (!user) { nav({ to: "/auth" }); return; }
-    if (profile?.phone_verified) {
+    // Wait until profile is loaded before deciding access.
+    if (!profile) return;
+    // Hard guard: this page is reserved to users who have just signed up
+    // and still have phone_verified === false. Anyone else (already
+    // verified, or somehow with phone_verified !== false) is redirected
+    // to their normal destination.
+    if (profile.phone_verified !== false) {
       if (profile?.profile_completed) {
         nav({ to: "/dashboard" });
       } else {
