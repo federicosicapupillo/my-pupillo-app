@@ -216,8 +216,8 @@ function NewRestaurantJobRequest() {
       const end = `${String(Math.floor(endMinutes / 60) % 24).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
       setF(prev => ({
         ...prev,
-        title: prev.title || `Servizio ${data.professional_profile || "extra"}`,
         role_required: data.professional_profile || prev.role_required,
+        title: data.professional_profile || prev.role_required || prev.title,
         shift_date: "",
         start_time: start,
         end_time: end,
@@ -271,8 +271,7 @@ function NewRestaurantJobRequest() {
 
   const validate = () => {
     if (!user) return false;
-    if (!f.title.trim()) { toast.error("Inserisci il titolo annuncio"); return false; }
-    if (!f.role_required) { toast.error("Seleziona il ruolo cercato"); return false; }
+    if (!f.role_required) { toast.error("Seleziona il ruolo cercato."); return false; }
     if (!f.shift_date) { toast.error("Inserisci la data del turno"); return false; }
     if (!f.start_time || !f.end_time || durationHours <= 0) { toast.error("Inserisci un orario valido"); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
@@ -353,7 +352,7 @@ function NewRestaurantJobRequest() {
       restaurant_id: user.id,
       user_id: user.id,
       announcement_id: announcement.id,
-      title: f.title.trim(),
+      title: f.role_required,
       role_required: f.role_required,
       workers_needed: Number(f.workers_needed || 1),
       description: f.description || null,
@@ -479,9 +478,8 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="1" title="Informazioni principali" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Titolo annuncio"><Input required value={f.title} onChange={e => setField("title", e.target.value)} placeholder="Es. Cameriere per servizio cena" /></Field>
             <Field label="Ruolo cercato">
-              <Select value={f.role_required} onValueChange={v => setField("role_required", v)}>
+              <Select value={f.role_required} onValueChange={v => { setField("role_required", v); setField("title", v); }}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo" /></SelectTrigger>
                 <SelectContent>{ROLE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
