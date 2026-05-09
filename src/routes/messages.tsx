@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
@@ -14,12 +14,15 @@ export const Route = createFileRoute("/messages")({
   validateSearch: zodValidator(
     z.object({ with: fallback(z.string(), "").default("") }),
   ),
-  component: () => <RequireAuth><Inbox /></RequireAuth>,
+  component: () => <RequireAuth><MessagesLayout /></RequireAuth>,
 });
 
 type Thread = {
   id: string;
   status: string;
+  announcementId: string;
+  restaurantId: string;
+  workerId: string;
   other: { id: string; name: string };
   lastBody: string | null;
   lastAt: string | null;
@@ -53,24 +56,35 @@ function formatWhen(iso: string | null) {
     : d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
 }
 
-function Inbox() {
-  const { user, role } = useAuth();
+function MessagesLayout() {
+  const { user, role, loading: authLoading } = useAuth();
   const { with: withUser } = Route.useSearch();
+  const location = useLocation();
+  const selectedId = location.pathname.startsWith("/messages/")
+    ? decodeURIComponent(location.pathname.split("/")[2] ?? "")
+    : "";
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const load = async () => {
-    if (!user) return;
+    if (!user || !role) return;
+    setLoading(true);
     const col = role === "restaurant" ? "restaurant_id" : "worker_id";
     const otherCol = role === "restaurant" ? "worker_id" : "restaurant_id";
-    const { data: apps } = await supabase
+    const { data: apps, error: appsError } = await supabase
       .from("applications")
-      .select(`id, status, ${otherCol}`)
+      .select(`id, status, announcement_id, restaurant_id, worker_id, ${otherCol}`)
       .eq(col, user.id);
+    if (appsError) {
+      toast.error(appsError.message);
+      setThreads([]);
+      setLoading(false);
+      return;
+    }
     const list = (apps ?? []) as any[];
-    const others = list.map((a) => a[otherCol]);
+    const others = list.map((a) => a[otherCol]).filter(Boolean);
     const ids = list.map((a) => a.id);
     const [{ data: profs }, { data: msgs }] = await Promise.all([
       others.length
@@ -99,22 +113,25 @@ function Inbox() {
       return {
         id: a.id,
         status: a.status,
+        announcementId: a.announcement_id,
+        restaurantId: a.restaurant_id,
+        workerId: a.worker_id,
         other: { id: a[otherCol], name: p?.business_name || p?.full_name || "Utente" },
         lastBody: last?.body ?? null,
         lastAt: last?.created_at ?? null,
         unread: unreadByApp.get(a.id) ?? 0,
       };
     });
-    next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
+    next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
     setThreads(next);
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user, role]);
+  useEffect(() => { if (!authLoading) load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user, role, authLoading]);
 
   // Realtime: status updates + new messages
   useEffect(() => {
-    if (!user) return;
+    if (!user || !role) return;
     const col = role === "restaurant" ? "restaurant_id" : "worker_id";
     const ch = supabase
       .channel(`inbox-${user.id}`)
@@ -151,104 +168,122 @@ function Inbox() {
   return (
     <AppShell>
       <PageHeader title="Messaggi" subtitle="Le tue conversazioni" />
-      {withUser && (
-        <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
-          <span>
-            Conversazioni con <span className="font-semibold">{focusedName ?? "questo utente"}</span>
-            {visible.length > 0 && <span className="ml-1 text-muted-foreground">({visible.length})</span>}
-          </span>
-          <Link to="/messages" search={{ with: "" }} className="text-xs text-primary hover:underline">
-            Mostra tutte
-          </Link>
-        </div>
-      )}
-      <div className="mb-3 flex items-center gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setFilter("all")}
-          className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
-        >
-          Tutte ({threads.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilter("unread")}
-          className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "unread" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
-        >
-          Non lette ({totalUnread})
-        </button>
-      </div>
-      <div className="mb-4 flex items-center gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setStatusFilter("all")}
-          className={`text-[11px] rounded-full px-2.5 py-1 border transition ${statusFilter === "all" ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent"}`}
-        >
-          Tutti gli stati
-        </button>
-        {Object.keys(STATUS_LABELS).map((s) => {
-          const count = statusCounts[s] ?? 0;
-          if (count === 0) return null;
-          const active = statusFilter === s;
-          return (
+      <div className="grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]">
+        <section className={`${selectedId ? "hidden lg:block" : "block"} min-w-0`} aria-label="Lista conversazioni">
+          {withUser && (
+            <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
+              <span>
+                Conversazioni con <span className="font-semibold">{focusedName ?? "questo utente"}</span>
+                {visible.length > 0 && <span className="ml-1 text-muted-foreground">({visible.length})</span>}
+              </span>
+              <Link to="/messages" search={{ with: "" }} className="text-xs text-primary hover:underline">
+                Mostra tutte
+              </Link>
+            </div>
+          )}
+          <div className="mb-3 flex items-center gap-2 flex-wrap">
             <button
-              key={s}
               type="button"
-              onClick={() => setStatusFilter(s)}
-              className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
+              onClick={() => setFilter("all")}
+              className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
             >
-              {STATUS_LABELS[s]} ({count})
+              Tutte ({threads.length})
             </button>
-          );
-        })}
-      </div>
-      {loading ? (
-        <p className="text-muted-foreground">Caricamento…</p>
-      ) : threads.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-          Nessun messaggio ancora. Le conversazioni appariranno qui quando nascerà un contatto tra ristoratore e lavoratore.
-        </div>
-      ) : visible.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-          Nessuna conversazione corrisponde ai filtri selezionati.
-        </div>
-      ) : (
-        <div className="space-y-2 max-w-2xl">
-          {visible.map((t) => (
-            <Link
-              key={t.id}
-              to="/messages/$id"
-              params={{ id: t.id }}
-              className="group flex items-center gap-3 rounded-2xl border bg-card p-4 hover:bg-accent transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            <button
+              type="button"
+              onClick={() => setFilter("unread")}
+              className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "unread" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
             >
-              <div className="relative h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                {t.unread > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
-                    {t.unread > 9 ? "9+" : t.unread}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
-                    {t.other.name}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
-                </div>
-                <div className="flex items-center justify-between gap-2 mt-0.5">
-                  <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                    {t.lastBody ?? "Nessun messaggio"}
-                  </div>
-                  <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
-                    {STATUS_LABELS[t.status] || t.status}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+              Non lette ({totalUnread})
+            </button>
+          </div>
+          <div className="mb-4 flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={`text-[11px] rounded-full px-2.5 py-1 border transition ${statusFilter === "all" ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent"}`}
+            >
+              Tutti gli stati
+            </button>
+            {Object.keys(STATUS_LABELS).map((s) => {
+              const count = statusCounts[s] ?? 0;
+              if (count === 0) return null;
+              const active = statusFilter === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatusFilter(s)}
+                  className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
+                >
+                  {STATUS_LABELS[s]} ({count})
+                </button>
+              );
+            })}
+          </div>
+          {loading ? (
+            <p className="text-muted-foreground">Caricamento…</p>
+          ) : threads.length === 0 ? (
+            <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
+              Nessun messaggio ancora. Le conversazioni appariranno qui quando nasce un contatto tra ristoratore e lavoratore.
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
+              Nessuna conversazione corrisponde ai filtri selezionati.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visible.map((t) => {
+                const active = selectedId === t.id;
+                return (
+                  <Link
+                    key={t.id}
+                    to="/messages/$id"
+                    params={{ id: t.id }}
+                    className={`group flex items-center gap-3 rounded-2xl border p-4 transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${active ? "bg-primary/10 border-primary/40" : "bg-card hover:bg-accent"}`}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <div className="relative h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      {t.unread > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                          {t.unread > 9 ? "9+" : t.unread}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                          {t.other.name}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                          {t.lastBody ?? "Nessun messaggio"}
+                        </div>
+                        <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
+                          {STATUS_LABELS[t.status] || t.status}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className={`${selectedId ? "block" : "hidden lg:block"} min-w-0`} aria-label="Chat conversazione">
+          {selectedId ? (
+            <Outlet />
+          ) : (
+            <div className="flex min-h-[520px] items-center justify-center rounded-2xl border bg-card p-10 text-center text-muted-foreground">
+              Seleziona una conversazione per iniziare.
+            </div>
+          )}
+        </section>
+      </div>
     </AppShell>
   );
 }

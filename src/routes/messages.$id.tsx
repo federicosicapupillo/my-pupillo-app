@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
-import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +19,7 @@ type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
 };
-type Ann = { id: string; tariff_amount: number; tariff_type: string };
+type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string };
 type LogEvent = {
   id: string;
   action: string;
@@ -101,6 +100,8 @@ function Thread() {
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [otherId, setOtherId] = useState<string | null>(null);
   const [counterOpen, setCounterOpen] = useState(false);
   const [counterValue, setCounterValue] = useState("");
@@ -109,14 +110,23 @@ function Thread() {
 
   useEffect(() => {
     (async () => {
-      const { data: a } = await supabase.from("applications").select("*").eq("id", id).maybeSingle();
+      setLoading(true);
+      setNotFound(false);
+      const { data: a, error: appError } = await supabase.from("applications").select("*").eq("id", id).maybeSingle();
+      if (appError) toast.error(appError.message);
       setApp(a as App | null);
+      if (!a) {
+        setNotFound(true);
+        setMsgs([]);
+        setLoading(false);
+        return;
+      }
       if (a) {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
           supabase.from("profiles").select("full_name, business_name").eq("id", otherId).maybeSingle(),
-          supabase.from("announcements").select("id, tariff_amount, tariff_type").eq("id", a.announcement_id).maybeSingle(),
+          supabase.from("announcements").select("id, service_date, service_time, location_address, tariff_amount, tariff_type").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({ name: p?.business_name || p?.full_name || "Utente" });
         setAnn(an as Ann | null);
@@ -136,6 +146,7 @@ function Thread() {
         .select("*").eq("entity_type", "application").eq("entity_id", id)
         .order("created_at");
       setEvents((ev as LogEvent[]) ?? []);
+      setLoading(false);
     })();
     const ch = supabase.channel(`thread-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `application_id=eq.${id}` },
@@ -222,11 +233,22 @@ function Thread() {
     });
   };
 
+  if (loading) {
+    return <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">Caricamento chat…</div>;
+  }
+
+  if (notFound) {
+    return (
+      <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">
+        Conversazione non trovata o non accessibile.
+      </div>
+    );
+  }
+
   return (
-    <AppShell>
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto lg:mx-0">
         <div className="flex items-center justify-between mb-4">
-          <Link to="/messages"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Indietro</Button></Link>
+          <Link to="/messages" className="lg:hidden"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Indietro</Button></Link>
           {app && <span className="text-xs rounded-full bg-secondary px-2 py-1 capitalize">{app.status}</span>}
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
@@ -242,6 +264,15 @@ function Thread() {
               </Link>
             ) : (
               <div className="font-semibold">{other?.name ?? "—"}</div>
+            )}
+            {ann && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                <Link to="/announcements/$id" params={{ id: ann.id }} className="text-primary hover:underline underline-offset-2">
+                  Annuncio del {new Date(ann.service_date).toLocaleDateString("it-IT")}
+                </Link>
+                {ann.service_time && <> · {ann.service_time.slice(0, 5)}</>}
+                {ann.location_address && <> · {ann.location_address}</>}
+              </div>
             )}
             {currentTariff != null && (
               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
@@ -323,7 +354,7 @@ function Thread() {
           </div>
         )}
 
-        <div className="rounded-2xl border bg-card p-4 h-[400px] overflow-y-auto space-y-2">
+        <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => (
             <div key={m.id} className={`flex ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
@@ -344,6 +375,5 @@ function Thread() {
           <Button type="submit" className="shrink-0 gap-2"><Send className="h-4 w-4" />Invia</Button>
         </form>
       </div>
-    </AppShell>
   );
 }
