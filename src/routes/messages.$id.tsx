@@ -245,6 +245,9 @@ function Thread() {
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
   const [sending, setSending] = useState(false);
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -285,6 +288,26 @@ function Thread() {
         .select("*").eq("entity_type", "application").eq("entity_id", id)
         .order("created_at");
       setEvents((ev as LogEvent[]) ?? []);
+      // Carica turno collegato e recensione esistente
+      if (a) {
+        const { data: sh } = await supabase
+          .from("shifts")
+          .select("id, status, shift_date, worker_id, restaurant_id, announcement_id, reviewed_at, reviewed_by_restaurant_user_id")
+          .eq("announcement_id", (a as any).announcement_id)
+          .eq("worker_id", (a as any).worker_id)
+          .eq("restaurant_id", (a as any).restaurant_id)
+          .maybeSingle();
+        setShift((sh as Shift | null) ?? null);
+        if (sh && user) {
+          const { data: rev } = await supabase
+            .from("reviews")
+            .select("id, rating, comment, tags, created_at, author_id, target_id, shift_id")
+            .eq("shift_id", (sh as any).id)
+            .eq("author_id", user.id)
+            .maybeSingle();
+          setExistingReview((rev as Review | null) ?? null);
+        }
+      }
       setLoading(false);
     })();
     const ch = supabase.channel(`thread-${id}`)
