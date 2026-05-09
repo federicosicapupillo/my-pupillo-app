@@ -836,3 +836,179 @@ function TemplatePicker(props: {
     </div>
   );
 }
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="flex items-center gap-1" role="radiogroup" aria-label="Valutazione">
+      {[1, 2, 3, 4, 5].map((n) => {
+        const active = (hover || value) >= n;
+        return (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            onMouseEnter={() => setHover(n)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => onChange(n)}
+            className="p-1 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            aria-label={`${n} stelle`}
+          >
+            <Star
+              className={`h-7 w-7 transition ${active ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
+              strokeWidth={1.5}
+            />
+          </button>
+        );
+      })}
+      <span className="ml-2 text-sm text-muted-foreground">
+        {value ? RATING_LABELS[value] : "Seleziona valutazione"}
+      </span>
+    </div>
+  );
+}
+
+const RATING_LABELS: Record<number, string> = {
+  1: "Insufficiente",
+  2: "Da migliorare",
+  3: "Buono",
+  4: "Molto buono",
+  5: "Eccellente",
+};
+
+function ReviewBlock(props: {
+  id?: string;
+  existing: Review | null;
+  workerName: string | null;
+  shift: Shift | null;
+  forceOpen: boolean;
+  onSubmit: (rating: number, text: string, tags: string[]) => Promise<void>;
+}) {
+  const { id, existing, workerName, shift, forceOpen, onSubmit } = props;
+  const [rating, setRating] = useState(0);
+  const [text, setText] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (existing) {
+    return (
+      <div id={id} className="mt-4 rounded-2xl border bg-card p-4 space-y-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm">Recensione inviata</h3>
+        </div>
+        <div className="flex items-center gap-1">
+          {[1,2,3,4,5].map(n => (
+            <Star key={n} className={`h-5 w-5 ${n <= existing.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} strokeWidth={1.5} />
+          ))}
+          <span className="ml-2 text-sm font-medium">{existing.rating}.0 — {RATING_LABELS[existing.rating]}</span>
+        </div>
+        {existing.comment && <p className="text-sm">{existing.comment}</p>}
+        {existing.tags && existing.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {existing.tags.map(t => (
+              <span key={t} className="text-[11px] rounded-full bg-secondary px-2 py-0.5">{t}</span>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Hai già recensito questo turno. Non è possibile modificarla.</p>
+      </div>
+    );
+  }
+
+  const charCount = text.trim().length;
+  const canSubmit = rating > 0 && charCount >= 20 && charCount <= 500 && !submitting;
+
+  const toggleTag = (t: string) => {
+    setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try { await onSubmit(rating, text, tags); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div id={id} className={`mt-4 rounded-2xl border bg-card p-4 space-y-4 ${forceOpen ? "ring-2 ring-primary/40" : ""}`}>
+      <div>
+        <div className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+          <h3 className="font-semibold text-base">Com'è andato il turno{workerName ? ` con ${workerName}` : ""}?</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Conferma la fine del turno e lascia una recensione al lavoratore.
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium mb-2">Valutazione *</label>
+        <StarPicker value={rating} onChange={setRating} />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-medium">Recensione *</label>
+          <span className={`text-[11px] ${charCount > 500 ? "text-destructive" : "text-muted-foreground"}`}>
+            {charCount}/500
+          </span>
+        </div>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Scrivi una recensione chiara e utile. Esempio: puntuale, professionale, ha rispettato il dress code e ha lavorato bene con il team."
+          rows={4}
+          maxLength={500}
+        />
+        {charCount > 0 && charCount < 20 && (
+          <p className="text-[11px] text-destructive mt-1">Minimo 20 caratteri ({20 - charCount} mancanti).</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium mb-2">Tag rapidi (opzionali)</label>
+        <div className="space-y-2">
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1">Positivi</div>
+            <div className="flex flex-wrap gap-1.5">
+              {POSITIVE_TAGS.map(t => {
+                const active = tags.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTag(t)}
+                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1">Critici</div>
+            <div className="flex flex-wrap gap-1.5">
+              {CRITICAL_TAGS.map(t => {
+                const active = tags.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTag(t)}
+                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-destructive/20 border-destructive text-destructive" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Button type="button" onClick={handleSubmit} disabled={!canSubmit} className="w-full gap-2">
+        <Check className="h-4 w-4" />
+        {submitting ? "Invio in corso…" : "Conferma fine turno e invia recensione"}
+      </Button>
+      {shift?.status === "cancelled" && (
+        <p className="text-[11px] text-destructive text-center">
+          Il turno risulta annullato: usa il flusso di segnalazione invece della recensione standard.
+        </p>
+      )}
+    </div>
+  );
+}
