@@ -5,9 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban } from "lucide-react";
+import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -20,6 +19,100 @@ type App = {
   announcement_id: string; proposed_tariff: number | null;
 };
 type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string };
+
+type TemplateCategory =
+  | "application"
+  | "availability"
+  | "shift_organization"
+  | "dress_code_access"
+  | "shift_changes"
+  | "post_shift"
+  | "issue_report";
+
+type TemplateAction =
+  | "none"
+  | "accept_application"
+  | "reject_application"
+  | "confirm_shift"
+  | "cancel_shift"
+  | "complete_shift"
+  | "withdraw_application"
+  | "confirm_arrival"
+  | "report_issue";
+
+type MsgTemplate = {
+  key: string;
+  role: "restaurant" | "worker" | "both";
+  category: TemplateCategory;
+  text: string; // may include {{vars}}
+  action: TemplateAction;
+};
+
+const CATEGORY_LABELS: Record<TemplateCategory, string> = {
+  application: "Candidatura",
+  availability: "Conferma disponibilità",
+  shift_organization: "Organizzazione turno",
+  dress_code_access: "Dress code e accesso",
+  shift_changes: "Modifiche turno",
+  post_shift: "Post turno",
+  issue_report: "Problemi / segnalazioni",
+};
+
+const TEMPLATES: MsgTemplate[] = [
+  // Restaurant — application
+  { key: "r_app_seen", role: "restaurant", category: "application", text: "Ciao, ho visto la tua candidatura.", action: "none" },
+  { key: "r_app_avail", role: "restaurant", category: "application", text: "Sei disponibile per il turno del {{shift_date}} alle {{start_time}}?", action: "none" },
+  { key: "r_app_exp", role: "restaurant", category: "application", text: "Hai esperienza in questo ruolo?", action: "none" },
+  { key: "r_app_similar", role: "restaurant", category: "application", text: "Hai già lavorato in un locale simile?", action: "none" },
+  { key: "r_app_confirm_avail", role: "restaurant", category: "application", text: "Puoi confermare la tua disponibilità?", action: "none" },
+  { key: "r_app_selected", role: "restaurant", category: "application", text: "Ti abbiamo selezionato per questo turno.", action: "accept_application" },
+  { key: "r_app_other", role: "restaurant", category: "application", text: "Al momento abbiamo scelto un altro candidato.", action: "reject_application" },
+  // Restaurant — shift organization
+  { key: "r_org_15", role: "restaurant", category: "shift_organization", text: "Presentati 15 minuti prima dell'orario di inizio.", action: "none" },
+  { key: "r_org_ref", role: "restaurant", category: "shift_organization", text: "Chiedi del referente indicato nell'annuncio.", action: "none" },
+  { key: "r_org_dress", role: "restaurant", category: "dress_code_access", text: "Ricorda di rispettare il dress code indicato.", action: "none" },
+  { key: "r_org_tools", role: "restaurant", category: "shift_organization", text: "Porta con te gli strumenti richiesti nell'annuncio.", action: "none" },
+  { key: "r_org_confirmed", role: "restaurant", category: "shift_organization", text: "Il turno del {{shift_date}} alle {{start_time}} è confermato.", action: "confirm_shift" },
+  { key: "r_org_modified", role: "restaurant", category: "shift_changes", text: "Il turno è stato modificato. Controlla i dettagli.", action: "none" },
+  { key: "r_org_cancelled", role: "restaurant", category: "shift_changes", text: "Il turno è stato annullato.", action: "cancel_shift" },
+  // Restaurant — post shift
+  { key: "r_post_thanks", role: "restaurant", category: "post_shift", text: "Grazie per il lavoro svolto.", action: "none" },
+  { key: "r_post_completed", role: "restaurant", category: "post_shift", text: "Confermo che il turno è stato completato.", action: "complete_shift" },
+  { key: "r_post_again", role: "restaurant", category: "post_shift", text: "Ci piacerebbe collaborare ancora con te.", action: "none" },
+  { key: "r_post_issue", role: "restaurant", category: "issue_report", text: "Segnalo un problema sul turno.", action: "report_issue" },
+
+  // Worker — application
+  { key: "w_app_interest", role: "worker", category: "application", text: "Ciao, confermo il mio interesse per il turno.", action: "none" },
+  { key: "w_app_avail", role: "worker", category: "availability", text: "Sono disponibile per questo turno.", action: "none" },
+  { key: "w_app_exp", role: "worker", category: "application", text: "Ho esperienza in questo ruolo.", action: "none" },
+  { key: "w_app_details", role: "worker", category: "application", text: "Vorrei maggiori dettagli sul turno.", action: "none" },
+  { key: "w_app_dress_read", role: "worker", category: "dress_code_access", text: "Confermo di aver letto requisiti e dress code.", action: "none" },
+  { key: "w_app_withdraw", role: "worker", category: "application", text: "Non sono più disponibile per questo turno.", action: "withdraw_application" },
+  // Worker — shift organization
+  { key: "w_org_present", role: "worker", category: "shift_organization", text: "Confermo la mia presenza.", action: "confirm_arrival" },
+  { key: "w_org_15", role: "worker", category: "shift_organization", text: "Arriverò 15 minuti prima.", action: "none" },
+  { key: "w_org_access", role: "worker", category: "dress_code_access", text: "Ho letto le indicazioni di accesso.", action: "none" },
+  { key: "w_org_dress", role: "worker", category: "dress_code_access", text: "Ho letto il dress code richiesto.", action: "none" },
+  { key: "w_org_coming", role: "worker", category: "shift_organization", text: "Sono in arrivo.", action: "none" },
+  { key: "w_org_arrived", role: "worker", category: "shift_organization", text: "Sono arrivato sul posto.", action: "none" },
+  { key: "w_org_help", role: "worker", category: "issue_report", text: "Ho bisogno di chiarimenti sull'ingresso.", action: "none" },
+  // Worker — post shift
+  { key: "w_post_done", role: "worker", category: "post_shift", text: "Il turno è stato completato.", action: "none" },
+  { key: "w_post_thanks", role: "worker", category: "post_shift", text: "Grazie per l'opportunità.", action: "none" },
+  { key: "w_post_more", role: "worker", category: "post_shift", text: "Sono disponibile per altri turni.", action: "none" },
+  { key: "w_post_issue", role: "worker", category: "issue_report", text: "Vorrei segnalare un problema.", action: "report_issue" },
+];
+
+function renderTemplate(text: string, ann: Ann | null, otherName: string | null): string {
+  const date = ann?.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "—";
+  const time = ann?.service_time ? ann.service_time.slice(0, 5) : "—";
+  const address = ann?.location_address ?? "—";
+  return text
+    .replace(/{{shift_date}}/g, date)
+    .replace(/{{start_time}}/g, time)
+    .replace(/{{address}}/g, address)
+    .replace(/{{restaurant_name}}/g, otherName ?? "—");
+}
 type LogEvent = {
   id: string;
   action: string;
@@ -96,7 +189,6 @@ function Thread() {
   const { id } = Route.useParams();
   const { user, role } = useAuth();
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [text, setText] = useState("");
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string } | null>(null);
@@ -106,6 +198,9 @@ function Thread() {
   const [counterOpen, setCounterOpen] = useState(false);
   const [counterValue, setCounterValue] = useState("");
   const [events, setEvents] = useState<LogEvent[]>([]);
+  const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
+  const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
+  const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -161,19 +256,75 @@ function Thread() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  const send = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!text.trim() || !user) return;
-    const body = text.trim();
-    setText("");
-    const { error } = await supabase.from("messages").insert({ application_id: id, sender_id: user.id, body });
-    if (error) toast.error(error.message);
+  const insertSystemMessage = async (text: string) => {
+    if (!user) return;
+    await supabase.from("messages").insert({
+      application_id: id, sender_id: user.id, body: `⚙️ Sistema: ${text}`,
+    });
   };
 
-  const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
+  const sendTemplate = async () => {
+    if (!selectedTpl || !user || sending) return;
+    setSending(true);
+    try {
+      const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null);
+      const { error } = await supabase.from("messages").insert({
+        application_id: id, sender_id: user.id, body,
+      });
+      if (error) { toast.error(error.message); return; }
+
+      // Trigger collegate alle azioni
+      switch (selectedTpl.action) {
+        case "accept_application":
+          if (role === "restaurant") {
+            await transition("accepted");
+            await insertSystemMessage("candidatura accettata.");
+          }
+          break;
+        case "reject_application":
+          if (role === "restaurant") {
+            await transition("rejected");
+            await insertSystemMessage("candidatura rifiutata.");
+          }
+          break;
+        case "withdraw_application":
+          if (role === "worker") {
+            await transition("not_interested");
+            await insertSystemMessage("il lavoratore ha ritirato la candidatura.");
+          }
+          break;
+        case "confirm_shift":
+          if (app?.announcement_id) {
+            await supabase.from("shifts").update({ status: "scheduled" })
+              .eq("announcement_id", app.announcement_id);
+            await insertSystemMessage("turno confermato.");
+          }
+          break;
+        case "cancel_shift":
+          if (app?.announcement_id) {
+            await supabase.from("shifts").update({ status: "cancelled" })
+              .eq("announcement_id", app.announcement_id);
+            await insertSystemMessage("turno annullato.");
+          }
+          break;
+        case "complete_shift":
+          if (app?.announcement_id) {
+            await supabase.from("shifts").update({ status: "completed" })
+              .eq("announcement_id", app.announcement_id);
+            await insertSystemMessage("turno completato.");
+          }
+          break;
+        case "confirm_arrival":
+          await insertSystemMessage("il lavoratore ha confermato la presenza.");
+          break;
+        case "report_issue":
+          await insertSystemMessage("è stato segnalato un problema sul turno.");
+          break;
+      }
+      setSelectedTpl(null);
+      toast.success("Messaggio inviato");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -356,24 +507,122 @@ function Thread() {
 
         <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
-          {msgs.map(m => (
-            <div key={m.id} className={`flex ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
-              <div className={`rounded-2xl px-4 py-2 max-w-[75%] text-sm ${m.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.body}</div>
-            </div>
-          ))}
+          {msgs.map(m => {
+            const isSystem = m.body.startsWith("⚙️ Sistema:");
+            if (isSystem) {
+              return (
+                <div key={m.id} className="flex justify-center">
+                  <div className="rounded-full px-3 py-1 text-xs bg-muted text-muted-foreground border">
+                    {m.body.replace(/^⚙️ /, "")}
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={m.id} className={`flex ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
+                <div className={`rounded-2xl px-4 py-2 max-w-[75%] text-sm ${m.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.body}</div>
+              </div>
+            );
+          })}
           <div ref={endRef} />
         </div>
-        <form onSubmit={send} className="mt-4 flex gap-2 items-end">
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={onComposerKeyDown}
-            placeholder="Scrivi un messaggio… (Invio per inviare, Shift+Invio per andare a capo)"
-            rows={1}
-            className="min-h-[44px] max-h-40 resize-none"
-          />
-          <Button type="submit" className="shrink-0 gap-2"><Send className="h-4 w-4" />Invia</Button>
-        </form>
+        <TemplatePicker
+          role={role === "restaurant" ? "restaurant" : "worker"}
+          category={tplCategory}
+          setCategory={setTplCategory}
+          selected={selectedTpl}
+          setSelected={setSelectedTpl}
+          onSend={sendTemplate}
+          sending={sending}
+          ann={ann}
+          otherName={other?.name ?? null}
+          disabled={isTerminal}
+        />
       </div>
+  );
+}
+
+function TemplatePicker(props: {
+  role: "restaurant" | "worker";
+  category: TemplateCategory;
+  setCategory: (c: TemplateCategory) => void;
+  selected: MsgTemplate | null;
+  setSelected: (t: MsgTemplate | null) => void;
+  onSend: () => void;
+  sending: boolean;
+  ann: Ann | null;
+  otherName: string | null;
+  disabled?: boolean;
+}) {
+  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, disabled } = props;
+  const available = TEMPLATES.filter(t => (t.role === role || t.role === "both"));
+  const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
+  const inCat = available.filter(t => t.category === category);
+
+  return (
+    <div className="mt-4 rounded-2xl border bg-card p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h3 className="font-semibold text-sm">Scegli un messaggio</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Per la sicurezza di tutti, in chat si possono inviare solo messaggi preimpostati. Non è possibile scrivere testo libero.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {categories.map(c => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => { setCategory(c); setSelected(null); }}
+            className={`text-xs rounded-full px-3 py-1 border transition ${category === c ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground hover:bg-secondary/80"}`}
+          >
+            {CATEGORY_LABELS[c]}
+          </button>
+        ))}
+      </div>
+      {inCat.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          Nessun messaggio preimpostato disponibile per questa fase.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {inCat.map(t => {
+            const isSelected = selected?.key === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setSelected(t)}
+                className={`text-left text-sm rounded-xl border px-3 py-2 transition ${isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary/40"}`}
+              >
+                {renderTemplate(t.text, ann, otherName)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {selected && (
+        <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
+          <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
+          {renderTemplate(selected.text, ann, otherName)}
+        </div>
+      )}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          onClick={onSend}
+          disabled={!selected || sending || disabled}
+          className="gap-2"
+        >
+          <Send className="h-4 w-4" />
+          {sending ? "Invio…" : "Invia messaggio"}
+        </Button>
+      </div>
+      {disabled && (
+        <p className="text-xs text-muted-foreground text-center">
+          Conversazione chiusa: non è possibile inviare nuovi messaggi.
+        </p>
+      )}
+    </div>
   );
 }
