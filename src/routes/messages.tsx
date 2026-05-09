@@ -53,6 +53,7 @@ function Inbox() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const load = async () => {
     if (!user) return;
@@ -129,12 +130,20 @@ function Inbox() {
   }, [user, role]);
 
   const totalUnread = threads.reduce((n, t) => n + (t.unread > 0 ? 1 : 0), 0);
-  const visible = filter === "unread" ? threads.filter((t) => t.unread > 0) : threads;
+  const statusCounts = threads.reduce<Record<string, number>>((acc, t) => {
+    acc[t.status] = (acc[t.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const visible = threads.filter((t) => {
+    if (filter === "unread" && t.unread === 0) return false;
+    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    return true;
+  });
 
   return (
     <AppShell>
       <PageHeader title="Messaggi" subtitle="Le tue conversazioni" />
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-3 flex items-center gap-2 flex-wrap">
         <button
           type="button"
           onClick={() => setFilter("all")}
@@ -150,6 +159,30 @@ function Inbox() {
           Non lette ({totalUnread})
         </button>
       </div>
+      <div className="mb-4 flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setStatusFilter("all")}
+          className={`text-[11px] rounded-full px-2.5 py-1 border transition ${statusFilter === "all" ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent"}`}
+        >
+          Tutti gli stati
+        </button>
+        {Object.keys(STATUS_LABELS).map((s) => {
+          const count = statusCounts[s] ?? 0;
+          if (count === 0) return null;
+          const active = statusFilter === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
+            >
+              {STATUS_LABELS[s]} ({count})
+            </button>
+          );
+        })}
+      </div>
       {loading ? (
         <p className="text-muted-foreground">Caricamento…</p>
       ) : threads.length === 0 ? (
@@ -158,7 +191,7 @@ function Inbox() {
         </div>
       ) : visible.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-          Nessuna conversazione con messaggi non letti.
+          Nessuna conversazione corrisponde ai filtri selezionati.
         </div>
       ) : (
         <div className="space-y-2 max-w-2xl">
