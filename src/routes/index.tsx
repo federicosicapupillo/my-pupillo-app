@@ -183,7 +183,14 @@ function Index() {
                 alt="Mascotte Pupillo"
                 width={1024}
                 height={1024}
-                className="relative mx-auto w-[88%] drop-shadow-[0_20px_40px_rgba(139,92,246,0.45)]"
+                className="relative mx-auto w-[92%] drop-shadow-[0_20px_60px_rgba(139,92,246,0.55)]"
+                style={{
+                  WebkitMaskImage:
+                    "radial-gradient(ellipse 70% 70% at 50% 48%, #000 55%, rgba(0,0,0,0.85) 70%, transparent 92%)",
+                  maskImage:
+                    "radial-gradient(ellipse 70% 70% at 50% 48%, #000 55%, rgba(0,0,0,0.85) 70%, transparent 92%)",
+                  mixBlendMode: "screen",
+                }}
               />
 
               {/* Speech bubble */}
