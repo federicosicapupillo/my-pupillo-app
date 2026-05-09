@@ -14,6 +14,9 @@ import {
   Clock,
   MapPin,
   UserPlus,
+  Send,
+  Bell,
+  Euro,
 } from "lucide-react";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 
