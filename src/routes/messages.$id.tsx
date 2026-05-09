@@ -368,6 +368,18 @@ function Thread() {
     }
     setSending(true);
     try {
+      // Caso speciale: "Lascia recensione" apre solo il blocco recensione
+      if (selectedTpl.key === "r_post_review") {
+        setTplCategory("post_shift");
+        setReviewOpen(true);
+        setSelectedTpl(null);
+        setSending(false);
+        // scroll verso il blocco recensione
+        setTimeout(() => {
+          document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 50);
+        return;
+      }
       const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
