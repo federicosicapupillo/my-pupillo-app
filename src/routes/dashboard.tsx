@@ -357,3 +357,102 @@ function StatCard({ icon: Icon, label, value, highlight }: { icon: typeof Briefc
     </div>
   );
 }
+
+function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () => void }) {
+  const dateLabel = new Date(item.service_date).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" });
+  const timeLabel = item.service_time ? item.service_time.slice(0, 5) : null;
+  const endTime = (() => {
+    if (!timeLabel || !item.duration_hours) return null;
+    const [h, m] = timeLabel.split(":").map(Number);
+    const total = h * 60 + m + Math.round(item.duration_hours * 60);
+    const eh = Math.floor(total / 60) % 24;
+    const em = total % 60;
+    return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
+  })();
+
+  // Stato turno → label/colore
+  const status = item.shift_status;
+  let statusLabel = "Confermato";
+  let statusClass = "bg-emerald-500/10 text-emerald-700 border-emerald-500/30";
+  let StatusIcon = CheckCircle2;
+  if (status === "scheduled") { statusLabel = "Confermato"; }
+  else if (status === "completed") { statusLabel = "Completato"; statusClass = "bg-blue-500/10 text-blue-700 border-blue-500/30"; StatusIcon = CheckCheck; }
+  else if (status === "cancelled") { statusLabel = "Annullato"; statusClass = "bg-red-500/10 text-red-700 border-red-500/30"; StatusIcon = XCircle; }
+  else if (status === "no_show") { statusLabel = "No-show"; statusClass = "bg-orange-500/10 text-orange-700 border-orange-500/30"; StatusIcon = AlertTriangle; }
+  else if (!status) { statusLabel = "In attesa"; statusClass = "bg-amber-500/10 text-amber-700 border-amber-500/30"; StatusIcon = Clock; }
+
+  // Stato recensione
+  const isOverdue = item.required_status === "overdue";
+  let reviewLabel = "non ancora disponibile";
+  let reviewClass = "text-muted-foreground";
+  if (status === "completed") {
+    if (item.has_review) { reviewLabel = "inviata"; reviewClass = "text-emerald-600"; }
+    else if (isOverdue) { reviewLabel = "obbligatoria scaduta"; reviewClass = "text-destructive"; }
+    else { reviewLabel = "da lasciare"; reviewClass = "text-amber-700"; }
+  }
+
+  return (
+    <li className="rounded-xl border bg-background p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-medium">{item.role_label ?? "Servizio"}</div>
+          {item.worker_name && (
+            <div className="text-sm text-muted-foreground mt-0.5">{item.worker_name}</div>
+          )}
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {dateLabel}
+              {timeLabel && <> · {timeLabel}{endTime && ` - ${endTime}`}</>}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{item.location_address}</span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass}`}>
+            <StatusIcon className="h-3 w-3" />
+            {statusLabel}
+          </span>
+          <span className={`text-[11px] ${reviewClass}`}>Recensione: {reviewLabel}</span>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {status === "scheduled" || status === null ? (
+          <>
+            <Button size="sm" onClick={onClose} className="gap-1" disabled={!item.worker_id}>
+              <CheckCheck className="h-4 w-4" /> Concludi turno
+            </Button>
+            <span className="text-[11px] text-muted-foreground">Dopo la chiusura potrai lasciare la recensione al lavoratore.</span>
+          </>
+        ) : status === "completed" && !item.has_review ? (
+          <Link to="/messages/$id" params={{ id: item.app_id ?? "" }} disabled={!item.app_id} as={item.app_id ? undefined : "span" as never}>
+            <Button size="sm" variant={isOverdue ? "destructive" : "default"} className="gap-1" disabled={!item.app_id}>
+              <Star className="h-4 w-4" /> {isOverdue ? "Recensione scaduta — agisci ora" : "Lascia recensione"}
+            </Button>
+          </Link>
+        ) : status === "completed" && item.has_review ? (
+          <Link to="/messages/$id" params={{ id: item.app_id ?? "" }}>
+            <Button size="sm" variant="outline" className="gap-1" disabled={!item.app_id}>
+              <Star className="h-4 w-4" /> Vedi recensione
+            </Button>
+          </Link>
+        ) : status === "cancelled" ? (
+          <span className="text-xs text-muted-foreground">Turno annullato</span>
+        ) : status === "no_show" ? (
+          <Link to="/messages/$id" params={{ id: item.app_id ?? "" }}>
+            <Button size="sm" variant="outline" className="gap-1" disabled={!item.app_id}>
+              <AlertTriangle className="h-4 w-4" /> Gestisci segnalazione
+            </Button>
+          </Link>
+        ) : null}
+        <Link to="/announcements/$id" params={{ id: item.ann_id }} className="ml-auto">
+          <Button size="sm" variant="ghost" className="gap-1">Dettagli <ArrowRight className="h-3.5 w-3.5" /></Button>
+        </Link>
+      </div>
+    </li>
+  );
+}
