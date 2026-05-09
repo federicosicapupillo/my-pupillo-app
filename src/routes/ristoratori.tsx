@@ -199,6 +199,166 @@ function RistoratoriPage() {
         </div>
       </section>
 
+      {/* Mockup app — flusso ristoratore */}
+      <section className="relative overflow-hidden py-16 md:py-24">
+        <div
+          className="absolute inset-0 -z-10 opacity-50"
+          style={{
+            background:
+              "radial-gradient(700px 400px at 20% 30%, oklch(0.65 0.25 310 / 30%), transparent 60%), radial-gradient(600px 350px at 80% 70%, oklch(0.7 0.27 350 / 22%), transparent 60%)",
+          }}
+        />
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 md:grid-cols-2 md:items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+              <Sparkles className="h-3.5 w-3.5" /> Dentro l'app
+            </div>
+            <h2 className="mt-4 text-3xl font-black tracking-tight md:text-5xl">
+              Tutto il flusso, <span className="text-neon-gradient">a portata di mano</span>
+            </h2>
+            <p className="mt-4 max-w-md text-muted-foreground md:text-lg">
+              Pubblica un turno, ricevi candidature in tempo reale e conferma il lavoratore giusto
+              direttamente dal tuo telefono. Niente telefonate, niente caos.
+            </p>
+            <ul className="mt-6 space-y-3 text-sm">
+              {[
+                { icon: FileText, text: "Crea l'annuncio in meno di 2 minuti" },
+                { icon: Bell, text: "Notifiche istantanee per ogni candidatura" },
+                { icon: CheckCircle2, text: "Conferma con un tap, profili verificati" },
+              ].map(({ icon: Ic, text }) => (
+                <li key={text} className="flex items-center gap-3">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 text-primary">
+                    <Ic className="h-4 w-4" />
+                  </span>
+                  <span className="text-foreground/90">{text}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link to="/auth" search={{ role: "restaurant" } as never}>
+                <Button size="lg" className="gap-2">
+                  <ChefHat className="h-4 w-4" /> Pubblica un annuncio
+                </Button>
+              </Link>
+              <Link to="/workers">
+                <Button size="lg" variant="outline" className="gap-2">
+                  <Users className="h-4 w-4" /> Sfoglia lavoratori
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Phone mockup */}
+          <div className="relative mx-auto w-full max-w-sm">
+            <div
+              className="relative rounded-[2.5rem] p-3"
+              style={{
+                background: "linear-gradient(180deg, #1a1330, #0b0717)",
+                boxShadow:
+                  "0 0 0 8px #000, 0 30px 80px -20px oklch(0.65 0.25 310 / 60%), 0 0 60px oklch(0.7 0.27 350 / 25%)",
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between px-3 pt-1 text-[11px] text-white/70">
+                <span className="font-mono">9:41</span>
+                <img src={pupilloLogo} alt="" className="h-5" />
+                <span className="font-mono">●●● 5G</span>
+              </div>
+
+              {/* Screen 1: annuncio attivo */}
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background:
+                    "linear-gradient(135deg, oklch(0.65 0.25 310 / 30%), oklch(0.7 0.27 350 / 18%))",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+                    Annuncio attivo
+                  </span>
+                  <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-black uppercase text-primary">
+                    Live
+                  </span>
+                </div>
+                <div className="mt-2 text-base font-bold text-white">Cameriere · Sab sera</div>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/60">
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> Trattoria Da Marco
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> 19:00–24:00
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-bold text-primary">
+                    <Euro className="h-3 w-3" /> 90
+                  </span>
+                </div>
+              </div>
+
+              {/* Screen 2: candidature */}
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-white/70">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Send className="h-3 w-3" /> Candidature ricevute
+                  </span>
+                  <span className="rounded-full bg-accent/30 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
+                    +3 nuove
+                  </span>
+                </div>
+                {[
+                  { name: "Luca M.", exp: "Cameriere · 3 anni", rating: "4.9", color: "#D8FF36" },
+                  { name: "Sara R.", exp: "Bartender · IT/EN", rating: "4.8", color: "#22E0CF" },
+                  { name: "Davide P.", exp: "Extra weekend", rating: "5.0", color: "#FF2EA8" },
+                ].map((c) => (
+                  <div
+                    key={c.name}
+                    className="flex items-center justify-between gap-2 rounded-xl p-2.5"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black"
+                        style={{
+                          background: `${c.color}1f`,
+                          border: `2px solid ${c.color}`,
+                          color: c.color,
+                          boxShadow: `0 0 16px ${c.color}55`,
+                        }}
+                      >
+                        {c.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold text-white">{c.name}</div>
+                        <div className="truncate text-[10px] text-white/55">{c.exp}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-white">
+                      <Star className="h-3 w-3 fill-primary text-primary" />
+                      {c.rating}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Screen 3: conferma */}
+              <button
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-extrabold text-[#0A0A0A] transition active:scale-[0.98]"
+                style={{
+                  background: "#D8FF36",
+                  boxShadow: "0 0 0 2px #000, 0 10px 30px -8px oklch(0.93 0.22 120 / 65%)",
+                }}
+                aria-hidden
+              >
+                <CheckCircle2 className="h-4 w-4" /> Conferma Luca M.
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="mx-auto max-w-6xl px-4 py-16 md:py-24">
         <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary to-primary/70 p-8 text-primary-foreground shadow-xl md:p-14">
