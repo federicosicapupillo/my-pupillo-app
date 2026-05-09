@@ -378,18 +378,23 @@ function AuthPage() {
                     </p>
                   </div>
                 )}
-                <div>
-                  <Label>Numero WhatsApp</Label>
-                  <PhoneInput
-                    code={phoneCode}
-                    number={phoneNumber}
-                    onCodeChange={setPhoneCode}
-                    onNumberChange={setPhoneNumber}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Riceverai un codice via WhatsApp per confermare il numero.
+                <div className="rounded-2xl border border-white/10 bg-[oklch(0.16_0.04_280)] p-5 shadow-[0_0_40px_-20px_oklch(0.92_0.18_115_/_0.5)]">
+                  <h3 className="text-xl font-semibold text-white">Conferma il tuo numero</h3>
+                  <p className="mt-1 text-sm text-white/60">
+                    Inserisci il numero su cui vuoi ricevere il codice di conferma via WhatsApp.
                   </p>
+                  <div className="mt-4">
+                    <Label className="text-white">Numero WhatsApp</Label>
+                    <div className="mt-2">
+                      <PhoneInput
+                        code={phoneCode}
+                        number={phoneNumber}
+                        onCodeChange={setPhoneCode}
+                        onNumberChange={setPhoneNumber}
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
                 <Button
                   type="submit"
