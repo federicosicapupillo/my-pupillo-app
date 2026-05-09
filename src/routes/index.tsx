@@ -16,6 +16,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import pupilloLogo from "@/assets/pupillo-logo.png";
+import { useEffect, useState } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -43,12 +45,27 @@ const NEON = {
 };
 
 function Index() {
+  const [isLight, setIsLight] = useState(false);
+  useEffect(() => {
+    const update = () => setIsLight(document.documentElement.classList.contains("light"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  const textMain = isLight ? "text-zinc-900" : "text-white";
+  const textSoft = isLight ? "text-zinc-700" : "text-white/75";
+  const textDim = isLight ? "text-zinc-600" : "text-white/70";
+  const textFaint = isLight ? "text-zinc-500" : "text-white/60";
+  const surfaceBg = isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.03)";
+  const surfaceBorder = isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)";
+  const bgStyle = isLight
+    ? `radial-gradient(1200px 600px at 80% -10%, ${NEON.violet}26, transparent 60%), radial-gradient(800px 500px at -10% 30%, ${NEON.magenta}1f, transparent 60%), radial-gradient(900px 600px at 50% 110%, ${NEON.cyan}1a, transparent 60%), #FAFAF7`
+    : `radial-gradient(1200px 600px at 80% -10%, ${NEON.violet}33, transparent 60%), radial-gradient(800px 500px at -10% 30%, ${NEON.magenta}26, transparent 60%), radial-gradient(900px 600px at 50% 110%, ${NEON.cyan}1f, transparent 60%), ${NEON.bg}`;
   return (
     <div
-      className="dark min-h-screen overflow-hidden text-white"
-      style={{
-        background: `radial-gradient(1200px 600px at 80% -10%, ${NEON.violet}33, transparent 60%), radial-gradient(800px 500px at -10% 30%, ${NEON.magenta}26, transparent 60%), radial-gradient(900px 600px at 50% 110%, ${NEON.cyan}1f, transparent 60%), ${NEON.bg}`,
-      }}
+      className={`min-h-screen overflow-hidden ${textMain}`}
+      style={{ background: bgStyle }}
     >
       {/* Decorative scribbles */}
       <Scribbles />
@@ -60,11 +77,12 @@ function Index() {
             <img src={pupilloLogo} alt="Pupillo" className="h-10 w-auto md:h-12" style={{ filter: "drop-shadow(0 0 12px rgba(216,255,54,0.35))" }} />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeToggle className={isLight ? "text-zinc-900 hover:bg-black/5" : "text-white hover:bg-white/10 hover:text-white"} />
             <Link to="/auth">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-white/10 hover:text-white"
+                className={isLight ? "text-zinc-900 hover:bg-black/5" : "text-white hover:bg-white/10 hover:text-white"}
               >
                 Accedi
               </Button>
@@ -123,7 +141,7 @@ function Index() {
               </span>
             </h1>
 
-            <p className="mt-7 max-w-xl text-base leading-relaxed text-white/75 md:text-lg">
+            <p className={`mt-7 max-w-xl text-base leading-relaxed md:text-lg ${textSoft}`}>
               Con Pupillo ti candidi ai turni pubblicati da ristoranti, bar e locali Horeca della tua
               città. Vedi <span style={{ color: NEON.lime }} className="font-semibold">orari</span> e{" "}
               <span style={{ color: NEON.magenta }} className="font-semibold">compensi stimati</span>{" "}
@@ -146,8 +164,8 @@ function Index() {
               </Link>
               <a href="#come-funziona" className="w-full sm:w-auto">
                 <button
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 px-6 py-4 text-base font-bold text-white transition hover:bg-white/5 active:scale-[0.98] sm:w-auto"
-                  style={{ borderColor: "rgba(255,255,255,0.25)" }}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 px-6 py-4 text-base font-bold transition active:scale-[0.98] sm:w-auto ${isLight ? "text-zinc-900 hover:bg-black/5" : "text-white hover:bg-white/5"}`}
+                  style={{ borderColor: isLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)" }}
                 >
                   <Play className="h-5 w-5" />
                   Scopri come funziona
@@ -157,9 +175,9 @@ function Index() {
 
             {/* Mini benefits */}
             <div className="mt-8 grid grid-cols-3 gap-3">
-              <Benefit color={NEON.orange} icon={Euro} label="Gratis per i lavoratori" />
-              <Benefit color={NEON.violet} icon={Zap} label="Senza impegno" />
-              <Benefit color={NEON.cyan} icon={Clock} label="Pochi minuti per iniziare" />
+              <Benefit color={NEON.orange} icon={Euro} label="Gratis per i lavoratori" isLight={isLight} />
+              <Benefit color={NEON.violet} icon={Zap} label="Senza impegno" isLight={isLight} />
+              <Benefit color={NEON.cyan} icon={Clock} label="Pochi minuti per iniziare" isLight={isLight} />
             </div>
           </div>
         </div>
@@ -230,7 +248,7 @@ function Index() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold">{s.role}</span>
+                      <span className="font-bold text-white">{s.role}</span>
                       {s.flash && (
                         <span
                           className="rounded-full px-2 py-0.5 text-[10px] font-black uppercase"
@@ -291,7 +309,7 @@ function Index() {
                 key={n}
                 className="relative overflow-hidden rounded-3xl p-6"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
+                  background: surfaceBg,
                   border: `1.5px solid ${color}40`,
                   boxShadow: `0 0 30px ${color}15`,
                 }}
@@ -306,7 +324,7 @@ function Index() {
                   </div>
                 </div>
                 <h3 className="mt-4 text-xl font-extrabold">{title}</h3>
-                <p className="mt-2 text-sm text-white/70">{text}</p>
+                <p className={`mt-2 text-sm ${textDim}`}>{text}</p>
               </div>
             ))}
           </div>
@@ -326,7 +344,7 @@ function Index() {
                 key={label}
                 className="flex items-center gap-3 rounded-2xl p-4"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
+                  background: surfaceBg,
                   border: `1px solid ${color}40`,
                 }}
               >
@@ -338,7 +356,7 @@ function Index() {
                 </div>
                 <div>
                   <div className="font-bold">{label}</div>
-                  <div className="text-sm text-white/60">{value}</div>
+                  <div className={`text-sm ${textFaint}`}>{value}</div>
                 </div>
               </div>
             ))}
@@ -391,14 +409,14 @@ function Index() {
         </div>
       </section>
 
-      <footer className="relative z-10 border-t border-white/10 py-8 text-center text-sm text-white/50">
+      <footer className={`relative z-10 border-t py-8 text-center text-sm ${isLight ? "border-black/10 text-zinc-500" : "border-white/10 text-white/50"}`}>
         © 2026 Pupillo. Marketplace per la ristorazione.
       </footer>
     </div>
   );
 }
 
-function Benefit({ icon: Icon, label, color }: { icon: React.ComponentType<{ className?: string }>; label: string; color: string }) {
+function Benefit({ icon: Icon, label, color, isLight }: { icon: React.ComponentType<{ className?: string }>; label: string; color: string; isLight?: boolean }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:text-left">
       <div
@@ -407,7 +425,7 @@ function Benefit({ icon: Icon, label, color }: { icon: React.ComponentType<{ cla
       >
         <Icon className="h-5 w-5" />
       </div>
-      <span className="text-xs font-medium leading-tight text-white/80 sm:text-sm">{label}</span>
+      <span className={`text-xs font-medium leading-tight sm:text-sm ${isLight ? "text-zinc-700" : "text-white/80"}`}>{label}</span>
     </div>
   );
 }
