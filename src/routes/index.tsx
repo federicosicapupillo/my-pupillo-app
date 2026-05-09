@@ -91,7 +91,7 @@ function Index() {
 
       {/* HERO */}
       <section className="relative z-10">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-10 pt-6 md:grid-cols-2 md:gap-6 md:pb-16 md:pt-12">
+        <div className="mx-auto grid max-w-3xl gap-10 px-4 pb-10 pt-6 md:gap-6 md:pb-16 md:pt-12">
           {/* Left */}
           <div className="flex flex-col justify-center">
             <span
@@ -162,75 +162,6 @@ function Index() {
               <Benefit color={NEON.orange} icon={Euro} label="Gratis per i lavoratori" />
               <Benefit color={NEON.violet} icon={Zap} label="Senza impegno" />
               <Benefit color={NEON.cyan} icon={Clock} label="Pochi minuti per iniziare" />
-            </div>
-          </div>
-
-          {/* Right — Mascot */}
-          <div className="relative mx-auto w-full max-w-md md:max-w-none">
-            <div className="relative">
-              {/* Glow blob */}
-              <div
-                aria-hidden
-                className="absolute inset-0 -z-10 rounded-full blur-3xl"
-                style={{
-                  background: `radial-gradient(circle at 50% 50%, ${NEON.violet}80, ${NEON.magenta}55 40%, transparent 70%)`,
-                }}
-              />
-              {/* City silhouette */}
-              <CitySkyline />
-              <img
-                src={mascot}
-                alt="Mascotte Pupillo"
-                width={1024}
-                height={1024}
-                className="relative mx-auto w-[92%] drop-shadow-[0_20px_60px_rgba(139,92,246,0.55)]"
-                style={{
-                  WebkitMaskImage:
-                    "radial-gradient(ellipse 70% 70% at 50% 48%, #000 55%, rgba(0,0,0,0.85) 70%, transparent 92%)",
-                  maskImage:
-                    "radial-gradient(ellipse 70% 70% at 50% 48%, #000 55%, rgba(0,0,0,0.85) 70%, transparent 92%)",
-                  mixBlendMode: "screen",
-                }}
-              />
-
-              {/* Speech bubble */}
-              <div
-                className="absolute right-2 top-2 rotate-[8deg] rounded-2xl px-4 py-2 text-sm font-black uppercase leading-tight md:right-6 md:top-4"
-                style={{
-                  background: NEON.cyan,
-                  color: "#0A0A0A",
-                  boxShadow: `0 0 0 2px #000`,
-                }}
-              >
-                Sblocca<br />lo sconto!
-                <span
-                  aria-hidden
-                  className="absolute -bottom-2 left-6 h-4 w-4 rotate-45"
-                  style={{ background: NEON.cyan, boxShadow: "2px 2px 0 #000" }}
-                />
-              </div>
-
-              {/* Lock badge */}
-              <div
-                className="absolute right-6 top-32 hidden h-14 w-14 items-center justify-center rounded-2xl md:flex"
-                style={{ background: NEON.magenta, boxShadow: "0 0 0 2px #000, 0 0 30px rgba(255,46,168,0.6)" }}
-              >
-                <span className="text-2xl">🔒</span>
-              </div>
-
-              {/* Enigma ribbon */}
-              <div
-                className="absolute -bottom-2 right-0 hidden items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black uppercase md:flex"
-                style={{
-                  background: "rgba(0,0,0,0.6)",
-                  border: `1.5px dashed ${NEON.lime}`,
-                  color: NEON.lime,
-                }}
-              >
-                <span>Indovina l'enigma</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-                <span style={{ color: "#fff" }}>🎁</span>
-              </div>
             </div>
           </div>
         </div>
