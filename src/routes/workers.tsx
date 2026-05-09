@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search, List, Map as MapIcon, RotateCcw } from "lucide-react";
+import { Search, List, Map as MapIcon, RotateCcw, X } from "lucide-react";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
 import { Coins, AlertCircle, MessageSquare } from "lucide-react";
@@ -32,40 +32,72 @@ type W = {
   secondary_roles: string[] | null;
   city: string | null;
   neighborhood: string | null;
+  province: string | null;
   badge: string | null;
+  rating_avg: number | null;
+  reliability_pct: number | null;
+  no_shows: number | null;
+  weekly_availability: string[] | null;
+  last_active_at: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
   service_area_radius_m: number | null;
 };
 
-type SearchType = "all" | "first_name" | "last_name" | "profile" | "role" | "skill" | "language" | "city" | "zone" | "badge" | "custom";
+type Category =
+  | "all"
+  | "name_profile"
+  | "role"
+  | "skill"
+  | "language"
+  | "location"
+  | "badge"
+  | "availability"
+  | "custom";
 
-const SEARCH_TYPE_LABEL: Record<SearchType, string> = {
+const CATEGORY_LABEL: Record<Category, string> = {
   all: "Tutto",
-  first_name: "Nome",
-  last_name: "Cognome",
-  profile: "Profilo",
+  name_profile: "Nome / Profilo",
   role: "Ruolo",
-  skill: "Competenza",
-  language: "Lingua parlata",
-  city: "Città",
-  zone: "Zona",
-  badge: "Badge",
+  skill: "Competenze",
+  language: "Lingue",
+  location: "Località",
+  badge: "Badge / Affidabilità",
+  availability: "Disponibilità",
   custom: "Personalizzato",
 };
 
-const SEARCH_PLACEHOLDER: Record<SearchType, string> = {
+const SUBCATEGORIES: Record<Category, string[]> = {
+  all: ["Tutti i campi", "Più rilevanti", "Ultimi attivi", "Miglior rating", "Più affidabili"],
+  name_profile: ["Nome", "Cognome", "Nome completo", "Titolo profilo", "Descrizione profilo"],
+  role: [
+    "Cameriere", "Bartender", "Barista", "Chef", "Aiuto cucina", "Lavapiatti",
+    "Runner", "Responsabile di sala", "Hostess", "Receptionist", "Pizzaiolo",
+    "Addetto catering", "Commis di sala", "Commis di cucina", "Sommelier",
+    "Barman", "Banconista", "Altro ruolo",
+  ],
+  skill: [
+    "Servizio al tavolo", "Saper portare tre piatti", "Uso palmare/comande",
+    "Preparazione cocktail", "Caffetteria", "Gestione cassa", "Banqueting",
+    "Fine dining", "Gestione sala", "Pulizia postazione", "Preparazione linea", "Altro",
+  ],
+  language: ["Italiano","Inglese","Francese","Spagnolo","Tedesco","Portoghese","Arabo","Cinese","Russo","Rumeno","Albanese","Ucraino","Polacco","Altro"],
+  location: ["Città","Zona / Quartiere","Provincia","Vicino a me","Entro 1 km","Entro 3 km","Entro 5 km","Entro 10 km","Entro 20 km"],
+  badge: ["Basic","Pro","Elite","Rating minimo 3+","Rating minimo 4+","Rating minimo 4.5+","Affidabilità 80%+","Affidabilità 90%+","Nessun no-show"],
+  availability: ["Disponibile oggi","Disponibile domani","Disponibile weekend","Disponibile sera","Disponibile pranzo","Disponibile full-time","Disponibile extra","Disponibile urgente"],
+  custom: ["Ricerca libera","Parola chiave","Profilo completo","Qualsiasi campo"],
+};
+
+const PLACEHOLDER_BY_CATEGORY: Record<Category, string> = {
   all: "Cerca nome, profilo o parola chiave",
-  first_name: "Scrivi nome lavoratore",
-  last_name: "Scrivi cognome lavoratore",
-  profile: "Cerca nel profilo lavoratore",
-  role: "Es. cameriere, bartender, chef",
-  skill: "Es. banqueting, cocktail, fine dining",
-  language: "Es. inglese, francese, spagnolo",
-  city: "Es. Milano, Roma",
-  zone: "Es. Navigli, Trastevere",
-  badge: "Basic, Pro o Elite",
-  custom: "Scrivi nome, ruolo, città o parola chiave",
+  name_profile: "Scrivi nome o cognome",
+  role: "Aggiungi nome o zona",
+  skill: "Aggiungi nome, città o profilo",
+  language: "Aggiungi città o profilo",
+  location: "Scrivi città, zona o provincia",
+  badge: "Aggiungi nome o ruolo",
+  availability: "Aggiungi nome o ruolo",
+  custom: "Scrivi qualsiasi parola chiave",
 };
 type Ann = { id: string; service_date: string; location_address: string; location_lat: number | null; location_lng: number | null };
 
@@ -84,7 +116,8 @@ function WorkersPage() {
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
-  const [searchType, setSearchType] = useState<SearchType>("all");
+  const [category, setCategory] = useState<Category>("all");
+  const [subcategory, setSubcategory] = useState<string>("");
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [lang, setLang] = useState("");
@@ -95,7 +128,7 @@ function WorkersPage() {
       const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "worker");
       const ids = (roles ?? []).map((r) => r.user_id);
       if (ids.length) {
-        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, badge, service_area_lat, service_area_lng, service_area_radius_m").in("id", ids);
+        const { data } = await supabase.from("profiles").select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m").in("id", ids);
         setWorkers((data as W[]) ?? []);
       }
       if (user) {
@@ -137,41 +170,103 @@ function WorkersPage() {
     nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
-  const matchesSearch = (w: W, term: string, type: SearchType): boolean => {
-    if (!term) return true;
-    const t = term.toLowerCase().trim();
+  const fieldsOf = (w: W) => {
     const fullName = (w.full_name ?? "").toLowerCase();
     const [first = "", ...rest] = fullName.split(" ");
-    const last = rest.join(" ");
-    const profileText = `${w.professional_profile ?? ""} ${w.short_bio ?? ""}`.toLowerCase();
-    const roles = [w.primary_role ?? "", ...(w.secondary_roles ?? [])].join(" ").toLowerCase();
-    const skills = profileText; // skills not stored as separate field; search inside profile/bio
-    const langsAll = [
-      ...normalizeSpokenLanguages(w.spoken_languages).map((s) => s.language),
-      ...(w.languages ?? []),
-    ].join(" ").toLowerCase();
-    const city = (w.city ?? "").toLowerCase();
-    const zone = (w.neighborhood ?? "").toLowerCase();
-    const badge = (w.badge ?? "").toLowerCase();
-    const allText = [fullName, profileText, roles, langsAll, city, zone, badge].join(" ");
-    switch (type) {
-      case "first_name": return first.includes(t);
-      case "last_name": return last.includes(t);
-      case "profile": return profileText.includes(t);
-      case "role": return roles.includes(t);
-      case "skill": return skills.includes(t);
-      case "language": return langsAll.includes(t);
-      case "city": return city.includes(t);
-      case "zone": return zone.includes(t);
-      case "badge": return badge.includes(t);
-      case "all":
-      case "custom":
-      default: return allText.includes(t);
+    return {
+      fullName,
+      first,
+      last: rest.join(" "),
+      title: (w.professional_profile ?? "").toLowerCase(),
+      description: (w.short_bio ?? "").toLowerCase(),
+      roles: [w.primary_role ?? "", ...(w.secondary_roles ?? [])].join(" ").toLowerCase(),
+      langs: [
+        ...normalizeSpokenLanguages(w.spoken_languages).map((s) => s.language),
+        ...(w.languages ?? []),
+      ].join(" ").toLowerCase(),
+      city: (w.city ?? "").toLowerCase(),
+      zone: (w.neighborhood ?? "").toLowerCase(),
+      province: (w.province ?? "").toLowerCase(),
+      badge: (w.badge ?? "").toLowerCase(),
+      availability: (w.weekly_availability ?? []).join(" ").toLowerCase(),
+    };
+  };
+
+  const matchesSubcategory = (w: W, cat: Category, sub: string): boolean => {
+    if (!sub) return true;
+    const f = fieldsOf(w);
+    const s = sub.toLowerCase();
+    switch (cat) {
+      case "all": return true; // sub controls sort, not filter
+      case "name_profile": return true; // sub determines which field free-text targets
+      case "role": return f.roles.includes(s) || s === "altro ruolo";
+      case "skill": return s === "altro" ? true : (f.title + " " + f.description).includes(s);
+      case "language": return s === "altro" ? true : f.langs.includes(s);
+      case "location":
+        if (s === "vicino a me" || s.startsWith("entro")) return true; // handled by inRange
+        return true; // sub determines which location field free-text targets
+      case "badge":
+        if (["basic","pro","elite"].includes(s)) return f.badge === s;
+        if (s === "rating minimo 3+") return (w.rating_avg ?? 0) >= 3;
+        if (s === "rating minimo 4+") return (w.rating_avg ?? 0) >= 4;
+        if (s === "rating minimo 4.5+") return (w.rating_avg ?? 0) >= 4.5;
+        if (s === "affidabilità 80%+") return (w.reliability_pct ?? 0) >= 80;
+        if (s === "affidabilità 90%+") return (w.reliability_pct ?? 0) >= 90;
+        if (s === "nessun no-show") return (w.no_shows ?? 0) === 0;
+        return true;
+      case "availability": {
+        const map: Record<string, string[]> = {
+          "disponibile oggi": ["oggi","today"],
+          "disponibile domani": ["domani","tomorrow"],
+          "disponibile weekend": ["weekend","sabato","domenica","saturday","sunday"],
+          "disponibile sera": ["sera","evening","night"],
+          "disponibile pranzo": ["pranzo","lunch"],
+          "disponibile full-time": ["full","fulltime","full-time"],
+          "disponibile extra": ["extra"],
+          "disponibile urgente": ["urgente","urgent"],
+        };
+        const keys = map[s] ?? [s];
+        return keys.some(k => f.availability.includes(k));
+      }
+      case "custom": return true;
+      default: return true;
     }
   };
 
+  const matchesText = (w: W, term: string, cat: Category, sub: string): boolean => {
+    if (!term) return true;
+    const t = term.toLowerCase().trim();
+    const f = fieldsOf(w);
+    const allText = [f.fullName, f.title, f.description, f.roles, f.langs, f.city, f.zone, f.province, f.badge, f.availability].join(" ");
+    if (cat === "name_profile") {
+      switch (sub) {
+        case "Nome": return f.first.includes(t);
+        case "Cognome": return f.last.includes(t);
+        case "Nome completo": return f.fullName.includes(t);
+        case "Titolo profilo": return f.title.includes(t);
+        case "Descrizione profilo": return f.description.includes(t);
+        default: return (f.fullName + " " + f.title + " " + f.description).includes(t);
+      }
+    }
+    if (cat === "role") return (f.roles + " " + f.fullName).includes(t);
+    if (cat === "skill") return (f.title + " " + f.description + " " + f.fullName + " " + f.city).includes(t);
+    if (cat === "language") return (f.langs + " " + f.city + " " + f.title).includes(t);
+    if (cat === "location") {
+      switch (sub) {
+        case "Città": return f.city.includes(t);
+        case "Zona / Quartiere": return f.zone.includes(t);
+        case "Provincia": return f.province.includes(t);
+        default: return (f.city + " " + f.zone + " " + f.province).includes(t);
+      }
+    }
+    if (cat === "badge") return (f.badge + " " + f.fullName + " " + f.roles).includes(t);
+    if (cat === "availability") return (f.availability + " " + f.fullName + " " + f.roles).includes(t);
+    return allText.includes(t); // all + custom
+  };
+
   const filtered = workers.filter(w => {
-    if (!matchesSearch(w, q, searchType)) return false;
+    if (!matchesSubcategory(w, category, subcategory)) return false;
+    if (!matchesText(w, q, category, subcategory)) return false;
     if (lang) {
       const spoken = normalizeSpokenLanguages(w.spoken_languages).map(s => s.language.toLowerCase());
       const legacy = (w.languages ?? []).map(s => s.toLowerCase());
@@ -181,7 +276,8 @@ function WorkersPage() {
     return true;
   });
   const runSearch = () => setQ(qInput);
-  const resetFilters = () => { setSearchType("all"); setQInput(""); setQ(""); setLang(""); };
+  const resetFilters = () => { setCategory("all"); setSubcategory(""); setQInput(""); setQ(""); setLang(""); };
+  const onChangeCategory = (c: Category) => { setCategory(c); setSubcategory(""); };
 
 
   const selectedAnn = anns.find((a) => a.id === selected);
@@ -191,7 +287,29 @@ function WorkersPage() {
     const d = distanceM(selectedAnn.location_lat, selectedAnn.location_lng, w.service_area_lat, w.service_area_lng);
     return d <= (w.service_area_radius_m ?? 500);
   };
-  const sorted = [...filtered].sort((a, b) => Number(inRange(b)) - Number(inRange(a)));
+  // location distance sub-filter
+  const distLimit: number | null = (() => {
+    if (category !== "location") return null;
+    const m: Record<string, number> = { "Entro 1 km": 1000, "Entro 3 km": 3000, "Entro 5 km": 5000, "Entro 10 km": 10000, "Entro 20 km": 20000 };
+    return m[subcategory] ?? null;
+  })();
+  const distFiltered = filtered.filter((w) => {
+    if (category === "location" && subcategory === "Vicino a me") return inRange(w);
+    if (distLimit != null) {
+      if (!selectedAnn?.location_lat || !selectedAnn?.location_lng) return false;
+      if (w.service_area_lat == null || w.service_area_lng == null) return false;
+      return distanceM(selectedAnn.location_lat, selectedAnn.location_lng, w.service_area_lat, w.service_area_lng) <= distLimit;
+    }
+    return true;
+  });
+  const sorted = [...distFiltered].sort((a, b) => {
+    if (category === "all") {
+      if (subcategory === "Ultimi attivi") return (new Date(b.last_active_at ?? 0).getTime()) - (new Date(a.last_active_at ?? 0).getTime());
+      if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
+      if (subcategory === "Più affidabili") return (b.reliability_pct ?? 0) - (a.reliability_pct ?? 0);
+    }
+    return Number(inRange(b)) - Number(inRange(a));
+  });
 
   const credits = profile?.credits ?? 0;
   const isPaid = profile?.plan === "pro" || profile?.plan === "business";
@@ -216,7 +334,7 @@ function WorkersPage() {
           <Link to="/billing"><Button size="sm" variant="outline" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
         )}
       </div>
-      <div className="mb-4 grid gap-3 md:grid-cols-3">
+      <div className="mb-4 grid gap-3 md:grid-cols-2">
         <div>
           <label className="text-sm font-medium">Annuncio per cui contattare</label>
           <Select value={selected} onValueChange={setSelected}>
@@ -226,35 +344,8 @@ function WorkersPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="md:col-span-1">
-          <label className="text-sm font-medium">Cerca lavoratore</label>
-          <div className="mt-1 flex flex-col gap-2 sm:flex-row">
-            <Select value={searchType} onValueChange={(v) => setSearchType(v as SearchType)}>
-              <SelectTrigger className="sm:w-[150px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(Object.keys(SEARCH_TYPE_LABEL) as SearchType[]).map((k) => (
-                  <SelectItem key={k} value={k}>{SEARCH_TYPE_LABEL[k]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                className="pl-8"
-                placeholder={SEARCH_PLACEHOLDER[searchType]}
-                value={qInput}
-                onChange={(e) => { setQInput(e.target.value); setQ(e.target.value); }}
-                onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
-              />
-            </div>
-          </div>
-          <div className="mt-2 flex gap-2">
-            <Button size="sm" onClick={runSearch} className="gap-1"><Search className="h-3.5 w-3.5" />Cerca</Button>
-            <Button size="sm" variant="outline" onClick={resetFilters} className="gap-1"><RotateCcw className="h-3.5 w-3.5" />Reset filtri</Button>
-          </div>
-        </div>
         <div>
-          <label className="text-sm font-medium">Lingua</label>
+          <label className="text-sm font-medium">Lingua (filtro rapido)</label>
           <Select value={lang || "__all"} onValueChange={(v) => setLang(v === "__all" ? "" : v)}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Tutte" /></SelectTrigger>
             <SelectContent>
@@ -263,6 +354,69 @@ function WorkersPage() {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Unified search box */}
+      <div className="mb-4 rounded-2xl border bg-card p-3 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_15%,transparent)]">
+        <label className="mb-2 block text-sm font-medium">Ricerca avanzata lavoratori</label>
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
+          <Select value={category} onValueChange={(v) => onChangeCategory(v as Category)}>
+            <SelectTrigger className="lg:w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
+                <SelectItem key={k} value={k}>{CATEGORY_LABEL[k]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={subcategory || "__none"} onValueChange={(v) => setSubcategory(v === "__none" ? "" : v)}>
+            <SelectTrigger className="lg:w-[220px]"><SelectValue placeholder="Sottocategoria" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">— nessuna —</SelectItem>
+              {SUBCATEGORIES[category].map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder={PLACEHOLDER_BY_CATEGORY[category]}
+              value={qInput}
+              onChange={(e) => { setQInput(e.target.value); setQ(e.target.value); }}
+              onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={runSearch} className="gap-1"><Search className="h-4 w-4" />Cerca</Button>
+            <Button variant="outline" onClick={resetFilters} className="gap-1"><RotateCcw className="h-4 w-4" />Reset</Button>
+          </div>
+        </div>
+        {/* Active filter chips */}
+        {(category !== "all" || subcategory || q || lang) && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {category !== "all" && (
+              <button onClick={() => onChangeCategory("all")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
+                {CATEGORY_LABEL[category]} <X className="h-3 w-3" />
+              </button>
+            )}
+            {subcategory && (
+              <button onClick={() => setSubcategory("")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
+                {subcategory} <X className="h-3 w-3" />
+              </button>
+            )}
+            {q && (
+              <button onClick={() => { setQ(""); setQInput(""); }} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
+                "{q}" <X className="h-3 w-3" />
+              </button>
+            )}
+            {lang && (
+              <button onClick={() => setLang("")} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
+                Lingua: {lang} <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
       <div className="mb-4 flex justify-end">
         <div className="inline-flex rounded-lg border p-0.5">
@@ -337,7 +491,7 @@ function WorkersPage() {
           </div>
           );
         })}
-        {sorted.length === 0 && <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a cambiare tipo di ricerca o parola chiave.</p>}
+        {sorted.length === 0 && <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a cambiare categoria, sottocategoria o parola chiave.</p>}
       </div>
       )}
     </AppShell>
