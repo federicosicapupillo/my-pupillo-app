@@ -440,7 +440,10 @@ function WorkersPage() {
           </div>
         )}
       </div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {searching ? "Ricerca in corso…" : `${sorted.length} ${sorted.length === 1 ? "lavoratore trovato" : "lavoratori trovati"}`}
+        </p>
         <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view==="list"?"secondary":"ghost"} onClick={()=>setView("list")} className="gap-1"><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view==="map"?"secondary":"ghost"} onClick={()=>setView("map")} className="gap-1"><MapIcon className="h-4 w-4" />Mappa</Button>
