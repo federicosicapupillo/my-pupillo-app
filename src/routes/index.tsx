@@ -11,13 +11,11 @@ import {
   Star,
   Sparkles,
   Bookmark,
-  ArrowRight,
   Send,
   TrendingUp,
   CheckCircle2,
 } from "lucide-react";
 import pupilloLogo from "@/assets/pupillo-logo.png";
-import mascot from "@/assets/pupillo-mascot.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
