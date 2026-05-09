@@ -80,6 +80,7 @@ function VerifyPhonePage() {
       }
       setPhase("code");
       setCooldown(60);
+      userChangedPhoneRef.current = false;
       if (res.simulated) {
         toast.success("Messaggio WhatsApp simulato correttamente.");
       } else {
