@@ -220,7 +220,12 @@ function ShiftDetailPage() {
     if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
     if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
     // Anti-duplicato
-    const { data: dup } = await supabase.from("reviews").select("id").eq("shift_id", shift.id).eq("author_id", user.id).maybeSingle();
+    const { data: dup } = await supabase.from("reviews")
+      .select("id, rating, comment, tags")
+      .eq("shift_id", shift.id)
+      .eq("author_id", user.id)
+      .eq("target_id", shift.worker_id)
+      .maybeSingle();
     if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
     const { data: created, error } = await supabase.from("reviews").insert({
       author_id: user.id,
@@ -232,7 +237,11 @@ function ShiftDetailPage() {
       comment: trimmed,
       tags,
     } as never).select("id, rating, comment, tags").single();
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message.includes("duplicate") || error.message.includes("unique") ? "Recensione già presente per questo turno." : error.message);
+      await load();
+      return;
+    }
     // Messaggio di sistema in chat (best effort)
     if (appId) {
       await supabase.from("messages").insert({
