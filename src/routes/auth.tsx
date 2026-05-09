@@ -65,9 +65,18 @@ function AuthPage() {
       navigate({ to: "/verify-phone" });
       return;
     }
+    // Profile incomplete → onboarding (one onboarding route covers both roles)
+    if (profile && profile.profile_completed === false && userRole !== "admin") {
+      navigate({ to: "/onboarding" });
+      return;
+    }
     if (userRole === "admin") navigate({ to: "/admin" });
     else if (userRole === "restaurant") navigate({ to: "/dashboard" });
     else if (userRole === "worker") navigate({ to: "/jobs" });
+    else if (userRole === null) {
+      // Authenticated but no role row yet — surface a clear error.
+      toast.error("Ruolo account non configurato. Contatta l'assistenza.");
+    }
   }, [user, userRole, profile, loading, navigate]);
 
   const handleSignup = async (e: React.FormEvent) => {
