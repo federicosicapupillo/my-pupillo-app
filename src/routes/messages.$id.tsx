@@ -5,8 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -30,6 +31,38 @@ type App = {
   announcement_id: string; proposed_tariff: number | null;
 };
 type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string };
+
+type Shift = {
+  id: string;
+  status: string;
+  shift_date: string;
+  worker_id: string;
+  restaurant_id: string;
+  announcement_id: string | null;
+  reviewed_at: string | null;
+  reviewed_by_restaurant_user_id: string | null;
+};
+
+type Review = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  tags: string[] | null;
+  created_at: string;
+  author_id: string;
+  target_id: string;
+  shift_id: string | null;
+};
+
+const POSITIVE_TAGS = [
+  "Puntuale", "Professionale", "Affidabile", "Ordinato", "Veloce",
+  "Collaborativo", "Ha rispettato il dress code", "Buona comunicazione",
+  "Esperienza adeguata", "Da richiamare",
+];
+const CRITICAL_TAGS = [
+  "In ritardo", "Poco comunicativo", "Dress code non rispettato",
+  "Esperienza non adeguata", "Da migliorare", "Non richiamare",
+];
 
 type TemplateCategory =
   | "application"
@@ -90,6 +123,7 @@ const TEMPLATES: MsgTemplate[] = [
   { key: "r_post_thanks", role: "restaurant", category: "post_shift", text: "Grazie per il lavoro svolto.", action: "none" },
   { key: "r_post_completed", role: "restaurant", category: "post_shift", text: "Confermo che il turno è stato completato.", action: "complete_shift" },
   { key: "r_post_again", role: "restaurant", category: "post_shift", text: "Ci piacerebbe collaborare ancora con te.", action: "none" },
+  { key: "r_post_review", role: "restaurant", category: "post_shift", text: "Lascia recensione", action: "none" },
   { key: "r_post_issue", role: "restaurant", category: "issue_report", text: "Segnalo un problema sul turno.", action: "report_issue" },
 
   // Worker — application
@@ -212,6 +246,9 @@ function Thread() {
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
   const [sending, setSending] = useState(false);
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -252,6 +289,26 @@ function Thread() {
         .select("*").eq("entity_type", "application").eq("entity_id", id)
         .order("created_at");
       setEvents((ev as LogEvent[]) ?? []);
+      // Carica turno collegato e recensione esistente
+      if (a) {
+        const { data: sh } = await supabase
+          .from("shifts")
+          .select("id, status, shift_date, worker_id, restaurant_id, announcement_id, reviewed_at, reviewed_by_restaurant_user_id")
+          .eq("announcement_id", (a as any).announcement_id)
+          .eq("worker_id", (a as any).worker_id)
+          .eq("restaurant_id", (a as any).restaurant_id)
+          .maybeSingle();
+        setShift((sh as Shift | null) ?? null);
+        if (sh && user) {
+          const { data: rev } = await supabase
+            .from("reviews")
+            .select("id, rating, comment, tags, created_at, author_id, target_id, shift_id")
+            .eq("shift_id", (sh as any).id)
+            .eq("author_id", user.id)
+            .maybeSingle();
+          setExistingReview((rev as Review | null) ?? null);
+        }
+      }
       setLoading(false);
     })();
     const ch = supabase.channel(`thread-${id}`)
@@ -311,6 +368,18 @@ function Thread() {
     }
     setSending(true);
     try {
+      // Caso speciale: "Lascia recensione" apre solo il blocco recensione
+      if (selectedTpl.key === "r_post_review") {
+        setTplCategory("post_shift");
+        setReviewOpen(true);
+        setSelectedTpl(null);
+        setSending(false);
+        // scroll verso il blocco recensione
+        setTimeout(() => {
+          document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 50);
+        return;
+      }
       const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
@@ -450,6 +519,68 @@ function Thread() {
       user_id: user.id, action, entity_type: "application", entity_id: id,
       metadata: metadata as never,
     });
+  };
+
+  const submitReview = async (rating: number, text: string, tags: string[]) => {
+    if (!user || !app) return;
+    if (role !== "restaurant") {
+      toast.error("Solo il ristoratore può lasciare una recensione.");
+      return;
+    }
+    if (!rating) { toast.error("Seleziona una valutazione."); return; }
+    const trimmed = text.trim();
+    if (!trimmed) { toast.error("Scrivi una recensione prima di confermare il turno."); return; }
+    if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
+    if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
+
+    // Crea il turno se non esiste (caso in cui non sia mai stato confermato)
+    let shiftId = shift?.id ?? null;
+    if (!shiftId && app.announcement_id && ann) {
+      const { data: created, error: createErr } = await supabase.from("shifts").insert({
+        announcement_id: app.announcement_id,
+        restaurant_id: app.restaurant_id,
+        worker_id: app.worker_id,
+        shift_date: ann.service_date,
+        hours: 4,
+        amount: app.proposed_tariff ?? ann.tariff_amount ?? null,
+        status: "completed",
+      } as never).select("*").single();
+      if (createErr) { toast.error("Impossibile creare il turno: " + createErr.message); return; }
+      shiftId = (created as any).id;
+      setShift(created as Shift);
+    }
+
+    const { data, error } = await supabase.from("reviews").insert({
+      author_id: user.id,
+      target_id: app.worker_id,
+      shift_id: shiftId,
+      rating,
+      comment: trimmed,
+      tags,
+      application_id: app.id,
+      announcement_id: app.announcement_id,
+      is_visible_to_restaurants: true,
+      is_visible_to_worker: true,
+    } as never).select("*").single();
+    if (error) {
+      if (String(error.message).toLowerCase().includes("uniq_reviews_shift_author") || (error as any).code === "23505") {
+        toast.error("Hai già recensito questo turno.");
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
+    setExistingReview(data as Review);
+    // Messaggio di sistema in chat
+    try {
+      await insertSystemMessage(`il turno è stato completato e il lavoratore ha ricevuto una recensione. Valutazione: ${rating} ${rating === 1 ? "stella" : "stelle"}.`, "complete_shift");
+    } catch (e) { /* non bloccante */ }
+    // Marca l'annuncio come completato
+    if (app.announcement_id) {
+      await supabase.from("announcements").update({ status: "completed" } as never).eq("id", app.announcement_id);
+    }
+    setReviewOpen(false);
+    toast.success("Turno completato e recensione inviata al lavoratore.");
   };
 
   if (loading) {
@@ -606,6 +737,17 @@ function Thread() {
           otherName={other?.name ?? null}
           disabled={isConversationClosed}
         />
+
+        {role === "restaurant" && tplCategory === "post_shift" && app && (
+          <ReviewBlock
+            id="review-block"
+            existing={existingReview}
+            workerName={other?.name ?? null}
+            shift={shift}
+            forceOpen={reviewOpen}
+            onSubmit={submitReview}
+          />
+        )}
       </div>
   );
 }
@@ -689,6 +831,182 @@ function TemplatePicker(props: {
       {disabled && (
         <p className="text-xs text-muted-foreground text-center">
           Conversazione chiusa: non è possibile inviare nuovi messaggi.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="flex items-center gap-1" role="radiogroup" aria-label="Valutazione">
+      {[1, 2, 3, 4, 5].map((n) => {
+        const active = (hover || value) >= n;
+        return (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            onMouseEnter={() => setHover(n)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => onChange(n)}
+            className="p-1 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            aria-label={`${n} stelle`}
+          >
+            <Star
+              className={`h-7 w-7 transition ${active ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
+              strokeWidth={1.5}
+            />
+          </button>
+        );
+      })}
+      <span className="ml-2 text-sm text-muted-foreground">
+        {value ? RATING_LABELS[value] : "Seleziona valutazione"}
+      </span>
+    </div>
+  );
+}
+
+const RATING_LABELS: Record<number, string> = {
+  1: "Insufficiente",
+  2: "Da migliorare",
+  3: "Buono",
+  4: "Molto buono",
+  5: "Eccellente",
+};
+
+function ReviewBlock(props: {
+  id?: string;
+  existing: Review | null;
+  workerName: string | null;
+  shift: Shift | null;
+  forceOpen: boolean;
+  onSubmit: (rating: number, text: string, tags: string[]) => Promise<void>;
+}) {
+  const { id, existing, workerName, shift, forceOpen, onSubmit } = props;
+  const [rating, setRating] = useState(0);
+  const [text, setText] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (existing) {
+    return (
+      <div id={id} className="mt-4 rounded-2xl border bg-card p-4 space-y-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm">Recensione inviata</h3>
+        </div>
+        <div className="flex items-center gap-1">
+          {[1,2,3,4,5].map(n => (
+            <Star key={n} className={`h-5 w-5 ${n <= existing.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} strokeWidth={1.5} />
+          ))}
+          <span className="ml-2 text-sm font-medium">{existing.rating}.0 — {RATING_LABELS[existing.rating]}</span>
+        </div>
+        {existing.comment && <p className="text-sm">{existing.comment}</p>}
+        {existing.tags && existing.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {existing.tags.map(t => (
+              <span key={t} className="text-[11px] rounded-full bg-secondary px-2 py-0.5">{t}</span>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Hai già recensito questo turno. Non è possibile modificarla.</p>
+      </div>
+    );
+  }
+
+  const charCount = text.trim().length;
+  const canSubmit = rating > 0 && charCount >= 20 && charCount <= 500 && !submitting;
+
+  const toggleTag = (t: string) => {
+    setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try { await onSubmit(rating, text, tags); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div id={id} className={`mt-4 rounded-2xl border bg-card p-4 space-y-4 ${forceOpen ? "ring-2 ring-primary/40" : ""}`}>
+      <div>
+        <div className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+          <h3 className="font-semibold text-base">Com'è andato il turno{workerName ? ` con ${workerName}` : ""}?</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Conferma la fine del turno e lascia una recensione al lavoratore.
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium mb-2">Valutazione *</label>
+        <StarPicker value={rating} onChange={setRating} />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs font-medium">Recensione *</label>
+          <span className={`text-[11px] ${charCount > 500 ? "text-destructive" : "text-muted-foreground"}`}>
+            {charCount}/500
+          </span>
+        </div>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Scrivi una recensione chiara e utile. Esempio: puntuale, professionale, ha rispettato il dress code e ha lavorato bene con il team."
+          rows={4}
+          maxLength={500}
+        />
+        {charCount > 0 && charCount < 20 && (
+          <p className="text-[11px] text-destructive mt-1">Minimo 20 caratteri ({20 - charCount} mancanti).</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium mb-2">Tag rapidi (opzionali)</label>
+        <div className="space-y-2">
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1">Positivi</div>
+            <div className="flex flex-wrap gap-1.5">
+              {POSITIVE_TAGS.map(t => {
+                const active = tags.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTag(t)}
+                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1">Critici</div>
+            <div className="flex flex-wrap gap-1.5">
+              {CRITICAL_TAGS.map(t => {
+                const active = tags.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTag(t)}
+                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-destructive/20 border-destructive text-destructive" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Button type="button" onClick={handleSubmit} disabled={!canSubmit} className="w-full gap-2">
+        <Check className="h-4 w-4" />
+        {submitting ? "Invio in corso…" : "Conferma fine turno e invia recensione"}
+      </Button>
+      {shift?.status === "cancelled" && (
+        <p className="text-[11px] text-destructive text-center">
+          Il turno risulta annullato: usa il flusso di segnalazione invece della recensione standard.
         </p>
       )}
     </div>

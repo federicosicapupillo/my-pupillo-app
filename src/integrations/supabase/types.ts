@@ -672,6 +672,7 @@ export type Database = {
           is_motorized: boolean | null
           languages: string[] | null
           last_active_at: string | null
+          last_review_at: string | null
           latitude: number | null
           location_notes: string | null
           longitude: number | null
@@ -776,6 +777,7 @@ export type Database = {
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
+          last_review_at?: string | null
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
@@ -880,6 +882,7 @@ export type Database = {
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
+          last_review_at?: string | null
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
@@ -977,31 +980,49 @@ export type Database = {
       }
       reviews: {
         Row: {
+          announcement_id: string | null
+          application_id: string | null
           author_id: string
           comment: string | null
           created_at: string
           id: string
+          is_visible_to_restaurants: boolean
+          is_visible_to_worker: boolean
           rating: number
           shift_id: string | null
+          tags: string[]
           target_id: string
+          updated_at: string
         }
         Insert: {
+          announcement_id?: string | null
+          application_id?: string | null
           author_id: string
           comment?: string | null
           created_at?: string
           id?: string
+          is_visible_to_restaurants?: boolean
+          is_visible_to_worker?: boolean
           rating: number
           shift_id?: string | null
+          tags?: string[]
           target_id: string
+          updated_at?: string
         }
         Update: {
+          announcement_id?: string | null
+          application_id?: string | null
           author_id?: string
           comment?: string | null
           created_at?: string
           id?: string
+          is_visible_to_restaurants?: boolean
+          is_visible_to_worker?: boolean
           rating?: number
           shift_id?: string | null
+          tags?: string[]
           target_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1009,10 +1030,13 @@ export type Database = {
         Row: {
           amount: number | null
           announcement_id: string | null
+          completed_at: string | null
           created_at: string
           hours: number
           id: string
           restaurant_id: string
+          reviewed_at: string | null
+          reviewed_by_restaurant_user_id: string | null
           shift_date: string
           status: Database["public"]["Enums"]["shift_status"]
           worker_id: string
@@ -1020,10 +1044,13 @@ export type Database = {
         Insert: {
           amount?: number | null
           announcement_id?: string | null
+          completed_at?: string | null
           created_at?: string
           hours?: number
           id?: string
           restaurant_id: string
+          reviewed_at?: string | null
+          reviewed_by_restaurant_user_id?: string | null
           shift_date: string
           status?: Database["public"]["Enums"]["shift_status"]
           worker_id: string
@@ -1031,10 +1058,13 @@ export type Database = {
         Update: {
           amount?: number | null
           announcement_id?: string | null
+          completed_at?: string | null
           created_at?: string
           hours?: number
           id?: string
           restaurant_id?: string
+          reviewed_at?: string | null
+          reviewed_by_restaurant_user_id?: string | null
           shift_date?: string
           status?: Database["public"]["Enums"]["shift_status"]
           worker_id?: string
