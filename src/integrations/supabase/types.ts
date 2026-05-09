@@ -673,12 +673,14 @@ export type Database = {
           languages: string[] | null
           last_active_at: string | null
           last_review_at: string | null
+          last_review_reminder_at: string | null
           latitude: number | null
           location_notes: string | null
           longitude: number | null
           neighborhood: string | null
           no_shows: number | null
           opening_hours: string | null
+          overdue_reviews_count: number
           pec_email: string | null
           phone: string | null
           phone_country_code: string | null
@@ -704,6 +706,8 @@ export type Database = {
           registered_office_province: string | null
           reliability_pct: number | null
           representative_age: number | null
+          review_blocked: boolean
+          review_blocked_at: string | null
           reviews_count: number | null
           sdi_code: string | null
           secondary_roles: string[] | null
@@ -778,12 +782,14 @@ export type Database = {
           languages?: string[] | null
           last_active_at?: string | null
           last_review_at?: string | null
+          last_review_reminder_at?: string | null
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
           neighborhood?: string | null
           no_shows?: number | null
           opening_hours?: string | null
+          overdue_reviews_count?: number
           pec_email?: string | null
           phone?: string | null
           phone_country_code?: string | null
@@ -809,6 +815,8 @@ export type Database = {
           registered_office_province?: string | null
           reliability_pct?: number | null
           representative_age?: number | null
+          review_blocked?: boolean
+          review_blocked_at?: string | null
           reviews_count?: number | null
           sdi_code?: string | null
           secondary_roles?: string[] | null
@@ -883,12 +891,14 @@ export type Database = {
           languages?: string[] | null
           last_active_at?: string | null
           last_review_at?: string | null
+          last_review_reminder_at?: string | null
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
           neighborhood?: string | null
           no_shows?: number | null
           opening_hours?: string | null
+          overdue_reviews_count?: number
           pec_email?: string | null
           phone?: string | null
           phone_country_code?: string | null
@@ -914,6 +924,8 @@ export type Database = {
           registered_office_province?: string | null
           reliability_pct?: number | null
           representative_age?: number | null
+          review_blocked?: boolean
+          review_blocked_at?: string | null
           reviews_count?: number | null
           sdi_code?: string | null
           secondary_roles?: string[] | null
@@ -975,6 +987,51 @@ export type Database = {
           referred_user_id?: string | null
           referrer_user_id?: string
           status?: Database["public"]["Enums"]["referral_status"]
+        }
+        Relationships: []
+      }
+      required_reviews: {
+        Row: {
+          announcement_id: string | null
+          application_id: string | null
+          completed_at: string | null
+          created_at: string
+          due_date: string
+          id: string
+          restaurant_user_id: string
+          review_id: string | null
+          shift_id: string | null
+          status: string
+          updated_at: string
+          worker_user_id: string
+        }
+        Insert: {
+          announcement_id?: string | null
+          application_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_date: string
+          id?: string
+          restaurant_user_id: string
+          review_id?: string | null
+          shift_id?: string | null
+          status?: string
+          updated_at?: string
+          worker_user_id: string
+        }
+        Update: {
+          announcement_id?: string | null
+          application_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string
+          id?: string
+          restaurant_user_id?: string
+          review_id?: string | null
+          shift_id?: string | null
+          status?: string
+          updated_at?: string
+          worker_user_id?: string
         }
         Relationships: []
       }
@@ -1176,7 +1233,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      mark_overdue_required_reviews: { Args: never; Returns: number }
       normalize_vat: { Args: { _v: string }; Returns: string }
+      recompute_review_block: {
+        Args: { _restaurant_id: string }
+        Returns: undefined
+      }
       redeem_discount_code: {
         Args: {
           _applies_to: string
