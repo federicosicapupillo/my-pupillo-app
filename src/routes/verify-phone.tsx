@@ -191,7 +191,13 @@ function VerifyPhonePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setPhase("phone"); setCode(""); }}
+                  onClick={() => {
+                    userChangedPhoneRef.current = true;
+                    setPhase("phone");
+                    setCode("");
+                    setCooldown(0);
+                    setPhoneNumber("");
+                  }}
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Cambia numero
