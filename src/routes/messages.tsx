@@ -219,7 +219,7 @@ function Inbox() {
               key={t.id}
               to="/messages/$id"
               params={{ id: t.id }}
-              className="flex items-center gap-3 rounded-2xl border bg-card p-4 hover:bg-accent transition"
+              className="group flex items-center gap-3 rounded-2xl border bg-card p-4 hover:bg-accent transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <div className="relative h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <MessageSquare className="h-4 w-4 text-primary" />
