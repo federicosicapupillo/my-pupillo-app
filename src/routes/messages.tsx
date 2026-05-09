@@ -75,7 +75,7 @@ function MessagesLayout() {
     const otherCol = role === "restaurant" ? "worker_id" : "restaurant_id";
     const { data: apps, error: appsError } = await supabase
       .from("applications")
-      .select(`id, status, announcement_id, restaurant_id, worker_id, ${otherCol}`)
+      .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
       .eq(col, user.id);
     if (appsError) {
       toast.error(appsError.message);
@@ -117,8 +117,8 @@ function MessagesLayout() {
         restaurantId: a.restaurant_id,
         workerId: a.worker_id,
         other: { id: a[otherCol], name: p?.business_name || p?.full_name || "Utente" },
-        lastBody: last?.body ?? null,
-        lastAt: last?.created_at ?? null,
+        lastBody: a.last_message_preview ?? last?.body ?? null,
+        lastAt: a.last_message_at ?? last?.created_at ?? null,
         unread: unreadByApp.get(a.id) ?? 0,
       };
     });
