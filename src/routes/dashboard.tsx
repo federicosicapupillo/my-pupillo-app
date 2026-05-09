@@ -9,6 +9,7 @@ import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
+import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -105,6 +106,7 @@ function DashboardInner() {
       />
 
       <ProfileStatusBanner />
+      {role === "restaurant" && <RequiredReviewsBanner />}
 
       {profile && !profile.profile_completed && (
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-yellow-300 bg-yellow-50 p-4">
