@@ -156,7 +156,7 @@ function AuthPage() {
     }
     setBusy(false);
     toast.success("Registrazione ricevuta! Conferma il numero WhatsApp.");
-    navigate({ to: "/verify-phone" });
+    navigate({ to: "/verify-phone", search: { phase: "code" } as never });
   };
 
   const handleLogin = async (e: React.FormEvent) => {
