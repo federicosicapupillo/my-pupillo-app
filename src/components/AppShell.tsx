@@ -6,6 +6,7 @@ import { PupilloMenu, PupilloClose, PupilloAvatar } from "@/components/PupilloIc
 import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { supabase } from "@/integrations/supabase/client";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 
 
