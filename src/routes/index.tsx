@@ -69,7 +69,7 @@ function Index() {
                 Accedi
               </Button>
             </Link>
-            <Link to="/ristoratori">
+            <Link to="/auth" search={{ role: "restaurant" } as never}>
               <button
                 className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition active:scale-95"
                 style={{
@@ -381,7 +381,7 @@ function Index() {
                   <UserPlus className="h-5 w-5" /> Registrati come lavoratore
                 </button>
               </Link>
-              <Link to="/ristoratori">
+              <Link to="/auth" search={{ role: "restaurant" } as never}>
                 <button className="inline-flex items-center gap-2 rounded-2xl border-2 border-white/60 px-6 py-4 text-base font-bold text-white hover:bg-white/10 active:scale-95">
                   <ChefHat className="h-5 w-5" /> Sei un ristoratore?
                 </button>
