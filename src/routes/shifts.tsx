@@ -226,6 +226,19 @@ function ShiftsPage() {
 
                 {s.status === "completed" && (
                   <div className="mt-4 border-t pt-3">
+                    {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (() => {
+                      const due = new Date(reqByShift[s.id].due_date).getTime();
+                      const now = Date.now();
+                      const overdue = reqByShift[s.id].status === "overdue" || due < now;
+                      const soon = !overdue && (due - now) < 24 * 60 * 60 * 1000;
+                      return (
+                        <div className={`mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          overdue ? "bg-destructive/15 text-destructive" : soon ? "bg-amber-500/15 text-amber-700" : "bg-muted text-muted-foreground"
+                        }`}>
+                          {overdue ? "Scaduta" : soon ? "In scadenza" : `Entro il ${new Date(reqByShift[s.id].due_date).toLocaleDateString("it-IT")}`}
+                        </div>
+                      );
+                    })()}
                     {reviewed.has(s.id) ? (
                       <p className="text-xs text-muted-foreground flex items-center gap-1"><Star className="h-3 w-3" /> Recensione inviata</p>
                     ) : reviewOpen === s.id ? (
