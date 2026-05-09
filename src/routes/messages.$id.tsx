@@ -256,7 +256,7 @@ function Thread() {
     })();
     const ch = supabase.channel(`thread-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `application_id=eq.${id}` },
-        (p) => setMsgs(prev => [...prev, p.new as Msg]))
+        (p) => setMsgs(prev => prev.some(m => m.id === (p.new as Msg).id) ? prev : [...prev, p.new as Msg]))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `id=eq.${id}` },
         (p) => setApp(p.new as App))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs", filter: `entity_id=eq.${id}` },
@@ -438,7 +438,8 @@ function Thread() {
     toast.success("Controfferta inviata");
   };
 
-  const isTerminal = app ? TERMINAL.includes(app.status) : true;
+  const canChangeStatus = app ? TERMINAL.includes(app.status) === false : false;
+  const isConversationClosed = app?.status === "expired";
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
   const steps = buildTimeline(app?.status);
@@ -547,7 +548,7 @@ function Thread() {
           </div>
         )}
 
-        {!isTerminal && app && (
+        {canChangeStatus && app && (
           <div className="mb-4 space-y-2">
             <div className="flex flex-wrap gap-2">
               {role === "worker" && app.status === "pending" && (<>
@@ -603,7 +604,7 @@ function Thread() {
           sending={sending}
           ann={ann}
           otherName={other?.name ?? null}
-          disabled={isTerminal}
+          disabled={isConversationClosed}
         />
       </div>
   );
