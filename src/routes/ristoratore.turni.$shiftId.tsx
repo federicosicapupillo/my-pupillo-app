@@ -119,7 +119,7 @@ function ShiftDetailPage() {
   const [appCount, setAppCount] = useState<number>(0);
   const [existingReview, setExistingReview] = useState<{ id: string; rating: number; comment: string | null; tags: string[] | null } | null>(null);
   const hasReview = !!existingReview;
-  const [requiredReview, setRequiredReview] = useState<{ status: string; due_date: string } | null>(null);
+  const [requiredReview, setRequiredReview] = useState<{ status: string; due_date: string; review_id?: string | null } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const reviewRef = useRef<HTMLDivElement | null>(null);
@@ -150,7 +150,12 @@ function ShiftDetailPage() {
       user
         ? supabase.from("reviews").select("id, rating, comment, tags").eq("shift_id", s.id).eq("author_id", user.id).maybeSingle()
         : Promise.resolve({ data: null }),
-      (supabase as any).from("required_reviews").select("status, due_date").eq("shift_id", s.id).maybeSingle(),
+      (supabase as any).from("required_reviews")
+        .select("status, due_date, review_id")
+        .eq("shift_id", s.id)
+        .eq("restaurant_user_id", s.restaurant_id)
+        .eq("worker_user_id", s.worker_id)
+        .maybeSingle(),
     ]);
     setAnn((annRes.data as Announcement) ?? null);
     setWorker((workerRes.data as Worker) ?? null);
@@ -184,12 +189,23 @@ function ShiftDetailPage() {
 
   const concludeShift = async () => {
     if (!shift) return;
+    if (!shift.worker_id) { toast.error("Lavoratore non collegato al turno."); return; }
+    if (!shift.restaurant_id) { toast.error("Turno non trovato."); return; }
     setClosing(true);
     const { error } = await supabase.from("shifts")
       .update({ status: "completed", completed_at: new Date().toISOString() })
-      .eq("id", shift.id);
+      .eq("id", shift.id)
+      .eq("restaurant_id", shift.restaurant_id);
     setClosing(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      const msg = String(error.message ?? "");
+      toast.error(
+        msg.includes("required_reviews") || msg.includes("ON CONFLICT")
+          ? "Impossibile creare la recensione obbligatoria. Riprova."
+          : msg || "Errore durante la chiusura del turno"
+      );
+      return;
+    }
     toast.success("Turno concluso. Lascia ora la recensione.");
     setConfirmOpen(false);
     await load();
@@ -204,7 +220,12 @@ function ShiftDetailPage() {
     if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
     if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
     // Anti-duplicato
-    const { data: dup } = await supabase.from("reviews").select("id").eq("shift_id", shift.id).eq("author_id", user.id).maybeSingle();
+    const { data: dup } = await supabase.from("reviews")
+      .select("id, rating, comment, tags")
+      .eq("shift_id", shift.id)
+      .eq("author_id", user.id)
+      .eq("target_id", shift.worker_id)
+      .maybeSingle();
     if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
     const { data: created, error } = await supabase.from("reviews").insert({
       author_id: user.id,
@@ -216,7 +237,11 @@ function ShiftDetailPage() {
       comment: trimmed,
       tags,
     } as never).select("id, rating, comment, tags").single();
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message.includes("duplicate") || error.message.includes("unique") ? "Recensione già presente per questo turno." : error.message);
+      await load();
+      return;
+    }
     // Messaggio di sistema in chat (best effort)
     if (appId) {
       await supabase.from("messages").insert({
