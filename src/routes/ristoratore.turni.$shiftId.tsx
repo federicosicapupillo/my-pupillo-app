@@ -1,0 +1,430 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { RequireAuth } from "@/components/RequireAuth";
+import { AppShell, PageHeader } from "@/components/AppShell";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import {
+  ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
+  XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro,
+} from "lucide-react";
+
+export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
+  head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
+  component: () => <RequireAuth><ShiftDetailPage /></RequireAuth>,
+});
+
+type Shift = {
+  id: string;
+  announcement_id: string | null;
+  restaurant_id: string;
+  worker_id: string;
+  shift_date: string;
+  hours: number;
+  amount: number | null;
+  status: "scheduled" | "completed" | "no_show" | "cancelled";
+  completed_at: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+};
+
+type Announcement = {
+  id: string;
+  service_date: string;
+  service_time: string;
+  duration_hours: number | null;
+  tariff_amount: number | null;
+  tariff_type: string | null;
+  location_address: string | null;
+  professional_profile: string | null;
+  notes: string | null;
+  dress_code_items: string[] | null;
+  dress_code_notes: string | null;
+  required_skills: string[] | null;
+  language_requirements: string[] | null;
+  job_access_restrictions: string | null;
+  status: string;
+  created_at: string;
+  assigned_worker_id: string | null;
+  restaurant_id: string;
+};
+
+type Worker = {
+  id: string;
+  full_name: string | null;
+  primary_role: string | null;
+  badge: string | null;
+  rating_avg: number | null;
+  reliability_pct: number | null;
+  completed_shifts: number | null;
+  languages: string[] | null;
+  spoken_languages: any;
+};
+
+type JobReq = {
+  announcement_id: string | null;
+  role_required: string | null;
+  title: string | null;
+  description: string | null;
+  workers_needed: number | null;
+  operational_notes: string | null;
+};
+
+type Restaurant = { id: string; business_name: string | null; full_name: string | null };
+
+const shiftStatusMeta: Record<Shift["status"], { label: string; cls: string; Icon: any }> = {
+  scheduled: { label: "Confermato", cls: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30", Icon: CheckCircle2 },
+  completed: { label: "Completato", cls: "bg-blue-500/10 text-blue-700 border-blue-500/30", Icon: CheckCheck },
+  cancelled: { label: "Annullato", cls: "bg-red-500/10 text-red-700 border-red-500/30", Icon: XCircle },
+  no_show: { label: "No-show", cls: "bg-orange-500/10 text-orange-700 border-orange-500/30", Icon: AlertTriangle },
+};
+
+function ShiftDetailPage() {
+  const { shiftId } = Route.useParams();
+  const { user, role } = useAuth();
+  const nav = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [ann, setAnn] = useState<Announcement | null>(null);
+  const [worker, setWorker] = useState<Worker | null>(null);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [jobReq, setJobReq] = useState<JobReq | null>(null);
+  const [appId, setAppId] = useState<string | null>(null);
+  const [appCount, setAppCount] = useState<number>(0);
+  const [hasReview, setHasReview] = useState(false);
+  const [requiredReview, setRequiredReview] = useState<{ status: string; due_date: string } | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setForbidden(false);
+    setNotFound(false);
+    const { data: sh, error } = await supabase
+      .from("shifts").select("*").eq("id", shiftId).maybeSingle();
+    if (error || !sh) { setNotFound(true); setLoading(false); return; }
+    const s = sh as Shift;
+    if (user && s.restaurant_id !== user.id && role !== "admin") {
+      setForbidden(true); setLoading(false); return;
+    }
+    setShift(s);
+    const [annRes, workerRes, restRes, appsRes, revsRes, reqRes] = await Promise.all([
+      s.announcement_id
+        ? supabase.from("announcements").select("*").eq("id", s.announcement_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase.from("profiles")
+        .select("id, full_name, primary_role, badge, rating_avg, reliability_pct, completed_shifts, languages, spoken_languages")
+        .eq("id", s.worker_id).maybeSingle(),
+      supabase.from("profiles").select("id, business_name, full_name").eq("id", s.restaurant_id).maybeSingle(),
+      s.announcement_id
+        ? supabase.from("applications").select("id, worker_id, status").eq("announcement_id", s.announcement_id)
+        : Promise.resolve({ data: [] as any[] }),
+      user ? supabase.from("reviews").select("id").eq("shift_id", s.id).eq("author_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+      (supabase as any).from("required_reviews").select("status, due_date").eq("shift_id", s.id).maybeSingle(),
+    ]);
+    setAnn((annRes.data as Announcement) ?? null);
+    setWorker((workerRes.data as Worker) ?? null);
+    setRestaurant((restRes.data as Restaurant) ?? null);
+    const apps = (appsRes.data ?? []) as any[];
+    setAppCount(apps.length);
+    const matchedApp = apps.find((a) => a.worker_id === s.worker_id) ?? null;
+    setAppId(matchedApp?.id ?? null);
+    setHasReview(!!revsRes.data);
+    setRequiredReview((reqRes as any).data ?? null);
+    if (s.announcement_id) {
+      const { data: jr } = await supabase
+        .from("job_requests")
+        .select("announcement_id, role_required, title, description, workers_needed, operational_notes")
+        .eq("announcement_id", s.announcement_id).maybeSingle();
+      setJobReq((jr as JobReq) ?? null);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { if (user) load(); /* eslint-disable-next-line */ }, [user, shiftId]);
+
+  const concludeShift = async () => {
+    if (!shift) return;
+    setClosing(true);
+    const { error } = await supabase.from("shifts")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .eq("id", shift.id);
+    setClosing(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Turno concluso. Lascia ora la recensione.");
+    setConfirmOpen(false);
+    await load();
+    if (appId) nav({ to: "/messages/$id", params: { id: appId } });
+  };
+
+  if (loading) {
+    return <AppShell><PageHeader title="Dettaglio turno" /><p className="text-muted-foreground">Caricamento…</p></AppShell>;
+  }
+  if (notFound) {
+    return (
+      <AppShell>
+        <PageHeader title="Dettaglio turno" />
+        <EmptyState title="Turno non trovato" hint="Il turno richiesto non esiste o è stato rimosso." />
+      </AppShell>
+    );
+  }
+  if (forbidden) {
+    return (
+      <AppShell>
+        <PageHeader title="Dettaglio turno" />
+        <EmptyState title="Permesso negato" hint="Non hai i permessi per visualizzare questo turno." />
+      </AppShell>
+    );
+  }
+  if (!shift) return null;
+
+  const meta = shiftStatusMeta[shift.status];
+  const StatusIcon = meta.Icon;
+
+  // Orari
+  const startTime = ann?.service_time?.slice(0, 5) ?? null;
+  const dur = ann?.duration_hours ?? shift.hours;
+  const endTime = (() => {
+    if (!startTime || !dur) return null;
+    const [h, m] = startTime.split(":").map(Number);
+    const total = h * 60 + m + Math.round(dur * 60);
+    return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  })();
+  const tariff = ann?.tariff_amount ?? null;
+  const compenso = shift.amount ?? (tariff && dur ? Number(tariff) * Number(dur) : null);
+
+  // Stato recensione
+  const isOverdue = requiredReview?.status === "overdue";
+  let reviewLabel = "non ancora disponibile";
+  let reviewClass = "text-muted-foreground";
+  if (shift.status === "completed") {
+    if (hasReview) { reviewLabel = "inviata"; reviewClass = "text-emerald-600"; }
+    else if (isOverdue) { reviewLabel = "obbligatoria scaduta"; reviewClass = "text-destructive"; }
+    else { reviewLabel = "da lasciare"; reviewClass = "text-amber-700"; }
+  }
+
+  const restName = restaurant?.business_name || restaurant?.full_name || "—";
+  const roleLabel = jobReq?.role_required || ann?.professional_profile || "Servizio";
+
+  return (
+    <AppShell>
+      <PageHeader
+        title="Dettaglio turno"
+        subtitle="Riepilogo del servizio e lavoratore assegnato"
+        action={
+          <Link to="/dashboard">
+            <Button variant="ghost" size="sm" className="gap-1"><ArrowLeft className="h-3.5 w-3.5" /> Dashboard</Button>
+          </Link>
+        }
+      />
+
+      {/* Card 1 — Riepilogo turno */}
+      <div className="rounded-2xl border bg-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs text-muted-foreground">Ruolo cercato</div>
+            <div className="text-lg font-semibold">{roleLabel}</div>
+            {jobReq?.title && jobReq.title !== roleLabel && (
+              <div className="text-sm text-muted-foreground">{jobReq.title}</div>
+            )}
+            <div className="text-sm text-muted-foreground mt-1">{restName}</div>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${meta.cls}`}>
+              <StatusIcon className="h-3 w-3" /> {meta.label}
+            </span>
+            <span className={`text-[11px] ${reviewClass}`}>Recensione: {reviewLabel}</span>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Field icon={Calendar} label="Data turno" value={new Date(shift.shift_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} />
+          {startTime && <Field icon={Clock} label="Orario" value={`${startTime}${endTime ? ` - ${endTime}` : ""}`} />}
+          <Field icon={Clock} label="Durata stimata" value={dur ? `${dur} ore` : "—"} />
+          {tariff != null && <Field icon={Euro} label={ann?.tariff_type === "hourly" ? "Tariffa oraria" : "Tariffa"} value={`€${Number(tariff).toFixed(2)}${ann?.tariff_type === "hourly" ? " /ora" : ""}`} />}
+          {compenso != null && <Field icon={Euro} label="Compenso stimato" value={`€${Number(compenso).toFixed(2)}`} />}
+          {ann?.location_address && <Field icon={MapPin} label="Luogo" value={ann.location_address} />}
+        </div>
+
+        {(ann?.notes || jobReq?.operational_notes) && (
+          <div className="mt-4 rounded-md bg-muted/50 p-3 text-sm">
+            <div className="text-xs font-medium text-muted-foreground mb-1">Note operative</div>
+            <div className="whitespace-pre-line">{ann?.notes || jobReq?.operational_notes}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Card 2 — Lavoratore */}
+      <div className="mt-4 rounded-2xl border bg-card p-5">
+        <div className="text-sm font-semibold mb-3">Lavoratore assegnato</div>
+        {!worker ? (
+          <p className="text-sm text-muted-foreground">Nessun lavoratore assegnato a questo turno.</p>
+        ) : (
+          <>
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <User className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{worker.full_name ?? "—"}</div>
+                <div className="text-sm text-muted-foreground">{worker.primary_role ?? roleLabel}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                  {worker.badge && <span className="rounded-full border px-2 py-0.5 capitalize">{worker.badge}</span>}
+                  {worker.rating_avg != null && (
+                    <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{Number(worker.rating_avg).toFixed(1)}</span>
+                  )}
+                  {worker.reliability_pct != null && <span className="text-muted-foreground">Affidabilità {worker.reliability_pct}%</span>}
+                  {worker.completed_shifts != null && <span className="text-muted-foreground">{worker.completed_shifts} turni</span>}
+                </div>
+                {((worker.languages && worker.languages.length > 0) || (Array.isArray(worker.spoken_languages) && worker.spoken_languages.length > 0)) && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Lingue: {(worker.languages ?? []).concat(
+                      Array.isArray(worker.spoken_languages) ? worker.spoken_languages.map((l: any) => typeof l === "string" ? l : l.name ?? l.code ?? "").filter(Boolean) : []
+                    ).filter((v, i, arr) => arr.indexOf(v) === i).join(", ") || "—"}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link to="/restaurants/$id" params={{ id: worker.id }}>
+                <Button size="sm" variant="outline" className="gap-1"><User className="h-4 w-4" /> Vedi profilo</Button>
+              </Link>
+              {appId && (
+                <Link to="/messages/$id" params={{ id: appId }}>
+                  <Button size="sm" variant="outline" className="gap-1"><MessageSquare className="h-4 w-4" /> Messaggia</Button>
+                </Link>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Card 3 — Annuncio collegato */}
+      {ann && (
+        <div className="mt-4 rounded-2xl border bg-card p-5">
+          <div className="text-sm font-semibold mb-3">Annuncio collegato</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field icon={Briefcase} label="Ruolo richiesto" value={roleLabel} />
+            <Field icon={User} label="Lavoratori richiesti" value={String(jobReq?.workers_needed ?? 1)} />
+            <Field icon={MessageSquare} label="Candidature ricevute" value={String(appCount)} />
+            <Field icon={Calendar} label="Pubblicato il" value={new Date(ann.created_at).toLocaleDateString("it-IT")} />
+            <Field icon={CheckCircle2} label="Stato annuncio" value={ann.status} />
+          </div>
+
+          {(ann.dress_code_items?.length || ann.dress_code_notes || ann.required_skills?.length || ann.language_requirements?.length || ann.job_access_restrictions) && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {ann.dress_code_items && ann.dress_code_items.length > 0 && (
+                <Field label="Dress code" value={ann.dress_code_items.join(", ")} />
+              )}
+              {ann.required_skills && ann.required_skills.length > 0 && (
+                <Field label="Competenze richieste" value={ann.required_skills.join(", ")} />
+              )}
+              {ann.language_requirements && ann.language_requirements.length > 0 && (
+                <Field label="Lingue richieste" value={ann.language_requirements.join(", ")} />
+              )}
+              {ann.job_access_restrictions && (
+                <Field label="Accesso al locale" value={ann.job_access_restrictions} />
+              )}
+            </div>
+          )}
+
+          <div className="mt-3">
+            <Link to="/announcements/$id" params={{ id: ann.id }}>
+              <Button size="sm" variant="ghost">Apri annuncio →</Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Card 4 — Azioni turno */}
+      <div className="mt-4 rounded-2xl border bg-card p-5">
+        <div className="text-sm font-semibold mb-3">Azioni turno</div>
+        <div className="flex flex-wrap gap-2">
+          {shift.status === "scheduled" && worker && (
+            <Button onClick={() => setConfirmOpen(true)} className="gap-1">
+              <CheckCheck className="h-4 w-4" /> Concludi turno
+            </Button>
+          )}
+          {shift.status === "completed" && !hasReview && appId && (
+            <Link to="/messages/$id" params={{ id: appId }}>
+              <Button variant={isOverdue ? "destructive" : "default"} className="gap-1">
+                <Star className="h-4 w-4" /> {isOverdue ? "Recensione scaduta — agisci ora" : "Lascia recensione"}
+              </Button>
+            </Link>
+          )}
+          {shift.status === "completed" && hasReview && appId && (
+            <Link to="/messages/$id" params={{ id: appId }}>
+              <Button variant="outline" className="gap-1"><Star className="h-4 w-4" /> Vedi recensione</Button>
+            </Link>
+          )}
+          {shift.status === "cancelled" && (
+            <span className="text-sm text-muted-foreground">Turno annullato</span>
+          )}
+          {shift.status === "no_show" && appId && (
+            <Link to="/messages/$id" params={{ id: appId }}>
+              <Button variant="outline" className="gap-1"><AlertTriangle className="h-4 w-4" /> Gestisci segnalazione</Button>
+            </Link>
+          )}
+          <Link to="/dashboard" className="ml-auto">
+            <Button variant="ghost" className="gap-1"><ArrowLeft className="h-4 w-4" /> Torna alla dashboard</Button>
+          </Link>
+        </div>
+        {shift.status === "scheduled" && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Dopo la chiusura potrai lasciare la recensione al lavoratore.
+          </p>
+        )}
+      </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={(o) => !closing && setConfirmOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Concludere questo turno?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confermando la chiusura del turno, potrai lasciare una recensione al lavoratore.
+              La recensione è necessaria per aggiornare il profilo reputazionale.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={closing}>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); concludeShift(); }} disabled={closing}>
+              {closing ? "Chiusura..." : "Conferma e lascia recensione"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AppShell>
+  );
+}
+
+function Field({ icon: Icon, label, value }: { icon?: any; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      {Icon && <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />}
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="text-sm font-medium break-words">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="rounded-2xl border bg-card p-8 text-center">
+      <AlertTriangle className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
+      <div className="font-medium">{title}</div>
+      <p className="text-sm text-muted-foreground mt-1">{hint}</p>
+      <Link to="/dashboard"><Button size="sm" variant="outline" className="mt-4 gap-1"><ArrowLeft className="h-4 w-4" /> Torna alla dashboard</Button></Link>
+    </div>
+  );
+}
