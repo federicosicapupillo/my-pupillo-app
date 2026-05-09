@@ -5,11 +5,22 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight } from "lucide-react";
+import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck } from "lucide-react";
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -17,11 +28,30 @@ export const Route = createFileRoute("/dashboard")({
   component: () => <RequireAuth><DashboardInner /></RequireAuth>,
 });
 
+type AssignedItem = {
+  ann_id: string;
+  service_date: string;
+  service_time: string;
+  duration_hours: number | null;
+  location_address: string;
+  role_label: string | null;
+  worker_id: string | null;
+  worker_name: string | null;
+  shift_id: string | null;
+  shift_status: "scheduled" | "completed" | "no_show" | "cancelled" | null;
+  app_id: string | null;
+  has_review: boolean;
+  required_status: string | null;
+  required_due: string | null;
+};
+
 function DashboardInner() {
   const { profile, role, user } = useAuth();
   const nav = useNavigate();
   const [stats, setStats] = useState({ active: 0, assigned: 0, applications: 0, messages: 0 });
-  const [assignedList, setAssignedList] = useState<Array<{ id: string; service_date: string; service_time: string; location_address: string; assigned_worker_id: string | null; worker_name?: string | null }>>([]);
+  const [assignedList, setAssignedList] = useState<AssignedItem[]>([]);
+  const [closingItem, setClosingItem] = useState<AssignedItem | null>(null);
+  const [closing, setClosing] = useState(false);
 
   useEffect(() => {
     if (!user || !role) return;
@@ -67,22 +97,7 @@ function DashboardInner() {
           ? await supabase.from("messages").select("*", { count: "exact", head: true }).in("application_id", ids)
           : { count: 0 };
         setStats({ active: active ?? 0, assigned: assignedCount ?? 0, applications: apps ?? 0, messages: msgs ?? 0 });
-        // Anteprima annunci assegnati (max 5, ordinati per data servizio)
-        const { data: assignedRows } = await supabase
-          .from("announcements")
-          .select("id, service_date, service_time, location_address, assigned_worker_id")
-          .eq("restaurant_id", user.id)
-          .eq("status", "assigned")
-          .order("service_date", { ascending: true })
-          .limit(5);
-        const rows = (assignedRows ?? []) as any[];
-        const workerIds = Array.from(new Set(rows.map(r => r.assigned_worker_id).filter(Boolean)));
-        let nameMap: Record<string, string> = {};
-        if (workerIds.length) {
-          const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", workerIds);
-          (profs ?? []).forEach((p: any) => { nameMap[p.id] = p.full_name; });
-        }
-        setAssignedList(rows.map(r => ({ ...r, worker_name: r.assigned_worker_id ? nameMap[r.assigned_worker_id] ?? null : null })));
+        await loadAssigned(user.id);
       } else if (role === "worker") {
         const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("worker_id", user.id);
         const { data: appIds } = await supabase.from("applications").select("id").eq("worker_id", user.id);
@@ -94,6 +109,114 @@ function DashboardInner() {
       }
     })();
   }, [user, role]);
+
+  const loadAssigned = async (uid: string) => {
+    // Anteprima annunci assegnati (max 8, ordinati per data servizio)
+    const { data: assignedRows } = await supabase
+      .from("announcements")
+      .select("id, service_date, service_time, duration_hours, location_address, assigned_worker_id, professional_profile")
+      .eq("restaurant_id", uid)
+      .eq("status", "assigned")
+      .order("service_date", { ascending: true })
+      .limit(8);
+    const rows = (assignedRows ?? []) as any[];
+    if (rows.length === 0) { setAssignedList([]); return; }
+    const annIds = rows.map(r => r.id);
+    const workerIds = Array.from(new Set(rows.map(r => r.assigned_worker_id).filter(Boolean))) as string[];
+    const [profsRes, jrRes, shiftsRes, appsRes] = await Promise.all([
+      workerIds.length ? supabase.from("profiles").select("id, full_name").in("id", workerIds) : Promise.resolve({ data: [] as any[] }),
+      supabase.from("job_requests").select("announcement_id, role_required").in("announcement_id", annIds),
+      supabase.from("shifts").select("id, announcement_id, status, worker_id, reviewed_at").in("announcement_id", annIds).eq("restaurant_id", uid),
+      supabase.from("applications").select("id, announcement_id, worker_id, status").in("announcement_id", annIds).eq("restaurant_id", uid),
+    ]);
+    const nameMap: Record<string, string> = {};
+    (profsRes.data ?? []).forEach((p: any) => { nameMap[p.id] = p.full_name; });
+    const roleMap: Record<string, string> = {};
+    (jrRes.data ?? []).forEach((j: any) => { if (j.announcement_id) roleMap[j.announcement_id] = j.role_required; });
+    // pick latest active shift per announcement (prefer scheduled/completed over cancelled)
+    const shiftMap: Record<string, any> = {};
+    const rank = (st: string) => st === "scheduled" ? 4 : st === "completed" ? 3 : st === "no_show" ? 2 : 1;
+    (shiftsRes.data ?? []).forEach((s: any) => {
+      const cur = shiftMap[s.announcement_id];
+      if (!cur || rank(s.status) > rank(cur.status)) shiftMap[s.announcement_id] = s;
+    });
+    const appMap: Record<string, any> = {};
+    (appsRes.data ?? []).forEach((a: any) => {
+      const key = `${a.announcement_id}|${a.worker_id}`;
+      if (!appMap[key] || a.status === "accepted") appMap[key] = a;
+    });
+    // reviews + required_reviews
+    const shiftIds = Object.values(shiftMap).map((s: any) => s.id);
+    let reviewSet = new Set<string>();
+    let reqMap: Record<string, { status: string; due_date: string }> = {};
+    if (shiftIds.length) {
+      const [{ data: revs }, { data: reqs }] = await Promise.all([
+        supabase.from("reviews").select("shift_id").eq("author_id", uid).in("shift_id", shiftIds),
+        (supabase as any).from("required_reviews").select("shift_id, status, due_date").eq("restaurant_user_id", uid).in("shift_id", shiftIds),
+      ]);
+      reviewSet = new Set((revs ?? []).map((r: any) => r.shift_id));
+      (reqs ?? []).forEach((r: any) => { if (r.shift_id) reqMap[r.shift_id] = { status: r.status, due_date: r.due_date }; });
+    }
+    setAssignedList(rows.map((r): AssignedItem => {
+      const s = shiftMap[r.id] ?? null;
+      const app = r.assigned_worker_id ? appMap[`${r.id}|${r.assigned_worker_id}`] ?? null : null;
+      return {
+        ann_id: r.id,
+        service_date: r.service_date,
+        service_time: r.service_time,
+        duration_hours: r.duration_hours,
+        location_address: r.location_address,
+        role_label: roleMap[r.id] ?? r.professional_profile ?? null,
+        worker_id: r.assigned_worker_id,
+        worker_name: r.assigned_worker_id ? nameMap[r.assigned_worker_id] ?? null : null,
+        shift_id: s?.id ?? null,
+        shift_status: s?.status ?? null,
+        app_id: app?.id ?? null,
+        has_review: s ? reviewSet.has(s.id) : false,
+        required_status: s ? reqMap[s.id]?.status ?? null : null,
+        required_due: s ? reqMap[s.id]?.due_date ?? null : null,
+      };
+    }));
+  };
+
+  const concludeShift = async () => {
+    if (!closingItem || !user) return;
+    setClosing(true);
+    try {
+      let shiftId = closingItem.shift_id;
+      if (!shiftId) {
+        // crea il turno se mancante
+        const { data: created, error } = await supabase.from("shifts").insert({
+          announcement_id: closingItem.ann_id,
+          restaurant_id: user.id,
+          worker_id: closingItem.worker_id!,
+          shift_date: closingItem.service_date,
+          hours: closingItem.duration_hours ?? 4,
+          status: "completed",
+        } as never).select("id").single();
+        if (error) throw error;
+        shiftId = (created as any).id;
+      } else {
+        const { error } = await supabase.from("shifts")
+          .update({ status: "completed", completed_at: new Date().toISOString() })
+          .eq("id", shiftId);
+        if (error) throw error;
+      }
+      toast.success("Turno concluso. Lascia ora la recensione.");
+      setClosingItem(null);
+      await loadAssigned(user.id);
+      // porta al thread messaggi (post-turno) se possibile, altrimenti pagina turni
+      if (closingItem.app_id) {
+        nav({ to: "/messages/$id", params: { id: closingItem.app_id } });
+      } else {
+        nav({ to: "/shifts", search: { tab: "to-review" } as never });
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Errore durante la chiusura del turno");
+    } finally {
+      setClosing(false);
+    }
+  };
 
   return (
     <AppShell>
@@ -141,28 +264,45 @@ function DashboardInner() {
               <Button variant="ghost" size="sm" className="gap-1">Vedi tutti <ArrowRight className="h-3.5 w-3.5" /></Button>
             </Link>
           </div>
-          <ul className="divide-y">
+          <ul className="space-y-3">
             {assignedList.map((a) => (
-              <li key={a.id}>
-                <Link to="/announcements/$id" params={{ id: a.id }} className="flex items-center justify-between py-3 hover:bg-accent/40 -mx-2 px-2 rounded-md transition-colors">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="font-medium">{new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}</span>
-                      {a.worker_name && <span className="text-xs rounded-full bg-emerald-500/10 text-emerald-700 px-2 py-0.5">→ {a.worker_name}</span>}
-                    </div>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-                      <MapPin className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{a.location_address}</span>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 ml-3" />
-                </Link>
-              </li>
+              <AssignedShiftCard
+                key={a.ann_id}
+                item={a}
+                onClose={() => setClosingItem(a)}
+              />
             ))}
           </ul>
         </div>
       )}
+
+      <AlertDialog open={!!closingItem} onOpenChange={(o) => !o && !closing && setClosingItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Concludere questo turno?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Confermando la chiusura del turno, potrai lasciare una recensione al lavoratore.
+                La recensione è necessaria per aggiornare il profilo reputazionale.
+              </span>
+              {closingItem && (
+                <span className="block rounded-md bg-muted/60 p-3 text-sm text-foreground">
+                  <strong>{closingItem.role_label ?? "Servizio"}</strong>
+                  {closingItem.worker_name && <> · {closingItem.worker_name}</>}<br />
+                  {new Date(closingItem.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long" })}
+                  {closingItem.service_time && <> · {closingItem.service_time.slice(0,5)}</>}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={closing}>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); concludeShift(); }} disabled={closing}>
+              {closing ? "Chiusura..." : "Conferma e lascia recensione"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {role === "restaurant" && (
         <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl border bg-card p-5">
@@ -215,5 +355,114 @@ function StatCard({ icon: Icon, label, value, highlight }: { icon: typeof Briefc
       </div>
       <div className="mt-2 text-3xl font-semibold">{value}</div>
     </div>
+  );
+}
+
+function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () => void }) {
+  const dateLabel = new Date(item.service_date).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" });
+  const timeLabel = item.service_time ? item.service_time.slice(0, 5) : null;
+  const endTime = (() => {
+    if (!timeLabel || !item.duration_hours) return null;
+    const [h, m] = timeLabel.split(":").map(Number);
+    const total = h * 60 + m + Math.round(item.duration_hours * 60);
+    const eh = Math.floor(total / 60) % 24;
+    const em = total % 60;
+    return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
+  })();
+
+  // Stato turno → label/colore
+  const status = item.shift_status;
+  let statusLabel = "Confermato";
+  let statusClass = "bg-emerald-500/10 text-emerald-700 border-emerald-500/30";
+  let StatusIcon = CheckCircle2;
+  if (status === "scheduled") { statusLabel = "Confermato"; }
+  else if (status === "completed") { statusLabel = "Completato"; statusClass = "bg-blue-500/10 text-blue-700 border-blue-500/30"; StatusIcon = CheckCheck; }
+  else if (status === "cancelled") { statusLabel = "Annullato"; statusClass = "bg-red-500/10 text-red-700 border-red-500/30"; StatusIcon = XCircle; }
+  else if (status === "no_show") { statusLabel = "No-show"; statusClass = "bg-orange-500/10 text-orange-700 border-orange-500/30"; StatusIcon = AlertTriangle; }
+  else if (!status) { statusLabel = "In attesa"; statusClass = "bg-amber-500/10 text-amber-700 border-amber-500/30"; StatusIcon = Clock; }
+
+  // Stato recensione
+  const isOverdue = item.required_status === "overdue";
+  let reviewLabel = "non ancora disponibile";
+  let reviewClass = "text-muted-foreground";
+  if (status === "completed") {
+    if (item.has_review) { reviewLabel = "inviata"; reviewClass = "text-emerald-600"; }
+    else if (isOverdue) { reviewLabel = "obbligatoria scaduta"; reviewClass = "text-destructive"; }
+    else { reviewLabel = "da lasciare"; reviewClass = "text-amber-700"; }
+  }
+
+  return (
+    <li className="rounded-xl border bg-background p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-medium">{item.role_label ?? "Servizio"}</div>
+          {item.worker_name && (
+            <div className="text-sm text-muted-foreground mt-0.5">{item.worker_name}</div>
+          )}
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {dateLabel}
+              {timeLabel && <> · {timeLabel}{endTime && ` - ${endTime}`}</>}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{item.location_address}</span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass}`}>
+            <StatusIcon className="h-3 w-3" />
+            {statusLabel}
+          </span>
+          <span className={`text-[11px] ${reviewClass}`}>Recensione: {reviewLabel}</span>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {status === "scheduled" || status === null ? (
+          <>
+            <Button size="sm" onClick={onClose} className="gap-1" disabled={!item.worker_id}>
+              <CheckCheck className="h-4 w-4" /> Concludi turno
+            </Button>
+            <span className="text-[11px] text-muted-foreground">Dopo la chiusura potrai lasciare la recensione al lavoratore.</span>
+          </>
+        ) : status === "completed" && !item.has_review ? (
+          item.app_id ? (
+            <Link to="/messages/$id" params={{ id: item.app_id }}>
+              <Button size="sm" variant={isOverdue ? "destructive" : "default"} className="gap-1">
+                <Star className="h-4 w-4" /> {isOverdue ? "Recensione scaduta — agisci ora" : "Lascia recensione"}
+              </Button>
+            </Link>
+          ) : (
+            <Button size="sm" variant={isOverdue ? "destructive" : "default"} className="gap-1" disabled>
+              <Star className="h-4 w-4" /> {isOverdue ? "Recensione scaduta — agisci ora" : "Lascia recensione"}
+            </Button>
+          )
+        ) : status === "completed" && item.has_review ? (
+          item.app_id ? (
+          <Link to="/messages/$id" params={{ id: item.app_id ?? "" }}>
+            <Button size="sm" variant="outline" className="gap-1">
+              <Star className="h-4 w-4" /> Vedi recensione
+            </Button>
+          </Link>
+          ) : null
+        ) : status === "cancelled" ? (
+          <span className="text-xs text-muted-foreground">Turno annullato</span>
+        ) : status === "no_show" ? (
+          item.app_id ? (
+          <Link to="/messages/$id" params={{ id: item.app_id ?? "" }}>
+            <Button size="sm" variant="outline" className="gap-1">
+              <AlertTriangle className="h-4 w-4" /> Gestisci segnalazione
+            </Button>
+          </Link>
+          ) : null
+        ) : null}
+        <Link to="/announcements/$id" params={{ id: item.ann_id }} className="ml-auto">
+          <Button size="sm" variant="ghost" className="gap-1">Dettagli <ArrowRight className="h-3.5 w-3.5" /></Button>
+        </Link>
+      </div>
+    </li>
   );
 }
