@@ -11,10 +11,12 @@ const RESEND_COOLDOWN_SECONDS = 60;
 const TEST_OTP_CODE = "123456";
 
 function isTestOtpEnabled(): boolean {
-  // NEVER enable in production. Even if the env var is set,
-  // require NODE_ENV !== 'production' as a hard guard.
-  if (process.env.NODE_ENV === "production") return false;
-  return process.env.ENABLE_TEST_OTP === "true";
+  // NEVER enable on the published app. In Lovable preview/dev the server runtime
+  // can still expose NODE_ENV="production", so use the explicit test flag plus
+  // sandbox/dev signals instead of NODE_ENV alone.
+  const enabled = process.env.ENABLE_TEST_OTP === "true" || process.env.VITE_ENABLE_TEST_OTP === "true";
+  const isSafeRuntime = process.env.NODE_ENV !== "production" || process.env.LOVABLE_SANDBOX === "true" || process.env.LOVABLE === "true";
+  return enabled && isSafeRuntime;
 }
 
 function hashOtp(code: string, userId: string): string {
