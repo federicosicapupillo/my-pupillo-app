@@ -14,6 +14,8 @@ import { CREDIT_COSTS } from "@/lib/pricing";
 import { Coins, AlertCircle, MessageSquare } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
+import { useRequiredReviews } from "@/lib/required-reviews";
+import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
