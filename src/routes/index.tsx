@@ -69,7 +69,7 @@ function Index() {
                 Accedi
               </Button>
             </Link>
-            <Link to="/ristoratori">
+            <Link to="/auth" search={{ role: "restaurant" } as never}>
               <button
                 className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition active:scale-95"
                 style={{
