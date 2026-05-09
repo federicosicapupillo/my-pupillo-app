@@ -87,7 +87,7 @@ function VerifyPhonePage() {
         return;
       }
       setPhase("code");
-      setCooldown(60);
+      setCooldown(30);
       if (res.simulated) {
         toast.success("Messaggio WhatsApp simulato correttamente.");
       } else {
@@ -135,7 +135,7 @@ function VerifyPhonePage() {
         if (res.cooldownSeconds) setCooldown(res.cooldownSeconds);
         return;
       }
-      setCooldown(60);
+      setCooldown(30);
       toast.success(res.simulated ? "Messaggio WhatsApp simulato correttamente." : "Codice reinviato.");
     } finally {
       setBusy(false);
@@ -188,22 +188,33 @@ function VerifyPhonePage() {
               <Button className="w-full" onClick={handleVerify} disabled={busy || code.length !== 6}>
                 {busy ? "Verifica…" : "Conferma codice"}
               </Button>
-              <div className="flex items-center justify-between text-xs">
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={busy || cooldown > 0}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+              <div className="pt-1 space-y-2 text-xs">
+                <p
+                  className="text-center text-muted-foreground"
+                  aria-live="polite"
+                  role="status"
                 >
-                  {cooldown > 0 ? `Reinvia codice (${cooldown}s)` : "Reinvia codice"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setPhase("phone"); setCode(""); }}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Cambia numero
-                </button>
+                  {cooldown > 0
+                    ? `Potrai richiedere un nuovo codice tra ${cooldown}s`
+                    : "Non hai ricevuto il codice? Puoi richiederlo di nuovo."}
+                </p>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={busy || cooldown > 0}
+                    className="font-medium text-foreground hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed"
+                  >
+                    {cooldown > 0 ? `Reinvia codice (${cooldown}s)` : "Reinvia codice"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPhase("phone"); setCode(""); }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Cambia numero
+                  </button>
+                </div>
               </div>
               {TEST_OTP_ENABLED && (
                 <p className="text-[11px] text-muted-foreground/80 text-center pt-1">
