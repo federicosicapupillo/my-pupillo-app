@@ -228,7 +228,8 @@ function WorkersPage() {
               ) : null;
             })()}
             <Button size="sm" className="mt-4 w-full gap-1" onClick={() => invite(w.id)} disabled={!selected || !canAfford}>
-              Contatta {!isPaid && <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span>}
+              <MessageSquare className="h-3.5 w-3.5" />
+              Messaggia {!isPaid && <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span>}
             </Button>
           </div>
           );
