@@ -24,18 +24,13 @@ function VerifyPhonePage() {
   const verify = useServerFn(verifyPhoneOtp);
   const resend = useServerFn(resendPhoneOtp);
 
-  const [phase, setPhase] = useState<"phone" | "code" | "success">("phone");
+  const [phase, setPhase] = useState<"phone" | "code">("phone");
   const [code, setCode] = useState("");
   const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
-  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
-  const [lockedOut, setLockedOut] = useState(false);
-  const [verifyError, setVerifyError] = useState<string | null>(null);
-  const [redirectIn, setRedirectIn] = useState(5);
-  const [successDest, setSuccessDest] = useState<"/onboarding" | "/dashboard" | "/admin">("/onboarding");
 
   const homeHref = (() => {
     if (!user) return "/";
@@ -46,13 +41,7 @@ function VerifyPhonePage() {
   useEffect(() => {
     if (loading) return;
     if (!user) { nav({ to: "/auth" }); return; }
-    // Wait until profile is loaded before deciding access.
-    if (!profile) return;
-    // Hard guard: this page is reserved to users who have just signed up
-    // and still have phone_verified === false. Anyone else (already
-    // verified, or somehow with phone_verified !== false) is redirected
-    // to their normal destination.
-    if (profile.phone_verified !== false) {
+    if (profile?.phone_verified) {
       if (profile?.profile_completed) {
         nav({ to: "/dashboard" });
       } else {
@@ -76,16 +65,6 @@ function VerifyPhonePage() {
     return () => clearInterval(t);
   }, [cooldown]);
 
-  useEffect(() => {
-    if (phase !== "success") return;
-    if (redirectIn <= 0) {
-      nav({ to: successDest as any });
-      return;
-    }
-    const t = setTimeout(() => setRedirectIn((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, redirectIn, successDest, nav]);
-
   const phoneFull = `${phoneCode}${phoneNumber}`;
 
   const handleSendCode = async () => {
@@ -102,7 +81,7 @@ function VerifyPhonePage() {
         return;
       }
       setPhase("code");
-      setCooldown(30);
+      setCooldown(60);
       if (res.simulated) {
         toast.success("Messaggio WhatsApp simulato correttamente.");
       } else {
@@ -119,37 +98,14 @@ function VerifyPhonePage() {
       toast.error("Inserisci un codice di 6 cifre.");
       return;
     }
-    if (lockedOut) return;
     setBusy(true);
     try {
       const res = await verify({ data: { code } });
       if (!res.ok) {
-        const msg = res.error ?? "Codice non valido.";
-        if (res.maxedOut) {
-          setLockedOut(true);
-          setAttemptsLeft(0);
-          setVerifyError(
-            "Hai superato il numero massimo di tentativi. Richiedi un nuovo codice o cambia numero per continuare.",
-          );
-          toast.error("Troppi tentativi errati. Richiedi un nuovo codice.");
-        } else if (res.expired) {
-          setVerifyError(null);
-          toast.error(msg);
-          setPhase("phone");
-        } else {
-          if (typeof res.attemptsLeft === "number") setAttemptsLeft(res.attemptsLeft);
-          setVerifyError(
-            typeof res.attemptsLeft === "number"
-              ? `${msg} Tentativi rimasti: ${res.attemptsLeft}.`
-              : msg,
-          );
-          toast.error(msg);
-        }
+        toast.error(res.error ?? "Codice non valido.");
+        if (res.expired || res.maxedOut) setPhase("phone");
         return;
       }
-      setVerifyError(null);
-      setAttemptsLeft(null);
-      setLockedOut(false);
       toast.success("Codice verificato correttamente.");
       await refresh();
       const dest = role === "admin"
@@ -157,9 +113,7 @@ function VerifyPhonePage() {
         : profile?.profile_completed
           ? "/dashboard"
           : "/onboarding";
-      setSuccessDest(dest as any);
-      setRedirectIn(5);
-      setPhase("success");
+      nav({ to: dest as any });
     } finally {
       setBusy(false);
     }
@@ -175,12 +129,7 @@ function VerifyPhonePage() {
         if (res.cooldownSeconds) setCooldown(res.cooldownSeconds);
         return;
       }
-      setCooldown(30);
-      // New code issued → reset attempts/lock state for the new OTP row.
-      setLockedOut(false);
-      setAttemptsLeft(null);
-      setVerifyError(null);
-      setCode("");
+      setCooldown(60);
       toast.success(res.simulated ? "Messaggio WhatsApp simulato correttamente." : "Codice reinviato.");
     } finally {
       setBusy(false);
@@ -195,65 +144,7 @@ function VerifyPhonePage() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm">
         <h1 className="text-2xl font-semibold">Conferma il tuo numero</h1>
-        {TEST_OTP_ENABLED && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mt-3 flex items-start gap-3 rounded-xl border border-[oklch(0.92_0.18_115)]/40 bg-[oklch(0.92_0.18_115)]/10 px-3 py-2.5 text-xs"
-          >
-            <span
-              aria-hidden
-              className="mt-0.5 inline-flex h-5 shrink-0 items-center rounded-md bg-[oklch(0.92_0.18_115)] px-1.5 text-[10px] font-bold uppercase tracking-wide text-black"
-            >
-              Test
-            </span>
-            <span className="text-foreground">
-              Modalità OTP di test attiva — usa il codice{" "}
-              <strong className="font-mono text-sm tracking-widest">123456</strong>{" "}
-              per completare la verifica senza WhatsApp.
-            </span>
-          </div>
-        )}
-        {phase === "success" ? (
-          <>
-            <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-3">
-              <span
-                aria-hidden
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white text-lg font-bold"
-              >
-                ✓
-              </span>
-              <div className="text-sm">
-                <p className="font-medium text-foreground">Numero verificato</p>
-                <p className="text-muted-foreground">
-                  <strong>{phoneFull || profile?.phone_full}</strong> è ora associato al tuo account.
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 rounded-xl border bg-muted/40 p-4 text-sm">
-              <p className="font-medium">Prossimo passo</p>
-              <p className="text-muted-foreground mt-1">
-                {successDest === "/onboarding"
-                  ? "Completa il profilo per iniziare a usare Pupillo."
-                  : successDest === "/admin"
-                    ? "Vai alla console di amministrazione."
-                    : "Torna alla tua dashboard."}
-              </p>
-            </div>
-            <div className="mt-4 space-y-2">
-              <Button className="w-full" onClick={() => nav({ to: successDest as any })}>
-                Continua ora
-              </Button>
-              <p
-                role="status"
-                aria-live="polite"
-                className="text-center text-xs text-muted-foreground"
-              >
-                Reindirizzamento automatico tra {redirectIn}s…
-              </p>
-            </div>
-          </>
-        ) : phase === "phone" ? (
+        {phase === "phone" ? (
           <>
             <p className="text-sm text-muted-foreground mt-2">
               Inserisci il numero su cui vuoi ricevere il codice di conferma via WhatsApp.
@@ -284,59 +175,35 @@ function VerifyPhonePage() {
                 pattern="[0-9]*"
                 maxLength={6}
                 value={code}
-                onChange={(e) => {
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
-                  if (verifyError && !lockedOut) setVerifyError(null);
-                }}
-                disabled={lockedOut}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="000000"
-                className={`text-center text-2xl tracking-[0.5em] ${lockedOut ? "opacity-60" : ""} ${verifyError ? "border-destructive focus-visible:ring-destructive/50" : ""}`}
-                aria-invalid={!!verifyError}
+                className="text-center text-2xl tracking-[0.5em]"
               />
-              {verifyError && (
-                <p
-                  role="alert"
-                  aria-live="assertive"
-                  className={`rounded-md border px-3 py-2 text-xs ${
-                    lockedOut
-                      ? "border-destructive/40 bg-destructive/10 text-destructive"
-                      : "border-destructive/30 bg-destructive/5 text-destructive"
-                  }`}
+              <Button className="w-full" onClick={handleVerify} disabled={busy || code.length !== 6}>
+                {busy ? "Verifica…" : "Conferma codice"}
+              </Button>
+              <div className="flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={busy || cooldown > 0}
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-50"
                 >
-                  {verifyError}
+                  {cooldown > 0 ? `Reinvia codice (${cooldown}s)` : "Reinvia codice"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPhase("phone"); setCode(""); }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Cambia numero
+                </button>
+              </div>
+              {TEST_OTP_ENABLED && (
+                <p className="text-[11px] text-muted-foreground/80 text-center pt-1">
+                  Modalità test attiva: usa il codice <strong>123456</strong> per completare la verifica.
                 </p>
               )}
-              <Button className="w-full" onClick={handleVerify} disabled={busy || code.length !== 6 || lockedOut}>
-                {busy ? "Verifica…" : lockedOut ? "Bloccato — richiedi un nuovo codice" : "Conferma codice"}
-              </Button>
-              <div className="pt-1 space-y-2 text-xs">
-                <p
-                  className="text-center text-muted-foreground"
-                  aria-live="polite"
-                  role="status"
-                >
-                  {cooldown > 0
-                    ? `Potrai richiedere un nuovo codice tra ${cooldown}s`
-                    : "Non hai ricevuto il codice? Puoi richiederlo di nuovo."}
-                </p>
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={busy || cooldown > 0}
-                    className="font-medium text-foreground hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed"
-                  >
-                    {cooldown > 0 ? `Reinvia codice (${cooldown}s)` : "Reinvia codice"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setPhase("phone"); setCode(""); }}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    Cambia numero
-                  </button>
-                </div>
-              </div>
             </div>
           </>
         )}
