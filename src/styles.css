@@ -260,3 +260,34 @@ header.sticky {
   background-color: oklch(0.13 0.02 280 / 75%) !important;
   border-bottom-color: oklch(0.93 0.22 120 / 14%) !important;
 }
+
+/* ----------------------------------------------------------------------
+ * Leaflet dark-neon overrides
+ * ---------------------------------------------------------------------- */
+.leaflet-container {
+  background: oklch(0.1 0.02 280) !important;
+  font-family: inherit;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: oklch(0.18 0.025 280) !important;
+  color: oklch(0.97 0.01 100) !important;
+  border: 1px solid oklch(0.97 0.01 100 / 10%);
+  box-shadow: 0 10px 40px -10px oklch(0.65 0.25 310 / 45%) !important;
+}
+.leaflet-popup-content { color: oklch(0.97 0.01 100); }
+.leaflet-popup-close-button { color: oklch(0.97 0.01 100 / 70%) !important; }
+.leaflet-control-zoom a {
+  background: oklch(0.18 0.025 280) !important;
+  color: oklch(0.97 0.01 100) !important;
+  border-color: oklch(0.97 0.01 100 / 12%) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: oklch(0.22 0.04 290) !important;
+  color: oklch(0.93 0.22 120) !important;
+}
+.leaflet-control-attribution {
+  background: oklch(0.13 0.02 280 / 80%) !important;
+  color: oklch(0.72 0.03 280) !important;
+}
+.leaflet-control-attribution a { color: oklch(0.93 0.22 120) !important; }
