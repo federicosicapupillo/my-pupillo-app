@@ -555,6 +555,7 @@ export type Database = {
           created_at: string
           id: string
           link: string | null
+          metadata: Json | null
           read: boolean | null
           read_at: string | null
           title: string
@@ -565,6 +566,7 @@ export type Database = {
           created_at?: string
           id?: string
           link?: string | null
+          metadata?: Json | null
           read?: boolean | null
           read_at?: string | null
           title: string
@@ -575,6 +577,7 @@ export type Database = {
           created_at?: string
           id?: string
           link?: string | null
+          metadata?: Json | null
           read?: boolean | null
           read_at?: string | null
           title?: string
