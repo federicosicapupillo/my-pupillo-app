@@ -31,29 +31,45 @@ export type MapPoint = {
   };
 };
 
+// Pupillo neon palette
 const COLORS: Record<MapCategory, string> = {
-  restaurant: "#4f46e5", // indigo
-  worker: "#22c55e",     // green
-  announcement: "#06b6d4", // cyan
+  restaurant: "#FF2EA8",   // magenta
+  worker: "#D8FF36",       // lime
+  announcement: "#22E0CF", // cyan
 };
 
-const makeIcon = (category: MapCategory) =>
-  L.divIcon({
+const makeIcon = (category: MapCategory) => {
+  const c = COLORS[category];
+  if (category === "worker") {
+    return L.divIcon({
+      className: "",
+      html: `<div style="position:relative;width:22px;height:22px;">
+        <div style="position:absolute;inset:-6px;border-radius:50%;background:${c};opacity:.25;filter:blur(6px);"></div>
+        <div style="position:relative;width:22px;height:22px;border-radius:50%;background:${c};border:2px solid #07060B;box-shadow:0 0 0 2px ${c}66, 0 4px 10px rgba(0,0,0,.5);"></div>
+      </div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+    });
+  }
+  return L.divIcon({
     className: "",
-    html: category === "worker"
-      ? `<div style="background:${COLORS[category]};width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.35);"></div>`
-      : `<div style="background:${COLORS[category]};width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.35);"></div>`,
-    iconSize: category === "worker" ? [20, 20] : [22, 22],
-    iconAnchor: category === "worker" ? [10, 10] : [11, 22],
+    html: `<div style="position:relative;width:24px;height:24px;">
+      <div style="position:absolute;inset:-6px;border-radius:50%;background:${c};opacity:.3;filter:blur(8px);"></div>
+      <div style="position:relative;width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${c};border:2px solid #07060B;box-shadow:0 0 0 2px ${c}55, 0 4px 12px rgba(0,0,0,.6);"></div>
+    </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
   });
+};
 
 export default function MapViewInner({ points, height, center, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
   return (
-    <div className="overflow-hidden rounded-xl border" style={{ height }}>
+    <div className="overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_50px_-25px_rgba(0,0,0,0.7)]" style={{ height }}>
       <MapContainer center={center} zoom={6} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
         />
         {me && (
           <>
