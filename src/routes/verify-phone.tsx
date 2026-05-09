@@ -34,11 +34,6 @@ function VerifyPhonePage() {
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
 
-  const homeHref = (() => {
-    if (!user) return "/";
-    if (role === "admin") return "/admin";
-    return "/dashboard";
-  })();
 
   useEffect(() => {
     if (loading) return;
@@ -210,8 +205,8 @@ function VerifyPhonePage() {
           </>
         )}
         <div className="mt-6 flex flex-col items-center gap-2 text-xs text-muted-foreground">
-          <Link to={homeHref as any} className="underline hover:text-foreground">
-            ← Torna al menu principale
+          <Link to="/auth" search={{ role: "worker" } as never} className="underline hover:text-foreground">
+            ← Torna alla registrazione lavoratore
           </Link>
           {!user && (
             <Link to="/auth" className="hover:text-foreground">Torna al login</Link>
