@@ -24,7 +24,7 @@ function VerifyPhonePage() {
   const verify = useServerFn(verifyPhoneOtp);
   const resend = useServerFn(resendPhoneOtp);
 
-  const [phase, setPhase] = useState<"phone" | "code">("phone");
+  const [phase, setPhase] = useState<"phone" | "code" | "success">("phone");
   const [code, setCode] = useState("");
   const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -34,6 +34,8 @@ function VerifyPhonePage() {
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [lockedOut, setLockedOut] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [redirectIn, setRedirectIn] = useState(5);
+  const [successDest, setSuccessDest] = useState<"/onboarding" | "/dashboard" | "/admin">("/onboarding");
 
   const homeHref = (() => {
     if (!user) return "/";
@@ -73,6 +75,16 @@ function VerifyPhonePage() {
     const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(t);
   }, [cooldown]);
+
+  useEffect(() => {
+    if (phase !== "success") return;
+    if (redirectIn <= 0) {
+      nav({ to: successDest as any });
+      return;
+    }
+    const t = setTimeout(() => setRedirectIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, redirectIn, successDest, nav]);
 
   const phoneFull = `${phoneCode}${phoneNumber}`;
 
@@ -145,7 +157,9 @@ function VerifyPhonePage() {
         : profile?.profile_completed
           ? "/dashboard"
           : "/onboarding";
-      nav({ to: dest as any });
+      setSuccessDest(dest as any);
+      setRedirectIn(5);
+      setPhase("success");
     } finally {
       setBusy(false);
     }
@@ -200,7 +214,46 @@ function VerifyPhonePage() {
             </span>
           </div>
         )}
-        {phase === "phone" ? (
+        {phase === "success" ? (
+          <>
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-3">
+              <span
+                aria-hidden
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white text-lg font-bold"
+              >
+                ✓
+              </span>
+              <div className="text-sm">
+                <p className="font-medium text-foreground">Numero verificato</p>
+                <p className="text-muted-foreground">
+                  <strong>{phoneFull || profile?.phone_full}</strong> è ora associato al tuo account.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl border bg-muted/40 p-4 text-sm">
+              <p className="font-medium">Prossimo passo</p>
+              <p className="text-muted-foreground mt-1">
+                {successDest === "/onboarding"
+                  ? "Completa il profilo per iniziare a usare Pupillo."
+                  : successDest === "/admin"
+                    ? "Vai alla console di amministrazione."
+                    : "Torna alla tua dashboard."}
+              </p>
+            </div>
+            <div className="mt-4 space-y-2">
+              <Button className="w-full" onClick={() => nav({ to: successDest as any })}>
+                Continua ora
+              </Button>
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-center text-xs text-muted-foreground"
+              >
+                Reindirizzamento automatico tra {redirectIn}s…
+              </p>
+            </div>
+          </>
+        ) : phase === "phone" ? (
           <>
             <p className="text-sm text-muted-foreground mt-2">
               Inserisci il numero su cui vuoi ricevere il codice di conferma via WhatsApp.
