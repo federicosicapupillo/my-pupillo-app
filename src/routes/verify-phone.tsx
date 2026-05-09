@@ -24,7 +24,7 @@ function VerifyPhonePage() {
   const verify = useServerFn(verifyPhoneOtp);
   const resend = useServerFn(resendPhoneOtp);
 
-  const [phase, setPhase] = useState<"phone" | "code">("phone");
+  const [phase, setPhase] = useState<"phone" | "code" | "success">("phone");
   const [code, setCode] = useState("");
   const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -34,6 +34,8 @@ function VerifyPhonePage() {
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [lockedOut, setLockedOut] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [redirectIn, setRedirectIn] = useState(5);
+  const [successDest, setSuccessDest] = useState<"/onboarding" | "/dashboard" | "/admin">("/onboarding");
 
   const homeHref = (() => {
     if (!user) return "/";
@@ -73,6 +75,16 @@ function VerifyPhonePage() {
     const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(t);
   }, [cooldown]);
+
+  useEffect(() => {
+    if (phase !== "success") return;
+    if (redirectIn <= 0) {
+      nav({ to: successDest as any });
+      return;
+    }
+    const t = setTimeout(() => setRedirectIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, redirectIn, successDest, nav]);
 
   const phoneFull = `${phoneCode}${phoneNumber}`;
 
@@ -145,7 +157,9 @@ function VerifyPhonePage() {
         : profile?.profile_completed
           ? "/dashboard"
           : "/onboarding";
-      nav({ to: dest as any });
+      setSuccessDest(dest as any);
+      setRedirectIn(5);
+      setPhase("success");
     } finally {
       setBusy(false);
     }
