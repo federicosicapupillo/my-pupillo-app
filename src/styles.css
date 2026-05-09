@@ -267,6 +267,14 @@ header.sticky {
 }
 
 /* ----------------------------------------------------------------------
+ * Page-level dark surfaces — keep auth, onboarding, dashboard wrappers
+ * transparent so the global neon gradient shows through.
+ * ---------------------------------------------------------------------- */
+@layer utilities {
+  .bg-background { background-color: transparent !important; }
+}
+
+/* ----------------------------------------------------------------------
  * Leaflet dark-neon overrides
  * ---------------------------------------------------------------------- */
 .leaflet-container {
