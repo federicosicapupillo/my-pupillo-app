@@ -31,6 +31,9 @@ function VerifyPhonePage() {
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+  const [lockedOut, setLockedOut] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const homeHref = (() => {
     if (!user) return "/";
@@ -104,14 +107,37 @@ function VerifyPhonePage() {
       toast.error("Inserisci un codice di 6 cifre.");
       return;
     }
+    if (lockedOut) return;
     setBusy(true);
     try {
       const res = await verify({ data: { code } });
       if (!res.ok) {
-        toast.error(res.error ?? "Codice non valido.");
-        if (res.expired || res.maxedOut) setPhase("phone");
+        const msg = res.error ?? "Codice non valido.";
+        if (res.maxedOut) {
+          setLockedOut(true);
+          setAttemptsLeft(0);
+          setVerifyError(
+            "Hai superato il numero massimo di tentativi. Richiedi un nuovo codice o cambia numero per continuare.",
+          );
+          toast.error("Troppi tentativi errati. Richiedi un nuovo codice.");
+        } else if (res.expired) {
+          setVerifyError(null);
+          toast.error(msg);
+          setPhase("phone");
+        } else {
+          if (typeof res.attemptsLeft === "number") setAttemptsLeft(res.attemptsLeft);
+          setVerifyError(
+            typeof res.attemptsLeft === "number"
+              ? `${msg} Tentativi rimasti: ${res.attemptsLeft}.`
+              : msg,
+          );
+          toast.error(msg);
+        }
         return;
       }
+      setVerifyError(null);
+      setAttemptsLeft(null);
+      setLockedOut(false);
       toast.success("Codice verificato correttamente.");
       await refresh();
       const dest = role === "admin"
@@ -136,6 +162,11 @@ function VerifyPhonePage() {
         return;
       }
       setCooldown(30);
+      // New code issued → reset attempts/lock state for the new OTP row.
+      setLockedOut(false);
+      setAttemptsLeft(null);
+      setVerifyError(null);
+      setCode("");
       toast.success(res.simulated ? "Messaggio WhatsApp simulato correttamente." : "Codice reinviato.");
     } finally {
       setBusy(false);
@@ -200,12 +231,30 @@ function VerifyPhonePage() {
                 pattern="[0-9]*"
                 maxLength={6}
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(e) => {
+                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                  if (verifyError && !lockedOut) setVerifyError(null);
+                }}
+                disabled={lockedOut}
                 placeholder="000000"
-                className="text-center text-2xl tracking-[0.5em]"
+                className={`text-center text-2xl tracking-[0.5em] ${lockedOut ? "opacity-60" : ""} ${verifyError ? "border-destructive focus-visible:ring-destructive/50" : ""}`}
+                aria-invalid={!!verifyError}
               />
-              <Button className="w-full" onClick={handleVerify} disabled={busy || code.length !== 6}>
-                {busy ? "Verifica…" : "Conferma codice"}
+              {verifyError && (
+                <p
+                  role="alert"
+                  aria-live="assertive"
+                  className={`rounded-md border px-3 py-2 text-xs ${
+                    lockedOut
+                      ? "border-destructive/40 bg-destructive/10 text-destructive"
+                      : "border-destructive/30 bg-destructive/5 text-destructive"
+                  }`}
+                >
+                  {verifyError}
+                </p>
+              )}
+              <Button className="w-full" onClick={handleVerify} disabled={busy || code.length !== 6 || lockedOut}>
+                {busy ? "Verifica…" : lockedOut ? "Bloccato — richiedi un nuovo codice" : "Conferma codice"}
               </Button>
               <div className="pt-1 space-y-2 text-xs">
                 <p
