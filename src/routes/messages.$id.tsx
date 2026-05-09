@@ -5,8 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -30,6 +31,38 @@ type App = {
   announcement_id: string; proposed_tariff: number | null;
 };
 type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string };
+
+type Shift = {
+  id: string;
+  status: string;
+  shift_date: string;
+  worker_id: string;
+  restaurant_id: string;
+  announcement_id: string | null;
+  reviewed_at: string | null;
+  reviewed_by_restaurant_user_id: string | null;
+};
+
+type Review = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  tags: string[] | null;
+  created_at: string;
+  author_id: string;
+  target_id: string;
+  shift_id: string | null;
+};
+
+const POSITIVE_TAGS = [
+  "Puntuale", "Professionale", "Affidabile", "Ordinato", "Veloce",
+  "Collaborativo", "Ha rispettato il dress code", "Buona comunicazione",
+  "Esperienza adeguata", "Da richiamare",
+];
+const CRITICAL_TAGS = [
+  "In ritardo", "Poco comunicativo", "Dress code non rispettato",
+  "Esperienza non adeguata", "Da migliorare", "Non richiamare",
+];
 
 type TemplateCategory =
   | "application"
