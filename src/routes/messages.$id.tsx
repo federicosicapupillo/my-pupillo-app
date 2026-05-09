@@ -576,7 +576,7 @@ function Thread() {
         <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
-            const isSystem = m.body.startsWith("⚙️ Sistema:");
+            const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             if (isSystem) {
               return (
                 <div key={m.id} className="flex justify-center">
@@ -683,7 +683,7 @@ function TemplatePicker(props: {
           className="gap-2"
         >
           <Send className="h-4 w-4" />
-          {sending ? "Invio…" : "Invia messaggio"}
+          {sending ? "Invio in corso…" : "Invia messaggio"}
         </Button>
       </div>
       {disabled && (
