@@ -504,7 +504,7 @@ function Onboarding() {
         </div>
         {role === "restaurant" ? (
           <>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div id="sec-business" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
               <div>
                 <Label>Nome locale</Label>
                 <Input
@@ -513,7 +513,7 @@ function Onboarding() {
                   onChange={(e) => setForm({ ...form, business_name: e.target.value })}
                 />
               </div>
-              <div className="md:col-span-1">
+              <div id="sec-vat" className="md:col-span-1 scroll-mt-24">
                 <Label>Partita IVA *</Label>
                 <div className="flex gap-2">
                   <Input
@@ -593,7 +593,7 @@ function Onboarding() {
                 </select>
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-[1fr_140px]">
+            <div id="sec-location" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
               <div>
                 <Label>Indirizzo *</Label>
                 <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
@@ -656,7 +656,7 @@ function Onboarding() {
               </div>
             </div>
 
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+            <div id="sec-contact" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold flex items-center gap-2">📍 Luogo e Accesso</h3>
               <p className="text-xs text-muted-foreground -mt-2">
                 Queste informazioni vengono mostrate ai lavoratori candidati e precompilate negli annunci.
@@ -756,7 +756,7 @@ function Onboarding() {
               </div>
             </div>
 
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+            <div id="sec-requirements" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold flex items-center gap-2">📋 Requisiti e Competenze standard</h3>
               <p className="text-xs text-muted-foreground -mt-1">
                 Imposta i requisiti standard del locale: verranno precompilati automaticamente in ogni nuovo annuncio.
@@ -766,7 +766,7 @@ function Onboarding() {
           </>
         ) : (
           <>
-            <div>
+            <div id="sec-experience" className="scroll-mt-24">
               <Label>Età</Label>
               <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
             </div>
@@ -778,12 +778,12 @@ function Onboarding() {
                 onChange={(e) => setForm({ ...form, professional_profile: e.target.value })}
               />
             </div>
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+            <div id="sec-languages" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Lingue parlate</Label>
               <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
               <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
             </div>
-            <div className="grid gap-4 md:grid-cols-[1fr_140px]">
+            <div id="sec-availability" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
               <div>
                 <Label>Area di interesse (indirizzo)</Label>
                 <Input
