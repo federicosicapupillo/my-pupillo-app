@@ -920,6 +920,12 @@ function ReviewBlock(props: {
   const charCount = text.trim().length;
   const canSubmit = rating > 0 && charCount >= 20 && charCount <= 500 && !submitting;
 
+  // Mandatory review state derived from shift.completed_at (3-day deadline)
+  const completedAtIso = (shift as any)?.completed_at as string | null | undefined;
+  const dueMs = completedAtIso ? new Date(completedAtIso).getTime() + 3 * 24 * 60 * 60 * 1000 : null;
+  const overdue = dueMs != null && Date.now() > dueMs;
+  const showMandatoryNotice = !!shift && (shift.status === "completed");
+
   const toggleTag = (t: string) => {
     setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   };
@@ -932,6 +938,22 @@ function ReviewBlock(props: {
 
   return (
     <div id={id} className={`mt-4 rounded-2xl border bg-card p-4 space-y-4 ${forceOpen ? "ring-2 ring-primary/40" : ""}`}>
+      {showMandatoryNotice && (
+        <div className={`rounded-lg border p-3 text-sm ${
+          overdue
+            ? "border-destructive/40 bg-destructive/10 text-destructive"
+            : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
+        }`}>
+          <div className="font-semibold">{overdue ? "Recensione scaduta" : "Recensione obbligatoria"}</div>
+          <div className="text-xs mt-0.5">
+            {overdue
+              ? "Questa recensione è scaduta. Completarla riattiverà il contatto con nuovi lavoratori."
+              : `Per chiudere correttamente il turno devi lasciare una valutazione al lavoratore${
+                  dueMs ? ` entro il ${new Date(dueMs).toLocaleDateString("it-IT")}` : " entro 3 giorni"
+                }.`}
+          </div>
+        </div>
+      )}
       <div>
         <div className="flex items-center gap-2">
           <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />

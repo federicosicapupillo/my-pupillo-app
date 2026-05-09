@@ -1252,6 +1252,7 @@ export type Database = {
         Args: { _code: string; _new_user: string }
         Returns: string
       }
+      send_required_review_reminders: { Args: never; Returns: number }
       validate_discount_code: {
         Args: { _applies_to?: string; _code: string }
         Returns: Json
