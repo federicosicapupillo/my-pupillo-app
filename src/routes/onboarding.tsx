@@ -29,7 +29,6 @@ import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { OnboardingStatusCard, type OnboardingStep } from "@/components/OnboardingStatusCard";
 
 export const Route = createFileRoute("/onboarding")({
