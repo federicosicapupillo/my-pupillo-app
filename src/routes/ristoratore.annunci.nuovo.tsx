@@ -94,7 +94,10 @@ function calculateDurationHours(start: string, end: string) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
-  const diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+  if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return 0;
+  let diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+  // Overnight shift (es. 19:00 -> 02:00): aggiungi 24h
+  if (diffMinutes <= 0) diffMinutes += 24 * 60;
   return diffMinutes > 0 ? Number((diffMinutes / 60).toFixed(2)) : 0;
 }
 
