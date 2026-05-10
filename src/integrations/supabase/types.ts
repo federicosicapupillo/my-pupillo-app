@@ -53,6 +53,8 @@ export type Database = {
           dress_code_items: string[] | null
           dress_code_notes: string | null
           duration_hours: number
+          end_date: string | null
+          end_time: string | null
           expires_at: string
           id: string
           job_access_restrictions: string | null
@@ -95,6 +97,8 @@ export type Database = {
           dress_code_items?: string[] | null
           dress_code_notes?: string | null
           duration_hours?: number
+          end_date?: string | null
+          end_time?: string | null
           expires_at?: string
           id?: string
           job_access_restrictions?: string | null
@@ -137,6 +141,8 @@ export type Database = {
           dress_code_items?: string[] | null
           dress_code_notes?: string | null
           duration_hours?: number
+          end_date?: string | null
+          end_time?: string | null
           expires_at?: string
           id?: string
           job_access_restrictions?: string | null
@@ -381,6 +387,7 @@ export type Database = {
           district: string | null
           dress_code_items: string[]
           dress_code_notes: string | null
+          end_date: string | null
           end_time: string
           hourly_rate: number
           id: string
@@ -427,6 +434,7 @@ export type Database = {
           district?: string | null
           dress_code_items?: string[]
           dress_code_notes?: string | null
+          end_date?: string | null
           end_time: string
           hourly_rate: number
           id?: string
@@ -473,6 +481,7 @@ export type Database = {
           district?: string | null
           dress_code_items?: string[]
           dress_code_notes?: string | null
+          end_date?: string | null
           end_time?: string
           hourly_rate?: number
           id?: string
