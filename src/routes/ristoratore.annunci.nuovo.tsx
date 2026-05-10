@@ -487,11 +487,6 @@ function NewRestaurantJobRequest() {
             <Field label="Ora inizio"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
             <Field label="Ora fine"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={f.break_included} onCheckedChange={v => setField("break_included", !!v)} />
-            Pausa prevista
-          </label>
-          <Field label="Note operative"><Textarea rows={3} value={f.operational_notes} onChange={e => setField("operational_notes", e.target.value)} /></Field>
         </section>
 
         <section className="rounded-2xl border bg-card p-5 space-y-4">
@@ -614,9 +609,20 @@ function NewRestaurantJobRequest() {
           <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />
         </section>
 
+        <section className="rounded-2xl border bg-card p-5 space-y-4">
+          <SectionTitle number="5" title="Dettagli aggiuntivi del turno" />
+          <Field label="Pausa prevista durante il turno?">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={f.break_included} onCheckedChange={v => setField("break_included", !!v)} />
+              Sì, è prevista una pausa
+            </label>
+          </Field>
+          <Field label="Note operative"><Textarea rows={3} value={f.operational_notes} onChange={e => setField("operational_notes", e.target.value)} /></Field>
+        </section>
+
         {previewVisible && (
           <section ref={previewRef} className="rounded-2xl border bg-card p-5 space-y-4">
-            <SectionTitle number="5" title="Anteprima annuncio" />
+            <SectionTitle number="6" title="Anteprima annuncio" />
             <div className="grid gap-4 md:grid-cols-2 text-sm">
               <PreviewItem label="Ruolo cercato" value={f.role_required || "—"} />
               <PreviewItem label="Data e orario" value={f.shift_date ? `${new Date(f.shift_date).toLocaleDateString("it-IT")} · ${f.start_time}–${f.end_time}` : "—"} />
