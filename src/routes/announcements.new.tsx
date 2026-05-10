@@ -241,7 +241,7 @@ function NewAnn() {
       job_country: f.job_country || null,
       job_latitude: coords?.lat ?? null,
       job_longitude: coords?.lng ?? null,
-      job_access_restrictions: f.job_access_restrictions || null,
+      job_access_restrictions: accessText,
       job_additional_directions: f.job_additional_directions || null,
       job_location_notes: f.job_location_notes || null,
       job_contact_person_name: f.job_contact_person_name || null,
