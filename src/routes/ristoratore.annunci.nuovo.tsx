@@ -266,6 +266,16 @@ function NewRestaurantJobRequest() {
     }
   };
 
+  // Auto-geocode silently when address fields change (debounced).
+  // Replaces the manual "Trova coordinate" button.
+  useEffect(() => {
+    const address = [f.address, f.city, f.province, f.country].filter(Boolean).join(", ");
+    if (address.trim().length < 5) return;
+    const t = setTimeout(() => { void runGeocode(); }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.address, f.city, f.province, f.country]);
+
   const validate = () => {
     if (!user) return false;
     if (!f.role_required) { toast.error("Seleziona il ruolo cercato."); return false; }
