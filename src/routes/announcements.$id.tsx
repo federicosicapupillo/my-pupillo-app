@@ -54,6 +54,9 @@ type Ann = {
   job_contact_person_email?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
+  is_long_shift?: boolean | null;
+  long_shift_reason?: string | null;
+  shift_duration_hours?: number | null;
 };
 type App = {
   id: string; status: string; worker_id: string; proposed_tariff: number | null;
