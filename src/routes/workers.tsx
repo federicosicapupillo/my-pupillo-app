@@ -180,7 +180,6 @@ function WorkersPage() {
   useEffect(() => {
     (async () => {
       if (user) {
-        await runSearch({ category: "all", subcategory: "", text: "", language: "" });
         const { data } = await supabase.from("announcements").select("id, service_date, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
         setAnns((data as Ann[]) ?? []);
         if (data?.[0]) setSelected(data[0].id);
@@ -338,8 +337,9 @@ function WorkersPage() {
     setCatDraft("all"); setSubDraft("");
     setCategory("all"); setSubcategory("");
     setQInput(""); setQ("");
-    setLang(""); setLangDraft(""); setHasSearched(false);
-    void runSearch({ category: "all", subcategory: "", text: "", language: "" });
+    setLang(""); setLangDraft("");
+    setWorkers([]);
+    setHasSearched(false);
   };
   const onChangeCategory = (c: Category) => { setCatDraft(c); setSubDraft(""); };
   const removeCategoryChip = () => { setCatDraft("all"); setSubDraft(""); void runSearch({ category: "all", subcategory: "" }); };
