@@ -265,6 +265,7 @@ function NewRestaurantJobRequest() {
         role_required: data.professional_profile || prev.role_required,
         title: data.professional_profile || prev.role_required || prev.title,
         shift_date: "",
+        end_date: "",
         start_time: start,
         end_time: end,
         hourly_rate: String(data.tariff_amount ?? prev.hourly_rate),
