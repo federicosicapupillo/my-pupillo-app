@@ -683,7 +683,20 @@ function NewRestaurantJobRequest() {
           </div>
           {coords && <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={220} />}
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Restrizioni all’ingresso"><Textarea rows={2} value={f.access_restrictions} onChange={e => setField("access_restrictions", e.target.value)} /></Field>
+            <Field label="Anticipo richiesto all'ingresso">
+              <div className="space-y-2">
+                <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
+                  <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">Minimo 15 minuti</SelectItem>
+                    <SelectItem value="over15">Oltre 15 minuti</SelectItem>
+                  </SelectContent>
+                </Select>
+                {accessChoice === "over15" && (
+                  <Textarea rows={2} required placeholder="Motivazione obbligatoria (es. accredito, briefing, vestizione)…" value={accessReason} onChange={e => setAccessReason(e.target.value)} />
+                )}
+              </div>
+            </Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
             <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
             <Field label="Ruolo del referente">
