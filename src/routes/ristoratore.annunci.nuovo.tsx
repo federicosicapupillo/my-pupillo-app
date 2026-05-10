@@ -86,6 +86,7 @@ type FormState = {
   piercings_allowed: string;
   beard_allowed: string;
   dress_code_notes: string;
+  long_shift_reason: string;
 };
 
 function calculateDurationHours(start: string, end: string) {
