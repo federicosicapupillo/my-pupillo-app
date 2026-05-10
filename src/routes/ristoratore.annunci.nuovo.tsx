@@ -486,19 +486,6 @@ function NewRestaurantJobRequest() {
             <Field label="Data del turno"><Input type="date" required value={f.shift_date} onChange={e => setField("shift_date", e.target.value)} /></Field>
             <Field label="Ora inizio"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
             <Field label="Ora fine"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
-            <Field label="Stato annuncio">
-              <Select value={f.status} onValueChange={v => setField("status", v as FormState["status"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bozza">Bozza</SelectItem>
-                  <SelectItem value="pubblicato">Pubblicato</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Descrizione del turno"><Textarea rows={4} value={f.description} onChange={e => setField("description", e.target.value)} /></Field>
-            <Field label="Mansioni richieste"><Textarea rows={4} value={f.tasks} onChange={e => setField("tasks", e.target.value)} /></Field>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={f.break_included} onCheckedChange={v => setField("break_included", !!v)} />
