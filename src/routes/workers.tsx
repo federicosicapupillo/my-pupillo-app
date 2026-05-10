@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Search, List, Map as MapIcon, RotateCcw, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
 import { Coins, AlertCircle, MessageSquare } from "lucide-react";
@@ -421,16 +422,15 @@ function WorkersPage() {
         </div>
         <div>
           <label className="text-sm font-medium">Lingua (filtro rapido)</label>
-          <select
-            value={langDraft}
-            onChange={(e) => setLangDraft(e.target.value)}
-            className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="">Tutte le lingue</option>
-            {LANGUAGE_OPTIONS.filter((l) => l !== "Altro").map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
+          <Select value={langDraft || "__all"} onValueChange={(v) => setLangDraft(v === "__all" ? "" : v)}>
+            <SelectTrigger className="mt-1 h-9 w-full"><SelectValue placeholder="Tutte le lingue" /></SelectTrigger>
+            <SelectContent className="z-[60] max-h-[60vh]">
+              <SelectItem value="__all">Tutte le lingue</SelectItem>
+              {LANGUAGE_OPTIONS.filter((l) => l !== "Altro").map((l) => (
+                <SelectItem key={l} value={l}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -438,27 +438,27 @@ function WorkersPage() {
       <div className="mb-4 rounded-2xl border bg-card p-3 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_15%,transparent)]">
         <label className="mb-2 block text-sm font-medium">Ricerca avanzata lavoratori</label>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
-          <select
-            aria-label="Categoria di ricerca"
-            value={catDraft}
-            onChange={(e) => onChangeCategory(e.target.value as Category)}
-            className="flex h-9 items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring lg:w-[180px]"
-          >
-            {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
-              <option key={k} value={k}>{CATEGORY_LABEL[k]}</option>
-            ))}
-          </select>
-          <select
-            aria-label="Sottocategoria"
-            value={subDraft}
-            onChange={(e) => setSubDraft(e.target.value)}
-            className="flex h-9 items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring lg:w-[220px]"
-          >
-            <option value="">— Sottocategoria —</option>
-            {SUBCATEGORIES[catDraft].map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          <Select value={catDraft} onValueChange={(v) => onChangeCategory(v as Category)}>
+            <SelectTrigger aria-label="Categoria di ricerca" className="h-9 lg:w-[180px]">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent className="z-[60] max-h-[60vh]">
+              {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => (
+                <SelectItem key={k} value={k}>{CATEGORY_LABEL[k]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={subDraft || "__none"} onValueChange={(v) => setSubDraft(v === "__none" ? "" : v)}>
+            <SelectTrigger aria-label="Sottocategoria" className="h-9 lg:w-[220px]">
+              <SelectValue placeholder="— Sottocategoria —" />
+            </SelectTrigger>
+            <SelectContent className="z-[60] max-h-[60vh]">
+              <SelectItem value="__none">— Sottocategoria —</SelectItem>
+              {SUBCATEGORIES[catDraft].map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
