@@ -585,7 +585,7 @@ function MapPage() {
                         <Button size="sm" variant="outline" className="flex-1" onClick={() => {
                           if (w.service_area_lat != null && w.service_area_lng != null) {
                             focusOnMap(w.service_area_lat, w.service_area_lng, w.full_name || undefined);
-                          } else { toast.info("Coordinate non disponibili"); }
+                          }
                         }}>Mostra sulla mappa</Button>
                         <Link to="/workers"><Button size="sm">Vedi profilo</Button></Link>
                       </div>
@@ -631,8 +631,6 @@ function MapPage() {
                         const lng = r.service_area_lng ?? r.longitude;
                         if (lat != null && lng != null) {
                           focusOnMap(lat, lng, r.business_name || undefined);
-                        } else {
-                          toast.info("Coordinate non disponibili per questo locale");
                         }
                       }}>Mostra sulla mappa</Button>
                       <Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm">Vedi dettaglio</Button></Link>
