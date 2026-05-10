@@ -197,6 +197,7 @@ function AuthPage() {
       }
       return;
     }
+    toast.dismiss();
     toast.success("Bentornato!");
     // Redirect handled by useEffect once profile/role are loaded.
   };
