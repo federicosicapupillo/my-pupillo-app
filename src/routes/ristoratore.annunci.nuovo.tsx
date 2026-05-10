@@ -528,14 +528,6 @@ function NewRestaurantJobRequest() {
             <Field label="Zona/quartiere"><Input value={f.district} onChange={e => setField("district", e.target.value)} /></Field>
             <Field label="CAP"><Input value={f.postal_code} onChange={e => setField("postal_code", e.target.value)} /></Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
-            <div className="flex items-end">
-              <Button type="button" variant="outline" className="gap-2" onClick={runGeocode} disabled={geoState.status === "loading"}>
-                {geoState.status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-                Trova coordinate
-              </Button>
-            </div>
-            <Field label="Latitude"><Input inputMode="decimal" value={f.latitude} onChange={e => setField("latitude", e.target.value)} /></Field>
-            <Field label="Longitude"><Input inputMode="decimal" value={f.longitude} onChange={e => setField("longitude", e.target.value)} /></Field>
           </div>
           <GeoStatus state={geoState} />
           {coords && <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={220} />}
