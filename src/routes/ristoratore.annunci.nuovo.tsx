@@ -300,6 +300,7 @@ function NewRestaurantJobRequest() {
         piercings_allowed: (data as any).piercings_allowed ?? prev.piercings_allowed,
         beard_allowed: (data as any).beard_allowed ?? prev.beard_allowed,
         dress_code_notes: (data as any).dress_code_notes ?? prev.dress_code_notes,
+        long_shift_reason: (data as any).long_shift_reason ?? prev.long_shift_reason,
         city: (data as any).job_city ?? prev.city,
         province: (data as any).job_province ?? prev.province,
         postal_code: (data as any).job_postal_code ?? prev.postal_code,
