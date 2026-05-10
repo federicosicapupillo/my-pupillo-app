@@ -504,7 +504,12 @@ function WorkersPage() {
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {searching ? "Ricerca in corso…" : `${sorted.length} ${sorted.length === 1 ? "lavoratore trovato" : "lavoratori trovati"}`}
+          {searching
+            ? "Ricerca in corso…"
+            : (() => {
+                const n = hasSearched ? sorted.length : 0;
+                return `${n} ${n === 1 ? "lavoratore trovato" : "lavoratori trovati"}`;
+              })()}
         </p>
         <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view==="list"?"secondary":"ghost"} onClick={()=>setView("list")} className="gap-1"><List className="h-4 w-4" />Lista</Button>
@@ -586,7 +591,12 @@ function WorkersPage() {
           </div>
           );
         })}
-        {hasSearched && !searching && sorted.length === 0 && <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a cambiare categoria, sottocategoria o parola chiave.</p>}
+        {!hasSearched && !searching && (
+          <p className="text-muted-foreground col-span-full">Imposta i filtri e clicca su Cerca per visualizzare i lavoratori disponibili.</p>
+        )}
+        {hasSearched && !searching && sorted.length === 0 && (
+          <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a modificare i filtri o la parola chiave.</p>
+        )}
       </div>
       )}
     </AppShell>
