@@ -329,8 +329,11 @@ function NewRestaurantJobRequest() {
   const validate = () => {
     if (!user) return false;
     if (!f.role_required) { toast.error("Seleziona il ruolo cercato."); return false; }
-    if (!f.shift_date) { toast.error("Inserisci la data del turno"); return false; }
-    if (!f.start_time || !f.end_time || durationHours <= 0) { toast.error("Inserisci un orario valido"); return false; }
+    if (!f.shift_date) { toast.error("Inserisci la data di inizio turno."); return false; }
+    if (!f.start_time) { toast.error("Inserisci l'orario di inizio turno."); return false; }
+    if (!f.end_date) { toast.error("Inserisci la data di fine turno."); return false; }
+    if (!f.end_time) { toast.error("Inserisci l'orario di fine turno."); return false; }
+    if (durationHours <= 0) { toast.error("La fine del turno deve essere successiva all'inizio."); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
     if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
     if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
