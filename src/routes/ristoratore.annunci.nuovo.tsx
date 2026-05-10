@@ -775,6 +775,9 @@ function NewRestaurantJobRequest() {
               <PreviewItem label="Requisiti" value={[labelOf(f.license_requirement, LICENSE_OPTIONS), ...splitLanguages(languageReqs), ...labelsOf(skills, SKILL_OPTIONS)].filter(Boolean).join(" · ") || "—"} />
               <PreviewItem label="Dress code" value={[...labelsOf(dressItems, DRESS_CODE_OPTIONS), f.dress_code_notes].filter(Boolean).join(" · ") || "—"} />
               <PreviewItem label="Note operative" value={f.operational_notes || f.worker_notes || "—"} wide />
+              {isLongShift && (
+                <PreviewItem label="Turno lungo (+8 ore)" value={`Durata ${durationHours}h · ${longReasonTrimmed || "Motivazione mancante"}`} wide />
+              )}
             </div>
           </section>
         )}
