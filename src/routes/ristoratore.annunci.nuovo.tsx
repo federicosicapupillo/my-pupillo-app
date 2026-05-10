@@ -184,9 +184,32 @@ function NewRestaurantJobRequest() {
     return Number.isFinite(lat) && Number.isFinite(lng) && f.latitude !== "" && f.longitude !== "" ? { lat, lng } : null;
   }, [f.latitude, f.longitude]);
 
-  const durationHours = useMemo(() => calculateDurationHours(f.start_time, f.end_time), [f.start_time, f.end_time]);
+  const durationHours = useMemo(
+    () => durationFromDateTimes(f.shift_date, f.start_time, f.end_date || f.shift_date, f.end_time),
+    [f.shift_date, f.end_date, f.start_time, f.end_time],
+  );
+  const crossesMidnight = useMemo(() => {
+    if (!f.shift_date || !f.end_date) return false;
+    return f.end_date !== f.shift_date;
+  }, [f.shift_date, f.end_date]);
+  const sameDayEndBeforeStart = useMemo(() => {
+    if (!f.shift_date || !f.end_date || f.shift_date !== f.end_date) return false;
+    if (!f.start_time || !f.end_time) return false;
+    return f.end_time <= f.start_time;
+  }, [f.shift_date, f.end_date, f.start_time, f.end_time]);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => setF(prev => ({ ...prev, [key]: value }));
+  // Auto-fill end_date when start_date is selected/changed (only if empty or same as previous start)
+  useEffect(() => {
+    if (!f.shift_date) return;
+    setF(prev => {
+      if (!prev.end_date || prev.end_date < prev.shift_date) {
+        return { ...prev, end_date: prev.shift_date };
+      }
+      return prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.shift_date]);
   const toggleIn = (arr: string[], v: string, setter: (v: string[]) => void) => setter(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
 
   useEffect(() => {
