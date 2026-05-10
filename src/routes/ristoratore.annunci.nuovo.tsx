@@ -57,15 +57,12 @@ type FormState = {
   title: string;
   role_required: string;
   workers_needed: string;
-  description: string;
-  tasks: string;
   shift_date: string;
   start_time: string;
   end_time: string;
   hourly_rate: string;
   break_included: boolean;
   operational_notes: string;
-  status: "bozza" | "pubblicato";
   restaurant_name: string;
   address: string;
   city: string;
@@ -125,15 +122,12 @@ function NewRestaurantJobRequest() {
     title: "",
     role_required: "",
     workers_needed: "1",
-    description: "",
-    tasks: "",
     shift_date: "",
     start_time: "19:00",
     end_time: "23:00",
     hourly_rate: "12",
     break_included: false,
     operational_notes: "",
-    status: "bozza",
     restaurant_name: "",
     address: "",
     city: "",
@@ -313,7 +307,7 @@ function NewRestaurantJobRequest() {
       location_lng: coords?.lng ?? null,
       professional_profile: f.role_required,
       languages: splitLanguages(languageReqs),
-      notes: [f.description, f.tasks, f.operational_notes].filter(Boolean).join("\n\n") || null,
+      notes: f.operational_notes || null,
       status: announcementStatus as "draft" | "active",
       license_requirement: f.license_requirement,
       language_requirements: languageReqs,
@@ -358,8 +352,8 @@ function NewRestaurantJobRequest() {
       title: f.role_required,
       role_required: f.role_required,
       workers_needed: Number(f.workers_needed || 1),
-      description: f.description || null,
-      tasks: f.tasks || null,
+      description: null,
+      tasks: null,
       shift_date: f.shift_date,
       start_time: f.start_time,
       end_time: f.end_time,
@@ -492,19 +486,6 @@ function NewRestaurantJobRequest() {
             <Field label="Data del turno"><Input type="date" required value={f.shift_date} onChange={e => setField("shift_date", e.target.value)} /></Field>
             <Field label="Ora inizio"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
             <Field label="Ora fine"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
-            <Field label="Stato annuncio">
-              <Select value={f.status} onValueChange={v => setField("status", v as FormState["status"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bozza">Bozza</SelectItem>
-                  <SelectItem value="pubblicato">Pubblicato</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Descrizione del turno"><Textarea rows={4} value={f.description} onChange={e => setField("description", e.target.value)} /></Field>
-            <Field label="Mansioni richieste"><Textarea rows={4} value={f.tasks} onChange={e => setField("tasks", e.target.value)} /></Field>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={f.break_included} onCheckedChange={v => setField("break_included", !!v)} />
