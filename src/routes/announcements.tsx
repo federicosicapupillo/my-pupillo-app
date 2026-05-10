@@ -16,7 +16,7 @@ export const Route = createFileRoute("/announcements")({
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
 });
 
-type Ann = { id: string; service_date: string; service_time: string; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string };
+type Ann = { id: string; service_date: string; service_time: string; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null };
 
 function expiresLabel(iso: string) {
   const ms = new Date(iso).getTime() - Date.now();
@@ -84,7 +84,8 @@ function AnnouncementsPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />{new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}</div>
-                  <h3 className="mt-2 font-semibold">Servizio {a.speed} · {a.duration_hours}h</h3>
+                  <h3 className="mt-2 text-lg font-bold text-foreground">{a.professional_profile?.trim() || "Ruolo non specificato"}</h3>
+                  <p className="text-xs text-muted-foreground">Durata: {a.duration_hours}h</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className={`text-xs rounded-full px-2 py-1 ${a.status === 'active' ? 'bg-green-100 text-green-800' : a.status === 'assigned' ? 'bg-blue-100 text-blue-800' : 'bg-muted text-muted-foreground'}`}>{a.status}</span>
