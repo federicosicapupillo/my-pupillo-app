@@ -1,6 +1,7 @@
-import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useEffect } from "react";
 
 export type MapCategory = "restaurant" | "worker" | "announcement";
 
@@ -62,10 +63,22 @@ const makeIcon = (category: MapCategory) => {
   });
 };
 
-export default function MapViewInner({ points, height, center, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
+function Recenter({ center, zoom }: { center: [number, number]; zoom?: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && Number.isFinite(center[0]) && Number.isFinite(center[1])) {
+      map.flyTo(center, zoom ?? map.getZoom(), { duration: 0.6 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center[0], center[1], zoom]);
+  return null;
+}
+
+export default function MapViewInner({ points, height, center, focusZoom, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; focusZoom?: number; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_50px_-25px_rgba(0,0,0,0.7)]" style={{ height }}>
       <MapContainer center={center} zoom={6} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
+        <Recenter center={center} zoom={focusZoom} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
