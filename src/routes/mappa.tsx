@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -129,6 +129,16 @@ function MapPage() {
   const [radiusKm, setRadiusKm] = useState<string>("any");
   const [locating, setLocating] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
+  const [focusZoom, setFocusZoom] = useState<number | undefined>(undefined);
+  const mapBoxRef = useRef<HTMLDivElement | null>(null);
+
+  const focusOnMap = (lat: number, lng: number, label?: string) => {
+    setSearchCenter({ lat, lng, label });
+    setFocusZoom(15);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      requestAnimationFrame(() => mapBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -664,7 +674,7 @@ function MapPage() {
                       <div className="mt-3 flex gap-2">
                         <Button size="sm" variant="outline" className="flex-1" onClick={() => {
                           if (w.service_area_lat != null && w.service_area_lng != null) {
-                            setSearchCenter({ lat: w.service_area_lat, lng: w.service_area_lng, label: w.full_name || undefined });
+                            focusOnMap(w.service_area_lat, w.service_area_lng, w.full_name || undefined);
                           } else { toast.info("Coordinate non disponibili"); }
                         }}>Mostra sulla mappa</Button>
                         <Link to="/workers"><Button size="sm">Vedi profilo</Button></Link>
@@ -707,8 +717,10 @@ function MapPage() {
                     </div>
                     <div className="mt-3 flex gap-2">
                       <Button size="sm" variant="outline" className="flex-1" onClick={() => {
-                        if (r.service_area_lat != null && r.service_area_lng != null) {
-                          setSearchCenter({ lat: r.service_area_lat, lng: r.service_area_lng, label: r.business_name || undefined });
+                        const lat = r.service_area_lat ?? r.latitude;
+                        const lng = r.service_area_lng ?? r.longitude;
+                        if (lat != null && lng != null) {
+                          focusOnMap(lat, lng, r.business_name || undefined);
                         } else {
                           toast.info("Coordinate non disponibili per questo locale");
                         }
@@ -723,7 +735,7 @@ function MapPage() {
         </div>
 
         {/* MAP */}
-        <div className="order-1 lg:order-2">
+        <div ref={mapBoxRef} className="order-1 lg:order-2">
           {loading ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground" style={{ minHeight: 500 }}>Caricamento mappa…</div>
           ) : points.length === 0 ? (
@@ -736,6 +748,7 @@ function MapPage() {
                 points={points}
                 height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
                 center={center}
+                focusZoom={focusZoom}
                 me={ref}
                 radiusKm={radiusKm !== "any" ? Number(radiusKm) : null}
               />
