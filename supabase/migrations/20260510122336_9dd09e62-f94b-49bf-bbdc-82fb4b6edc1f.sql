@@ -1,0 +1,1 @@
+UPDATE public.discount_codes SET applies_to = 'premium', description = 'Sconto 10% sugli abbonamenti Pro/Business' WHERE code = 'PUPILLO10';
