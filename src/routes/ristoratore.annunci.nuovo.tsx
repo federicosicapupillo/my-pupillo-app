@@ -549,9 +549,35 @@ function NewRestaurantJobRequest() {
             </Field>
             <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
             <Field label="Tariffa oraria proposta"><Input type="number" min="1" step="0.5" value={f.hourly_rate} onChange={e => setField("hourly_rate", e.target.value)} /></Field>
-            <Field label="Data del turno"><Input type="date" required value={f.shift_date} onChange={e => setField("shift_date", e.target.value)} /></Field>
-            <Field label="Ora inizio"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
-            <Field label="Ora fine"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
+            <Field label="Data inizio turno"><Input type="date" required value={f.shift_date} onChange={e => setField("shift_date", e.target.value)} /></Field>
+            <Field label="Ora inizio turno"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
+            <Field label="Data fine turno">
+              <Input type="date" required min={f.shift_date || undefined} value={f.end_date} onChange={e => setField("end_date", e.target.value)} />
+            </Field>
+            <Field label="Ora fine turno"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Se il turno termina dopo la mezzanotte, seleziona come data fine il giorno successivo.
+          </p>
+          {sameDayEndBeforeStart && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+              <div className="flex-1">
+                Il turno sembra terminare dopo mezzanotte. Vuoi impostare la data fine al giorno successivo?
+              </div>
+              <button
+                type="button"
+                className="rounded-md border border-amber-500/40 bg-background px-2 py-1 text-xs font-medium hover:bg-amber-500/10"
+                onClick={() => setField("end_date", addDays(f.shift_date, 1))}
+              >
+                Imposta giorno successivo
+              </button>
+            </div>
+          )}
+          {crossesMidnight && durationHours > 0 && (
+            <p className="text-xs text-primary">Turno notturno · {durationHours}h totali</p>
+          )}
+          <div className="hidden">
           </div>
         </section>
 
