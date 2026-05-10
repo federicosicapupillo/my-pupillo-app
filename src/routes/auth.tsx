@@ -58,15 +58,11 @@ function AuthPage() {
     // If the user just submitted the signup form, skip auto-redirects
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
-    // If the user explicitly came back from the OTP page via the
-    // "Torna alla registrazione (lavoratore|ristoratore)" link, the URL
-    // carries ?role=worker|restaurant. Stay on this page so they can
-    // change account / number, instead of bouncing back to /verify-phone.
-    if (roleParam) return;
-    // If phone not yet verified, send to OTP page (do NOT silently sign out —
-    // that broke the login button: user clicked Accedi and got logged out
-    // with no message).
-    if (profile && profile.phone_verified === false) {
+    // If phone not yet verified, send to OTP page — UNLESS the user
+    // explicitly came back from the OTP page via the "Torna alla
+    // registrazione" link (URL carries ?role=...). In that case, let
+    // them edit their account here.
+    if (profile && profile.phone_verified === false && !roleParam) {
       navigate({ to: "/verify-phone" });
       return;
     }
