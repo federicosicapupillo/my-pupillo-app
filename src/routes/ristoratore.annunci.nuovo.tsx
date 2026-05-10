@@ -57,15 +57,12 @@ type FormState = {
   title: string;
   role_required: string;
   workers_needed: string;
-  description: string;
-  tasks: string;
   shift_date: string;
   start_time: string;
   end_time: string;
   hourly_rate: string;
   break_included: boolean;
   operational_notes: string;
-  status: "bozza" | "pubblicato";
   restaurant_name: string;
   address: string;
   city: string;
@@ -125,15 +122,12 @@ function NewRestaurantJobRequest() {
     title: "",
     role_required: "",
     workers_needed: "1",
-    description: "",
-    tasks: "",
     shift_date: "",
     start_time: "19:00",
     end_time: "23:00",
     hourly_rate: "12",
     break_included: false,
     operational_notes: "",
-    status: "bozza",
     restaurant_name: "",
     address: "",
     city: "",
