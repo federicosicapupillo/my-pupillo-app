@@ -30,7 +30,7 @@ function Billing() {
     const code = discountInput.trim();
     if (!code) { toast.error("Inserisci un codice."); return; }
     setDiscountBusy(true);
-    const { data, error } = await supabase.rpc("validate_discount_code", { _code: code, _applies_to: "all" });
+    const { data, error } = await supabase.rpc("validate_discount_code", { _code: code, _applies_to: "premium" });
     setDiscountBusy(false);
     if (error) { toast.error(error.message); return; }
     const res = data as any;
@@ -71,6 +71,7 @@ function Billing() {
             priceId={checkoutKey}
             customerEmail={user?.email ?? undefined}
             userId={user?.id}
+            discountCode={discount && (discount.applies_to === "all" || discount.applies_to === "premium") && PLAN_PRICES[checkoutKey] ? discount.code : undefined}
             returnUrl={typeof window !== "undefined" ? `${window.location.origin}/billing` : undefined}
           />
         </div>
