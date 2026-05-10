@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
-import { AlertCircle, CheckCircle2, Eye, Loader2, MapPin, RefreshCw, Save, Send, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, Loader2, Save, Send, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { buildDefaultsUpdate, hasSavedDefaults } from "@/lib/restaurant-defaults";
 import {
@@ -265,6 +265,16 @@ function NewRestaurantJobRequest() {
       setGeoState({ status: "error", attempt: 0, error: result.error });
     }
   };
+
+  // Auto-geocode silently when address fields change (debounced).
+  // Replaces the manual "Trova coordinate" button.
+  useEffect(() => {
+    const address = [f.address, f.city, f.province, f.country].filter(Boolean).join(", ");
+    if (address.trim().length < 5) return;
+    const t = setTimeout(() => { void runGeocode(); }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.address, f.city, f.province, f.country]);
 
   const validate = () => {
     if (!user) return false;
@@ -518,14 +528,6 @@ function NewRestaurantJobRequest() {
             <Field label="Zona/quartiere"><Input value={f.district} onChange={e => setField("district", e.target.value)} /></Field>
             <Field label="CAP"><Input value={f.postal_code} onChange={e => setField("postal_code", e.target.value)} /></Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
-            <div className="flex items-end">
-              <Button type="button" variant="outline" className="gap-2" onClick={runGeocode} disabled={geoState.status === "loading"}>
-                {geoState.status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-                Trova coordinate
-              </Button>
-            </div>
-            <Field label="Latitude"><Input inputMode="decimal" value={f.latitude} onChange={e => setField("latitude", e.target.value)} /></Field>
-            <Field label="Longitude"><Input inputMode="decimal" value={f.longitude} onChange={e => setField("longitude", e.target.value)} /></Field>
           </div>
           <GeoStatus state={geoState} />
           {coords && <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={220} />}
@@ -726,5 +728,5 @@ function GeoStatus({ state }: { state: { status: "idle" | "loading" | "ok" | "er
   if (state.status === "ok") {
     return <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary"><CheckCircle2 className="h-3 w-3" />Coordinate aggiornate</div>;
   }
-  return <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{state.error ? describeGeocodeError(state.error) : "Coordinate non trovate. Puoi inserirle manualmente."}</span><RefreshCw className="h-3.5 w-3.5" /></div>;
+  return <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-400"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Coordinate non disponibili. L'indirizzo verrà comunque salvato.</span></div>;
 }
