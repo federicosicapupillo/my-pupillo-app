@@ -192,10 +192,6 @@ function NewAnn() {
 
   const save = async (asDraft: boolean) => {
     if (!user) return;
-    if (!asDraft && !coords) {
-      toast.error("Posizione non valida: verifica l'indirizzo prima di pubblicare.");
-      return;
-    }
     if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
     setBusy(true);
     // Consume credits only when publishing (not draft). Urgent (flash/fast) costs more.
