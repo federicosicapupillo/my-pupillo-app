@@ -235,11 +235,13 @@ function MapPage() {
     const byId: Record<string, "job" | "location" | "profile" | "service_area"> = {};
     if (showR) {
       filteredRestaurants.forEach(r => {
-        if (r.service_area_lat == null || r.service_area_lng == null) return;
+        const lat = r.service_area_lat ?? r.latitude;
+        const lng = r.service_area_lng ?? r.longitude;
+        if (lat == null || lng == null) return;
         pts.push({
           id: r.id,
-          lat: r.service_area_lat,
-          lng: r.service_area_lng,
+          lat,
+          lng,
           category: "restaurant",
           title: r.business_name || r.full_name || "Locale",
           subtitle: [r.venue_type, r.price_range ? `Fascia: ${priceRangeLabel(r.price_range)}` : null, [r.neighborhood, r.city].filter(Boolean).join(", "), `${annCounts[r.id] || 0} annunci attivi`].filter(Boolean).join(" · "),
