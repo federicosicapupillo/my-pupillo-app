@@ -38,6 +38,8 @@ function NewAnn() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
+  const [accessChoice, setAccessChoice] = useState<"" | "15" | "over15">("");
+  const [accessReason, setAccessReason] = useState("");
   const [f, setF] = useState({
     service_date: "", service_time: "19:00", duration_hours: "4",
     speed: "normal", tariff_type: "hourly", tariff_amount: "12",
@@ -193,6 +195,14 @@ function NewAnn() {
   const save = async (asDraft: boolean) => {
     if (!user) return;
     if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
+    if (!accessChoice) { toast.error("Seleziona l'anticipo richiesto all'ingresso."); return; }
+    if (accessChoice === "over15" && accessReason.trim().length < 10) {
+      toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
+      return;
+    }
+    const accessText = accessChoice === "15"
+      ? "Presentarsi almeno 15 minuti prima del turno."
+      : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
     setBusy(true);
     // Consume credits only when publishing (not draft). Urgent (flash/fast) costs more.
     if (!asDraft) {
@@ -231,7 +241,7 @@ function NewAnn() {
       job_country: f.job_country || null,
       job_latitude: coords?.lat ?? null,
       job_longitude: coords?.lng ?? null,
-      job_access_restrictions: f.job_access_restrictions || null,
+      job_access_restrictions: accessText,
       job_additional_directions: f.job_additional_directions || null,
       job_location_notes: f.job_location_notes || null,
       job_contact_person_name: f.job_contact_person_name || null,
@@ -319,7 +329,22 @@ function NewAnn() {
             <div><Label>Provincia</Label><Input maxLength={3} value={f.job_province} onChange={e => setF({ ...f, job_province: e.target.value.toUpperCase() })} /></div>
             <div><Label>CAP</Label><Input value={f.job_postal_code} onChange={e => setF({ ...f, job_postal_code: e.target.value })} /></div>
           </div>
-          <div><Label>Restrizioni all'ingresso</Label><Textarea rows={2} placeholder="Es. Arrivare 15 minuti prima per accreditarsi" value={f.job_access_restrictions} onChange={e => setF({ ...f, job_access_restrictions: e.target.value })} /></div>
+          <div className="space-y-2">
+            <Label>Anticipo richiesto all'ingresso</Label>
+            <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
+              <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">Minimo 15 minuti</SelectItem>
+                <SelectItem value="over15">Oltre 15 minuti</SelectItem>
+              </SelectContent>
+            </Select>
+            {accessChoice === "over15" && (
+              <div>
+                <Label className="text-xs">Motivazione (obbligatoria)</Label>
+                <Textarea rows={2} required placeholder="Spiega perché serve un anticipo superiore ai 15 minuti (es. accredito, briefing, vestizione)…" value={accessReason} onChange={e => setAccessReason(e.target.value)} />
+              </div>
+            )}
+          </div>
           <div><Label>Indicazioni aggiuntive</Label><Textarea rows={2} placeholder="Es. Entrare dall'ingresso laterale" value={f.job_additional_directions} onChange={e => setF({ ...f, job_additional_directions: e.target.value })} /></div>
           <div><Label>Note per il lavoratore</Label><Textarea rows={2} value={f.job_location_notes} onChange={e => setF({ ...f, job_location_notes: e.target.value })} /></div>
           <div className="grid gap-3 md:grid-cols-3 pt-2 border-t">

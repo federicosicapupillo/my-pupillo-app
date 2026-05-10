@@ -152,6 +152,8 @@ function NewRestaurantJobRequest() {
   const [confirmDefaultsOpen, setConfirmDefaultsOpen] = useState(false);
   const pendingStatusRef = useRef<"bozza" | "pubblicato" | null>(null);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
+  const [accessChoice, setAccessChoice] = useState<"" | "15" | "over15">("");
+  const [accessReason, setAccessReason] = useState("");
   const [languageReqs, setLanguageReqs] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [dressItems, setDressItems] = useState<string[]>([]);
@@ -373,12 +375,20 @@ function NewRestaurantJobRequest() {
       toast.error("Inserisci un indirizzo email valido.");
       return false;
     }
+    if (!accessChoice) { toast.error("Seleziona l'anticipo richiesto all'ingresso."); return false; }
+    if (accessChoice === "over15" && accessReason.trim().length < 10) {
+      toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
+      return false;
+    }
     return true;
   };
 
   const save = async (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
     setBusy(true);
+    const accessText = accessChoice === "15"
+      ? "Presentarsi almeno 15 minuti prima del turno."
+      : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
     const announcementStatus = status === "pubblicato" ? "active" : "draft";
     const locationAddress = [f.address, f.district, f.city, f.province, f.postal_code, f.country].filter(Boolean).join(", ");
     const announcementPayload = {
@@ -416,7 +426,7 @@ function NewRestaurantJobRequest() {
       job_country: f.country || null,
       job_latitude: coords?.lat ?? null,
       job_longitude: coords?.lng ?? null,
-      job_access_restrictions: f.access_restrictions || null,
+      job_access_restrictions: accessText,
       job_additional_directions: f.additional_directions || null,
       job_location_notes: f.worker_notes || null,
       job_contact_person_name: f.contact_person_name || null,
@@ -466,7 +476,7 @@ function NewRestaurantJobRequest() {
       country: f.country || "Italia",
       latitude: coords?.lat ?? null,
       longitude: coords?.lng ?? null,
-      access_restrictions: f.access_restrictions || null,
+      access_restrictions: accessText,
       additional_directions: f.additional_directions || null,
       contact_person_name: f.contact_person_name || null,
       contact_person_phone: f.contact_person_phone || null,
@@ -673,7 +683,20 @@ function NewRestaurantJobRequest() {
           </div>
           {coords && <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={220} />}
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Restrizioni all’ingresso"><Textarea rows={2} value={f.access_restrictions} onChange={e => setField("access_restrictions", e.target.value)} /></Field>
+            <Field label="Anticipo richiesto all'ingresso">
+              <div className="space-y-2">
+                <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
+                  <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">Minimo 15 minuti</SelectItem>
+                    <SelectItem value="over15">Oltre 15 minuti</SelectItem>
+                  </SelectContent>
+                </Select>
+                {accessChoice === "over15" && (
+                  <Textarea rows={2} required placeholder="Motivazione obbligatoria (es. accredito, briefing, vestizione)…" value={accessReason} onChange={e => setAccessReason(e.target.value)} />
+                )}
+              </div>
+            </Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
             <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
             <Field label="Ruolo del referente">
