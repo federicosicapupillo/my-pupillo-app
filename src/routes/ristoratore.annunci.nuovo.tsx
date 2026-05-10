@@ -188,6 +188,7 @@ function NewRestaurantJobRequest() {
     piercings_allowed: "indifferente",
     beard_allowed: "solo_curata",
     dress_code_notes: "",
+    long_shift_reason: "",
   });
 
   const coords = useMemo(() => {
