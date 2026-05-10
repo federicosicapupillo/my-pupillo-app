@@ -16,7 +16,19 @@ export const Route = createFileRoute("/announcements")({
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
 });
 
-type Ann = { id: string; service_date: string; service_time: string; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null };
+type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null };
+
+function formatRange(a: Ann) {
+  const startD = new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT");
+  const startT = a.service_time?.slice(0, 5) ?? "";
+  if (!a.end_date || a.end_date === a.service_date) {
+    const endT = a.end_time?.slice(0, 5);
+    return `${startD} · ${startT}${endT ? `–${endT}` : ""}`;
+  }
+  const endD = new Date(a.end_date + "T00:00:00").toLocaleDateString("it-IT");
+  const endT = a.end_time?.slice(0, 5) ?? "";
+  return `${startD} ${startT} → ${endD} ${endT}`;
+}
 
 function expiresLabel(iso: string) {
   const ms = new Date(iso).getTime() - Date.now();
@@ -83,9 +95,9 @@ function AnnouncementsPage() {
             <div key={a.id} className="rounded-2xl border bg-card p-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />{new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}</div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />{formatRange(a)}</div>
                   <h3 className="mt-2 text-lg font-bold text-foreground">{a.professional_profile?.trim() || "Ruolo non specificato"}</h3>
-                  <p className="text-xs text-muted-foreground">Durata: {a.duration_hours}h</p>
+                  <p className="text-xs text-muted-foreground">Durata: {a.duration_hours}h{a.end_date && a.end_date !== a.service_date ? " · Turno notturno" : ""}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className={`text-xs rounded-full px-2 py-1 ${a.status === 'active' ? 'bg-green-100 text-green-800' : a.status === 'assigned' ? 'bg-blue-100 text-blue-800' : 'bg-muted text-muted-foreground'}`}>{a.status}</span>

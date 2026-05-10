@@ -58,6 +58,7 @@ type FormState = {
   role_required: string;
   workers_needed: string;
   shift_date: string;
+  end_date: string;
   start_time: string;
   end_time: string;
   hourly_rate: string;
@@ -98,6 +99,41 @@ function calculateDurationHours(start: string, end: string) {
   return diffMinutes > 0 ? Number((diffMinutes / 60).toFixed(2)) : 0;
 }
 
+function buildDateTime(date: string, time: string): Date | null {
+  if (!date || !time) return null;
+  const [y, m, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  if ([y, m, d, h, mi].some((n) => Number.isNaN(n))) return null;
+  return new Date(y, m - 1, d, h, mi, 0, 0);
+}
+
+function durationFromDateTimes(startDate: string, startTime: string, endDate: string, endTime: string) {
+  const s = buildDateTime(startDate, startTime);
+  const e = buildDateTime(endDate, endTime);
+  if (!s || !e) return 0;
+  const diffMin = Math.round((e.getTime() - s.getTime()) / 60000);
+  return diffMin > 0 ? Number((diffMin / 60).toFixed(2)) : 0;
+}
+
+function addDays(date: string, days: number): string {
+  if (!date) return "";
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
+export function formatShiftRange(startDate: string, startTime: string, endDate: string, endTime: string): string {
+  if (!startDate) return "—";
+  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("it-IT");
+  const st = (startTime || "").slice(0, 5);
+  const et = (endTime || "").slice(0, 5);
+  if (!endDate || endDate === startDate) {
+    return `${fmt(startDate)} · ${st}${et ? `–${et}` : ""}`;
+  }
+  return `${fmt(startDate)} ${st} → ${fmt(endDate)} ${et}`;
+}
+
 function splitLanguages(values: string[]) {
   return labelsOf(values, LANGUAGE_OPTIONS);
 }
@@ -123,6 +159,7 @@ function NewRestaurantJobRequest() {
     role_required: "",
     workers_needed: "1",
     shift_date: "",
+    end_date: "",
     start_time: "19:00",
     end_time: "23:00",
     hourly_rate: "12",
@@ -158,9 +195,32 @@ function NewRestaurantJobRequest() {
     return Number.isFinite(lat) && Number.isFinite(lng) && f.latitude !== "" && f.longitude !== "" ? { lat, lng } : null;
   }, [f.latitude, f.longitude]);
 
-  const durationHours = useMemo(() => calculateDurationHours(f.start_time, f.end_time), [f.start_time, f.end_time]);
+  const durationHours = useMemo(
+    () => durationFromDateTimes(f.shift_date, f.start_time, f.end_date || f.shift_date, f.end_time),
+    [f.shift_date, f.end_date, f.start_time, f.end_time],
+  );
+  const crossesMidnight = useMemo(() => {
+    if (!f.shift_date || !f.end_date) return false;
+    return f.end_date !== f.shift_date;
+  }, [f.shift_date, f.end_date]);
+  const sameDayEndBeforeStart = useMemo(() => {
+    if (!f.shift_date || !f.end_date || f.shift_date !== f.end_date) return false;
+    if (!f.start_time || !f.end_time) return false;
+    return f.end_time <= f.start_time;
+  }, [f.shift_date, f.end_date, f.start_time, f.end_time]);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => setF(prev => ({ ...prev, [key]: value }));
+  // Auto-fill end_date when start_date is selected/changed (only if empty or same as previous start)
+  useEffect(() => {
+    if (!f.shift_date) return;
+    setF(prev => {
+      if (!prev.end_date || prev.end_date < prev.shift_date) {
+        return { ...prev, end_date: prev.shift_date };
+      }
+      return prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.shift_date]);
   const toggleIn = (arr: string[], v: string, setter: (v: string[]) => void) => setter(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
 
   useEffect(() => {
@@ -216,6 +276,7 @@ function NewRestaurantJobRequest() {
         role_required: data.professional_profile || prev.role_required,
         title: data.professional_profile || prev.role_required || prev.title,
         shift_date: "",
+        end_date: "",
         start_time: start,
         end_time: end,
         hourly_rate: String(data.tariff_amount ?? prev.hourly_rate),
@@ -279,8 +340,11 @@ function NewRestaurantJobRequest() {
   const validate = () => {
     if (!user) return false;
     if (!f.role_required) { toast.error("Seleziona il ruolo cercato."); return false; }
-    if (!f.shift_date) { toast.error("Inserisci la data del turno"); return false; }
-    if (!f.start_time || !f.end_time || durationHours <= 0) { toast.error("Inserisci un orario valido"); return false; }
+    if (!f.shift_date) { toast.error("Inserisci la data di inizio turno."); return false; }
+    if (!f.start_time) { toast.error("Inserisci l'orario di inizio turno."); return false; }
+    if (!f.end_date) { toast.error("Inserisci la data di fine turno."); return false; }
+    if (!f.end_time) { toast.error("Inserisci l'orario di fine turno."); return false; }
+    if (durationHours <= 0) { toast.error("La fine del turno deve essere successiva all'inizio."); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
     if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
     if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
@@ -308,6 +372,8 @@ function NewRestaurantJobRequest() {
       restaurant_id: user.id,
       service_date: f.shift_date,
       service_time: f.start_time,
+      end_date: f.end_date || f.shift_date,
+      end_time: f.end_time,
       duration_hours: durationHours,
       speed: "normal" as const,
       tariff_type: "hourly" as const,
@@ -365,6 +431,7 @@ function NewRestaurantJobRequest() {
       description: null,
       tasks: null,
       shift_date: f.shift_date,
+      end_date: f.end_date || f.shift_date,
       start_time: f.start_time,
       end_time: f.end_time,
       hourly_rate: Number(f.hourly_rate),
@@ -493,9 +560,35 @@ function NewRestaurantJobRequest() {
             </Field>
             <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
             <Field label="Tariffa oraria proposta"><Input type="number" min="1" step="0.5" value={f.hourly_rate} onChange={e => setField("hourly_rate", e.target.value)} /></Field>
-            <Field label="Data del turno"><Input type="date" required value={f.shift_date} onChange={e => setField("shift_date", e.target.value)} /></Field>
-            <Field label="Ora inizio"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
-            <Field label="Ora fine"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
+            <Field label="Data inizio turno"><Input type="date" required value={f.shift_date} onChange={e => setField("shift_date", e.target.value)} /></Field>
+            <Field label="Ora inizio turno"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
+            <Field label="Data fine turno">
+              <Input type="date" required min={f.shift_date || undefined} value={f.end_date} onChange={e => setField("end_date", e.target.value)} />
+            </Field>
+            <Field label="Ora fine turno"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Se il turno termina dopo la mezzanotte, seleziona come data fine il giorno successivo.
+          </p>
+          {sameDayEndBeforeStart && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+              <div className="flex-1">
+                Il turno sembra terminare dopo mezzanotte. Vuoi impostare la data fine al giorno successivo?
+              </div>
+              <button
+                type="button"
+                className="rounded-md border border-amber-500/40 bg-background px-2 py-1 text-xs font-medium hover:bg-amber-500/10"
+                onClick={() => setField("end_date", addDays(f.shift_date, 1))}
+              >
+                Imposta giorno successivo
+              </button>
+            </div>
+          )}
+          {crossesMidnight && durationHours > 0 && (
+            <p className="text-xs text-primary">Turno notturno · {durationHours}h totali</p>
+          )}
+          <div className="hidden">
           </div>
         </section>
 
@@ -627,7 +720,7 @@ function NewRestaurantJobRequest() {
             <SectionTitle number="6" title="Anteprima annuncio" />
             <div className="grid gap-4 md:grid-cols-2 text-sm">
               <PreviewItem label="Ruolo cercato" value={f.role_required || "—"} />
-              <PreviewItem label="Data e orario" value={f.shift_date ? `${new Date(f.shift_date).toLocaleDateString("it-IT")} · ${f.start_time}–${f.end_time}` : "—"} />
+              <PreviewItem label="Data e orario" value={formatShiftRange(f.shift_date, f.start_time, f.end_date || f.shift_date, f.end_time)} />
               <PreviewItem label="Luogo" value={[f.restaurant_name, f.address, f.city].filter(Boolean).join(" · ") || "—"} />
               <PreviewItem label="Tariffa" value={f.hourly_rate ? `€${f.hourly_rate}/h` : "—"} />
               <PreviewItem label="Requisiti" value={[labelOf(f.license_requirement, LICENSE_OPTIONS), ...splitLanguages(languageReqs), ...labelsOf(skills, SKILL_OPTIONS)].filter(Boolean).join(" · ") || "—"} />

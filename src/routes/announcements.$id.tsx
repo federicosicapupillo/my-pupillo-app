@@ -26,6 +26,7 @@ export const Route = createFileRoute("/announcements/$id")({
 
 type Ann = {
   id: string; restaurant_id: string; service_date: string; service_time: string;
+  end_date?: string | null; end_time?: string | null;
   duration_hours: number; speed: string; tariff_type: string; tariff_amount: number;
   location_address: string; status: string; expires_at: string;
   professional_profile: string | null; languages: string[] | null; notes: string | null;
@@ -140,7 +141,7 @@ function AnnouncementDetail() {
     setApps(list);
     const { data: jr } = await (supabase as any)
       .from("job_requests")
-      .select("title,role_required,workers_needed,description,tasks,start_time,end_time,hourly_rate,break_included,operational_notes,restaurant_name,district,worker_notes")
+      .select("title,role_required,workers_needed,description,tasks,shift_date,end_date,start_time,end_time,hourly_rate,break_included,operational_notes,restaurant_name,district,worker_notes")
       .eq("announcement_id", id)
       .maybeSingle();
     setJobRequest((jr as JobRequest) ?? null);
@@ -278,7 +279,17 @@ function AnnouncementDetail() {
         <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
           <div className="font-medium text-base mb-1">Dettagli servizio</div>
           {jobRequest?.workers_needed && <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" />{jobRequest.workers_needed} lavorator{jobRequest.workers_needed === 1 ? "e" : "i"} richiest{jobRequest.workers_needed === 1 ? "o" : "i"}</div>}
-          <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" />{new Date(ann.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} · {(jobRequest?.start_time || ann.service_time)?.slice(0,5)}{jobRequest?.end_time ? `–${jobRequest.end_time.slice(0,5)}` : ""}</div>
+          <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" />{(() => {
+            const sd = new Date(ann.service_date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+            const st = ((jobRequest?.start_time || ann.service_time) ?? "").slice(0,5);
+            const endDate = (jobRequest as any)?.end_date || ann.end_date;
+            const et = (jobRequest?.end_time || ann.end_time || "").slice(0,5);
+            if (endDate && endDate !== ann.service_date) {
+              const ed = new Date(endDate + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "long" });
+              return <>Turno notturno: {sd} ore {st} → {ed} ore {et}</>;
+            }
+            return <>{sd} · {st}{et ? `–${et}` : ""}</>;
+          })()}</div>
           <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{ann.location_address}</div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />€{jobRequest?.hourly_rate ?? ann.tariff_amount} ({ann.tariff_type === "hourly" ? "/ora" : "a servizio"})</div>
           <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.expires_at).toLocaleDateString("it-IT")}</div>
