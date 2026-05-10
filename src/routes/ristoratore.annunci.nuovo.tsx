@@ -607,6 +607,36 @@ function NewRestaurantJobRequest() {
           {crossesMidnight && durationHours > 0 && (
             <p className="text-xs text-primary">Turno notturno · {durationHours}h totali</p>
           )}
+          {isLongShift && (
+            <div className="rounded-xl border-2 border-amber-500/50 bg-amber-500/10 p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground">Turno superiore a 8 ore</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Questo turno supera le 8 ore ({durationHours}h). Inserisci una motivazione o una nota organizzativa per spiegare la durata estesa del servizio.
+                  </p>
+                </div>
+                <span className="text-[10px] uppercase font-semibold rounded-full bg-amber-500/20 text-amber-700 px-2 py-1">Turno lungo</span>
+              </div>
+              <Field label="Motivazione turno superiore a 8 ore">
+                <Textarea
+                  rows={3}
+                  required
+                  maxLength={500}
+                  value={f.long_shift_reason}
+                  onChange={e => setField("long_shift_reason", e.target.value)}
+                  placeholder="Es. evento privato con servizio continuativo, doppio servizio pranzo/cena, catering esterno, turno notturno prolungato, necessità organizzativa particolare…"
+                />
+                <div className="flex items-center justify-between mt-1">
+                  {longReasonError ? (
+                    <p className="text-xs text-destructive">{longReasonError}</p>
+                  ) : <span className="text-xs text-muted-foreground">Min. 20 caratteri</span>}
+                  <span className="text-xs text-muted-foreground">{f.long_shift_reason.length}/500</span>
+                </div>
+              </Field>
+            </div>
+          )}
           <div className="hidden">
           </div>
         </section>
