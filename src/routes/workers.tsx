@@ -422,16 +422,15 @@ function WorkersPage() {
         </div>
         <div>
           <label className="text-sm font-medium">Lingua (filtro rapido)</label>
-          <select
-            value={langDraft}
-            onChange={(e) => setLangDraft(e.target.value)}
-            className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="">Tutte le lingue</option>
-            {LANGUAGE_OPTIONS.filter((l) => l !== "Altro").map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
+          <Select value={langDraft || "__all"} onValueChange={(v) => setLangDraft(v === "__all" ? "" : v)}>
+            <SelectTrigger className="mt-1 h-9 w-full"><SelectValue placeholder="Tutte le lingue" /></SelectTrigger>
+            <SelectContent className="z-[60] max-h-[60vh]">
+              <SelectItem value="__all">Tutte le lingue</SelectItem>
+              {LANGUAGE_OPTIONS.filter((l) => l !== "Altro").map((l) => (
+                <SelectItem key={l} value={l}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
