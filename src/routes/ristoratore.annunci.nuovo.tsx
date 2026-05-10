@@ -58,6 +58,7 @@ type FormState = {
   role_required: string;
   workers_needed: string;
   shift_date: string;
+  end_date: string;
   start_time: string;
   end_time: string;
   hourly_rate: string;
@@ -98,6 +99,30 @@ function calculateDurationHours(start: string, end: string) {
   return diffMinutes > 0 ? Number((diffMinutes / 60).toFixed(2)) : 0;
 }
 
+function buildDateTime(date: string, time: string): Date | null {
+  if (!date || !time) return null;
+  const [y, m, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  if ([y, m, d, h, mi].some((n) => Number.isNaN(n))) return null;
+  return new Date(y, m - 1, d, h, mi, 0, 0);
+}
+
+function durationFromDateTimes(startDate: string, startTime: string, endDate: string, endTime: string) {
+  const s = buildDateTime(startDate, startTime);
+  const e = buildDateTime(endDate, endTime);
+  if (!s || !e) return 0;
+  const diffMin = Math.round((e.getTime() - s.getTime()) / 60000);
+  return diffMin > 0 ? Number((diffMin / 60).toFixed(2)) : 0;
+}
+
+function addDays(date: string, days: number): string {
+  if (!date) return "";
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
 function splitLanguages(values: string[]) {
   return labelsOf(values, LANGUAGE_OPTIONS);
 }
@@ -123,6 +148,7 @@ function NewRestaurantJobRequest() {
     role_required: "",
     workers_needed: "1",
     shift_date: "",
+    end_date: "",
     start_time: "19:00",
     end_time: "23:00",
     hourly_rate: "12",
