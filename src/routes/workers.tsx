@@ -180,7 +180,6 @@ function WorkersPage() {
   useEffect(() => {
     (async () => {
       if (user) {
-        await runSearch({ category: "all", subcategory: "", text: "", language: "" });
         const { data } = await supabase.from("announcements").select("id, service_date, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
         setAnns((data as Ann[]) ?? []);
         if (data?.[0]) setSelected(data[0].id);
@@ -338,8 +337,9 @@ function WorkersPage() {
     setCatDraft("all"); setSubDraft("");
     setCategory("all"); setSubcategory("");
     setQInput(""); setQ("");
-    setLang(""); setLangDraft(""); setHasSearched(false);
-    void runSearch({ category: "all", subcategory: "", text: "", language: "" });
+    setLang(""); setLangDraft("");
+    setWorkers([]);
+    setHasSearched(false);
   };
   const onChangeCategory = (c: Category) => { setCatDraft(c); setSubDraft(""); };
   const removeCategoryChip = () => { setCatDraft("all"); setSubDraft(""); void runSearch({ category: "all", subcategory: "" }); };
@@ -504,7 +504,12 @@ function WorkersPage() {
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {searching ? "Ricerca in corso…" : `${sorted.length} ${sorted.length === 1 ? "lavoratore trovato" : "lavoratori trovati"}`}
+          {searching
+            ? "Ricerca in corso…"
+            : (() => {
+                const n = hasSearched ? sorted.length : 0;
+                return `${n} ${n === 1 ? "lavoratore trovato" : "lavoratori trovati"}`;
+              })()}
         </p>
         <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view==="list"?"secondary":"ghost"} onClick={()=>setView("list")} className="gap-1"><List className="h-4 w-4" />Lista</Button>
@@ -586,7 +591,12 @@ function WorkersPage() {
           </div>
           );
         })}
-        {hasSearched && !searching && sorted.length === 0 && <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a cambiare categoria, sottocategoria o parola chiave.</p>}
+        {!hasSearched && !searching && (
+          <p className="text-muted-foreground col-span-full">Imposta i filtri e clicca su Cerca per visualizzare i lavoratori disponibili.</p>
+        )}
+        {hasSearched && !searching && sorted.length === 0 && (
+          <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a modificare i filtri o la parola chiave.</p>
+        )}
       </div>
       )}
     </AppShell>
