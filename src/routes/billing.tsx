@@ -27,10 +27,10 @@ function Billing() {
   const [discountBusy, setDiscountBusy] = useState(false);
 
   const applyDiscount = async () => {
-    const code = discountInput.trim();
+    const code = discountInput.trim().toUpperCase();
     if (!code) { toast.error("Inserisci un codice."); return; }
     setDiscountBusy(true);
-    const { data, error } = await supabase.rpc("validate_discount_code", { _code: code, _applies_to: "premium" });
+    const { data, error } = await supabase.rpc("validate_discount_code", { _code: code, _applies_to: "all" });
     setDiscountBusy(false);
     if (error) { toast.error(error.message); return; }
     const res = data as any;
