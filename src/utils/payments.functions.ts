@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createServerSupabaseClient } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .inputValidator((data: {
@@ -29,8 +29,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     let discounts: { coupon: string }[] | undefined;
     if (data.discountCode) {
       try {
-        const sb = createServerSupabaseClient();
-        const { data: row } = await sb
+        const { data: row } = await supabaseAdmin
           .from("discount_codes")
           .select("code, discount_type, discount_value, applies_to, is_active, valid_from, valid_until, max_uses, used_count")
           .ilike("code", data.discountCode)
