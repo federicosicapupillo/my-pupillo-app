@@ -57,6 +57,7 @@ export type Database = {
           end_time: string | null
           expires_at: string
           id: string
+          is_long_shift: boolean
           job_access_restrictions: string | null
           job_additional_directions: string | null
           job_address: string | null
@@ -76,6 +77,7 @@ export type Database = {
           location_address: string
           location_lat: number | null
           location_lng: number | null
+          long_shift_reason: string | null
           notes: string | null
           piercings_allowed: string | null
           professional_profile: string | null
@@ -83,6 +85,7 @@ export type Database = {
           restaurant_id: string
           service_date: string
           service_time: string
+          shift_duration_hours: number | null
           speed: Database["public"]["Enums"]["service_speed"]
           status: Database["public"]["Enums"]["announcement_status"]
           tariff_amount: number
@@ -101,6 +104,7 @@ export type Database = {
           end_time?: string | null
           expires_at?: string
           id?: string
+          is_long_shift?: boolean
           job_access_restrictions?: string | null
           job_additional_directions?: string | null
           job_address?: string | null
@@ -120,6 +124,7 @@ export type Database = {
           location_address: string
           location_lat?: number | null
           location_lng?: number | null
+          long_shift_reason?: string | null
           notes?: string | null
           piercings_allowed?: string | null
           professional_profile?: string | null
@@ -127,6 +132,7 @@ export type Database = {
           restaurant_id: string
           service_date: string
           service_time: string
+          shift_duration_hours?: number | null
           speed?: Database["public"]["Enums"]["service_speed"]
           status?: Database["public"]["Enums"]["announcement_status"]
           tariff_amount: number
@@ -145,6 +151,7 @@ export type Database = {
           end_time?: string | null
           expires_at?: string
           id?: string
+          is_long_shift?: boolean
           job_access_restrictions?: string | null
           job_additional_directions?: string | null
           job_address?: string | null
@@ -164,6 +171,7 @@ export type Database = {
           location_address?: string
           location_lat?: number | null
           location_lng?: number | null
+          long_shift_reason?: string | null
           notes?: string | null
           piercings_allowed?: string | null
           professional_profile?: string | null
@@ -171,6 +179,7 @@ export type Database = {
           restaurant_id?: string
           service_date?: string
           service_time?: string
+          shift_duration_hours?: number | null
           speed?: Database["public"]["Enums"]["service_speed"]
           status?: Database["public"]["Enums"]["announcement_status"]
           tariff_amount?: number
@@ -391,9 +400,11 @@ export type Database = {
           end_time: string
           hourly_rate: number
           id: string
+          is_long_shift: boolean
           language_requirements: string[]
           latitude: number | null
           license_requirement: string | null
+          long_shift_reason: string | null
           longitude: number | null
           operational_notes: string | null
           piercings_allowed: string | null
@@ -405,6 +416,7 @@ export type Database = {
           restaurant_profile_id: string
           role_required: string
           shift_date: string
+          shift_duration_hours: number | null
           start_time: string
           status: string
           tasks: string | null
@@ -438,9 +450,11 @@ export type Database = {
           end_time: string
           hourly_rate: number
           id?: string
+          is_long_shift?: boolean
           language_requirements?: string[]
           latitude?: number | null
           license_requirement?: string | null
+          long_shift_reason?: string | null
           longitude?: number | null
           operational_notes?: string | null
           piercings_allowed?: string | null
@@ -452,6 +466,7 @@ export type Database = {
           restaurant_profile_id: string
           role_required: string
           shift_date: string
+          shift_duration_hours?: number | null
           start_time: string
           status?: string
           tasks?: string | null
@@ -485,9 +500,11 @@ export type Database = {
           end_time?: string
           hourly_rate?: number
           id?: string
+          is_long_shift?: boolean
           language_requirements?: string[]
           latitude?: number | null
           license_requirement?: string | null
+          long_shift_reason?: string | null
           longitude?: number | null
           operational_notes?: string | null
           piercings_allowed?: string | null
@@ -499,6 +516,7 @@ export type Database = {
           restaurant_profile_id?: string
           role_required?: string
           shift_date?: string
+          shift_duration_hours?: number | null
           start_time?: string
           status?: string
           tasks?: string | null
