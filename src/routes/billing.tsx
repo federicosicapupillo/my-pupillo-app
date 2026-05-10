@@ -63,6 +63,14 @@ function Billing() {
   const isPaid = plan === "pro" || plan === "business";
 
   if (checkoutKey) {
+    const isPlan = !!PLAN_PRICES[checkoutKey];
+    const discountAppliesToCheckout = !!(
+      discount && (
+        discount.applies_to === "all" ||
+        (isPlan && discount.applies_to === "premium") ||
+        (!isPlan && discount.applies_to === "credits")
+      )
+    );
     return (
       <AppShell>
         <Button variant="ghost" size="sm" className="mb-3 gap-2" onClick={() => setCheckoutKey(null)}>
@@ -73,7 +81,7 @@ function Billing() {
             priceId={checkoutKey}
             customerEmail={user?.email ?? undefined}
             userId={user?.id}
-            discountCode={discount && (discount.applies_to === "all" || discount.applies_to === "premium") && PLAN_PRICES[checkoutKey] ? discount.code : undefined}
+            discountCode={discountAppliesToCheckout ? discount!.code : undefined}
             returnUrl={typeof window !== "undefined" ? `${window.location.origin}/billing` : undefined}
           />
         </div>
