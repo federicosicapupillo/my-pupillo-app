@@ -671,7 +671,6 @@ function NewRestaurantJobRequest() {
             <Field label="CAP"><Input value={f.postal_code} onChange={e => setField("postal_code", e.target.value)} /></Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
           </div>
-          <GeoStatus state={geoState} />
           {coords && <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={220} />}
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Restrizioni all’ingresso"><Textarea rows={2} value={f.access_restrictions} onChange={e => setField("access_restrictions", e.target.value)} /></Field>
