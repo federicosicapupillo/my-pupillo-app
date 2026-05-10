@@ -329,7 +329,22 @@ function NewAnn() {
             <div><Label>Provincia</Label><Input maxLength={3} value={f.job_province} onChange={e => setF({ ...f, job_province: e.target.value.toUpperCase() })} /></div>
             <div><Label>CAP</Label><Input value={f.job_postal_code} onChange={e => setF({ ...f, job_postal_code: e.target.value })} /></div>
           </div>
-          <div><Label>Restrizioni all'ingresso</Label><Textarea rows={2} placeholder="Es. Arrivare 15 minuti prima per accreditarsi" value={f.job_access_restrictions} onChange={e => setF({ ...f, job_access_restrictions: e.target.value })} /></div>
+          <div className="space-y-2">
+            <Label>Anticipo richiesto all'ingresso</Label>
+            <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
+              <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">Minimo 15 minuti</SelectItem>
+                <SelectItem value="over15">Oltre 15 minuti</SelectItem>
+              </SelectContent>
+            </Select>
+            {accessChoice === "over15" && (
+              <div>
+                <Label className="text-xs">Motivazione (obbligatoria)</Label>
+                <Textarea rows={2} required placeholder="Spiega perché serve un anticipo superiore ai 15 minuti (es. accredito, briefing, vestizione)…" value={accessReason} onChange={e => setAccessReason(e.target.value)} />
+              </div>
+            )}
+          </div>
           <div><Label>Indicazioni aggiuntive</Label><Textarea rows={2} placeholder="Es. Entrare dall'ingresso laterale" value={f.job_additional_directions} onChange={e => setF({ ...f, job_additional_directions: e.target.value })} /></div>
           <div><Label>Note per il lavoratore</Label><Textarea rows={2} value={f.job_location_notes} onChange={e => setF({ ...f, job_location_notes: e.target.value })} /></div>
           <div className="grid gap-3 md:grid-cols-3 pt-2 border-t">
