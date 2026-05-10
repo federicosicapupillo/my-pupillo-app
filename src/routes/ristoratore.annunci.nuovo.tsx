@@ -86,6 +86,7 @@ type FormState = {
   piercings_allowed: string;
   beard_allowed: string;
   dress_code_notes: string;
+  long_shift_reason: string;
 };
 
 function calculateDurationHours(start: string, end: string) {
@@ -187,6 +188,7 @@ function NewRestaurantJobRequest() {
     piercings_allowed: "indifferente",
     beard_allowed: "solo_curata",
     dress_code_notes: "",
+    long_shift_reason: "",
   });
 
   const coords = useMemo(() => {
@@ -208,6 +210,15 @@ function NewRestaurantJobRequest() {
     if (!f.start_time || !f.end_time) return false;
     return f.end_time <= f.start_time;
   }, [f.shift_date, f.end_date, f.start_time, f.end_time]);
+  const isLongShift = durationHours > 8;
+  const longReasonTrimmed = f.long_shift_reason.trim();
+  const longReasonError = isLongShift
+    ? (longReasonTrimmed.length === 0
+        ? "Il turno supera le 8 ore. Inserisci una motivazione."
+        : longReasonTrimmed.length < 20
+          ? "La motivazione deve contenere almeno 20 caratteri."
+          : null)
+    : null;
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => setF(prev => ({ ...prev, [key]: value }));
   // Auto-fill end_date when start_date is selected/changed (only if empty or same as previous start)
@@ -289,6 +300,7 @@ function NewRestaurantJobRequest() {
         piercings_allowed: (data as any).piercings_allowed ?? prev.piercings_allowed,
         beard_allowed: (data as any).beard_allowed ?? prev.beard_allowed,
         dress_code_notes: (data as any).dress_code_notes ?? prev.dress_code_notes,
+        long_shift_reason: (data as any).long_shift_reason ?? prev.long_shift_reason,
         city: (data as any).job_city ?? prev.city,
         province: (data as any).job_province ?? prev.province,
         postal_code: (data as any).job_postal_code ?? prev.postal_code,
@@ -345,6 +357,7 @@ function NewRestaurantJobRequest() {
     if (!f.end_date) { toast.error("Inserisci la data di fine turno."); return false; }
     if (!f.end_time) { toast.error("Inserisci l'orario di fine turno."); return false; }
     if (durationHours <= 0) { toast.error("La fine del turno deve essere successiva all'inizio."); return false; }
+    if (longReasonError) { toast.error(longReasonError); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
     if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
     if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
@@ -375,6 +388,9 @@ function NewRestaurantJobRequest() {
       end_date: f.end_date || f.shift_date,
       end_time: f.end_time,
       duration_hours: durationHours,
+      shift_duration_hours: durationHours,
+      is_long_shift: isLongShift,
+      long_shift_reason: isLongShift ? longReasonTrimmed : null,
       speed: "normal" as const,
       tariff_type: "hourly" as const,
       tariff_amount: Number(f.hourly_rate),
@@ -437,6 +453,9 @@ function NewRestaurantJobRequest() {
       hourly_rate: Number(f.hourly_rate),
       break_included: f.break_included,
       operational_notes: f.operational_notes || null,
+      shift_duration_hours: durationHours,
+      is_long_shift: isLongShift,
+      long_shift_reason: isLongShift ? longReasonTrimmed : null,
       status,
       restaurant_name: f.restaurant_name || null,
       address: f.address,
@@ -588,6 +607,36 @@ function NewRestaurantJobRequest() {
           {crossesMidnight && durationHours > 0 && (
             <p className="text-xs text-primary">Turno notturno · {durationHours}h totali</p>
           )}
+          {isLongShift && (
+            <div className="rounded-xl border-2 border-amber-500/50 bg-amber-500/10 p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground">Turno superiore a 8 ore</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Questo turno supera le 8 ore ({durationHours}h). Inserisci una motivazione o una nota organizzativa per spiegare la durata estesa del servizio.
+                  </p>
+                </div>
+                <span className="text-[10px] uppercase font-semibold rounded-full bg-amber-500/20 text-amber-700 px-2 py-1">Turno lungo</span>
+              </div>
+              <Field label="Motivazione turno superiore a 8 ore">
+                <Textarea
+                  rows={3}
+                  required
+                  maxLength={500}
+                  value={f.long_shift_reason}
+                  onChange={e => setField("long_shift_reason", e.target.value)}
+                  placeholder="Es. evento privato con servizio continuativo, doppio servizio pranzo/cena, catering esterno, turno notturno prolungato, necessità organizzativa particolare…"
+                />
+                <div className="flex items-center justify-between mt-1">
+                  {longReasonError ? (
+                    <p className="text-xs text-destructive">{longReasonError}</p>
+                  ) : <span className="text-xs text-muted-foreground">Min. 20 caratteri</span>}
+                  <span className="text-xs text-muted-foreground">{f.long_shift_reason.length}/500</span>
+                </div>
+              </Field>
+            </div>
+          )}
           <div className="hidden">
           </div>
         </section>
@@ -726,6 +775,9 @@ function NewRestaurantJobRequest() {
               <PreviewItem label="Requisiti" value={[labelOf(f.license_requirement, LICENSE_OPTIONS), ...splitLanguages(languageReqs), ...labelsOf(skills, SKILL_OPTIONS)].filter(Boolean).join(" · ") || "—"} />
               <PreviewItem label="Dress code" value={[...labelsOf(dressItems, DRESS_CODE_OPTIONS), f.dress_code_notes].filter(Boolean).join(" · ") || "—"} />
               <PreviewItem label="Note operative" value={f.operational_notes || f.worker_notes || "—"} wide />
+              {isLongShift && (
+                <PreviewItem label="Turno lungo (+8 ore)" value={`Durata ${durationHours}h · ${longReasonTrimmed || "Motivazione mancante"}`} wide />
+              )}
             </div>
           </section>
         )}
