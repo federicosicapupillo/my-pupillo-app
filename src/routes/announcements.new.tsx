@@ -38,6 +38,8 @@ function NewAnn() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
+  const [accessChoice, setAccessChoice] = useState<"" | "15" | "over15">("");
+  const [accessReason, setAccessReason] = useState("");
   const [f, setF] = useState({
     service_date: "", service_time: "19:00", duration_hours: "4",
     speed: "normal", tariff_type: "hourly", tariff_amount: "12",
