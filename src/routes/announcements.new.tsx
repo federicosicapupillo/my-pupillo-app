@@ -308,11 +308,6 @@ function NewAnn() {
         <div>
           <Label>Indirizzo del servizio</Label>
           <Input required value={f.location_address} onChange={e => setF({ ...f, location_address: e.target.value })} />
-          <GeoBadge
-            state={geoState}
-            hasAddress={f.location_address.trim().length >= 3}
-            onRetry={() => runGeocode(f.location_address.trim())}
-          />
           {coords && (
             <div className="mt-2"><AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.location_address} /></div>
           )}
@@ -446,12 +441,6 @@ function NewAnn() {
           </div>
         </div>
 
-        {!coords && f.location_address.trim().length >= 3 && geoState.status !== "loading" && (
-          <p className="text-xs text-destructive flex items-center gap-1.5">
-            <AlertCircle className="h-3.5 w-3.5" />
-            Devi confermare una posizione valida sulla mappa per pubblicare.
-          </p>
-        )}
         <div className="flex flex-col sm:flex-row gap-2">
           <Link to="/announcements" className="sm:w-auto w-full">
             <Button type="button" variant="ghost" disabled={busy} className="w-full">Annulla</Button>
@@ -459,8 +448,8 @@ function NewAnn() {
           <Button type="button" variant="outline" disabled={busy} onClick={()=>save(true)} className="sm:w-auto w-full">
             Salva come bozza
           </Button>
-          <Button type="submit" disabled={busy || !coords || !canAfford} className="flex-1 gap-1">
-            {busy ? "Pubblicazione…" : geoState.status === "loading" ? "Ricerca posizione…" : !coords ? "Posizione richiesta" : !canAfford ? "Crediti insufficienti" : (
+          <Button type="submit" disabled={busy || !canAfford} className="flex-1 gap-1">
+            {busy ? "Pubblicazione…" : !canAfford ? "Crediti insufficienti" : (
               <>Pubblica annuncio {!isPaid && <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span>}</>
             )}
           </Button>
