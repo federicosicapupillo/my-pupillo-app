@@ -709,7 +709,7 @@ function NewRestaurantJobRequest() {
             <SectionTitle number="6" title="Anteprima annuncio" />
             <div className="grid gap-4 md:grid-cols-2 text-sm">
               <PreviewItem label="Ruolo cercato" value={f.role_required || "—"} />
-              <PreviewItem label="Data e orario" value={f.shift_date ? `${new Date(f.shift_date).toLocaleDateString("it-IT")} · ${f.start_time}–${f.end_time}` : "—"} />
+              <PreviewItem label="Data e orario" value={formatShiftRange(f.shift_date, f.start_time, f.end_date || f.shift_date, f.end_time)} />
               <PreviewItem label="Luogo" value={[f.restaurant_name, f.address, f.city].filter(Boolean).join(" · ") || "—"} />
               <PreviewItem label="Tariffa" value={f.hourly_rate ? `€${f.hourly_rate}/h` : "—"} />
               <PreviewItem label="Requisiti" value={[labelOf(f.license_requirement, LICENSE_OPTIONS), ...splitLanguages(languageReqs), ...labelsOf(skills, SKILL_OPTIONS)].filter(Boolean).join(" · ") || "—"} />
