@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
-import { AlertCircle, CheckCircle2, Eye, Loader2, MapPin, RefreshCw, Save, Send, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, Loader2, Save, Send, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { buildDefaultsUpdate, hasSavedDefaults } from "@/lib/restaurant-defaults";
 import {
@@ -728,5 +728,5 @@ function GeoStatus({ state }: { state: { status: "idle" | "loading" | "ok" | "er
   if (state.status === "ok") {
     return <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary"><CheckCircle2 className="h-3 w-3" />Coordinate aggiornate</div>;
   }
-  return <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{state.error ? describeGeocodeError(state.error) : "Coordinate non trovate. Puoi inserirle manualmente."}</span><RefreshCw className="h-3.5 w-3.5" /></div>;
+  return <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-400"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Coordinate non disponibili. L'indirizzo verrà comunque salvato.</span></div>;
 }
