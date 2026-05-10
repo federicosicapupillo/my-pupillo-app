@@ -31,7 +31,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { user, role: userRole, profile, loading, refresh } = useAuth();
+  const { user, role: userRole, profile, loading, extrasLoaded, refresh } = useAuth();
   const { role: roleParam, ref: refParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
@@ -55,6 +55,10 @@ function AuthPage() {
 
   useEffect(() => {
     if (loading || !user) return;
+    // Wait until role+profile have actually finished loading from the DB
+    // before deciding anything. Otherwise role is momentarily null right
+    // after login and we wrongly show "Ruolo account non configurato".
+    if (!extrasLoaded) return;
     // If the user just submitted the signup form, skip auto-redirects
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
@@ -78,7 +82,7 @@ function AuthPage() {
       // Authenticated but no role row yet — surface a clear error.
       toast.error("Ruolo account non configurato. Contatta l'assistenza.");
     }
-  }, [user, userRole, profile, loading, navigate, roleParam]);
+  }, [user, userRole, profile, loading, extrasLoaded, navigate, roleParam]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
