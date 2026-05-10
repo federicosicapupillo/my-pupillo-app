@@ -123,6 +123,17 @@ function addDays(date: string, days: number): string {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
 }
 
+export function formatShiftRange(startDate: string, startTime: string, endDate: string, endTime: string): string {
+  if (!startDate) return "—";
+  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("it-IT");
+  const st = (startTime || "").slice(0, 5);
+  const et = (endTime || "").slice(0, 5);
+  if (!endDate || endDate === startDate) {
+    return `${fmt(startDate)} · ${st}${et ? `–${et}` : ""}`;
+  }
+  return `${fmt(startDate)} ${st} → ${fmt(endDate)} ${et}`;
+}
+
 function splitLanguages(values: string[]) {
   return labelsOf(values, LANGUAGE_OPTIONS);
 }
