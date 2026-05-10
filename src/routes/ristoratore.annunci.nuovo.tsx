@@ -210,6 +210,15 @@ function NewRestaurantJobRequest() {
     if (!f.start_time || !f.end_time) return false;
     return f.end_time <= f.start_time;
   }, [f.shift_date, f.end_date, f.start_time, f.end_time]);
+  const isLongShift = durationHours > 8;
+  const longReasonTrimmed = f.long_shift_reason.trim();
+  const longReasonError = isLongShift
+    ? (longReasonTrimmed.length === 0
+        ? "Il turno supera le 8 ore. Inserisci una motivazione."
+        : longReasonTrimmed.length < 20
+          ? "La motivazione deve contenere almeno 20 caratteri."
+          : null)
+    : null;
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => setF(prev => ({ ...prev, [key]: value }));
   // Auto-fill end_date when start_date is selected/changed (only if empty or same as previous start)
