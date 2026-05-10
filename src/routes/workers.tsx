@@ -134,17 +134,22 @@ function WorkersPage() {
   const runSearch = async (overrides?: { category?: Category; subcategory?: string; text?: string; language?: string }) => {
     const nextCategory = overrides?.category ?? catDraft;
     const nextSubcategory = overrides?.subcategory ?? subDraft;
-    const nextText = overrides?.text ?? qInput;
+    const nextText = (overrides?.text ?? qInput).trim();
     const nextLanguage = overrides?.language ?? langDraft;
     setSearching(true);
     try {
-      const { data, error } = await supabase
+      // Only restrict to workers with a primary_role when the user is filtering by role/skill,
+      // otherwise show every active worker so "Cerca" without filtri returns the full list.
+      let query = supabase
         .from("profiles")
         .select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m")
         .eq("account_status", "active")
-        .not("primary_role", "is", null)
         .order("last_active_at", { ascending: false })
-        .limit(500);
+        .limit(1000);
+      if (nextCategory === "role" || nextCategory === "skill") {
+        query = query.not("primary_role", "is", null);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       const results = ((data as W[]) ?? []).filter((worker) => {
         if (!matchesSubcategory(worker, nextCategory, nextSubcategory)) return false;
@@ -163,6 +168,7 @@ function WorkersPage() {
       setLang(nextLanguage);
       setHasSearched(true);
     } catch (error) {
+      console.error("[workers] runSearch error", error);
       toast.error(error instanceof Error ? error.message : "Errore durante la ricerca lavoratori");
       setWorkers([]);
       setHasSearched(true);
