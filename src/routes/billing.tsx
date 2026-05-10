@@ -27,9 +27,11 @@ function Billing() {
   const [discountBusy, setDiscountBusy] = useState(false);
 
   const applyDiscount = async () => {
-    const code = discountInput.trim();
+    const code = discountInput.trim().toUpperCase();
     if (!code) { toast.error("Inserisci un codice."); return; }
     setDiscountBusy(true);
+    // Validiamo con "premium": l'RPC accetta automaticamente anche i codici con applies_to='all',
+    // così PUPILLO10 (all) e START20 (premium) funzionano entrambi.
     const { data, error } = await supabase.rpc("validate_discount_code", { _code: code, _applies_to: "premium" });
     setDiscountBusy(false);
     if (error) { toast.error(error.message); return; }
@@ -61,6 +63,14 @@ function Billing() {
   const isPaid = plan === "pro" || plan === "business";
 
   if (checkoutKey) {
+    const isPlan = !!PLAN_PRICES[checkoutKey];
+    const discountAppliesToCheckout = !!(
+      discount && (
+        discount.applies_to === "all" ||
+        (isPlan && discount.applies_to === "premium") ||
+        (!isPlan && discount.applies_to === "credits")
+      )
+    );
     return (
       <AppShell>
         <Button variant="ghost" size="sm" className="mb-3 gap-2" onClick={() => setCheckoutKey(null)}>
@@ -71,7 +81,7 @@ function Billing() {
             priceId={checkoutKey}
             customerEmail={user?.email ?? undefined}
             userId={user?.id}
-            discountCode={discount && (discount.applies_to === "all" || discount.applies_to === "premium") && PLAN_PRICES[checkoutKey] ? discount.code : undefined}
+            discountCode={discountAppliesToCheckout ? discount!.code : undefined}
             returnUrl={typeof window !== "undefined" ? `${window.location.origin}/billing` : undefined}
           />
         </div>
@@ -118,24 +128,8 @@ function Billing() {
         </div>
       </div>
 
-      <h2 className="text-lg font-semibold mb-3">Pacchetti crediti</h2>
-      <div className="grid gap-4 md:grid-cols-3 mb-10">
-        {Object.entries(CREDIT_PACKS).map(([key, p]) => {
-          const final = p.priceEur;
-          return (
-            <div key={key} className="rounded-2xl border bg-card p-5 flex flex-col">
-              <div className="text-2xl font-bold">{p.credits} <span className="text-sm font-normal text-muted-foreground">crediti</span></div>
-              <div className="text-sm text-muted-foreground mb-4">{p.label}</div>
-              <div className="text-3xl font-bold mb-4">€{final}</div>
-              <Button className="mt-auto" onClick={() => setCheckoutKey(key)}>Acquista</Button>
-            </div>
-          );
-        })}
-      </div>
-
-      <h2 className="text-lg font-semibold mb-3">Piani in abbonamento</h2>
-      <div className="rounded-2xl border bg-card p-4 mb-4">
-        <div className="text-sm font-medium mb-2">Codice sconto abbonamenti</div>
+      <div className="rounded-2xl border bg-card p-4 mb-6">
+        <div className="text-sm font-medium mb-2">Hai un codice sconto?</div>
         <div className="flex gap-2">
           <Input
             placeholder="Es. PUPILLO10"
@@ -150,13 +144,52 @@ function Billing() {
           )}
         </div>
         {discount && (
-          <p className="text-xs text-emerald-700 mt-2">
-            Codice <strong>{discount.code}</strong> applicato:{" "}
-            {discount.type === "percentage" && `sconto del ${discount.value}% sul primo pagamento`}
-            {discount.type === "fixed_amount" && `sconto di €${discount.value}`}
-          </p>
+          <div className="mt-2 text-xs space-y-0.5">
+            <p className="text-emerald-700">
+              Codice <strong>{discount.code}</strong> applicato:{" "}
+              {discount.type === "percentage" && `sconto del ${discount.value}% sul primo pagamento`}
+              {discount.type === "fixed_amount" && `sconto di €${discount.value}`}
+            </p>
+            <p className="text-muted-foreground">
+              {discount.applies_to === "all"
+                ? "Valido su pacchetti crediti e abbonamenti."
+                : discount.applies_to === "premium"
+                  ? "Valido solo sugli abbonamenti."
+                  : "Valido solo sui pacchetti crediti."}
+            </p>
+          </div>
         )}
       </div>
+
+      <h2 className="text-lg font-semibold mb-3">Pacchetti crediti</h2>
+      <div className="grid gap-4 md:grid-cols-3 mb-10">
+        {Object.entries(CREDIT_PACKS).map(([key, p]) => {
+          const applies = !!(discount && (discount.applies_to === "all" || discount.applies_to === "credits"));
+          let final = p.priceEur;
+          if (applies && discount) {
+            if (discount.type === "percentage") final = +(p.priceEur * (1 - discount.value / 100)).toFixed(2);
+            else if (discount.type === "fixed_amount") final = Math.max(0, +(p.priceEur - discount.value).toFixed(2));
+          }
+          return (
+            <div key={key} className="rounded-2xl border bg-card p-5 flex flex-col">
+              <div className="text-2xl font-bold">{p.credits} <span className="text-sm font-normal text-muted-foreground">crediti</span></div>
+              <div className="text-sm text-muted-foreground mb-4">{p.label}</div>
+              {applies && final !== p.priceEur ? (
+                <div className="mb-4">
+                  <div className="text-sm text-muted-foreground line-through">€{p.priceEur}</div>
+                  <div className="text-3xl font-bold text-emerald-600">€{final}</div>
+                  <div className="text-xs text-emerald-700">Sconto {discount!.code} applicato</div>
+                </div>
+              ) : (
+                <div className="text-3xl font-bold mb-4">€{final}</div>
+              )}
+              <Button className="mt-auto" onClick={() => setCheckoutKey(key)}>Acquista</Button>
+            </div>
+          );
+        })}
+      </div>
+
+      <h2 className="text-lg font-semibold mb-3">Piani in abbonamento</h2>
       <div className="grid gap-4 md:grid-cols-2 mb-10">
         {Object.entries(PLAN_PRICES).map(([key, p]) => {
           const current = plan === p.plan;
