@@ -193,6 +193,14 @@ function NewAnn() {
   const save = async (asDraft: boolean) => {
     if (!user) return;
     if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
+    if (!accessChoice) { toast.error("Seleziona l'anticipo richiesto all'ingresso."); return; }
+    if (accessChoice === "over15" && accessReason.trim().length < 10) {
+      toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
+      return;
+    }
+    const accessText = accessChoice === "15"
+      ? "Presentarsi almeno 15 minuti prima del turno."
+      : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
     setBusy(true);
     // Consume credits only when publishing (not draft). Urgent (flash/fast) costs more.
     if (!asDraft) {
