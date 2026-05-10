@@ -246,7 +246,7 @@ function Browse() {
             const a = withCoords[0];
             return <AnnouncementMap lat={a.location_lat!} lng={a.location_lng!} address={a.location_address} height={420} />;
           })()}
-          <div className="p-3 text-xs text-muted-foreground">Vista mappa: mostra la prima offerta con coordinate. Usa la lista per candidarti.</div>
+          <div className="p-3 text-xs text-muted-foreground">Vista mappa: mostra la prima offerta disponibile. Usa la lista per candidarti.</div>
         </div>
       )}
 

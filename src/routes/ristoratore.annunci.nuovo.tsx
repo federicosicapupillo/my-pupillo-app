@@ -671,7 +671,6 @@ function NewRestaurantJobRequest() {
             <Field label="CAP"><Input value={f.postal_code} onChange={e => setField("postal_code", e.target.value)} /></Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
           </div>
-          <GeoStatus state={geoState} />
           {coords && <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={220} />}
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Restrizioni all’ingresso"><Textarea rows={2} value={f.access_restrictions} onChange={e => setField("access_restrictions", e.target.value)} /></Field>
@@ -865,13 +864,3 @@ function SaveDefaultToggle({ checked, onChange }: { checked: boolean; onChange: 
   );
 }
 
-function GeoStatus({ state }: { state: { status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError } }) {
-  if (state.status === "idle") return null;
-  if (state.status === "loading") {
-    return <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary"><Loader2 className="h-3 w-3 animate-spin" />Ricerca coordinate{state.attempt > 1 ? ` · tentativo ${state.attempt}/3` : ""}</div>;
-  }
-  if (state.status === "ok") {
-    return <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary"><CheckCircle2 className="h-3 w-3" />Coordinate aggiornate</div>;
-  }
-  return <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-400"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Coordinate non disponibili. L'indirizzo verrà comunque salvato.</span></div>;
-}

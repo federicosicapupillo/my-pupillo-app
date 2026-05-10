@@ -551,7 +551,7 @@ function WorkersPage() {
               <div className="p-3 text-xs text-muted-foreground">Posizione dell'annuncio selezionato. I lavoratori "in zona" sono evidenziati nella vista lista.</div>
             </>
           ) : (
-            <div className="p-12 text-center text-muted-foreground">Seleziona un annuncio con coordinate per vederne la posizione sulla mappa.</div>
+            <div className="p-12 text-center text-muted-foreground">Seleziona un annuncio per vederne la posizione sulla mappa.</div>
           )}
         </div>
       ) : (
