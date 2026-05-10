@@ -356,6 +356,7 @@ function NewRestaurantJobRequest() {
     if (!f.end_date) { toast.error("Inserisci la data di fine turno."); return false; }
     if (!f.end_time) { toast.error("Inserisci l'orario di fine turno."); return false; }
     if (durationHours <= 0) { toast.error("La fine del turno deve essere successiva all'inizio."); return false; }
+    if (longReasonError) { toast.error(longReasonError); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
     if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
     if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
