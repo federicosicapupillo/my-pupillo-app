@@ -315,6 +315,19 @@ function AnnouncementDetail() {
           )}
         </div>
 
+        {(ann.is_long_shift || (ann.shift_duration_hours ?? ann.duration_hours) > 8) && (
+          <div className="rounded-2xl border-2 border-amber-500/50 bg-amber-500/10 p-5 space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold text-base text-foreground">Turno superiore a 8 ore</div>
+              <span className="text-[10px] uppercase font-semibold rounded-full bg-amber-500/20 text-amber-700 px-2 py-1">Turno lungo</span>
+            </div>
+            <p className="text-muted-foreground">Questo turno ha una durata prevista di {ann.shift_duration_hours ?? ann.duration_hours} ore.</p>
+            {ann.long_shift_reason && (
+              <p className="pt-2 border-t whitespace-pre-wrap"><strong className="text-foreground">Motivazione del ristoratore:</strong> {ann.long_shift_reason}</p>
+            )}
+          </div>
+        )}
+
         {restaurant && (
           <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
             <div className="flex items-center justify-between mb-1">
