@@ -63,6 +63,7 @@ type Ctx = {
   role: Role | null;
   profile: Profile | null;
   loading: boolean;
+  extrasLoaded: boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -75,8 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [extrasLoaded, setExtrasLoaded] = useState(false);
 
   const loadExtras = async (uid: string) => {
+    setExtrasLoaded(false);
     const [{ data: roles }, { data: prof }] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", uid),
       supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
@@ -84,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const r = roles?.[0]?.role as Role | undefined;
     setRole(r ?? null);
     setProfile((prof as Profile) ?? null);
+    setExtrasLoaded(true);
   };
 
   const refresh = async () => {
@@ -99,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setRole(null);
         setProfile(null);
+        setExtrasLoaded(false);
       }
     });
     supabase.auth.getSession().then(({ data }) => {
@@ -115,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profile, loading, refresh, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, profile, loading, extrasLoaded, refresh, signOut }}>
       {children}
     </AuthContext.Provider>
   );
