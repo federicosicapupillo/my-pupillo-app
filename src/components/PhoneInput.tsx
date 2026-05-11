@@ -18,7 +18,7 @@ export function PhoneInput({ code, number, onCodeChange, onNumberChange, require
       <select
         value={safeCode}
         onChange={(e) => onCodeChange(e.target.value)}
-        className="h-9 w-[5.5rem] shrink-0 rounded-md border border-input bg-background px-2 text-sm"
+        className="h-9 w-[5.5rem] shrink-0 rounded-md border border-white/10 bg-white/[0.04] text-foreground px-2 text-sm hover:border-white/20 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
         aria-label="Prefisso internazionale"
       >
         {PHONE_PREFIXES.map((p) => (
