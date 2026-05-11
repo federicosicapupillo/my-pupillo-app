@@ -215,7 +215,7 @@ function Browse() {
                       <span className="rounded-full bg-secondary px-2 py-0.5 capitalize">{a.professional_profile || "ruolo"}</span>
                       <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{a.speed}</span>
                     </div>
-                    <h3 className="mt-2 font-semibold">{a.duration_hours}h · €{a.tariff_amount}{a.tariff_type==="hourly"?"/h":""}</h3>
+                    <h3 className="mt-2 font-semibold">{a.duration_hours}h · {formatTariff(a.tariff_amount, a.tariff_type)}</h3>
                   </div>
                   <Button size="icon" variant="ghost" onClick={()=>toggleFav(a.id)} aria-label="Preferiti">
                     <Heart className={`h-5 w-5 ${fav?"fill-primary text-primary":""}`} />
@@ -224,7 +224,7 @@ function Browse() {
                 <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}</div>
                   <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
-                  <div className="flex items-center gap-2"><Euro className="h-4 w-4" />€{a.tariff_amount} ({a.tariff_type==="hourly"?"orario":"a servizio"})</div>
+                  <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
                 </div>
                 <div className="mt-4 flex gap-2">
                   {applied ? (
@@ -270,14 +270,14 @@ function Browse() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="rounded-full bg-secondary px-2 py-1 text-xs capitalize">{selected.speed}</span>
                   <span className="rounded-full bg-accent text-accent-foreground px-2 py-1 text-xs">{selected.duration_hours}h</span>
-                  <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">€{selected.tariff_amount}{selected.tariff_type==="hourly"?"/h":""}</span>
+                  <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">{formatTariff(selected.tariff_amount, selected.tariff_type)}</span>
                   {dist != null && <span className="rounded-full bg-muted px-2 py-1 text-xs">{dist.toFixed(1)} km</span>}
                 </div>
 
                 <div className="mt-5 space-y-3 text-sm">
                   <Row icon={Calendar} label="Data" value={new Date(selected.service_date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" })} />
                   <Row icon={Clock} label="Orario" value={`${selected.service_time?.slice(0,5)} · durata ${selected.duration_hours}h`} />
-                  <Row icon={Euro} label="Compenso" value={`€${selected.tariff_amount} ${selected.tariff_type==="hourly"?"all'ora":"a servizio"}`} />
+                  <Row icon={Euro} label="Compenso" value={formatTariff(selected.tariff_amount, selected.tariff_type)} />
                   <Row icon={Zap} label="Tipologia" value={selected.speed} />
                   <Row icon={MapPin} label="Indirizzo" value={selected.location_address} />
                   {restaurant?.venue_type && <Row icon={User} label="Locale" value={restaurant.venue_type} />}
