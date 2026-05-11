@@ -658,7 +658,7 @@ function Onboarding() {
                    city={form.city}
                    cap={form.postal_code}
                    value={form.district}
-                   onChange={(v) => setForm({ ...form, district: v })}
+                   onChange={(v) => setForm({ ...form, district: v, postal_code: "" })}
                  />
               </div>
               <div>
@@ -666,8 +666,9 @@ function Onboarding() {
                 <CapField
                   province={form.province}
                   city={form.city}
+                  district={form.district}
                   value={form.postal_code}
-                  onChange={(v) => setForm({ ...form, postal_code: v, district: "" })}
+                  onChange={(v) => setForm({ ...form, postal_code: v })}
                 />
               </div>
               <div>
