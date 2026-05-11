@@ -24,7 +24,7 @@ import {
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
-import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity, isValidCapForDistrict } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -355,6 +355,10 @@ function Onboarding() {
         toast.error("Seleziona la zona/quartiere del locale.");
         return;
       }
+      if (!isValidCapForDistrict(form.province, form.city, form.district, form.postal_code.trim())) {
+        toast.error("Il CAP selezionato non appartiene alla zona indicata.");
+        return;
+      }
       if (!form.contact_person_first_name.trim() || !form.contact_person_last_name.trim()) {
         toast.error("Inserisci nome e cognome del referente.");
         return;
@@ -658,7 +662,7 @@ function Onboarding() {
                    city={form.city}
                    cap={form.postal_code}
                    value={form.district}
-                   onChange={(v) => setForm({ ...form, district: v })}
+                   onChange={(v) => setForm({ ...form, district: v, postal_code: "" })}
                  />
               </div>
               <div>
@@ -666,8 +670,9 @@ function Onboarding() {
                 <CapField
                   province={form.province}
                   city={form.city}
+                  district={form.district}
                   value={form.postal_code}
-                  onChange={(v) => setForm({ ...form, postal_code: v, district: "" })}
+                  onChange={(v) => setForm({ ...form, postal_code: v })}
                 />
               </div>
               <div>

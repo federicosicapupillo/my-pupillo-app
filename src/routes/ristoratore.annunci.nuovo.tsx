@@ -27,7 +27,7 @@ import {
   labelOf,
   labelsOf,
 } from "@/lib/announcement-requirements";
-import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity, isValidCapForDistrict } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { DateField } from "@/components/DateField";
@@ -379,6 +379,10 @@ function NewRestaurantJobRequest() {
       toast.error("Seleziona la zona/quartiere del locale.");
       return false;
     }
+    if (f.province && f.city && f.postal_code && !isValidCapForDistrict(f.province, f.city, f.district, f.postal_code)) {
+      toast.error("Il CAP selezionato non appartiene alla zona indicata.");
+      return false;
+    }
     if (!f.contact_person_role) { toast.error("Seleziona il ruolo del referente."); return false; }
     if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim()) {
       toast.error("Specifica il ruolo del referente.");
@@ -700,15 +704,16 @@ function NewRestaurantJobRequest() {
                 city={f.city}
                 cap={f.postal_code}
                 value={f.district}
-                onChange={(v) => setField("district", v)}
+                onChange={(v) => { setField("district", v); setField("postal_code", ""); }}
               />
             </Field>
             <Field label="CAP">
               <CapField
                 province={f.province}
                 city={f.city}
+                district={f.district}
                 value={f.postal_code}
-                onChange={(v) => { setField("postal_code", v); setField("district", ""); }}
+                onChange={(v) => setField("postal_code", v)}
               />
             </Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>

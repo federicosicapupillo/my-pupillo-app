@@ -1,11 +1,12 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { capsForCity } from "@/lib/italian-locations";
+import { capsForCity, capsForDistrict } from "@/lib/italian-locations";
 
 type Props = {
   province?: string | null;
   city?: string | null;
+  district?: string | null;
   value: string;
   onChange: (cap: string) => void;
   disabled?: boolean;
@@ -13,28 +14,33 @@ type Props = {
 
 /**
  * Smart CAP field:
- * - if the city has 1 known CAP → auto-fills, read-only Input
- * - if multiple known CAPs → Select dropdown
- * - if no CAP data → free numeric Input (5 digits)
- * Auto-resets/auto-fills when city changes.
+ * - filtra i CAP in base alla zona/quartiere se disponibile, altrimenti alla città
+ * - 1 CAP coerente → auto-fill read-only
+ * - più CAP → Select dropdown
+ * - nessun dato → input numerico libero (5 cifre)
+ * Auto-resetta/auto-completa quando città o zona cambiano.
  */
-export function CapField({ province, city, value, onChange, disabled }: Props) {
-  const caps = React.useMemo(() => capsForCity(province, city), [province, city]);
-  const lastCityRef = React.useRef<string | null | undefined>(city);
+export function CapField({ province, city, district, value, onChange, disabled }: Props) {
+  const caps = React.useMemo(
+    () => (district ? capsForDistrict(province, city, district) : capsForCity(province, city)),
+    [province, city, district],
+  );
+  const lastKeyRef = React.useRef<string>(`${city ?? ""}|${district ?? ""}`);
 
   React.useEffect(() => {
-    if (lastCityRef.current !== city) {
-      lastCityRef.current = city;
+    const key = `${city ?? ""}|${district ?? ""}`;
+    if (lastKeyRef.current !== key) {
+      lastKeyRef.current = key;
       if (caps.length === 1) {
         if (value !== caps[0]) onChange(caps[0]);
       } else if (caps.length > 1) {
         if (value && !caps.includes(value)) onChange("");
       } else {
-        // unknown city → leave current value
+        // dati non disponibili → mantieni valore
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city, caps]);
+  }, [city, district, caps]);
 
   if (caps.length > 1) {
     return (

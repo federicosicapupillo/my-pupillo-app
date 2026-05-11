@@ -378,3 +378,38 @@ export function isValidDistrictForCity(
   if (zones.length === 0) return true; // città senza elenco → testo libero accettato
   return zones.some((z) => z.toLowerCase() === district.toLowerCase());
 }
+
+// =============================================================
+// CAP coerenti con la zona/quartiere selezionata
+// =============================================================
+export function capsForDistrict(
+  province?: string | null,
+  city?: string | null,
+  district?: string | null,
+): string[] {
+  const allCityCaps = capsForCity(province, city);
+  if (!district) return allCityCaps;
+  const code = provinceCode(province) || province || "";
+  if (!code) return allCityCaps;
+  const target = district.toLowerCase();
+  const matched = allCityCaps.filter((cap) => {
+    const zones = CAP_ZONES[`${code}:${cap}`] ?? [];
+    return zones.some((z) => z.toLowerCase().includes(target) || target.includes(z.toLowerCase()));
+  });
+  // Se non troviamo CAP collegati a quella zona, restituiamo tutti i CAP della città
+  // così l'utente può comunque sceglierne uno valido.
+  return matched.length > 0 ? matched : allCityCaps;
+}
+
+export function isValidCapForDistrict(
+  province?: string | null,
+  city?: string | null,
+  district?: string | null,
+  cap?: string | null,
+): boolean {
+  if (!cap) return false;
+  if (!/^\d{5}$/.test(cap)) return false;
+  const caps = capsForDistrict(province, city, district);
+  if (caps.length === 0) return /^\d{5}$/.test(cap);
+  return caps.includes(cap);
+}
