@@ -355,10 +355,6 @@ function Onboarding() {
         toast.error("Seleziona la zona/quartiere del locale.");
         return;
       }
-      if (!isValidDistrictForCity(form.city, form.district.trim())) {
-        toast.error("Specifica la zona/quartiere.");
-        return;
-      }
       if (!form.contact_person_first_name.trim() || !form.contact_person_last_name.trim()) {
         toast.error("Inserisci nome e cognome del referente.");
         return;
