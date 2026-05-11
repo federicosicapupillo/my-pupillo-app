@@ -700,15 +700,16 @@ function NewRestaurantJobRequest() {
                 city={f.city}
                 cap={f.postal_code}
                 value={f.district}
-                onChange={(v) => setField("district", v)}
+                onChange={(v) => { setField("district", v); setField("postal_code", ""); }}
               />
             </Field>
             <Field label="CAP">
               <CapField
                 province={f.province}
                 city={f.city}
+                district={f.district}
                 value={f.postal_code}
-                onChange={(v) => { setField("postal_code", v); setField("district", ""); }}
+                onChange={(v) => setField("postal_code", v)}
               />
             </Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
