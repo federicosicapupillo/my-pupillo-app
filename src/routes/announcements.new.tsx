@@ -23,6 +23,8 @@ import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
 } from "@/lib/announcement-requirements";
+import { isValidCapForCity } from "@/lib/italian-locations";
+import { CapField } from "@/components/CapField";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -198,6 +200,12 @@ function NewAnn() {
     if (!accessChoice) { toast.error("Seleziona l'anticipo richiesto all'ingresso."); return; }
     if (accessChoice === "over15" && accessReason.trim().length < 10) {
       toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
+      return;
+    }
+    if (f.job_province && f.job_city && f.job_postal_code && !isValidCapForCity(f.job_province, f.job_city, f.job_postal_code)) {
+      toast.error("Il CAP non appartiene alla città selezionata.");
+      return;
+    }
       return;
     }
     const accessText = accessChoice === "15"
