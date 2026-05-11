@@ -206,8 +206,6 @@ function NewAnn() {
       toast.error("Il CAP non appartiene alla città selezionata.");
       return;
     }
-      return;
-    }
     const accessText = accessChoice === "15"
       ? "Presentarsi almeno 15 minuti prima del turno."
       : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
