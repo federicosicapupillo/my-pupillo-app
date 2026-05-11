@@ -351,6 +351,10 @@ function Onboarding() {
         toast.error("Il CAP non appartiene alla città selezionata.");
         return;
       }
+      if (!isValidDistrict(form.province, form.postal_code.trim(), form.district.trim())) {
+        toast.error("Il quartiere/zona non sembra coerente con città e CAP selezionati.");
+        return;
+      }
       if (!form.contact_person_first_name.trim() || !form.contact_person_last_name.trim()) {
         toast.error("Inserisci nome e cognome del referente.");
         return;
