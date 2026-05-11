@@ -1,122 +1,165 @@
+export type CityEntry = {
+  name: string;
+  caps: string[];
+};
+
 export type ProvinceLocation = {
   province: string;
   province_code: string;
-  cities: string[];
+  cities: CityEntry[];
 };
 
-// MVP set of Italian provinces with main comuni. Extendable in future.
+// MVP set of Italian provinces with main comuni and CAP. Extendable in future.
 export const ITALIAN_LOCATIONS: ProvinceLocation[] = [
   {
     province: "Milano",
     province_code: "MI",
     cities: [
-      "Milano",
-      "Sesto San Giovanni",
-      "Cinisello Balsamo",
-      "Rho",
-      "Cologno Monzese",
-      "Legnano",
-      "Bollate",
-      "Paderno Dugnano",
-      "San Donato Milanese",
-      "San Giuliano Milanese",
-      "Segrate",
-      "Corsico",
+      { name: "Milano", caps: ["20121","20122","20123","20124","20125","20126","20127","20128","20129","20131","20132","20133","20134","20135","20136","20137","20138","20139","20141","20142","20143","20144","20145","20146","20147","20148","20149","20151","20152","20153","20154","20155","20156","20157","20158","20159","20161","20162"] },
+      { name: "Sesto San Giovanni", caps: ["20099"] },
+      { name: "Cinisello Balsamo", caps: ["20092"] },
+      { name: "Rho", caps: ["20017"] },
+      { name: "Cologno Monzese", caps: ["20093"] },
+      { name: "Legnano", caps: ["20025"] },
+      { name: "Bollate", caps: ["20021"] },
+      { name: "Paderno Dugnano", caps: ["20037"] },
+      { name: "San Donato Milanese", caps: ["20097"] },
+      { name: "San Giuliano Milanese", caps: ["20098"] },
+      { name: "Segrate", caps: ["20090"] },
+      { name: "Corsico", caps: ["20094"] },
     ],
   },
   {
     province: "Torino",
     province_code: "TO",
     cities: [
-      "Torino",
-      "Moncalieri",
-      "Rivoli",
-      "Collegno",
-      "Nichelino",
-      "Settimo Torinese",
-      "Grugliasco",
-      "Chieri",
-      "Pinerolo",
-      "Venaria Reale",
+      { name: "Torino", caps: ["10121","10122","10123","10124","10125","10126","10127","10128","10129","10131","10132","10133","10134","10135","10136","10137","10138","10139","10141","10142","10143","10144","10145","10146","10147","10148","10149","10151","10152","10153","10154","10155","10156"] },
+      { name: "Moncalieri", caps: ["10024"] },
+      { name: "Rivoli", caps: ["10098"] },
+      { name: "Collegno", caps: ["10093"] },
+      { name: "Nichelino", caps: ["10042"] },
+      { name: "Settimo Torinese", caps: ["10036"] },
+      { name: "Grugliasco", caps: ["10095"] },
+      { name: "Chieri", caps: ["10023"] },
+      { name: "Pinerolo", caps: ["10064"] },
+      { name: "Venaria Reale", caps: ["10078"] },
     ],
   },
   {
     province: "Roma",
     province_code: "RM",
     cities: [
-      "Roma",
-      "Fiumicino",
-      "Guidonia Montecelio",
-      "Pomezia",
-      "Tivoli",
-      "Anzio",
-      "Velletri",
-      "Civitavecchia",
-      "Albano Laziale",
-      "Frascati",
-      "Ciampino",
+      { name: "Roma", caps: ["00118","00119","00121","00122","00123","00124","00125","00126","00127","00128","00131","00132","00133","00134","00135","00136","00137","00138","00139","00141","00142","00143","00144","00145","00146","00147","00148","00149","00151","00152","00153","00154","00155","00156","00157","00158","00159","00161","00162","00163","00164","00165","00166","00167","00168","00169","00171","00172","00173","00174","00175","00176","00177","00178","00179","00181","00182","00183","00184","00185","00186","00187","00188","00189","00191","00192","00193","00194","00195","00196","00197","00198","00199"] },
+      { name: "Fiumicino", caps: ["00054"] },
+      { name: "Guidonia Montecelio", caps: ["00012"] },
+      { name: "Pomezia", caps: ["00071"] },
+      { name: "Tivoli", caps: ["00019"] },
+      { name: "Anzio", caps: ["00042"] },
+      { name: "Velletri", caps: ["00049"] },
+      { name: "Civitavecchia", caps: ["00053"] },
+      { name: "Albano Laziale", caps: ["00041"] },
+      { name: "Frascati", caps: ["00044"] },
+      { name: "Ciampino", caps: ["00043"] },
     ],
   },
   {
     province: "Firenze",
     province_code: "FI",
     cities: [
-      "Firenze",
-      "Scandicci",
-      "Sesto Fiorentino",
-      "Campi Bisenzio",
-      "Bagno a Ripoli",
-      "Empoli",
-      "Fiesole",
-      "Calenzano",
-      "Lastra a Signa",
+      { name: "Firenze", caps: ["50121","50122","50123","50124","50125","50126","50127","50129","50131","50132","50133","50134","50135","50136","50137","50139","50141","50142","50143","50144","50145"] },
+      { name: "Scandicci", caps: ["50018"] },
+      { name: "Sesto Fiorentino", caps: ["50019"] },
+      { name: "Campi Bisenzio", caps: ["50013"] },
+      { name: "Bagno a Ripoli", caps: ["50012"] },
+      { name: "Empoli", caps: ["50053"] },
+      { name: "Fiesole", caps: ["50014"] },
+      { name: "Calenzano", caps: ["50041"] },
+      { name: "Lastra a Signa", caps: ["50055"] },
     ],
   },
   {
     province: "Bologna",
     province_code: "BO",
     cities: [
-      "Bologna",
-      "Imola",
-      "Casalecchio di Reno",
-      "San Lazzaro di Savena",
-      "Castel Maggiore",
-      "Pianoro",
-      "Zola Predosa",
-      "Budrio",
+      { name: "Bologna", caps: ["40121","40122","40123","40124","40125","40126","40127","40128","40129","40131","40132","40133","40134","40135","40136","40137","40138","40139","40141"] },
+      { name: "Imola", caps: ["40026"] },
+      { name: "Casalecchio di Reno", caps: ["40033"] },
+      { name: "San Lazzaro di Savena", caps: ["40068"] },
+      { name: "Castel Maggiore", caps: ["40013"] },
+      { name: "Pianoro", caps: ["40065"] },
+      { name: "Zola Predosa", caps: ["40069"] },
+      { name: "Budrio", caps: ["40054"] },
     ],
   },
   {
     province: "Napoli",
     province_code: "NA",
-    cities: ["Napoli", "Pozzuoli", "Casoria", "Portici", "Torre del Greco", "Giugliano in Campania"],
+    cities: [
+      { name: "Napoli", caps: ["80121","80122","80123","80124","80125","80126","80127","80128","80129","80131","80132","80133","80134","80135","80136","80137","80138","80139","80141","80142","80143","80144","80145","80146","80147"] },
+      { name: "Pozzuoli", caps: ["80078"] },
+      { name: "Casoria", caps: ["80026"] },
+      { name: "Portici", caps: ["80055"] },
+      { name: "Torre del Greco", caps: ["80059"] },
+      { name: "Giugliano in Campania", caps: ["80014"] },
+    ],
   },
   {
     province: "Venezia",
     province_code: "VE",
-    cities: ["Venezia", "Mestre", "Marghera", "Chioggia", "Mira", "Spinea"],
+    cities: [
+      { name: "Venezia", caps: ["30121","30122","30123","30124","30125","30126"] },
+      { name: "Mestre", caps: ["30171","30172","30173","30174"] },
+      { name: "Marghera", caps: ["30175"] },
+      { name: "Chioggia", caps: ["30015"] },
+      { name: "Mira", caps: ["30034"] },
+      { name: "Spinea", caps: ["30038"] },
+    ],
   },
   {
     province: "Genova",
     province_code: "GE",
-    cities: ["Genova", "Rapallo", "Chiavari", "Sestri Levante", "Recco"],
+    cities: [
+      { name: "Genova", caps: ["16121","16122","16123","16124","16125","16126","16127","16128","16129","16131","16132","16133","16134","16135","16136","16137","16138","16139","16141","16142","16143","16144","16145","16146","16147","16148","16149","16151","16152","16153","16154","16155","16156","16157","16158","16159","16161","16162","16163","16164","16165","16166","16167"] },
+      { name: "Rapallo", caps: ["16035"] },
+      { name: "Chiavari", caps: ["16043"] },
+      { name: "Sestri Levante", caps: ["16039"] },
+      { name: "Recco", caps: ["16036"] },
+    ],
   },
 ];
 
-export function citiesForProvince(province?: string | null): string[] {
-  if (!province) return [];
-  const p = ITALIAN_LOCATIONS.find(
+function findProvince(province?: string | null): ProvinceLocation | undefined {
+  if (!province) return undefined;
+  return ITALIAN_LOCATIONS.find(
     (x) => x.province === province || x.province_code === province,
   );
-  return p ? p.cities : [];
+}
+
+export function citiesForProvince(province?: string | null): string[] {
+  const p = findProvince(province);
+  return p ? p.cities.map((c) => c.name) : [];
+}
+
+export function capsForCity(province?: string | null, city?: string | null): string[] {
+  if (!city) return [];
+  const p = findProvince(province);
+  if (!p) return [];
+  return p.cities.find((c) => c.name === city)?.caps ?? [];
+}
+
+export function isValidCapForCity(
+  province?: string | null,
+  city?: string | null,
+  cap?: string | null,
+): boolean {
+  if (!cap) return false;
+  const caps = capsForCity(province, city);
+  if (caps.length === 0) return /^\d{5}$/.test(cap);
+  return caps.includes(cap);
 }
 
 export function provinceCode(province?: string | null): string | null {
-  if (!province) return null;
-  const p = ITALIAN_LOCATIONS.find(
-    (x) => x.province === province || x.province_code === province,
-  );
-  return p?.province_code ?? null;
+  return findProvince(province)?.province_code ?? null;
 }
 
 export function provinceFromCode(code?: string | null): string | null {
