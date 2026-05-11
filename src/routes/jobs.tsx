@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Calendar, MapPin, Euro, MessageSquare } from "lucide-react";
+import { formatTariff } from "@/lib/format";
 
 export const Route = createFileRoute("/jobs")({
   head: () => ({ meta: [{ title: "Le mie offerte — Pupillo" }] }),
@@ -74,7 +75,7 @@ function Jobs() {
                 <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(r.announcement.service_date).toLocaleDateString("it-IT")} · {r.announcement.service_time?.slice(0,5)} ({r.announcement.duration_hours}h)</div>
                   <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{r.announcement.location_address}</div>
-                  <div className="flex items-center gap-2"><Euro className="h-4 w-4" />€{r.announcement.tariff_amount} ({r.announcement.tariff_type === "hourly" ? "orario" : "a servizio"})</div>
+                  <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(r.announcement.tariff_amount, r.announcement.tariff_type)}</div>
                 </div>
               )}
               <div className="mt-4 flex gap-2">
