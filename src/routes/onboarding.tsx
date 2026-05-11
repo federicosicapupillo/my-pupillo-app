@@ -24,8 +24,9 @@ import {
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
-import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity, isValidDistrict } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
+import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
@@ -616,7 +617,7 @@ function Onboarding() {
                 <select
                   required
                   value={form.province}
-                  onChange={(e) => setForm({ ...form, province: e.target.value, city: "", postal_code: "" })}
+                  onChange={(e) => setForm({ ...form, province: e.target.value, city: "", postal_code: "", district: "" })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">Seleziona provincia</option>
@@ -633,7 +634,7 @@ function Onboarding() {
                   required
                   disabled={!form.province}
                   value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value, postal_code: "" })}
+                  onChange={(e) => setForm({ ...form, city: e.target.value, postal_code: "", district: "" })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 >
                   <option value="">{form.province ? "Seleziona città" : "Seleziona prima la provincia"}</option>
@@ -647,8 +648,14 @@ function Onboarding() {
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <Label>Zona / quartiere</Label>
-                <Input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} />
+                 <Label>Zona / quartiere</Label>
+                 <DistrictField
+                   province={form.province}
+                   city={form.city}
+                   cap={form.postal_code}
+                   value={form.district}
+                   onChange={(v) => setForm({ ...form, district: v })}
+                 />
               </div>
               <div>
                 <Label>CAP</Label>
@@ -656,7 +663,7 @@ function Onboarding() {
                   province={form.province}
                   city={form.city}
                   value={form.postal_code}
-                  onChange={(v) => setForm({ ...form, postal_code: v })}
+                  onChange={(v) => setForm({ ...form, postal_code: v, district: "" })}
                 />
               </div>
               <div>
