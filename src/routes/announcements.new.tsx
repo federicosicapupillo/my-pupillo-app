@@ -23,6 +23,8 @@ import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
 } from "@/lib/announcement-requirements";
+import { isValidCapForCity } from "@/lib/italian-locations";
+import { CapField } from "@/components/CapField";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -200,6 +202,10 @@ function NewAnn() {
       toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
       return;
     }
+    if (f.job_province && f.job_city && f.job_postal_code && !isValidCapForCity(f.job_province, f.job_city, f.job_postal_code)) {
+      toast.error("Il CAP non appartiene alla città selezionata.");
+      return;
+    }
     const accessText = accessChoice === "15"
       ? "Presentarsi almeno 15 minuti prima del turno."
       : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
@@ -325,9 +331,17 @@ function NewAnn() {
         <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
           <h3 className="font-semibold flex items-center gap-2">📍 Luogo e Accesso <span className="text-xs font-normal text-muted-foreground">(precompilato dal profilo, modificabile per questo turno)</span></h3>
           <div className="grid gap-3 md:grid-cols-3">
-            <div><Label>Città</Label><Input value={f.job_city} onChange={e => setF({ ...f, job_city: e.target.value })} /></div>
-            <div><Label>Provincia</Label><Input maxLength={3} value={f.job_province} onChange={e => setF({ ...f, job_province: e.target.value.toUpperCase() })} /></div>
-            <div><Label>CAP</Label><Input value={f.job_postal_code} onChange={e => setF({ ...f, job_postal_code: e.target.value })} /></div>
+            <div><Label>Città</Label><Input value={f.job_city} onChange={e => setF({ ...f, job_city: e.target.value, job_postal_code: "" })} /></div>
+            <div><Label>Provincia</Label><Input maxLength={3} value={f.job_province} onChange={e => setF({ ...f, job_province: e.target.value.toUpperCase(), job_city: "", job_postal_code: "" })} /></div>
+            <div>
+              <Label>CAP</Label>
+              <CapField
+                province={f.job_province}
+                city={f.job_city}
+                value={f.job_postal_code}
+                onChange={(v) => setF({ ...f, job_postal_code: v })}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Anticipo richiesto all'ingresso</Label>

@@ -27,7 +27,8 @@ import {
   labelOf,
   labelsOf,
 } from "@/lib/announcement-requirements";
-import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { CapField } from "@/components/CapField";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
@@ -366,6 +367,10 @@ function NewRestaurantJobRequest() {
       toast.error("La città selezionata non appartiene alla provincia scelta.");
       return false;
     }
+    if (f.province && f.city && f.postal_code && !isValidCapForCity(f.province, f.city, f.postal_code)) {
+      toast.error("Il CAP non appartiene alla città selezionata.");
+      return false;
+    }
     if (!f.contact_person_role) { toast.error("Seleziona il ruolo del referente."); return false; }
     if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim()) {
       toast.error("Specifica il ruolo del referente.");
@@ -659,7 +664,7 @@ function NewRestaurantJobRequest() {
             <Field label="Provincia">
               <select
                 value={f.province}
-                onChange={(e) => { setField("province", e.target.value); setField("city", ""); }}
+                onChange={(e) => { setField("province", e.target.value); setField("city", ""); setField("postal_code", ""); }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Seleziona provincia</option>
@@ -670,7 +675,7 @@ function NewRestaurantJobRequest() {
               <select
                 value={f.city}
                 disabled={!f.province}
-                onChange={(e) => setField("city", e.target.value)}
+                onChange={(e) => { setField("city", e.target.value); setField("postal_code", ""); }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
               >
                 <option value="">{f.province ? "Seleziona città" : "Seleziona prima la provincia"}</option>
@@ -678,7 +683,14 @@ function NewRestaurantJobRequest() {
               </select>
             </Field>
             <Field label="Zona/quartiere"><Input value={f.district} onChange={e => setField("district", e.target.value)} /></Field>
-            <Field label="CAP"><Input value={f.postal_code} onChange={e => setField("postal_code", e.target.value)} /></Field>
+            <Field label="CAP">
+              <CapField
+                province={f.province}
+                city={f.city}
+                value={f.postal_code}
+                onChange={(v) => setField("postal_code", v)}
+              />
+            </Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
           </div>
           {coords && <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={220} />}
