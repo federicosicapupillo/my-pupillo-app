@@ -27,7 +27,7 @@ import {
   labelOf,
   labelsOf,
 } from "@/lib/announcement-requirements";
-import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity, isValidCapForDistrict } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { DateField } from "@/components/DateField";
@@ -377,6 +377,10 @@ function NewRestaurantJobRequest() {
     }
     if (!f.district || !f.district.trim()) {
       toast.error("Seleziona la zona/quartiere del locale.");
+      return false;
+    }
+    if (f.province && f.city && f.postal_code && !isValidCapForDistrict(f.province, f.city, f.district, f.postal_code)) {
+      toast.error("Il CAP selezionato non appartiene alla zona indicata.");
       return false;
     }
     if (!f.contact_person_role) { toast.error("Seleziona il ruolo del referente."); return false; }
