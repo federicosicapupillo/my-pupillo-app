@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/registration-success")({
   head: () => ({ meta: [{ title: "Registrazione ricevuta — Pupillo" }] }),
@@ -22,6 +23,7 @@ function RegistrationSuccessPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <div className="absolute top-4 right-4"><ThemeToggle /></div>
       <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm text-center">
         <div className="mx-auto h-14 w-14 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
           <CheckCircle2 className="h-8 w-8 text-emerald-600" />
