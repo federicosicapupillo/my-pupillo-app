@@ -24,7 +24,8 @@ import {
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
-import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { CapField } from "@/components/CapField";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
@@ -345,6 +346,10 @@ function Onboarding() {
         toast.error("Inserisci il CAP.");
         return;
       }
+      if (!isValidCapForCity(form.province, form.city, form.postal_code.trim())) {
+        toast.error("Il CAP non appartiene alla città selezionata.");
+        return;
+      }
       if (!form.contact_person_first_name.trim() || !form.contact_person_last_name.trim()) {
         toast.error("Inserisci nome e cognome del referente.");
         return;
@@ -611,7 +616,7 @@ function Onboarding() {
                 <select
                   required
                   value={form.province}
-                  onChange={(e) => setForm({ ...form, province: e.target.value, city: "" })}
+                  onChange={(e) => setForm({ ...form, province: e.target.value, city: "", postal_code: "" })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">Seleziona provincia</option>
@@ -628,7 +633,7 @@ function Onboarding() {
                   required
                   disabled={!form.province}
                   value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  onChange={(e) => setForm({ ...form, city: e.target.value, postal_code: "" })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 >
                   <option value="">{form.province ? "Seleziona città" : "Seleziona prima la provincia"}</option>
@@ -647,7 +652,12 @@ function Onboarding() {
               </div>
               <div>
                 <Label>CAP</Label>
-                <Input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} />
+                <CapField
+                  province={form.province}
+                  city={form.city}
+                  value={form.postal_code}
+                  onChange={(v) => setForm({ ...form, postal_code: v })}
+                />
               </div>
               <div>
                 <Label>Paese</Label>
