@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({ meta: [{ title: "Reimposta password — Pupillo" }] }),
@@ -49,11 +50,12 @@ function ResetPassword() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="border-b">
-        <div className="mx-auto max-w-6xl px-4 py-4">
+        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-2 w-fit">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">P</div>
             <span className="text-xl font-semibold">Pupillo</span>
           </Link>
+          <ThemeToggle />
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12">
