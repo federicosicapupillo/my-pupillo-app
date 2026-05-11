@@ -372,6 +372,10 @@ function NewRestaurantJobRequest() {
       toast.error("Il CAP non appartiene alla città selezionata.");
       return false;
     }
+    if (f.district && !isValidDistrict(f.province, f.postal_code, f.district)) {
+      toast.error("Il quartiere/zona non sembra coerente con città e CAP selezionati.");
+      return false;
+    }
     if (!f.contact_person_role) { toast.error("Seleziona il ruolo del referente."); return false; }
     if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim()) {
       toast.error("Specifica il ruolo del referente.");
