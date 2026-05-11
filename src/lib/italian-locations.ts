@@ -173,3 +173,165 @@ export function isCityInProvince(city?: string | null, province?: string | null)
 }
 
 export const ALL_PROVINCES = ITALIAN_LOCATIONS.map((p) => p.province);
+
+// =============================================================
+// Zone / quartiere per CAP (MVP — espandibile)
+// Chiave: `${province_code}:${cap}` (es. "MI:20121")
+// =============================================================
+export const CAP_ZONES: Record<string, string[]> = {
+  // Milano
+  "MI:20121": ["Centro", "Brera"],
+  "MI:20122": ["Centro", "Duomo", "Missori"],
+  "MI:20123": ["Centro", "Duomo", "Sant'Ambrogio"],
+  "MI:20124": ["Centrale", "Repubblica"],
+  "MI:20125": ["Isola", "Garibaldi"],
+  "MI:20126": ["Bicocca", "Niguarda"],
+  "MI:20127": ["Loreto", "Padova"],
+  "MI:20128": ["Città Studi"],
+  "MI:20129": ["Porta Venezia", "Buenos Aires"],
+  "MI:20131": ["Lambrate", "Città Studi"],
+  "MI:20132": ["Cimiano", "Crescenzago"],
+  "MI:20133": ["Città Studi", "Politecnico"],
+  "MI:20134": ["Forlanini", "Mecenate"],
+  "MI:20135": ["Porta Romana", "Crocetta"],
+  "MI:20136": ["Ticinese", "Bocconi"],
+  "MI:20137": ["Corvetto", "Rogoredo"],
+  "MI:20138": ["Mecenate", "Forlanini"],
+  "MI:20139": ["Corvetto", "Chiaravalle"],
+  "MI:20141": ["Vigentino", "Ripamonti"],
+  "MI:20142": ["Barona", "Famagosta"],
+  "MI:20143": ["Navigli", "Ticinese"],
+  "MI:20144": ["Navigli", "Solari", "Tortona"],
+  "MI:20145": ["Sempione", "Pagano"],
+  "MI:20146": ["De Angeli", "Washington"],
+  "MI:20147": ["Lorenteggio", "Bande Nere"],
+  "MI:20148": ["Portello", "Fiera"],
+  "MI:20149": ["San Siro", "Pagano"],
+  "MI:20151": ["Quarto Oggiaro", "Bovisa"],
+  "MI:20152": ["Baggio", "Bisceglie"],
+  "MI:20153": ["Quinto Romano", "Trenno"],
+  "MI:20154": ["Sempione", "Chinatown"],
+  "MI:20155": ["Sempione", "Cenisio"],
+  "MI:20156": ["Certosa", "Quarto Oggiaro"],
+  "MI:20157": ["Bovisa", "Quarto Oggiaro"],
+  "MI:20158": ["Bovisa", "Dergano"],
+  "MI:20159": ["Isola", "Maciachini"],
+  "MI:20161": ["Affori", "Bruzzano"],
+  "MI:20162": ["Niguarda", "Pratocentenaro"],
+
+  // Torino
+  "TO:10121": ["Centro"],
+  "TO:10122": ["Centro", "Quadrilatero Romano"],
+  "TO:10123": ["Centro", "Vanchiglia"],
+  "TO:10124": ["Centro", "Vanchiglia"],
+  "TO:10125": ["San Salvario"],
+  "TO:10126": ["San Salvario", "Lingotto"],
+  "TO:10127": ["Lingotto", "Nizza Millefonti"],
+  "TO:10128": ["Crocetta"],
+  "TO:10129": ["Crocetta", "Cit Turin"],
+  "TO:10131": ["Borgo Po", "Madonna del Pilone"],
+  "TO:10132": ["Sassi", "Madonna del Pilone"],
+  "TO:10133": ["Cavoretto"],
+  "TO:10134": ["Mirafiori Nord"],
+  "TO:10135": ["Mirafiori Sud"],
+  "TO:10136": ["Santa Rita"],
+  "TO:10137": ["Mirafiori Nord"],
+  "TO:10138": ["Cit Turin", "Cenisia"],
+  "TO:10139": ["Cenisia", "Pozzo Strada"],
+  "TO:10141": ["Pozzo Strada"],
+  "TO:10142": ["Parella"],
+  "TO:10143": ["Campidoglio", "San Donato"],
+  "TO:10144": ["San Donato"],
+  "TO:10145": ["Parella", "Madonna di Campagna"],
+  "TO:10146": ["Pozzo Strada"],
+  "TO:10147": ["Madonna di Campagna"],
+  "TO:10148": ["Barriera di Milano", "Rebaudengo"],
+  "TO:10149": ["Lucento", "Vallette"],
+  "TO:10151": ["Madonna di Campagna"],
+  "TO:10152": ["Aurora", "Porta Palazzo"],
+  "TO:10153": ["Vanchiglia", "Vanchiglietta"],
+  "TO:10154": ["Barriera di Milano"],
+  "TO:10155": ["Falchera", "Regio Parco"],
+  "TO:10156": ["Falchera"],
+
+  // Roma (selezione MVP)
+  "RM:00184": ["Monti", "Centro storico"],
+  "RM:00185": ["Esquilino", "Centro storico"],
+  "RM:00186": ["Centro storico", "Pantheon", "Navona"],
+  "RM:00187": ["Centro storico", "Trevi", "Barberini"],
+  "RM:00188": ["Bufalotta"],
+  "RM:00192": ["Prati"],
+  "RM:00193": ["Prati", "Borgo"],
+  "RM:00195": ["Prati", "Della Vittoria"],
+  "RM:00196": ["Flaminio", "Parioli"],
+  "RM:00197": ["Parioli"],
+  "RM:00198": ["Salario", "Trieste"],
+  "RM:00153": ["Trastevere", "Testaccio"],
+  "RM:00152": ["Trastevere", "Monteverde"],
+  "RM:00154": ["Ostiense", "Testaccio"],
+  "RM:00161": ["Nomentano", "Bologna"],
+  "RM:00162": ["Nomentano", "Italia"],
+  "RM:00179": ["Appio Latino", "Tuscolano"],
+
+  // Firenze
+  "FI:50121": ["Centro storico", "Cavour"],
+  "FI:50122": ["Centro storico", "Santa Croce"],
+  "FI:50123": ["Centro storico", "Stazione"],
+  "FI:50124": ["Bellosguardo", "Galluzzo"],
+  "FI:50125": ["Oltrarno", "San Frediano"],
+  "FI:50126": ["Gavinana", "Sorgane"],
+  "FI:50127": ["Novoli", "Rifredi"],
+  "FI:50129": ["San Marco", "Cure"],
+  "FI:50131": ["Cure", "Coverciano"],
+  "FI:50132": ["Campo di Marte"],
+  "FI:50133": ["Coverciano", "Salviatino"],
+  "FI:50134": ["Rifredi", "Careggi"],
+  "FI:50135": ["Settignano", "Rovezzano"],
+  "FI:50136": ["Campo di Marte", "Bellariva"],
+  "FI:50137": ["Bellariva"],
+  "FI:50139": ["Castello", "Statuto"],
+  "FI:50141": ["Rifredi", "Castello"],
+  "FI:50142": ["Isolotto", "Legnaia"],
+  "FI:50143": ["Soffiano", "Isolotto"],
+  "FI:50144": ["Novoli", "Peretola"],
+  "FI:50145": ["Peretola", "Brozzi"],
+
+  // Bologna
+  "BO:40121": ["Centro storico", "Stazione"],
+  "BO:40122": ["Centro storico", "Marconi"],
+  "BO:40123": ["Centro storico", "Saragozza"],
+  "BO:40124": ["Centro storico", "Santo Stefano"],
+  "BO:40125": ["Centro storico", "San Vitale"],
+  "BO:40126": ["Centro storico", "Università"],
+  "BO:40127": ["Bolognina"],
+  "BO:40128": ["Lame", "Bolognina"],
+  "BO:40129": ["Corticella", "Bolognina"],
+  "BO:40131": ["Bolognina", "Arcoveggio"],
+  "BO:40132": ["Borgo Panigale", "Reno"],
+  "BO:40133": ["Borgo Panigale"],
+  "BO:40134": ["Saragozza", "Costa"],
+  "BO:40135": ["Saragozza", "San Luca"],
+  "BO:40136": ["Porto", "Saragozza"],
+  "BO:40137": ["Mazzini", "San Vitale"],
+  "BO:40138": ["San Donato", "Mazzini"],
+  "BO:40139": ["Savena", "Mazzini"],
+  "BO:40141": ["Savena", "San Ruffillo"],
+};
+
+export function zonesForCap(province?: string | null, cap?: string | null): string[] {
+  if (!cap) return [];
+  const code = provinceCode(province) || province || "";
+  if (!code) return [];
+  return CAP_ZONES[`${code}:${cap}`] ?? [];
+}
+
+export function isValidDistrict(
+  province?: string | null,
+  cap?: string | null,
+  district?: string | null,
+): boolean {
+  if (!district) return true; // vuoto è ammesso
+  const zones = zonesForCap(province, cap);
+  if (zones.length === 0) return true; // dato non disponibile → accetta
+  return zones.some((z) => z.toLowerCase() === district.toLowerCase());
+}
