@@ -11,14 +11,46 @@ export const LANGUAGE_OPTIONS = [
 
 export const LEVEL_OPTIONS = ["Base", "Intermedio", "Avanzato", "Madrelingua"] as const;
 
-export type SpokenLanguage = { language: string; level?: string };
+export type SpokenLanguage = { language: string; level?: string; cefr?: string };
+
+const FLAG_MAP: Record<string, string> = {
+  italiano: "🇮🇹",
+  inglese: "🇬🇧",
+  francese: "🇫🇷",
+  tedesco: "🇩🇪",
+  spagnolo: "🇪🇸",
+  portoghese: "🇵🇹",
+  arabo: "🇸🇦",
+  cinese: "🇨🇳",
+  russo: "🇷🇺",
+  rumeno: "🇷🇴",
+  albanese: "🇦🇱",
+  ucraino: "🇺🇦",
+  polacco: "🇵🇱",
+};
+
+const CEFR_MAP: Record<string, string> = {
+  base: "A2",
+  intermedio: "B2",
+  avanzato: "C1",
+  madrelingua: "C2",
+};
+
+export function flagFor(language: string): string {
+  return FLAG_MAP[language?.trim().toLowerCase()] ?? "🌐";
+}
+
+export function cefrFor(level?: string | null): string | undefined {
+  if (!level) return undefined;
+  return CEFR_MAP[level.trim().toLowerCase()];
+}
 
 export function normalizeSpokenLanguages(raw: any): SpokenLanguage[] {
   if (Array.isArray(raw)) {
     return raw
       .map((x: any) => {
         if (typeof x === "string") return { language: x };
-        if (x && typeof x === "object" && typeof x.language === "string") return { language: x.language, level: x.level };
+        if (x && typeof x === "object" && typeof x.language === "string") return { language: x.language, level: x.level, cefr: x.cefr };
         return null;
       })
       .filter(Boolean) as SpokenLanguage[];
@@ -98,12 +130,21 @@ export function SpokenLanguagesEditor({ value, onChange }: { value: SpokenLangua
 export function SpokenLanguagesView({ value }: { value: SpokenLanguage[] }) {
   if (!value || value.length === 0) return <p className="text-sm text-muted-foreground">—</p>;
   return (
-    <div className="flex flex-wrap gap-2">
-      {value.map((v) => (
-        <span key={v.language} className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-          {v.language}{v.level ? ` · ${v.level}` : ""}
-        </span>
-      ))}
-    </div>
+    <ul className="flex flex-col gap-1 text-sm text-foreground">
+      {value.map((v) => {
+        const flag = flagFor(v.language);
+        const cefr = v.cefr ?? cefrFor(v.level);
+        return (
+          <li key={v.language} className="flex items-baseline gap-2 leading-tight">
+            <span aria-hidden className="text-base">{flag}</span>
+            <span>
+              <span className="font-medium">{v.language}</span>
+              {v.level ? <span> {v.level}</span> : null}
+              {cefr ? <span className="text-muted-foreground"> ({cefr})</span> : null}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
