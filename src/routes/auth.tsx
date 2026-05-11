@@ -19,6 +19,7 @@ import { PhoneInput } from "@/components/PhoneInput";
 import { DEFAULT_PHONE_PREFIX, isValidPhone, buildPhoneFull } from "@/lib/phone-prefixes";
 import { startPhoneVerification } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -231,7 +232,7 @@ function AuthPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="border-b">
-        <div className="mx-auto max-w-6xl px-4 py-4">
+        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-2">
           <Link
             to="/"
             aria-label="Vai alla home page"
@@ -245,6 +246,7 @@ function AuthPage() {
           >
             <img src={pupilloLogo} alt="Logo Pupillo" className="h-10 w-auto object-contain md:h-12" />
           </Link>
+          <ThemeToggle />
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12">
@@ -398,7 +400,7 @@ function AuthPage() {
                       required
                       value={repAge}
                       onChange={(e) => setRepAge(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex h-10 w-full rounded-md border border-white/10 bg-white/[0.04] text-foreground px-3 py-2 text-sm ring-offset-background hover:border-white/20 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
                       <option value="">Seleziona…</option>
                       {ageOptions.map((a) => (
