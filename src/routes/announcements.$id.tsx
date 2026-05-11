@@ -18,6 +18,7 @@ import {
 } from "@/lib/announcement-requirements";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
+import { formatTariff } from "@/lib/format";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -294,7 +295,7 @@ function AnnouncementDetail() {
             return <>{sd} · {st}{et ? `–${et}` : ""}</>;
           })()}</div>
           <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{ann.location_address}</div>
-          <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />€{jobRequest?.hourly_rate ?? ann.tariff_amount} ({ann.tariff_type === "hourly" ? "/ora" : "a servizio"})</div>
+          <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />{formatTariff(jobRequest?.hourly_rate ?? ann.tariff_amount, ann.tariff_type)}</div>
           <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.expires_at).toLocaleDateString("it-IT")}</div>
           {jobRequest?.break_included != null && <div className="text-muted-foreground">Pausa prevista: <span className="font-medium text-foreground">{jobRequest.break_included ? "Sì" : "No"}</span></div>}
           {ann.languages && ann.languages.length > 0 && (
