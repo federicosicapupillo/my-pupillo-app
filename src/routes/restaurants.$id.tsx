@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
 import { ClipboardList } from "lucide-react";
 import { priceRangeLabel } from "@/lib/price-range";
+import { formatTariff } from "@/lib/format";
 
 export const Route = createFileRoute("/restaurants/$id")({
   head: () => ({ meta: [{ title: "Dettaglio ristoratore — Pupillo" }] }),
@@ -123,7 +124,7 @@ function RestaurantDetailPage() {
       when,
       duration: confirmAnn.duration_hours ? `${confirmAnn.duration_hours}h` : "—",
       tariff: confirmAnn.tariff_amount != null
-        ? `€${Number(confirmAnn.tariff_amount).toFixed(2)}${confirmAnn.tariff_type === "hourly" ? "/h" : ""}`
+        ? formatTariff(confirmAnn.tariff_amount, confirmAnn.tariff_type)
         : "—",
       note: note.trim(),
       submittedAt: new Date().toLocaleString("it-IT"),
@@ -257,7 +258,7 @@ function RestaurantDetailPage() {
                       </div>
                       {a.tariff_amount != null && (
                         <span className="text-xs rounded-full bg-emerald-500/15 text-emerald-700 px-2 py-0.5 whitespace-nowrap">
-                          €{Number(a.tariff_amount).toFixed(2)}{a.tariff_type === "hourly" ? "/h" : ""}
+                          {formatTariff(a.tariff_amount, a.tariff_type)}
                         </span>
                       )}
                     </div>
