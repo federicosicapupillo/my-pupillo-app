@@ -25,6 +25,8 @@ import {
 } from "@/lib/announcement-requirements";
 import { isValidCapForCity } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
+import { DateField } from "@/components/DateField";
+import { HourlyRateInput } from "@/components/HourlyRateInput";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -197,6 +199,11 @@ function NewAnn() {
   const save = async (asDraft: boolean) => {
     if (!user) return;
     if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
+    const tariffNum = parseFloat(f.tariff_amount);
+    if (!Number.isFinite(tariffNum) || tariffNum <= 0) {
+      toast.error("Inserisci una tariffa oraria valida.");
+      return;
+    }
     if (!accessChoice) { toast.error("Seleziona l'anticipo richiesto all'ingresso."); return; }
     if (accessChoice === "over15" && accessReason.trim().length < 10) {
       toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
@@ -295,7 +302,10 @@ function NewAnn() {
       </div>
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <div><Label>Data servizio</Label><Input type="date" required value={f.service_date} onChange={e => setF({ ...f, service_date: e.target.value })} /></div>
+          <div>
+            <Label>Data servizio</Label>
+            <DateField value={f.service_date} onChange={(v) => setF({ ...f, service_date: v })} required />
+          </div>
           <div><Label>Ora inizio</Label><Input type="time" required value={f.service_time} onChange={e => setF({ ...f, service_time: e.target.value })} /></div>
           <div><Label>Durata (ore)</Label><Input type="number" min="1" step="0.5" required value={f.duration_hours} onChange={e => setF({ ...f, duration_hours: e.target.value })} /></div>
           <div>
@@ -319,7 +329,14 @@ function NewAnn() {
               </SelectContent>
             </Select>
           </div>
-          <div><Label>Importo (€)</Label><Input type="number" min="1" step="0.5" required value={f.tariff_amount} onChange={e => setF({ ...f, tariff_amount: e.target.value })} /></div>
+          <div>
+            <Label>{f.tariff_type === "hourly" ? "Tariffa oraria" : "Importo (€)"}</Label>
+            {f.tariff_type === "hourly" ? (
+              <HourlyRateInput value={f.tariff_amount} onChange={(v) => setF({ ...f, tariff_amount: v })} required />
+            ) : (
+              <Input type="number" min="0.01" step="0.5" required value={f.tariff_amount} onChange={e => setF({ ...f, tariff_amount: e.target.value })} />
+            )}
+          </div>
         </div>
         <div>
           <Label>Indirizzo del servizio</Label>

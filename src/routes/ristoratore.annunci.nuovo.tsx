@@ -30,6 +30,9 @@ import {
 import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity, isValidDistrict } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
+import { DateField } from "@/components/DateField";
+import { HourlyRateInput } from "@/components/HourlyRateInput";
+import { formatTariff } from "@/lib/format";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
@@ -598,11 +601,15 @@ function NewRestaurantJobRequest() {
               </Select>
             </Field>
             <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
-            <Field label="Tariffa oraria proposta"><Input type="number" min="1" step="0.5" value={f.hourly_rate} onChange={e => setField("hourly_rate", e.target.value)} /></Field>
-            <Field label="Data inizio turno"><Input type="date" required value={f.shift_date} onChange={e => setField("shift_date", e.target.value)} /></Field>
+            <Field label="Tariffa oraria">
+              <HourlyRateInput value={f.hourly_rate} onChange={(v) => setField("hourly_rate", v)} required />
+            </Field>
+            <Field label="Data inizio turno">
+              <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} required />
+            </Field>
             <Field label="Ora inizio turno"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
             <Field label="Data fine turno">
-              <Input type="date" required min={f.shift_date || undefined} value={f.end_date} onChange={e => setField("end_date", e.target.value)} />
+              <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || undefined} required />
             </Field>
             <Field label="Ora fine turno"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
           </div>
@@ -818,7 +825,7 @@ function NewRestaurantJobRequest() {
               <PreviewItem label="Ruolo cercato" value={f.role_required || "—"} />
               <PreviewItem label="Data e orario" value={formatShiftRange(f.shift_date, f.start_time, f.end_date || f.shift_date, f.end_time)} />
               <PreviewItem label="Luogo" value={[f.restaurant_name, f.address, f.city].filter(Boolean).join(" · ") || "—"} />
-              <PreviewItem label="Tariffa" value={f.hourly_rate ? `€${f.hourly_rate}/h` : "—"} />
+              <PreviewItem label="Tariffa" value={formatTariff(f.hourly_rate, "hourly")} />
               <PreviewItem label="Requisiti" value={[labelOf(f.license_requirement, LICENSE_OPTIONS), ...splitLanguages(languageReqs), ...labelsOf(skills, SKILL_OPTIONS)].filter(Boolean).join(" · ") || "—"} />
               <PreviewItem label="Dress code" value={[...labelsOf(dressItems, DRESS_CODE_OPTIONS), f.dress_code_notes].filter(Boolean).join(" · ") || "—"} />
               <PreviewItem label="Note operative" value={f.operational_notes || f.worker_notes || "—"} wide />

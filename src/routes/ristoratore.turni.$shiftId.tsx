@@ -11,6 +11,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { formatTariff } from "@/lib/format";
 import {
   ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
   XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check,
@@ -341,7 +342,7 @@ function ShiftDetailPage() {
           <Field icon={Calendar} label="Data turno" value={new Date(shift.shift_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} />
           {startTime && <Field icon={Clock} label="Orario" value={`${startTime}${endTime ? ` - ${endTime}` : ""}`} />}
           <Field icon={Clock} label="Durata stimata" value={dur ? `${dur} ore` : "—"} />
-          {tariff != null && <Field icon={Euro} label={ann?.tariff_type === "hourly" ? "Tariffa oraria" : "Tariffa"} value={`€${Number(tariff).toFixed(2)}${ann?.tariff_type === "hourly" ? " /ora" : ""}`} />}
+          {tariff != null && <Field icon={Euro} label={ann?.tariff_type === "hourly" ? "Tariffa oraria" : "Tariffa"} value={formatTariff(tariff, ann?.tariff_type)} />}
           {compenso != null && <Field icon={Euro} label="Compenso stimato" value={`€${Number(compenso).toFixed(2)}`} />}
           {ann?.location_address && <Field icon={MapPin} label="Luogo" value={ann.location_address} />}
         </div>

@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users } from "lucide-react";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
+import { formatTariff } from "@/lib/format";
 
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
@@ -112,7 +113,7 @@ function AnnouncementsPage() {
               </div>
               <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
-                <div className="flex items-center gap-2"><Euro className="h-4 w-4" />€{a.tariff_amount} ({a.tariff_type === 'hourly' ? "orario" : "a servizio"})</div>
+                <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
                 <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.expires_at).toLocaleDateString("it-IT")}</div>
                 {role === "restaurant" && (
                   <div className="flex items-center gap-2"><Users className="h-4 w-4" />{counts[a.id] ?? 0} candidatur{(counts[a.id] ?? 0) === 1 ? "a" : "e"}</div>
