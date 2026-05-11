@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users } from "lucide-react";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
+import { formatTariff } from "@/lib/format";
 
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
