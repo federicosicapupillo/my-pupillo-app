@@ -94,7 +94,9 @@ export function SpokenLanguagesEditor({ value, onChange }: { value: SpokenLangua
           <SelectTrigger className="w-full sm:w-[220px]"><SelectValue placeholder="Seleziona una lingua…" /></SelectTrigger>
           <SelectContent>
             {LANGUAGE_OPTIONS.filter(opt => opt === "Altro" || !value.some(v => v.language.toLowerCase() === opt.toLowerCase())).map(opt => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              <SelectItem key={opt} value={opt}>
+                <span className="inline-flex items-center gap-2"><span aria-hidden>{flagFor(opt)}</span>{opt}</span>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -106,22 +108,29 @@ export function SpokenLanguagesEditor({ value, onChange }: { value: SpokenLangua
         )}
       </div>
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {value.map((v) => (
-            <div key={v.language} className="flex items-center gap-1 rounded-full border bg-secondary/40 pl-3 pr-1 py-1 text-sm">
-              <span className="font-medium">{v.language}</span>
-              <Select value={v.level ?? ""} onValueChange={(lv) => setLevel(v.language, lv)}>
-                <SelectTrigger className="h-7 border-0 bg-transparent shadow-none px-2 text-xs w-[120px]"><SelectValue placeholder="Livello" /></SelectTrigger>
-                <SelectContent>
-                  {LEVEL_OPTIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <button type="button" onClick={() => remove(v.language)} className="rounded-full p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive" aria-label={`Rimuovi ${v.language}`}>
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
+        <ul className="flex flex-col divide-y rounded-lg border bg-card">
+          {value.map((v) => {
+            const cefr = cefrFor(v.level);
+            return (
+              <li key={v.language} className="flex items-center gap-2 px-3 py-2 text-sm">
+                <span aria-hidden className="text-base shrink-0">{flagFor(v.language)}</span>
+                <span className="font-medium truncate">{v.language}</span>
+                {cefr && <span className="text-muted-foreground text-xs">({cefr})</span>}
+                <div className="ml-auto flex items-center gap-1">
+                  <Select value={v.level ?? ""} onValueChange={(lv) => setLevel(v.language, lv)}>
+                    <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue placeholder="Livello" /></SelectTrigger>
+                    <SelectContent>
+                      {LEVEL_OPTIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <button type="button" onClick={() => remove(v.language)} className="rounded-full p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive" aria-label={`Rimuovi ${v.language}`}>
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
