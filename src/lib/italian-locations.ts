@@ -335,3 +335,46 @@ export function isValidDistrict(
   if (zones.length === 0) return true; // dato non disponibile → accetta
   return zones.some((z) => z.toLowerCase() === district.toLowerCase());
 }
+
+// =============================================================
+// Zone / quartiere per CITTÀ (indipendente dal CAP)
+// Chiave: nome città (case-insensitive)
+// =============================================================
+export const CITY_ZONES: Record<string, string[]> = {
+  Milano: [
+    "Centro", "Duomo", "Brera", "Navigli", "Porta Romana", "Porta Venezia",
+    "Isola", "CityLife", "Garibaldi", "Lambrate", "Bicocca", "Città Studi",
+  ],
+  Torino: [
+    "Centro", "Crocetta", "San Salvario", "Vanchiglia", "Aurora", "Cit Turin",
+    "Santa Rita", "Mirafiori", "Lingotto", "Barriera di Milano",
+  ],
+  Roma: [
+    "Centro Storico", "Trastevere", "Testaccio", "Prati", "Parioli",
+    "San Giovanni", "EUR", "Ostiense", "Garbatella", "Monteverde",
+  ],
+  Firenze: [
+    "Centro Storico", "Santa Croce", "Santo Spirito", "San Frediano",
+    "Campo di Marte", "Rifredi", "Novoli",
+  ],
+  Bologna: [
+    "Centro Storico", "Santo Stefano", "San Donato", "Bolognina", "Saragozza",
+    "Savena", "Borgo Panigale",
+  ],
+};
+
+export function zonesForCity(city?: string | null): string[] {
+  if (!city) return [];
+  const key = Object.keys(CITY_ZONES).find((k) => k.toLowerCase() === city.toLowerCase());
+  return key ? CITY_ZONES[key] : [];
+}
+
+export function isValidDistrictForCity(
+  city?: string | null,
+  district?: string | null,
+): boolean {
+  if (!district) return false;
+  const zones = zonesForCity(city);
+  if (zones.length === 0) return true; // città senza elenco → testo libero accettato
+  return zones.some((z) => z.toLowerCase() === district.toLowerCase());
+}

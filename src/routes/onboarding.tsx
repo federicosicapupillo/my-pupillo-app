@@ -24,7 +24,7 @@ import {
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
-import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity, isValidDistrict } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -351,8 +351,8 @@ function Onboarding() {
         toast.error("Il CAP non appartiene alla città selezionata.");
         return;
       }
-      if (!isValidDistrict(form.province, form.postal_code.trim(), form.district.trim())) {
-        toast.error("Il quartiere/zona non sembra coerente con città e CAP selezionati.");
+      if (!form.district.trim()) {
+        toast.error("Seleziona la zona/quartiere del locale.");
         return;
       }
       if (!form.contact_person_first_name.trim() || !form.contact_person_last_name.trim()) {

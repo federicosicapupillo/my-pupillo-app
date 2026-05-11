@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { zonesForCap } from "@/lib/italian-locations";
+import { zonesForCity } from "@/lib/italian-locations";
 
 type Props = {
   province?: string | null;
@@ -12,58 +12,75 @@ type Props = {
   disabled?: boolean;
 };
 
+const OTHER = "__other__";
+
 /**
- * Smart District/Quartiere field:
- * - 1 zone known → auto-fills, read-only
- * - >1 zones known → dropdown
- * - unknown → free text input
- * Resets/refills automatically when city or CAP changes.
+ * Smart District/Quartiere field (basato sulla CITTÀ):
+ * - città con elenco zone → dropdown con le zone + "Altro" (con campo testo)
+ * - città senza elenco / nessuna città → testo libero
+ * Quando la città cambia, il valore non più valido viene azzerato dal parent.
  */
-export function DistrictField({ province, city, cap, value, onChange, disabled }: Props) {
-  const zones = React.useMemo(() => zonesForCap(province, cap), [province, cap]);
-  const lastKeyRef = React.useRef<string>("");
+export function DistrictField({ city, value, onChange, disabled }: Props) {
+  const zones = React.useMemo(() => zonesForCity(city), [city]);
 
+  const isKnown = zones.some((z) => z.toLowerCase() === (value || "").toLowerCase());
+  const [other, setOther] = React.useState<boolean>(
+    Boolean(value) && zones.length > 0 && !isKnown,
+  );
+
+  // Quando cambia la città, ripristina lo stato "Altro" in base al valore.
   React.useEffect(() => {
-    const key = `${province || ""}|${city || ""}|${cap || ""}`;
-    if (lastKeyRef.current === key) return;
-    lastKeyRef.current = key;
-    if (zones.length === 1) {
-      if (value !== zones[0]) onChange(zones[0]);
-    } else if (zones.length > 1) {
-      if (value && !zones.some((z) => z.toLowerCase() === value.toLowerCase())) onChange("");
+    if (zones.length === 0) {
+      setOther(false);
+      return;
     }
-    // unknown → leave current value
+    setOther(Boolean(value) && !zones.some((z) => z.toLowerCase() === value.toLowerCase()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [province, city, cap, zones]);
+  }, [city]);
 
-  if (zones.length > 1) {
-    return (
-      <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger><SelectValue placeholder="Seleziona quartiere / zona" /></SelectTrigger>
-        <SelectContent className="z-[60] max-h-[60vh]">
-          {zones.map((z) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  if (zones.length === 1) {
+  // Città senza elenco → testo libero
+  if (zones.length === 0) {
     return (
       <Input
-        value={value || zones[0]}
+        value={value}
         onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        placeholder="Quartiere / zona"
+        placeholder={city ? "Quartiere / zona" : "Seleziona prima la città"}
+        disabled={disabled || !city}
       />
     );
   }
 
+  const selectValue = other ? OTHER : (isKnown ? value : undefined);
+
   return (
-    <Input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Quartiere / zona (opzionale)"
-      disabled={disabled}
-    />
+    <div className="space-y-2">
+      <Select
+        value={selectValue}
+        onValueChange={(v) => {
+          if (v === OTHER) {
+            setOther(true);
+            onChange("");
+          } else {
+            setOther(false);
+            onChange(v);
+          }
+        }}
+        disabled={disabled}
+      >
+        <SelectTrigger><SelectValue placeholder="Seleziona zona / quartiere" /></SelectTrigger>
+        <SelectContent className="z-[60] max-h-[60vh]">
+          {zones.map((z) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
+          <SelectItem value={OTHER}>Altro…</SelectItem>
+        </SelectContent>
+      </Select>
+      {other && (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Specifica zona / quartiere"
+          disabled={disabled}
+        />
+      )}
+    </div>
   );
 }
