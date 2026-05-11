@@ -27,8 +27,9 @@ import {
   labelOf,
   labelsOf,
 } from "@/lib/announcement-requirements";
-import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity, isValidDistrict } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
+import { DistrictField } from "@/components/DistrictField";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
@@ -664,7 +665,7 @@ function NewRestaurantJobRequest() {
             <Field label="Provincia">
               <select
                 value={f.province}
-                onChange={(e) => { setField("province", e.target.value); setField("city", ""); setField("postal_code", ""); }}
+                onChange={(e) => { setField("province", e.target.value); setField("city", ""); setField("postal_code", ""); setField("district", ""); }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Seleziona provincia</option>
@@ -675,20 +676,28 @@ function NewRestaurantJobRequest() {
               <select
                 value={f.city}
                 disabled={!f.province}
-                onChange={(e) => { setField("city", e.target.value); setField("postal_code", ""); }}
+                onChange={(e) => { setField("city", e.target.value); setField("postal_code", ""); setField("district", ""); }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
               >
                 <option value="">{f.province ? "Seleziona città" : "Seleziona prima la provincia"}</option>
                 {citiesForProvince(f.province).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            <Field label="Zona/quartiere"><Input value={f.district} onChange={e => setField("district", e.target.value)} /></Field>
+            <Field label="Zona/quartiere">
+              <DistrictField
+                province={f.province}
+                city={f.city}
+                cap={f.postal_code}
+                value={f.district}
+                onChange={(v) => setField("district", v)}
+              />
+            </Field>
             <Field label="CAP">
               <CapField
                 province={f.province}
                 city={f.city}
                 value={f.postal_code}
-                onChange={(v) => setField("postal_code", v)}
+                onChange={(v) => { setField("postal_code", v); setField("district", ""); }}
               />
             </Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
