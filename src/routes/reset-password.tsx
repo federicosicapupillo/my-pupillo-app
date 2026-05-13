@@ -65,7 +65,7 @@ function ResetPassword() {
               <h1 className="text-2xl font-semibold">Reimposta password</h1>
               <p className="text-sm text-muted-foreground mt-1">Ti invieremo un link via email per scegliere una nuova password.</p>
               <form onSubmit={requestReset} className="space-y-4 mt-6">
-                <div><Label required>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+                <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
                 <Button type="submit" className="w-full" disabled={busy}>{busy ? "Invio..." : "Invia link di reset"}</Button>
                 <Link to="/auth" className="block text-center text-sm text-muted-foreground hover:text-foreground">← Torna al login</Link>
               </form>
@@ -75,7 +75,7 @@ function ResetPassword() {
               <h1 className="text-2xl font-semibold">Nuova password</h1>
               <p className="text-sm text-muted-foreground mt-1">Imposta la tua nuova password.</p>
               <form onSubmit={updatePwd} className="space-y-4 mt-6">
-                <div><Label required>Nuova password</Label><Input type="password" required minLength={6} value={pwd} onChange={(e) => setPwd(e.target.value)} /></div>
+                <div><Label>Nuova password</Label><Input type="password" required minLength={6} value={pwd} onChange={(e) => setPwd(e.target.value)} /></div>
                 <Button type="submit" className="w-full" disabled={busy}>{busy ? "Aggiorno..." : "Aggiorna password"}</Button>
               </form>
             </>

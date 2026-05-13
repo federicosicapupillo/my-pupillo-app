@@ -151,7 +151,7 @@ function VerifyPhonePage() {
               Inserisci il numero su cui vuoi ricevere il codice di conferma via WhatsApp.
             </p>
             <div className="mt-4 space-y-3">
-              <Label required>Numero WhatsApp</Label>
+              <Label>Numero WhatsApp</Label>
               <PhoneInput
                 code={phoneCode}
                 number={phoneNumber}
@@ -170,7 +170,7 @@ function VerifyPhonePage() {
               Ti abbiamo inviato un codice via WhatsApp al numero <strong>{phoneFull || profile?.phone_full}</strong>.
             </p>
             <div className="mt-4 space-y-3">
-              <Label required>Inserisci codice a 6 cifre</Label>
+              <Label>Inserisci codice a 6 cifre</Label>
               <Input
                 inputMode="numeric"
                 pattern="[0-9]*"

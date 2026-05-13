@@ -289,11 +289,11 @@ function AuthPage() {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4 mt-4">
                 <div>
-                  <Label required>Email</Label>
+                  <Label>Email</Label>
                   <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
                 <div>
-                  <Label required>Password</Label>
+                  <Label>Password</Label>
                   <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
                 <Button type="submit" className="w-full" disabled={busy}>
@@ -310,15 +310,15 @@ function AuthPage() {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
                 <div>
-                  <Label required>Nome completo</Label>
+                  <Label>Nome completo</Label>
                   <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
                 </div>
                 <div>
-                  <Label required>Email</Label>
+                  <Label>Email</Label>
                   <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
                 <div>
-                  <Label required>Password</Label>
+                  <Label>Password</Label>
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
@@ -354,7 +354,7 @@ function AuthPage() {
                   </ul>
                 </div>
                 <div>
-                  <Label required>Conferma password</Label>
+                  <Label>Conferma password</Label>
                   <div className="relative">
                     <Input
                       type={showConfirmPassword ? "text" : "password"}
@@ -379,7 +379,7 @@ function AuthPage() {
                   )}
                 </div>
                 <div>
-                  <Label required className="mb-2 block">Sono un</Label>
+                  <Label className="mb-2 block">Sono un</Label>
                   <RadioGroup
                     value={role}
                     onValueChange={(v) => setRole(v as "restaurant" | "worker")}
@@ -395,7 +395,7 @@ function AuthPage() {
                 </div>
                 {role === "restaurant" && (
                   <div>
-                    <Label required>Età del referente</Label>
+                    <Label>Età del referente</Label>
                     <select
                       required
                       value={repAge}
@@ -415,7 +415,7 @@ function AuthPage() {
                   </div>
                 )}
                 <div>
-                  <Label required>Numero WhatsApp</Label>
+                  <Label>Numero WhatsApp</Label>
                   <PhoneInput
                     code={phoneCode}
                     number={phoneNumber}
@@ -434,9 +434,6 @@ function AuthPage() {
                 >
                   {busy ? "Attendi..." : "Crea profilo"}
                 </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  <span className="text-destructive">*</span> Campi obbligatori
-                </p>
                 <p className="text-xs text-muted-foreground text-center">
                   Accettando, confermi le{" "}
                   <Link to="/terms" className="underline hover:text-foreground">
