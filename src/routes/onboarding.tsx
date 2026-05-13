@@ -28,6 +28,7 @@ import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, i
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
+import { validateDocumentDates, DOC_DATE_ERRORS } from "@/lib/document-dates";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -471,19 +472,14 @@ function Onboarding() {
         toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
         return;
       }
-      if (issued && issued > today) {
+      const dateErr = validateDocumentDates(
+        personal.id_document_issued_at,
+        personal.id_document_expires_at,
+        today,
+      );
+      if (dateErr) {
         setBusy(false);
-        toast.error("La data di rilascio non può essere futura.");
-        return;
-      }
-      if (expires && expires < today) {
-        setBusy(false);
-        toast.error("Il documento risulta scaduto. Carica un documento valido.");
-        return;
-      }
-      if (issued && expires && expires <= issued) {
-        setBusy(false);
-        toast.error("La data di scadenza deve essere successiva alla data di rilascio.");
+        toast.error(dateErr);
         return;
       }
       if (!idDocFile && !idDocPath) {
@@ -1017,7 +1013,7 @@ function Onboarding() {
                     onChange={(iso) => setPersonal({ ...personal, id_document_issued_at: iso })}
                   />
                   {personal.id_document_issued_at && new Date(personal.id_document_issued_at) > new Date(new Date().toDateString()) && (
-                    <p className="text-xs text-destructive mt-1">La data di rilascio non può essere futura.</p>
+                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.ISSUED_FUTURE}</p>
                   )}
                 </div>
                 <div>
@@ -1029,11 +1025,11 @@ function Onboarding() {
                     onChange={(iso) => setPersonal({ ...personal, id_document_expires_at: iso })}
                   />
                   {personal.id_document_expires_at && new Date(personal.id_document_expires_at) < new Date(new Date().toDateString()) && (
-                    <p className="text-xs text-destructive mt-1">Il documento risulta scaduto. Carica un documento valido.</p>
+                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.EXPIRED}</p>
                   )}
                   {personal.id_document_issued_at && personal.id_document_expires_at &&
                     new Date(personal.id_document_expires_at) <= new Date(personal.id_document_issued_at) && (
-                    <p className="text-xs text-destructive mt-1">La data di scadenza deve essere successiva alla data di rilascio.</p>
+                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED}</p>
                   )}
                 </div>
                 <div className="md:col-span-2">
