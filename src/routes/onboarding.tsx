@@ -651,7 +651,13 @@ function Onboarding() {
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
             secondary_roles: workerRoles,
-            service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
+            service_area_address: form.service_area_address.trim() || null,
+            service_area_city: form.service_area_city.trim() || null,
+            service_area_district: form.service_area_district.trim() || null,
+            service_area_radius_m: (() => {
+              const v = parseInt(form.service_area_radius_m);
+              return ALLOWED_RADIUS_M.has(v) ? v : 10000;
+            })(),
             id_document_path: uploadedPath,
             avatar_url: uploadedAvatarUrl,
             first_name: personal.first_name.trim(),
