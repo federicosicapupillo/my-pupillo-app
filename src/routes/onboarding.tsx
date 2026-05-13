@@ -45,6 +45,7 @@ import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
+import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 
 const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 20, 30, 50] as const;
@@ -64,6 +65,7 @@ function Onboarding() {
   const nav = useNavigate();
   const verifyVatFn = useServerFn(verifyVat);
   const uploadAvatarFn = useServerFn(uploadAvatar);
+  const validateWorkerDatesFn = useServerFn(validateWorkerDocumentDates);
 
   useEffect(() => {
     if (!profile) return;
