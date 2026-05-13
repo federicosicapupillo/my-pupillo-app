@@ -644,8 +644,6 @@ function Onboarding() {
       const birthOk =
         isValidISODate(personal.birth_date) &&
         validateBirthDate(personal.birth_date, today) === null;
-      const issued = personal.id_document_issued_at ? new Date(personal.id_document_issued_at) : null;
-      const expires = personal.id_document_expires_at ? new Date(personal.id_document_expires_at) : null;
       if (!allFilled || !cfOk || !birthOk || (!idDocFile && !idDocPath)) {
         setBusy(false);
         toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
