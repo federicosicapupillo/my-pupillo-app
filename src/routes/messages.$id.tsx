@@ -722,8 +722,14 @@ function Thread() {
               );
             }
             return (
-              <div key={m.id} className={`flex ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
+              <div key={m.id} className={`flex items-end gap-2 ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
+                {m.sender_id === app?.worker_id && m.sender_id !== user?.id && (
+                  <UserAvatar userId={app?.worker_id} name={other?.name} className="h-8 w-8 shrink-0" />
+                )}
                 <div className={`rounded-2xl px-4 py-2 max-w-[75%] text-sm ${m.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.body}</div>
+                {m.sender_id === app?.worker_id && m.sender_id === user?.id && (
+                  <UserAvatar userId={app?.worker_id} name={undefined} className="h-8 w-8 shrink-0" />
+                )}
               </div>
             );
           })}
