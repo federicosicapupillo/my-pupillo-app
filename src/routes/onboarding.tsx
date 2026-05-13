@@ -825,7 +825,12 @@ function Onboarding() {
       }
       if (!idDocFile && !idDocPath) {
         setBusy(false);
-        toast.error("Carica il documento di identità per completare il profilo.");
+        toast.error("Carica il fronte del documento.");
+        return;
+      }
+      if (!idDocBackFile && !idDocBackPath) {
+        setBusy(false);
+        toast.error("Carica il retro del documento.");
         return;
       }
       if (!avatarFile && !avatarUrl) {
@@ -857,6 +862,31 @@ function Onboarding() {
         setIdDocPath(docRes.path);
         setIdDocName(docRes.name);
         setIdDocFile(null);
+      }
+      if (idDocBackFile) {
+        const fd = new FormData();
+        fd.append("file", idDocBackFile);
+        let docRes: Awaited<ReturnType<typeof uploadIdDocumentFn>>;
+        try {
+          docRes = await uploadIdDocumentFn({ data: fd });
+        } catch (e) {
+          setBusy(false);
+          toast.error(
+            e instanceof Error && e.message
+              ? e.message
+              : "Caricamento documento non riuscito.",
+          );
+          return;
+        }
+        if (!docRes.ok) {
+          setBusy(false);
+          toast.error(docRes.error);
+          return;
+        }
+        uploadedBackPath = docRes.path;
+        setIdDocBackPath(docRes.path);
+        setIdDocBackName(docRes.name);
+        setIdDocBackFile(null);
       }
       if (avatarFile) {
         // Server-side validation: format (JPG/PNG/WEBP), size, min 500x500.
