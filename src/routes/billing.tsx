@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
@@ -14,6 +14,10 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/billing")({
   head: () => ({ meta: [{ title: "Crediti e piano — Pupillo" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
+    action: typeof search.action === "string" ? search.action : undefined,
+  }),
   component: () => <RequireAuth><Billing /></RequireAuth>,
 });
 
@@ -21,6 +25,8 @@ type Tx = { id: string; created_at: string; delta: number; balance_after: number
 
 function Billing() {
   const { profile, user, role } = useAuth();
+  const navigate = useNavigate();
+  const { returnTo, action } = useSearch({ from: "/billing" });
   const [tx, setTx] = useState<Tx[]>([]);
   const [checkoutKey, setCheckoutKey] = useState<string | null>(null);
   const [discountInput, setDiscountInput] = useState("");
@@ -99,6 +105,28 @@ function Billing() {
   return (
     <AppShell>
       <PageHeader title="Crediti e piano" subtitle="Gestisci il saldo crediti e il piano del tuo locale" />
+
+      {returnTo && action === "confirm-worker" && (
+        <div className={`mb-6 rounded-2xl border p-5 ${credits >= CREDITS_PER_HIRE ? "border-emerald-500/40 bg-emerald-500/5" : "border-primary/30 bg-primary/5"}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+            <div>
+              <h3 className="font-semibold">
+                {credits >= CREDITS_PER_HIRE ? "Tutto pronto, hai abbastanza crediti." : "Acquista crediti per confermare il lavoratore"}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {credits >= CREDITS_PER_HIRE
+                  ? "Torna alla candidatura per completare la conferma."
+                  : `Ti servono ${CREDITS_PER_HIRE} crediti. Saldo attuale: ${credits}.`}
+              </p>
+            </div>
+            {credits >= CREDITS_PER_HIRE && (
+              <Button onClick={() => navigate({ to: returnTo as any })} className="shadow-lg shadow-primary/30 gap-2">
+                <ArrowLeft className="h-4 w-4 rotate-180" />Torna alla candidatura
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 mb-8">
         <div className="rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-card p-6 shadow-sm">
