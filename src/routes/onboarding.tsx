@@ -1339,21 +1339,100 @@ function Onboarding() {
                   <Label>Nazionalità *</Label>
                   <Input required value={personal.nationality} onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })} />
                 </div>
-                <div className="md:col-span-2">
-                  <Label>Indirizzo di residenza *</Label>
-                  <Input required value={personal.residence_address} onChange={(e) => setPersonal({ ...personal, residence_address: e.target.value })} />
-                </div>
                 <div>
                   <Label>Città di residenza *</Label>
-                  <Input required value={personal.residence_city} onChange={(e) => setPersonal({ ...personal, residence_city: e.target.value })} />
-                </div>
-                <div>
-                  <Label>CAP *</Label>
-                  <Input required maxLength={5} inputMode="numeric" pattern="\d{5}" value={personal.residence_postal_code} onChange={(e) => setPersonal({ ...personal, residence_postal_code: e.target.value.replace(/\D/g, "").slice(0, 5) })} />
+                  <SearchableSelect
+                    options={ALL_CITIES_WITH_PROVINCE.map((c) => ({
+                      value: c.city,
+                      label: `${c.city} (${c.province_code})`,
+                    }))}
+                    value={personal.residence_city}
+                    placeholder="Seleziona città"
+                    searchPlaceholder="Cerca città"
+                    onChange={(city) => {
+                      const entry = findCityProvince(city);
+                      setPersonal((s) => ({
+                        ...s,
+                        residence_city: city,
+                        residence_province: entry?.province_code ?? "",
+                        // Clear CAP when city changes — it must be picked
+                        // from the new city's CAP list.
+                        residence_postal_code: "",
+                      }));
+                    }}
+                  />
                 </div>
                 <div>
                   <Label>Provincia *</Label>
-                  <Input required maxLength={2} value={personal.residence_province} onChange={(e) => setPersonal({ ...personal, residence_province: e.target.value.toUpperCase().slice(0, 2) })} />
+                  <Input
+                    value={personal.residence_province}
+                    readOnly
+                    disabled
+                    placeholder="Auto"
+                    aria-readonly="true"
+                  />
+                </div>
+                <div>
+                  <Label>CAP *</Label>
+                  <SearchableSelect
+                    options={capsForCity(
+                      findCityProvince(personal.residence_city)?.province ?? null,
+                      personal.residence_city,
+                    ).map((c) => ({ value: c, label: c }))}
+                    value={personal.residence_postal_code}
+                    placeholder={
+                      personal.residence_city
+                        ? "Seleziona CAP"
+                        : "Prima seleziona la città"
+                    }
+                    searchPlaceholder="Cerca CAP"
+                    disabled={!personal.residence_city}
+                    onChange={(cap) =>
+                      setPersonal((s) => ({ ...s, residence_postal_code: cap }))
+                    }
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Via / Indirizzo *</Label>
+                  <Input
+                    required
+                    placeholder={
+                      personal.residence_city
+                        ? "Cerca via o indirizzo"
+                        : "Prima seleziona la città"
+                    }
+                    disabled={!personal.residence_city}
+                    value={personal.residence_street}
+                    onChange={(e) =>
+                      setPersonal({ ...personal, residence_street: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Numero civico *</Label>
+                  <Input
+                    required
+                    placeholder="Es. 12, 12A, 24/B"
+                    value={personal.residence_street_number}
+                    onChange={(e) =>
+                      setPersonal({
+                        ...personal,
+                        residence_street_number: e.target.value
+                          .replace(/[^0-9A-Za-z/ ]/g, "")
+                          .slice(0, 10),
+                      })
+                    }
+                    aria-invalid={
+                      !!personal.residence_street_number &&
+                      !isValidCivicNumber(personal.residence_street_number)
+                    }
+                  />
+                  {!!personal.residence_street_number &&
+                    !isValidCivicNumber(personal.residence_street_number) && (
+                      <p className="mt-1 text-xs text-destructive">
+                        Formato non valido. Es: 12, 12A, 24/B.
+                      </p>
+                    )}
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">Telefono ed email sono già impostati nei dati account.</p>
