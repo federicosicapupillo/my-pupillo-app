@@ -82,14 +82,14 @@ export const validateWorkerDocumentDates = createServerFn({ method: "POST" })
  * validation response — logging is observability, not a security boundary.
  */
 async function logFailure(
-  context: { supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> } },
+  context: { supabase: { rpc: (fn: "log_profile_date_validation_failure", args: { _reason: string; _payload: Record<string, unknown> }) => Promise<unknown> } },
   reason: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
   try {
     await context.supabase.rpc("log_profile_date_validation_failure", {
       _reason: reason,
-      _payload: payload as unknown as Record<string, unknown>,
+      _payload: payload,
     });
   } catch (e) {
     // Swallow — never let logging break the response.
