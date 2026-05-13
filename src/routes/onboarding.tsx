@@ -1261,7 +1261,7 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.birth_date}
-                    max={todayISORome}
+                    max={maxBirthISORome}
                     error={dateFieldErrors.birth_date}
                     onChange={(iso) => {
                       clearDateError("birth_date");
