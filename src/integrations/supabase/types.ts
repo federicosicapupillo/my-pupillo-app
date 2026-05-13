@@ -657,6 +657,7 @@ export type Database = {
           age: number | null
           age_verified: boolean
           age_verified_at: string | null
+          all_zones: boolean
           avatar_url: string | null
           badge: Database["public"]["Enums"]["worker_badge"] | null
           birth_date: string | null
@@ -754,6 +755,7 @@ export type Database = {
           reviews_count: number | null
           sdi_code: string | null
           secondary_roles: string[] | null
+          selected_zones: string[]
           service_area_city: string | null
           service_area_district: string | null
           service_area_lat: number | null
@@ -776,6 +778,7 @@ export type Database = {
           whatsapp_confirmation_sent_at: string | null
           whatsapp_confirmation_status: string | null
           whatsapp_connected: boolean | null
+          work_area_mode: string | null
         }
         Insert: {
           access_restrictions?: string | null
@@ -785,6 +788,7 @@ export type Database = {
           age?: number | null
           age_verified?: boolean
           age_verified_at?: string | null
+          all_zones?: boolean
           avatar_url?: string | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
@@ -882,6 +886,7 @@ export type Database = {
           reviews_count?: number | null
           sdi_code?: string | null
           secondary_roles?: string[] | null
+          selected_zones?: string[]
           service_area_city?: string | null
           service_area_district?: string | null
           service_area_lat?: number | null
@@ -904,6 +909,7 @@ export type Database = {
           whatsapp_confirmation_sent_at?: string | null
           whatsapp_confirmation_status?: string | null
           whatsapp_connected?: boolean | null
+          work_area_mode?: string | null
         }
         Update: {
           access_restrictions?: string | null
@@ -913,6 +919,7 @@ export type Database = {
           age?: number | null
           age_verified?: boolean
           age_verified_at?: string | null
+          all_zones?: boolean
           avatar_url?: string | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
@@ -1010,6 +1017,7 @@ export type Database = {
           reviews_count?: number | null
           sdi_code?: string | null
           secondary_roles?: string[] | null
+          selected_zones?: string[]
           service_area_city?: string | null
           service_area_district?: string | null
           service_area_lat?: number | null
@@ -1032,6 +1040,7 @@ export type Database = {
           whatsapp_confirmation_sent_at?: string | null
           whatsapp_confirmation_status?: string | null
           whatsapp_connected?: boolean | null
+          work_area_mode?: string | null
         }
         Relationships: []
       }

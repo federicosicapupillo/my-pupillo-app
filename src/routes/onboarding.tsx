@@ -170,6 +170,12 @@ function Onboarding() {
   // GeoRadar mode (radius around position) instead of specific zones.
   const GEORADAR_SENTINEL = "__georadar__";
 
+  const parseSelectedZones = (raw: string): string[] =>
+    raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
   const [form, setForm] = useState({
     full_name: "",
     phone_code: DEFAULT_PHONE_PREFIX,
@@ -221,6 +227,7 @@ function Onboarding() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsServiceArea, setGpsServiceArea] = useState<{ lat: number; lng: number } | null>(null);
   const [serviceAreaLoading, setServiceAreaLoading] = useState(false);
   const [serviceAreaError, setServiceAreaError] = useState<string | null>(null);
 
@@ -249,7 +256,7 @@ function Onboarding() {
         setServiceAreaPreview({ lat: r.lat, lng: r.lng });
       } else {
         setServiceAreaPreview(null);
-        setServiceAreaError("Indirizzo non trovato. Verrà riprovato al salvataggio.");
+        setServiceAreaError("Area non trovata. Verrà riprovato al salvataggio.");
       }
       setServiceAreaLoading(false);
     }, 700);
@@ -434,11 +441,11 @@ function Onboarding() {
       isValidISODate(personal.birth_date) &&
       validateBirthDate(personal.birth_date, todayInRome()) === null;
     const languagesDone = spokenLanguages.length > 0;
+    const selectedZones = parseSelectedZones(form.service_area_district);
     const availabilityDone =
       !!form.service_area_city.trim() &&
-      (areaMode === "georadar"
-        ? ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))
-        : !!form.service_area_district.trim());
+      ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m)) &&
+      (areaMode === "georadar" || selectedZones.length > 0);
     const finalLocked = !(personalDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
@@ -510,10 +517,15 @@ function Onboarding() {
     if (profile) {
       const ph = splitPhone((profile as any).phone_full ?? profile.phone);
       const cph = splitPhone((profile as any).contact_person_phone);
+      const loadedMode = (profile as any).work_area_mode as string | null | undefined;
       const loadedDistrict = ((profile as any).service_area_district ?? "") as string;
-      if (loadedDistrict === GEORADAR_SENTINEL) {
+      const loadedZones = Array.isArray((profile as any).selected_zones)
+        ? ((profile as any).selected_zones as string[]).filter(Boolean)
+        : [];
+      const loadedAllZones = Boolean((profile as any).all_zones);
+      if (loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL) {
         setAreaMode("georadar");
-      } else if (loadedDistrict.trim()) {
+      } else if (loadedMode === "zones" || loadedDistrict.trim() || loadedZones.length > 0 || loadedAllZones) {
         setAreaMode("zones");
       }
       setForm((f) => ({
@@ -533,7 +545,14 @@ function Onboarding() {
           return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
         })(),
         service_area_city: (profile as any).service_area_city ?? "",
-        service_area_district: (profile as any).service_area_district ?? "",
+        service_area_district:
+          loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL
+            ? ""
+            : loadedAllZones
+              ? ALL_ZONES_OPTION
+              : loadedZones.length > 0
+                ? loadedZones.join(", ")
+                : loadedDistrict,
         street_number: (profile as any).street_number ?? "",
         district: (profile as any).neighborhood ?? "",
         city: (profile as any).city ?? "",
@@ -965,13 +984,16 @@ function Onboarding() {
       service_area_lng: null,
     };
     let restCoords: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
+    const selectedZones = areaMode === "zones" ? parseSelectedZones(form.service_area_district) : [];
+    const allZonesSelected = selectedZones.includes(ALL_ZONES_OPTION);
+    const normalizedSelectedZones = allZonesSelected ? [] : selectedZones;
     if (role === "worker") {
       if (!form.service_area_city.trim()) {
         setBusy(false);
         toast.error("Indica la città di partenza per la tua area di interesse.");
         return;
       }
-      if (areaMode === "zones" && !form.service_area_district.trim()) {
+      if (areaMode === "zones" && selectedZones.length === 0) {
         setBusy(false);
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
         return;
@@ -989,12 +1011,15 @@ function Onboarding() {
           service_area_lat: serviceAreaPreview.lat,
           service_area_lng: serviceAreaPreview.lng,
         };
+      } else if (gpsServiceArea) {
+        serviceArea = {
+          service_area_lat: gpsServiceArea.lat,
+          service_area_lng: gpsServiceArea.lng,
+        };
       } else {
-        const fullAddr = [
-          areaMode === "zones" ? form.service_area_district.trim() : "",
-          form.service_area_city.trim(),
-          "Italia",
-        ].filter(Boolean).join(", ");
+        const fullAddr = [form.service_area_district.trim(), form.service_area_city.trim(), "Italia"]
+          .filter(Boolean)
+          .join(", ");
         const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 1 });
         if (r.ok) {
           serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
@@ -1065,11 +1090,16 @@ function Onboarding() {
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
             secondary_roles: workerRoles,
+            work_area_mode: areaMode,
             service_area_city: form.service_area_city.trim() || null,
             service_area_district:
               areaMode === "georadar"
-                ? GEORADAR_SENTINEL
-                : form.service_area_district.trim() || null,
+                ? form.service_area_district.trim() || null
+                : allZonesSelected
+                  ? ALL_ZONES_OPTION
+                  : normalizedSelectedZones.join(", ") || null,
+            selected_zones: areaMode === "zones" ? normalizedSelectedZones : [],
+            all_zones: areaMode === "zones" ? allZonesSelected : false,
             service_area_radius_m: (() => {
               const v = parseInt(form.service_area_radius_m);
               return ALLOWED_RADIUS_M.has(v) ? v : 10000;
@@ -1856,9 +1886,9 @@ function Onboarding() {
                     searchPlaceholder="Cerca città…"
                   />
                 </div>
-                {areaMode === "zones" && (
+                {(areaMode === "zones" || areaMode === "georadar") && (
                 <div>
-                  <Label>Zona / quartiere *</Label>
+                  <Label>{areaMode === "zones" ? "Zona / quartiere *" : "Zona / quartiere"}</Label>
                   {(() => {
                     const zones = form.service_area_district
                       ? form.service_area_district.split(",").map((s) => s.trim()).filter(Boolean)
@@ -1901,7 +1931,11 @@ function Onboarding() {
                       setForm((prev) => ({
                         ...prev,
                         service_area_city: knownCity,
+                        service_area_district: loc.district || prev.service_area_district,
                       }));
+                      setGpsServiceArea({ lat: loc.lat, lng: loc.lng });
+                      setServiceAreaPreview({ lat: loc.lat, lng: loc.lng });
+                      setServiceAreaError(null);
                     }}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -1944,7 +1978,7 @@ function Onboarding() {
                     ? <span className="text-destructive">{serviceAreaError}</span>
                     : serviceAreaPreview
                     ? "Anteprima dell'area di copertura."
-                    : "Compila città e indirizzo per vedere l'anteprima."}
+                    : "Usa la posizione attuale o inserisci città e zona per vedere l'anteprima."}
                 </div>
               </div>
               )}
