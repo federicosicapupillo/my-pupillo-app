@@ -461,6 +461,55 @@ function ApplyConfirmDialog({
           </div>
         )}
 
+        {ann && (
+          <div className="px-6 pb-2 space-y-2">
+            <Label className="text-sm font-medium">Vuoi candidarti alla tariffa proposta o fare una contro offerta?</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setApplyMode("accept")}
+                className={`rounded-xl border p-3 text-left transition ${applyMode === "accept" ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/40"}`}
+              >
+                <div className="text-xs text-muted-foreground">Accetta tariffa</div>
+                <div className="font-semibold text-sm mt-0.5">€ {ann.tariff_amount} {ann.tariff_type === "hourly" ? "/h" : ""}</div>
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setApplyMode("counter")}
+                className={`rounded-xl border p-3 text-left transition ${applyMode === "counter" ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/40"}`}
+              >
+                <div className="text-xs text-muted-foreground">Fai contro offerta</div>
+                <div className="font-semibold text-sm mt-0.5">Proponi tariffa</div>
+              </button>
+            </div>
+            {applyMode === "counter" && (
+              <div className="pt-1 animate-fade-in">
+                <Label className="text-xs text-muted-foreground">La tua tariffa (EUR/h)</Label>
+                <div className="relative mt-1">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min={ann.tariff_amount + 0.01}
+                    max={100}
+                    step="0.5"
+                    placeholder={`min € ${ann.tariff_amount + 1}`}
+                    value={counterAmount}
+                    onChange={(e) => setCounterAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+                    disabled={submitting}
+                    className="pr-14"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">EUR/h</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Deve essere superiore a € {ann.tariff_amount}. Massimo € 100/h.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         <DialogFooter className="p-6 pt-4 gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
           <Button variant="outline" onClick={onCancel} disabled={submitting} className="sm:flex-1">
             Annulla
