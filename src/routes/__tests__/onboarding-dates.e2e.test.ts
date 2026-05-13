@@ -122,8 +122,9 @@ describe("onboarding form — submit blocked on rilascio/scadenza inconsistencie
   it("blocks submit when scadenza is the same day as rilascio", () => {
     const ok = attemptSubmit({
       ...validDates,
-      id_document_issued_at: "2024-05-13",
-      id_document_expires_at: "2024-05-13",
+      // both >= today so the EXPIRED check does not short-circuit the assertion
+      id_document_issued_at: "2026-05-13",
+      id_document_expires_at: "2026-05-13",
     });
     expect(ok).toBe(false);
     expect(toast.error).toHaveBeenCalledWith(
@@ -137,8 +138,9 @@ describe("onboarding form — submit blocked on rilascio/scadenza inconsistencie
   it("blocks submit when scadenza is before rilascio", () => {
     const ok = attemptSubmit({
       ...validDates,
-      id_document_issued_at: "2024-06-01",
-      id_document_expires_at: "2024-01-01",
+      // both in the future so we isolate the rilascio>scadenza branch
+      id_document_issued_at: "2028-06-01",
+      id_document_expires_at: "2027-01-01",
     });
     expect(ok).toBe(false);
     expect(toast.error).toHaveBeenCalledWith(
