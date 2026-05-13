@@ -983,10 +983,10 @@ function Onboarding() {
       service_area_lng: null,
     };
     let restCoords: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
+    const selectedZones = areaMode === "zones" ? parseSelectedZones(form.service_area_district) : [];
+    const allZonesSelected = selectedZones.includes(ALL_ZONES_OPTION);
+    const normalizedSelectedZones = allZonesSelected ? [] : selectedZones;
     if (role === "worker") {
-      const selectedZones = areaMode === "zones" ? parseSelectedZones(form.service_area_district) : [];
-      const allZonesSelected = selectedZones.includes(ALL_ZONES_OPTION);
-      const normalizedSelectedZones = allZonesSelected ? [] : selectedZones;
       if (!form.service_area_city.trim()) {
         setBusy(false);
         toast.error("Indica la città di partenza per la tua area di interesse.");
