@@ -237,7 +237,7 @@ function Thread() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
-  const [other, setOther] = useState<{ name: string } | null>(null);
+  const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [otherId, setOtherId] = useState<string | null>(null);
@@ -269,10 +269,14 @@ function Thread() {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
-          supabase.from("profiles").select("full_name, business_name").eq("id", otherId).maybeSingle(),
+          supabase.from("profiles").select("full_name, business_name, city, neighborhood").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, service_date, service_time, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id").eq("id", a.announcement_id).maybeSingle(),
         ]);
-        setOther({ name: p?.business_name || p?.full_name || "Utente" });
+        setOther({
+          name: p?.business_name || p?.full_name || "Utente",
+          city: (p as any)?.city ?? null,
+          neighborhood: (p as any)?.neighborhood ?? null,
+        });
         setAnn(an as Ann | null);
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
