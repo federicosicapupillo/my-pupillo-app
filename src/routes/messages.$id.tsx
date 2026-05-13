@@ -270,7 +270,7 @@ function Thread() {
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
           supabase.from("profiles").select("full_name, business_name").eq("id", otherId).maybeSingle(),
-          supabase.from("announcements").select("id, service_date, service_time, location_address, tariff_amount, tariff_type").eq("id", a.announcement_id).maybeSingle(),
+          supabase.from("announcements").select("id, service_date, service_time, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({ name: p?.business_name || p?.full_name || "Utente" });
         setAnn(an as Ann | null);
@@ -381,7 +381,7 @@ function Thread() {
         }, 50);
         return;
       }
-      const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null);
+      const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null, displayAddress);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
       const { data, error } = await supabase.from("messages").insert({
