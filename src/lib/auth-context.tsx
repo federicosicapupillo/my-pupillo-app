@@ -117,6 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    if (typeof window !== "undefined") {
+      // Hard redirect to public Home, replacing history so back button
+      // cannot return to protected pages after logout.
+      window.location.replace("/");
+    }
   };
 
   return (
