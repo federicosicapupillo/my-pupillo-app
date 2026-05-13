@@ -1292,7 +1292,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      _exec_admin_sql: { Args: { _sql: string }; Returns: undefined }
       award_referral_credits: {
         Args: { _referred_user_id: string }
         Returns: undefined
