@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
@@ -14,6 +14,10 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/billing")({
   head: () => ({ meta: [{ title: "Crediti e piano — Pupillo" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
+    action: typeof search.action === "string" ? search.action : undefined,
+  }),
   component: () => <RequireAuth><Billing /></RequireAuth>,
 });
 
@@ -21,6 +25,8 @@ type Tx = { id: string; created_at: string; delta: number; balance_after: number
 
 function Billing() {
   const { profile, user, role } = useAuth();
+  const navigate = useNavigate();
+  const { returnTo, action } = useSearch({ from: "/billing" });
   const [tx, setTx] = useState<Tx[]>([]);
   const [checkoutKey, setCheckoutKey] = useState<string | null>(null);
   const [discountInput, setDiscountInput] = useState("");
