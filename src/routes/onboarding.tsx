@@ -35,6 +35,7 @@ import { OnboardingStatusCard, type OnboardingStep } from "@/components/Onboardi
 import { DateField } from "@/components/DateField";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
+import { AvatarUpload } from "@/components/AvatarUpload";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -103,6 +104,8 @@ function Onboarding() {
   const [idDocPath, setIdDocPath] = useState<string | null>(null);
   const [idDocName, setIdDocName] = useState<string | null>(null);
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [personal, setPersonal] = useState({
     first_name: "",
@@ -322,6 +325,9 @@ function Onboarding() {
       setIdDocPath(p);
       setIdDocName(p.split("/").pop() ?? p);
     }
+    if (profile && (profile as any).avatar_url) {
+      setAvatarUrl((profile as any).avatar_url as string);
+    }
     if (profile) {
       const p = profile as any;
       setPersonal((s) => ({
@@ -431,6 +437,7 @@ function Onboarding() {
     }
     setBusy(true);
     let uploadedPath: string | null = idDocPath;
+    let uploadedAvatarUrl: string | null = avatarUrl;
     if (role === "worker") {
       const required = [
         personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
@@ -472,6 +479,11 @@ function Onboarding() {
         toast.error("Carica un documento di identità per completare il profilo.");
         return;
       }
+      if (!avatarFile && !avatarUrl) {
+        setBusy(false);
+        toast.error("Carica una foto profilo per completare il profilo.");
+        return;
+      }
       if (idDocFile) {
         const ext = idDocFile.name.split(".").pop()?.toLowerCase() || "bin";
         const path = `${user.id}/id-${Date.now()}.${ext}`;
@@ -484,6 +496,19 @@ function Onboarding() {
           return;
         }
         uploadedPath = path;
+      }
+      if (avatarFile) {
+        const path = `${user.id}/avatar-${Date.now()}.jpg`;
+        const { error: upErr } = await supabase.storage
+          .from("avatars")
+          .upload(path, avatarFile, { upsert: true, contentType: "image/jpeg" });
+        if (upErr) {
+          setBusy(false);
+          toast.error("Caricamento foto profilo non riuscito: " + upErr.message);
+          return;
+        }
+        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+        uploadedAvatarUrl = pub.publicUrl;
       }
     }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
@@ -565,6 +590,7 @@ function Onboarding() {
             secondary_roles: workerRoles,
             service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
             id_document_path: uploadedPath,
+            avatar_url: uploadedAvatarUrl,
             first_name: personal.first_name.trim(),
             last_name: personal.last_name.trim(),
             birth_date: personal.birth_date,
@@ -881,6 +907,22 @@ function Onboarding() {
           </>
         ) : (
           <>
+            <div id="sec-avatar" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+              <Label className="font-semibold">Foto profilo *</Label>
+              <p className="text-xs text-muted-foreground">
+                La foto verrà mostrata sulla tua scheda, nelle candidature e in chat.
+              </p>
+              <AvatarUpload
+                value={avatarUrl}
+                onPickFile={(f, p) => {
+                  setAvatarFile(f);
+                  if (p) setAvatarUrl(p);
+                }}
+              />
+              {!avatarFile && !avatarUrl && (
+                <p className="text-xs text-destructive">Carica una foto profilo per completare il profilo.</p>
+              )}
+            </div>
             <div id="sec-anagrafica" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">📇 Dati anagrafici</h3>
               <div className="grid gap-3 md:grid-cols-2">
