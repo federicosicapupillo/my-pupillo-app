@@ -405,7 +405,7 @@ function AnnouncementDetail() {
           </h2>
           {apps.length === 0 ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-              Non hai ancora ricevuto candidature per questo annuncio.
+              Nessuna candidatura ricevuta per questo annuncio.
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
@@ -419,15 +419,20 @@ function AnnouncementDetail() {
                 return (
                   <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate flex items-center gap-2">
+                      <Link
+                        to="/workers/$id"
+                        params={{ id: a.worker_id }}
+                        className="min-w-0 flex-1 group rounded-lg -m-1 p-1 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="font-semibold truncate flex items-center gap-2 group-hover:underline">
                           {w?.full_name ?? "Lavoratore"}
                           {w?.badge === "pro" && <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/20"><Award className="h-3 w-3 mr-0.5" />Pro</Badge>}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
                           {[w?.professional_profile, w?.city, w?.age && `${w.age} anni`].filter(Boolean).join(" · ") || "—"}
                         </div>
-                      </div>
+                        <div className="text-[10px] text-primary mt-1">Vedi scheda lavoratore →</div>
+                      </Link>
                       <Badge variant="outline" className={APP_STATUS_CLS[a.status] ?? ""}>
                         {APP_STATUS_LABEL[a.status] ?? a.status}
                       </Badge>

@@ -30,6 +30,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorkersIdRouteImport } from './routes/workers.$id'
 import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
 import { Route as MessagesIdRouteImport } from './routes/messages.$id'
 import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
@@ -144,6 +145,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkersIdRoute = WorkersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => WorkersRoute,
+} as any)
 const RestaurantsIdRoute = RestaurantsIdRouteImport.update({
   id: '/restaurants/$id',
   path: '/restaurants/$id',
@@ -208,11 +214,12 @@ export interface FileRoutesByFullPath {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
-  '/workers': typeof WorkersRoute
+  '/workers': typeof WorkersRouteWithChildren
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
+  '/workers/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -239,11 +246,12 @@ export interface FileRoutesByTo {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
-  '/workers': typeof WorkersRoute
+  '/workers': typeof WorkersRouteWithChildren
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
+  '/workers/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -271,11 +279,12 @@ export interface FileRoutesById {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
-  '/workers': typeof WorkersRoute
+  '/workers': typeof WorkersRouteWithChildren
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
+  '/workers/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
+    | '/workers/$id'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
+    | '/workers/$id'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
+    | '/workers/$id'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -398,7 +410,7 @@ export interface RootRouteChildren {
   ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
   VerifyPhoneRoute: typeof VerifyPhoneRoute
-  WorkersRoute: typeof WorkersRoute
+  WorkersRoute: typeof WorkersRouteWithChildren
   RestaurantsIdRoute: typeof RestaurantsIdRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
@@ -555,6 +567,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workers/$id': {
+      id: '/workers/$id'
+      path: '/$id'
+      fullPath: '/workers/$id'
+      preLoaderRoute: typeof WorkersIdRouteImport
+      parentRoute: typeof WorkersRoute
+    }
     '/restaurants/$id': {
       id: '/restaurants/$id'
       path: '/restaurants/$id'
@@ -640,6 +659,17 @@ const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
   MessagesRouteChildren,
 )
 
+interface WorkersRouteChildren {
+  WorkersIdRoute: typeof WorkersIdRoute
+}
+
+const WorkersRouteChildren: WorkersRouteChildren = {
+  WorkersIdRoute: WorkersIdRoute,
+}
+
+const WorkersRouteWithChildren =
+  WorkersRoute._addFileChildren(WorkersRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
@@ -661,7 +691,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
   VerifyPhoneRoute: VerifyPhoneRoute,
-  WorkersRoute: WorkersRoute,
+  WorkersRoute: WorkersRouteWithChildren,
   RestaurantsIdRoute: RestaurantsIdRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
