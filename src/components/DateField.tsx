@@ -13,6 +13,7 @@ type Props = {
   value?: string;
   onChange: (iso: string) => void;
   min?: string; // ISO yyyy-mm-dd
+  max?: string; // ISO yyyy-mm-dd
   required?: boolean;
   placeholder?: string;
   className?: string;
@@ -26,6 +27,7 @@ export function DateField({
   value,
   onChange,
   min,
+  max,
   required,
   placeholder = "gg/mm/aaaa",
   className,
@@ -34,6 +36,7 @@ export function DateField({
   const [open, setOpen] = React.useState(false);
   const selected = fromISODate(value);
   const minDate = fromISODate(min);
+  const maxDate = fromISODate(max);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -66,7 +69,15 @@ export function DateField({
               setOpen(false);
             }
           }}
-          disabled={minDate ? { before: minDate } : undefined}
+          disabled={
+            minDate && maxDate
+              ? [{ before: minDate }, { after: maxDate }]
+              : minDate
+              ? { before: minDate }
+              : maxDate
+              ? { after: maxDate }
+              : undefined
+          }
           initialFocus
           className={cn("p-3 pointer-events-auto")}
         />

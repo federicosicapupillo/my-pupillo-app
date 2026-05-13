@@ -32,6 +32,7 @@ import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OnboardingStatusCard, type OnboardingStep } from "@/components/OnboardingStatusCard";
+import { DateField } from "@/components/DateField";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -434,10 +435,24 @@ function Onboarding() {
       const birthOk = !!birth && birth < today && birth <= minAge;
       const issued = personal.id_document_issued_at ? new Date(personal.id_document_issued_at) : null;
       const expires = personal.id_document_expires_at ? new Date(personal.id_document_expires_at) : null;
-      const docOk = !!issued && !!expires && issued <= today && expires >= today && issued < expires;
-      if (!allFilled || !cfOk || !birthOk || !docOk || (!idDocFile && !idDocPath)) {
+      if (!allFilled || !cfOk || !birthOk || (!idDocFile && !idDocPath)) {
         setBusy(false);
         toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
+        return;
+      }
+      if (issued && issued > today) {
+        setBusy(false);
+        toast.error("La data di rilascio non può essere futura.");
+        return;
+      }
+      if (expires && expires < today) {
+        setBusy(false);
+        toast.error("Il documento risulta scaduto. Carica un documento valido.");
+        return;
+      }
+      if (issued && expires && expires <= issued) {
+        setBusy(false);
+        toast.error("La data di scadenza deve essere successiva alla data di rilascio.");
         return;
       }
       if (!idDocFile && !idDocPath) {
@@ -927,13 +942,30 @@ function Onboarding() {
                 </div>
                 <div>
                   <Label>Data rilascio *</Label>
-                  <Input type="date" required value={personal.id_document_issued_at} onChange={(e) => setPersonal({ ...personal, id_document_issued_at: e.target.value })} />
+                  <DateField
+                    required
+                    value={personal.id_document_issued_at}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(iso) => setPersonal({ ...personal, id_document_issued_at: iso })}
+                  />
+                  {personal.id_document_issued_at && new Date(personal.id_document_issued_at) > new Date(new Date().toDateString()) && (
+                    <p className="text-xs text-destructive mt-1">La data di rilascio non può essere futura.</p>
+                  )}
                 </div>
                 <div>
                   <Label>Data scadenza *</Label>
-                  <Input type="date" required value={personal.id_document_expires_at} onChange={(e) => setPersonal({ ...personal, id_document_expires_at: e.target.value })} />
+                  <DateField
+                    required
+                    value={personal.id_document_expires_at}
+                    min={personal.id_document_issued_at || new Date().toISOString().slice(0, 10)}
+                    onChange={(iso) => setPersonal({ ...personal, id_document_expires_at: iso })}
+                  />
                   {personal.id_document_expires_at && new Date(personal.id_document_expires_at) < new Date(new Date().toDateString()) && (
-                    <p className="text-xs text-destructive mt-1">Documento scaduto.</p>
+                    <p className="text-xs text-destructive mt-1">Il documento risulta scaduto. Carica un documento valido.</p>
+                  )}
+                  {personal.id_document_issued_at && personal.id_document_expires_at &&
+                    new Date(personal.id_document_expires_at) <= new Date(personal.id_document_issued_at) && (
+                    <p className="text-xs text-destructive mt-1">La data di scadenza deve essere successiva alla data di rilascio.</p>
                   )}
                 </div>
                 <div className="md:col-span-2">
