@@ -10,6 +10,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -244,6 +254,8 @@ function Thread() {
   const [otherId, setOtherId] = useState<string | null>(null);
   const [counterOpen, setCounterOpen] = useState(false);
   const [counterValue, setCounterValue] = useState("");
+  const [counterConfirmOpen, setCounterConfirmOpen] = useState(false);
+  const [sendingCounter, setSendingCounter] = useState(false);
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
@@ -501,9 +513,12 @@ function Thread() {
   };
 
   const sendCounter = async () => {
+    if (sendingCounter) return;
     const v = parseFloat(counterValue);
     if (!v || v <= 0) { toast.error("Inserisci un importo valido"); return; }
     if (!app || !user) return;
+    setSendingCounter(true);
+    try {
     const { error } = await supabase.from("applications").update({
       status: "counter_offer", proposed_tariff: v,
       ...(role === "worker" ? { worker_response_at: new Date().toISOString() } : {}),
@@ -517,7 +532,25 @@ function Thread() {
     setApp({ ...app, status: "counter_offer", proposed_tariff: v });
     setCounterOpen(false);
     setCounterValue("");
-    toast.success("Controfferta inviata");
+    setCounterConfirmOpen(false);
+    toast.success(
+      role === "worker"
+        ? "Controfferta inviata correttamente. Attendi la risposta del ristoratore."
+        : "Controfferta inviata"
+    );
+    } finally {
+      setSendingCounter(false);
+    }
+  };
+
+  const requestSendCounter = () => {
+    const v = parseFloat(counterValue);
+    if (!v || v <= 0) { toast.error("Inserisci un importo valido"); return; }
+    if (role === "worker") {
+      setCounterConfirmOpen(true);
+    } else {
+      void sendCounter();
+    }
   };
 
   const canChangeStatus = app ? TERMINAL.includes(app.status) === false : false;
@@ -729,10 +762,29 @@ function Thread() {
             {counterOpen && (
               <div className="flex gap-2 rounded-xl border bg-card p-3">
                 <Input type="number" min="1" step="0.5" placeholder={`Nuovo importo €`} value={counterValue} onChange={e => setCounterValue(e.target.value)} />
-                <Button size="sm" onClick={sendCounter}>Invia controfferta</Button>
+                <Button size="sm" onClick={requestSendCounter} disabled={sendingCounter}>Invia controfferta</Button>
                 <Button size="sm" variant="ghost" onClick={() => setCounterOpen(false)}>Annulla</Button>
               </div>
             )}
+            <AlertDialog open={counterConfirmOpen} onOpenChange={setCounterConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confermi la controfferta?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Stai proponendo una tariffa diversa da quella indicata nell'annuncio. Il ristoratore potrà accettare oppure rifiutare la tua controfferta.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={sendingCounter}>Annulla</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={sendingCounter}
+                    onClick={(e) => { e.preventDefault(); void sendCounter(); }}
+                  >
+                    Invia controfferta
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
 
