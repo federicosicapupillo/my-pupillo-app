@@ -164,6 +164,10 @@ function Onboarding() {
     }
   }, [profile, nav]);
 
+  // Sentinel value stored in service_area_district when the worker chooses
+  // GeoRadar mode (radius around position) instead of specific zones.
+  const GEORADAR_SENTINEL = "__georadar__";
+
   const [form, setForm] = useState({
     full_name: "",
     phone_code: DEFAULT_PHONE_PREFIX,
