@@ -19,6 +19,7 @@ import {
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
 import { formatTariff } from "@/lib/format";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -422,16 +423,19 @@ function AnnouncementDetail() {
                       <Link
                         to="/workers/$id"
                         params={{ id: a.worker_id }}
-                        className="min-w-0 flex-1 group rounded-lg -m-1 p-1 hover:bg-muted/50 transition-colors"
+                        className="min-w-0 flex-1 group rounded-lg -m-1 p-1 hover:bg-muted/50 transition-colors flex items-start gap-3"
                       >
-                        <div className="font-semibold truncate flex items-center gap-2 group-hover:underline">
-                          {w?.full_name ?? "Lavoratore"}
-                          {w?.badge === "pro" && <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/20"><Award className="h-3 w-3 mr-0.5" />Pro</Badge>}
+                        <UserAvatar userId={a.worker_id} name={w?.full_name} className="h-12 w-12 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold truncate flex items-center gap-2 group-hover:underline">
+                            {w?.full_name ?? "Lavoratore"}
+                            {w?.badge === "pro" && <Badge className="bg-violet-500/15 text-violet-700 hover:bg-violet-500/20"><Award className="h-3 w-3 mr-0.5" />Pro</Badge>}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {[w?.professional_profile, w?.city, w?.age && `${w.age} anni`].filter(Boolean).join(" · ") || "—"}
+                          </div>
+                          <div className="text-[10px] text-primary mt-1">Vedi scheda lavoratore →</div>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {[w?.professional_profile, w?.city, w?.age && `${w.age} anni`].filter(Boolean).join(" · ") || "—"}
-                        </div>
-                        <div className="text-[10px] text-primary mt-1">Vedi scheda lavoratore →</div>
                       </Link>
                       <Badge variant="outline" className={APP_STATUS_CLS[a.status] ?? ""}>
                         {APP_STATUS_LABEL[a.status] ?? a.status}
