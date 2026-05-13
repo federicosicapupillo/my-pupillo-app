@@ -13,10 +13,10 @@ export type CreditPack = {
 };
 
 export const CREDIT_PACKS: Record<string, CreditPack> = {
-  pack_start_35:  { credits: 35,  label: "START", priceEur: 39,  hires: 5,  tagline: "Per iniziare" },
-  pack_smart_70:  { credits: 70,  label: "SMART", priceEur: 69,  hires: 10, highlight: "best", badge: "Più conveniente", tagline: "Consigliato" },
-  pack_pro_140:   { credits: 140, label: "PRO",   priceEur: 129, hires: 20, tagline: "Per ristoranti attivi" },
-  pack_power_350: { credits: 350, label: "POWER", priceEur: 299, hires: 50, tagline: "Massimo risparmio" },
+  pack_start_21:  { credits: 21,  label: "START", priceEur: 49,  hires: 3,  tagline: "Per iniziare" },
+  pack_smart_49:  { credits: 49,  label: "SMART", priceEur: 99,  hires: 7,  highlight: "best", badge: "Più scelto", tagline: "Consigliato" },
+  pack_pro_98:    { credits: 98,  label: "PRO",   priceEur: 189, hires: 14, tagline: "Per ristoranti attivi" },
+  pack_power_245: { credits: 245, label: "POWER", priceEur: 455, hires: 35, badge: "Miglior valore", tagline: "Massimo risparmio" },
 };
 
 export const PLAN_PRICES: Record<string, { plan: "pro" | "business"; label: string; priceEur: number }> = {
