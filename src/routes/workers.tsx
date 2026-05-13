@@ -16,6 +16,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -561,7 +562,7 @@ function WorkersPage() {
           return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
-              <div className={`h-12 w-12 rounded-full flex items-center justify-center font-semibold ${near ? "bg-emerald-500/20 text-emerald-700" : "bg-primary/10 text-primary"}`}>{w.full_name?.[0] ?? "?"}</div>
+              <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
               <div>
                 <div className="font-semibold">{w.full_name || "Lavoratore"}</div>
                 {w.age && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
