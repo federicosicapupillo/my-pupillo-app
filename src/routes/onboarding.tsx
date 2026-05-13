@@ -746,6 +746,19 @@ function Onboarding() {
         );
         return;
       }
+      // Per-type coherence check (carta d'identità / passaporto / patente).
+      if (
+        !isValidIdDocNumberForType(
+          personal.id_document_type as IdDocumentType,
+          docNumber,
+        )
+      ) {
+        setBusy(false);
+        toast.error(
+          "Numero documento non coerente con il tipo di documento selezionato.",
+        );
+        return;
+      }
       // Block save if any date input is not a real dd/mm/yyyy value or
       // the rilascio/scadenza pair is inconsistent.
       const perField = computeDateFieldErrors(
