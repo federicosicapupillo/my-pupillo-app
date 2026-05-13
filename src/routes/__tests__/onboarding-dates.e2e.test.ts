@@ -135,14 +135,21 @@ describe("onboarding form — submit blocked on rilascio/scadenza inconsistencie
     );
   });
 
-  it("blocks submit when scadenza is before rilascio", () => {
-    const ok = attemptSubmit({
-      ...validDates,
-      // both in the future so we isolate the rilascio>scadenza branch
-      id_document_issued_at: "2028-06-01",
-      id_document_expires_at: "2027-01-01",
-    });
-    expect(ok).toBe(false);
+  it("blocks submit when scadenza is before rilascio (using a custom today)", () => {
+    // Pick a "today" where issued < today and expires < issued, which
+    // means expires < today too. The EXPIRED branch fires first, so the
+    // dedicated EXPIRES_BEFORE_ISSUED branch is exercised by anchoring
+    // today BEFORE both dates: issued and expires both >= today.
+    const customToday = new Date(2024, 0, 1); // 01/01/2024
+    const guard = attemptSubmit(
+      {
+        ...validDates,
+        id_document_issued_at: "2028-06-01",
+        id_document_expires_at: "2027-01-01",
+      },
+      customToday,
+    );
+    expect(guard).toBe(false);
     expect(toast.error).toHaveBeenCalledWith(
       DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED,
     );
