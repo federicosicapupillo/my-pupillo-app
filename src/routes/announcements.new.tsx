@@ -191,10 +191,11 @@ function NewAnn() {
   }
 
   const isUrgent = f.speed === "flash" || f.speed === "fast";
-  const cost = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
+  const cost: number = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
   const credits = profile?.credits ?? 0;
   const isPaid = profile?.plan === "pro" || profile?.plan === "business";
-  const canAfford = isPaid || credits >= cost;
+  const isFree = cost === 0;
+  const canAfford = isPaid || isFree || credits >= cost;
 
   const save = async (asDraft: boolean) => {
     if (!user) return;
@@ -217,12 +218,15 @@ function NewAnn() {
       ? "Presentarsi almeno 15 minuti prima del turno."
       : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
     setBusy(true);
-    // Consume credits only when publishing (not draft). Urgent (flash/fast) costs more.
+    // Consume credits only when publishing (not draft) AND when cost > 0.
+    // Pubblicare è gratis: paghi solo alla conferma del lavoratore.
     if (!asDraft) {
-      const isUrgent = f.speed === "flash" || f.speed === "fast";
-      const cost = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
-      const ok = await consumeCredits(cost, isUrgent ? "publish_urgent_announcement" : "publish_announcement");
-      if (!ok) { setBusy(false); return; }
+      const isUrgentNow = f.speed === "flash" || f.speed === "fast";
+      const costNow: number = isUrgentNow ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
+      if (costNow > 0) {
+        const ok = await consumeCredits(costNow, isUrgentNow ? "publish_urgent_announcement" : "publish_announcement");
+        if (!ok) { setBusy(false); return; }
+      }
     }
     const { error } = await supabase.from("announcements").insert({
       restaurant_id: user.id,
