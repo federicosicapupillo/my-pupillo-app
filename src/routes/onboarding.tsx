@@ -43,6 +43,7 @@ import { DateField } from "@/components/DateField";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { uploadAvatar } from "@/lib/avatar-upload.functions";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -57,6 +58,7 @@ function Onboarding() {
   const { user, role, profile, refresh } = useAuth();
   const nav = useNavigate();
   const verifyVatFn = useServerFn(verifyVat);
+  const uploadAvatarFn = useServerFn(uploadAvatar);
 
   useEffect(() => {
     if (!profile) return;
@@ -523,17 +525,23 @@ function Onboarding() {
         uploadedPath = path;
       }
       if (avatarFile) {
-        const path = `${user.id}/avatar-${Date.now()}.jpg`;
-        const { error: upErr } = await supabase.storage
-          .from("avatars")
-          .upload(path, avatarFile, { upsert: true, contentType: "image/jpeg" });
-        if (upErr) {
+        // Server-side validation: format (JPG/PNG/WEBP), size, min 500x500.
+        const fd = new FormData();
+        fd.append("file", avatarFile);
+        try {
+          const res = await uploadAvatarFn({ data: fd });
+          uploadedAvatarUrl = res.path;
+        } catch (e) {
           setBusy(false);
-          toast.error("Caricamento foto profilo non riuscito: " + upErr.message);
+          const msg =
+            e instanceof Response
+              ? await e.text().catch(() => "Foto profilo non valida.")
+              : e instanceof Error
+                ? e.message
+                : "Foto profilo non valida.";
+          toast.error(msg || "Foto profilo non valida.");
           return;
         }
-        // Store the storage path (bucket is private); display via signed URLs.
-        uploadedAvatarUrl = path;
       }
     }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
