@@ -881,7 +881,6 @@ function Onboarding() {
             terms_accepted: true,
             profile_completed: true,
             age: form.age ? parseInt(form.age) : null,
-            professional_profile: form.professional_profile,
             languages: spokenLanguages.map((s) => s.language),
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
@@ -1545,14 +1544,6 @@ function Onboarding() {
                 Seleziona i ruoli che vuoi ricoprire. Lasciando tutto selezionato risulterai disponibile per tutti i ruoli.
               </p>
               <WorkerRolesMultiSelect value={workerRoles} onChange={setWorkerRoles} />
-            </div>
-            <div>
-              <Label>Profilo professionale</Label>
-              <Textarea
-                rows={4}
-                value={form.professional_profile}
-                onChange={(e) => setForm({ ...form, professional_profile: e.target.value })}
-              />
             </div>
             <div id="sec-languages" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Lingue parlate</Label>
