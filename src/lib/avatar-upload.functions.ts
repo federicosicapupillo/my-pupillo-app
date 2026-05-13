@@ -33,46 +33,44 @@ function sniffMime(b: Uint8Array): string | null {
   return null;
 }
 
+type UploadResult =
+  | { ok: true; path: string; mime: string; width: number; height: number }
+  | { ok: false; error: string };
+
 export const uploadAvatar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => {
-    if (!(data instanceof FormData)) {
-      throw new Response(AVATAR_ERRORS.missing, { status: 400 });
-    }
+    if (!(data instanceof FormData)) return { file: null as File | null };
     const file = data.get("file");
-    if (!(file instanceof File)) {
-      throw new Response(AVATAR_ERRORS.missing, { status: 400 });
-    }
-    return { file };
+    return { file: file instanceof File ? file : null };
   })
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<UploadResult> => {
     const { file } = data;
-    const { userId } = context;
-
-    if (file.size === 0) throw new Response(AVATAR_ERRORS.missing, { status: 400 });
-    if (file.size > MAX_BYTES) throw new Response(AVATAR_ERRORS.size, { status: 400 });
+    if (!file) return { ok: false, error: AVATAR_ERRORS.missing };
+    if (file.size === 0) return { ok: false, error: AVATAR_ERRORS.missing };
+    if (file.size > MAX_BYTES) return { ok: false, error: AVATAR_ERRORS.size };
 
     const buf = new Uint8Array(await file.arrayBuffer());
     const sniffed = sniffMime(buf);
     if (!sniffed || !ALLOWED.has(sniffed)) {
-      throw new Response(AVATAR_ERRORS.format, { status: 400 });
+      return { ok: false, error: AVATAR_ERRORS.format };
     }
 
-    let dims: { width?: number; height?: number; type?: string };
+    let dims: { width?: number; height?: number };
     try {
       dims = imageSize(buf);
     } catch {
-      throw new Response(AVATAR_ERRORS.corrupt, { status: 400 });
+      return { ok: false, error: AVATAR_ERRORS.corrupt };
     }
     if (!dims.width || !dims.height) {
-      throw new Response(AVATAR_ERRORS.corrupt, { status: 400 });
+      return { ok: false, error: AVATAR_ERRORS.corrupt };
     }
     if (dims.width < MIN_DIM || dims.height < MIN_DIM) {
-      throw new Response(AVATAR_ERRORS.dim, { status: 400 });
+      return { ok: false, error: AVATAR_ERRORS.dim };
     }
 
     const ext = sniffed === "image/png" ? "png" : sniffed === "image/webp" ? "webp" : "jpg";
-    const path = `${userId}/avatar-${Date.now()}.${ext}`;
+    const path = `${context.userId}/avatar-${Date.now()}.${ext}`;
 
     const SUPABASE_URL = process.env.SUPABASE_URL!;
     const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -84,8 +82,8 @@ export const uploadAvatar = createServerFn({ method: "POST" })
       .from("avatars")
       .upload(path, buf, { contentType: sniffed, upsert: true });
     if (upErr) {
-      throw new Response(`${AVATAR_ERRORS.upload} ${upErr.message}`, { status: 500 });
+      return { ok: false, error: `${AVATAR_ERRORS.upload} ${upErr.message}` };
     }
 
-    return { path, mime: sniffed, width: dims.width, height: dims.height };
+    return { ok: true, path, mime: sniffed, width: dims.width, height: dims.height };
   });
