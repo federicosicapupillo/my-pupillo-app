@@ -35,6 +35,7 @@ import { OnboardingStatusCard, type OnboardingStep } from "@/components/Onboardi
 import { DateField } from "@/components/DateField";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
+import { AvatarUpload } from "@/components/AvatarUpload";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
