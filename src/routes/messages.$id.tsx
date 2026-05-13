@@ -246,7 +246,9 @@ function buildTimeline(status?: string): Step[] {
 
 function Thread() {
   const { id } = Route.useParams();
-  const { user, role } = useAuth();
+  const { user, role, profile } = useAuth();
+  const [insufficientOpen, setInsufficientOpen] = useState(false);
+  const [creditsAvailable, setCreditsAvailable] = useState(0);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
@@ -491,9 +493,21 @@ function Thread() {
     if (!app || !user) return;
     // Charge credits to the restaurant only on shift assignment confirmation.
     if (next === "accepted" && role === "restaurant" && app.status !== "accepted") {
+      // Pre-check credits to show a premium dialog instead of a generic toast.
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("credits, plan")
+        .eq("id", user.id)
+        .maybeSingle();
+      const balance = prof?.credits ?? profile?.credits ?? 0;
+      const isPaid = (prof?.plan ?? profile?.plan) === "pro" || (prof?.plan ?? profile?.plan) === "business";
+      if (!isPaid && balance < CREDITS_PER_HIRE) {
+        setCreditsAvailable(balance);
+        setInsufficientOpen(true);
+        return;
+      }
       const { consumeCredits } = await import("@/lib/credits");
-      const { CREDIT_COSTS } = await import("@/lib/pricing");
-      const ok = await consumeCredits(CREDIT_COSTS.assignWorker, "assign_worker", app.announcement_id ?? id);
+      const ok = await consumeCredits(CREDITS_PER_HIRE, "assign_worker", app.announcement_id ?? id);
       if (!ok) return;
     }
     const patch: any = { status: next, ...extra };
