@@ -319,7 +319,9 @@ function MapPage() {
           lng,
           category: "announcement",
           title: a.professional_profile || "Annuncio",
-          subtitle: a.job_address || a.location_address || undefined,
+          subtitle: role === "worker"
+            ? ([rest?.neighborhood, rest?.city].filter(Boolean).join(" · ") || undefined)
+            : (a.job_address || a.location_address || undefined),
           status: a.status,
           link: `/announcements/${a.id}`,
           meta: {

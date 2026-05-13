@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
+import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -31,7 +32,7 @@ type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
 };
-type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string };
+type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string };
 
 type Shift = {
   id: string;
@@ -149,10 +150,10 @@ const TEMPLATES: MsgTemplate[] = [
   { key: "w_post_issue", role: "worker", category: "issue_report", text: "Vorrei segnalare un problema.", action: "report_issue" },
 ];
 
-function renderTemplate(text: string, ann: Ann | null, otherName: string | null): string {
+function renderTemplate(text: string, ann: Ann | null, otherName: string | null, addressOverride?: string | null): string {
   const date = ann?.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "—";
   const time = ann?.service_time ? ann.service_time.slice(0, 5) : "—";
-  const address = ann?.location_address ?? "—";
+  const address = addressOverride ?? ann?.location_address ?? "—";
   return text
     .replace(/{{shift_date}}/g, date)
     .replace(/{{start_time}}/g, time)
@@ -237,7 +238,7 @@ function Thread() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
-  const [other, setOther] = useState<{ name: string } | null>(null);
+  const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [otherId, setOtherId] = useState<string | null>(null);
@@ -269,10 +270,14 @@ function Thread() {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
-          supabase.from("profiles").select("full_name, business_name").eq("id", otherId).maybeSingle(),
-          supabase.from("announcements").select("id, service_date, service_time, location_address, tariff_amount, tariff_type").eq("id", a.announcement_id).maybeSingle(),
+          supabase.from("profiles").select("full_name, business_name, city, neighborhood").eq("id", otherId).maybeSingle(),
+          supabase.from("announcements").select("id, service_date, service_time, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id").eq("id", a.announcement_id).maybeSingle(),
         ]);
-        setOther({ name: p?.business_name || p?.full_name || "Utente" });
+        setOther({
+          name: p?.business_name || p?.full_name || "Utente",
+          city: (p as any)?.city ?? null,
+          neighborhood: (p as any)?.neighborhood ?? null,
+        });
         setAnn(an as Ann | null);
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
@@ -381,7 +386,7 @@ function Thread() {
         }, 50);
         return;
       }
-      const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null);
+      const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null, displayAddress);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
       const { data, error } = await supabase.from("messages").insert({
@@ -512,6 +517,22 @@ function Thread() {
   const isConversationClosed = app?.status === "expired";
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
+  const canSeeAddress = canSeePreciseAddress({
+    isOwner: !!(user && app && app.restaurant_id === user.id),
+    isAdmin: role === "admin",
+    applicationStatus: app?.status ?? null,
+  });
+  const restaurantHints = role === "restaurant"
+    ? null
+    : { city: other?.city ?? null, neighborhood: other?.neighborhood ?? null };
+  const displayAddress = canSeeAddress
+    ? (ann?.location_address ?? null)
+    : publicLocationLabel({
+        job_city: ann?.job_city ?? null,
+        city: restaurantHints?.city ?? null,
+        neighborhood: restaurantHints?.neighborhood ?? null,
+      });
+
   const steps = buildTimeline(app?.status);
 
   const logEvent = async (action: string, metadata: Record<string, unknown>) => {
@@ -624,7 +645,7 @@ function Thread() {
                   Annuncio del {new Date(ann.service_date).toLocaleDateString("it-IT")}
                 </Link>
                 {ann.service_time && <> · {ann.service_time.slice(0, 5)}</>}
-                {ann.location_address && <> · {ann.location_address}</>}
+                {displayAddress && <> · {displayAddress}</>}
               </div>
             )}
             {currentTariff != null && (
@@ -797,6 +818,7 @@ function Thread() {
           sending={sending}
           ann={ann}
           otherName={other?.name ?? null}
+          addressOverride={displayAddress}
           disabled={isConversationClosed}
         />
 
@@ -824,9 +846,10 @@ function TemplatePicker(props: {
   sending: boolean;
   ann: Ann | null;
   otherName: string | null;
+  addressOverride?: string | null;
   disabled?: boolean;
 }) {
-  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, disabled } = props;
+  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled } = props;
   const available = TEMPLATES.filter(t => (t.role === role || t.role === "both") && t.category !== "post_shift");
   const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
   const inCat = available.filter(t => t.category === category);
@@ -875,7 +898,7 @@ function TemplatePicker(props: {
                 onClick={() => setSelected(t)}
                 className={`text-left text-sm rounded-xl border px-3 py-2 transition ${isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary/40"}`}
               >
-                {renderTemplate(t.text, ann, otherName)}
+                {renderTemplate(t.text, ann, otherName, addressOverride)}
               </button>
             );
           })}
@@ -884,7 +907,7 @@ function TemplatePicker(props: {
       {selected && !isClosureForRestaurant && (
         <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
           <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
-          {renderTemplate(selected.text, ann, otherName)}
+          {renderTemplate(selected.text, ann, otherName, addressOverride)}
         </div>
       )}
       {!isClosureForRestaurant && (

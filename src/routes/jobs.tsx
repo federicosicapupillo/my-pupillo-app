@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Calendar, MapPin, Euro, MessageSquare } from "lucide-react";
 import { formatTariff } from "@/lib/format";
+import { publicLocationLabel } from "@/lib/public-location";
 
 export const Route = createFileRoute("/jobs")({
   head: () => ({ meta: [{ title: "Le mie offerte — Pupillo" }] }),
@@ -16,8 +17,8 @@ export const Route = createFileRoute("/jobs")({
 
 type Row = {
   id: string; status: string; created_at: string; restaurant_id: string;
-  announcement: { id: string; service_date: string; service_time: string; duration_hours: number; tariff_amount: number; tariff_type: string; location_address: string; speed: string } | null;
-  restaurant: { full_name: string | null; business_name: string | null } | null;
+  announcement: { id: string; service_date: string; service_time: string; duration_hours: number; tariff_amount: number; tariff_type: string; speed: string; job_city: string | null; job_province: string | null; assigned_worker_id: string | null } | null;
+  restaurant: { full_name: string | null; business_name: string | null; city: string | null; neighborhood: string | null } | null;
 };
 
 function Jobs() {
@@ -34,8 +35,8 @@ function Jobs() {
     const annIds = (apps ?? []).map(a => a.announcement_id);
     const restIds = (apps ?? []).map(a => a.restaurant_id);
     const [{ data: anns }, { data: rests }] = await Promise.all([
-      annIds.length ? supabase.from("announcements").select("id, service_date, service_time, duration_hours, tariff_amount, tariff_type, location_address, speed").in("id", annIds) : Promise.resolve({ data: [] }),
-      restIds.length ? supabase.from("profiles").select("id, full_name, business_name").in("id", restIds) : Promise.resolve({ data: [] }),
+      annIds.length ? supabase.from("announcements").select("id, service_date, service_time, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id").in("id", annIds) : Promise.resolve({ data: [] }),
+      restIds.length ? supabase.from("profiles").select("id, full_name, business_name, city, neighborhood").in("id", restIds) : Promise.resolve({ data: [] }),
     ]);
     const annMap = new Map((anns ?? []).map((a: any) => [a.id, a]));
     const restMap = new Map((rests ?? []).map((r: any) => [r.id, r]));
@@ -96,7 +97,11 @@ function Jobs() {
               {r.announcement && (
                 <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(r.announcement.service_date).toLocaleDateString("it-IT")} · {r.announcement.service_time?.slice(0,5)} ({r.announcement.duration_hours}h)</div>
-                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{r.announcement.location_address}</div>
+                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{publicLocationLabel({
+                    job_city: r.announcement.job_city,
+                    city: r.restaurant?.city,
+                    neighborhood: r.restaurant?.neighborhood,
+                  })}</div>
                   <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(r.announcement.tariff_amount, r.announcement.tariff_type)}</div>
                 </div>
               )}
