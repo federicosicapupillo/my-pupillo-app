@@ -220,6 +220,16 @@ function NewRestaurantJobRequest() {
     if (!f.start_time || !f.end_time) return false;
     return f.end_time <= f.start_time;
   }, [f.shift_date, f.end_date, f.start_time, f.end_time]);
+  const todayISO = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+  const nowHHMM = useMemo(() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }, []);
+  const startTimeMin = f.shift_date && f.shift_date === todayISO ? nowHHMM : undefined;
+  const endTimeMin = f.end_date && f.end_date === todayISO ? nowHHMM : undefined;
   const isLongShift = durationHours > 8;
   const longReasonTrimmed = f.long_shift_reason.trim();
   const longReasonError = isLongShift
@@ -366,6 +376,14 @@ function NewRestaurantJobRequest() {
     if (!f.start_time) { toast.error("Inserisci l'orario di inizio turno."); return false; }
     if (!f.end_date) { toast.error("Inserisci la data di fine turno."); return false; }
     if (!f.end_time) { toast.error("Inserisci l'orario di fine turno."); return false; }
+    if (f.shift_date < todayISO) { toast.error("Non puoi selezionare una data passata"); return false; }
+    {
+      const start = buildDateTime(f.shift_date, f.start_time);
+      if (start && start.getTime() < Date.now()) {
+        toast.error(f.shift_date === todayISO ? "Non puoi selezionare un orario già trascorso" : "Non puoi selezionare una data passata");
+        return false;
+      }
+    }
     if (durationHours <= 0) { toast.error("La fine del turno deve essere successiva all'inizio."); return false; }
     if (longReasonError) { toast.error(longReasonError); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
@@ -612,13 +630,13 @@ function NewRestaurantJobRequest() {
               <HourlyRateInput value={f.hourly_rate} onChange={(v) => setField("hourly_rate", v)} required />
             </Field>
             <Field label="Data inizio turno">
-              <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} required />
+              <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} min={todayISO} required />
             </Field>
-            <Field label="Ora inizio turno"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
+            <Field label="Ora inizio turno"><Input type="time" required min={startTimeMin} value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
             <Field label="Data fine turno">
-              <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || undefined} required />
+              <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || todayISO} required />
             </Field>
-            <Field label="Ora fine turno"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
+            <Field label="Ora fine turno"><Input type="time" required min={endTimeMin} value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
           </div>
           <p className="text-xs text-muted-foreground">
             Se il turno termina dopo la mezzanotte, seleziona come data fine il giorno successivo.
