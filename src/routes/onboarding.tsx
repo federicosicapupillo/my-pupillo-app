@@ -45,6 +45,7 @@ import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
+import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 
 const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 20, 30, 50] as const;
@@ -64,6 +65,7 @@ function Onboarding() {
   const nav = useNavigate();
   const verifyVatFn = useServerFn(verifyVat);
   const uploadAvatarFn = useServerFn(uploadAvatar);
+  const validateWorkerDatesFn = useServerFn(validateWorkerDocumentDates);
 
   useEffect(() => {
     if (!profile) return;
@@ -545,6 +547,31 @@ function Onboarding() {
       if (dateGuard.blocked) {
         setBusy(false);
         toast.error(dateGuard.message);
+        return;
+      }
+      // Server-side echo of the same validation: re-runs the rules under the
+      // user's auth session so a tampered client cannot bypass them. The DB
+      // trigger `enforce_worker_personal_data` is the final guard.
+      try {
+        const serverCheck = await validateWorkerDatesFn({
+          data: {
+            birth_date: personal.birth_date,
+            id_document_issued_at: personal.id_document_issued_at,
+            id_document_expires_at: personal.id_document_expires_at,
+          },
+        });
+        if (!serverCheck.ok) {
+          setBusy(false);
+          toast.error(serverCheck.error);
+          return;
+        }
+      } catch (e) {
+        setBusy(false);
+        toast.error(
+          e instanceof Error && e.message
+            ? e.message
+            : "Validazione delle date non riuscita. Riprova.",
+        );
         return;
       }
       if (!idDocFile && !idDocPath) {
