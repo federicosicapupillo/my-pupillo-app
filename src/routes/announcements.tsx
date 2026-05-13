@@ -152,13 +152,22 @@ function AnnouncementsPage() {
               {role === "restaurant" && a.status !== "active" && (
                 <Link to="/ristoratore/annunci/nuovo" search={{ reuse: a.id } as never} className="mt-3 inline-flex"><Button variant="outline" size="sm" className="gap-2"><RotateCw className="h-3 w-3" />Riusa come nuovo</Button></Link>
               )}
-              {role !== "restaurant" && (
-                <div className="mt-3">
+              <div className="mt-3">
+                {role === "restaurant" ? (
+                  a.status === "active" || a.status === "assigned" ? (
+                    <Link to="/announcements/$id" params={{ id: a.id }} search={{ section: "candidature" } as never}>
+                      <Button size="sm" variant="default" className="gap-1">
+                        <Users className="h-3.5 w-3.5" />
+                        Vedi candidature{counts[a.id] ? ` (${counts[a.id]})` : ""}
+                      </Button>
+                    </Link>
+                  ) : null
+                ) : (
                   <Link to="/announcements/$id" params={{ id: a.id }}>
                     <Button size="sm" variant="outline" className="gap-1">Apri dettagli</Button>
                   </Link>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))}
         </div>
