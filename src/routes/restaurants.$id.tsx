@@ -103,14 +103,21 @@ function RestaurantDetailPage() {
       restaurant_id: id,
     }).select("id").single();
     if (error) { setSubmitting(false); return toast.error(error.message); }
-    if (note.trim() && app?.id) {
-      await supabase.from("messages").insert({
-        application_id: app.id, sender_id: user.id, body: note.trim(),
-      });
+    if (app?.id) {
+      const autoBody =
+        "Ciao! Ho inviato la mia candidatura per il turno pubblicato.\n" +
+        "Sono disponibile nell'orario richiesto e resto a disposizione per conferma o ulteriori informazioni. A presto!";
+      const messages: Array<{ application_id: string; sender_id: string; body: string; message_type: string }> = [
+        { application_id: app.id, sender_id: user.id, body: autoBody, message_type: "auto" },
+      ];
+      if (note.trim()) {
+        messages.push({ application_id: app.id, sender_id: user.id, body: note.trim(), message_type: "text" });
+      }
+      await supabase.from("messages").insert(messages);
     }
     const when = [confirmAnn.service_date, confirmAnn.service_time].filter(Boolean).join(" · ") || "data da definire";
     const dur = confirmAnn.duration_hours ? ` (${confirmAnn.duration_hours}h)` : "";
-    toast.success("Prenotazione inviata", {
+    toast.success("Candidatura inviata correttamente", {
       description:
         `${confirmAnn.professional_profile || "Turno"} — ${when}${dur}\n` +
         `Stato iniziale: In attesa di conferma del ristoratore.`,
@@ -131,6 +138,7 @@ function RestaurantDetailPage() {
       status: "pending",
     });
     setConfirmAnn(null); setNote(""); setSubmitting(false);
+    if (app?.id) navigate({ to: "/messages/$id", params: { id: app.id } });
   };
 
   // Realtime: subscribe to status changes of the just-submitted application

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
@@ -42,6 +42,7 @@ function distKm(aLat:number,aLng:number,bLat:number,bLng:number){
 
 function Browse() {
   const { user, role, profile } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<Ann[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
@@ -130,16 +131,25 @@ function Browse() {
       announcement_id: confirmAnn.id, worker_id: user.id, restaurant_id: confirmAnn.restaurant_id,
     }).select("id").single();
     if (error) { setSubmitting(false); return toast.error(error.message); }
-    if (note.trim() && app?.id) {
-      const { error: mErr } = await supabase.from("messages").insert({
-        application_id: app.id, sender_id: user.id, body: note.trim(),
-      });
-      if (mErr) toast.error("Candidatura inviata, ma nota non salvata: " + mErr.message);
+    if (app?.id) {
+      const autoBody =
+        "Ciao! Ho inviato la mia candidatura per il turno pubblicato.\n" +
+        "Sono disponibile nell'orario richiesto e resto a disposizione per conferma o ulteriori informazioni. A presto!";
+      const messages: Array<{ application_id: string; sender_id: string; body: string; message_type: string }> = [
+        { application_id: app.id, sender_id: user.id, body: autoBody, message_type: "auto" },
+      ];
+      if (note.trim()) {
+        messages.push({ application_id: app.id, sender_id: user.id, body: note.trim(), message_type: "text" });
+      }
+      const { error: mErr } = await supabase.from("messages").insert(messages);
+      if (mErr) toast.error("Candidatura inviata, ma messaggio non salvato: " + mErr.message);
     }
-    toast.success("Candidatura inviata");
+    toast.success("Candidatura inviata correttamente");
     setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
+    const appId = app?.id;
     setConfirmAnn(null); setNote(""); setSubmitting(false);
     setOpenId(null);
+    if (appId) navigate({ to: "/messages/$id", params: { id: appId } });
   };
 
   if (role && role !== "worker") {
