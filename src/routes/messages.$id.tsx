@@ -645,7 +645,7 @@ function Thread() {
                   Annuncio del {new Date(ann.service_date).toLocaleDateString("it-IT")}
                 </Link>
                 {ann.service_time && <> · {ann.service_time.slice(0, 5)}</>}
-                {ann.location_address && <> · {ann.location_address}</>}
+                {displayAddress && <> · {displayAddress}</>}
               </div>
             )}
             {currentTariff != null && (
@@ -818,6 +818,7 @@ function Thread() {
           sending={sending}
           ann={ann}
           otherName={other?.name ?? null}
+          addressOverride={displayAddress}
           disabled={isConversationClosed}
         />
 
@@ -845,9 +846,10 @@ function TemplatePicker(props: {
   sending: boolean;
   ann: Ann | null;
   otherName: string | null;
+  addressOverride?: string | null;
   disabled?: boolean;
 }) {
-  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, disabled } = props;
+  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled } = props;
   const available = TEMPLATES.filter(t => (t.role === role || t.role === "both") && t.category !== "post_shift");
   const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
   const inCat = available.filter(t => t.category === category);
@@ -896,7 +898,7 @@ function TemplatePicker(props: {
                 onClick={() => setSelected(t)}
                 className={`text-left text-sm rounded-xl border px-3 py-2 transition ${isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary/40"}`}
               >
-                {renderTemplate(t.text, ann, otherName)}
+                {renderTemplate(t.text, ann, otherName, addressOverride)}
               </button>
             );
           })}
@@ -905,7 +907,7 @@ function TemplatePicker(props: {
       {selected && !isClosureForRestaurant && (
         <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
           <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
-          {renderTemplate(selected.text, ann, otherName)}
+          {renderTemplate(selected.text, ann, otherName, addressOverride)}
         </div>
       )}
       {!isClosureForRestaurant && (
