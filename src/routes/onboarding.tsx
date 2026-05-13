@@ -638,6 +638,17 @@ function Onboarding() {
         toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
         return;
       }
+      // Numero documento: only letters and digits, 5–20 chars (already
+      // forced uppercase by the input). Mirror this rule in the DB trigger
+      // `enforce_worker_personal_data` for backend safety.
+      const docNumber = personal.id_document_number.trim().toUpperCase();
+      if (!/^[A-Z0-9]{5,20}$/.test(docNumber)) {
+        setBusy(false);
+        toast.error(
+          "Numero documento non valido. Inserisci solo lettere e numeri.",
+        );
+        return;
+      }
       // Block save if any date input is not a real dd/mm/yyyy value or
       // the rilascio/scadenza pair is inconsistent.
       const perField = computeDateFieldErrors(
