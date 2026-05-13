@@ -66,6 +66,13 @@ import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
 import { uploadWorkerIdDocument } from "@/lib/id-document-upload.functions";
 import {
+  ID_DOC_PLACEHOLDER,
+  ID_DOC_HINT,
+  ID_DOC_MAX_LEN,
+  isValidIdDocNumberForType,
+  type IdDocumentType,
+} from "@/lib/id-document-format";
+import {
   ID_DOC_ACCEPT_ATTR,
   validateIdDocumentFile,
 } from "@/lib/id-document-file";
