@@ -7,6 +7,18 @@ import {
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
 } from "@/lib/announcement-requirements";
 
+const LANG_FLAG: Record<string, string> = {
+  italiano: "🇮🇹",
+  inglese: "🇬🇧",
+  francese: "🇫🇷",
+  tedesco: "🇩🇪",
+  spagnolo: "🇪🇸",
+};
+function flagForOption(value: string): string {
+  const key = value.split("_")[0];
+  return LANG_FLAG[key] ?? "🌐";
+}
+
 export type RestaurantRequirements = {
   license_requirement: string;
   language_requirements: string[];
@@ -101,18 +113,23 @@ export function RestaurantRequirementsEditor({ value, onChange }: { value: Resta
 
           <div>
             <Label className="mb-2 block">Lingue richieste</Label>
-            <div className="flex flex-wrap gap-2">
+            <ul className="flex flex-col divide-y rounded-lg border bg-card">
               {LANGUAGE_OPTIONS.map(o => {
                 const active = value.language_requirements.includes(o.value);
                 return (
-                  <button type="button" key={o.value}
-                    onClick={() => set({ language_requirements: toggle(value.language_requirements, o.value) })}
-                    className={`px-3 py-1.5 rounded-full text-xs border transition ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}>
-                    {o.label}
-                  </button>
+                  <li key={o.value}>
+                    <label className={`flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer transition ${active ? "bg-primary/10" : "hover:bg-accent"}`}>
+                      <Checkbox
+                        checked={active}
+                        onCheckedChange={() => set({ language_requirements: toggle(value.language_requirements, o.value) })}
+                      />
+                      <span aria-hidden className="text-base shrink-0">{flagForOption(o.value)}</span>
+                      <span className="truncate">{o.label}</span>
+                    </label>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
 
           <div>
@@ -171,7 +188,25 @@ export function RestaurantRequirementsView({ value }: { value: RestaurantRequire
       <div className="space-y-2">
         <h4 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-2">Requisiti e Competenze</h4>
         <ViewRow label="Tipo di patente" value={labelOf(value.license_requirement, LICENSE_OPTIONS)} />
-        <ViewRow label="Lingue" value={langs.length ? langs.join(", ") : "—"} bold={langs.length > 0} />
+        <div className="py-2 border-b">
+          <div className="text-sm text-muted-foreground mb-1.5">Lingue</div>
+          {langs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">—</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {value.language_requirements.map(v => {
+                const opt = LANGUAGE_OPTIONS.find(o => o.value === v);
+                if (!opt) return null;
+                return (
+                  <li key={v} className="flex items-center gap-2 text-sm">
+                    <span aria-hidden className="text-base">{flagForOption(v)}</span>
+                    <span className="font-medium">{opt.label}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
         <ViewRow label="Tatuaggi ammessi" value={labelOf(value.tattoos_allowed, TATTOO_OPTIONS)} bold />
         <ViewRow label="Piercing ammessi" value={labelOf(value.piercings_allowed, PIERCING_OPTIONS)} bold />
         <ViewRow label="Barba ammessa" value={labelOf(value.beard_allowed, BEARD_OPTIONS)} bold />
