@@ -122,7 +122,6 @@ export function AvatarUpload({ value, onPickFile }: Props) {
           ref={inputRef}
           type="file"
           accept={ACCEPT}
-          capture="user"
           className="hidden"
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
