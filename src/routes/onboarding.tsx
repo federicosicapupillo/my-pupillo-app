@@ -1095,7 +1095,12 @@ function Onboarding() {
                 </div>
                 <div>
                   <Label>Data di nascita *</Label>
-                  <Input type="date" required value={personal.birth_date} onChange={(e) => setPersonal({ ...personal, birth_date: e.target.value })} />
+                  <DateField
+                    required
+                    value={personal.birth_date}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(iso) => setPersonal({ ...personal, birth_date: iso })}
+                  />
                 </div>
                 <div>
                   <Label>Luogo di nascita *</Label>
