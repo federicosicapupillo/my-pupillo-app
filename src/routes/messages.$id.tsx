@@ -31,7 +31,7 @@ type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
 };
-type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string };
+type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string };
 
 type Shift = {
   id: string;
@@ -149,10 +149,10 @@ const TEMPLATES: MsgTemplate[] = [
   { key: "w_post_issue", role: "worker", category: "issue_report", text: "Vorrei segnalare un problema.", action: "report_issue" },
 ];
 
-function renderTemplate(text: string, ann: Ann | null, otherName: string | null): string {
+function renderTemplate(text: string, ann: Ann | null, otherName: string | null, addressOverride?: string | null): string {
   const date = ann?.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "—";
   const time = ann?.service_time ? ann.service_time.slice(0, 5) : "—";
-  const address = ann?.location_address ?? "—";
+  const address = addressOverride ?? ann?.location_address ?? "—";
   return text
     .replace(/{{shift_date}}/g, date)
     .replace(/{{start_time}}/g, time)
