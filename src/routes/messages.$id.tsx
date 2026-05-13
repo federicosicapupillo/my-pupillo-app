@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
+import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -515,6 +516,22 @@ function Thread() {
   const canChangeStatus = app ? TERMINAL.includes(app.status) === false : false;
   const isConversationClosed = app?.status === "expired";
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
+
+  const canSeeAddress = canSeePreciseAddress({
+    isOwner: !!(user && app && app.restaurant_id === user.id),
+    isAdmin: role === "admin",
+    applicationStatus: app?.status ?? null,
+  });
+  const restaurantHints = role === "restaurant"
+    ? null
+    : { city: other?.city ?? null, neighborhood: other?.neighborhood ?? null };
+  const displayAddress = canSeeAddress
+    ? (ann?.location_address ?? null)
+    : publicLocationLabel({
+        job_city: ann?.job_city ?? null,
+        city: restaurantHints?.city ?? null,
+        neighborhood: restaurantHints?.neighborhood ?? null,
+      });
 
   const steps = buildTimeline(app?.status);
 
