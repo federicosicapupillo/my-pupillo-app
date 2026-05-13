@@ -14,6 +14,7 @@ import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -149,18 +150,44 @@ function Browse() {
       setConfirmAnn(null);
       return;
     }
+    // Validazione contro-offerta lato client
+    let counterValueNum: number | null = null;
+    if (applyMode === "counter") {
+      const v = parseFloat(counterAmount.replace(",", "."));
+      if (!Number.isFinite(v) || v <= 0) {
+        toast.error("Inserisci una tariffa valida.");
+        return;
+      }
+      if (v <= (confirmAnn.tariff_amount ?? 0)) {
+        toast.error(`La contro offerta deve essere superiore a € ${confirmAnn.tariff_amount}.`);
+        return;
+      }
+      if (v > 100) {
+        toast.error("Importo non valido (max € 100/h).");
+        return;
+      }
+      counterValueNum = Math.round(v * 100) / 100;
+    }
     setSubmitting(true);
-    const { data: app, error } = await supabase.from("applications").insert({
+    const insertPayload: any = {
       announcement_id: confirmAnn.id, worker_id: user.id, restaurant_id: confirmAnn.restaurant_id,
-    }).select("id").single();
+    };
+    if (counterValueNum != null) {
+      insertPayload.status = "counter_offer";
+      insertPayload.proposed_tariff = counterValueNum;
+      insertPayload.worker_response_at = new Date().toISOString();
+    }
+    const { data: app, error } = await supabase.from("applications").insert(insertPayload).select("id").single();
     if (error) { setSubmitting(false); return toast.error(error.message); }
     // Notifica al ristoratore (best-effort)
     if (app?.id) {
       await supabase.from("notifications").insert({
         user_id: confirmAnn.restaurant_id,
-        title: "Nuova candidatura ricevuta",
-        body: "Un lavoratore si è candidato per uno dei tuoi turni.",
-        link: `/announcements/${confirmAnn.id}`,
+        title: counterValueNum != null ? "Nuova contro offerta ricevuta" : "Nuova candidatura ricevuta",
+        body: counterValueNum != null
+          ? `Un lavoratore propone € ${counterValueNum}/h per uno dei tuoi turni.`
+          : "Un lavoratore si è candidato per uno dei tuoi turni.",
+        link: `/messages/${app.id}`,
       });
     }
     setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
@@ -170,6 +197,8 @@ function Browse() {
     }
     setConfirmAnn(null);
     setOpenId(null);
+    setApplyMode("accept");
+    setCounterAmount("");
   };
 
   if (role && role !== "worker") {
