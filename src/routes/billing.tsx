@@ -5,8 +5,9 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Coins, Check, Sparkles, ArrowLeft } from "lucide-react";
-import { CREDIT_PACKS, PLAN_PRICES, CREDIT_COSTS } from "@/lib/pricing";
+import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle, Zap } from "lucide-react";
+import { CREDIT_PACKS, PLAN_PRICES, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD } from "@/lib/pricing";
+import { Progress } from "@/components/ui/progress";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -61,6 +62,12 @@ function Billing() {
   const credits = profile?.credits ?? 0;
   const plan = profile?.plan ?? "free";
   const isPaid = plan === "pro" || plan === "business";
+  const remainingHires = Math.floor(credits / CREDITS_PER_HIRE);
+  const isExhausted = !isPaid && credits < CREDITS_PER_HIRE;
+  const isLow = !isPaid && !isExhausted && credits < LOW_CREDITS_THRESHOLD;
+  // Progress bar fills up to a "comfortable" reference of 70 crediti (SMART pack).
+  const progressRef = 70;
+  const progressValue = Math.min(100, Math.round((credits / progressRef) * 100));
 
   if (checkoutKey) {
     const isPlan = !!PLAN_PRICES[checkoutKey];
@@ -94,20 +101,27 @@ function Billing() {
       <PageHeader title="Crediti e piano" subtitle="Gestisci il saldo crediti e il piano del tuo locale" />
 
       <div className="grid gap-4 md:grid-cols-2 mb-8">
-        <div className="rounded-2xl border bg-card p-6">
+        <div className="rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-card p-6 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
               <Coins className="h-6 w-6" />
             </div>
-            <div>
+            <div className="flex-1">
               <div className="text-sm text-muted-foreground">Saldo crediti</div>
-              <div className="text-3xl font-bold">{credits}</div>
+              <div className="text-3xl font-bold tabular-nums">{credits}</div>
             </div>
           </div>
-          <div className="mt-4 text-xs text-muted-foreground space-y-1">
-            <div>Pubblica annuncio · {CREDIT_COSTS.publishAnnouncement} credito</div>
-            <div>Annuncio urgente · {CREDIT_COSTS.publishUrgentAnnouncement} crediti</div>
-            <div>Invita lavoratore · {CREDIT_COSTS.assignWorker} crediti</div>
+          {!isPaid && (
+            <div className="mt-4 space-y-2">
+              <Progress value={progressValue} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                Ti bastano per circa <strong className="text-foreground">{remainingHires}</strong> {remainingHires === 1 ? "conferma lavoratore" : "conferme lavoratore"}.
+              </p>
+            </div>
+          )}
+          <div className="mt-4 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+            <strong className="text-foreground">{CREDITS_PER_HIRE} crediti = 1 lavoratore confermato.</strong><br />
+            Pubblicare annunci e contattare lavoratori è <strong className="text-foreground">gratis</strong>. Paghi solo quando trovi davvero una persona disponibile.
           </div>
         </div>
         <div className="rounded-2xl border bg-card p-6">
@@ -127,6 +141,29 @@ function Billing() {
           )}
         </div>
       </div>
+
+      {isExhausted && (
+        <div className="mb-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-destructive">Crediti terminati</h3>
+              <p className="text-sm mt-1 text-muted-foreground">Hai esaurito i crediti disponibili. Per continuare a confermare lavoratori, scegli un nuovo pacchetto qui sotto.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {isLow && (
+        <div className="mb-6 rounded-2xl border border-amber-400/40 bg-amber-50 dark:bg-amber-950/20 p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-amber-900 dark:text-amber-200">Stai terminando i crediti</h3>
+              <p className="text-sm mt-1 text-amber-800/80 dark:text-amber-200/80">Evita interruzioni durante la ricerca del personale. SMART ti dà 10 conferme a un prezzo conveniente.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-2xl border bg-card p-4 mb-6">
         <div className="text-sm font-medium mb-2">Hai un codice sconto?</div>
@@ -161,8 +198,13 @@ function Billing() {
         )}
       </div>
 
-      <h2 className="text-lg font-semibold mb-3">Pacchetti crediti</h2>
-      <div className="grid gap-4 md:grid-cols-3 mb-10">
+      <div className="mb-3 flex items-end justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Pacchetti crediti</h2>
+          <p className="text-sm text-muted-foreground">{CREDITS_PER_HIRE} crediti per ogni lavoratore confermato.</p>
+        </div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-10">
         {Object.entries(CREDIT_PACKS).map(([key, p]) => {
           const applies = !!(discount && (discount.applies_to === "all" || discount.applies_to === "credits"));
           let final = p.priceEur;
@@ -170,20 +212,46 @@ function Billing() {
             if (discount.type === "percentage") final = +(p.priceEur * (1 - discount.value / 100)).toFixed(2);
             else if (discount.type === "fixed_amount") final = Math.max(0, +(p.priceEur - discount.value).toFixed(2));
           }
+          const isBest = p.highlight === "best";
+          const pricePerHire = (p.priceEur / p.hires).toFixed(2);
           return (
-            <div key={key} className="rounded-2xl border bg-card p-5 flex flex-col">
-              <div className="text-2xl font-bold">{p.credits} <span className="text-sm font-normal text-muted-foreground">crediti</span></div>
-              <div className="text-sm text-muted-foreground mb-4">{p.label}</div>
+            <div
+              key={key}
+              className={`relative rounded-2xl border p-5 flex flex-col transition-all hover:shadow-md ${
+                isBest
+                  ? "border-primary/60 bg-gradient-to-b from-primary/10 via-card to-card shadow-lg ring-1 ring-primary/30 md:scale-[1.02]"
+                  : "bg-card"
+              }`}
+            >
+              {isBest && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm flex items-center gap-1">
+                  <Zap className="h-3 w-3" />{p.badge ?? "Più conveniente"}
+                </div>
+              )}
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{p.label}</div>
+              {p.tagline && <div className="text-xs text-muted-foreground/80 mb-3">{p.tagline}</div>}
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-3xl font-bold tabular-nums">{p.credits}</span>
+                <span className="text-sm text-muted-foreground">crediti</span>
+              </div>
+              <div className="text-xs text-muted-foreground mb-4">≈ {p.hires} lavoratori confermati</div>
               {applies && final !== p.priceEur ? (
-                <div className="mb-4">
+                <div className="mb-2">
                   <div className="text-sm text-muted-foreground line-through">€{p.priceEur}</div>
-                  <div className="text-3xl font-bold text-emerald-600">€{final}</div>
-                  <div className="text-xs text-emerald-700">Sconto {discount!.code} applicato</div>
+                  <div className="text-3xl font-bold text-emerald-600 tabular-nums">€{final}</div>
+                  <div className="text-xs text-emerald-700">Sconto {discount!.code}</div>
                 </div>
               ) : (
-                <div className="text-3xl font-bold mb-4">€{final}</div>
+                <div className="text-3xl font-bold mb-2 tabular-nums">€{final}</div>
               )}
-              <Button className="mt-auto" onClick={() => setCheckoutKey(key)}>Acquista</Button>
+              <div className="text-xs text-muted-foreground mb-4">€{pricePerHire} per conferma</div>
+              <Button
+                className="mt-auto"
+                variant={isBest ? "default" : "outline"}
+                onClick={() => setCheckoutKey(key)}
+              >
+                Acquista {p.label}
+              </Button>
             </div>
           );
         })}
