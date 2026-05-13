@@ -15,7 +15,13 @@ export function RequireRole({ allow, children }: { allow: Role[]; children: Reac
       return;
     }
     if (role && !allow.includes(role)) {
-      nav({ to: "/forbidden" });
+      // Send the user to their own home instead of a forbidden page,
+      // so a worker hitting a restaurant URL (or vice-versa) lands on
+      // the right dashboard.
+      if (role === "restaurant") nav({ to: "/dashboard" });
+      else if (role === "worker") nav({ to: "/jobs" });
+      else if (role === "admin") nav({ to: "/admin" });
+      else nav({ to: "/forbidden" });
     }
   }, [user, role, loading, allow, nav]);
 
