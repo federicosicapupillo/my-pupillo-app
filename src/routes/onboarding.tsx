@@ -33,6 +33,8 @@ import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OnboardingStatusCard, type OnboardingStep } from "@/components/OnboardingStatusCard";
 import { DateField } from "@/components/DateField";
+import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
+import { WORKER_ROLES } from "@/lib/worker-roles";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -100,6 +102,7 @@ function Onboarding() {
   const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [idDocPath, setIdDocPath] = useState<string | null>(null);
   const [idDocName, setIdDocName] = useState<string | null>(null);
+  const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
 
   const [personal, setPersonal] = useState({
     first_name: "",
@@ -305,6 +308,15 @@ function Onboarding() {
     }
     if (profile) setRequirements(reqFromProfile(profile));
     if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
+    if (profile) {
+      const sec = (profile as any).secondary_roles as string[] | null | undefined;
+      const prim = (profile as any).primary_role as string | null | undefined;
+      const known = new Set<string>(WORKER_ROLES as readonly string[]);
+      const merged = [...(sec ?? []), ...(prim ? [prim] : [])].filter((r) => known.has(r));
+      if (merged.length > 0) {
+        setWorkerRoles((WORKER_ROLES as readonly string[]).filter((r) => merged.includes(r)));
+      }
+    }
     if (profile && (profile as any).id_document_path) {
       const p = (profile as any).id_document_path as string;
       setIdDocPath(p);
@@ -549,6 +561,8 @@ function Onboarding() {
             professional_profile: form.professional_profile,
             languages: spokenLanguages.map((s) => s.language),
             spoken_languages: spokenLanguages,
+            primary_role: workerRoles[0] ?? null,
+            secondary_roles: workerRoles,
             service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
             id_document_path: uploadedPath,
             first_name: personal.first_name.trim(),
@@ -978,6 +992,13 @@ function Onboarding() {
             <div id="sec-experience" className="scroll-mt-24">
               <Label>Età</Label>
               <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
+            </div>
+            <div id="sec-roles" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
+              <Label className="font-semibold">Renditi disponibile per</Label>
+              <p className="text-xs text-muted-foreground">
+                Seleziona i ruoli che vuoi ricoprire. Lasciando tutto selezionato risulterai disponibile per tutti i ruoli.
+              </p>
+              <WorkerRolesMultiSelect value={workerRoles} onChange={setWorkerRoles} />
             </div>
             <div>
               <Label>Profilo professionale</Label>
