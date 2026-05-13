@@ -14,14 +14,22 @@ export const LICENSE_OPTIONS = [
 ] as const;
 
 export const LANGUAGE_OPTIONS = [
-  { value: "italiano", label: "Italiano" },
-  { value: "inglese_base", label: "Inglese base" },
-  { value: "inglese_intermedio", label: "Inglese intermedio" },
-  { value: "inglese_avanzato", label: "Inglese avanzato" },
-  { value: "francese", label: "Francese" },
-  { value: "spagnolo", label: "Spagnolo" },
-  { value: "tedesco", label: "Tedesco" },
-  { value: "altro", label: "Altro" },
+  { value: "italiano_base", label: "Italiano Base (A2)" },
+  { value: "italiano_intermedio", label: "Italiano Intermedio (B2)" },
+  { value: "italiano_avanzato", label: "Italiano Avanzato (C1)" },
+  { value: "italiano_madrelingua", label: "Italiano Madrelingua" },
+  { value: "inglese_base", label: "Inglese Base (A2)" },
+  { value: "inglese_intermedio", label: "Inglese Intermedio (B2)" },
+  { value: "inglese_avanzato", label: "Inglese Avanzato (C1)" },
+  { value: "francese_base", label: "Francese Base (A2)" },
+  { value: "francese_intermedio", label: "Francese Intermedio (B2)" },
+  { value: "francese_avanzato", label: "Francese Avanzato (C1)" },
+  { value: "tedesco_base", label: "Tedesco Base (A2)" },
+  { value: "tedesco_intermedio", label: "Tedesco Intermedio (B2)" },
+  { value: "tedesco_avanzato", label: "Tedesco Avanzato (C1)" },
+  { value: "spagnolo_base", label: "Spagnolo Base (A2)" },
+  { value: "spagnolo_intermedio", label: "Spagnolo Intermedio (B2)" },
+  { value: "spagnolo_avanzato", label: "Spagnolo Avanzato (C1)" },
 ] as const;
 
 export const TATTOO_OPTIONS = [
