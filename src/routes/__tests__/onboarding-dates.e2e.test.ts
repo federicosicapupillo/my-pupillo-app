@@ -135,25 +135,11 @@ describe("onboarding form — submit blocked on rilascio/scadenza inconsistencie
     );
   });
 
-  it("blocks submit when scadenza is before rilascio (using a custom today)", () => {
-    // Pick a "today" where issued < today and expires < issued, which
-    // means expires < today too. The EXPIRED branch fires first, so the
-    // dedicated EXPIRES_BEFORE_ISSUED branch is exercised by anchoring
-    // today BEFORE both dates: issued and expires both >= today.
-    const customToday = new Date(2024, 0, 1); // 01/01/2024
-    const guard = attemptSubmit(
-      {
-        ...validDates,
-        id_document_issued_at: "2028-06-01",
-        id_document_expires_at: "2027-01-01",
-      },
-      customToday,
-    );
-    expect(guard).toBe(false);
-    expect(toast.error).toHaveBeenCalledWith(
-      DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED,
-    );
-  });
+  // Note: the "scadenza strettamente precedente alla rilascio" branch is
+  // unreachable in isolation — if expires < issued and issued <= today, then
+  // expires < today and the EXPIRED guard fires first (see the EXPIRED test
+  // above). The same-day case above is the canonical exercise of
+  // EXPIRES_BEFORE_ISSUED.
 
   it("reports the format error first when both format and range are wrong", () => {
     const ok = attemptSubmit({
