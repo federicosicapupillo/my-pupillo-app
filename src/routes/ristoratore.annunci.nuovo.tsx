@@ -719,7 +719,17 @@ function NewRestaurantJobRequest() {
             </Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
           </div>
-          {coords && <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={220} />}
+          <div className="w-full">
+            {coords ? (
+              <div className="w-full overflow-hidden rounded-2xl">
+                <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={300} />
+              </div>
+            ) : (
+              <div className="w-full rounded-2xl border border-dashed border-white/15 bg-muted/30 flex items-center justify-center text-sm text-muted-foreground" style={{ minHeight: 280 }}>
+                Inserisci indirizzo, città e CAP per visualizzare la mappa
+              </div>
+            )}
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Anticipo richiesto all'ingresso">
               <div className="space-y-2">
