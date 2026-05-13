@@ -309,6 +309,17 @@ function Onboarding() {
     return `${y}-${m}-${d}`;
   })();
 
+  // Maximum allowed birth date for workers: today minus the legal minimum
+  // age (18 years), in the Europe/Rome calendar. Used as the picker upper
+  // bound so the UI matches the DB trigger.
+  const maxBirthISORome = (() => {
+    const t = todayInRome();
+    const y = t.getFullYear() - MIN_WORKER_AGE_YEARS;
+    const m = String(t.getMonth() + 1).padStart(2, "0");
+    const d = String(t.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
   const ID_DOC_ACCEPT = ID_DOC_ACCEPT_ATTR;
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
