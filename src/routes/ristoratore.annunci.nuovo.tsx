@@ -376,6 +376,14 @@ function NewRestaurantJobRequest() {
     if (!f.start_time) { toast.error("Inserisci l'orario di inizio turno."); return false; }
     if (!f.end_date) { toast.error("Inserisci la data di fine turno."); return false; }
     if (!f.end_time) { toast.error("Inserisci l'orario di fine turno."); return false; }
+    if (f.shift_date < todayISO) { toast.error("Non puoi selezionare una data passata"); return false; }
+    {
+      const start = buildDateTime(f.shift_date, f.start_time);
+      if (start && start.getTime() < Date.now()) {
+        toast.error(f.shift_date === todayISO ? "Non puoi selezionare un orario già trascorso" : "Non puoi selezionare una data passata");
+        return false;
+      }
+    }
     if (durationHours <= 0) { toast.error("La fine del turno deve essere successiva all'inizio."); return false; }
     if (longReasonError) { toast.error(longReasonError); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
