@@ -708,7 +708,16 @@ function Onboarding() {
         (!idDocFile && !idDocPath)
       ) {
         setBusy(false);
-        if (!cityEntry) {
+        // Surface the issued-specific message before the generic copy so
+        // the user knows exactly which date is missing.
+        if (!personal.id_document_issued_at) {
+          setDateFieldErrors((prev) => ({
+            ...prev,
+            id_document_issued_at:
+              "Inserisci la data di rilascio del documento.",
+          }));
+          toast.error("Inserisci la data di rilascio del documento.");
+        } else if (!cityEntry) {
           toast.error("Seleziona una città di residenza dall'elenco.");
         } else if (!capOk) {
           toast.error("Seleziona un CAP valido per la città scelta.");
