@@ -277,7 +277,7 @@ function Onboarding() {
       validateDocumentDates(
         personal.id_document_issued_at,
         personal.id_document_expires_at,
-        new Date(),
+        todayInRome(),
       ) !== null
     ) {
       return true;
