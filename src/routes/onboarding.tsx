@@ -1178,7 +1178,11 @@ function Onboarding() {
                     required
                     value={personal.birth_date}
                     max={new Date().toISOString().slice(0, 10)}
-                    onChange={(iso) => setPersonal({ ...personal, birth_date: iso })}
+                    error={dateFieldErrors.birth_date}
+                    onChange={(iso) => {
+                      clearDateError("birth_date");
+                      setPersonal({ ...personal, birth_date: iso });
+                    }}
                   />
                 </div>
                 <div>
@@ -1245,11 +1249,15 @@ function Onboarding() {
                     required
                     value={personal.id_document_issued_at}
                     max={new Date().toISOString().slice(0, 10)}
-                    onChange={(iso) => setPersonal({ ...personal, id_document_issued_at: iso })}
+                    error={dateFieldErrors.id_document_issued_at}
+                    onChange={(iso) => {
+                      clearDateError("id_document_issued_at");
+                      // Re-validating the cross-check may also clear a stale
+                      // expires error, so wipe it too — submit will recompute.
+                      clearDateError("id_document_expires_at");
+                      setPersonal({ ...personal, id_document_issued_at: iso });
+                    }}
                   />
-                  {personal.id_document_issued_at && new Date(personal.id_document_issued_at) > new Date(new Date().toDateString()) && (
-                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.ISSUED_FUTURE}</p>
-                  )}
                 </div>
                 <div>
                   <Label>Data scadenza *</Label>
@@ -1257,15 +1265,12 @@ function Onboarding() {
                     required
                     value={personal.id_document_expires_at}
                     min={personal.id_document_issued_at || new Date().toISOString().slice(0, 10)}
-                    onChange={(iso) => setPersonal({ ...personal, id_document_expires_at: iso })}
+                    error={dateFieldErrors.id_document_expires_at}
+                    onChange={(iso) => {
+                      clearDateError("id_document_expires_at");
+                      setPersonal({ ...personal, id_document_expires_at: iso });
+                    }}
                   />
-                  {personal.id_document_expires_at && new Date(personal.id_document_expires_at) < new Date(new Date().toDateString()) && (
-                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.EXPIRED}</p>
-                  )}
-                  {personal.id_document_issued_at && personal.id_document_expires_at &&
-                    new Date(personal.id_document_expires_at) <= new Date(personal.id_document_issued_at) && (
-                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED}</p>
-                  )}
                 </div>
                 <div className="md:col-span-2">
                   <Label>Ente di rilascio *</Label>
