@@ -126,11 +126,23 @@ function AnnouncementsPage() {
                 <Link to="/ristoratore/annunci/nuovo" search={{ reuse: a.id } as never} className="mt-3 inline-flex"><Button variant="outline" size="sm" className="gap-2"><RotateCw className="h-3 w-3" />Riusa come nuovo</Button></Link>
               )}
               <div className="mt-3">
-                <Link to="/announcements/$id" params={{ id: a.id }}>
-                  <Button size="sm" variant={role === "restaurant" && (counts[a.id] ?? 0) > 0 ? "default" : "outline"} className="gap-1">
-                    {role === "restaurant" ? <>Vedi candidature{(counts[a.id] ?? 0) > 0 ? ` (${counts[a.id]})` : ""}</> : "Apri dettagli"}
-                  </Button>
-                </Link>
+                {role === "restaurant" ? (
+                  (counts[a.id] ?? 0) > 0 ? (
+                    <Link to="/announcements/$id" params={{ id: a.id }}>
+                      <Button size="sm" variant="default" className="gap-1">
+                        Vedi candidature ({counts[a.id]})
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button size="sm" variant="outline" className="gap-1" disabled>
+                      Nessuna candidatura
+                    </Button>
+                  )
+                ) : (
+                  <Link to="/announcements/$id" params={{ id: a.id }}>
+                    <Button size="sm" variant="outline" className="gap-1">Apri dettagli</Button>
+                  </Link>
+                )}
               </div>
             </div>
           ))}
