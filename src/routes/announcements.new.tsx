@@ -510,6 +510,9 @@ function NewAnn() {
             )}
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          <span className="text-destructive">*</span> Campi obbligatori
+        </p>
       </form>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
