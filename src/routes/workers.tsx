@@ -393,7 +393,7 @@ function WorkersPage() {
             <span>Piano <strong className="capitalize">{profile?.plan}</strong> attivo · inviti illimitati</span>
           ) : (
             <span>
-              Invitare un lavoratore costa <strong>{cost} crediti</strong>. Saldo: <strong>{credits}</strong>
+              Contattare è gratis. L'assegnazione del turno costa <strong>{cost} crediti</strong>. Saldo: <strong>{credits}</strong>
             </span>
           )}
         </div>
