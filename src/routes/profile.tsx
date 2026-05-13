@@ -67,7 +67,7 @@ function Profile() {
       <div className="rounded-2xl border bg-card p-6 max-w-2xl space-y-3">
         <Row label="Email" value={user?.email} />
         <Row label="Ruolo" value={role} />
-        <Row label="Nome" value={profile?.full_name} />
+        <Row label="Nome e cognome" value={[(profile as any)?.first_name, (profile as any)?.last_name].filter(Boolean).join(" ") || profile?.full_name} />
         <Row label="Telefono" value={(profile as any)?.phone_full || profile?.phone} />
         {role === "restaurant" && (<>
           <Row label="Nome locale" value={profile?.business_name} />
