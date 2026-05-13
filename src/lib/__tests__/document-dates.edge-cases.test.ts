@@ -42,12 +42,12 @@ describe("document dates — timezone-safe comparisons", () => {
       validateDocumentDates("2026-05-13", "2030-05-13", lateToday),
     ).toBeNull();
     // Expiring on the same calendar day must NOT report EXPIRED
-    // (the guard normalizes to start-of-day).
+    // (the guard normalizes to start-of-day). With issued in the past,
+    // the only remaining branch is EXPIRES_BEFORE_ISSUED only when
+    // expires <= issued, which is not the case here, so result is null.
     expect(
       validateDocumentDates("2020-01-01", "2026-05-13", lateToday),
-    ).toBe(DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED) /* sanity: range still triggers */ === false
-      ? null
-      : null;
+    ).toBeNull();
   });
 
   it("does not flip results when 'today' is built from UTC hours that differ from local hours", () => {
