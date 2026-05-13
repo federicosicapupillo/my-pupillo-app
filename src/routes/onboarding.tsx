@@ -79,9 +79,6 @@ function Onboarding() {
     province: "",
     postal_code: "",
     country: "Italia",
-    access_restrictions: "",
-    additional_directions: "",
-    location_notes: "",
     contact_person_first_name: "",
     contact_person_last_name: "",
     contact_person_role: "",
@@ -115,8 +112,6 @@ function Onboarding() {
         !!form.price_range &&
         (form.venue_type !== "Altro" || !!form.venue_type_other.trim());
       const vatDone = vatValid;
-      const locationDone =
-        !!form.address.trim() && !!form.province && !!form.city && !!form.postal_code.trim();
       const contactDone =
         !!form.contact_person_first_name.trim() &&
         !!form.contact_person_last_name.trim() &&
@@ -125,7 +120,7 @@ function Onboarding() {
         !!form.contact_person_email.trim() &&
         isValidEmail(form.contact_person_email);
       const finalDone = allDone;
-      const finalLocked = !(businessDone && vatDone && locationDone && contactDone);
+      const finalLocked = !(businessDone && vatDone && contactDone);
       return [
         { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
         {
@@ -147,13 +142,6 @@ function Onboarding() {
           hint: "11 cifre, verifica automatica",
           status: vatDone ? "done" : "todo",
           href: "#sec-vat",
-        },
-        {
-          id: "location",
-          label: "Luogo e accesso",
-          hint: "Indirizzo, provincia, città, CAP",
-          status: locationDone ? "done" : "todo",
-          href: "#sec-location",
         },
         {
           id: "contact",
@@ -276,9 +264,6 @@ function Onboarding() {
         province: (profile as any).province ?? "",
         postal_code: (profile as any).postal_code ?? "",
         country: (profile as any).country ?? "Italia",
-        access_restrictions: (profile as any).access_restrictions ?? "",
-        additional_directions: (profile as any).additional_directions ?? "",
-        location_notes: (profile as any).location_notes ?? "",
         contact_person_first_name: (profile as any).contact_person_first_name ?? "",
         contact_person_last_name: (profile as any).contact_person_last_name ?? "",
         contact_person_role: (profile as any).contact_person_role ?? "",
@@ -434,9 +419,6 @@ function Onboarding() {
             longitude: restCoords.longitude,
             service_area_lat: serviceArea.service_area_lat,
             service_area_lng: serviceArea.service_area_lng,
-            access_restrictions: form.access_restrictions || null,
-            additional_directions: form.additional_directions || null,
-            location_notes: form.location_notes || null,
             contact_person_first_name: form.contact_person_first_name || null,
             contact_person_last_name: form.contact_person_last_name || null,
             contact_person_role: form.contact_person_role || null,
@@ -682,40 +664,11 @@ function Onboarding() {
             </div>
 
             <div id="sec-contact" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
-              <h3 className="font-semibold flex items-center gap-2">📍 Luogo e Accesso</h3>
+              <h3 className="font-semibold flex items-center gap-2">👤 Referente operativo</h3>
               <p className="text-xs text-muted-foreground -mt-2">
-                Queste informazioni vengono mostrate ai lavoratori candidati e precompilate negli annunci.
+                Persona di riferimento per i lavoratori candidati.
               </p>
-              <div>
-                <Label>Restrizioni all'ingresso</Label>
-                <Textarea
-                  rows={2}
-                  placeholder="Es. Arrivare 15 minuti prima per accreditarsi"
-                  value={form.access_restrictions}
-                  onChange={(e) => setForm({ ...form, access_restrictions: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Indicazioni aggiuntive</Label>
-                <Textarea
-                  rows={2}
-                  placeholder="Es. Entrare dall'ingresso laterale, chiedere del responsabile di sala"
-                  value={form.additional_directions}
-                  onChange={(e) => setForm({ ...form, additional_directions: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Note per il lavoratore</Label>
-                <Textarea
-                  rows={2}
-                  placeholder="Informazioni utili che il lavoratore deve sapere prima di arrivare sul posto"
-                  value={form.location_notes}
-                  onChange={(e) => setForm({ ...form, location_notes: e.target.value })}
-                />
-              </div>
-              <div className="pt-2 border-t">
-                <Label className="text-sm font-semibold">Referente operativo</Label>
-                <div className="grid gap-3 md:grid-cols-2 mt-2">
+              <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <Label className="text-xs">Nome</Label>
                     <Input
@@ -777,7 +730,6 @@ function Onboarding() {
                       <p className="text-xs text-destructive mt-1">Inserisci un indirizzo email valido.</p>
                     )}
                   </div>
-                </div>
               </div>
             </div>
 
