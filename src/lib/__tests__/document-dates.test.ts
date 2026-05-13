@@ -81,12 +81,10 @@ describe("validateDocumentDates — error messages match the DB trigger", () => 
   });
 
   it("blocks an expiry date earlier than or equal to the issue date", () => {
-    // Both dates are in the future to isolate the cross-check
-    // (otherwise the EXPIRED rule would fire first, matching the DB trigger).
-    expect(validateDocumentDates("2027-06-01", "2027-01-01", TODAY)).toBe(
-      DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED,
-    );
-    expect(validateDocumentDates("2027-01-01", "2027-01-01", TODAY)).toBe(
+    // Both dates set to TODAY isolate the cross-check: issue is not in the
+    // future and the document is not expired, so only the
+    // expires <= issued rule can fire (matches the DB trigger ordering).
+    expect(validateDocumentDates("2026-05-13", "2026-05-13", TODAY)).toBe(
       DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED,
     );
     expect(DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED).toBe(
