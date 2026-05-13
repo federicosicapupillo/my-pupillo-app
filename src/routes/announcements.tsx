@@ -120,9 +120,35 @@ function AnnouncementsPage() {
                   <div className="flex items-center gap-2"><Users className="h-4 w-4" />{counts[a.id] ?? 0} candidatur{(counts[a.id] ?? 0) === 1 ? "a" : "e"}</div>
                 )}
               </div>
-              {a.location_lat != null && a.location_lng != null && (
-                <div className="mt-3"><AnnouncementMap lat={a.location_lat} lng={a.location_lng} address={a.location_address} height={140} /></div>
-              )}
+              <div className="mt-3">
+                {a.location_lat != null && a.location_lng != null ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                      onClick={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+                      aria-expanded={!!openMaps[a.id]}
+                    >
+                      {openMaps[a.id] ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
+                    </Button>
+                    {openMaps[a.id] && (
+                      <div className="mt-3 overflow-hidden rounded-xl">
+                        <AnnouncementMap
+                          key={a.id}
+                          lat={a.location_lat}
+                          lng={a.location_lng}
+                          address={a.location_address}
+                          height={280}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Mappa non disponibile: indirizzo incompleto</p>
+                )}
+              </div>
               {role === "restaurant" && a.status !== "active" && (
                 <Link to="/ristoratore/annunci/nuovo" search={{ reuse: a.id } as never} className="mt-3 inline-flex"><Button variant="outline" size="sm" className="gap-2"><RotateCw className="h-3 w-3" />Riusa come nuovo</Button></Link>
               )}
