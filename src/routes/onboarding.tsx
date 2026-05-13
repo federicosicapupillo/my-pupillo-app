@@ -164,6 +164,10 @@ function Onboarding() {
     }
   }, [profile, nav]);
 
+  // Sentinel value stored in service_area_district when the worker chooses
+  // GeoRadar mode (radius around position) instead of specific zones.
+  const GEORADAR_SENTINEL = "__georadar__";
+
   const [form, setForm] = useState({
     full_name: "",
     phone_code: DEFAULT_PHONE_PREFIX,
@@ -219,6 +223,9 @@ function Onboarding() {
   const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
   const [serviceAreaLoading, setServiceAreaLoading] = useState(false);
   const [serviceAreaError, setServiceAreaError] = useState<string | null>(null);
+
+  // Worker area mode: "zones" (specific zones/quartieri) | "georadar" (radius around position).
+  const [areaMode, setAreaMode] = useState<"zones" | "georadar">("zones");
 
   // Live-geocode worker service area for the map preview (debounced).
   useEffect(() => {
@@ -419,9 +426,10 @@ function Onboarding() {
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
       !!form.service_area_city.trim() &&
-      !!form.service_area_district.trim() &&
       form.service_area_address.trim().length >= 3 &&
-      ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m));
+      (areaMode === "georadar"
+        ? ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))
+        : !!form.service_area_district.trim());
     const finalLocked = !(personalDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
@@ -493,6 +501,12 @@ function Onboarding() {
     if (profile) {
       const ph = splitPhone((profile as any).phone_full ?? profile.phone);
       const cph = splitPhone((profile as any).contact_person_phone);
+      const loadedDistrict = ((profile as any).service_area_district ?? "") as string;
+      if (loadedDistrict === GEORADAR_SENTINEL) {
+        setAreaMode("georadar");
+      } else if (loadedDistrict.trim()) {
+        setAreaMode("zones");
+      }
       setForm((f) => ({
         ...f,
         full_name: profile.full_name ?? "",
@@ -937,7 +951,7 @@ function Onboarding() {
         toast.error("Indica la città di partenza per la tua area di interesse.");
         return;
       }
-      if (!form.service_area_district.trim()) {
+      if (areaMode === "zones" && !form.service_area_district.trim()) {
         setBusy(false);
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
         return;
@@ -954,7 +968,7 @@ function Onboarding() {
       }
       const fullAddr = [
         form.service_area_address.trim(),
-        form.service_area_district.trim(),
+        areaMode === "zones" ? form.service_area_district.trim() : "",
         form.service_area_city.trim(),
         "Italia",
       ].filter(Boolean).join(", ");
@@ -1033,7 +1047,10 @@ function Onboarding() {
             secondary_roles: workerRoles,
             service_area_address: form.service_area_address.trim() || null,
             service_area_city: form.service_area_city.trim() || null,
-            service_area_district: form.service_area_district.trim() || null,
+            service_area_district:
+              areaMode === "georadar"
+                ? GEORADAR_SENTINEL
+                : form.service_area_district.trim() || null,
             service_area_radius_m: (() => {
               const v = parseInt(form.service_area_radius_m);
               return ALLOWED_RADIUS_M.has(v) ? v : 10000;
@@ -1756,10 +1773,57 @@ function Onboarding() {
             </div>
             <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <div>
-                <Label className="font-semibold">Dove vuoi lavorare?</Label>
+                <Label className="font-semibold">Come vuoi impostare la tua area di lavoro?</Label>
                 <p className="text-xs text-muted-foreground">
-                  Scegli la città e le zone in cui sei disponibile.
+                  Scegli se indicare zone specifiche oppure usare un raggio automatico intorno alla tua posizione.
                 </p>
+              </div>
+              <div
+                role="radiogroup"
+                aria-label="Modalità area di lavoro"
+                className="grid gap-2 sm:grid-cols-2"
+              >
+                {([
+                  {
+                    id: "zones",
+                    title: "Zone / Quartieri",
+                    desc: "Lavora solo nelle zone che preferisci.",
+                  },
+                  {
+                    id: "georadar",
+                    title: "GeoRadar",
+                    desc: "Mostrati automaticamente agli annunci vicini alla tua posizione.",
+                  },
+                ] as const).map((opt) => {
+                  const active = areaMode === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setAreaMode(opt.id)}
+                      className={`text-left rounded-xl border p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${
+                        active
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-input bg-background hover:bg-muted"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          aria-hidden
+                          className={`inline-flex h-4 w-4 items-center justify-center rounded-full border ${
+                            active ? "border-primary" : "border-muted-foreground/40"
+                          }`}
+                        >
+                          {active && <span className="h-2 w-2 rounded-full bg-primary" />}
+                        </span>
+                        <span className="font-medium">{opt.title}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{opt.desc}</p>
+                    </button>
+                  );
+                })}
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
@@ -1779,6 +1843,7 @@ function Onboarding() {
                     searchPlaceholder="Cerca città…"
                   />
                 </div>
+                {areaMode === "zones" && (
                 <div>
                   <Label>Zona / quartiere *</Label>
                   {(() => {
@@ -1809,6 +1874,7 @@ function Onboarding() {
                     );
                   })()}
                 </div>
+                )}
               </div>
               <div>
                 <Label>Indirizzo o punto di riferimento *</Label>
@@ -1818,6 +1884,7 @@ function Onboarding() {
                   onChange={(e) => setForm({ ...form, service_area_address: e.target.value })}
                 />
               </div>
+              {areaMode === "georadar" && (
               <div>
                 <Label>Raggio d'azione *</Label>
                 <SearchableSelect
@@ -1836,6 +1903,8 @@ function Onboarding() {
                   searchPlaceholder="Cerca raggio…"
                 />
               </div>
+              )}
+              {areaMode === "georadar" && (
               <div className="relative isolate" style={{ zIndex: 0 }}>
                 <WorkerServiceAreaMap
                   lat={serviceAreaPreview?.lat ?? null}
@@ -1852,6 +1921,7 @@ function Onboarding() {
                     : "Compila città e indirizzo per vedere l'anteprima."}
                 </div>
               </div>
+              )}
             </div>
             {/* Upload UI moved inside the "Documento di identità" section above. */}
           </>
