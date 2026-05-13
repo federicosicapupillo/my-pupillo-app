@@ -847,6 +847,9 @@ function Onboarding() {
         <Button type="submit" disabled={busy}>
           {busy ? "Salvataggio..." : "Salva e continua"}
         </Button>
+        <p className="text-xs text-muted-foreground">
+          <span className="text-destructive">*</span> Campi obbligatori
+        </p>
       </form>
     </AppShell>
   );
