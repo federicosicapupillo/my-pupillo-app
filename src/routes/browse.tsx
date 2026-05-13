@@ -8,13 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User } from "lucide-react";
+import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User, CheckCircle2, Moon, Hourglass, Loader2 } from "lucide-react";
 import { formatTariff } from "@/lib/format";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -60,8 +59,8 @@ function Browse() {
   const [restaurant, setRestaurant] = useState<RestaurantInfo>(null);
   const [restaurantsById, setRestaurantsById] = useState<Record<string, { city: string | null; neighborhood: string | null }>>({});
   const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
-  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [successApp, setSuccessApp] = useState<{ id: string; ann: Ann } | null>(null);
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
@@ -135,34 +134,42 @@ function Browse() {
     }
   };
 
-  const apply = (a: Ann) => { setNote(""); setConfirmAnn(a); };
+  const apply = (a: Ann) => {
+    if (appliedIds.has(a.id)) {
+      toast.info("Ti sei già candidato a questo turno.");
+      return;
+    }
+    setConfirmAnn(a);
+  };
 
   const submitApplication = async () => {
     if (!user || !confirmAnn) return;
+    if (appliedIds.has(confirmAnn.id)) {
+      toast.info("Ti sei già candidato a questo turno.");
+      setConfirmAnn(null);
+      return;
+    }
     setSubmitting(true);
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: confirmAnn.id, worker_id: user.id, restaurant_id: confirmAnn.restaurant_id,
     }).select("id").single();
     if (error) { setSubmitting(false); return toast.error(error.message); }
+    // Notifica al ristoratore (best-effort)
     if (app?.id) {
-      const autoBody =
-        "Ciao! Ho inviato la mia candidatura per il turno pubblicato.\n" +
-        "Sono disponibile nell'orario richiesto e resto a disposizione per conferma o ulteriori informazioni. A presto!";
-      const messages: Array<{ application_id: string; sender_id: string; body: string; message_type: string }> = [
-        { application_id: app.id, sender_id: user.id, body: autoBody, message_type: "auto" },
-      ];
-      if (note.trim()) {
-        messages.push({ application_id: app.id, sender_id: user.id, body: note.trim(), message_type: "text" });
-      }
-      const { error: mErr } = await supabase.from("messages").insert(messages);
-      if (mErr) toast.error("Candidatura inviata, ma messaggio non salvato: " + mErr.message);
+      await supabase.from("notifications").insert({
+        user_id: confirmAnn.restaurant_id,
+        title: "Nuova candidatura ricevuta",
+        body: "Un lavoratore si è candidato per uno dei tuoi turni.",
+        link: `/announcements/${confirmAnn.id}`,
+      });
     }
-    toast.success("Candidatura inviata correttamente");
     setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
-    const appId = app?.id;
-    setConfirmAnn(null); setNote(""); setSubmitting(false);
+    setSubmitting(false);
+    if (app?.id) {
+      setSuccessApp({ id: app.id, ann: confirmAnn });
+    }
+    setConfirmAnn(null);
     setOpenId(null);
-    if (appId) navigate({ to: "/messages/$id", params: { id: appId } });
   };
 
   if (role && role !== "worker") {
@@ -321,31 +328,132 @@ function Browse() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={!!confirmAnn} onOpenChange={(o)=>!o && !submitting && setConfirmAnn(null)}>
-        <DialogContent>
+      <ApplyConfirmDialog
+        ann={confirmAnn}
+        restaurantInfo={confirmAnn ? restaurantsById[confirmAnn.restaurant_id] : undefined}
+        submitting={submitting}
+        onCancel={() => !submitting && setConfirmAnn(null)}
+        onConfirm={submitApplication}
+      />
+
+      <SuccessDialog
+        open={!!successApp}
+        onClose={() => setSuccessApp(null)}
+        onGoToApplications={() => { const id = successApp?.id; setSuccessApp(null); if (id) navigate({ to: "/messages/$id", params: { id } }); }}
+      />
+    </AppShell>
+  );
+}
+
+function isNightShift(time?: string | null) {
+  if (!time) return false;
+  const h = Number(time.slice(0, 2));
+  return h >= 20 || h < 6;
+}
+
+function ApplyConfirmDialog({
+  ann, restaurantInfo, submitting, onCancel, onConfirm,
+}: {
+  ann: Ann | null;
+  restaurantInfo?: { city: string | null; neighborhood: string | null };
+  submitting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const night = ann ? isNightShift(ann.service_time) : false;
+  const long = !!(ann && (ann.duration_hours ?? 0) >= 8);
+  const startH = ann?.service_time?.slice(0, 5) ?? "—";
+  const endLabel = (() => {
+    if (!ann?.service_time) return "—";
+    const [h, m] = ann.service_time.split(":").map(Number);
+    const total = h * 60 + (m || 0) + Math.round((ann.duration_hours || 0) * 60);
+    const eh = Math.floor(total / 60) % 24;
+    const em = total % 60;
+    return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
+  })();
+  const zone = ann ? publicLocationLabel({ job_city: ann.job_city, city: restaurantInfo?.city, neighborhood: restaurantInfo?.neighborhood }) : "";
+
+  return (
+    <Dialog open={!!ann} onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-primary/20 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.4)] animate-scale-in">
+        <div className="bg-gradient-to-br from-primary/10 via-card to-card p-6 pb-4">
           <DialogHeader>
-            <DialogTitle>Conferma candidatura</DialogTitle>
-            <DialogDescription>
-              {confirmAnn && <>Stai per candidarti per <span className="capitalize font-medium">{confirmAnn.professional_profile || "questa offerta"}</span> del {new Date(confirmAnn.service_date).toLocaleDateString("it-IT")} alle {confirmAnn.service_time?.slice(0,5)}. Vuoi aggiungere una nota per il ristoratore?</>}
+            <DialogTitle className="text-2xl font-bold tracking-tight">Confermi la candidatura?</DialogTitle>
+            <DialogDescription className="text-sm">
+              Stai inviando la tua disponibilità per questo turno.
             </DialogDescription>
           </DialogHeader>
-          <Textarea
-            placeholder="Es. Ho 3 anni di esperienza come cameriere in eventi serali, disponibile dalle 18…"
-            value={note}
-            onChange={(e)=>setNote(e.target.value)}
-            rows={4}
-            maxLength={500}
-          />
-          <div className="text-xs text-muted-foreground text-right">{note.length}/500</div>
-          <DialogFooter>
-            <Button variant="outline" onClick={()=>setConfirmAnn(null)} disabled={submitting}>Annulla</Button>
-            <Button onClick={submitApplication} disabled={submitting} className="gap-2">
-              <Send className="h-4 w-4" />{submitting ? "Invio…" : "Conferma e invia"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </AppShell>
+        </div>
+
+        {ann && (
+          <div className="px-6 pb-2 space-y-3">
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-2.5 text-sm">
+              <div className="flex items-center gap-2 text-base font-semibold capitalize">
+                <User className="h-4 w-4 text-primary" />
+                {ann.professional_profile || "Ruolo"}
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-4 w-4" /><span className="truncate">{zone || "—"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-4 w-4" /><span>{startH} → {endLabel} · {ann.duration_hours}h</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Calendar className="h-4 w-4" /><span>{new Date(ann.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+              </div>
+              <div className="flex items-center gap-2 font-medium text-foreground">
+                <Euro className="h-4 w-4 text-primary" />{formatTariff(ann.tariff_amount, ann.tariff_type)}
+              </div>
+            </div>
+            {(night || long) && (
+              <div className="flex flex-wrap gap-2">
+                {night && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 text-indigo-300 dark:text-indigo-300 text-xs px-2.5 py-1 font-medium">
+                    <Moon className="h-3 w-3" />Turno notturno
+                  </span>
+                )}
+                {long && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 text-xs px-2.5 py-1 font-medium">
+                    <Hourglass className="h-3 w-3" />Turno lungo
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter className="p-6 pt-4 gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
+          <Button variant="outline" onClick={onCancel} disabled={submitting} className="sm:flex-1">
+            Annulla
+          </Button>
+          <Button onClick={onConfirm} disabled={submitting} className="sm:flex-1 gap-2 shadow-lg shadow-primary/30">
+            {submitting ? (<><Loader2 className="h-4 w-4 animate-spin" />Invio candidatura…</>) : (<><Send className="h-4 w-4" />Conferma candidatura</>)}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SuccessDialog({ open, onClose, onGoToApplications }: { open: boolean; onClose: () => void; onGoToApplications: () => void }) {
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md text-center p-8 border-primary/20 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.5)] animate-scale-in">
+        <div className="mx-auto h-16 w-16 rounded-full bg-primary/15 flex items-center justify-center mb-2 animate-fade-in">
+          <CheckCircle2 className="h-9 w-9 text-primary" />
+        </div>
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">Candidatura inviata</DialogTitle>
+          <DialogDescription className="text-base">
+            Il ristoratore riceverà subito la tua disponibilità.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4 flex-col-reverse sm:flex-row gap-2 sm:gap-2">
+          <Button variant="outline" onClick={onClose} className="sm:flex-1">Continua a cercare</Button>
+          <Button onClick={onGoToApplications} className="sm:flex-1 shadow-lg shadow-primary/30">Vai alle mie candidature</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
