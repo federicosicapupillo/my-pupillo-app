@@ -549,6 +549,7 @@ function Onboarding() {
     }
     if (profile) {
       const p = profile as any;
+      const split = splitAddressAndCivic(p.residence_address);
       setPersonal((s) => ({
         first_name: p.first_name ?? s.first_name,
         last_name: p.last_name ?? s.last_name,
@@ -557,6 +558,8 @@ function Onboarding() {
         tax_code: p.tax_code ?? s.tax_code,
         nationality: p.nationality ?? s.nationality,
         residence_address: p.residence_address ?? s.residence_address,
+        residence_street: split.street || s.residence_street,
+        residence_street_number: split.civic || s.residence_street_number,
         residence_city: p.residence_city ?? s.residence_city,
         residence_postal_code: p.residence_postal_code ?? s.residence_postal_code,
         residence_province: p.residence_province ?? s.residence_province,
