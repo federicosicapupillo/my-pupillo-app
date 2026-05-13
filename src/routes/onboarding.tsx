@@ -332,10 +332,12 @@ function Onboarding() {
         setAvatarUrl(stored);
       } else {
         // Storage path — generate a short-lived signed URL
-        const { data: signed } = await supabase.storage
+        supabase.storage
           .from("avatars")
-          .createSignedUrl(stored, 60 * 60);
-        if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+          .createSignedUrl(stored, 60 * 60)
+          .then(({ data: signed }) => {
+            if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+          });
       }
     }
     if (profile) {
