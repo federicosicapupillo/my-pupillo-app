@@ -33,6 +33,7 @@ import { DistrictField } from "@/components/DistrictField";
 import { DateField } from "@/components/DateField";
 import { HourlyRateInput } from "@/components/HourlyRateInput";
 import { formatTariff } from "@/lib/format";
+import { LanguagesMultiSelect } from "@/components/RestaurantRequirements";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
