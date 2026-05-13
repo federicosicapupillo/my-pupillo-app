@@ -1128,6 +1128,27 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurant_worker_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          restaurant_id: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          restaurant_id: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          restaurant_id?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           announcement_id: string | null

@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight, Users } from "lucide-react";
 import { PupilloMenu, PupilloClose, PupilloAvatar } from "@/components/PupilloIcons";
 import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -27,6 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     role === "restaurant" && { to: "/announcements", label: "I miei annunci", icon: Briefcase },
     role === "restaurant" && { to: "/workers", label: "Cerca lavoratori", icon: Search },
+    role === "restaurant" && { to: "/ristoratore/collaboratori", label: "Collaboratori", icon: Users },
     role === "worker" && { to: "/jobs", label: "Offerte ricevute", icon: Briefcase },
     role === "worker" && { to: "/browse", label: "Trova offerte", icon: Compass },
     (role === "worker" || role === "restaurant") && { to: "/shifts", label: "I miei turni", icon: CalendarClock },
