@@ -4,8 +4,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Check, ChevronDown } from "lucide-react";
 
+export type SearchableSelectOption = { value: string; label: string };
+
 type Props = {
-  options: readonly string[] | string[];
+  options:
+    | readonly string[]
+    | string[]
+    | readonly SearchableSelectOption[]
+    | SearchableSelectOption[];
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
@@ -24,10 +30,26 @@ export function SearchableSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(
-    () => options.filter((o) => o.toLowerCase().includes(query.trim().toLowerCase())),
-    [options, query],
+  const normalized: SearchableSelectOption[] = useMemo(
+    () =>
+      (options as Array<string | SearchableSelectOption>).map((o) =>
+        typeof o === "string" ? { value: o, label: o } : o,
+      ),
+    [options],
   );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return normalized;
+    return normalized.filter(
+      (o) =>
+        o.label.toLowerCase().includes(q) ||
+        o.value.toLowerCase().includes(q),
+    );
+  }, [normalized, query]);
+
+  const selectedLabel =
+    normalized.find((o) => o.value === value)?.label ?? value;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -39,7 +61,7 @@ export function SearchableSelect({
           className="w-full justify-between h-12 text-left font-normal"
         >
           <span className={!value ? "text-muted-foreground" : ""}>
-            {value || placeholder}
+            {value ? selectedLabel : placeholder}
           </span>
           <ChevronDown className="h-4 w-4 opacity-60 shrink-0" />
         </Button>
@@ -65,16 +87,16 @@ export function SearchableSelect({
           {filtered.map((opt) => (
             <button
               type="button"
-              key={opt}
+              key={opt.value}
               onClick={() => {
-                onChange(opt);
+                onChange(opt.value);
                 setOpen(false);
                 setQuery("");
               }}
               className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-accent text-sm text-left"
             >
-              <Check className={`h-4 w-4 ${value === opt ? "opacity-100" : "opacity-0"}`} />
-              {opt}
+              <Check className={`h-4 w-4 ${value === opt.value ? "opacity-100" : "opacity-0"}`} />
+              {opt.label}
             </button>
           ))}
         </div>
