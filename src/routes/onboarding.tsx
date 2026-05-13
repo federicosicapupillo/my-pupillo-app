@@ -436,7 +436,6 @@ function Onboarding() {
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
       !!form.service_area_city.trim() &&
-      form.service_area_address.trim().length >= 3 &&
       (areaMode === "georadar"
         ? ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))
         : !!form.service_area_district.trim());
@@ -978,18 +977,12 @@ function Onboarding() {
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
         return;
       }
-      if (form.service_area_address.trim().length < 3) {
-        setBusy(false);
-        toast.error("Indica l'indirizzo o un punto di riferimento della tua area di interesse.");
-        return;
-      }
       if (!ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))) {
         setBusy(false);
         toast.error("Seleziona un raggio d'azione valido.");
         return;
       }
       const fullAddr = [
-        form.service_area_address.trim(),
         areaMode === "zones" ? form.service_area_district.trim() : "",
         form.service_area_city.trim(),
         "Italia",
@@ -1066,7 +1059,6 @@ function Onboarding() {
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
             secondary_roles: workerRoles,
-            service_area_address: form.service_area_address.trim() || null,
             service_area_city: form.service_area_city.trim() || null,
             service_area_district:
               areaMode === "georadar"
