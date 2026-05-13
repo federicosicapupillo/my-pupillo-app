@@ -122,6 +122,10 @@ function Onboarding() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
+  const [serviceAreaLoading, setServiceAreaLoading] = useState(false);
+  const [serviceAreaError, setServiceAreaError] = useState<string | null>(null);
+
   const [personal, setPersonal] = useState({
     first_name: "",
     last_name: "",
