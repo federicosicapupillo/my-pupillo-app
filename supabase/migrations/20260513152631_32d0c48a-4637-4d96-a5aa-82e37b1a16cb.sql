@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public._exec_admin_sql(text);
