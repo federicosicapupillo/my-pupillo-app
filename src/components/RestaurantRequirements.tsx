@@ -2,6 +2,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, ChevronsUpDown, X } from "lucide-react";
+import { useState } from "react";
 import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
@@ -72,6 +78,92 @@ function toggle<T>(list: T[], v: T): T[] {
   return list.includes(v) ? list.filter(x => x !== v) : [...list, v];
 }
 
+function LanguagesMultiSelect({ selected, onChange }: { selected: string[]; onChange: (next: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const toggleVal = (v: string) => onChange(selected.includes(v) ? selected.filter(x => x !== v) : [...selected, v]);
+  const clear = () => onChange([]);
+  return (
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate text-muted-foreground">
+              {selected.length === 0
+                ? "Seleziona una o più lingue…"
+                : `${selected.length} lingu${selected.length === 1 ? "a" : "e"} selezionat${selected.length === 1 ? "a" : "e"}`}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[80]" align="start">
+          <Command>
+            <CommandInput placeholder="Cerca lingua…" />
+            <CommandList className="max-h-[300px]">
+              <CommandEmpty>Nessuna lingua trovata.</CommandEmpty>
+              <CommandGroup>
+                {LANGUAGE_OPTIONS.map(o => {
+                  const active = selected.includes(o.value);
+                  return (
+                    <CommandItem
+                      key={o.value}
+                      value={o.label}
+                      onSelect={() => toggleVal(o.value)}
+                      className="gap-2"
+                    >
+                      <div className={`flex h-4 w-4 items-center justify-center rounded border ${active ? "bg-primary border-primary text-primary-foreground" : "border-input"}`}>
+                        {active && <Check className="h-3 w-3" />}
+                      </div>
+                      <span aria-hidden className="text-base">{flagForOption(o.value)}</span>
+                      <span className="flex-1 truncate">{o.label}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map(v => {
+            const opt = LANGUAGE_OPTIONS.find(o => o.value === v);
+            if (!opt) return null;
+            return (
+              <Badge key={v} variant="secondary" className="gap-1.5 pl-2 pr-1 py-1">
+                <span aria-hidden>{flagForOption(v)}</span>
+                <span>{opt.label}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleVal(v)}
+                  className="rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive"
+                  aria-label={`Rimuovi ${opt.label}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            );
+          })}
+          {selected.length > 1 && (
+            <button
+              type="button"
+              onClick={clear}
+              className="text-xs text-muted-foreground hover:text-destructive underline-offset-2 hover:underline px-1"
+            >
+              Rimuovi tutte
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function RestaurantRequirementsEditor({ value, onChange }: { value: RestaurantRequirements; onChange: (next: RestaurantRequirements) => void }) {
   const set = (patch: Partial<RestaurantRequirements>) => onChange({ ...value, ...patch });
   return (
@@ -113,23 +205,10 @@ export function RestaurantRequirementsEditor({ value, onChange }: { value: Resta
 
           <div>
             <Label className="mb-2 block">Lingue richieste</Label>
-            <ul className="flex flex-col divide-y rounded-lg border bg-card">
-              {LANGUAGE_OPTIONS.map(o => {
-                const active = value.language_requirements.includes(o.value);
-                return (
-                  <li key={o.value}>
-                    <label className={`flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer transition ${active ? "bg-primary/10" : "hover:bg-accent"}`}>
-                      <Checkbox
-                        checked={active}
-                        onCheckedChange={() => set({ language_requirements: toggle(value.language_requirements, o.value) })}
-                      />
-                      <span aria-hidden className="text-base shrink-0">{flagForOption(o.value)}</span>
-                      <span className="truncate">{o.label}</span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
+            <LanguagesMultiSelect
+              selected={value.language_requirements}
+              onChange={(next) => set({ language_requirements: next })}
+            />
           </div>
 
           <div>
