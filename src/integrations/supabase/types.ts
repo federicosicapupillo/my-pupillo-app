@@ -659,6 +659,7 @@ export type Database = {
           age_verified_at: string | null
           badge: Database["public"]["Enums"]["worker_badge"] | null
           birth_date: string | null
+          birth_place: string | null
           business_name: string | null
           business_status: string | null
           busy_days: string[] | null
@@ -692,19 +693,27 @@ export type Database = {
             | Database["public"]["Enums"]["experience_level"]
             | null
           experience_years: number | null
+          first_name: string | null
           full_name: string | null
           hourly_availability: string | null
           hourly_rate: number | null
           id: string
+          id_document_expires_at: string | null
+          id_document_issued_at: string | null
+          id_document_issuer: string | null
+          id_document_number: string | null
           id_document_path: string | null
+          id_document_type: string | null
           is_motorized: boolean | null
           languages: string[] | null
           last_active_at: string | null
+          last_name: string | null
           last_review_at: string | null
           last_review_reminder_at: string | null
           latitude: number | null
           location_notes: string | null
           longitude: number | null
+          nationality: string | null
           neighborhood: string | null
           no_shows: number | null
           opening_hours: string | null
@@ -734,6 +743,10 @@ export type Database = {
           registered_office_province: string | null
           reliability_pct: number | null
           representative_age: number | null
+          residence_address: string | null
+          residence_city: string | null
+          residence_postal_code: string | null
+          residence_province: string | null
           review_blocked: boolean
           review_blocked_at: string | null
           reviews_count: number | null
@@ -746,6 +759,7 @@ export type Database = {
           spoken_languages: Json
           street: string | null
           street_number: string | null
+          tax_code: string | null
           terms_accepted: boolean | null
           updated_at: string
           vat_company_name: string | null
@@ -769,6 +783,7 @@ export type Database = {
           age_verified_at?: string | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
+          birth_place?: string | null
           business_name?: string | null
           business_status?: string | null
           busy_days?: string[] | null
@@ -802,19 +817,27 @@ export type Database = {
             | Database["public"]["Enums"]["experience_level"]
             | null
           experience_years?: number | null
+          first_name?: string | null
           full_name?: string | null
           hourly_availability?: string | null
           hourly_rate?: number | null
           id: string
+          id_document_expires_at?: string | null
+          id_document_issued_at?: string | null
+          id_document_issuer?: string | null
+          id_document_number?: string | null
           id_document_path?: string | null
+          id_document_type?: string | null
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
+          last_name?: string | null
           last_review_at?: string | null
           last_review_reminder_at?: string | null
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
+          nationality?: string | null
           neighborhood?: string | null
           no_shows?: number | null
           opening_hours?: string | null
@@ -844,6 +867,10 @@ export type Database = {
           registered_office_province?: string | null
           reliability_pct?: number | null
           representative_age?: number | null
+          residence_address?: string | null
+          residence_city?: string | null
+          residence_postal_code?: string | null
+          residence_province?: string | null
           review_blocked?: boolean
           review_blocked_at?: string | null
           reviews_count?: number | null
@@ -856,6 +883,7 @@ export type Database = {
           spoken_languages?: Json
           street?: string | null
           street_number?: string | null
+          tax_code?: string | null
           terms_accepted?: boolean | null
           updated_at?: string
           vat_company_name?: string | null
@@ -879,6 +907,7 @@ export type Database = {
           age_verified_at?: string | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
+          birth_place?: string | null
           business_name?: string | null
           business_status?: string | null
           busy_days?: string[] | null
@@ -912,19 +941,27 @@ export type Database = {
             | Database["public"]["Enums"]["experience_level"]
             | null
           experience_years?: number | null
+          first_name?: string | null
           full_name?: string | null
           hourly_availability?: string | null
           hourly_rate?: number | null
           id?: string
+          id_document_expires_at?: string | null
+          id_document_issued_at?: string | null
+          id_document_issuer?: string | null
+          id_document_number?: string | null
           id_document_path?: string | null
+          id_document_type?: string | null
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
+          last_name?: string | null
           last_review_at?: string | null
           last_review_reminder_at?: string | null
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
+          nationality?: string | null
           neighborhood?: string | null
           no_shows?: number | null
           opening_hours?: string | null
@@ -954,6 +991,10 @@ export type Database = {
           registered_office_province?: string | null
           reliability_pct?: number | null
           representative_age?: number | null
+          residence_address?: string | null
+          residence_city?: string | null
+          residence_postal_code?: string | null
+          residence_province?: string | null
           review_blocked?: boolean
           review_blocked_at?: string | null
           reviews_count?: number | null
@@ -966,6 +1007,7 @@ export type Database = {
           spoken_languages?: Json
           street?: string | null
           street_number?: string | null
+          tax_code?: string | null
           terms_accepted?: boolean | null
           updated_at?: string
           vat_company_name?: string | null

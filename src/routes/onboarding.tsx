@@ -100,6 +100,26 @@ function Onboarding() {
   const [idDocPath, setIdDocPath] = useState<string | null>(null);
   const [idDocName, setIdDocName] = useState<string | null>(null);
 
+  const [personal, setPersonal] = useState({
+    first_name: "",
+    last_name: "",
+    birth_date: "",
+    birth_place: "",
+    tax_code: "",
+    nationality: "Italiana",
+    residence_address: "",
+    residence_city: "",
+    residence_postal_code: "",
+    residence_province: "",
+    id_document_type: "",
+    id_document_number: "",
+    id_document_issued_at: "",
+    id_document_expires_at: "",
+    id_document_issuer: "",
+  });
+
+  const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
+
   const ID_DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
   const ID_DOC_MAX = 8 * 1024 * 1024; // 8MB
 
@@ -289,6 +309,26 @@ function Onboarding() {
       setIdDocPath(p);
       setIdDocName(p.split("/").pop() ?? p);
     }
+    if (profile) {
+      const p = profile as any;
+      setPersonal((s) => ({
+        first_name: p.first_name ?? s.first_name,
+        last_name: p.last_name ?? s.last_name,
+        birth_date: p.birth_date ?? s.birth_date,
+        birth_place: p.birth_place ?? s.birth_place,
+        tax_code: p.tax_code ?? s.tax_code,
+        nationality: p.nationality ?? s.nationality,
+        residence_address: p.residence_address ?? s.residence_address,
+        residence_city: p.residence_city ?? s.residence_city,
+        residence_postal_code: p.residence_postal_code ?? s.residence_postal_code,
+        residence_province: p.residence_province ?? s.residence_province,
+        id_document_type: p.id_document_type ?? s.id_document_type,
+        id_document_number: p.id_document_number ?? s.id_document_number,
+        id_document_issued_at: p.id_document_issued_at ?? s.id_document_issued_at,
+        id_document_expires_at: p.id_document_expires_at ?? s.id_document_expires_at,
+        id_document_issuer: p.id_document_issuer ?? s.id_document_issuer,
+      }));
+    }
   }, [profile]);
 
   const submit = async (e: React.FormEvent) => {
@@ -379,6 +419,27 @@ function Onboarding() {
     setBusy(true);
     let uploadedPath: string | null = idDocPath;
     if (role === "worker") {
+      const required = [
+        personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
+        personal.tax_code, personal.nationality, personal.residence_address,
+        personal.residence_city, personal.residence_postal_code, personal.residence_province,
+        personal.id_document_type, personal.id_document_number,
+        personal.id_document_issued_at, personal.id_document_expires_at, personal.id_document_issuer,
+      ];
+      const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
+      const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
+      const today = new Date(); today.setHours(0,0,0,0);
+      const birth = personal.birth_date ? new Date(personal.birth_date) : null;
+      const minAge = new Date(today); minAge.setFullYear(minAge.getFullYear() - 16);
+      const birthOk = !!birth && birth < today && birth <= minAge;
+      const issued = personal.id_document_issued_at ? new Date(personal.id_document_issued_at) : null;
+      const expires = personal.id_document_expires_at ? new Date(personal.id_document_expires_at) : null;
+      const docOk = !!issued && !!expires && issued <= today && expires >= today && issued < expires;
+      if (!allFilled || !cfOk || !birthOk || !docOk || (!idDocFile && !idDocPath)) {
+        setBusy(false);
+        toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
+        return;
+      }
       if (!idDocFile && !idDocPath) {
         setBusy(false);
         toast.error("Carica un documento di identità per completare il profilo.");
@@ -475,6 +536,21 @@ function Onboarding() {
             spoken_languages: spokenLanguages,
             service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
             id_document_path: uploadedPath,
+            first_name: personal.first_name.trim(),
+            last_name: personal.last_name.trim(),
+            birth_date: personal.birth_date,
+            birth_place: personal.birth_place.trim(),
+            tax_code: personal.tax_code.trim().toUpperCase(),
+            nationality: personal.nationality.trim(),
+            residence_address: personal.residence_address.trim(),
+            residence_city: personal.residence_city.trim(),
+            residence_postal_code: personal.residence_postal_code.trim(),
+            residence_province: personal.residence_province.trim().toUpperCase(),
+            id_document_type: personal.id_document_type,
+            id_document_number: personal.id_document_number.trim(),
+            id_document_issued_at: personal.id_document_issued_at,
+            id_document_expires_at: personal.id_document_expires_at,
+            id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
           };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
@@ -776,6 +852,97 @@ function Onboarding() {
           </>
         ) : (
           <>
+            <div id="sec-anagrafica" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+              <h3 className="font-semibold">📇 Dati anagrafici</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Nome *</Label>
+                  <Input required value={personal.first_name} onChange={(e) => setPersonal({ ...personal, first_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Cognome *</Label>
+                  <Input required value={personal.last_name} onChange={(e) => setPersonal({ ...personal, last_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Data di nascita *</Label>
+                  <Input type="date" required value={personal.birth_date} onChange={(e) => setPersonal({ ...personal, birth_date: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Luogo di nascita *</Label>
+                  <Input required value={personal.birth_place} onChange={(e) => setPersonal({ ...personal, birth_place: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Codice fiscale *</Label>
+                  <Input
+                    required
+                    maxLength={16}
+                    value={personal.tax_code}
+                    onChange={(e) => setPersonal({ ...personal, tax_code: e.target.value.toUpperCase() })}
+                  />
+                  {personal.tax_code && !CF_REGEX.test(personal.tax_code.trim().toUpperCase()) && (
+                    <p className="text-xs text-destructive mt-1">Codice fiscale non valido.</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Nazionalità *</Label>
+                  <Input required value={personal.nationality} onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })} />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Indirizzo di residenza *</Label>
+                  <Input required value={personal.residence_address} onChange={(e) => setPersonal({ ...personal, residence_address: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Città di residenza *</Label>
+                  <Input required value={personal.residence_city} onChange={(e) => setPersonal({ ...personal, residence_city: e.target.value })} />
+                </div>
+                <div>
+                  <Label>CAP *</Label>
+                  <Input required maxLength={5} inputMode="numeric" pattern="\d{5}" value={personal.residence_postal_code} onChange={(e) => setPersonal({ ...personal, residence_postal_code: e.target.value.replace(/\D/g, "").slice(0, 5) })} />
+                </div>
+                <div>
+                  <Label>Provincia *</Label>
+                  <Input required maxLength={2} value={personal.residence_province} onChange={(e) => setPersonal({ ...personal, residence_province: e.target.value.toUpperCase().slice(0, 2) })} />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Telefono ed email sono già impostati nei dati account.</p>
+            </div>
+
+            <div id="sec-documento" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+              <h3 className="font-semibold">🪪 Documento di identità *</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Tipo documento *</Label>
+                  <Select value={personal.id_document_type} onValueChange={(v) => setPersonal({ ...personal, id_document_type: v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleziona tipo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="carta_identita">Carta d'identità</SelectItem>
+                      <SelectItem value="passaporto">Passaporto</SelectItem>
+                      <SelectItem value="patente">Patente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Numero documento *</Label>
+                  <Input required value={personal.id_document_number} onChange={(e) => setPersonal({ ...personal, id_document_number: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Data rilascio *</Label>
+                  <Input type="date" required value={personal.id_document_issued_at} onChange={(e) => setPersonal({ ...personal, id_document_issued_at: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Data scadenza *</Label>
+                  <Input type="date" required value={personal.id_document_expires_at} onChange={(e) => setPersonal({ ...personal, id_document_expires_at: e.target.value })} />
+                  {personal.id_document_expires_at && new Date(personal.id_document_expires_at) < new Date(new Date().toDateString()) && (
+                    <p className="text-xs text-destructive mt-1">Documento scaduto.</p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Ente di rilascio *</Label>
+                  <Input required placeholder="Es. Comune di Milano / MIT / Questura" value={personal.id_document_issuer} onChange={(e) => setPersonal({ ...personal, id_document_issuer: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
             <div id="sec-experience" className="scroll-mt-24">
               <Label>Età</Label>
               <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
