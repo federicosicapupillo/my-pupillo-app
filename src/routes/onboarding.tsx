@@ -456,7 +456,6 @@ function Onboarding() {
         phone_code: (profile as any).phone_country_code || ph.code,
         phone_number: (profile as any).phone_number || ph.number,
         age: profile.age?.toString() ?? "",
-        professional_profile: profile.professional_profile ?? "",
         languages: (profile.languages ?? []).join(", "),
         business_name: profile.business_name ?? "",
         vat_number: profile.vat_number ?? "",
