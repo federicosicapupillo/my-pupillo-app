@@ -220,6 +220,16 @@ function NewRestaurantJobRequest() {
     if (!f.start_time || !f.end_time) return false;
     return f.end_time <= f.start_time;
   }, [f.shift_date, f.end_date, f.start_time, f.end_time]);
+  const todayISO = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+  const nowHHMM = useMemo(() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }, []);
+  const startTimeMin = f.shift_date && f.shift_date === todayISO ? nowHHMM : undefined;
+  const endTimeMin = f.end_date && f.end_date === todayISO ? nowHHMM : undefined;
   const isLongShift = durationHours > 8;
   const longReasonTrimmed = f.long_shift_reason.trim();
   const longReasonError = isLongShift
