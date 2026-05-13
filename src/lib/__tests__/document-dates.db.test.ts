@@ -11,10 +11,12 @@ import { resolve } from "node:path";
  * (PGHOST/PGUSER/PGPASSWORD/PGDATABASE/PGPORT). The script wraps
  * everything in BEGIN/ROLLBACK so it is non-destructive.
  *
- * Skipped automatically when no DB credentials or `psql` are available
- * (e.g. on a developer machine without sandbox DB access). To run it,
- * enable "Read database" / "Add data" in Lovable Cloud settings or set
- * PGHOST manually, then execute `bunx vitest run`.
+ * Opt-in: set `RUN_DB_TESTS=1` and provide the standard `PG*` env vars
+ * pointing at a connection with rights to mutate `public.profiles`
+ * (typically the service role / db_url, NOT the anon connection).
+ * Otherwise this suite is skipped — running it against a low-privilege
+ * connection would just surface "permission denied" instead of a real
+ * trigger failure.
  */
 
 const sqlPath = resolve(
@@ -32,7 +34,10 @@ function hasPsql(): boolean {
 }
 
 const canRun =
-  !!process.env.PGHOST && existsSync(sqlPath) && hasPsql();
+  process.env.RUN_DB_TESTS === "1" &&
+  !!process.env.PGHOST &&
+  existsSync(sqlPath) &&
+  hasPsql();
 
 (canRun ? describe : describe.skip)(
   "DB trigger: enforce_worker_personal_data (date rules)",
