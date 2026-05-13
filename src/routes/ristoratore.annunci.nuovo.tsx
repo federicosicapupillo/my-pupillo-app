@@ -719,9 +719,9 @@ function NewRestaurantJobRequest() {
             </Field>
             <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
           </div>
-          <div className="w-full">
+          <div className="relative isolate z-0 w-full mb-6 sm:mb-8">
             {coords ? (
-              <div className="w-full overflow-hidden rounded-2xl">
+              <div className="relative w-full overflow-hidden rounded-2xl">
                 <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={300} />
               </div>
             ) : (
@@ -854,7 +854,7 @@ function NewRestaurantJobRequest() {
           </section>
         )}
 
-        <div className="sticky bottom-0 z-10 -mx-4 border-t bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="sticky bottom-0 z-50 -mx-4 border-t bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <div className="mx-auto flex max-w-5xl flex-col gap-2 sm:flex-row sm:justify-end">
             <Link to="/announcements" className="sm:mr-auto"><Button type="button" variant="ghost" className="w-full gap-2" disabled={busy}><X className="h-4 w-4" />Annulla</Button></Link>
             <Link to="/announcements"><Button type="button" variant="outline" className="w-full">Torna agli annunci</Button></Link>
