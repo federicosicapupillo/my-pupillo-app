@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,10 +73,6 @@ import {
   isValidIdDocNumberForType,
   type IdDocumentType,
 } from "@/lib/id-document-format";
-import {
-  ID_DOC_ACCEPT_ATTR,
-  validateIdDocumentFile,
-} from "@/lib/id-document-file";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 
 /**
