@@ -419,6 +419,27 @@ function Onboarding() {
     setBusy(true);
     let uploadedPath: string | null = idDocPath;
     if (role === "worker") {
+      const required = [
+        personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
+        personal.tax_code, personal.nationality, personal.residence_address,
+        personal.residence_city, personal.residence_postal_code, personal.residence_province,
+        personal.id_document_type, personal.id_document_number,
+        personal.id_document_issued_at, personal.id_document_expires_at, personal.id_document_issuer,
+      ];
+      const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
+      const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
+      const today = new Date(); today.setHours(0,0,0,0);
+      const birth = personal.birth_date ? new Date(personal.birth_date) : null;
+      const minAge = new Date(today); minAge.setFullYear(minAge.getFullYear() - 16);
+      const birthOk = !!birth && birth < today && birth <= minAge;
+      const issued = personal.id_document_issued_at ? new Date(personal.id_document_issued_at) : null;
+      const expires = personal.id_document_expires_at ? new Date(personal.id_document_expires_at) : null;
+      const docOk = !!issued && !!expires && issued <= today && expires >= today && issued < expires;
+      if (!allFilled || !cfOk || !birthOk || !docOk || (!idDocFile && !idDocPath)) {
+        setBusy(false);
+        toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
+        return;
+      }
       if (!idDocFile && !idDocPath) {
         setBusy(false);
         toast.error("Carica un documento di identità per completare il profilo.");
@@ -515,6 +536,21 @@ function Onboarding() {
             spoken_languages: spokenLanguages,
             service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
             id_document_path: uploadedPath,
+            first_name: personal.first_name.trim(),
+            last_name: personal.last_name.trim(),
+            birth_date: personal.birth_date,
+            birth_place: personal.birth_place.trim(),
+            tax_code: personal.tax_code.trim().toUpperCase(),
+            nationality: personal.nationality.trim(),
+            residence_address: personal.residence_address.trim(),
+            residence_city: personal.residence_city.trim(),
+            residence_postal_code: personal.residence_postal_code.trim(),
+            residence_province: personal.residence_province.trim().toUpperCase(),
+            id_document_type: personal.id_document_type,
+            id_document_number: personal.id_document_number.trim(),
+            id_document_issued_at: personal.id_document_issued_at,
+            id_document_expires_at: personal.id_document_expires_at,
+            id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
           };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
