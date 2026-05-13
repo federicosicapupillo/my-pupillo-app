@@ -547,6 +547,11 @@ function Onboarding() {
       setIdDocPath(p);
       setIdDocName(p.split("/").pop() ?? p);
     }
+    if (profile && (profile as any).id_document_back_path) {
+      const p = (profile as any).id_document_back_path as string;
+      setIdDocBackPath(p);
+      setIdDocBackName(p.split("/").pop() ?? p);
+    }
     if (profile && (profile as any).avatar_url) {
       const stored = (profile as any).avatar_url as string;
       // Reject legacy public/external URLs — only signed URLs from storage paths are allowed.
