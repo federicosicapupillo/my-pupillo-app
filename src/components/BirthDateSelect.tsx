@@ -112,6 +112,22 @@ export function BirthDateSelect({ value, onChange, error, id, disabled }: Props)
         setD("");
       }
     }
+    // If we're on the cap year, also clamp the day to today's day-of-month
+    // when the chosen month equals the current month, and clear the day if
+    // the month is in the future relative to today.
+    if (y && Number(y) === maxYear) {
+      if (Number(v) > today.getMonth() + 1) {
+        nextD = "";
+        setD("");
+      } else if (
+        Number(v) === today.getMonth() + 1 &&
+        nextD &&
+        Number(nextD) > today.getDate()
+      ) {
+        nextD = "";
+        setD("");
+      }
+    }
     emit(y, v, nextD);
   }
   function handleYear(v: string) {
@@ -130,6 +146,18 @@ export function BirthDateSelect({ value, onChange, error, id, disabled }: Props)
       nextMo = "";
       nextD = "";
       setMo("");
+      setD("");
+    }
+    // If switching to maxYear and the month equals the current month,
+    // clear the day when it's past today's day-of-month (under 18).
+    if (
+      Number(v) === maxYear &&
+      nextMo &&
+      Number(nextMo) === today.getMonth() + 1 &&
+      nextD &&
+      Number(nextD) > today.getDate()
+    ) {
+      nextD = "";
       setD("");
     }
     emit(v, nextMo, nextD);
