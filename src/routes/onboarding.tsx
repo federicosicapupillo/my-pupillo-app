@@ -628,7 +628,7 @@ function Onboarding() {
       ];
       const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
       const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
-      const today = new Date(); today.setHours(0,0,0,0);
+      const today = todayInRome();
       const birth = personal.birth_date ? new Date(personal.birth_date) : null;
       const minAge = new Date(today); minAge.setFullYear(minAge.getFullYear() - 16);
       const birthOk = !!birth && birth < today && birth <= minAge;
