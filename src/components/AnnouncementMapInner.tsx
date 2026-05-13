@@ -20,6 +20,10 @@ const makeIcon = (selected: boolean) => {
 function Recenter({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   useEffect(() => { map.setView([lat, lng], map.getZoom()); }, [lat, lng, map]);
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 100);
+    return () => clearTimeout(t);
+  }, [map]);
   return null;
 }
 
