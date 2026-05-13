@@ -907,6 +907,22 @@ function Onboarding() {
           </>
         ) : (
           <>
+            <div id="sec-avatar" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+              <Label className="font-semibold">Foto profilo *</Label>
+              <p className="text-xs text-muted-foreground">
+                La foto verrà mostrata sulla tua scheda, nelle candidature e in chat.
+              </p>
+              <AvatarUpload
+                value={avatarUrl}
+                onPickFile={(f, p) => {
+                  setAvatarFile(f);
+                  if (p) setAvatarUrl(p);
+                }}
+              />
+              {!avatarFile && !avatarUrl && (
+                <p className="text-xs text-destructive">Carica una foto profilo per completare il profilo.</p>
+              )}
+            </div>
             <div id="sec-anagrafica" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">📇 Dati anagrafici</h3>
               <div className="grid gap-3 md:grid-cols-2">
