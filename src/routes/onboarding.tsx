@@ -35,6 +35,7 @@ import {
   DOC_DATE_ERRORS,
   INVALID_DATE_MESSAGE,
 } from "@/lib/document-dates";
+import { evaluateOnboardingDateGuard } from "@/lib/onboarding-date-guard";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -531,25 +532,19 @@ function Onboarding() {
         toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
         return;
       }
-      // Block save if any of the date inputs is not a real dd/mm/yyyy value.
-      const fmtErr = validateRequiredDates([
-        personal.birth_date,
-        personal.id_document_issued_at,
-        personal.id_document_expires_at,
-      ]);
-      if (fmtErr) {
-        setBusy(false);
-        toast.error(fmtErr);
-        return;
-      }
-      const dateErr = validateDocumentDates(
-        personal.id_document_issued_at,
-        personal.id_document_expires_at,
+      // Block save if any date input is not a real dd/mm/yyyy value or
+      // the rilascio/scadenza pair is inconsistent.
+      const dateGuard = evaluateOnboardingDateGuard(
+        {
+          birth_date: personal.birth_date,
+          id_document_issued_at: personal.id_document_issued_at,
+          id_document_expires_at: personal.id_document_expires_at,
+        },
         today,
       );
-      if (dateErr) {
+      if (dateGuard.blocked) {
         setBusy(false);
-        toast.error(dateErr);
+        toast.error(dateGuard.message);
         return;
       }
       if (!idDocFile && !idDocPath) {
