@@ -294,9 +294,11 @@ function NewAnn() {
           <Coins className="h-4 w-4 text-primary" />
           {isPaid ? (
             <span>Piano <strong className="capitalize">{profile?.plan}</strong> attivo · pubblicazioni illimitate</span>
+          ) : isFree ? (
+            <span>Pubblicare è <strong>gratis</strong>. Paghi solo quando confermi un lavoratore. Saldo: <strong>{credits}</strong></span>
           ) : (
             <span>
-              Costo pubblicazione: <strong>{cost} {cost === 1 ? "credito" : "crediti"}</strong>{isUrgent && " (urgente)"} · Saldo: <strong>{credits}</strong>
+              Costo pubblicazione: <strong>{cost} crediti</strong>{isUrgent && " (urgente)"} · Saldo: <strong>{credits}</strong>
             </span>
           )}
         </div>
@@ -523,11 +525,13 @@ function NewAnn() {
               <div className="space-y-3 pt-2">
                 {isPaid ? (
                   <p>Il tuo piano <strong className="capitalize">{profile?.plan}</strong> include pubblicazioni illimitate. Nessun credito verrà scalato.</p>
+                ) : isFree ? (
+                  <p>Pubblicare un annuncio è <strong>gratis</strong>. I crediti vengono scalati solo quando confermi definitivamente un lavoratore per il turno.</p>
                 ) : (
                   <>
                     <p>Stai per pubblicare un annuncio{isUrgent ? " urgente" : ""}.</p>
                     <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1.5">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Costo pubblicazione</span><strong>{cost} {cost === 1 ? "credito" : "crediti"}</strong></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Costo pubblicazione</span><strong>{cost} crediti</strong></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Saldo attuale</span><strong>{credits}</strong></div>
                       <div className="flex justify-between border-t pt-1.5"><span className="text-muted-foreground">Saldo dopo</span><strong className={credits - cost < 0 ? "text-destructive" : ""}>{credits - cost}</strong></div>
                     </div>
