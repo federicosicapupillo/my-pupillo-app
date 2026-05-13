@@ -1423,7 +1423,7 @@ function Onboarding() {
             <div id="sec-id-document" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Documento di identità *</Label>
               <p className="text-xs text-muted-foreground">
-                Formati accettati: PDF, JPG, PNG (max 8MB). Necessario per completare il profilo.
+                Formati accettati: PDF, JPG, JPEG, PNG (max 10 MB). Necessario per completare il profilo.
               </p>
               <Input
                 type="file"
