@@ -1661,111 +1661,42 @@ function Onboarding() {
               <div id="sec-id-document" className="space-y-2 pt-2 border-t border-border/60 scroll-mt-24">
                 <Label className="font-semibold">Upload documento *</Label>
                 <p className="text-xs text-muted-foreground">
-                  Formati accettati: PDF, JPG, JPEG, PNG · max 10 MB.
+                  Carica entrambi i lati del documento. Da smartphone puoi scattare
+                  direttamente con la fotocamera. Formati: PDF, JPG, JPEG, PNG · max 10 MB.
                 </p>
-                <input
-                  ref={idDocInputRef}
-                  type="file"
-                  accept={ID_DOC_ACCEPT}
-                  className="hidden"
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0] ?? null;
-                    if (!f) return;
-                    const check = await validateIdDocumentFile(f);
-                    if (!check.ok) {
-                      toast.error(check.error);
-                      e.target.value = "";
-                      return;
-                    }
-                    if (idDocPreview) URL.revokeObjectURL(idDocPreview);
-                    const isImage = f.type === "image/jpeg" || f.type === "image/png";
-                    setIdDocPreview(isImage ? URL.createObjectURL(f) : null);
-                    setIdDocFile(f);
-                    setIdDocName(f.name);
-                  }}
-                />
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-label={idDocName ? "Sostituisci documento di identità" : "Carica documento di identità"}
-                  onClick={() => idDocInputRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      idDocInputRef.current?.click();
-                    }
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!idDocDragging) setIdDocDragging(true);
-                  }}
-                  onDragEnter={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIdDocDragging(true);
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIdDocDragging(false);
-                  }}
-                  onDrop={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIdDocDragging(false);
-                    const f = e.dataTransfer.files?.[0] ?? null;
-                    if (!f) return;
-                    const check = await validateIdDocumentFile(f);
-                    if (!check.ok) {
-                      toast.error(check.error);
-                      return;
-                    }
-                    if (idDocPreview) URL.revokeObjectURL(idDocPreview);
-                    const isImage = f.type === "image/jpeg" || f.type === "image/png";
-                    setIdDocPreview(isImage ? URL.createObjectURL(f) : null);
-                    setIdDocFile(f);
-                    setIdDocName(f.name);
-                  }}
-                  className={`flex flex-col items-center justify-center gap-2 w-full min-h-[160px] sm:min-h-[180px] px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-center select-none ${
-                    idDocDragging
-                      ? "border-primary bg-primary/10"
-                      : idDocName
-                        ? "border-emerald-500/60 bg-emerald-500/5 hover:bg-emerald-500/10"
-                        : "border-border bg-muted/30 hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="text-3xl" aria-hidden>
-                    {idDocName ? "✅" : "📤"}
-                  </div>
-                  <div className="text-base font-medium">
-                    {idDocName ? "Sostituisci documento" : "Carica documento"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Trascina qui il file o tocca per selezionarlo
-                  </div>
-                  {idDocName && (
-                    <div className="mt-1 text-sm text-foreground break-all max-w-full">
-                      📎 {idDocName}
-                      <span className="text-muted-foreground">
-                        {idDocFile ? " (nuovo file da salvare)" : " (già caricato)"}
-                      </span>
-                    </div>
-                  )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <IdDocumentDropzone
+                    side="fronte"
+                    file={idDocFile}
+                    storedPath={idDocPath}
+                    storedName={idDocName}
+                    preview={idDocPreview}
+                    onFileSelected={({ file: f, preview, name }) => {
+                      if (idDocPreview) URL.revokeObjectURL(idDocPreview);
+                      setIdDocPreview(preview);
+                      setIdDocFile(f);
+                      setIdDocName(name);
+                    }}
+                  />
+                  <IdDocumentDropzone
+                    side="retro"
+                    file={idDocBackFile}
+                    storedPath={idDocBackPath}
+                    storedName={idDocBackName}
+                    preview={idDocBackPreview}
+                    onFileSelected={({ file: f, preview, name }) => {
+                      if (idDocBackPreview) URL.revokeObjectURL(idDocBackPreview);
+                      setIdDocBackPreview(preview);
+                      setIdDocBackFile(f);
+                      setIdDocBackName(name);
+                    }}
+                  />
                 </div>
-                {idDocPreview && (
-                  <div className="mt-2">
-                    <img
-                      src={idDocPreview}
-                      alt="Anteprima documento"
-                      className="max-h-48 rounded-lg border object-contain bg-background"
-                    />
-                  </div>
+                {!(idDocFile || idDocPath) && (
+                  <p className="text-xs text-destructive">Carica il fronte del documento.</p>
                 )}
-                {!idDocName && (
-                  <p className="text-xs text-destructive">
-                    Carica il documento di identità per completare il profilo.
-                  </p>
+                {!(idDocBackFile || idDocBackPath) && (
+                  <p className="text-xs text-destructive">Carica il retro del documento.</p>
                 )}
               </div>
             </div>
