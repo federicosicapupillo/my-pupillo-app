@@ -75,6 +75,7 @@ import {
   type IdDocumentType,
 } from "@/lib/id-document-format";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
+import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton";
 
 /**
  * Compute per-field error messages for the three worker date inputs.
@@ -1875,14 +1876,51 @@ function Onboarding() {
                 </div>
                 )}
               </div>
-              <div>
-                <Label>Indirizzo o punto di riferimento *</Label>
-                <Input
-                  placeholder="es. Via Roma 1 oppure Stazione Centrale"
-                  value={form.service_area_address}
-                  onChange={(e) => setForm({ ...form, service_area_address: e.target.value })}
-                />
-              </div>
+              {areaMode === "georadar" ? (
+                <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+                  <UseCurrentLocationButton
+                    onLocated={(loc) => {
+                      const knownCity = (WORKER_CITIES as readonly string[]).includes(
+                        loc.city,
+                      )
+                        ? loc.city
+                        : form.service_area_city || loc.city;
+                      setForm((prev) => ({
+                        ...prev,
+                        service_area_city: knownCity,
+                        service_area_address: loc.address,
+                      }));
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    La posizione viene usata solo per il matching degli annunci
+                    e non verrà mostrata pubblicamente in modo preciso.
+                  </p>
+                  <div className="pt-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Oppure inserisci manualmente un indirizzo o punto di riferimento *
+                    </Label>
+                    <Input
+                      placeholder="es. Via Roma 1 oppure Stazione Centrale"
+                      value={form.service_area_address}
+                      onChange={(e) =>
+                        setForm({ ...form, service_area_address: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <Label>Indirizzo o punto di riferimento *</Label>
+                  <Input
+                    placeholder="es. Via Roma 1 oppure Stazione Centrale"
+                    value={form.service_area_address}
+                    onChange={(e) =>
+                      setForm({ ...form, service_area_address: e.target.value })
+                    }
+                  />
+                </div>
+              )}
               {areaMode === "georadar" && (
               <div>
                 <Label>Raggio d'azione *</Label>
