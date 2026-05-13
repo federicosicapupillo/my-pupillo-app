@@ -78,6 +78,92 @@ function toggle<T>(list: T[], v: T): T[] {
   return list.includes(v) ? list.filter(x => x !== v) : [...list, v];
 }
 
+function LanguagesMultiSelect({ selected, onChange }: { selected: string[]; onChange: (next: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const toggleVal = (v: string) => onChange(selected.includes(v) ? selected.filter(x => x !== v) : [...selected, v]);
+  const clear = () => onChange([]);
+  return (
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate text-muted-foreground">
+              {selected.length === 0
+                ? "Seleziona una o più lingue…"
+                : `${selected.length} lingu${selected.length === 1 ? "a" : "e"} selezionat${selected.length === 1 ? "a" : "e"}`}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[80]" align="start">
+          <Command>
+            <CommandInput placeholder="Cerca lingua…" />
+            <CommandList className="max-h-[300px]">
+              <CommandEmpty>Nessuna lingua trovata.</CommandEmpty>
+              <CommandGroup>
+                {LANGUAGE_OPTIONS.map(o => {
+                  const active = selected.includes(o.value);
+                  return (
+                    <CommandItem
+                      key={o.value}
+                      value={o.label}
+                      onSelect={() => toggleVal(o.value)}
+                      className="gap-2"
+                    >
+                      <div className={`flex h-4 w-4 items-center justify-center rounded border ${active ? "bg-primary border-primary text-primary-foreground" : "border-input"}`}>
+                        {active && <Check className="h-3 w-3" />}
+                      </div>
+                      <span aria-hidden className="text-base">{flagForOption(o.value)}</span>
+                      <span className="flex-1 truncate">{o.label}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map(v => {
+            const opt = LANGUAGE_OPTIONS.find(o => o.value === v);
+            if (!opt) return null;
+            return (
+              <Badge key={v} variant="secondary" className="gap-1.5 pl-2 pr-1 py-1">
+                <span aria-hidden>{flagForOption(v)}</span>
+                <span>{opt.label}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleVal(v)}
+                  className="rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive"
+                  aria-label={`Rimuovi ${opt.label}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            );
+          })}
+          {selected.length > 1 && (
+            <button
+              type="button"
+              onClick={clear}
+              className="text-xs text-muted-foreground hover:text-destructive underline-offset-2 hover:underline px-1"
+            >
+              Rimuovi tutte
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function RestaurantRequirementsEditor({ value, onChange }: { value: RestaurantRequirements; onChange: (next: RestaurantRequirements) => void }) {
   const set = (patch: Partial<RestaurantRequirements>) => onChange({ ...value, ...patch });
   return (
