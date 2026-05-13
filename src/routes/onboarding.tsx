@@ -170,6 +170,12 @@ function Onboarding() {
   // GeoRadar mode (radius around position) instead of specific zones.
   const GEORADAR_SENTINEL = "__georadar__";
 
+  const parseSelectedZones = (raw: string): string[] =>
+    raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
   const [form, setForm] = useState({
     full_name: "",
     phone_code: DEFAULT_PHONE_PREFIX,
@@ -434,11 +440,11 @@ function Onboarding() {
       isValidISODate(personal.birth_date) &&
       validateBirthDate(personal.birth_date, todayInRome()) === null;
     const languagesDone = spokenLanguages.length > 0;
+    const selectedZones = parseSelectedZones(form.service_area_district);
     const availabilityDone =
       !!form.service_area_city.trim() &&
-      (areaMode === "georadar"
-        ? ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))
-        : !!form.service_area_district.trim());
+      ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m)) &&
+      (areaMode === "georadar" || selectedZones.length > 0);
     const finalLocked = !(personalDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
@@ -510,10 +516,15 @@ function Onboarding() {
     if (profile) {
       const ph = splitPhone((profile as any).phone_full ?? profile.phone);
       const cph = splitPhone((profile as any).contact_person_phone);
+      const loadedMode = (profile as any).work_area_mode as string | null | undefined;
       const loadedDistrict = ((profile as any).service_area_district ?? "") as string;
-      if (loadedDistrict === GEORADAR_SENTINEL) {
+      const loadedZones = Array.isArray((profile as any).selected_zones)
+        ? ((profile as any).selected_zones as string[]).filter(Boolean)
+        : [];
+      const loadedAllZones = Boolean((profile as any).all_zones);
+      if (loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL) {
         setAreaMode("georadar");
-      } else if (loadedDistrict.trim()) {
+      } else if (loadedMode === "zones" || loadedDistrict.trim() || loadedZones.length > 0 || loadedAllZones) {
         setAreaMode("zones");
       }
       setForm((f) => ({
@@ -533,7 +544,14 @@ function Onboarding() {
           return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
         })(),
         service_area_city: (profile as any).service_area_city ?? "",
-        service_area_district: (profile as any).service_area_district ?? "",
+        service_area_district:
+          loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL
+            ? ""
+            : loadedAllZones
+              ? ALL_ZONES_OPTION
+              : loadedZones.length > 0
+                ? loadedZones.join(", ")
+                : loadedDistrict,
         street_number: (profile as any).street_number ?? "",
         district: (profile as any).neighborhood ?? "",
         city: (profile as any).city ?? "",
