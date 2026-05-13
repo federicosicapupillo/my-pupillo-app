@@ -34,6 +34,7 @@ import {
   isValidISODate,
   DOC_DATE_ERRORS,
   INVALID_DATE_MESSAGE,
+  todayInRome,
 } from "@/lib/document-dates";
 import { evaluateOnboardingDateGuard } from "@/lib/onboarding-date-guard";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
