@@ -12,7 +12,9 @@
 import {
   DOC_DATE_ERRORS,
   INVALID_DATE_MESSAGE,
+  BIRTH_DATE_ERRORS,
   validateDocumentDates,
+  validateBirthDate,
   validateRequiredDates,
 } from "./document-dates";
 
@@ -37,6 +39,9 @@ export function evaluateOnboardingDateGuard(
   ]);
   if (fmt) return { blocked: true, message: fmt };
 
+  const birth = validateBirthDate(input.birth_date, today);
+  if (birth) return { blocked: true, message: birth };
+
   const range = validateDocumentDates(
     input.id_document_issued_at,
     input.id_document_expires_at,
@@ -48,4 +53,4 @@ export function evaluateOnboardingDateGuard(
 }
 
 // Re-export the canonical messages so tests assert against the single source of truth.
-export { DOC_DATE_ERRORS, INVALID_DATE_MESSAGE };
+export { DOC_DATE_ERRORS, INVALID_DATE_MESSAGE, BIRTH_DATE_ERRORS };

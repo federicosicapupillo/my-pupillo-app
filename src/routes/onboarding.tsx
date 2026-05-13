@@ -34,6 +34,8 @@ import {
   isValidISODate,
   DOC_DATE_ERRORS,
   INVALID_DATE_MESSAGE,
+  validateBirthDate,
+  MIN_WORKER_AGE_YEARS,
   todayInRome,
 } from "@/lib/document-dates";
 import { evaluateOnboardingDateGuard } from "@/lib/onboarding-date-guard";
@@ -85,6 +87,10 @@ function computeDateFieldErrors(
     out.id_document_issued_at = INVALID_DATE_MESSAGE;
   if (!isValidISODate(input.id_document_expires_at))
     out.id_document_expires_at = INVALID_DATE_MESSAGE;
+
+  // Age / future check on the birth date.
+  const birthErr = validateBirthDate(input.birth_date, today);
+  if (birthErr) out.birth_date = out.birth_date ?? birthErr;
 
   // Range checks only when both raw inputs are individually valid dates.
   const range = validateDocumentDates(
@@ -297,6 +303,17 @@ function Onboarding() {
   const todayISORome = (() => {
     const t = todayInRome();
     const y = t.getFullYear();
+    const m = String(t.getMonth() + 1).padStart(2, "0");
+    const d = String(t.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
+  // Maximum allowed birth date for workers: today minus the legal minimum
+  // age (18 years), in the Europe/Rome calendar. Used as the picker upper
+  // bound so the UI matches the DB trigger.
+  const maxBirthISORome = (() => {
+    const t = todayInRome();
+    const y = t.getFullYear() - MIN_WORKER_AGE_YEARS;
     const m = String(t.getMonth() + 1).padStart(2, "0");
     const d = String(t.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
@@ -634,11 +651,9 @@ function Onboarding() {
       const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
       const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
       const today = todayInRome();
-      const birth = personal.birth_date ? new Date(personal.birth_date) : null;
-      const minAge = new Date(today); minAge.setFullYear(minAge.getFullYear() - 16);
-      const birthOk = !!birth && birth < today && birth <= minAge;
-      const issued = personal.id_document_issued_at ? new Date(personal.id_document_issued_at) : null;
-      const expires = personal.id_document_expires_at ? new Date(personal.id_document_expires_at) : null;
+      const birthOk =
+        isValidISODate(personal.birth_date) &&
+        validateBirthDate(personal.birth_date, today) === null;
       if (!allFilled || !cfOk || !birthOk || (!idDocFile && !idDocPath)) {
         setBusy(false);
         toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
@@ -1245,7 +1260,7 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.birth_date}
-                    max={todayISORome}
+                    max={maxBirthISORome}
                     error={dateFieldErrors.birth_date}
                     onChange={(iso) => {
                       clearDateError("birth_date");

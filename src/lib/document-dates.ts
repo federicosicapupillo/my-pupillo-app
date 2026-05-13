@@ -14,6 +14,22 @@ export const DOC_DATE_ERRORS = {
     "La data di scadenza deve essere successiva alla data di rilascio.",
 } as const;
 
+/**
+ * Italian error messages for the worker birth_date field.
+ * MUST stay in sync with the DB trigger `enforce_worker_personal_data`
+ * and `enforce_worker_date_fields_always`.
+ */
+export const BIRTH_DATE_ERRORS = {
+  FUTURE: "La data di nascita non può essere futura.",
+  UNDERAGE: "Devi avere almeno 18 anni per registrarti.",
+} as const;
+
+export type BirthDateError =
+  (typeof BIRTH_DATE_ERRORS)[keyof typeof BIRTH_DATE_ERRORS];
+
+/** Minimum age (in years) required to complete the worker profile. */
+export const MIN_WORKER_AGE_YEARS = 18;
+
 /** Generic message shown when a date input is not a real dd/mm/yyyy value. */
 export const INVALID_DATE_MESSAGE =
   "Inserisci una data valida nel formato gg/mm/aaaa.";
@@ -128,5 +144,29 @@ export function validateDocumentDates(
   if (expires && expires < t) return DOC_DATE_ERRORS.EXPIRED;
   if (issued && expires && expires <= issued)
     return DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED;
+  return null;
+}
+
+/**
+ * Validate the worker's birth date.
+ * - Must not be in the future.
+ * - Must be at least `MIN_WORKER_AGE_YEARS` years before `today`.
+ * Returns the first matching Italian error message, or `null` if valid.
+ */
+export function validateBirthDate(
+  birthISO: string | null | undefined,
+  today: Date = new Date(),
+): BirthDateError | null {
+  const birth = parseISODate(birthISO ?? null);
+  if (!birth) return null;
+  const t = startOfDay(today);
+  if (birth > t) return BIRTH_DATE_ERRORS.FUTURE;
+  // Maximum allowed birth date: today minus MIN_WORKER_AGE_YEARS.
+  const maxBirth = new Date(
+    t.getFullYear() - MIN_WORKER_AGE_YEARS,
+    t.getMonth(),
+    t.getDate(),
+  );
+  if (birth > maxBirth) return BIRTH_DATE_ERRORS.UNDERAGE;
   return null;
 }
