@@ -365,14 +365,13 @@ function Onboarding() {
 
     // worker (default)
     const personalDone = !!form.full_name.trim() && !!form.age && Number(form.age) >= 16;
-    const experienceDone = !!form.professional_profile.trim();
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
       !!form.service_area_city.trim() &&
       !!form.service_area_district.trim() &&
       form.service_area_address.trim().length >= 3 &&
       ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m));
-    const finalLocked = !(personalDone && experienceDone && languagesDone);
+    const finalLocked = !(personalDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
       {
@@ -387,13 +386,6 @@ function Onboarding() {
         hint: "Nome ed età",
         status: personalDone ? "done" : "todo",
         href: "#sec-personal",
-      },
-      {
-        id: "experience",
-        label: "Esperienza e ruoli",
-        hint: "Racconta il tuo profilo professionale",
-        status: experienceDone ? "done" : "todo",
-        href: "#sec-experience",
       },
       {
         id: "languages",
