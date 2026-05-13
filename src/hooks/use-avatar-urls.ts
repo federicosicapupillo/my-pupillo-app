@@ -13,8 +13,8 @@ function isFresh(e: Entry | undefined): e is Entry {
 
 export function useAvatarUrls(userIds: Array<string | null | undefined>) {
   const fetchUrls = useServerFn(getAvatarUrls);
-  const [urls, setUrls] = useState<Record<string, string | null>>(() => {
-    const init: Record<string, string | null> = {};
+  const [urls, setUrls] = useState<Record<string, string | null | undefined>>(() => {
+    const init: Record<string, string | null | undefined> = {};
     for (const id of userIds) {
       const e = id ? cache.get(id) : undefined;
       if (id && isFresh(e)) init[id] = e.url;
@@ -52,5 +52,6 @@ export function useAvatarUrls(userIds: Array<string | null | undefined>) {
 
 export function useAvatarUrl(userId: string | null | undefined) {
   const map = useAvatarUrls(userId ? [userId] : []);
-  return userId ? map[userId] ?? null : null;
+  if (!userId) return null;
+  return map[userId];
 }
