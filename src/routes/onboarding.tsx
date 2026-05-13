@@ -115,8 +115,6 @@ function Onboarding() {
         !!form.price_range &&
         (form.venue_type !== "Altro" || !!form.venue_type_other.trim());
       const vatDone = vatValid;
-      const locationDone =
-        !!form.address.trim() && !!form.province && !!form.city && !!form.postal_code.trim();
       const contactDone =
         !!form.contact_person_first_name.trim() &&
         !!form.contact_person_last_name.trim() &&
@@ -125,7 +123,7 @@ function Onboarding() {
         !!form.contact_person_email.trim() &&
         isValidEmail(form.contact_person_email);
       const finalDone = allDone;
-      const finalLocked = !(businessDone && vatDone && locationDone && contactDone);
+      const finalLocked = !(businessDone && vatDone && contactDone);
       return [
         { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
         {
@@ -147,13 +145,6 @@ function Onboarding() {
           hint: "11 cifre, verifica automatica",
           status: vatDone ? "done" : "todo",
           href: "#sec-vat",
-        },
-        {
-          id: "location",
-          label: "Luogo e accesso",
-          hint: "Indirizzo, provincia, città, CAP",
-          status: locationDone ? "done" : "todo",
-          href: "#sec-location",
         },
         {
           id: "contact",
