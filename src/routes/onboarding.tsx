@@ -1448,7 +1448,16 @@ function Onboarding() {
             .
           </span>
         </label>
-        <Button type="submit" disabled={busy}>
+        <Button
+          type="submit"
+          disabled={busy || workerDateInvalid}
+          aria-disabled={busy || workerDateInvalid}
+          title={
+            workerDateInvalid
+              ? "Correggi le date evidenziate per continuare."
+              : undefined
+          }
+        >
           {busy ? "Salvataggio..." : "Salva e continua"}
         </Button>
       </form>
