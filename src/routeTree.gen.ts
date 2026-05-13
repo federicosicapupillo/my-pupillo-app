@@ -30,7 +30,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkersIdRouteImport } from './routes/workers.$id'
+import { Route as WorkersIdRouteImport } from './routes/workers_.$id'
 import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
 import { Route as MessagesIdRouteImport } from './routes/messages.$id'
 import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
@@ -146,9 +146,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkersIdRoute = WorkersIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => WorkersRoute,
+  id: '/workers_/$id',
+  path: '/workers/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const RestaurantsIdRoute = RestaurantsIdRouteImport.update({
   id: '/restaurants/$id',
@@ -214,7 +214,7 @@ export interface FileRoutesByFullPath {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
-  '/workers': typeof WorkersRouteWithChildren
+  '/workers': typeof WorkersRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -246,7 +246,7 @@ export interface FileRoutesByTo {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
-  '/workers': typeof WorkersRouteWithChildren
+  '/workers': typeof WorkersRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -279,12 +279,12 @@ export interface FileRoutesById {
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
-  '/workers': typeof WorkersRouteWithChildren
+  '/workers': typeof WorkersRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
-  '/workers/$id': typeof WorkersIdRoute
+  '/workers_/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -382,7 +382,7 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
-    | '/workers/$id'
+    | '/workers_/$id'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -410,8 +410,9 @@ export interface RootRouteChildren {
   ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
   VerifyPhoneRoute: typeof VerifyPhoneRoute
-  WorkersRoute: typeof WorkersRouteWithChildren
+  WorkersRoute: typeof WorkersRoute
   RestaurantsIdRoute: typeof RestaurantsIdRoute
+  WorkersIdRoute: typeof WorkersIdRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
   ApiPublicHooksExpireStaleRoute: typeof ApiPublicHooksExpireStaleRoute
@@ -567,12 +568,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workers/$id': {
-      id: '/workers/$id'
-      path: '/$id'
+    '/workers_/$id': {
+      id: '/workers_/$id'
+      path: '/workers/$id'
       fullPath: '/workers/$id'
       preLoaderRoute: typeof WorkersIdRouteImport
-      parentRoute: typeof WorkersRoute
+      parentRoute: typeof rootRouteImport
     }
     '/restaurants/$id': {
       id: '/restaurants/$id'
@@ -659,17 +660,6 @@ const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
   MessagesRouteChildren,
 )
 
-interface WorkersRouteChildren {
-  WorkersIdRoute: typeof WorkersIdRoute
-}
-
-const WorkersRouteChildren: WorkersRouteChildren = {
-  WorkersIdRoute: WorkersIdRoute,
-}
-
-const WorkersRouteWithChildren =
-  WorkersRoute._addFileChildren(WorkersRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
@@ -691,8 +681,9 @@ const rootRouteChildren: RootRouteChildren = {
   ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
   VerifyPhoneRoute: VerifyPhoneRoute,
-  WorkersRoute: WorkersRouteWithChildren,
+  WorkersRoute: WorkersRoute,
   RestaurantsIdRoute: RestaurantsIdRoute,
+  WorkersIdRoute: WorkersIdRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
   ApiPublicHooksExpireStaleRoute: ApiPublicHooksExpireStaleRoute,
@@ -701,3 +692,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

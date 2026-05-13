@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Phone, Shield, Star, Users } from "lucide-react";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 
-export const Route = createFileRoute("/workers/$id")({
+export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
   component: () => <RequireAuth><WorkerDetailPage /></RequireAuth>,
 });
