@@ -15,6 +15,8 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
 import { AlertCircle, CheckCircle2, Eye, Loader2, Save, Send, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 import { buildDefaultsUpdate, hasSavedDefaults } from "@/lib/restaurant-defaults";
 import {
   BEARD_OPTIONS,
