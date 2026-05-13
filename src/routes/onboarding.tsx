@@ -581,9 +581,40 @@ function Onboarding() {
       service_area_lng: null,
     };
     let restCoords: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
-    if (role === "worker" && form.service_area_address.trim().length >= 3) {
-      const r = await geocodeAddressWithRetry(form.service_area_address.trim(), { maxAttempts: 2 });
-      if (r.ok) serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
+    if (role === "worker") {
+      if (!form.service_area_city.trim()) {
+        setBusy(false);
+        toast.error("Indica la città di partenza per la tua area di interesse.");
+        return;
+      }
+      if (!form.service_area_district.trim()) {
+        setBusy(false);
+        toast.error("Indica la zona o il quartiere della tua area di interesse.");
+        return;
+      }
+      if (form.service_area_address.trim().length < 3) {
+        setBusy(false);
+        toast.error("Indica l'indirizzo o un punto di riferimento della tua area di interesse.");
+        return;
+      }
+      if (!ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))) {
+        setBusy(false);
+        toast.error("Seleziona un raggio d'azione valido.");
+        return;
+      }
+      const fullAddr = [
+        form.service_area_address.trim(),
+        form.service_area_district.trim(),
+        form.service_area_city.trim(),
+        "Italia",
+      ].filter(Boolean).join(", ");
+      const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 2 });
+      if (!r.ok) {
+        setBusy(false);
+        toast.error("Impossibile localizzare l'indirizzo dell'area di interesse. Verifica i dati inseriti.");
+        return;
+      }
+      serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
     }
     if (role === "restaurant" && form.address.trim().length >= 3) {
       const fullAddr = [
