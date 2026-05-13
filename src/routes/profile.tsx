@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
-import { KeyRound, Trash2, FileText, Coins, Star, MapPin, ExternalLink } from "lucide-react";
+import { KeyRound, Trash2, FileText, Coins, Star, MapPin, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
@@ -29,16 +29,21 @@ function Profile() {
   const { profile, role, user, signOut } = useAuth();
   const nav = useNavigate();
   const [pwd, setPwd] = useState("");
+  const [pwdConfirm, setPwdConfirm] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [showPwdConfirm, setShowPwdConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pwd.length < 6) { toast.error("La password deve avere almeno 6 caratteri"); return; }
+    if (!pwdConfirm) { toast.error("Conferma la nuova password"); return; }
+    if (pwd !== pwdConfirm) { toast.error("Le password non coincidono."); return; }
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password: pwd });
     setBusy(false);
     if (error) toast.error(error.message);
-    else { toast.success("Password aggiornata"); setPwd(""); }
+    else { toast.success("Password aggiornata correttamente."); setPwd(""); setPwdConfirm(""); }
   };
 
   const deleteAccount = async () => {
@@ -157,9 +162,59 @@ function Profile() {
 
       <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
         <h2 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4" />Cambia password</h2>
-        <form onSubmit={changePassword} className="mt-3 flex flex-col sm:flex-row gap-2">
-          <div className="flex-1"><Label className="sr-only">Nuova password</Label><Input type="password" minLength={6} placeholder="Nuova password" value={pwd} onChange={e => setPwd(e.target.value)} /></div>
-          <Button type="submit" disabled={busy || !pwd}>Aggiorna</Button>
+        <form onSubmit={changePassword} className="mt-3 space-y-3">
+          <div>
+            <Label htmlFor="new-pwd">Nuova password *</Label>
+            <div className="relative mt-1">
+              <Input
+                id="new-pwd"
+                type={showPwd ? "text" : "password"}
+                minLength={6}
+                required
+                placeholder="Nuova password"
+                value={pwd}
+                onChange={e => setPwd(e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                aria-label={showPwd ? "Nascondi password" : "Mostra password"}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+              >
+                {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="confirm-pwd">Conferma nuova password *</Label>
+            <div className="relative mt-1">
+              <Input
+                id="confirm-pwd"
+                type={showPwdConfirm ? "text" : "password"}
+                minLength={6}
+                required
+                placeholder="Conferma nuova password"
+                value={pwdConfirm}
+                onChange={e => setPwdConfirm(e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwdConfirm(v => !v)}
+                aria-label={showPwdConfirm ? "Nascondi password" : "Mostra password"}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+              >
+                {showPwdConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {pwdConfirm && pwd !== pwdConfirm && (
+              <p className="mt-1 text-xs text-destructive">Le password non coincidono.</p>
+            )}
+          </div>
+          <Button type="submit" disabled={busy || !pwd || !pwdConfirm || pwd !== pwdConfirm}>
+            Aggiorna password
+          </Button>
         </form>
       </div>
 
