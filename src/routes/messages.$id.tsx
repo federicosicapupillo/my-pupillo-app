@@ -602,7 +602,9 @@ function Thread() {
           {app && <span className="text-xs rounded-full bg-secondary px-2 py-1 capitalize">{app.status}</span>}
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
-          <div>
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <UserAvatar userId={otherId} name={other?.name} className="h-12 w-12 shrink-0" />
+            <div className="min-w-0 flex-1">
             {otherId ? (
               <Link
                 to="/messages"
@@ -631,6 +633,7 @@ function Thread() {
                 {app?.proposed_tariff != null && <span className="ml-1 text-primary">(controfferta)</span>}
               </div>
             )}
+            </div>
           </div>
         </div>
 
