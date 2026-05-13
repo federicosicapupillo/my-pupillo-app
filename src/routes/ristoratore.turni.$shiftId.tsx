@@ -439,6 +439,19 @@ function ShiftDetailPage() {
                   <Button size="sm" variant="outline" className="gap-1"><MessageSquare className="h-4 w-4" /> Messaggia</Button>
                 </Link>
               )}
+              {shift.status === "completed" && (
+                <Button
+                  size="sm"
+                  variant={isFavorite ? "default" : "outline"}
+                  onClick={toggleFavorite}
+                  disabled={favLoading}
+                  className="gap-1"
+                  aria-pressed={isFavorite}
+                >
+                  <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
+                  {isFavorite ? "Preferito" : "Aggiungi ai preferiti"}
+                </Button>
+              )}
             </div>
           </>
         )}
