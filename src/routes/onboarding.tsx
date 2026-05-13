@@ -181,7 +181,6 @@ function Onboarding() {
     venue_type_other: "",
     address: "",
     price_range: "",
-    service_area_address: "",
     service_area_radius_m: "10000",
     service_area_city: "",
     service_area_district: "",
@@ -233,8 +232,7 @@ function Onboarding() {
     if (role !== "worker") return;
     const city = (form.service_area_city || "").trim();
     const district = (form.service_area_district || "").trim();
-    const address = (form.service_area_address || "").trim();
-    if (address.length < 3 || !city) {
+    if (!city) {
       setServiceAreaPreview(null);
       setServiceAreaError(null);
       setServiceAreaLoading(false);
@@ -244,7 +242,7 @@ function Onboarding() {
     setServiceAreaError(null);
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
-      const fullAddr = [address, district, city, "Italia"].filter(Boolean).join(", ");
+      const fullAddr = [district, city, "Italia"].filter(Boolean).join(", ");
       const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 1 });
       if (ctrl.signal.aborted) return;
       if (r.ok) {
@@ -259,7 +257,7 @@ function Onboarding() {
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [role, form.service_area_address, form.service_area_city, form.service_area_district]);
+  }, [role, form.service_area_city, form.service_area_district]);
 
   const [personal, setPersonal] = useState({
     first_name: "",
