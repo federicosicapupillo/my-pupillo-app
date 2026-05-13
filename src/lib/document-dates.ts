@@ -14,6 +14,10 @@ export const DOC_DATE_ERRORS = {
     "La data di scadenza deve essere successiva alla data di rilascio.",
 } as const;
 
+/** Generic message shown when a date input is not a real dd/mm/yyyy value. */
+export const INVALID_DATE_MESSAGE =
+  "Inserisci una data valida nel formato gg/mm/aaaa.";
+
 export type DocDateError =
   (typeof DOC_DATE_ERRORS)[keyof typeof DOC_DATE_ERRORS];
 
@@ -37,6 +41,29 @@ export function parseISODate(iso: string | null | undefined): Date | null {
     return null;
   }
   return dt;
+}
+
+/**
+ * `true` only if the given string is a real calendar day expressible as
+ * both ISO `yyyy-mm-dd` and Italian `dd/mm/yyyy`.
+ */
+export function isValidISODate(iso: string | null | undefined): boolean {
+  if (iso == null || iso === "") return false;
+  return parseISODate(iso) !== null;
+}
+
+/**
+ * Validate a list of required date inputs (ISO `yyyy-mm-dd`).
+ * Returns the generic dd/mm/yyyy error message if any value is missing
+ * or not a real date; `null` otherwise.
+ */
+export function validateRequiredDates(
+  values: Array<string | null | undefined>,
+): string | null {
+  for (const v of values) {
+    if (!isValidISODate(v)) return INVALID_DATE_MESSAGE;
+  }
+  return null;
 }
 
 /** Format an ISO `yyyy-mm-dd` (or Date) as Italian `dd/mm/yyyy`. */

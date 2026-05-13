@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   DOC_DATE_ERRORS,
+  INVALID_DATE_MESSAGE,
   formatItalianDate,
   parseISODate,
   parseItalianDateToISO,
+  isValidISODate,
+  validateRequiredDates,
   validateDocumentDates,
 } from "../document-dates";
 
@@ -42,6 +45,35 @@ describe("dd/mm/yyyy formatting", () => {
   it("parseISODate validates calendar correctness", () => {
     expect(parseISODate("2026-02-29")).toBeNull(); // not a leap year
     expect(parseISODate("2024-02-29")).not.toBeNull(); // leap year
+  });
+});
+
+describe("isValidISODate / validateRequiredDates", () => {
+  it("isValidISODate accepts only real dd/mm/yyyy ↔ ISO values", () => {
+    expect(isValidISODate("2026-05-13")).toBe(true);
+    expect(isValidISODate("2024-02-29")).toBe(true); // leap day
+    expect(isValidISODate("2026-02-29")).toBe(false); // invalid leap day
+    expect(isValidISODate("2026-13-01")).toBe(false); // bad month
+    expect(isValidISODate("2026-05-32")).toBe(false); // bad day
+    expect(isValidISODate("13/05/2026")).toBe(false); // wrong format
+    expect(isValidISODate("not-a-date")).toBe(false);
+    expect(isValidISODate("")).toBe(false);
+    expect(isValidISODate(null)).toBe(false);
+    expect(isValidISODate(undefined)).toBe(false);
+  });
+
+  it("validateRequiredDates returns the dd/mm/yyyy message on any invalid value", () => {
+    expect(
+      validateRequiredDates(["2026-05-13", "2024-02-29", "2030-01-01"]),
+    ).toBeNull();
+    expect(validateRequiredDates(["2026-05-13", "", "2030-01-01"])).toBe(
+      INVALID_DATE_MESSAGE,
+    );
+    expect(validateRequiredDates(["13-05-2026"])).toBe(INVALID_DATE_MESSAGE);
+    expect(validateRequiredDates(["2026-02-30"])).toBe(INVALID_DATE_MESSAGE);
+    expect(INVALID_DATE_MESSAGE).toBe(
+      "Inserisci una data valida nel formato gg/mm/aaaa.",
+    );
   });
 });
 

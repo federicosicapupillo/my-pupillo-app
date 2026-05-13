@@ -28,7 +28,13 @@ import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, i
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
-import { validateDocumentDates, DOC_DATE_ERRORS } from "@/lib/document-dates";
+import {
+  validateDocumentDates,
+  validateRequiredDates,
+  isValidISODate,
+  DOC_DATE_ERRORS,
+  INVALID_DATE_MESSAGE,
+} from "@/lib/document-dates";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -470,6 +476,17 @@ function Onboarding() {
       if (!allFilled || !cfOk || !birthOk || (!idDocFile && !idDocPath)) {
         setBusy(false);
         toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
+        return;
+      }
+      // Block save if any of the date inputs is not a real dd/mm/yyyy value.
+      const fmtErr = validateRequiredDates([
+        personal.birth_date,
+        personal.id_document_issued_at,
+        personal.id_document_expires_at,
+      ]);
+      if (fmtErr) {
+        setBusy(false);
+        toast.error(fmtErr);
         return;
       }
       const dateErr = validateDocumentDates(
