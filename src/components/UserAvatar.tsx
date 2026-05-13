@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAvatarUrl } from "@/hooks/use-avatar-urls";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 function initials(name?: string | null) {
@@ -16,6 +17,10 @@ interface Props {
 
 export function UserAvatar({ userId, name, className }: Props) {
   const url = useAvatarUrl(userId);
+  const isLoading = userId ? url === undefined : false;
+  if (isLoading) {
+    return <Skeleton className={cn("h-10 w-10 rounded-full", className)} />;
+  }
   return (
     <Avatar className={cn("h-10 w-10", className)}>
       {url ? <AvatarImage src={url} alt={name ?? "Avatar"} /> : null}
