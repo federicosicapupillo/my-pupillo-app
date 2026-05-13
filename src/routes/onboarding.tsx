@@ -180,6 +180,25 @@ function Onboarding() {
     id_document_issuer: "",
   });
 
+  // Per-field inline errors for the three date inputs. Cleared whenever the
+  // user edits the field. Populated on submit attempt (and by live cross-checks
+  // for rilascio/scadenza) so the user sees the exact message under the field.
+  const [dateFieldErrors, setDateFieldErrors] = useState<{
+    birth_date: string | null;
+    id_document_issued_at: string | null;
+    id_document_expires_at: string | null;
+  }>({
+    birth_date: null,
+    id_document_issued_at: null,
+    id_document_expires_at: null,
+  });
+
+  function clearDateError(field: keyof typeof dateFieldErrors) {
+    setDateFieldErrors((prev) =>
+      prev[field] === null ? prev : { ...prev, [field]: null },
+    );
+  }
+
   const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
 
   const ID_DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
