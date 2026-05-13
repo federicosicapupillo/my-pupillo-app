@@ -1011,6 +1011,11 @@ function Onboarding() {
           service_area_lat: serviceAreaPreview.lat,
           service_area_lng: serviceAreaPreview.lng,
         };
+      } else if (gpsServiceArea) {
+        serviceArea = {
+          service_area_lat: gpsServiceArea.lat,
+          service_area_lng: gpsServiceArea.lng,
+        };
       } else {
         const fullAddr = [
           areaMode === "zones" ? form.service_area_district.trim() : "",
@@ -1091,7 +1096,7 @@ function Onboarding() {
             service_area_city: form.service_area_city.trim() || null,
             service_area_district:
               areaMode === "georadar"
-                ? GEORADAR_SENTINEL
+                ? form.service_area_district.trim() || null
                 : allZonesSelected
                   ? ALL_ZONES_OPTION
                   : normalizedSelectedZones.join(", ") || null,
