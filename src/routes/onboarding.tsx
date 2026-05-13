@@ -227,6 +227,7 @@ function Onboarding() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsServiceArea, setGpsServiceArea] = useState<{ lat: number; lng: number } | null>(null);
   const [serviceAreaLoading, setServiceAreaLoading] = useState(false);
   const [serviceAreaError, setServiceAreaError] = useState<string | null>(null);
 
@@ -255,7 +256,7 @@ function Onboarding() {
         setServiceAreaPreview({ lat: r.lat, lng: r.lng });
       } else {
         setServiceAreaPreview(null);
-        setServiceAreaError("Indirizzo non trovato. Verrà riprovato al salvataggio.");
+        setServiceAreaError("Area non trovata. Verrà riprovato al salvataggio.");
       }
       setServiceAreaLoading(false);
     }, 700);
