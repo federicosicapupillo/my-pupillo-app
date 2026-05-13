@@ -65,6 +65,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
 import { uploadWorkerIdDocument } from "@/lib/id-document-upload.functions";
+import { IdDocumentDropzone } from "@/components/IdDocumentDropzone";
 import {
   ID_DOC_PLACEHOLDER,
   ID_DOC_HINT,
