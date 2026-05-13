@@ -3,7 +3,7 @@
 --
 -- Asserts the three Italian error messages used in the UI:
 --   * "La data di rilascio non può essere futura."
---   * "Il documento risulta scaduto. Carica un documento valido."
+--   * "Il documento risulta scaduto."
 --   * "La data di scadenza deve essere successiva alla data di rilascio."
 --
 -- Run with:  psql -v ON_ERROR_STOP=1 -f supabase/tests/document_dates_trigger.sql
@@ -76,8 +76,8 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     v_msg := SQLERRM; v_caught := true;
   END;
-  IF NOT v_caught OR v_msg <> 'Il documento risulta scaduto. Carica un documento valido.' THEN
-    RAISE EXCEPTION 'TEST FAIL [expired]: expected "Il documento risulta scaduto. Carica un documento valido.", got "%"', v_msg;
+  IF NOT v_caught OR v_msg <> 'Il documento risulta scaduto.' THEN
+    RAISE EXCEPTION 'TEST FAIL [expired]: expected "Il documento risulta scaduto.", got "%"', v_msg;
   END IF;
 
   UPDATE public.profiles SET
