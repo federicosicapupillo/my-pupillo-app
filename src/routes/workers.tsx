@@ -210,10 +210,6 @@ function WorkersPage() {
       nav({ to: "/messages/$id", params: { id: existing.id } });
       return;
     }
-    const { consumeCredits } = await import("@/lib/credits");
-    const { CREDIT_COSTS } = await import("@/lib/pricing");
-    const ok = await consumeCredits(CREDIT_COSTS.assignWorker, "assign_worker", selected);
-    if (!ok) return;
     const { data: created, error } = await supabase
       .from("applications")
       .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
@@ -221,7 +217,7 @@ function WorkersPage() {
       .single();
     if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
     await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: `/messages/${created.id}` });
-    toast.success("Lavoratore contattato! Apro la chat…");
+    toast.success("Chat aperta con il lavoratore");
     nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
