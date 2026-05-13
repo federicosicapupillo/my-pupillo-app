@@ -48,6 +48,51 @@ import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 
+/**
+ * Compute per-field error messages for the three worker date inputs.
+ * Returns the EXACT same Italian strings used by the toast / DB trigger
+ * so the inline UI and the existing tests stay in lockstep.
+ */
+function computeDateFieldErrors(
+  input: {
+    birth_date: string;
+    id_document_issued_at: string;
+    id_document_expires_at: string;
+  },
+  today: Date,
+): {
+  birth_date: string | null;
+  id_document_issued_at: string | null;
+  id_document_expires_at: string | null;
+} {
+  const out = {
+    birth_date: null as string | null,
+    id_document_issued_at: null as string | null,
+    id_document_expires_at: null as string | null,
+  };
+  // Format / required check per field.
+  if (!isValidISODate(input.birth_date)) out.birth_date = INVALID_DATE_MESSAGE;
+  if (!isValidISODate(input.id_document_issued_at))
+    out.id_document_issued_at = INVALID_DATE_MESSAGE;
+  if (!isValidISODate(input.id_document_expires_at))
+    out.id_document_expires_at = INVALID_DATE_MESSAGE;
+
+  // Range checks only when both raw inputs are individually valid dates.
+  const range = validateDocumentDates(
+    input.id_document_issued_at,
+    input.id_document_expires_at,
+    today,
+  );
+  if (range === DOC_DATE_ERRORS.ISSUED_FUTURE) {
+    out.id_document_issued_at = out.id_document_issued_at ?? range;
+  } else if (range === DOC_DATE_ERRORS.EXPIRED) {
+    out.id_document_expires_at = out.id_document_expires_at ?? range;
+  } else if (range === DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED) {
+    out.id_document_expires_at = out.id_document_expires_at ?? range;
+  }
+  return out;
+}
+
 const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 20, 30, 50] as const;
 const ALLOWED_RADIUS_M = new Set(RADIUS_KM_OPTIONS.map((k) => k * 1000));
 
