@@ -181,7 +181,6 @@ function Onboarding() {
     venue_type_other: "",
     address: "",
     price_range: "",
-    service_area_address: "",
     service_area_radius_m: "10000",
     service_area_city: "",
     service_area_district: "",
@@ -233,8 +232,7 @@ function Onboarding() {
     if (role !== "worker") return;
     const city = (form.service_area_city || "").trim();
     const district = (form.service_area_district || "").trim();
-    const address = (form.service_area_address || "").trim();
-    if (address.length < 3 || !city) {
+    if (!city) {
       setServiceAreaPreview(null);
       setServiceAreaError(null);
       setServiceAreaLoading(false);
@@ -244,7 +242,7 @@ function Onboarding() {
     setServiceAreaError(null);
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
-      const fullAddr = [address, district, city, "Italia"].filter(Boolean).join(", ");
+      const fullAddr = [district, city, "Italia"].filter(Boolean).join(", ");
       const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 1 });
       if (ctrl.signal.aborted) return;
       if (r.ok) {
@@ -259,7 +257,7 @@ function Onboarding() {
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [role, form.service_area_address, form.service_area_city, form.service_area_district]);
+  }, [role, form.service_area_city, form.service_area_district]);
 
   const [personal, setPersonal] = useState({
     first_name: "",
@@ -438,7 +436,6 @@ function Onboarding() {
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
       !!form.service_area_city.trim() &&
-      form.service_area_address.trim().length >= 3 &&
       (areaMode === "georadar"
         ? ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))
         : !!form.service_area_district.trim());
@@ -531,7 +528,6 @@ function Onboarding() {
         venue_type_other: (profile as any).venue_type_other ?? "",
         address: profile.address ?? "",
         price_range: profile.price_range ?? "",
-        service_area_address: (profile as any).service_area_address ?? "",
         service_area_radius_m: (() => {
           const v = profile.service_area_radius_m ?? 10000;
           return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
@@ -980,18 +976,12 @@ function Onboarding() {
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
         return;
       }
-      if (form.service_area_address.trim().length < 3) {
-        setBusy(false);
-        toast.error("Indica l'indirizzo o un punto di riferimento della tua area di interesse.");
-        return;
-      }
       if (!ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))) {
         setBusy(false);
         toast.error("Seleziona un raggio d'azione valido.");
         return;
       }
       const fullAddr = [
-        form.service_area_address.trim(),
         areaMode === "zones" ? form.service_area_district.trim() : "",
         form.service_area_city.trim(),
         "Italia",
@@ -1068,7 +1058,6 @@ function Onboarding() {
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
             secondary_roles: workerRoles,
-            service_area_address: form.service_area_address.trim() || null,
             service_area_city: form.service_area_city.trim() || null,
             service_area_district:
               areaMode === "georadar"
@@ -1893,7 +1882,7 @@ function Onboarding() {
                 </div>
                 )}
               </div>
-              {areaMode === "georadar" ? (
+              {areaMode === "georadar" && (
                 <div className="space-y-2 rounded-md border bg-muted/30 p-3">
                   <UseCurrentLocationButton
                     onLocated={(loc) => {
@@ -1905,7 +1894,6 @@ function Onboarding() {
                       setForm((prev) => ({
                         ...prev,
                         service_area_city: knownCity,
-                        service_area_address: loc.address,
                       }));
                     }}
                   />
@@ -1913,29 +1901,6 @@ function Onboarding() {
                     La posizione viene usata solo per il matching degli annunci
                     e non verrà mostrata pubblicamente in modo preciso.
                   </p>
-                  <div className="pt-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Oppure inserisci manualmente un indirizzo o punto di riferimento *
-                    </Label>
-                    <Input
-                      placeholder="es. Via Roma 1 oppure Stazione Centrale"
-                      value={form.service_area_address}
-                      onChange={(e) =>
-                        setForm({ ...form, service_area_address: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <Label>Indirizzo o punto di riferimento *</Label>
-                  <Input
-                    placeholder="es. Via Roma 1 oppure Stazione Centrale"
-                    value={form.service_area_address}
-                    onChange={(e) =>
-                      setForm({ ...form, service_area_address: e.target.value })
-                    }
-                  />
                 </div>
               )}
               {areaMode === "georadar" && (
