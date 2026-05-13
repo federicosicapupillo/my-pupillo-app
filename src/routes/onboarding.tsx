@@ -1416,17 +1416,14 @@ function Onboarding() {
               <Input
                 type="file"
                 accept={ID_DOC_ACCEPT}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const f = e.target.files?.[0] ?? null;
                   if (!f) { setIdDocFile(null); return; }
-                  if (!["application/pdf", "image/jpeg", "image/png"].includes(f.type)) {
-                    toast.error("Formato non valido. Usa PDF, JPG o PNG.");
+                  const check = await validateIdDocumentFile(f);
+                  if (!check.ok) {
+                    toast.error(check.error);
                     e.target.value = "";
-                    return;
-                  }
-                  if (f.size > ID_DOC_MAX) {
-                    toast.error("File troppo grande (max 8MB).");
-                    e.target.value = "";
+                    setIdDocFile(null);
                     return;
                   }
                   setIdDocFile(f);
