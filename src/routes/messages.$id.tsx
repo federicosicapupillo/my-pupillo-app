@@ -762,7 +762,7 @@ function Thread() {
             {counterOpen && (
               <div className="flex gap-2 rounded-xl border bg-card p-3">
                 <Input type="number" min="1" step="0.5" placeholder={`Nuovo importo €`} value={counterValue} onChange={e => setCounterValue(e.target.value)} />
-                <Button size="sm" onClick={sendCounter}>Invia controfferta</Button>
+                <Button size="sm" onClick={requestSendCounter} disabled={sendingCounter}>Invia controfferta</Button>
                 <Button size="sm" variant="ghost" onClick={() => setCounterOpen(false)}>Annulla</Button>
               </div>
             )}
