@@ -64,7 +64,11 @@ export function ZonesMultiSelect({ options, value, onChange, disabled, placehold
             <ChevronDown className="h-4 w-4 opacity-60 shrink-0" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-w-[95vw]" align="start">
+        <PopoverContent
+          className="p-0 w-[--radix-popover-trigger-width] max-w-[95vw] z-[1100]"
+          align="start"
+          sideOffset={4}
+        >
           <div className="p-2 border-b">
             <Input
               autoFocus
