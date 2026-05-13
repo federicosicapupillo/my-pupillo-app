@@ -34,6 +34,7 @@ import {
   isValidISODate,
   DOC_DATE_ERRORS,
   INVALID_DATE_MESSAGE,
+  todayInRome,
 } from "@/lib/document-dates";
 import { evaluateOnboardingDateGuard } from "@/lib/onboarding-date-guard";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
@@ -276,7 +277,7 @@ function Onboarding() {
       validateDocumentDates(
         personal.id_document_issued_at,
         personal.id_document_expires_at,
-        new Date(),
+        todayInRome(),
       ) !== null
     ) {
       return true;
@@ -286,6 +287,17 @@ function Onboarding() {
   })();
 
   const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
+
+  // Today's ISO yyyy-mm-dd in the Europe/Rome calendar — used as the
+  // upper/lower bound for the date inputs so the picker matches the
+  // backend rules (rilascio ≤ oggi, scadenza ≥ oggi, fuso Italia).
+  const todayISORome = (() => {
+    const t = todayInRome();
+    const y = t.getFullYear();
+    const m = String(t.getMonth() + 1).padStart(2, "0");
+    const d = String(t.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
 
   const ID_DOC_ACCEPT = ID_DOC_ACCEPT_ATTR;
 
@@ -627,7 +639,7 @@ function Onboarding() {
       ];
       const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
       const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
-      const today = new Date(); today.setHours(0,0,0,0);
+      const today = todayInRome();
       const birth = personal.birth_date ? new Date(personal.birth_date) : null;
       const minAge = new Date(today); minAge.setFullYear(minAge.getFullYear() - 16);
       const birthOk = !!birth && birth < today && birth <= minAge;
@@ -1240,7 +1252,7 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.birth_date}
-                    max={new Date().toISOString().slice(0, 10)}
+                    max={todayISORome}
                     error={dateFieldErrors.birth_date}
                     onChange={(iso) => {
                       clearDateError("birth_date");
@@ -1339,7 +1351,7 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.id_document_issued_at}
-                    max={new Date().toISOString().slice(0, 10)}
+                    max={todayISORome}
                     error={dateFieldErrors.id_document_issued_at}
                     onChange={(iso) => {
                       clearDateError("id_document_issued_at");
@@ -1355,7 +1367,7 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.id_document_expires_at}
-                    min={personal.id_document_issued_at || new Date().toISOString().slice(0, 10)}
+                    min={personal.id_document_issued_at || todayISORome}
                     error={dateFieldErrors.id_document_expires_at}
                     onChange={(iso) => {
                       clearDateError("id_document_expires_at");

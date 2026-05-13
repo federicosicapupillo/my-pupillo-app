@@ -20,6 +20,7 @@ import {
   DOC_DATE_ERRORS,
   INVALID_DATE_MESSAGE,
 } from "@/lib/onboarding-date-guard";
+import { todayInRome } from "@/lib/document-dates";
 
 const ISO_DATE = z
   .string()
@@ -68,7 +69,9 @@ export const validateWorkerDocumentDates = createServerFn({ method: "POST" })
         await logFailure(context, INVALID_DATE_MESSAGE, data);
         return { ok: false, error: INVALID_DATE_MESSAGE };
       }
-      const result = runWorkerDocumentDateValidation(shape.data, new Date());
+      // Always anchor to today's calendar day in Italy (Europe/Rome) so the
+      // SSR Worker (UTC) does not flip the boundary near midnight.
+      const result = runWorkerDocumentDateValidation(shape.data, todayInRome());
       if (!result.ok) {
         await logFailure(context, result.error, shape.data);
       }
@@ -114,7 +117,7 @@ export function runWorkerDocumentDateValidation(
     id_document_issued_at: string | null | undefined;
     id_document_expires_at: string | null | undefined;
   },
-  today: Date = new Date(),
+  today: Date = todayInRome(),
 ): ValidateWorkerDocumentDatesResult {
   const guard = evaluateOnboardingDateGuard(input, today);
   if (guard.blocked) return { ok: false, error: guard.message };

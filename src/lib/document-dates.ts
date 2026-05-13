@@ -9,7 +9,7 @@
 
 export const DOC_DATE_ERRORS = {
   ISSUED_FUTURE: "La data di rilascio non può essere futura.",
-  EXPIRED: "Il documento risulta scaduto. Carica un documento valido.",
+  EXPIRED: "Il documento risulta scaduto.",
   EXPIRES_BEFORE_ISSUED:
     "La data di scadenza deve essere successiva alla data di rilascio.",
 } as const;
@@ -24,6 +24,24 @@ export type DocDateError =
 /** Strip the time component so comparisons are calendar-day based. */
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/**
+ * Today, expressed as a Date at 00:00 in the Europe/Rome calendar.
+ * Use this everywhere that compares the user's documento dates against
+ * "oggi" so that midnight in Italia is the boundary, regardless of the
+ * runtime timezone (the SSR Worker is UTC).
+ */
+export function todayInRome(now: Date = new Date()): Date {
+  // en-CA gives an ISO yyyy-mm-dd in the requested timezone.
+  const ymd = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 /** Parse an ISO `yyyy-mm-dd` string to a local Date at 00:00. */

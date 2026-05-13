@@ -115,7 +115,7 @@ describe("onboarding form — submit blocked on rilascio/scadenza inconsistencie
     expect(ok).toBe(false);
     expect(toast.error).toHaveBeenCalledWith(DOC_DATE_ERRORS.EXPIRED);
     expect(DOC_DATE_ERRORS.EXPIRED).toBe(
-      "Il documento risulta scaduto. Carica un documento valido.",
+      "Il documento risulta scaduto.",
     );
   });
 

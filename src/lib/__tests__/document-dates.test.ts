@@ -108,7 +108,7 @@ describe("validateDocumentDates — error messages match the DB trigger", () => 
       DOC_DATE_ERRORS.EXPIRED,
     );
     expect(DOC_DATE_ERRORS.EXPIRED).toBe(
-      "Il documento risulta scaduto. Carica un documento valido.",
+      "Il documento risulta scaduto.",
     );
   });
 
