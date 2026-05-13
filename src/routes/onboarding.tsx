@@ -1047,7 +1047,10 @@ function Onboarding() {
             secondary_roles: workerRoles,
             service_area_address: form.service_area_address.trim() || null,
             service_area_city: form.service_area_city.trim() || null,
-            service_area_district: form.service_area_district.trim() || null,
+            service_area_district:
+              areaMode === "georadar"
+                ? GEORADAR_SENTINEL
+                : form.service_area_district.trim() || null,
             service_area_radius_m: (() => {
               const v = parseInt(form.service_area_radius_m);
               return ALLOWED_RADIUS_M.has(v) ? v : 10000;
