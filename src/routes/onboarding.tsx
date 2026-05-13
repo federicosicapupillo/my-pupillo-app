@@ -46,6 +46,11 @@ import { WORKER_ROLES } from "@/lib/worker-roles";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
+import { uploadWorkerIdDocument } from "@/lib/id-document-upload.functions";
+import {
+  ID_DOC_ACCEPT_ATTR,
+  validateIdDocumentFile,
+} from "@/lib/id-document-file";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 
 /**
@@ -111,6 +116,7 @@ function Onboarding() {
   const verifyVatFn = useServerFn(verifyVat);
   const uploadAvatarFn = useServerFn(uploadAvatar);
   const validateWorkerDatesFn = useServerFn(validateWorkerDocumentDates);
+  const uploadIdDocumentFn = useServerFn(uploadWorkerIdDocument);
 
   useEffect(() => {
     if (!profile) return;
@@ -279,8 +285,7 @@ function Onboarding() {
 
   const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
 
-  const ID_DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
-  const ID_DOC_MAX = 8 * 1024 * 1024; // 8MB
+  const ID_DOC_ACCEPT = ID_DOC_ACCEPT_ATTR;
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
   const vatValid = vatDigits.length === 11;
@@ -697,17 +702,29 @@ function Onboarding() {
         return;
       }
       if (idDocFile) {
-        const ext = idDocFile.name.split(".").pop()?.toLowerCase() || "bin";
-        const path = `${user.id}/id-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("worker-documents")
-          .upload(path, idDocFile, { upsert: true, contentType: idDocFile.type });
-        if (upErr) {
+        const fd = new FormData();
+        fd.append("file", idDocFile);
+        let docRes: Awaited<ReturnType<typeof uploadIdDocumentFn>>;
+        try {
+          docRes = await uploadIdDocumentFn({ data: fd });
+        } catch (e) {
           setBusy(false);
-          toast.error("Caricamento documento non riuscito: " + upErr.message);
+          toast.error(
+            e instanceof Error && e.message
+              ? e.message
+              : "Caricamento documento non riuscito.",
+          );
           return;
         }
-        uploadedPath = path;
+        if (!docRes.ok) {
+          setBusy(false);
+          toast.error(docRes.error);
+          return;
+        }
+        uploadedPath = docRes.path;
+        setIdDocPath(docRes.path);
+        setIdDocName(docRes.name);
+        setIdDocFile(null);
       }
       if (avatarFile) {
         // Server-side validation: format (JPG/PNG/WEBP), size, min 500x500.
@@ -1404,22 +1421,19 @@ function Onboarding() {
             <div id="sec-id-document" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Documento di identità *</Label>
               <p className="text-xs text-muted-foreground">
-                Formati accettati: PDF, JPG, PNG (max 8MB). Necessario per completare il profilo.
+                Formati accettati: PDF, JPG, JPEG, PNG (max 10 MB). Necessario per completare il profilo.
               </p>
               <Input
                 type="file"
                 accept={ID_DOC_ACCEPT}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const f = e.target.files?.[0] ?? null;
                   if (!f) { setIdDocFile(null); return; }
-                  if (!["application/pdf", "image/jpeg", "image/png"].includes(f.type)) {
-                    toast.error("Formato non valido. Usa PDF, JPG o PNG.");
+                  const check = await validateIdDocumentFile(f);
+                  if (!check.ok) {
+                    toast.error(check.error);
                     e.target.value = "";
-                    return;
-                  }
-                  if (f.size > ID_DOC_MAX) {
-                    toast.error("File troppo grande (max 8MB).");
-                    e.target.value = "";
+                    setIdDocFile(null);
                     return;
                   }
                   setIdDocFile(f);
