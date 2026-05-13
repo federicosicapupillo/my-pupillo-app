@@ -20,6 +20,7 @@ import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
 import { formatTariff } from "@/lib/format";
 import { UserAvatar } from "@/components/UserAvatar";
+import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -218,6 +219,17 @@ function AnnouncementDetail() {
   }, [id, ann?.restaurant_id, user?.id]);
 
   const isOwner = !!(ann && user && ann.restaurant_id === user.id);
+  const myApp = useMemo(
+    () => (user && apps.length ? apps.find(a => a.worker_id === user.id) ?? null : null),
+    [apps, user],
+  );
+  const canSeeAddress = canSeePreciseAddress({
+    isOwner,
+    isAdmin: role === "admin",
+    applicationStatus: myApp?.status ?? null,
+    assignedWorkerId: ann?.assigned_worker_id ?? null,
+    userId: user?.id ?? null,
+  });
   const restaurantName = restaurant?.business_name || restaurant?.full_name || "Ristoratore";
 
   const accept = async (app: App) => {
@@ -306,7 +318,9 @@ function AnnouncementDetail() {
             }
             return <>{sd} · {st}{et ? `–${et}` : ""}</>;
           })()}</div>
-          <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{ann.location_address}</div>
+          <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{canSeeAddress
+            ? ann.location_address
+            : publicLocationLabel({ job_city: ann.job_city, city: restaurant?.city, neighborhood: restaurant?.neighborhood })}</div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />{formatTariff(jobRequest?.hourly_rate ?? ann.tariff_amount, ann.tariff_type)}</div>
           <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.expires_at).toLocaleDateString("it-IT")}</div>
           {jobRequest?.break_included != null && <div className="text-muted-foreground">Pausa prevista: <span className="font-medium text-foreground">{jobRequest.break_included ? "Sì" : "No"}</span></div>}
@@ -356,7 +370,9 @@ function AnnouncementDetail() {
               ].filter(Boolean).join(" · ") || "—"}
             </div>
             {(restaurant.address || restaurant.city) && (
-              <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{[restaurant.address, restaurant.neighborhood, restaurant.city].filter(Boolean).join(", ")}</div>
+              <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{canSeeAddress
+                ? [restaurant.address, restaurant.neighborhood, restaurant.city].filter(Boolean).join(", ")
+                : publicLocationLabel({ city: restaurant.city, neighborhood: restaurant.neighborhood })}</div>
             )}
             {restaurant.opening_hours && (
               <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />{restaurant.opening_hours}</div>
@@ -397,7 +413,7 @@ function AnnouncementDetail() {
 
       <RequirementsSection ann={ann} isOwner={isOwner} />
 
-      <LocationAccessSection ann={ann} restaurant={restaurant} isOwner={isOwner} />
+      <LocationAccessSection ann={ann} restaurant={restaurant} isOwner={isOwner} canSeeAddress={canSeeAddress} />
 
       {isOwner && (
         <section ref={candidatesRef} id="candidature-annuncio" className="scroll-mt-24">
@@ -594,7 +610,24 @@ function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
-function LocationAccessSection({ ann, restaurant, isOwner }: { ann: Ann; restaurant: any; isOwner: boolean }) {
+function LocationAccessSection({ ann, restaurant, isOwner, canSeeAddress }: { ann: Ann; restaurant: any; isOwner: boolean; canSeeAddress: boolean }) {
+  if (!canSeeAddress) {
+    const masked = publicLocationLabel({
+      job_city: ann.job_city,
+      city: restaurant?.city,
+      neighborhood: restaurant?.neighborhood,
+    });
+    return (
+      <div className="rounded-2xl border bg-card p-6 mb-6">
+        <h2 className="text-2xl font-bold text-primary mb-4">Luogo</h2>
+        <div className="flex items-center gap-2 text-base">
+          <MapPin className="h-5 w-5 text-primary" />
+          <span className="font-medium">{masked}</span>
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">{PRECISE_ADDRESS_HINT}</p>
+      </div>
+    );
+  }
   const lat = ann.job_latitude ?? ann.location_lat ?? restaurant?.latitude ?? restaurant?.service_area_lat ?? null;
   const lng = ann.job_longitude ?? ann.location_lng ?? restaurant?.longitude ?? restaurant?.service_area_lng ?? null;
   const address = ann.job_address || ann.location_address;
