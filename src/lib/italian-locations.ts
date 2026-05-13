@@ -174,6 +174,74 @@ export function isCityInProvince(city?: string | null, province?: string | null)
 
 export const ALL_PROVINCES = ITALIAN_LOCATIONS.map((p) => p.province);
 
+/**
+ * Flat list of all comuni across the supported provinces, with their
+ * province name and code attached. Used by the residence picker on the
+ * worker onboarding to drive the city dropdown without forcing the user
+ * to first pick a province.
+ */
+export type CityWithProvince = {
+  city: string;
+  province: string;
+  province_code: string;
+};
+
+export const ALL_CITIES_WITH_PROVINCE: CityWithProvince[] =
+  ITALIAN_LOCATIONS.flatMap((p) =>
+    p.cities.map((c) => ({
+      city: c.name,
+      province: p.province,
+      province_code: p.province_code,
+    })),
+  ).sort((a, b) => a.city.localeCompare(b.city, "it"));
+
+/**
+ * Lookup helper: given a city name, return the matching province entry
+ * (first match if the same comune exists in multiple provinces, which is
+ * not the case in the current MVP dataset).
+ */
+export function findCityProvince(
+  city?: string | null,
+): CityWithProvince | null {
+  if (!city) return null;
+  const norm = city.trim().toLowerCase();
+  return (
+    ALL_CITIES_WITH_PROVINCE.find((c) => c.city.toLowerCase() === norm) ?? null
+  );
+}
+
+/**
+ * Validate the Italian civic number format used by the residence picker.
+ * Accepts forms like `12`, `12A`, `24/B`, `100 bis`. Disallows everything
+ * else so the saved address stays consistent with the trigger checks.
+ */
+export const CIVIC_NUMBER_REGEX =
+  /^\d{1,5}(?:\s?[A-Za-z]{1,3})?(?:\s?\/\s?[A-Za-z0-9]{1,4})?$/;
+
+export function isValidCivicNumber(input?: string | null): boolean {
+  if (!input) return false;
+  return CIVIC_NUMBER_REGEX.test(input.trim());
+}
+
+/**
+ * Try to split a stored `residence_address` (legacy free-text) into a
+ * `street` part and a trailing civic number. Returns the original input
+ * as `street` with an empty civic if the trailing token does not look
+ * like a civic number.
+ */
+export function splitAddressAndCivic(
+  full: string | null | undefined,
+): { street: string; civic: string } {
+  const v = (full ?? "").trim();
+  if (!v) return { street: "", civic: "" };
+  // Match a trailing civic at end of string, optionally preceded by a comma.
+  const m = v.match(
+    /^(.*?)[\s,]+(\d{1,5}(?:\s?[A-Za-z]{1,3})?(?:\s?\/\s?[A-Za-z0-9]{1,4})?)$/,
+  );
+  if (!m) return { street: v, civic: "" };
+  return { street: m[1].trim().replace(/,$/, "").trim(), civic: m[2].trim() };
+}
+
 // =============================================================
 // Zone / quartiere per CAP (MVP — espandibile)
 // Chiave: `${province_code}:${cap}` (es. "MI:20121")

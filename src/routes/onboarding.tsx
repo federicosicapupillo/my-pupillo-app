@@ -24,7 +24,19 @@ import {
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
-import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity, isValidCapForDistrict } from "@/lib/italian-locations";
+import {
+  ITALIAN_LOCATIONS,
+  citiesForProvince,
+  provinceCode,
+  isCityInProvince,
+  isValidCapForCity,
+  isValidCapForDistrict,
+  ALL_CITIES_WITH_PROVINCE,
+  findCityProvince,
+  capsForCity,
+  isValidCivicNumber,
+  splitAddressAndCivic,
+} from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -233,6 +245,11 @@ function Onboarding() {
     tax_code: "",
     nationality: "Italiana",
     residence_address: "",
+    // Local-only split of `residence_address` into a street part + civic
+    // number. Recombined into `residence_address` on save so the DB schema
+    // stays untouched.
+    residence_street: "",
+    residence_street_number: "",
     residence_city: "",
     residence_postal_code: "",
     residence_province: "",
@@ -532,6 +549,7 @@ function Onboarding() {
     }
     if (profile) {
       const p = profile as any;
+      const split = splitAddressAndCivic(p.residence_address);
       setPersonal((s) => ({
         first_name: p.first_name ?? s.first_name,
         last_name: p.last_name ?? s.last_name,
@@ -540,6 +558,8 @@ function Onboarding() {
         tax_code: p.tax_code ?? s.tax_code,
         nationality: p.nationality ?? s.nationality,
         residence_address: p.residence_address ?? s.residence_address,
+        residence_street: split.street || s.residence_street,
+        residence_street_number: split.civic || s.residence_street_number,
         residence_city: p.residence_city ?? s.residence_city,
         residence_postal_code: p.residence_postal_code ?? s.residence_postal_code,
         residence_province: p.residence_province ?? s.residence_province,
@@ -643,7 +663,8 @@ function Onboarding() {
     if (role === "worker") {
       const required = [
         personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
-        personal.tax_code, personal.nationality, personal.residence_address,
+        personal.tax_code, personal.nationality,
+        personal.residence_street, personal.residence_street_number,
         personal.residence_city, personal.residence_postal_code, personal.residence_province,
         personal.id_document_type, personal.id_document_number,
         personal.id_document_issued_at, personal.id_document_expires_at, personal.id_document_issuer,
@@ -654,9 +675,39 @@ function Onboarding() {
       const birthOk =
         isValidISODate(personal.birth_date) &&
         validateBirthDate(personal.birth_date, today) === null;
-      if (!allFilled || !cfOk || !birthOk || (!idDocFile && !idDocPath)) {
+      // City must belong to the supported dataset; CAP must match it; civic
+      // number must follow the Italian format (e.g. 12, 12A, 24/B).
+      const cityEntry = findCityProvince(personal.residence_city);
+      const provinceOk =
+        !!cityEntry &&
+        personal.residence_province.trim().toUpperCase() ===
+          cityEntry.province_code;
+      const capOk = isValidCapForCity(
+        cityEntry?.province ?? null,
+        personal.residence_city,
+        personal.residence_postal_code,
+      );
+      const civicOk = isValidCivicNumber(personal.residence_street_number);
+      if (
+        !allFilled ||
+        !cfOk ||
+        !birthOk ||
+        !cityEntry ||
+        !provinceOk ||
+        !capOk ||
+        !civicOk ||
+        (!idDocFile && !idDocPath)
+      ) {
         setBusy(false);
-        toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
+        if (!cityEntry) {
+          toast.error("Seleziona una città di residenza dall'elenco.");
+        } else if (!capOk) {
+          toast.error("Seleziona un CAP valido per la città scelta.");
+        } else if (!civicOk) {
+          toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
+        } else {
+          toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
+        }
         return;
       }
       // Numero documento: only letters and digits, 5–20 chars (already
@@ -918,7 +969,7 @@ function Onboarding() {
             birth_place: personal.birth_place.trim(),
             tax_code: personal.tax_code.trim().toUpperCase(),
             nationality: personal.nationality.trim(),
-            residence_address: personal.residence_address.trim(),
+            residence_address: `${personal.residence_street.trim()}, ${personal.residence_street_number.trim()}`,
             residence_city: personal.residence_city.trim(),
             residence_postal_code: personal.residence_postal_code.trim(),
             residence_province: personal.residence_province.trim().toUpperCase(),
@@ -1288,21 +1339,100 @@ function Onboarding() {
                   <Label>Nazionalità *</Label>
                   <Input required value={personal.nationality} onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })} />
                 </div>
-                <div className="md:col-span-2">
-                  <Label>Indirizzo di residenza *</Label>
-                  <Input required value={personal.residence_address} onChange={(e) => setPersonal({ ...personal, residence_address: e.target.value })} />
-                </div>
                 <div>
                   <Label>Città di residenza *</Label>
-                  <Input required value={personal.residence_city} onChange={(e) => setPersonal({ ...personal, residence_city: e.target.value })} />
-                </div>
-                <div>
-                  <Label>CAP *</Label>
-                  <Input required maxLength={5} inputMode="numeric" pattern="\d{5}" value={personal.residence_postal_code} onChange={(e) => setPersonal({ ...personal, residence_postal_code: e.target.value.replace(/\D/g, "").slice(0, 5) })} />
+                  <SearchableSelect
+                    options={ALL_CITIES_WITH_PROVINCE.map((c) => ({
+                      value: c.city,
+                      label: `${c.city} (${c.province_code})`,
+                    }))}
+                    value={personal.residence_city}
+                    placeholder="Seleziona città"
+                    searchPlaceholder="Cerca città"
+                    onChange={(city) => {
+                      const entry = findCityProvince(city);
+                      setPersonal((s) => ({
+                        ...s,
+                        residence_city: city,
+                        residence_province: entry?.province_code ?? "",
+                        // Clear CAP when city changes — it must be picked
+                        // from the new city's CAP list.
+                        residence_postal_code: "",
+                      }));
+                    }}
+                  />
                 </div>
                 <div>
                   <Label>Provincia *</Label>
-                  <Input required maxLength={2} value={personal.residence_province} onChange={(e) => setPersonal({ ...personal, residence_province: e.target.value.toUpperCase().slice(0, 2) })} />
+                  <Input
+                    value={personal.residence_province}
+                    readOnly
+                    disabled
+                    placeholder="Auto"
+                    aria-readonly="true"
+                  />
+                </div>
+                <div>
+                  <Label>CAP *</Label>
+                  <SearchableSelect
+                    options={capsForCity(
+                      findCityProvince(personal.residence_city)?.province ?? null,
+                      personal.residence_city,
+                    ).map((c) => ({ value: c, label: c }))}
+                    value={personal.residence_postal_code}
+                    placeholder={
+                      personal.residence_city
+                        ? "Seleziona CAP"
+                        : "Prima seleziona la città"
+                    }
+                    searchPlaceholder="Cerca CAP"
+                    disabled={!personal.residence_city}
+                    onChange={(cap) =>
+                      setPersonal((s) => ({ ...s, residence_postal_code: cap }))
+                    }
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Via / Indirizzo *</Label>
+                  <Input
+                    required
+                    placeholder={
+                      personal.residence_city
+                        ? "Cerca via o indirizzo"
+                        : "Prima seleziona la città"
+                    }
+                    disabled={!personal.residence_city}
+                    value={personal.residence_street}
+                    onChange={(e) =>
+                      setPersonal({ ...personal, residence_street: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Numero civico *</Label>
+                  <Input
+                    required
+                    placeholder="Es. 12, 12A, 24/B"
+                    value={personal.residence_street_number}
+                    onChange={(e) =>
+                      setPersonal({
+                        ...personal,
+                        residence_street_number: e.target.value
+                          .replace(/[^0-9A-Za-z/ ]/g, "")
+                          .slice(0, 10),
+                      })
+                    }
+                    aria-invalid={
+                      !!personal.residence_street_number &&
+                      !isValidCivicNumber(personal.residence_street_number)
+                    }
+                  />
+                  {!!personal.residence_street_number &&
+                    !isValidCivicNumber(personal.residence_street_number) && (
+                      <p className="mt-1 text-xs text-destructive">
+                        Formato non valido. Es: 12, 12A, 24/B.
+                      </p>
+                    )}
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">Telefono ed email sono già impostati nei dati account.</p>
