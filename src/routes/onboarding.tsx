@@ -96,6 +96,12 @@ function Onboarding() {
   const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(
     null,
   );
+  const [idDocFile, setIdDocFile] = useState<File | null>(null);
+  const [idDocPath, setIdDocPath] = useState<string | null>(null);
+  const [idDocName, setIdDocName] = useState<string | null>(null);
+
+  const ID_DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
+  const ID_DOC_MAX = 8 * 1024 * 1024; // 8MB
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
   const vatValid = vatDigits.length === 11;
@@ -278,6 +284,11 @@ function Onboarding() {
     }
     if (profile) setRequirements(reqFromProfile(profile));
     if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
+    if (profile && (profile as any).id_document_path) {
+      const p = (profile as any).id_document_path as string;
+      setIdDocPath(p);
+      setIdDocName(p.split("/").pop() ?? p);
+    }
   }, [profile]);
 
   const submit = async (e: React.FormEvent) => {
@@ -366,6 +377,27 @@ function Onboarding() {
       }
     }
     setBusy(true);
+    let uploadedPath: string | null = idDocPath;
+    if (role === "worker") {
+      if (!idDocFile && !idDocPath) {
+        setBusy(false);
+        toast.error("Carica un documento di identità per completare il profilo.");
+        return;
+      }
+      if (idDocFile) {
+        const ext = idDocFile.name.split(".").pop()?.toLowerCase() || "bin";
+        const path = `${user.id}/id-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("worker-documents")
+          .upload(path, idDocFile, { upsert: true, contentType: idDocFile.type });
+        if (upErr) {
+          setBusy(false);
+          toast.error("Caricamento documento non riuscito: " + upErr.message);
+          return;
+        }
+        uploadedPath = path;
+      }
+    }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
     const contactPhoneFull = buildPhoneFull(form.contact_person_phone_code, form.contact_person_phone_number);
     let serviceArea: { service_area_lat: number | null; service_area_lng: number | null } = {
@@ -442,6 +474,7 @@ function Onboarding() {
             languages: spokenLanguages.map((s) => s.language),
             spoken_languages: spokenLanguages,
             service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
+            id_document_path: uploadedPath,
             ...serviceArea,
           };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
