@@ -1017,11 +1017,9 @@ function Onboarding() {
           service_area_lng: gpsServiceArea.lng,
         };
       } else {
-        const fullAddr = [
-          areaMode === "zones" ? form.service_area_district.trim() : "",
-          form.service_area_city.trim(),
-          "Italia",
-        ].filter(Boolean).join(", ");
+        const fullAddr = [form.service_area_district.trim(), form.service_area_city.trim(), "Italia"]
+          .filter(Boolean)
+          .join(", ");
         const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 1 });
         if (r.ok) {
           serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
@@ -1888,9 +1886,9 @@ function Onboarding() {
                     searchPlaceholder="Cerca città…"
                   />
                 </div>
-                {areaMode === "zones" && (
+                {(areaMode === "zones" || areaMode === "georadar") && (
                 <div>
-                  <Label>Zona / quartiere *</Label>
+                  <Label>{areaMode === "zones" ? "Zona / quartiere *" : "Zona / quartiere"}</Label>
                   {(() => {
                     const zones = form.service_area_district
                       ? form.service_area_district.split(",").map((s) => s.trim()).filter(Boolean)
