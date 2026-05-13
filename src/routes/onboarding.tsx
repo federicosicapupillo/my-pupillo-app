@@ -244,6 +244,39 @@ function Onboarding() {
     );
   }
 
+  /**
+   * Live "any worker date is filled but invalid" flag, used to disable the
+   * Salva button. Empty fields are NOT considered invalid here (the existing
+   * required-field validation handles them on submit); only values the user
+   * actually typed/picked but that fail format or range checks count.
+   */
+  const workerDateInvalid = (() => {
+    if (role !== "worker") return false;
+    const fields = [
+      personal.birth_date,
+      personal.id_document_issued_at,
+      personal.id_document_expires_at,
+    ];
+    for (const v of fields) {
+      if (v && !isValidISODate(v)) return true;
+    }
+    if (
+      personal.id_document_issued_at &&
+      personal.id_document_expires_at &&
+      isValidISODate(personal.id_document_issued_at) &&
+      isValidISODate(personal.id_document_expires_at) &&
+      validateDocumentDates(
+        personal.id_document_issued_at,
+        personal.id_document_expires_at,
+        new Date(),
+      ) !== null
+    ) {
+      return true;
+    }
+    // Inline errors set by the last submit attempt also disable Salva.
+    return Object.values(dateFieldErrors).some((m) => m !== null);
+  })();
+
   const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
 
   const ID_DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
@@ -1415,7 +1448,16 @@ function Onboarding() {
             .
           </span>
         </label>
-        <Button type="submit" disabled={busy}>
+        <Button
+          type="submit"
+          disabled={busy || workerDateInvalid}
+          aria-disabled={busy || workerDateInvalid}
+          title={
+            workerDateInvalid
+              ? "Correggi le date evidenziate per continuare."
+              : undefined
+          }
+        >
           {busy ? "Salvataggio..." : "Salva e continua"}
         </Button>
       </form>
