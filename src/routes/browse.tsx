@@ -363,7 +363,11 @@ function Browse() {
         ann={confirmAnn}
         restaurantInfo={confirmAnn ? restaurantsById[confirmAnn.restaurant_id] : undefined}
         submitting={submitting}
-        onCancel={() => !submitting && setConfirmAnn(null)}
+        applyMode={applyMode}
+        setApplyMode={setApplyMode}
+        counterAmount={counterAmount}
+        setCounterAmount={setCounterAmount}
+        onCancel={() => { if (!submitting) { setConfirmAnn(null); setApplyMode("accept"); setCounterAmount(""); } }}
         onConfirm={submitApplication}
       />
 
