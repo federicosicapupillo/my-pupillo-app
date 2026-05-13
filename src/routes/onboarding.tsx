@@ -1039,6 +1039,7 @@ function Onboarding() {
               return ALLOWED_RADIUS_M.has(v) ? v : 10000;
             })(),
             id_document_path: uploadedPath,
+            id_document_back_path: uploadedBackPath,
             avatar_url: uploadedAvatarUrl,
             first_name: personal.first_name.trim(),
             last_name: personal.last_name.trim(),
