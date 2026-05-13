@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { RequireAuth } from "@/components/RequireAuth";
+import { RequireRole } from "@/components/RequireRole";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +25,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Pupillo" }] }),
-  component: () => <RequireAuth><DashboardInner /></RequireAuth>,
+  component: () => <RequireRole allow={["restaurant", "admin"]}><DashboardInner /></RequireRole>,
 });
 
 type AssignedItem = {
