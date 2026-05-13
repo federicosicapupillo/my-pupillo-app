@@ -24,7 +24,19 @@ import {
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
-import { ITALIAN_LOCATIONS, citiesForProvince, provinceCode, isCityInProvince, isValidCapForCity, isValidCapForDistrict } from "@/lib/italian-locations";
+import {
+  ITALIAN_LOCATIONS,
+  citiesForProvince,
+  provinceCode,
+  isCityInProvince,
+  isValidCapForCity,
+  isValidCapForDistrict,
+  ALL_CITIES_WITH_PROVINCE,
+  findCityProvince,
+  capsForCity,
+  isValidCivicNumber,
+  splitAddressAndCivic,
+} from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
