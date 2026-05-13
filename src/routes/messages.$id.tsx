@@ -770,37 +770,60 @@ function Thread() {
               {role === "restaurant" && (
                 <Button size="sm" className="gap-2" onClick={() => transition("accepted")}><Check className="h-4 w-4" />Assegna</Button>
               )}
-              <Button size="sm" variant="secondary" className="gap-2" onClick={() => { setCounterOpen(o => !o); setCounterValue(currentTariff?.toString() ?? ""); }}>
-                <Euro className="h-4 w-4" />Controfferta
-              </Button>
+              {role === "restaurant" && app.status === "counter_offer" && ann?.tariff_amount != null && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="gap-2"
+                  onClick={async () => {
+                    if (!app) return;
+                    const orig = ann.tariff_amount;
+                    const { error } = await supabase.from("applications").update({
+                      status: "pending", proposed_tariff: orig,
+                    }).eq("id", id);
+                    if (error) { toast.error(error.message); return; }
+                    await supabase.from("notifications").insert({
+                      user_id: app.worker_id,
+                      title: "Il ristoratore propone la tariffa originale",
+                      body: `Il ristoratore propone di tornare a € ${orig}${ann.tariff_type === "hourly" ? "/h" : ""}.`,
+                      link: `/messages/${id}`,
+                    });
+                    await logEvent("original_rate_proposed", { tariff: orig });
+                    setApp({ ...app, status: "pending", proposed_tariff: orig } as App);
+                    toast.success("Hai riproposto la tariffa originale.");
+                  }}
+                >
+                  <Euro className="h-4 w-4" />Proponi tariffa originale
+                </Button>
+              )}
               <Button size="sm" variant="outline" className="gap-2" onClick={() => transition("rejected")}><X className="h-4 w-4" />Rifiuta</Button>
             </div>
-            {counterOpen && (
-              <div className="flex gap-2 rounded-xl border bg-card p-3">
-                <Input type="number" min="1" step="0.5" placeholder={`Nuovo importo €`} value={counterValue} onChange={e => setCounterValue(e.target.value)} />
-                <Button size="sm" onClick={requestSendCounter} disabled={sendingCounter}>Invia controfferta</Button>
-                <Button size="sm" variant="ghost" onClick={() => setCounterOpen(false)}>Annulla</Button>
+            {role === "restaurant" && app.status === "counter_offer" && app.proposed_tariff != null && ann && (
+              <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 shadow-[0_0_24px_-8px_hsl(var(--primary)/0.5)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-xs px-2.5 py-1 font-semibold">
+                    <Euro className="h-3 w-3" />Contro offerta ricevuta
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Tariffa proposta</div>
+                    <div className="font-semibold">€ {ann.tariff_amount}{ann.tariff_type === "hourly" ? "/h" : ""}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Richiesta lavoratore</div>
+                    <div className="font-semibold text-primary">€ {app.proposed_tariff}{ann.tariff_type === "hourly" ? "/h" : ""}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted-foreground">Differenza</div>
+                    <div className="font-semibold">+ € {(Number(app.proposed_tariff) - Number(ann.tariff_amount)).toFixed(2)}</div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Accettando confermerai il lavoratore alla tariffa richiesta. I crediti vengono scalati solo alla conferma.
+                </p>
               </div>
             )}
-            <AlertDialog open={counterConfirmOpen} onOpenChange={setCounterConfirmOpen}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confermi la controfferta?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Stai proponendo una tariffa diversa da quella indicata nell'annuncio. Il ristoratore potrà accettare oppure rifiutare la tua controfferta.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={sendingCounter}>Annulla</AlertDialogCancel>
-                  <AlertDialogAction
-                    disabled={sendingCounter}
-                    onClick={(e) => { e.preventDefault(); void sendCounter(); }}
-                  >
-                    Invia controfferta
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
         )}
 
