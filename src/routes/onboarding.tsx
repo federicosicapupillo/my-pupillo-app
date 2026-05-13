@@ -852,6 +852,97 @@ function Onboarding() {
           </>
         ) : (
           <>
+            <div id="sec-anagrafica" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+              <h3 className="font-semibold">📇 Dati anagrafici</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Nome *</Label>
+                  <Input required value={personal.first_name} onChange={(e) => setPersonal({ ...personal, first_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Cognome *</Label>
+                  <Input required value={personal.last_name} onChange={(e) => setPersonal({ ...personal, last_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Data di nascita *</Label>
+                  <Input type="date" required value={personal.birth_date} onChange={(e) => setPersonal({ ...personal, birth_date: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Luogo di nascita *</Label>
+                  <Input required value={personal.birth_place} onChange={(e) => setPersonal({ ...personal, birth_place: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Codice fiscale *</Label>
+                  <Input
+                    required
+                    maxLength={16}
+                    value={personal.tax_code}
+                    onChange={(e) => setPersonal({ ...personal, tax_code: e.target.value.toUpperCase() })}
+                  />
+                  {personal.tax_code && !CF_REGEX.test(personal.tax_code.trim().toUpperCase()) && (
+                    <p className="text-xs text-destructive mt-1">Codice fiscale non valido.</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Nazionalità *</Label>
+                  <Input required value={personal.nationality} onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })} />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Indirizzo di residenza *</Label>
+                  <Input required value={personal.residence_address} onChange={(e) => setPersonal({ ...personal, residence_address: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Città di residenza *</Label>
+                  <Input required value={personal.residence_city} onChange={(e) => setPersonal({ ...personal, residence_city: e.target.value })} />
+                </div>
+                <div>
+                  <Label>CAP *</Label>
+                  <Input required maxLength={5} inputMode="numeric" pattern="\d{5}" value={personal.residence_postal_code} onChange={(e) => setPersonal({ ...personal, residence_postal_code: e.target.value.replace(/\D/g, "").slice(0, 5) })} />
+                </div>
+                <div>
+                  <Label>Provincia *</Label>
+                  <Input required maxLength={2} value={personal.residence_province} onChange={(e) => setPersonal({ ...personal, residence_province: e.target.value.toUpperCase().slice(0, 2) })} />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Telefono ed email sono già impostati nei dati account.</p>
+            </div>
+
+            <div id="sec-documento" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+              <h3 className="font-semibold">🪪 Documento di identità *</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Tipo documento *</Label>
+                  <Select value={personal.id_document_type} onValueChange={(v) => setPersonal({ ...personal, id_document_type: v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleziona tipo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="carta_identita">Carta d'identità</SelectItem>
+                      <SelectItem value="passaporto">Passaporto</SelectItem>
+                      <SelectItem value="patente">Patente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Numero documento *</Label>
+                  <Input required value={personal.id_document_number} onChange={(e) => setPersonal({ ...personal, id_document_number: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Data rilascio *</Label>
+                  <Input type="date" required value={personal.id_document_issued_at} onChange={(e) => setPersonal({ ...personal, id_document_issued_at: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Data scadenza *</Label>
+                  <Input type="date" required value={personal.id_document_expires_at} onChange={(e) => setPersonal({ ...personal, id_document_expires_at: e.target.value })} />
+                  {personal.id_document_expires_at && new Date(personal.id_document_expires_at) < new Date(new Date().toDateString()) && (
+                    <p className="text-xs text-destructive mt-1">Documento scaduto.</p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Ente di rilascio *</Label>
+                  <Input required placeholder="Es. Comune di Milano / MIT / Questura" value={personal.id_document_issuer} onChange={(e) => setPersonal({ ...personal, id_document_issuer: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
             <div id="sec-experience" className="scroll-mt-24">
               <Label>Età</Label>
               <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
