@@ -437,6 +437,7 @@ function Onboarding() {
     }
     setBusy(true);
     let uploadedPath: string | null = idDocPath;
+    let uploadedAvatarUrl: string | null = avatarUrl;
     if (role === "worker") {
       const required = [
         personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
@@ -478,6 +479,11 @@ function Onboarding() {
         toast.error("Carica un documento di identità per completare il profilo.");
         return;
       }
+      if (!avatarFile && !avatarUrl) {
+        setBusy(false);
+        toast.error("Carica una foto profilo per completare il profilo.");
+        return;
+      }
       if (idDocFile) {
         const ext = idDocFile.name.split(".").pop()?.toLowerCase() || "bin";
         const path = `${user.id}/id-${Date.now()}.${ext}`;
@@ -490,6 +496,19 @@ function Onboarding() {
           return;
         }
         uploadedPath = path;
+      }
+      if (avatarFile) {
+        const path = `${user.id}/avatar-${Date.now()}.jpg`;
+        const { error: upErr } = await supabase.storage
+          .from("avatars")
+          .upload(path, avatarFile, { upsert: true, contentType: "image/jpeg" });
+        if (upErr) {
+          setBusy(false);
+          toast.error("Caricamento foto profilo non riuscito: " + upErr.message);
+          return;
+        }
+        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+        uploadedAvatarUrl = pub.publicUrl;
       }
     }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
