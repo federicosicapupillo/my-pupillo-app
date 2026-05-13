@@ -1378,7 +1378,59 @@ function Onboarding() {
                 </div>
                 <div className="md:col-span-2">
                   <Label>Ente di rilascio *</Label>
-                  <Input required placeholder="Es. Comune di Milano / MIT / Questura" value={personal.id_document_issuer} onChange={(e) => setPersonal({ ...personal, id_document_issuer: e.target.value })} />
+                  {(() => {
+                    const ISSUER_OPTIONS = [
+                      "Comune",
+                      "Questura",
+                      "Motorizzazione Civile",
+                      "Ministero dell'Interno",
+                      "Consolato",
+                      "Ambasciata",
+                    ];
+                    const current = personal.id_document_issuer ?? "";
+                    const isPreset = ISSUER_OPTIONS.includes(current.trim());
+                    const selected = current.trim().length === 0 ? "" : isPreset ? current.trim() : "Altro";
+                    return (
+                      <>
+                        <Select
+                          value={selected}
+                          onValueChange={(v) => {
+                            if (v === "Altro") {
+                              setPersonal({ ...personal, id_document_issuer: "" });
+                            } else {
+                              setPersonal({ ...personal, id_document_issuer: v });
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona ente di rilascio" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ISSUER_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="Altro">Altro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {selected === "Altro" && (
+                          <div className="mt-2">
+                            <Label>Specifica ente di rilascio *</Label>
+                            <Input
+                              required
+                              placeholder="Es. Prefettura di Roma"
+                              maxLength={100}
+                              value={isPreset ? "" : current}
+                              onChange={(e) =>
+                                setPersonal({ ...personal, id_document_issuer: e.target.value })
+                              }
+                            />
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               <div id="sec-id-document" className="space-y-2 pt-2 border-t border-border/60 scroll-mt-24">
