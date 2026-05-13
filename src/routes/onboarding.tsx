@@ -33,6 +33,8 @@ import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OnboardingStatusCard, type OnboardingStep } from "@/components/OnboardingStatusCard";
 import { DateField } from "@/components/DateField";
+import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
+import { WORKER_ROLES } from "@/lib/worker-roles";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
