@@ -1174,7 +1174,25 @@ function Onboarding() {
               number={form.phone_number}
               onCodeChange={(c) => setForm({ ...form, phone_code: c })}
               onNumberChange={(n) => setForm({ ...form, phone_number: n })}
+              disabled={!!profile?.phone_verified}
             />
+            {profile?.phone_verified ? (
+              <div className="mt-1.5 space-y-1">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  ✓ Numero verificato
+                </span>
+                <p className="text-xs text-muted-foreground">
+                  Per modificare il numero di cellulare verificato,{" "}
+                  <a
+                    href="mailto:supporto@pupillo.app?subject=Modifica%20numero%20di%20cellulare%20verificato"
+                    className="text-primary underline"
+                  >
+                    contatta il supporto clienti
+                  </a>
+                  .
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
         {role === "restaurant" ? (
