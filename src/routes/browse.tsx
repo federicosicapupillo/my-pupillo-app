@@ -387,11 +387,15 @@ function isNightShift(time?: string | null) {
 }
 
 function ApplyConfirmDialog({
-  ann, restaurantInfo, submitting, onCancel, onConfirm,
+  ann, restaurantInfo, submitting, applyMode, setApplyMode, counterAmount, setCounterAmount, onCancel, onConfirm,
 }: {
   ann: Ann | null;
   restaurantInfo?: { city: string | null; neighborhood: string | null };
   submitting: boolean;
+  applyMode: "accept" | "counter";
+  setApplyMode: (m: "accept" | "counter") => void;
+  counterAmount: string;
+  setCounterAmount: (v: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
