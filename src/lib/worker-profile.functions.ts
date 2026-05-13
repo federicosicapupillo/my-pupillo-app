@@ -43,20 +43,30 @@ export type ValidateWorkerDocumentDatesResult =
  */
 export const validateWorkerDocumentDates = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown): ValidateWorkerDocumentDatesResult => {
-    const parsed = Schema.safeParse(input);
-    if (!parsed.success) {
-      return { ok: false, error: INVALID_DATE_MESSAGE };
-    }
-    return { ok: true };
+  .inputValidator((input: unknown) => {
+    // Normalize null/undefined to empty strings so the date guard reports
+    // the dd/mm/yyyy message instead of a Zod shape error.
+    const obj =
+      input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+    return {
+      birth_date: typeof obj.birth_date === "string" ? obj.birth_date : "",
+      id_document_issued_at:
+        typeof obj.id_document_issued_at === "string"
+          ? obj.id_document_issued_at
+          : "",
+      id_document_expires_at:
+        typeof obj.id_document_expires_at === "string"
+          ? obj.id_document_expires_at
+          : "",
+    };
   })
   .handler(async ({ data }): Promise<ValidateWorkerDocumentDatesResult> => {
-    if (data.ok === false) return data;
-
-    // Re-parse to recover the validated payload (inputValidator returned a
-    // sentinel; the raw input is not exposed here, so we accept the {ok:true}
-    // sentinel and re-run the guard inline against the raw request body).
-    return { ok: true };
+    // Shape check first — surfaces INVALID_DATE_MESSAGE for malformed payloads.
+    const shape = Schema.safeParse(data);
+    if (!shape.success) {
+      return { ok: false, error: INVALID_DATE_MESSAGE };
+    }
+    return runWorkerDocumentDateValidation(shape.data, new Date());
   });
 
 /**
