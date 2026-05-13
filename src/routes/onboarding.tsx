@@ -104,6 +104,8 @@ function Onboarding() {
   const [idDocPath, setIdDocPath] = useState<string | null>(null);
   const [idDocName, setIdDocName] = useState<string | null>(null);
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [personal, setPersonal] = useState({
     first_name: "",
