@@ -93,10 +93,14 @@ function computeDateFieldErrors(
     id_document_issued_at: null as string | null,
     id_document_expires_at: null as string | null,
   };
-  // Format / required check per field.
+  // Format / required check per field. The issued field has its own
+  // "missing" copy required by the product spec.
   if (!isValidISODate(input.birth_date)) out.birth_date = INVALID_DATE_MESSAGE;
   if (!isValidISODate(input.id_document_issued_at))
-    out.id_document_issued_at = INVALID_DATE_MESSAGE;
+    out.id_document_issued_at =
+      input.id_document_issued_at?.length
+        ? INVALID_DATE_MESSAGE
+        : "Inserisci la data di rilascio del documento.";
   if (!isValidISODate(input.id_document_expires_at))
     out.id_document_expires_at = INVALID_DATE_MESSAGE;
 
@@ -115,6 +119,11 @@ function computeDateFieldErrors(
   } else if (range === DOC_DATE_ERRORS.EXPIRED) {
     out.id_document_expires_at = out.id_document_expires_at ?? range;
   } else if (range === DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED) {
+    // Surface the issued-side framing under the issued field as well, so
+    // the user sees actionable copy under each input.
+    out.id_document_issued_at =
+      out.id_document_issued_at ??
+      "La data di rilascio deve essere precedente alla data di scadenza.";
     out.id_document_expires_at = out.id_document_expires_at ?? range;
   }
   return out;
