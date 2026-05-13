@@ -792,7 +792,7 @@ function Onboarding() {
         ) : (
           <>
             <div id="sec-experience" className="scroll-mt-24">
-              <Label>Età</Label>
+              <Label required>Età</Label>
               <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
             </div>
             <div>
@@ -804,7 +804,7 @@ function Onboarding() {
               />
             </div>
             <div id="sec-languages" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
-              <Label className="font-semibold">Lingue parlate</Label>
+              <Label required className="font-semibold">Lingue parlate</Label>
               <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
               <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
             </div>
