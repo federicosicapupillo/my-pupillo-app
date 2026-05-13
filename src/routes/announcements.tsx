@@ -5,7 +5,16 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useNavigate } from "@tanstack/react-router";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
 
@@ -18,6 +27,14 @@ export const Route = createFileRoute("/announcements")({
 });
 
 type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null; is_long_shift?: boolean | null; long_shift_reason?: string | null; shift_duration_hours?: number | null };
+
+type Candidate = {
+  worker_id: string;
+  full_name: string | null;
+  professional_profile: string | null;
+  rating_avg: number | null;
+  badge: string | null;
+};
 
 function formatRange(a: Ann) {
   const startD = new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT");
@@ -42,10 +59,12 @@ function expiresLabel(iso: string) {
 
 function AnnouncementsPage() {
   const { user, role } = useAuth();
+  const navigate = useNavigate();
   const { status: initialStatus } = Route.useSearch();
   const [items, setItems] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
@@ -60,10 +79,37 @@ function AnnouncementsPage() {
       setItems(list);
       if (role === "restaurant" && list.length) {
         const ids = list.map(a => a.id);
-        const { data: apps } = await supabase.from("applications").select("announcement_id").in("announcement_id", ids);
+        const { data: apps } = await supabase
+          .from("applications")
+          .select("announcement_id, worker_id")
+          .in("announcement_id", ids);
         const map: Record<string, number> = {};
-        (apps ?? []).forEach((a: any) => { map[a.announcement_id] = (map[a.announcement_id] ?? 0) + 1; });
+        const byAnn: Record<string, string[]> = {};
+        (apps ?? []).forEach((a: any) => {
+          map[a.announcement_id] = (map[a.announcement_id] ?? 0) + 1;
+          (byAnn[a.announcement_id] ||= []).push(a.worker_id);
+        });
         setCounts(map);
+        const workerIds = Array.from(new Set((apps ?? []).map((a: any) => a.worker_id)));
+        if (workerIds.length) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, full_name, professional_profile, rating_avg, badge")
+            .in("id", workerIds);
+          const profMap: Record<string, any> = {};
+          (profs ?? []).forEach((p: any) => { profMap[p.id] = p; });
+          const candMap: Record<string, Candidate[]> = {};
+          Object.entries(byAnn).forEach(([annId, wids]) => {
+            candMap[annId] = wids.map((wid) => ({
+              worker_id: wid,
+              full_name: profMap[wid]?.full_name ?? null,
+              professional_profile: profMap[wid]?.professional_profile ?? null,
+              rating_avg: profMap[wid]?.rating_avg ?? null,
+              badge: profMap[wid]?.badge ?? null,
+            }));
+          });
+          setCandidates(candMap);
+        }
       }
       setLoading(false);
     })();
@@ -155,12 +201,47 @@ function AnnouncementsPage() {
               <div className="mt-3">
                 {role === "restaurant" ? (
                   a.status === "active" || a.status === "assigned" ? (
-                    <Link to="/announcements/$id" params={{ id: a.id }} search={{ section: "candidature" } as never}>
-                      <Button size="sm" variant="default" className="gap-1">
-                        <Users className="h-3.5 w-3.5" />
-                        Vedi candidature{counts[a.id] ? ` (${counts[a.id]})` : ""}
-                      </Button>
-                    </Link>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="default" className="gap-1">
+                          <Users className="h-3.5 w-3.5" />
+                          Candidati{counts[a.id] ? ` (${counts[a.id]})` : ""}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)] z-50">
+                        <DropdownMenuLabel>Candidati per questo annuncio</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {(candidates[a.id]?.length ?? 0) === 0 ? (
+                          <div className="px-2 py-3 text-xs text-muted-foreground">
+                            Nessun candidato disponibile per questo annuncio
+                          </div>
+                        ) : (
+                          candidates[a.id].map((c) => (
+                            <DropdownMenuItem
+                              key={c.worker_id}
+                              onSelect={() => {
+                                navigate({ to: "/messages", search: { with: c.worker_id } });
+                              }}
+                              className="flex flex-col items-start gap-0.5 cursor-pointer"
+                            >
+                              <span className="text-sm font-medium text-foreground">
+                                {c.full_name || "Lavoratore"}
+                              </span>
+                              <span className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                                {c.professional_profile && <span>{c.professional_profile}</span>}
+                                {c.rating_avg != null && (
+                                  <span className="inline-flex items-center gap-0.5">
+                                    <Star className="h-3 w-3 fill-current" />
+                                    {Number(c.rating_avg).toFixed(1)}
+                                  </span>
+                                )}
+                                {c.badge && <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px]">{c.badge}</span>}
+                              </span>
+                            </DropdownMenuItem>
+                          ))
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ) : null
                 ) : (
                   <Link to="/announcements/$id" params={{ id: a.id }}>
