@@ -206,12 +206,15 @@ function Onboarding() {
   const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(
     null,
   );
+  // Worker ID document — stored as two separate files (fronte + retro).
   const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [idDocPath, setIdDocPath] = useState<string | null>(null);
   const [idDocName, setIdDocName] = useState<string | null>(null);
   const [idDocPreview, setIdDocPreview] = useState<string | null>(null);
-  const idDocInputRef = useRef<HTMLInputElement | null>(null);
-  const [idDocDragging, setIdDocDragging] = useState(false);
+  const [idDocBackFile, setIdDocBackFile] = useState<File | null>(null);
+  const [idDocBackPath, setIdDocBackPath] = useState<string | null>(null);
+  const [idDocBackName, setIdDocBackName] = useState<string | null>(null);
+  const [idDocBackPreview, setIdDocBackPreview] = useState<string | null>(null);
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
