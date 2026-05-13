@@ -1773,10 +1773,57 @@ function Onboarding() {
             </div>
             <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <div>
-                <Label className="font-semibold">Dove vuoi lavorare?</Label>
+                <Label className="font-semibold">Come vuoi impostare la tua area di lavoro?</Label>
                 <p className="text-xs text-muted-foreground">
-                  Scegli la città e le zone in cui sei disponibile.
+                  Scegli se indicare zone specifiche oppure usare un raggio automatico intorno alla tua posizione.
                 </p>
+              </div>
+              <div
+                role="radiogroup"
+                aria-label="Modalità area di lavoro"
+                className="grid gap-2 sm:grid-cols-2"
+              >
+                {([
+                  {
+                    id: "zones",
+                    title: "Zone / Quartieri",
+                    desc: "Lavora solo nelle zone che preferisci.",
+                  },
+                  {
+                    id: "georadar",
+                    title: "GeoRadar",
+                    desc: "Mostrati automaticamente agli annunci vicini alla tua posizione.",
+                  },
+                ] as const).map((opt) => {
+                  const active = areaMode === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setAreaMode(opt.id)}
+                      className={`text-left rounded-xl border p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${
+                        active
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-input bg-background hover:bg-muted"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          aria-hidden
+                          className={`inline-flex h-4 w-4 items-center justify-center rounded-full border ${
+                            active ? "border-primary" : "border-muted-foreground/40"
+                          }`}
+                        >
+                          {active && <span className="h-2 w-2 rounded-full bg-primary" />}
+                        </span>
+                        <span className="font-medium">{opt.title}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{opt.desc}</p>
+                    </button>
+                  );
+                })}
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
@@ -1796,6 +1843,7 @@ function Onboarding() {
                     searchPlaceholder="Cerca città…"
                   />
                 </div>
+                {areaMode === "zones" && (
                 <div>
                   <Label>Zona / quartiere *</Label>
                   {(() => {
@@ -1826,6 +1874,7 @@ function Onboarding() {
                     );
                   })()}
                 </div>
+                )}
               </div>
               <div>
                 <Label>Indirizzo o punto di riferimento *</Label>
@@ -1835,6 +1884,7 @@ function Onboarding() {
                   onChange={(e) => setForm({ ...form, service_area_address: e.target.value })}
                 />
               </div>
+              {areaMode === "georadar" && (
               <div>
                 <Label>Raggio d'azione *</Label>
                 <SearchableSelect
@@ -1853,6 +1903,8 @@ function Onboarding() {
                   searchPlaceholder="Cerca raggio…"
                 />
               </div>
+              )}
+              {areaMode === "georadar" && (
               <div className="relative isolate" style={{ zIndex: 0 }}>
                 <WorkerServiceAreaMap
                   lat={serviceAreaPreview?.lat ?? null}
@@ -1869,6 +1921,7 @@ function Onboarding() {
                     : "Compila città e indirizzo per vedere l'anteprima."}
                 </div>
               </div>
+              )}
             </div>
             {/* Upload UI moved inside the "Documento di identità" section above. */}
           </>
