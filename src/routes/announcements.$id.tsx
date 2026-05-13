@@ -405,7 +405,7 @@ function AnnouncementDetail() {
           </h2>
           {apps.length === 0 ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-              Non hai ancora ricevuto candidature per questo annuncio.
+              Nessuna candidatura ricevuta per questo annuncio.
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
