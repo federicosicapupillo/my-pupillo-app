@@ -96,6 +96,12 @@ function Onboarding() {
   const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(
     null,
   );
+  const [idDocFile, setIdDocFile] = useState<File | null>(null);
+  const [idDocPath, setIdDocPath] = useState<string | null>(null);
+  const [idDocName, setIdDocName] = useState<string | null>(null);
+
+  const ID_DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
+  const ID_DOC_MAX = 8 * 1024 * 1024; // 8MB
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
   const vatValid = vatDigits.length === 11;
@@ -278,6 +284,11 @@ function Onboarding() {
     }
     if (profile) setRequirements(reqFromProfile(profile));
     if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
+    if (profile && (profile as any).id_document_path) {
+      const p = (profile as any).id_document_path as string;
+      setIdDocPath(p);
+      setIdDocName(p.split("/").pop() ?? p);
+    }
   }, [profile]);
 
   const submit = async (e: React.FormEvent) => {
@@ -366,6 +377,27 @@ function Onboarding() {
       }
     }
     setBusy(true);
+    let uploadedPath: string | null = idDocPath;
+    if (role === "worker") {
+      if (!idDocFile && !idDocPath) {
+        setBusy(false);
+        toast.error("Carica un documento di identità per completare il profilo.");
+        return;
+      }
+      if (idDocFile) {
+        const ext = idDocFile.name.split(".").pop()?.toLowerCase() || "bin";
+        const path = `${user.id}/id-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("worker-documents")
+          .upload(path, idDocFile, { upsert: true, contentType: idDocFile.type });
+        if (upErr) {
+          setBusy(false);
+          toast.error("Caricamento documento non riuscito: " + upErr.message);
+          return;
+        }
+        uploadedPath = path;
+      }
+    }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
     const contactPhoneFull = buildPhoneFull(form.contact_person_phone_code, form.contact_person_phone_number);
     let serviceArea: { service_area_lat: number | null; service_area_lng: number | null } = {
@@ -442,6 +474,7 @@ function Onboarding() {
             languages: spokenLanguages.map((s) => s.language),
             spoken_languages: spokenLanguages,
             service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
+            id_document_path: uploadedPath,
             ...serviceArea,
           };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
@@ -784,6 +817,41 @@ function Onboarding() {
               Verrai mostrato in <span className="text-emerald-600 font-medium">verde</span> ai ristoratori il cui
               locale rientra nella tua area.
             </p>
+            <div id="sec-id-document" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
+              <Label className="font-semibold">Documento di identità *</Label>
+              <p className="text-xs text-muted-foreground">
+                Formati accettati: PDF, JPG, PNG (max 8MB). Necessario per completare il profilo.
+              </p>
+              <Input
+                type="file"
+                accept={ID_DOC_ACCEPT}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  if (!f) { setIdDocFile(null); return; }
+                  if (!["application/pdf", "image/jpeg", "image/png"].includes(f.type)) {
+                    toast.error("Formato non valido. Usa PDF, JPG o PNG.");
+                    e.target.value = "";
+                    return;
+                  }
+                  if (f.size > ID_DOC_MAX) {
+                    toast.error("File troppo grande (max 8MB).");
+                    e.target.value = "";
+                    return;
+                  }
+                  setIdDocFile(f);
+                  setIdDocName(f.name);
+                }}
+              />
+              {idDocName && (
+                <p className="text-xs text-emerald-600">
+                  📎 {idDocName}
+                  {idDocFile ? " (nuovo file da salvare)" : " (già caricato)"}
+                </p>
+              )}
+              {!idDocName && (
+                <p className="text-xs text-destructive">Nessun documento caricato.</p>
+              )}
+            </div>
           </>
         )}
         <label className="flex items-start gap-2 text-sm">

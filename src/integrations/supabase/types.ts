@@ -696,6 +696,7 @@ export type Database = {
           hourly_availability: string | null
           hourly_rate: number | null
           id: string
+          id_document_path: string | null
           is_motorized: boolean | null
           languages: string[] | null
           last_active_at: string | null
@@ -805,6 +806,7 @@ export type Database = {
           hourly_availability?: string | null
           hourly_rate?: number | null
           id: string
+          id_document_path?: string | null
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
@@ -914,6 +916,7 @@ export type Database = {
           hourly_availability?: string | null
           hourly_rate?: number | null
           id?: string
+          id_document_path?: string | null
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
