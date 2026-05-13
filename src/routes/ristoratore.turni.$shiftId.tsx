@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { formatTariff } from "@/lib/format";
 import {
   ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
-  XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check,
+  XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check, Heart,
 } from "lucide-react";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
@@ -123,6 +123,8 @@ function ShiftDetailPage() {
   const [requiredReview, setRequiredReview] = useState<{ status: string; due_date: string; review_id?: string | null } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
   const reviewRef = useRef<HTMLDivElement | null>(null);
 
   const load = async () => {
@@ -167,6 +169,15 @@ function ShiftDetailPage() {
     setAppId(matchedApp?.id ?? null);
     setExistingReview((revsRes.data as any) ?? null);
     setRequiredReview((reqRes as any).data ?? null);
+    if (user && s.worker_id) {
+      const { data: favRow } = await supabase
+        .from("restaurant_worker_favorites")
+        .select("id")
+        .eq("restaurant_id", user.id)
+        .eq("worker_id", s.worker_id)
+        .maybeSingle();
+      setIsFavorite(!!favRow);
+    }
     if (s.announcement_id) {
       const { data: jr } = await supabase
         .from("job_requests")
