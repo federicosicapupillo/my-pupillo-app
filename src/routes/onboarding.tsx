@@ -981,18 +981,25 @@ function Onboarding() {
         toast.error("Seleziona un raggio d'azione valido.");
         return;
       }
-      const fullAddr = [
-        areaMode === "zones" ? form.service_area_district.trim() : "",
-        form.service_area_city.trim(),
-        "Italia",
-      ].filter(Boolean).join(", ");
-      const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 2 });
-      if (!r.ok) {
-        setBusy(false);
-        toast.error("Impossibile localizzare l'indirizzo dell'area di interesse. Verifica i dati inseriti.");
-        return;
+      // Best-effort geocoding: usa l'anteprima già calcolata se disponibile,
+      // altrimenti prova una volta. In nessun caso bloccare il salvataggio:
+      // città + zone (o GPS in georadar) sono sufficienti per il matching.
+      if (serviceAreaPreview) {
+        serviceArea = {
+          service_area_lat: serviceAreaPreview.lat,
+          service_area_lng: serviceAreaPreview.lng,
+        };
+      } else {
+        const fullAddr = [
+          areaMode === "zones" ? form.service_area_district.trim() : "",
+          form.service_area_city.trim(),
+          "Italia",
+        ].filter(Boolean).join(", ");
+        const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 1 });
+        if (r.ok) {
+          serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
+        }
       }
-      serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
     }
     if (role === "restaurant" && form.address.trim().length >= 3) {
       const fullAddr = [
