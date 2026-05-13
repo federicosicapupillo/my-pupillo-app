@@ -247,7 +247,7 @@ function Page() {
           {filtered.map((r) => (
             <div key={r.worker_id} className="rounded-2xl border bg-card p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
               <div className="flex items-start gap-3">
-                <UserAvatar name={r.full_name} src={r.avatar_url ?? undefined} size={48} />
+                <UserAvatar userId={r.worker_id} name={r.full_name} className="h-12 w-12" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="font-semibold truncate">{r.full_name ?? "Lavoratore"}</div>
