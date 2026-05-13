@@ -48,6 +48,51 @@ import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 
+/**
+ * Compute per-field error messages for the three worker date inputs.
+ * Returns the EXACT same Italian strings used by the toast / DB trigger
+ * so the inline UI and the existing tests stay in lockstep.
+ */
+function computeDateFieldErrors(
+  input: {
+    birth_date: string;
+    id_document_issued_at: string;
+    id_document_expires_at: string;
+  },
+  today: Date,
+): {
+  birth_date: string | null;
+  id_document_issued_at: string | null;
+  id_document_expires_at: string | null;
+} {
+  const out = {
+    birth_date: null as string | null,
+    id_document_issued_at: null as string | null,
+    id_document_expires_at: null as string | null,
+  };
+  // Format / required check per field.
+  if (!isValidISODate(input.birth_date)) out.birth_date = INVALID_DATE_MESSAGE;
+  if (!isValidISODate(input.id_document_issued_at))
+    out.id_document_issued_at = INVALID_DATE_MESSAGE;
+  if (!isValidISODate(input.id_document_expires_at))
+    out.id_document_expires_at = INVALID_DATE_MESSAGE;
+
+  // Range checks only when both raw inputs are individually valid dates.
+  const range = validateDocumentDates(
+    input.id_document_issued_at,
+    input.id_document_expires_at,
+    today,
+  );
+  if (range === DOC_DATE_ERRORS.ISSUED_FUTURE) {
+    out.id_document_issued_at = out.id_document_issued_at ?? range;
+  } else if (range === DOC_DATE_ERRORS.EXPIRED) {
+    out.id_document_expires_at = out.id_document_expires_at ?? range;
+  } else if (range === DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED) {
+    out.id_document_expires_at = out.id_document_expires_at ?? range;
+  }
+  return out;
+}
+
 const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 20, 30, 50] as const;
 const ALLOWED_RADIUS_M = new Set(RADIUS_KM_OPTIONS.map((k) => k * 1000));
 
@@ -179,6 +224,25 @@ function Onboarding() {
     id_document_expires_at: "",
     id_document_issuer: "",
   });
+
+  // Per-field inline errors for the three date inputs. Cleared whenever the
+  // user edits the field. Populated on submit attempt (and by live cross-checks
+  // for rilascio/scadenza) so the user sees the exact message under the field.
+  const [dateFieldErrors, setDateFieldErrors] = useState<{
+    birth_date: string | null;
+    id_document_issued_at: string | null;
+    id_document_expires_at: string | null;
+  }>({
+    birth_date: null,
+    id_document_issued_at: null,
+    id_document_expires_at: null,
+  });
+
+  function clearDateError(field: keyof typeof dateFieldErrors) {
+    setDateFieldErrors((prev) =>
+      prev[field] === null ? prev : { ...prev, [field]: null },
+    );
+  }
 
   const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
 
@@ -536,6 +600,14 @@ function Onboarding() {
       }
       // Block save if any date input is not a real dd/mm/yyyy value or
       // the rilascio/scadenza pair is inconsistent.
+      const perField = computeDateFieldErrors(
+        {
+          birth_date: personal.birth_date,
+          id_document_issued_at: personal.id_document_issued_at,
+          id_document_expires_at: personal.id_document_expires_at,
+        },
+        today,
+      );
       const dateGuard = evaluateOnboardingDateGuard(
         {
           birth_date: personal.birth_date,
@@ -546,9 +618,16 @@ function Onboarding() {
       );
       if (dateGuard.blocked) {
         setBusy(false);
+        setDateFieldErrors(perField);
         toast.error(dateGuard.message);
         return;
       }
+      // Clear any stale inline errors when all dates are valid.
+      setDateFieldErrors({
+        birth_date: null,
+        id_document_issued_at: null,
+        id_document_expires_at: null,
+      });
       // Server-side echo of the same validation: re-runs the rules under the
       // user's auth session so a tampered client cannot bypass them. The DB
       // trigger `enforce_worker_personal_data` is the final guard.
@@ -1099,7 +1178,11 @@ function Onboarding() {
                     required
                     value={personal.birth_date}
                     max={new Date().toISOString().slice(0, 10)}
-                    onChange={(iso) => setPersonal({ ...personal, birth_date: iso })}
+                    error={dateFieldErrors.birth_date}
+                    onChange={(iso) => {
+                      clearDateError("birth_date");
+                      setPersonal({ ...personal, birth_date: iso });
+                    }}
                   />
                 </div>
                 <div>
@@ -1166,11 +1249,15 @@ function Onboarding() {
                     required
                     value={personal.id_document_issued_at}
                     max={new Date().toISOString().slice(0, 10)}
-                    onChange={(iso) => setPersonal({ ...personal, id_document_issued_at: iso })}
+                    error={dateFieldErrors.id_document_issued_at}
+                    onChange={(iso) => {
+                      clearDateError("id_document_issued_at");
+                      // Re-validating the cross-check may also clear a stale
+                      // expires error, so wipe it too — submit will recompute.
+                      clearDateError("id_document_expires_at");
+                      setPersonal({ ...personal, id_document_issued_at: iso });
+                    }}
                   />
-                  {personal.id_document_issued_at && new Date(personal.id_document_issued_at) > new Date(new Date().toDateString()) && (
-                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.ISSUED_FUTURE}</p>
-                  )}
                 </div>
                 <div>
                   <Label>Data scadenza *</Label>
@@ -1178,15 +1265,12 @@ function Onboarding() {
                     required
                     value={personal.id_document_expires_at}
                     min={personal.id_document_issued_at || new Date().toISOString().slice(0, 10)}
-                    onChange={(iso) => setPersonal({ ...personal, id_document_expires_at: iso })}
+                    error={dateFieldErrors.id_document_expires_at}
+                    onChange={(iso) => {
+                      clearDateError("id_document_expires_at");
+                      setPersonal({ ...personal, id_document_expires_at: iso });
+                    }}
                   />
-                  {personal.id_document_expires_at && new Date(personal.id_document_expires_at) < new Date(new Date().toDateString()) && (
-                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.EXPIRED}</p>
-                  )}
-                  {personal.id_document_issued_at && personal.id_document_expires_at &&
-                    new Date(personal.id_document_expires_at) <= new Date(personal.id_document_issued_at) && (
-                    <p className="text-xs text-destructive mt-1">{DOC_DATE_ERRORS.EXPIRES_BEFORE_ISSUED}</p>
-                  )}
                 </div>
                 <div className="md:col-span-2">
                   <Label>Ente di rilascio *</Label>

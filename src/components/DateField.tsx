@@ -25,6 +25,10 @@ type Props = {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  /** Inline error message rendered below the input. */
+  error?: string | null;
+  /** id used for the error element (for aria-describedby). */
+  id?: string;
 };
 
 /**
@@ -39,6 +43,8 @@ export function DateField({
   placeholder = "gg/mm/aaaa",
   className,
   disabled,
+  error,
+  id,
 }: Props) {
   const [open, setOpen] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -117,23 +123,32 @@ export function DateField({
     });
   }
 
+  const errorId = id ? `${id}-error` : undefined;
   return (
-    <div className={cn("flex items-stretch gap-2", className)}>
-      <Input
-        ref={inputRef}
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
-        placeholder={placeholder}
-        value={text}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        maxLength={10}
-        disabled={disabled}
-        aria-required={required}
-        className="flex-1"
-      />
+    <div className={cn("space-y-1", className)}>
+      <div className="flex items-stretch gap-2">
+        <Input
+          ref={inputRef}
+          id={id}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder={placeholder}
+          value={text}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          maxLength={10}
+          disabled={disabled}
+          aria-required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error && errorId ? errorId : undefined}
+          className={cn(
+            "flex-1",
+            error &&
+              "border-destructive focus-visible:ring-destructive/40",
+          )}
+        />
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -177,6 +192,16 @@ export function DateField({
           />
         </PopoverContent>
       </Popover>
+      </div>
+      {error ? (
+        <p
+          id={errorId}
+          role="alert"
+          className="text-xs text-destructive"
+        >
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
