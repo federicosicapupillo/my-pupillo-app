@@ -622,13 +622,13 @@ function NewRestaurantJobRequest() {
               <HourlyRateInput value={f.hourly_rate} onChange={(v) => setField("hourly_rate", v)} required />
             </Field>
             <Field label="Data inizio turno">
-              <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} required />
+              <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} min={todayISO} required />
             </Field>
-            <Field label="Ora inizio turno"><Input type="time" required value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
+            <Field label="Ora inizio turno"><Input type="time" required min={startTimeMin} value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
             <Field label="Data fine turno">
-              <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || undefined} required />
+              <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || todayISO} required />
             </Field>
-            <Field label="Ora fine turno"><Input type="time" required value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
+            <Field label="Ora fine turno"><Input type="time" required min={endTimeMin} value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
           </div>
           <p className="text-xs text-muted-foreground">
             Se il turno termina dopo la mezzanotte, seleziona come data fine il giorno successivo.
