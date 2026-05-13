@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User } from "lucide-react";
-import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
+import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -26,9 +26,10 @@ type Ann = {
   duration_hours: number; speed: string; tariff_type: string; tariff_amount: number;
   location_address: string; location_lat: number | null; location_lng: number | null;
   professional_profile: string | null; status: string; created_at: string;
+  job_city?: string | null; job_province?: string | null;
 };
 
-type RestaurantInfo = { id: string; full_name: string | null; business_name: string | null; venue_type: string | null; city: string | null; rating_avg: number | null } | null;
+type RestaurantInfo = { id: string; full_name: string | null; business_name: string | null; venue_type: string | null; city: string | null; neighborhood: string | null; rating_avg: number | null } | null;
 
 const ROLES = ["cameriere","bartender","chef","aiuto cucina","runner","lavapiatti","hostess","responsabile sala"];
 const SPEEDS = [{v:"normal",l:"Standard"},{v:"urgent",l:"Urgente"},{v:"flash",l:"Flash"}];
@@ -57,6 +58,7 @@ function Browse() {
   const [sort, setSort] = useState<"recent"|"pay"|"date">("recent");
   const [openId, setOpenId] = useState<string | null>(null);
   const [restaurant, setRestaurant] = useState<RestaurantInfo>(null);
+  const [restaurantsById, setRestaurantsById] = useState<Record<string, { city: string | null; neighborhood: string | null }>>({});
   const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -67,7 +69,7 @@ function Browse() {
     if (!selected) { setRestaurant(null); return; }
     (async () => {
       const { data } = await supabase.from("profiles")
-        .select("id, full_name, business_name, venue_type, city, rating_avg")
+        .select("id, full_name, business_name, venue_type, city, neighborhood, rating_avg")
         .eq("id", selected.restaurant_id).maybeSingle();
       setRestaurant((data as RestaurantInfo) ?? null);
     })();
@@ -76,7 +78,16 @@ function Browse() {
   const load = async () => {
     setLoading(true);
     const { data: anns } = await supabase.from("announcements").select("*").eq("status","active").order("created_at",{ascending:false}).limit(200);
-    setItems((anns as Ann[]) ?? []);
+    const list = (anns as Ann[]) ?? [];
+    setItems(list);
+    const restIds = Array.from(new Set(list.map(a => a.restaurant_id)));
+    if (restIds.length) {
+      const { data: rs } = await supabase.from("profiles")
+        .select("id, city, neighborhood").in("id", restIds);
+      const map: Record<string, { city: string | null; neighborhood: string | null }> = {};
+      for (const r of (rs ?? []) as any[]) map[r.id] = { city: r.city, neighborhood: r.neighborhood };
+      setRestaurantsById(map);
+    }
     if (user) {
       const [{data:apps},{data:favs}] = await Promise.all([
         supabase.from("applications").select("announcement_id").eq("worker_id",user.id),
@@ -98,7 +109,9 @@ function Browse() {
       if (onlyNotApplied && appliedIds.has(a.id)) return false;
       if (onlyFav && !favIds.has(a.id)) return false;
       if (q) {
-        const s = `${a.location_address} ${a.professional_profile||""} ${a.speed}`.toLowerCase();
+        const r = restaurantsById[a.restaurant_id];
+        const loc = publicLocationLabel({ job_city: a.job_city, city: r?.city, neighborhood: r?.neighborhood });
+        const s = `${loc} ${a.professional_profile||""} ${a.speed}`.toLowerCase();
         if (!s.includes(q.toLowerCase())) return false;
       }
       if (max != null && lat != null && lng != null && a.location_lat != null && a.location_lng != null) {
@@ -109,7 +122,7 @@ function Browse() {
     if (sort === "pay") out = [...out].sort((a,b)=>b.tariff_amount-a.tariff_amount);
     if (sort === "date") out = [...out].sort((a,b)=>a.service_date.localeCompare(b.service_date));
     return out;
-  }, [items, roleF, speedF, q, maxKm, onlyNotApplied, onlyFav, sort, profile, appliedIds, favIds]);
+  }, [items, roleF, speedF, q, maxKm, onlyNotApplied, onlyFav, sort, profile, appliedIds, favIds, restaurantsById]);
 
   const toggleFav = async (annId: string) => {
     if (!user) return;
@@ -234,7 +247,7 @@ function Browse() {
                 </div>
                 <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}</div>
-                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
+                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{publicLocationLabel({ job_city: a.job_city, city: restaurantsById[a.restaurant_id]?.city, neighborhood: restaurantsById[a.restaurant_id]?.neighborhood })}</div>
                   <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
                 </div>
                 <div className="mt-4 flex gap-2">
@@ -251,13 +264,10 @@ function Browse() {
         </div>
       ) : (
         <div className="rounded-2xl border bg-card p-2">
-          {(() => {
-            const withCoords = filtered.filter(a => a.location_lat != null && a.location_lng != null);
-            if (!withCoords.length) return <div className="p-8 text-center text-muted-foreground">Nessuna offerta con posizione.</div>;
-            const a = withCoords[0];
-            return <AnnouncementMap lat={a.location_lat!} lng={a.location_lng!} address={a.location_address} height={420} />;
-          })()}
-          <div className="p-3 text-xs text-muted-foreground">Vista mappa: mostra la prima offerta disponibile. Usa la lista per candidarti.</div>
+          <div className="p-8 text-center text-muted-foreground text-sm">
+            La mappa con la posizione esatta è disponibile solo dopo la conferma del turno.<br />
+            Usa la vista lista per esplorare le offerte per zona.
+          </div>
         </div>
       )}
 
@@ -290,15 +300,10 @@ function Browse() {
                   <Row icon={Clock} label="Orario" value={`${selected.service_time?.slice(0,5)} · durata ${selected.duration_hours}h`} />
                   <Row icon={Euro} label="Compenso" value={formatTariff(selected.tariff_amount, selected.tariff_type)} />
                   <Row icon={Zap} label="Tipologia" value={selected.speed} />
-                  <Row icon={MapPin} label="Indirizzo" value={selected.location_address} />
+                  <Row icon={MapPin} label="Zona" value={publicLocationLabel({ job_city: selected.job_city, city: restaurant?.city, neighborhood: restaurant?.neighborhood })} />
                   {restaurant?.venue_type && <Row icon={User} label="Locale" value={restaurant.venue_type} />}
                 </div>
-
-                {selected.location_lat != null && selected.location_lng != null && (
-                  <div className="mt-4">
-                    <AnnouncementMap lat={selected.location_lat} lng={selected.location_lng} address={selected.location_address} height={200} />
-                  </div>
-                )}
+                <p className="mt-3 text-xs text-muted-foreground">{PRECISE_ADDRESS_HINT}</p>
 
                 <div className="mt-6 flex gap-2 sticky bottom-0 bg-background pt-3">
                   <Button variant="outline" size="icon" onClick={()=>toggleFav(selected.id)} aria-label="Preferiti">
