@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
+import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
+import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import {
   AlertDialog,
   AlertDialogAction,
