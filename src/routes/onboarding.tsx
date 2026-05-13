@@ -288,6 +288,17 @@ function Onboarding() {
 
   const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
 
+  // Today's ISO yyyy-mm-dd in the Europe/Rome calendar — used as the
+  // upper/lower bound for the date inputs so the picker matches the
+  // backend rules (rilascio ≤ oggi, scadenza ≥ oggi, fuso Italia).
+  const todayISORome = (() => {
+    const t = todayInRome();
+    const y = t.getFullYear();
+    const m = String(t.getMonth() + 1).padStart(2, "0");
+    const d = String(t.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
   const ID_DOC_ACCEPT = ID_DOC_ACCEPT_ATTR;
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
