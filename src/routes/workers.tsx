@@ -210,10 +210,6 @@ function WorkersPage() {
       nav({ to: "/messages/$id", params: { id: existing.id } });
       return;
     }
-    const { consumeCredits } = await import("@/lib/credits");
-    const { CREDIT_COSTS } = await import("@/lib/pricing");
-    const ok = await consumeCredits(CREDIT_COSTS.assignWorker, "assign_worker", selected);
-    if (!ok) return;
     const { data: created, error } = await supabase
       .from("applications")
       .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
@@ -221,7 +217,7 @@ function WorkersPage() {
       .single();
     if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
     await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: `/messages/${created.id}` });
-    toast.success("Lavoratore contattato! Apro la chat…");
+    toast.success("Chat aperta con il lavoratore");
     nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
@@ -397,7 +393,7 @@ function WorkersPage() {
             <span>Piano <strong className="capitalize">{profile?.plan}</strong> attivo · inviti illimitati</span>
           ) : (
             <span>
-              Invitare un lavoratore costa <strong>{cost} crediti</strong>. Saldo: <strong>{credits}</strong>
+              Contattare è gratis. L'assegnazione del turno costa <strong>{cost} crediti</strong>. Saldo: <strong>{credits}</strong>
             </span>
           )}
         </div>
@@ -581,8 +577,8 @@ function WorkersPage() {
               size="sm"
               className="mt-4 w-full gap-1"
               onClick={() => invite(w.id)}
-              disabled={!selected || !canAfford || isBlocked}
-              title={isBlocked ? "Bloccato: completa le recensioni scadute" : undefined}
+              disabled={!selected || isBlocked}
+              title={isBlocked ? "Bloccato: completa le recensioni scadute" : (!selected ? "Seleziona prima un annuncio" : undefined)}
             >
               <MessageSquare className="h-3.5 w-3.5" />
               {isBlocked ? `Bloccato (${overdueCount} recension${overdueCount > 1 ? "i" : "e"} scadut${overdueCount > 1 ? "e" : "a"})` : (
