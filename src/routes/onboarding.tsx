@@ -1420,38 +1420,7 @@ function Onboarding() {
                 </div>
               </div>
             </div>
-            <div id="sec-id-document" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
-              <Label className="font-semibold">Documento di identità *</Label>
-              <p className="text-xs text-muted-foreground">
-                Formati accettati: PDF, JPG, JPEG, PNG (max 10 MB). Necessario per completare il profilo.
-              </p>
-              <Input
-                type="file"
-                accept={ID_DOC_ACCEPT}
-                onChange={async (e) => {
-                  const f = e.target.files?.[0] ?? null;
-                  if (!f) { setIdDocFile(null); return; }
-                  const check = await validateIdDocumentFile(f);
-                  if (!check.ok) {
-                    toast.error(check.error);
-                    e.target.value = "";
-                    setIdDocFile(null);
-                    return;
-                  }
-                  setIdDocFile(f);
-                  setIdDocName(f.name);
-                }}
-              />
-              {idDocName && (
-                <p className="text-xs text-emerald-600">
-                  📎 {idDocName}
-                  {idDocFile ? " (nuovo file da salvare)" : " (già caricato)"}
-                </p>
-              )}
-              {!idDocName && (
-                <p className="text-xs text-destructive">Nessun documento caricato.</p>
-              )}
-            </div>
+            {/* Upload UI moved inside the "Documento di identità" section above. */}
           </>
         )}
         <label className="flex items-start gap-2 text-sm">
