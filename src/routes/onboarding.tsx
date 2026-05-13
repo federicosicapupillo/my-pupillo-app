@@ -745,7 +745,20 @@ function Onboarding() {
         setBusy(false);
         // Surface the issued-specific message before the generic copy so
         // the user knows exactly which date is missing.
-        if (!personal.id_document_issued_at) {
+        if (personal.birth_date && !birthOk) {
+          const birthMsg =
+            (isValidISODate(personal.birth_date)
+              ? validateBirthDate(personal.birth_date, today)
+              : null) ?? "Data di nascita non valida.";
+          setDateFieldErrors((prev) => ({ ...prev, birth_date: birthMsg }));
+          toast.error(birthMsg);
+        } else if (!personal.birth_date) {
+          setDateFieldErrors((prev) => ({
+            ...prev,
+            birth_date: "Inserisci la tua data di nascita.",
+          }));
+          toast.error("Inserisci la tua data di nascita.");
+        } else if (!personal.id_document_issued_at) {
           setDateFieldErrors((prev) => ({
             ...prev,
             id_document_issued_at:
