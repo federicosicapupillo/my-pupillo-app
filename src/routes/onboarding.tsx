@@ -969,7 +969,7 @@ function Onboarding() {
             birth_place: personal.birth_place.trim(),
             tax_code: personal.tax_code.trim().toUpperCase(),
             nationality: personal.nationality.trim(),
-            residence_address: personal.residence_address.trim(),
+            residence_address: `${personal.residence_street.trim()}, ${personal.residence_street_number.trim()}`,
             residence_city: personal.residence_city.trim(),
             residence_postal_code: personal.residence_postal_code.trim(),
             residence_province: personal.residence_province.trim().toUpperCase(),
