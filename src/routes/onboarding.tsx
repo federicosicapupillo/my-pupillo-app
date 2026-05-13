@@ -44,6 +44,9 @@ import { OnboardingStatusCard, type OnboardingStep } from "@/components/Onboardi
 import { DateField } from "@/components/DateField";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
+import { WORKER_CITIES, zonesForCity, ALL_ZONES_OPTION } from "@/lib/worker-cities";
+import { SearchableSelect } from "@/components/SearchableSelect";
+import { ZonesMultiSelect } from "@/components/ZonesMultiSelect";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
@@ -1552,28 +1555,58 @@ function Onboarding() {
             </div>
             <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <div>
-                <Label className="font-semibold">Area di interesse / Raggio d'azione *</Label>
+                <Label className="font-semibold">Dove vuoi lavorare?</Label>
                 <p className="text-xs text-muted-foreground">
-                  Indica dove sei disponibile a lavorare. Verrai mostrato in
-                  <span className="text-emerald-600 font-medium"> verde</span> ai ristoratori il cui locale rientra nella tua area.
+                  Scegli la città e le zone in cui sei disponibile.
                 </p>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Città di partenza *</Label>
-                  <Input
-                    placeholder="es. Milano"
+                  <SearchableSelect
+                    options={WORKER_CITIES as unknown as string[]}
                     value={form.service_area_city}
-                    onChange={(e) => setForm({ ...form, service_area_city: e.target.value })}
+                    onChange={(v) =>
+                      setForm({
+                        ...form,
+                        service_area_city: v,
+                        // reset zones when city changes
+                        service_area_district: "",
+                      })
+                    }
+                    placeholder="Seleziona città"
+                    searchPlaceholder="Cerca città…"
                   />
                 </div>
                 <div>
                   <Label>Zona / quartiere *</Label>
-                  <Input
-                    placeholder="es. Navigli"
-                    value={form.service_area_district}
-                    onChange={(e) => setForm({ ...form, service_area_district: e.target.value })}
-                  />
+                  {(() => {
+                    const zones = form.service_area_district
+                      ? form.service_area_district.split(",").map((s) => s.trim()).filter(Boolean)
+                      : [];
+                    const cityZones = zonesForCity(form.service_area_city);
+                    const disabled = !form.service_area_city;
+                    return (
+                      <>
+                        <ZonesMultiSelect
+                          options={cityZones}
+                          value={zones}
+                          disabled={disabled}
+                          onChange={(next) =>
+                            setForm({ ...form, service_area_district: next.join(", ") })
+                          }
+                          placeholder={
+                            disabled ? "Seleziona prima la città" : "Seleziona zone"
+                          }
+                        />
+                        {!disabled && cityZones.length === 0 && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Nessuna zona disponibile per {form.service_area_city}. Seleziona "{ALL_ZONES_OPTION}".
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               <div>
