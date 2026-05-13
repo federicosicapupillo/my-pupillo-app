@@ -766,6 +766,25 @@ function Thread() {
                 <Button size="sm" variant="ghost" onClick={() => setCounterOpen(false)}>Annulla</Button>
               </div>
             )}
+            <AlertDialog open={counterConfirmOpen} onOpenChange={setCounterConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confermi la controfferta?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Stai proponendo una tariffa diversa da quella indicata nell'annuncio. Il ristoratore potrà accettare oppure rifiutare la tua controfferta.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={sendingCounter}>Annulla</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={sendingCounter}
+                    onClick={(e) => { e.preventDefault(); void sendCounter(); }}
+                  >
+                    Invia controfferta
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
 
