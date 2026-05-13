@@ -530,10 +530,26 @@ function Onboarding() {
         fd.append("file", avatarFile);
         let res;
         try {
-          res = await uploadAvatarFn({ data: fd });
+          const TIMEOUT_MS = 30_000;
+          res = await Promise.race([
+            uploadAvatarFn({ data: fd }),
+            new Promise((_, rej) =>
+              setTimeout(
+                () => rej(new Error("__timeout__")),
+                TIMEOUT_MS,
+              ),
+            ),
+          ]) as Awaited<ReturnType<typeof uploadAvatarFn>>;
         } catch (e) {
           setBusy(false);
-          toast.error(e instanceof Error ? e.message : "Foto profilo non valida.");
+          const msg = e instanceof Error ? e.message : "";
+          if (msg === "__timeout__") {
+            toast.error("Caricamento foto profilo scaduto. Controlla la connessione e riprova.");
+          } else if (msg.toLowerCase().includes("network") || msg.toLowerCase().includes("failed to fetch")) {
+            toast.error("Connessione assente o instabile. Riprova quando sei online.");
+          } else {
+            toast.error(msg || "Caricamento foto profilo non riuscito. Riprova.");
+          }
           return;
         }
         if (!res.ok) {
