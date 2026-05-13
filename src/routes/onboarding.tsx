@@ -46,6 +46,12 @@ import { WORKER_ROLES } from "@/lib/worker-roles";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
+import { uploadWorkerIdDocument } from "@/lib/id-document-upload.functions";
+import {
+  ID_DOC_ACCEPT_ATTR,
+  ID_DOC_MAX_BYTES,
+  validateIdDocumentFile,
+} from "@/lib/id-document-file";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 
 /**
