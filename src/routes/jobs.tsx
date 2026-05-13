@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
@@ -22,6 +22,7 @@ type Row = {
 
 function Jobs() {
   const { user, role } = useAuth();
+  const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,8 +53,29 @@ function Jobs() {
     const { error } = await supabase.from("applications").update({
       status, worker_response_at: new Date().toISOString(),
     }).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success(status === "interested" ? "Hai mostrato interesse" : "Offerta rifiutata"); load(); }
+    if (error) { toast.error(error.message); return; }
+    if (status === "interested" && user) {
+      const { data: existing } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("application_id", id)
+        .eq("sender_id", user.id)
+        .eq("message_type", "auto_application")
+        .maybeSingle();
+      if (!existing) {
+        await supabase.from("messages").insert({
+          application_id: id,
+          sender_id: user.id,
+          message_type: "auto_application",
+          body: "Ciao! Ho inviato la mia candidatura per il turno pubblicato.\n\nSono disponibile nell'orario richiesto e resto a disposizione per conferma o ulteriori informazioni. A presto!",
+        });
+      }
+      toast.success("Candidatura inviata correttamente");
+      navigate({ to: "/messages/$id", params: { id } });
+      return;
+    }
+    toast.success("Offerta rifiutata");
+    load();
   };
 
   if (role !== "worker") return <AppShell><p className="text-muted-foreground">Sezione riservata ai lavoratori.</p></AppShell>;
