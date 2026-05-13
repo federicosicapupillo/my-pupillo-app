@@ -89,6 +89,10 @@ function computeDateFieldErrors(
   if (!isValidISODate(input.id_document_expires_at))
     out.id_document_expires_at = INVALID_DATE_MESSAGE;
 
+  // Age / future check on the birth date.
+  const birthErr = validateBirthDate(input.birth_date, today);
+  if (birthErr) out.birth_date = out.birth_date ?? birthErr;
+
   // Range checks only when both raw inputs are individually valid dates.
   const range = validateDocumentDates(
     input.id_document_issued_at,
