@@ -549,6 +549,31 @@ function Onboarding() {
         toast.error(dateGuard.message);
         return;
       }
+      // Server-side echo of the same validation: re-runs the rules under the
+      // user's auth session so a tampered client cannot bypass them. The DB
+      // trigger `enforce_worker_personal_data` is the final guard.
+      try {
+        const serverCheck = await validateWorkerDatesFn({
+          data: {
+            birth_date: personal.birth_date,
+            id_document_issued_at: personal.id_document_issued_at,
+            id_document_expires_at: personal.id_document_expires_at,
+          },
+        });
+        if (!serverCheck.ok) {
+          setBusy(false);
+          toast.error(serverCheck.error);
+          return;
+        }
+      } catch (e) {
+        setBusy(false);
+        toast.error(
+          e instanceof Error && e.message
+            ? e.message
+            : "Validazione delle date non riuscita. Riprova.",
+        );
+        return;
+      }
       if (!idDocFile && !idDocPath) {
         setBusy(false);
         toast.error("Carica un documento di identità per completare il profilo.");
