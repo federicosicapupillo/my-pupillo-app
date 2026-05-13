@@ -1619,19 +1619,23 @@ function Onboarding() {
               </div>
               <div>
                 <Label>Raggio d'azione *</Label>
-                <Select
-                  value={form.service_area_radius_m}
-                  onValueChange={(v) => setForm({ ...form, service_area_radius_m: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Seleziona il raggio" /></SelectTrigger>
-                  <SelectContent>
-                    {RADIUS_KM_OPTIONS.map((km) => (
-                      <SelectItem key={km} value={String(km * 1000)}>{km} km</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={RADIUS_KM_OPTIONS.map((km) => `${km} km`)}
+                  value={
+                    ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))
+                      ? `${parseInt(form.service_area_radius_m) / 1000} km`
+                      : ""
+                  }
+                  onChange={(v) => {
+                    const km = parseInt(v);
+                    if (!Number.isFinite(km)) return;
+                    setForm({ ...form, service_area_radius_m: String(km * 1000) });
+                  }}
+                  placeholder="Seleziona raggio d'azione"
+                  searchPlaceholder="Cerca raggio…"
+                />
               </div>
-              <div>
+              <div className="relative isolate" style={{ zIndex: 0 }}>
                 <WorkerServiceAreaMap
                   lat={serviceAreaPreview?.lat ?? null}
                   lng={serviceAreaPreview?.lng ?? null}
