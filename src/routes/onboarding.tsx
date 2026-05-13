@@ -321,6 +321,13 @@ function Onboarding() {
       if (v && !isValidISODate(v)) return true;
     }
     if (
+      personal.birth_date &&
+      isValidISODate(personal.birth_date) &&
+      validateBirthDate(personal.birth_date, todayInRome()) !== null
+    ) {
+      return true;
+    }
+    if (
       personal.id_document_issued_at &&
       personal.id_document_expires_at &&
       isValidISODate(personal.id_document_issued_at) &&
