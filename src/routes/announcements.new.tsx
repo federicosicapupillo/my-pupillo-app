@@ -191,10 +191,11 @@ function NewAnn() {
   }
 
   const isUrgent = f.speed === "flash" || f.speed === "fast";
-  const cost = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
+  const cost: number = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
   const credits = profile?.credits ?? 0;
   const isPaid = profile?.plan === "pro" || profile?.plan === "business";
-  const canAfford = isPaid || credits >= cost;
+  const isFree = cost === 0;
+  const canAfford = isPaid || isFree || credits >= cost;
 
   const save = async (asDraft: boolean) => {
     if (!user) return;
@@ -217,12 +218,15 @@ function NewAnn() {
       ? "Presentarsi almeno 15 minuti prima del turno."
       : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
     setBusy(true);
-    // Consume credits only when publishing (not draft). Urgent (flash/fast) costs more.
+    // Consume credits only when publishing (not draft) AND when cost > 0.
+    // Pubblicare è gratis: paghi solo alla conferma del lavoratore.
     if (!asDraft) {
-      const isUrgent = f.speed === "flash" || f.speed === "fast";
-      const cost = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
-      const ok = await consumeCredits(cost, isUrgent ? "publish_urgent_announcement" : "publish_announcement");
-      if (!ok) { setBusy(false); return; }
+      const isUrgentNow = f.speed === "flash" || f.speed === "fast";
+      const costNow: number = isUrgentNow ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
+      if (costNow > 0) {
+        const ok = await consumeCredits(costNow, isUrgentNow ? "publish_urgent_announcement" : "publish_announcement");
+        if (!ok) { setBusy(false); return; }
+      }
     }
     const { error } = await supabase.from("announcements").insert({
       restaurant_id: user.id,
@@ -290,9 +294,11 @@ function NewAnn() {
           <Coins className="h-4 w-4 text-primary" />
           {isPaid ? (
             <span>Piano <strong className="capitalize">{profile?.plan}</strong> attivo · pubblicazioni illimitate</span>
+          ) : isFree ? (
+            <span>Pubblicare è <strong>gratis</strong>. Paghi solo quando confermi un lavoratore. Saldo: <strong>{credits}</strong></span>
           ) : (
             <span>
-              Costo pubblicazione: <strong>{cost} {cost === 1 ? "credito" : "crediti"}</strong>{isUrgent && " (urgente)"} · Saldo: <strong>{credits}</strong>
+              Costo pubblicazione: <strong>{cost} crediti</strong>{isUrgent && " (urgente)"} · Saldo: <strong>{credits}</strong>
             </span>
           )}
         </div>
@@ -519,11 +525,13 @@ function NewAnn() {
               <div className="space-y-3 pt-2">
                 {isPaid ? (
                   <p>Il tuo piano <strong className="capitalize">{profile?.plan}</strong> include pubblicazioni illimitate. Nessun credito verrà scalato.</p>
+                ) : isFree ? (
+                  <p>Pubblicare un annuncio è <strong>gratis</strong>. I crediti vengono scalati solo quando confermi definitivamente un lavoratore per il turno.</p>
                 ) : (
                   <>
                     <p>Stai per pubblicare un annuncio{isUrgent ? " urgente" : ""}.</p>
                     <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1.5">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Costo pubblicazione</span><strong>{cost} {cost === 1 ? "credito" : "crediti"}</strong></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Costo pubblicazione</span><strong>{cost} crediti</strong></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Saldo attuale</span><strong>{credits}</strong></div>
                       <div className="flex justify-between border-t pt-1.5"><span className="text-muted-foreground">Saldo dopo</span><strong className={credits - cost < 0 ? "text-destructive" : ""}>{credits - cost}</strong></div>
                     </div>
