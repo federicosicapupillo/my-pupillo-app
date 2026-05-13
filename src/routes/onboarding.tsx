@@ -56,6 +56,7 @@ import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OnboardingStatusCard, type OnboardingStep } from "@/components/OnboardingStatusCard";
 import { DateField } from "@/components/DateField";
+import { BirthDateSelect } from "@/components/BirthDateSelect";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { WORKER_CITIES, zonesForCity, ALL_ZONES_OPTION } from "@/lib/worker-cities";
@@ -1403,10 +1404,8 @@ function Onboarding() {
                 </div>
                 <div>
                   <Label>Data di nascita *</Label>
-                  <DateField
-                    required
+                  <BirthDateSelect
                     value={personal.birth_date}
-                    max={maxBirthISORome}
                     error={dateFieldErrors.birth_date}
                     onChange={(iso) => {
                       clearDateError("birth_date");
