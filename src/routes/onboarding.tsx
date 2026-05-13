@@ -663,7 +663,8 @@ function Onboarding() {
     if (role === "worker") {
       const required = [
         personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
-        personal.tax_code, personal.nationality, personal.residence_address,
+        personal.tax_code, personal.nationality,
+        personal.residence_street, personal.residence_street_number,
         personal.residence_city, personal.residence_postal_code, personal.residence_province,
         personal.id_document_type, personal.id_document_number,
         personal.id_document_issued_at, personal.id_document_expires_at, personal.id_document_issuer,
@@ -674,9 +675,39 @@ function Onboarding() {
       const birthOk =
         isValidISODate(personal.birth_date) &&
         validateBirthDate(personal.birth_date, today) === null;
-      if (!allFilled || !cfOk || !birthOk || (!idDocFile && !idDocPath)) {
+      // City must belong to the supported dataset; CAP must match it; civic
+      // number must follow the Italian format (e.g. 12, 12A, 24/B).
+      const cityEntry = findCityProvince(personal.residence_city);
+      const provinceOk =
+        !!cityEntry &&
+        personal.residence_province.trim().toUpperCase() ===
+          cityEntry.province_code;
+      const capOk = isValidCapForCity(
+        cityEntry?.province ?? null,
+        personal.residence_city,
+        personal.residence_postal_code,
+      );
+      const civicOk = isValidCivicNumber(personal.residence_street_number);
+      if (
+        !allFilled ||
+        !cfOk ||
+        !birthOk ||
+        !cityEntry ||
+        !provinceOk ||
+        !capOk ||
+        !civicOk ||
+        (!idDocFile && !idDocPath)
+      ) {
         setBusy(false);
-        toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
+        if (!cityEntry) {
+          toast.error("Seleziona una città di residenza dall'elenco.");
+        } else if (!capOk) {
+          toast.error("Seleziona un CAP valido per la città scelta.");
+        } else if (!civicOk) {
+          toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
+        } else {
+          toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
+        }
         return;
       }
       // Numero documento: only letters and digits, 5–20 chars (already
