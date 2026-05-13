@@ -220,6 +220,9 @@ function Onboarding() {
   const [serviceAreaLoading, setServiceAreaLoading] = useState(false);
   const [serviceAreaError, setServiceAreaError] = useState<string | null>(null);
 
+  // Worker area mode: "zones" (specific zones/quartieri) | "georadar" (radius around position).
+  const [areaMode, setAreaMode] = useState<"zones" | "georadar">("zones");
+
   // Live-geocode worker service area for the map preview (debounced).
   useEffect(() => {
     if (role !== "worker") return;
@@ -419,9 +422,10 @@ function Onboarding() {
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
       !!form.service_area_city.trim() &&
-      !!form.service_area_district.trim() &&
       form.service_area_address.trim().length >= 3 &&
-      ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m));
+      (areaMode === "georadar"
+        ? ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))
+        : !!form.service_area_district.trim());
     const finalLocked = !(personalDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
