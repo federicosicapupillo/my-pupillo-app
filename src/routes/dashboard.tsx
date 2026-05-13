@@ -288,6 +288,8 @@ function DashboardInner() {
         </div>
       )}
 
+      {role === "restaurant" && <FavoriteWorkersSection />}
+
       <AlertDialog open={!!closingItem} onOpenChange={(o) => !o && !closing && setClosingItem(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
