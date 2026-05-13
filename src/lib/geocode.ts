@@ -80,6 +80,70 @@ export function describeGeocodeError(err: GeocodeError): string {
   }
 }
 
+export type ReverseGeocodeResult =
+  | {
+      ok: true;
+      lat: number;
+      lng: number;
+      city: string;
+      district: string;
+      displayName: string;
+    }
+  | { ok: false; error: GeocodeError };
+
+/**
+ * Reverse-geocode a coordinate pair into a human-readable city / district
+ * using the public Nominatim endpoint. The quartiere is best-effort and
+ * falls back to the suburb / neighbourhood / city_district fields.
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number,
+  signal?: AbortSignal,
+): Promise<ReverseGeocodeResult> {
+  const url =
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2` +
+    `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}` +
+    `&addressdetails=1&zoom=16`;
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { "Accept-Language": "it" }, signal });
+  } catch (e: unknown) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      return { ok: false, error: { kind: "aborted" } };
+    }
+    return {
+      ok: false,
+      error: { kind: "network", message: e instanceof Error ? e.message : "Errore di rete" },
+    };
+  }
+  if (!res.ok) {
+    return { ok: false, error: { kind: "network", message: `HTTP ${res.status}` } };
+  }
+  let data: {
+    display_name?: string;
+    address?: Record<string, string | undefined>;
+  };
+  try {
+    data = await res.json();
+  } catch {
+    return { ok: false, error: { kind: "network", message: "Risposta non valida" } };
+  }
+  const a = data.address ?? {};
+  const city =
+    a.city ?? a.town ?? a.village ?? a.municipality ?? a.county ?? "";
+  const district =
+    a.suburb ?? a.neighbourhood ?? a.city_district ?? a.quarter ?? a.borough ?? "";
+  return {
+    ok: true,
+    lat,
+    lng,
+    city,
+    district,
+    displayName: data.display_name ?? "",
+  };
+}
+
 // Backwards-compatible helper (no retry, returns null on failure)
 export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
   const r = await geocodeAddressWithRetry(address, { maxAttempts: 1 });
