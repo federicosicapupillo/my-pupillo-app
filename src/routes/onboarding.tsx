@@ -174,7 +174,6 @@ function Onboarding() {
     full_name: "",
     phone_code: DEFAULT_PHONE_PREFIX,
     phone_number: "",
-    age: "",
     languages: "",
     business_name: "",
     vat_number: "",
@@ -431,7 +430,11 @@ function Onboarding() {
     }
 
     // worker (default)
-    const personalDone = !!form.full_name.trim() && !!form.age && Number(form.age) >= 16;
+    const personalDone =
+      !!personal.first_name.trim() &&
+      !!personal.last_name.trim() &&
+      isValidISODate(personal.birth_date) &&
+      validateBirthDate(personal.birth_date, todayInRome()) === null;
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
       !!form.service_area_city.trim() &&
@@ -521,7 +524,6 @@ function Onboarding() {
         full_name: profile.full_name ?? "",
         phone_code: (profile as any).phone_country_code || ph.code,
         phone_number: (profile as any).phone_number || ph.number,
-        age: profile.age?.toString() ?? "",
         languages: (profile.languages ?? []).join(", "),
         business_name: profile.business_name ?? "",
         vat_number: profile.vat_number ?? "",
@@ -1062,7 +1064,6 @@ function Onboarding() {
             phone_full: phoneFull,
             terms_accepted: true,
             profile_completed: true,
-            age: form.age ? parseInt(form.age) : null,
             languages: spokenLanguages.map((s) => s.language),
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
@@ -1775,10 +1776,6 @@ function Onboarding() {
               </div>
             </div>
 
-            <div id="sec-experience" className="scroll-mt-24">
-              <Label>Età</Label>
-              <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
-            </div>
             <div id="sec-roles" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Renditi disponibile per</Label>
               <p className="text-xs text-muted-foreground">
