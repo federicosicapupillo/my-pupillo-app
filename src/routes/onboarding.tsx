@@ -817,6 +817,41 @@ function Onboarding() {
               Verrai mostrato in <span className="text-emerald-600 font-medium">verde</span> ai ristoratori il cui
               locale rientra nella tua area.
             </p>
+            <div id="sec-id-document" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
+              <Label className="font-semibold">Documento di identità *</Label>
+              <p className="text-xs text-muted-foreground">
+                Formati accettati: PDF, JPG, PNG (max 8MB). Necessario per completare il profilo.
+              </p>
+              <Input
+                type="file"
+                accept={ID_DOC_ACCEPT}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  if (!f) { setIdDocFile(null); return; }
+                  if (!["application/pdf", "image/jpeg", "image/png"].includes(f.type)) {
+                    toast.error("Formato non valido. Usa PDF, JPG o PNG.");
+                    e.target.value = "";
+                    return;
+                  }
+                  if (f.size > ID_DOC_MAX) {
+                    toast.error("File troppo grande (max 8MB).");
+                    e.target.value = "";
+                    return;
+                  }
+                  setIdDocFile(f);
+                  setIdDocName(f.name);
+                }}
+              />
+              {idDocName && (
+                <p className="text-xs text-emerald-600">
+                  📎 {idDocName}
+                  {idDocFile ? " (nuovo file da salvare)" : " (già caricato)"}
+                </p>
+              )}
+              {!idDocName && (
+                <p className="text-xs text-destructive">Nessun documento caricato.</p>
+              )}
+            </div>
           </>
         )}
         <label className="flex items-start gap-2 text-sm">
