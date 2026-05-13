@@ -308,6 +308,15 @@ function Onboarding() {
     }
     if (profile) setRequirements(reqFromProfile(profile));
     if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
+    if (profile) {
+      const sec = (profile as any).secondary_roles as string[] | null | undefined;
+      const prim = (profile as any).primary_role as string | null | undefined;
+      const known = new Set<string>(WORKER_ROLES as readonly string[]);
+      const merged = [...(sec ?? []), ...(prim ? [prim] : [])].filter((r) => known.has(r));
+      if (merged.length > 0) {
+        setWorkerRoles((WORKER_ROLES as readonly string[]).filter((r) => merged.includes(r)));
+      }
+    }
     if (profile && (profile as any).id_document_path) {
       const p = (profile as any).id_document_path as string;
       setIdDocPath(p);
