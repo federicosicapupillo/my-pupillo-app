@@ -486,3 +486,119 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
     </li>
   );
 }
+type FavWorker = {
+  worker_id: string;
+  full_name: string | null;
+  primary_role: string | null;
+  rating_avg: number | null;
+  shifts_count: number;
+  last_shift_date: string | null;
+  last_application_id: string | null;
+};
+
+function FavoriteWorkersSection() {
+  const { user } = useAuth();
+  const [items, setItems] = useState<FavWorker[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!user) return;
+      setLoading(true);
+      const { data: favs } = await supabase
+        .from("restaurant_worker_favorites")
+        .select("worker_id")
+        .eq("restaurant_id", user.id);
+      const ids = (favs ?? []).map((f: any) => f.worker_id);
+      if (ids.length === 0) { if (alive) { setItems([]); setLoading(false); } return; }
+
+      const [{ data: profs }, { data: shifts }, { data: apps }] = await Promise.all([
+        supabase.from("profiles")
+          .select("id, full_name, primary_role, rating_avg")
+          .in("id", ids),
+        supabase.from("shifts")
+          .select("worker_id, shift_date, status")
+          .eq("restaurant_id", user.id)
+          .in("worker_id", ids)
+          .in("status", ["scheduled", "completed"]),
+        supabase.from("applications")
+          .select("id, worker_id, created_at")
+          .eq("restaurant_id", user.id)
+          .in("worker_id", ids)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      const agg = new Map<string, { count: number; last: string | null }>();
+      (shifts ?? []).forEach((s: any) => {
+        const cur = agg.get(s.worker_id) ?? { count: 0, last: null };
+        cur.count += 1;
+        if (!cur.last || s.shift_date > cur.last) cur.last = s.shift_date;
+        agg.set(s.worker_id, cur);
+      });
+      const lastApp = new Map<string, string>();
+      (apps ?? []).forEach((a: any) => { if (!lastApp.has(a.worker_id)) lastApp.set(a.worker_id, a.id); });
+      const profMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+      const out: FavWorker[] = ids.map((wid: string) => {
+        const p: any = profMap.get(wid) ?? {};
+        const a = agg.get(wid) ?? { count: 0, last: null };
+        return {
+          worker_id: wid,
+          full_name: p.full_name ?? null,
+          primary_role: p.primary_role ?? null,
+          rating_avg: p.rating_avg ?? null,
+          shifts_count: a.count,
+          last_shift_date: a.last,
+          last_application_id: lastApp.get(wid) ?? null,
+        };
+      }).sort((a, b) => (b.last_shift_date ?? "").localeCompare(a.last_shift_date ?? ""));
+      if (alive) { setItems(out); setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [user]);
+
+  if (loading || items.length === 0) return null;
+
+  return (
+    <div className="mt-6 rounded-2xl border bg-card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Heart className="h-5 w-5 text-rose-600 fill-current" />
+          <h2 className="font-semibold">Lavoratori preferiti</h2>
+        </div>
+        <Link to="/ristoratore/collaboratori">
+          <Button variant="ghost" size="sm" className="gap-1">Vedi tutti <ArrowRight className="h-3.5 w-3.5" /></Button>
+        </Link>
+      </div>
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.slice(0, 6).map((w) => (
+          <li key={w.worker_id} className="rounded-xl border p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-medium truncate">{w.full_name ?? "Lavoratore"}</div>
+                <div className="text-xs text-muted-foreground capitalize truncate">{w.primary_role ?? "—"}</div>
+                <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                  {w.rating_avg != null && (
+                    <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{Number(w.rating_avg).toFixed(1)}</span>
+                  )}
+                  <span>{w.shifts_count} turni</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {w.last_application_id ? (
+                <Link to="/messages/$id" params={{ id: w.last_application_id }}>
+                  <Button size="sm" variant="outline" className="gap-1"><MessageSquare className="h-3.5 w-3.5" /> Ricontatta</Button>
+                </Link>
+              ) : (
+                <Link to="/ristoratore/collaboratori">
+                  <Button size="sm" variant="outline">Invita</Button>
+                </Link>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
