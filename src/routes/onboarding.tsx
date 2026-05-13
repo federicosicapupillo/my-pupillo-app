@@ -942,13 +942,30 @@ function Onboarding() {
                 </div>
                 <div>
                   <Label>Data rilascio *</Label>
-                  <Input type="date" required value={personal.id_document_issued_at} onChange={(e) => setPersonal({ ...personal, id_document_issued_at: e.target.value })} />
+                  <DateField
+                    required
+                    value={personal.id_document_issued_at}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(iso) => setPersonal({ ...personal, id_document_issued_at: iso })}
+                  />
+                  {personal.id_document_issued_at && new Date(personal.id_document_issued_at) > new Date(new Date().toDateString()) && (
+                    <p className="text-xs text-destructive mt-1">La data di rilascio non può essere futura.</p>
+                  )}
                 </div>
                 <div>
                   <Label>Data scadenza *</Label>
-                  <Input type="date" required value={personal.id_document_expires_at} onChange={(e) => setPersonal({ ...personal, id_document_expires_at: e.target.value })} />
+                  <DateField
+                    required
+                    value={personal.id_document_expires_at}
+                    min={personal.id_document_issued_at || new Date().toISOString().slice(0, 10)}
+                    onChange={(iso) => setPersonal({ ...personal, id_document_expires_at: iso })}
+                  />
                   {personal.id_document_expires_at && new Date(personal.id_document_expires_at) < new Date(new Date().toDateString()) && (
-                    <p className="text-xs text-destructive mt-1">Documento scaduto.</p>
+                    <p className="text-xs text-destructive mt-1">Il documento risulta scaduto. Carica un documento valido.</p>
+                  )}
+                  {personal.id_document_issued_at && personal.id_document_expires_at &&
+                    new Date(personal.id_document_expires_at) <= new Date(personal.id_document_issued_at) && (
+                    <p className="text-xs text-destructive mt-1">La data di scadenza deve essere successiva alla data di rilascio.</p>
                   )}
                 </div>
                 <div className="md:col-span-2">
