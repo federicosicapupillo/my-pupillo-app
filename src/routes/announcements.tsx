@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +34,12 @@ type Candidate = {
   professional_profile: string | null;
   rating_avg: number | null;
   badge: string | null;
+};
+
+type AssignedInfo = {
+  worker_id: string;
+  full_name: string | null;
+  rating: number | null;
 };
 
 function formatRange(a: Ann) {
@@ -65,6 +71,7 @@ function AnnouncementsPage() {
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
+  const [assigned, setAssigned] = useState<Record<string, AssignedInfo>>({});
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
@@ -90,7 +97,9 @@ function AnnouncementsPage() {
           (byAnn[a.announcement_id] ||= []).push(a.worker_id);
         });
         setCounts(map);
-        const workerIds = Array.from(new Set((apps ?? []).map((a: any) => a.worker_id)));
+        const assignedAnns = list.filter(a => a.assigned_worker_id);
+        const assignedWorkerIds = assignedAnns.map(a => a.assigned_worker_id as string);
+        const workerIds = Array.from(new Set([...(apps ?? []).map((a: any) => a.worker_id), ...assignedWorkerIds]));
         if (workerIds.length) {
           const { data: profs } = await supabase
             .from("profiles")
@@ -109,6 +118,26 @@ function AnnouncementsPage() {
             }));
           });
           setCandidates(candMap);
+          if (assignedAnns.length) {
+            const annIds = assignedAnns.map(a => a.id);
+            const { data: revs } = await supabase
+              .from("reviews")
+              .select("announcement_id, target_id, rating, author_id")
+              .in("announcement_id", annIds)
+              .eq("author_id", user.id);
+            const revMap: Record<string, number> = {};
+            (revs ?? []).forEach((r: any) => { revMap[r.announcement_id] = r.rating; });
+            const aMap: Record<string, AssignedInfo> = {};
+            assignedAnns.forEach((a) => {
+              const wid = a.assigned_worker_id as string;
+              aMap[a.id] = {
+                worker_id: wid,
+                full_name: profMap[wid]?.full_name ?? null,
+                rating: revMap[a.id] ?? null,
+              };
+            });
+            setAssigned(aMap);
+          }
         }
       }
       setLoading(false);
@@ -141,6 +170,37 @@ function AnnouncementsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {visible.map((a) => (
             <div key={a.id} className="rounded-2xl border bg-card p-5">
+              {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (
+                <div className={`mb-3 rounded-xl border p-3 ${a.status === "completed" ? "bg-blue-50 border-blue-200" : "bg-green-50 border-green-200"}`}>
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <CheckCircle2 className={`h-4 w-4 ${a.status === "completed" ? "text-blue-600" : "text-green-600"}`} />
+                    <span className={a.status === "completed" ? "text-blue-800" : "text-green-800"}>
+                      {a.status === "completed" ? "Turno completato" : "Turno assegnato"}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-sm text-foreground">
+                    {a.status === "completed" ? "Lavoratore: " : "Assegnato a: "}
+                    <span className="font-medium">{assigned[a.id].full_name || "Lavoratore"}</span>
+                  </div>
+                  {a.status === "completed" && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {assigned[a.id].rating != null ? (
+                        <span className="inline-flex items-center gap-1">
+                          La tua valutazione:
+                          <span className="inline-flex items-center text-amber-500">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star key={i} className={`h-3 w-3 ${i < (assigned[a.id].rating ?? 0) ? "fill-current" : ""}`} />
+                            ))}
+                          </span>
+                          <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
+                        </span>
+                      ) : (
+                        <span className="italic">Valutazione non ancora inserita</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />{formatRange(a)}</div>
@@ -200,7 +260,7 @@ function AnnouncementsPage() {
               )}
               <div className="mt-3">
                 {role === "restaurant" ? (
-                  a.status === "active" || a.status === "assigned" ? (
+                  a.status === "active" ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="default" className="gap-1">
