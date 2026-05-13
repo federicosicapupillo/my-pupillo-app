@@ -60,14 +60,48 @@ export const validateWorkerDocumentDates = createServerFn({ method: "POST" })
           : "",
     };
   })
-  .handler(async ({ data }): Promise<ValidateWorkerDocumentDatesResult> => {
-    // Shape check first — surfaces INVALID_DATE_MESSAGE for malformed payloads.
-    const shape = Schema.safeParse(data);
-    if (!shape.success) {
-      return { ok: false, error: INVALID_DATE_MESSAGE };
-    }
-    return runWorkerDocumentDateValidation(shape.data, new Date());
-  });
+  .handler(
+    async ({ data, context }): Promise<ValidateWorkerDocumentDatesResult> => {
+      // Shape check first — surfaces INVALID_DATE_MESSAGE for malformed payloads.
+      const shape = Schema.safeParse(data);
+      if (!shape.success) {
+        await logFailure(context, INVALID_DATE_MESSAGE, data);
+        return { ok: false, error: INVALID_DATE_MESSAGE };
+      }
+      const result = runWorkerDocumentDateValidation(shape.data, new Date());
+      if (!result.ok) {
+        await logFailure(context, result.error, shape.data);
+      }
+      return result;
+    },
+  );
+
+/**
+ * Best-effort write to activity_logs via the SECURITY DEFINER helper
+ * `log_profile_date_validation_failure`. Failures here MUST NOT block the
+ * validation response — logging is observability, not a security boundary.
+ */
+async function logFailure(
+  context: { supabase: unknown },
+  reason: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const sb = context.supabase as {
+      rpc: (
+        fn: "log_profile_date_validation_failure",
+        args: { _reason: string; _payload: unknown },
+      ) => Promise<unknown>;
+    };
+    await sb.rpc("log_profile_date_validation_failure", {
+      _reason: reason,
+      _payload: payload,
+    });
+  } catch (e) {
+    // Swallow — never let logging break the response.
+    console.error("[worker-profile] failed to log date validation failure", e);
+  }
+}
 
 /**
  * Pure variant used by the server function and re-exported so callers (the

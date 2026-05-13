@@ -1314,6 +1314,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_profile_date_validation_failure: {
+        Args: { _payload: Json; _reason: string }
+        Returns: string
+      }
       mark_overdue_required_reviews: { Args: never; Returns: number }
       normalize_vat: { Args: { _v: string }; Returns: string }
       recompute_review_block: {
