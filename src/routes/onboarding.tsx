@@ -678,6 +678,7 @@ function Onboarding() {
     }
     setBusy(true);
     let uploadedPath: string | null = idDocPath;
+    let uploadedBackPath: string | null = idDocBackPath;
     let uploadedAvatarUrl: string | null = avatarUrl;
     if (role === "worker") {
       const required = [
@@ -715,7 +716,8 @@ function Onboarding() {
         !provinceOk ||
         !capOk ||
         !civicOk ||
-        (!idDocFile && !idDocPath)
+        (!idDocFile && !idDocPath) ||
+        (!idDocBackFile && !idDocBackPath)
       ) {
         setBusy(false);
         // Surface the issued-specific message before the generic copy so
@@ -733,6 +735,10 @@ function Onboarding() {
           toast.error("Seleziona un CAP valido per la città scelta.");
         } else if (!civicOk) {
           toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
+        } else if (!idDocFile && !idDocPath) {
+          toast.error("Carica il fronte del documento.");
+        } else if (!idDocBackFile && !idDocBackPath) {
+          toast.error("Carica il retro del documento.");
         } else {
           toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
         }
