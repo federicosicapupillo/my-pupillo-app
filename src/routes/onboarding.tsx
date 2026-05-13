@@ -528,7 +528,6 @@ function Onboarding() {
         venue_type_other: (profile as any).venue_type_other ?? "",
         address: profile.address ?? "",
         price_range: profile.price_range ?? "",
-        service_area_address: (profile as any).service_area_address ?? "",
         service_area_radius_m: (() => {
           const v = profile.service_area_radius_m ?? 10000;
           return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
