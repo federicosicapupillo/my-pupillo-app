@@ -951,7 +951,7 @@ function Onboarding() {
         toast.error("Indica la città di partenza per la tua area di interesse.");
         return;
       }
-      if (!form.service_area_district.trim()) {
+      if (areaMode === "zones" && !form.service_area_district.trim()) {
         setBusy(false);
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
         return;
@@ -968,7 +968,7 @@ function Onboarding() {
       }
       const fullAddr = [
         form.service_area_address.trim(),
-        form.service_area_district.trim(),
+        areaMode === "zones" ? form.service_area_district.trim() : "",
         form.service_area_city.trim(),
         "Italia",
       ].filter(Boolean).join(", ");
