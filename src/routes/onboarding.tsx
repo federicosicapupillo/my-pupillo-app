@@ -100,6 +100,26 @@ function Onboarding() {
   const [idDocPath, setIdDocPath] = useState<string | null>(null);
   const [idDocName, setIdDocName] = useState<string | null>(null);
 
+  const [personal, setPersonal] = useState({
+    first_name: "",
+    last_name: "",
+    birth_date: "",
+    birth_place: "",
+    tax_code: "",
+    nationality: "Italiana",
+    residence_address: "",
+    residence_city: "",
+    residence_postal_code: "",
+    residence_province: "",
+    id_document_type: "",
+    id_document_number: "",
+    id_document_issued_at: "",
+    id_document_expires_at: "",
+    id_document_issuer: "",
+  });
+
+  const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
+
   const ID_DOC_ACCEPT = "application/pdf,image/jpeg,image/png";
   const ID_DOC_MAX = 8 * 1024 * 1024; // 8MB
 
@@ -288,6 +308,26 @@ function Onboarding() {
       const p = (profile as any).id_document_path as string;
       setIdDocPath(p);
       setIdDocName(p.split("/").pop() ?? p);
+    }
+    if (profile) {
+      const p = profile as any;
+      setPersonal((s) => ({
+        first_name: p.first_name ?? s.first_name,
+        last_name: p.last_name ?? s.last_name,
+        birth_date: p.birth_date ?? s.birth_date,
+        birth_place: p.birth_place ?? s.birth_place,
+        tax_code: p.tax_code ?? s.tax_code,
+        nationality: p.nationality ?? s.nationality,
+        residence_address: p.residence_address ?? s.residence_address,
+        residence_city: p.residence_city ?? s.residence_city,
+        residence_postal_code: p.residence_postal_code ?? s.residence_postal_code,
+        residence_province: p.residence_province ?? s.residence_province,
+        id_document_type: p.id_document_type ?? s.id_document_type,
+        id_document_number: p.id_document_number ?? s.id_document_number,
+        id_document_issued_at: p.id_document_issued_at ?? s.id_document_issued_at,
+        id_document_expires_at: p.id_document_expires_at ?? s.id_document_expires_at,
+        id_document_issuer: p.id_document_issuer ?? s.id_document_issuer,
+      }));
     }
   }, [profile]);
 
