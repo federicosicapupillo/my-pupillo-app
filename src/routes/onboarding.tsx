@@ -1933,7 +1933,11 @@ function Onboarding() {
                       setForm((prev) => ({
                         ...prev,
                         service_area_city: knownCity,
+                        service_area_district: loc.district || prev.service_area_district,
                       }));
+                      setGpsServiceArea({ lat: loc.lat, lng: loc.lng });
+                      setServiceAreaPreview({ lat: loc.lat, lng: loc.lng });
+                      setServiceAreaError(null);
                     }}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -1976,7 +1980,7 @@ function Onboarding() {
                     ? <span className="text-destructive">{serviceAreaError}</span>
                     : serviceAreaPreview
                     ? "Anteprima dell'area di copertura."
-                    : "Compila città e indirizzo per vedere l'anteprima."}
+                    : "Usa la posizione attuale o inserisci città e zona per vedere l'anteprima."}
                 </div>
               </div>
               )}
