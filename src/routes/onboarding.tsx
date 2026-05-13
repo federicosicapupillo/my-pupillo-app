@@ -984,12 +984,15 @@ function Onboarding() {
     };
     let restCoords: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
     if (role === "worker") {
+      const selectedZones = areaMode === "zones" ? parseSelectedZones(form.service_area_district) : [];
+      const allZonesSelected = selectedZones.includes(ALL_ZONES_OPTION);
+      const normalizedSelectedZones = allZonesSelected ? [] : selectedZones;
       if (!form.service_area_city.trim()) {
         setBusy(false);
         toast.error("Indica la città di partenza per la tua area di interesse.");
         return;
       }
-      if (areaMode === "zones" && !form.service_area_district.trim()) {
+      if (areaMode === "zones" && selectedZones.length === 0) {
         setBusy(false);
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
         return;
@@ -1083,11 +1086,16 @@ function Onboarding() {
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
             secondary_roles: workerRoles,
+            work_area_mode: areaMode,
             service_area_city: form.service_area_city.trim() || null,
             service_area_district:
               areaMode === "georadar"
                 ? GEORADAR_SENTINEL
-                : form.service_area_district.trim() || null,
+                : allZonesSelected
+                  ? ALL_ZONES_OPTION
+                  : normalizedSelectedZones.join(", ") || null,
+            selected_zones: areaMode === "zones" ? normalizedSelectedZones : [],
+            all_zones: areaMode === "zones" ? allZonesSelected : false,
             service_area_radius_m: (() => {
               const v = parseInt(form.service_area_radius_m);
               return ALLOWED_RADIUS_M.has(v) ? v : 10000;
