@@ -2,6 +2,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, ChevronsUpDown, X } from "lucide-react";
+import { useState } from "react";
 import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
@@ -113,23 +119,10 @@ export function RestaurantRequirementsEditor({ value, onChange }: { value: Resta
 
           <div>
             <Label className="mb-2 block">Lingue richieste</Label>
-            <ul className="flex flex-col divide-y rounded-lg border bg-card">
-              {LANGUAGE_OPTIONS.map(o => {
-                const active = value.language_requirements.includes(o.value);
-                return (
-                  <li key={o.value}>
-                    <label className={`flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer transition ${active ? "bg-primary/10" : "hover:bg-accent"}`}>
-                      <Checkbox
-                        checked={active}
-                        onCheckedChange={() => set({ language_requirements: toggle(value.language_requirements, o.value) })}
-                      />
-                      <span aria-hidden className="text-base shrink-0">{flagForOption(o.value)}</span>
-                      <span className="truncate">{o.label}</span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
+            <LanguagesMultiSelect
+              selected={value.language_requirements}
+              onChange={(next) => set({ language_requirements: next })}
+            />
           </div>
 
           <div>
