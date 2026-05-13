@@ -1192,30 +1192,71 @@ function Onboarding() {
               <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
               <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
             </div>
-            <div id="sec-availability" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
+            <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <div>
-                <Label>Area di interesse (indirizzo)</Label>
+                <Label className="font-semibold">Area di interesse / Raggio d'azione *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Indica dove sei disponibile a lavorare. Verrai mostrato in
+                  <span className="text-emerald-600 font-medium"> verde</span> ai ristoratori il cui locale rientra nella tua area.
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Città di partenza *</Label>
+                  <Input
+                    placeholder="es. Milano"
+                    value={form.service_area_city}
+                    onChange={(e) => setForm({ ...form, service_area_city: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Zona / quartiere *</Label>
+                  <Input
+                    placeholder="es. Navigli"
+                    value={form.service_area_district}
+                    onChange={(e) => setForm({ ...form, service_area_district: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Indirizzo o punto di riferimento *</Label>
                 <Input
-                  placeholder="es. Via Roma 1, Milano"
+                  placeholder="es. Via Roma 1 oppure Stazione Centrale"
                   value={form.service_area_address}
                   onChange={(e) => setForm({ ...form, service_area_address: e.target.value })}
                 />
               </div>
               <div>
-                <Label>Raggio (m)</Label>
-                <Input
-                  type="number"
-                  min="100"
-                  step="100"
+                <Label>Raggio d'azione *</Label>
+                <Select
                   value={form.service_area_radius_m}
-                  onChange={(e) => setForm({ ...form, service_area_radius_m: e.target.value })}
+                  onValueChange={(v) => setForm({ ...form, service_area_radius_m: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleziona il raggio" /></SelectTrigger>
+                  <SelectContent>
+                    {RADIUS_KM_OPTIONS.map((km) => (
+                      <SelectItem key={km} value={String(km * 1000)}>{km} km</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <WorkerServiceAreaMap
+                  lat={serviceAreaPreview?.lat ?? null}
+                  lng={serviceAreaPreview?.lng ?? null}
+                  radiusM={parseInt(form.service_area_radius_m) || 10000}
                 />
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {serviceAreaLoading
+                    ? "Localizzazione in corso…"
+                    : serviceAreaError
+                    ? <span className="text-destructive">{serviceAreaError}</span>
+                    : serviceAreaPreview
+                    ? "Anteprima dell'area di copertura."
+                    : "Compila città e indirizzo per vedere l'anteprima."}
+                </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground -mt-3">
-              Verrai mostrato in <span className="text-emerald-600 font-medium">verde</span> ai ristoratori il cui
-              locale rientra nella tua area.
-            </p>
             <div id="sec-id-document" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Documento di identità *</Label>
               <p className="text-xs text-muted-foreground">
