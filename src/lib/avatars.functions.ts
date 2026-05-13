@@ -26,14 +26,23 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
     });
 
     const result: Record<string, string | null> = {};
+    // Strict path validator: <ownerUid>/avatar-<digits>.(jpg|jpeg|png|webp)
+    const PATH_RE = /^([0-9a-f-]{36})\/avatar-\d+\.(jpe?g|png|webp)$/i;
     for (const row of rows ?? []) {
       const stored = (row as any).avatar_url as string | null;
-      if (!stored) {
+      if (!stored || typeof stored !== "string") {
         result[row.id] = null;
         continue;
       }
-      if (stored.startsWith("http")) {
-        result[row.id] = stored;
+      // Reject legacy/public URLs and any absolute/external reference.
+      if (/^(https?:|data:|blob:|\/\/)/i.test(stored)) {
+        result[row.id] = null;
+        continue;
+      }
+      const m = stored.match(PATH_RE);
+      // The path's owner folder MUST match the row's user id.
+      if (!m || m[1] !== row.id) {
+        result[row.id] = null;
         continue;
       }
       const { data: signed } = await admin.storage
