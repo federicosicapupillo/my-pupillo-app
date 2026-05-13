@@ -75,39 +75,6 @@ function Onboarding() {
     }
   }, [profile, nav]);
 
-  // Live-geocode worker service area for the map preview (debounced).
-  useEffect(() => {
-    if (role !== "worker") return;
-    const city = (form.service_area_city || "").trim();
-    const district = (form.service_area_district || "").trim();
-    const address = (form.service_area_address || "").trim();
-    if (address.length < 3 || !city) {
-      setServiceAreaPreview(null);
-      setServiceAreaError(null);
-      setServiceAreaLoading(false);
-      return;
-    }
-    setServiceAreaLoading(true);
-    setServiceAreaError(null);
-    const ctrl = new AbortController();
-    const t = setTimeout(async () => {
-      const fullAddr = [address, district, city, "Italia"].filter(Boolean).join(", ");
-      const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 1 });
-      if (ctrl.signal.aborted) return;
-      if (r.ok) {
-        setServiceAreaPreview({ lat: r.lat, lng: r.lng });
-      } else {
-        setServiceAreaPreview(null);
-        setServiceAreaError("Indirizzo non trovato. Verrà riprovato al salvataggio.");
-      }
-      setServiceAreaLoading(false);
-    }, 700);
-    return () => {
-      clearTimeout(t);
-      ctrl.abort();
-    };
-  }, [role, form.service_area_address, form.service_area_city, form.service_area_district]);
-
   const [form, setForm] = useState({
     full_name: "",
     phone_code: DEFAULT_PHONE_PREFIX,
