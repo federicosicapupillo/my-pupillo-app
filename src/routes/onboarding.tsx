@@ -352,8 +352,6 @@ function Onboarding() {
     return `${y}-${m}-${d}`;
   })();
 
-  const ID_DOC_ACCEPT = ID_DOC_ACCEPT_ATTR;
-
   const vatDigits = form.vat_number.replace(/\D/g, "");
   const vatValid = vatDigits.length === 11;
 
