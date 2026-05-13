@@ -1252,7 +1252,7 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.birth_date}
-                    max={new Date().toISOString().slice(0, 10)}
+                    max={todayISORome}
                     error={dateFieldErrors.birth_date}
                     onChange={(iso) => {
                       clearDateError("birth_date");
@@ -1351,7 +1351,7 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.id_document_issued_at}
-                    max={new Date().toISOString().slice(0, 10)}
+                    max={todayISORome}
                     error={dateFieldErrors.id_document_issued_at}
                     onChange={(iso) => {
                       clearDateError("id_document_issued_at");
@@ -1367,7 +1367,7 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.id_document_expires_at}
-                    min={personal.id_document_issued_at || new Date().toISOString().slice(0, 10)}
+                    min={personal.id_document_issued_at || todayISORome}
                     error={dateFieldErrors.id_document_expires_at}
                     onChange={(iso) => {
                       clearDateError("id_document_expires_at");
