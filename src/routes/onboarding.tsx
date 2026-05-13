@@ -287,7 +287,6 @@ function Onboarding() {
   const CF_REGEX = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
 
   const ID_DOC_ACCEPT = ID_DOC_ACCEPT_ATTR;
-  const ID_DOC_MAX = ID_DOC_MAX_BYTES;
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
   const vatValid = vatDigits.length === 11;
