@@ -1481,7 +1481,18 @@ function Onboarding() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Tipo documento *</Label>
-                  <Select value={personal.id_document_type} onValueChange={(v) => setPersonal({ ...personal, id_document_type: v })}>
+                  <Select
+                    value={personal.id_document_type}
+                    onValueChange={(v) =>
+                      setPersonal({
+                        ...personal,
+                        id_document_type: v,
+                        // Reset the number when the type changes so the user
+                        // re-enters a value that matches the new format.
+                        id_document_number: "",
+                      })
+                    }
+                  >
                     <SelectTrigger><SelectValue placeholder="Seleziona tipo" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="carta_identita">Carta d'identità</SelectItem>
@@ -1498,17 +1509,33 @@ function Onboarding() {
                     autoCapitalize="characters"
                     autoComplete="off"
                     spellCheck={false}
+                    disabled={!personal.id_document_type}
                     minLength={5}
-                    maxLength={20}
-                    placeholder="Solo lettere e numeri (5-20 caratteri)"
+                    maxLength={
+                      personal.id_document_type
+                        ? ID_DOC_MAX_LEN[personal.id_document_type as IdDocumentType]
+                        : 20
+                    }
+                    placeholder={
+                      personal.id_document_type
+                        ? ID_DOC_PLACEHOLDER[
+                            personal.id_document_type as IdDocumentType
+                          ]
+                        : "Prima seleziona il tipo documento"
+                    }
                     value={personal.id_document_number}
                     onChange={(e) => {
                       // Strip anything that is not [A-Z0-9], force uppercase,
-                      // trim leading/trailing spaces, cap at 20 chars.
+                      // trim leading/trailing spaces, cap at the per-type max.
+                      const cap = personal.id_document_type
+                        ? ID_DOC_MAX_LEN[
+                            personal.id_document_type as IdDocumentType
+                          ]
+                        : 20;
                       const cleaned = e.target.value
                         .toUpperCase()
                         .replace(/[^A-Z0-9]/g, "")
-                        .slice(0, 20);
+                        .slice(0, cap);
                       setPersonal({ ...personal, id_document_number: cleaned });
                     }}
                     onBlur={(e) =>
@@ -1517,10 +1544,30 @@ function Onboarding() {
                         id_document_number: e.target.value.trim().toUpperCase(),
                       })
                     }
+                    aria-invalid={
+                      !!personal.id_document_number &&
+                      !!personal.id_document_type &&
+                      !isValidIdDocNumberForType(
+                        personal.id_document_type as IdDocumentType,
+                        personal.id_document_number,
+                      )
+                    }
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Solo lettere e numeri, da 5 a 20 caratteri.
+                    {personal.id_document_type
+                      ? ID_DOC_HINT[personal.id_document_type as IdDocumentType]
+                      : "Seleziona prima il tipo documento."}
                   </p>
+                  {!!personal.id_document_number &&
+                    !!personal.id_document_type &&
+                    !isValidIdDocNumberForType(
+                      personal.id_document_type as IdDocumentType,
+                      personal.id_document_number,
+                    ) && (
+                      <p className="mt-1 text-xs text-destructive">
+                        Inserisci un numero documento valido per il documento scelto.
+                      </p>
+                    )}
                 </div>
                 <div>
                   <Label>Data rilascio *</Label>
