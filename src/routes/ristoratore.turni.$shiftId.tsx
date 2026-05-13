@@ -127,6 +127,38 @@ function ShiftDetailPage() {
   const [favLoading, setFavLoading] = useState(false);
   const reviewRef = useRef<HTMLDivElement | null>(null);
 
+  const toggleFavorite = async () => {
+    if (!user || !shift?.worker_id) return;
+    if (shift.status !== "completed") {
+      toast.error("Puoi aggiungere ai preferiti solo dopo aver completato il turno.");
+      return;
+    }
+    setFavLoading(true);
+    try {
+      if (isFavorite) {
+        const { error } = await supabase
+          .from("restaurant_worker_favorites")
+          .delete()
+          .eq("restaurant_id", user.id)
+          .eq("worker_id", shift.worker_id);
+        if (error) throw error;
+        setIsFavorite(false);
+        toast.success("Lavoratore rimosso dai preferiti.");
+      } else {
+        const { error } = await supabase
+          .from("restaurant_worker_favorites")
+          .insert({ restaurant_id: user.id, worker_id: shift.worker_id });
+        if (error) throw error;
+        setIsFavorite(true);
+        toast.success("Lavoratore aggiunto ai preferiti.");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Errore aggiornamento preferiti");
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
   const load = async () => {
     setLoading(true);
     setForbidden(false);
