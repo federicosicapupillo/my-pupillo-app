@@ -590,6 +590,7 @@ function Onboarding() {
             secondary_roles: workerRoles,
             service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
             id_document_path: uploadedPath,
+            avatar_url: uploadedAvatarUrl,
             first_name: personal.first_name.trim(),
             last_name: personal.last_name.trim(),
             birth_date: personal.birth_date,
