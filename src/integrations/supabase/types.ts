@@ -753,6 +753,8 @@ export type Database = {
           reviews_count: number | null
           sdi_code: string | null
           secondary_roles: string[] | null
+          service_area_city: string | null
+          service_area_district: string | null
           service_area_lat: number | null
           service_area_lng: number | null
           service_area_radius_m: number | null
@@ -878,6 +880,8 @@ export type Database = {
           reviews_count?: number | null
           sdi_code?: string | null
           secondary_roles?: string[] | null
+          service_area_city?: string | null
+          service_area_district?: string | null
           service_area_lat?: number | null
           service_area_lng?: number | null
           service_area_radius_m?: number | null
@@ -1003,6 +1007,8 @@ export type Database = {
           reviews_count?: number | null
           sdi_code?: string | null
           secondary_roles?: string[] | null
+          service_area_city?: string | null
+          service_area_district?: string | null
           service_area_lat?: number | null
           service_area_lng?: number | null
           service_area_radius_m?: number | null

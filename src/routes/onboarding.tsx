@@ -44,6 +44,10 @@ import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
+import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
+
+const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 20, 30, 50] as const;
+const ALLOWED_RADIUS_M = new Set(RADIUS_KM_OPTIONS.map((k) => k * 1000));
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
@@ -85,7 +89,9 @@ function Onboarding() {
     address: "",
     price_range: "",
     service_area_address: "",
-    service_area_radius_m: "500",
+    service_area_radius_m: "10000",
+    service_area_city: "",
+    service_area_district: "",
     street_number: "",
     district: "",
     city: "",
@@ -115,6 +121,43 @@ function Onboarding() {
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
+  const [serviceAreaLoading, setServiceAreaLoading] = useState(false);
+  const [serviceAreaError, setServiceAreaError] = useState<string | null>(null);
+
+  // Live-geocode worker service area for the map preview (debounced).
+  useEffect(() => {
+    if (role !== "worker") return;
+    const city = (form.service_area_city || "").trim();
+    const district = (form.service_area_district || "").trim();
+    const address = (form.service_area_address || "").trim();
+    if (address.length < 3 || !city) {
+      setServiceAreaPreview(null);
+      setServiceAreaError(null);
+      setServiceAreaLoading(false);
+      return;
+    }
+    setServiceAreaLoading(true);
+    setServiceAreaError(null);
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      const fullAddr = [address, district, city, "Italia"].filter(Boolean).join(", ");
+      const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 1 });
+      if (ctrl.signal.aborted) return;
+      if (r.ok) {
+        setServiceAreaPreview({ lat: r.lat, lng: r.lng });
+      } else {
+        setServiceAreaPreview(null);
+        setServiceAreaError("Indirizzo non trovato. Verrà riprovato al salvataggio.");
+      }
+      setServiceAreaLoading(false);
+    }, 700);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [role, form.service_area_address, form.service_area_city, form.service_area_district]);
 
   const [personal, setPersonal] = useState({
     first_name: "",
@@ -206,7 +249,10 @@ function Onboarding() {
     const experienceDone = !!form.professional_profile.trim();
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
-      !!form.service_area_address.trim() && !!form.service_area_radius_m;
+      !!form.service_area_city.trim() &&
+      !!form.service_area_district.trim() &&
+      form.service_area_address.trim().length >= 3 &&
+      ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m));
     const finalLocked = !(personalDone && experienceDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
@@ -299,7 +345,13 @@ function Onboarding() {
         venue_type_other: (profile as any).venue_type_other ?? "",
         address: profile.address ?? "",
         price_range: profile.price_range ?? "",
-        service_area_radius_m: String(profile.service_area_radius_m ?? 500),
+        service_area_address: (profile as any).service_area_address ?? "",
+        service_area_radius_m: (() => {
+          const v = profile.service_area_radius_m ?? 10000;
+          return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
+        })(),
+        service_area_city: (profile as any).service_area_city ?? "",
+        service_area_district: (profile as any).service_area_district ?? "",
         street_number: (profile as any).street_number ?? "",
         district: (profile as any).neighborhood ?? "",
         city: (profile as any).city ?? "",
@@ -566,9 +618,40 @@ function Onboarding() {
       service_area_lng: null,
     };
     let restCoords: { latitude: number | null; longitude: number | null } = { latitude: null, longitude: null };
-    if (role === "worker" && form.service_area_address.trim().length >= 3) {
-      const r = await geocodeAddressWithRetry(form.service_area_address.trim(), { maxAttempts: 2 });
-      if (r.ok) serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
+    if (role === "worker") {
+      if (!form.service_area_city.trim()) {
+        setBusy(false);
+        toast.error("Indica la città di partenza per la tua area di interesse.");
+        return;
+      }
+      if (!form.service_area_district.trim()) {
+        setBusy(false);
+        toast.error("Indica la zona o il quartiere della tua area di interesse.");
+        return;
+      }
+      if (form.service_area_address.trim().length < 3) {
+        setBusy(false);
+        toast.error("Indica l'indirizzo o un punto di riferimento della tua area di interesse.");
+        return;
+      }
+      if (!ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))) {
+        setBusy(false);
+        toast.error("Seleziona un raggio d'azione valido.");
+        return;
+      }
+      const fullAddr = [
+        form.service_area_address.trim(),
+        form.service_area_district.trim(),
+        form.service_area_city.trim(),
+        "Italia",
+      ].filter(Boolean).join(", ");
+      const r = await geocodeAddressWithRetry(fullAddr, { maxAttempts: 2 });
+      if (!r.ok) {
+        setBusy(false);
+        toast.error("Impossibile localizzare l'indirizzo dell'area di interesse. Verifica i dati inseriti.");
+        return;
+      }
+      serviceArea = { service_area_lat: r.lat, service_area_lng: r.lng };
     }
     if (role === "restaurant" && form.address.trim().length >= 3) {
       const fullAddr = [
@@ -636,7 +719,13 @@ function Onboarding() {
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
             secondary_roles: workerRoles,
-            service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
+            service_area_address: form.service_area_address.trim() || null,
+            service_area_city: form.service_area_city.trim() || null,
+            service_area_district: form.service_area_district.trim() || null,
+            service_area_radius_m: (() => {
+              const v = parseInt(form.service_area_radius_m);
+              return ALLOWED_RADIUS_M.has(v) ? v : 10000;
+            })(),
             id_document_path: uploadedPath,
             avatar_url: uploadedAvatarUrl,
             first_name: personal.first_name.trim(),
@@ -1103,30 +1192,71 @@ function Onboarding() {
               <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
               <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
             </div>
-            <div id="sec-availability" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
+            <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <div>
-                <Label>Area di interesse (indirizzo)</Label>
+                <Label className="font-semibold">Area di interesse / Raggio d'azione *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Indica dove sei disponibile a lavorare. Verrai mostrato in
+                  <span className="text-emerald-600 font-medium"> verde</span> ai ristoratori il cui locale rientra nella tua area.
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Città di partenza *</Label>
+                  <Input
+                    placeholder="es. Milano"
+                    value={form.service_area_city}
+                    onChange={(e) => setForm({ ...form, service_area_city: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Zona / quartiere *</Label>
+                  <Input
+                    placeholder="es. Navigli"
+                    value={form.service_area_district}
+                    onChange={(e) => setForm({ ...form, service_area_district: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Indirizzo o punto di riferimento *</Label>
                 <Input
-                  placeholder="es. Via Roma 1, Milano"
+                  placeholder="es. Via Roma 1 oppure Stazione Centrale"
                   value={form.service_area_address}
                   onChange={(e) => setForm({ ...form, service_area_address: e.target.value })}
                 />
               </div>
               <div>
-                <Label>Raggio (m)</Label>
-                <Input
-                  type="number"
-                  min="100"
-                  step="100"
+                <Label>Raggio d'azione *</Label>
+                <Select
                   value={form.service_area_radius_m}
-                  onChange={(e) => setForm({ ...form, service_area_radius_m: e.target.value })}
+                  onValueChange={(v) => setForm({ ...form, service_area_radius_m: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleziona il raggio" /></SelectTrigger>
+                  <SelectContent>
+                    {RADIUS_KM_OPTIONS.map((km) => (
+                      <SelectItem key={km} value={String(km * 1000)}>{km} km</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <WorkerServiceAreaMap
+                  lat={serviceAreaPreview?.lat ?? null}
+                  lng={serviceAreaPreview?.lng ?? null}
+                  radiusM={parseInt(form.service_area_radius_m) || 10000}
                 />
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {serviceAreaLoading
+                    ? "Localizzazione in corso…"
+                    : serviceAreaError
+                    ? <span className="text-destructive">{serviceAreaError}</span>
+                    : serviceAreaPreview
+                    ? "Anteprima dell'area di copertura."
+                    : "Compila città e indirizzo per vedere l'anteprima."}
+                </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground -mt-3">
-              Verrai mostrato in <span className="text-emerald-600 font-medium">verde</span> ai ristoratori il cui
-              locale rientra nella tua area.
-            </p>
             <div id="sec-id-document" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Documento di identità *</Label>
               <p className="text-xs text-muted-foreground">
