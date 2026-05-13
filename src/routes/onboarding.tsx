@@ -1293,7 +1293,35 @@ function Onboarding() {
                 </div>
                 <div>
                   <Label>Numero documento *</Label>
-                  <Input required value={personal.id_document_number} onChange={(e) => setPersonal({ ...personal, id_document_number: e.target.value })} />
+                  <Input
+                    required
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    minLength={5}
+                    maxLength={20}
+                    placeholder="Solo lettere e numeri (5-20 caratteri)"
+                    value={personal.id_document_number}
+                    onChange={(e) => {
+                      // Strip anything that is not [A-Z0-9], force uppercase,
+                      // trim leading/trailing spaces, cap at 20 chars.
+                      const cleaned = e.target.value
+                        .toUpperCase()
+                        .replace(/[^A-Z0-9]/g, "")
+                        .slice(0, 20);
+                      setPersonal({ ...personal, id_document_number: cleaned });
+                    }}
+                    onBlur={(e) =>
+                      setPersonal({
+                        ...personal,
+                        id_document_number: e.target.value.trim().toUpperCase(),
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Solo lettere e numeri, da 5 a 20 caratteri.
+                  </p>
                 </div>
                 <div>
                   <Label>Data rilascio *</Label>
