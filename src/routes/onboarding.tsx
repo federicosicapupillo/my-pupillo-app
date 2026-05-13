@@ -641,9 +641,9 @@ function Onboarding() {
       const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
       const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
       const today = todayInRome();
-      const birth = personal.birth_date ? new Date(personal.birth_date) : null;
-      const minAge = new Date(today); minAge.setFullYear(minAge.getFullYear() - 16);
-      const birthOk = !!birth && birth < today && birth <= minAge;
+      const birthOk =
+        isValidISODate(personal.birth_date) &&
+        validateBirthDate(personal.birth_date, today) === null;
       const issued = personal.id_document_issued_at ? new Date(personal.id_document_issued_at) : null;
       const expires = personal.id_document_expires_at ? new Date(personal.id_document_expires_at) : null;
       if (!allFilled || !cfOk || !birthOk || (!idDocFile && !idDocPath)) {
