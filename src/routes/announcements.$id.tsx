@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,9 @@ import { formatTariff } from "@/lib/format";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    section: s.section === "candidature" ? "candidature" : undefined,
+  }),
   component: () => <RequireAuth><AnnouncementDetail /></RequireAuth>,
 });
 
@@ -119,8 +122,10 @@ const APP_STATUS_CLS: Record<string, string> = {
 
 function AnnouncementDetail() {
   const { id } = Route.useParams();
+  const { section } = Route.useSearch();
   const { user, role } = useAuth();
   const nav = useNavigate();
+  const candidatesRef = useRef<HTMLElement | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [apps, setApps] = useState<App[]>([]);
   const [workers, setWorkers] = useState<Record<string, WorkerProfile>>({});
@@ -162,6 +167,12 @@ function AnnouncementDetail() {
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+
+  useEffect(() => {
+    if (!loading && section === "candidature" && candidatesRef.current) {
+      candidatesRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [loading, section, ann?.id, apps.length]);
 
   // Realtime applications changes
   useEffect(() => {
@@ -388,13 +399,13 @@ function AnnouncementDetail() {
       <LocationAccessSection ann={ann} restaurant={restaurant} isOwner={isOwner} />
 
       {isOwner && (
-        <>
+        <section ref={candidatesRef} id="candidature-annuncio" className="scroll-mt-24">
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <Users className="h-5 w-5" /> Candidati ({counts.total})
           </h2>
           {apps.length === 0 ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-              Nessuna candidatura ricevuta. Condividi l'annuncio o invita lavoratori dal motore di ricerca.
+              Non hai ancora ricevuto candidature per questo annuncio.
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
@@ -479,7 +490,7 @@ function AnnouncementDetail() {
               })}
             </div>
           )}
-        </>
+        </section>
       )}
     </AppShell>
   );
