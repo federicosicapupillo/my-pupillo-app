@@ -5,7 +5,7 @@ import { getAvatarUrls } from "@/lib/avatars.functions";
 // Signed URLs expire after 1h server-side; refresh cache after 50min.
 const TTL_MS = 50 * 60 * 1000;
 const STORAGE_KEY = "avatar-url-cache:v1";
-type Entry = { url: string | null; at: number };
+type Entry = { url: string | null; name?: string | null; at: number };
 const cache = new Map<string, Entry>();
 const inflight = new Map<string, Promise<void>>();
 
@@ -68,7 +68,10 @@ export function useAvatarUrls(userIds: Array<string | null | undefined>) {
       const p = fetchUrls({ data: { userIds: toFetch } })
         .then((res) => {
           const now = Date.now();
-          for (const [id, url] of Object.entries(res.urls)) cache.set(id, { url, at: now });
+          const names = (res as { names?: Record<string, string | null> }).names ?? {};
+          for (const [id, url] of Object.entries(res.urls)) {
+            cache.set(id, { url, name: names[id] ?? null, at: now });
+          }
           schedulePersist();
         })
         .catch(() => {})
@@ -115,4 +118,11 @@ export function useAvatarUrl(userId: string | null | undefined) {
   const map = useAvatarUrls(userId ? [userId] : []);
   if (!userId) return null;
   return map[userId];
+}
+
+export function useUserName(userId: string | null | undefined): string | null {
+  // Trigger fetch via the same shared cache.
+  useAvatarUrls(userId ? [userId] : []);
+  if (!userId) return null;
+  return cache.get(userId)?.name ?? null;
 }

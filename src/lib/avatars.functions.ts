@@ -15,7 +15,7 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("profiles")
-      .select("id, avatar_url")
+      .select("id, avatar_url, full_name, business_name")
       .in("id", data.userIds);
     if (error) throw new Response(error.message, { status: 500 });
 
@@ -26,9 +26,12 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
     });
 
     const result: Record<string, string | null> = {};
+    const names: Record<string, string | null> = {};
     // Strict path validator: <ownerUid>/avatar-<digits>.(jpg|jpeg|png|webp)
     const PATH_RE = /^([0-9a-f-]{36})\/avatar-\d+\.(jpe?g|png|webp)$/i;
     for (const row of rows ?? []) {
+      const r = row as any;
+      names[row.id] = (r.business_name as string | null) || (r.full_name as string | null) || null;
       const stored = (row as any).avatar_url as string | null;
       if (!stored || typeof stored !== "string") {
         result[row.id] = null;
@@ -50,5 +53,5 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
         .createSignedUrl(stored, 60 * 60);
       result[row.id] = signed?.signedUrl ?? null;
     }
-    return { urls: result };
+    return { urls: result, names };
   });
