@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Phone, Shield, Star, Users } from "lucide-react";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
@@ -92,9 +93,7 @@ function WorkerDetailPage() {
 
       <div className="grid gap-4 md:grid-cols-[280px_1fr]">
         <div className="rounded-2xl border bg-card p-5 flex flex-col items-center text-center">
-          <div className="h-24 w-24 rounded-full bg-primary/15 text-primary text-2xl font-bold flex items-center justify-center mb-3">
-            {initials(w.full_name)}
-          </div>
+          <UserAvatar userId={w.id} name={w.full_name} className="h-24 w-24 text-2xl mb-3" />
           <div className="font-semibold">{w.full_name || "—"}</div>
           {w.age != null && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
           {w.badge && (

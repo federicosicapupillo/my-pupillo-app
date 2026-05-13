@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -245,8 +246,8 @@ function MessagesLayout() {
                     className={`group flex items-center gap-3 rounded-2xl border p-4 transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${active ? "bg-primary/10 border-primary/40" : "bg-card hover:bg-accent"}`}
                     aria-current={active ? "page" : undefined}
                   >
-                    <div className="relative h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <MessageSquare className="h-4 w-4 text-primary" />
+                    <div className="relative shrink-0">
+                      <UserAvatar userId={t.other.id} name={t.other.name} className="h-10 w-10" />
                       {t.unread > 0 && (
                         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
                           {t.unread > 9 ? "9+" : t.unread}
