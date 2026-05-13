@@ -657,6 +657,7 @@ export type Database = {
           age: number | null
           age_verified: boolean
           age_verified_at: string | null
+          avatar_url: string | null
           badge: Database["public"]["Enums"]["worker_badge"] | null
           birth_date: string | null
           birth_place: string | null
@@ -781,6 +782,7 @@ export type Database = {
           age?: number | null
           age_verified?: boolean
           age_verified_at?: string | null
+          avatar_url?: string | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
           birth_place?: string | null
@@ -905,6 +907,7 @@ export type Database = {
           age?: number | null
           age_verified?: boolean
           age_verified_at?: string | null
+          avatar_url?: string | null
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
           birth_place?: string | null
