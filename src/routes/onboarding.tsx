@@ -32,6 +32,7 @@ import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OnboardingStatusCard, type OnboardingStep } from "@/components/OnboardingStatusCard";
+import { DateField } from "@/components/DateField";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
