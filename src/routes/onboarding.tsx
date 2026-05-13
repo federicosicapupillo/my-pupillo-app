@@ -326,7 +326,19 @@ function Onboarding() {
       setIdDocName(p.split("/").pop() ?? p);
     }
     if (profile && (profile as any).avatar_url) {
-      setAvatarUrl((profile as any).avatar_url as string);
+      const stored = (profile as any).avatar_url as string;
+      if (stored.startsWith("http")) {
+        // Legacy public URL — display as-is (will be replaced on next upload)
+        setAvatarUrl(stored);
+      } else {
+        // Storage path — generate a short-lived signed URL
+        supabase.storage
+          .from("avatars")
+          .createSignedUrl(stored, 60 * 60)
+          .then(({ data: signed }) => {
+            if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+          });
+      }
     }
     if (profile) {
       const p = profile as any;
@@ -507,8 +519,8 @@ function Onboarding() {
           toast.error("Caricamento foto profilo non riuscito: " + upErr.message);
           return;
         }
-        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-        uploadedAvatarUrl = pub.publicUrl;
+        // Store the storage path (bucket is private); display via signed URLs.
+        uploadedAvatarUrl = path;
       }
     }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
