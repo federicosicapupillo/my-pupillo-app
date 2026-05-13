@@ -907,6 +907,13 @@ function Thread() {
             onSubmit={submitReview}
           />
         )}
+
+        <InsufficientCreditsDialog
+          open={insufficientOpen}
+          onOpenChange={setInsufficientOpen}
+          currentCredits={creditsAvailable}
+          returnTo={`/messages/${id}`}
+        />
       </div>
   );
 }
