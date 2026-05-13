@@ -501,11 +501,11 @@ function Onboarding() {
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div id="sec-personal" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
           <div>
-            <Label>Nome completo</Label>
+            <Label required>Nome completo</Label>
             <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
           </div>
           <div>
-            <Label>Telefono *</Label>
+            <Label required>Telefono</Label>
             <PhoneInput
               required
               code={form.phone_code}
@@ -519,7 +519,7 @@ function Onboarding() {
           <>
             <div id="sec-business" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
               <div>
-                <Label>Nome locale</Label>
+                <Label required>Nome locale</Label>
                 <Input
                   required
                   value={form.business_name}
@@ -527,7 +527,7 @@ function Onboarding() {
                 />
               </div>
               <div id="sec-vat" className="md:col-span-1 scroll-mt-24">
-                <Label>Partita IVA *</Label>
+                <Label required>Partita IVA</Label>
                 <div className="flex gap-2">
                   <Input
                     required
@@ -559,7 +559,7 @@ function Onboarding() {
                 )}
               </div>
               <div>
-                <Label>Tipologia locale *</Label>
+                <Label required>Tipologia locale</Label>
                 <select
                   required
                   value={form.venue_type}
@@ -590,7 +590,7 @@ function Onboarding() {
                 )}
               </div>
               <div>
-                <Label>Fascia di prezzo *</Label>
+                <Label required>Fascia di prezzo</Label>
                 <select
                   required
                   value={form.price_range}
@@ -608,7 +608,7 @@ function Onboarding() {
             </div>
             <div id="sec-location" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
               <div>
-                <Label>Indirizzo *</Label>
+                <Label required>Indirizzo</Label>
                 <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               </div>
               <div>
@@ -621,7 +621,7 @@ function Onboarding() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label>Provincia *</Label>
+                <Label required>Provincia</Label>
                 <select
                   required
                   value={form.province}
@@ -637,7 +637,7 @@ function Onboarding() {
                 </select>
               </div>
               <div>
-                <Label>Città *</Label>
+                <Label required>Città</Label>
                 <select
                   required
                   disabled={!form.province}
@@ -792,7 +792,7 @@ function Onboarding() {
         ) : (
           <>
             <div id="sec-experience" className="scroll-mt-24">
-              <Label>Età</Label>
+              <Label required>Età</Label>
               <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
             </div>
             <div>
@@ -804,7 +804,7 @@ function Onboarding() {
               />
             </div>
             <div id="sec-languages" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
-              <Label className="font-semibold">Lingue parlate</Label>
+              <Label required className="font-semibold">Lingue parlate</Label>
               <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
               <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
             </div>
@@ -847,6 +847,9 @@ function Onboarding() {
         <Button type="submit" disabled={busy}>
           {busy ? "Salvataggio..." : "Salva e continua"}
         </Button>
+        <p className="text-xs text-muted-foreground">
+          <span className="text-destructive">*</span> Campi obbligatori
+        </p>
       </form>
     </AppShell>
   );

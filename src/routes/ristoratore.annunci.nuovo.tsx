@@ -619,24 +619,24 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="1" title="Informazioni principali" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Ruolo cercato">
+           <Field required label="Ruolo cercato">
               <Select value={f.role_required} onValueChange={v => { setField("role_required", v); setField("title", v); }}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo" /></SelectTrigger>
                 <SelectContent>{ROLE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
-            <Field label="Tariffa oraria">
+           <Field required label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
+           <Field required label="Tariffa oraria">
               <HourlyRateInput value={f.hourly_rate} onChange={(v) => setField("hourly_rate", v)} required />
             </Field>
-            <Field label="Data inizio turno">
+           <Field required label="Data inizio turno">
               <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} min={todayISO} required />
             </Field>
-            <Field label="Ora inizio turno"><Input type="time" required min={startTimeMin} value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
-            <Field label="Data fine turno">
+           <Field required label="Ora inizio turno"><Input type="time" required min={startTimeMin} value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
+           <Field required label="Data fine turno">
               <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || todayISO} required />
             </Field>
-            <Field label="Ora fine turno"><Input type="time" required min={endTimeMin} value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
+           <Field required label="Ora fine turno"><Input type="time" required min={endTimeMin} value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
           </div>
           <p className="text-xs text-muted-foreground">
             Se il turno termina dopo la mezzanotte, seleziona come data fine il giorno successivo.
@@ -697,8 +697,8 @@ function NewRestaurantJobRequest() {
           <SectionTitle number="2" title="Luogo e accesso" subtitle="Precompilato dal profilo ristoratore, modificabile per questo singolo annuncio." />
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Nome locale"><Input value={f.restaurant_name} onChange={e => setField("restaurant_name", e.target.value)} /></Field>
-            <Field label="Indirizzo"><Input required value={f.address} onChange={e => setField("address", e.target.value)} /></Field>
-            <Field label="Provincia">
+           <Field required label="Indirizzo"><Input required value={f.address} onChange={e => setField("address", e.target.value)} /></Field>
+           <Field required label="Provincia">
               <select
                 value={f.province}
                 onChange={(e) => { setField("province", e.target.value); setField("city", ""); setField("postal_code", ""); setField("district", ""); }}
@@ -708,7 +708,7 @@ function NewRestaurantJobRequest() {
                 {ITALIAN_LOCATIONS.map((p) => <option key={p.province_code} value={p.province}>{p.province} ({p.province_code})</option>)}
               </select>
             </Field>
-            <Field label="Città">
+           <Field required label="Città">
               <select
                 value={f.city}
                 disabled={!f.province}
@@ -941,8 +941,8 @@ function SectionTitle({ number, title, subtitle }: { number: string; title: stri
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
+function Field({ label, children, required }: { label: string; children: ReactNode; required?: boolean }) {
+  return <div className="space-y-1.5"><Label required={required}>{label}</Label>{children}</div>;
 }
 
 function ChoiceGroup({ title, items, selected, onToggle }: { title: string; items: readonly { value: string; label: string }[]; selected: string[]; onToggle: (value: string) => void }) {

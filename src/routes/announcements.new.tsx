@@ -303,13 +303,13 @@ function NewAnn() {
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <Label>Data servizio</Label>
+            <Label required>Data servizio</Label>
             <DateField value={f.service_date} onChange={(v) => setF({ ...f, service_date: v })} required />
           </div>
-          <div><Label>Ora inizio</Label><Input type="time" required value={f.service_time} onChange={e => setF({ ...f, service_time: e.target.value })} /></div>
-          <div><Label>Durata (ore)</Label><Input type="number" min="1" step="0.5" required value={f.duration_hours} onChange={e => setF({ ...f, duration_hours: e.target.value })} /></div>
+          <div><Label required>Ora inizio</Label><Input type="time" required value={f.service_time} onChange={e => setF({ ...f, service_time: e.target.value })} /></div>
+          <div><Label required>Durata (ore)</Label><Input type="number" min="1" step="0.5" required value={f.duration_hours} onChange={e => setF({ ...f, duration_hours: e.target.value })} /></div>
           <div>
-            <Label>Velocità ricerca</Label>
+            <Label required>Velocità ricerca</Label>
             <Select value={f.speed} onValueChange={v => setF({ ...f, speed: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -320,7 +320,7 @@ function NewAnn() {
             </Select>
           </div>
           <div>
-            <Label>Tipo tariffa</Label>
+            <Label required>Tipo tariffa</Label>
             <Select value={f.tariff_type} onValueChange={v => setF({ ...f, tariff_type: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -330,7 +330,7 @@ function NewAnn() {
             </Select>
           </div>
           <div>
-            <Label>{f.tariff_type === "hourly" ? "Tariffa oraria" : "Importo (€)"}</Label>
+            <Label required>{f.tariff_type === "hourly" ? "Tariffa oraria" : "Importo (€)"}</Label>
             {f.tariff_type === "hourly" ? (
               <HourlyRateInput value={f.tariff_amount} onChange={(v) => setF({ ...f, tariff_amount: v })} required />
             ) : (
@@ -339,7 +339,7 @@ function NewAnn() {
           </div>
         </div>
         <div>
-          <Label>Indirizzo del servizio</Label>
+          <Label required>Indirizzo del servizio</Label>
           <Input required value={f.location_address} onChange={e => setF({ ...f, location_address: e.target.value })} />
           {coords && (
             <div className="mt-2"><AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.location_address} /></div>
@@ -385,7 +385,7 @@ function NewAnn() {
           </div>
         </div>
         <div>
-          <Label>Ruolo richiesto</Label>
+          <Label required>Ruolo richiesto</Label>
           <Select value={f.professional_profile} onValueChange={v => setF({ ...f, professional_profile: v })}>
             <SelectTrigger><SelectValue placeholder="Seleziona un ruolo" /></SelectTrigger>
             <SelectContent>
@@ -510,6 +510,9 @@ function NewAnn() {
             )}
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          <span className="text-destructive">*</span> Campi obbligatori
+        </p>
       </form>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
