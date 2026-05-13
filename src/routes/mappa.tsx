@@ -93,6 +93,7 @@ function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
 
 function MapPage() {
   const { role } = useAuth();
+  const isRestaurant = role === "restaurant";
   const isDev = typeof import.meta !== "undefined" && (import.meta as any).env?.DEV === true;
   const debugEnabled = role === "admin" || isDev;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -122,6 +123,14 @@ function MapPage() {
   const [wMinReliab, setWMinReliab] = useState("any");
   const [wExp, setWExp] = useState("any");
   const [view, setView] = useState<"restaurants" | "workers">("restaurants");
+
+  // For restaurant accounts: never display other restaurants on the map
+  useEffect(() => {
+    if (isRestaurant) {
+      setShowR(false);
+      setView("workers");
+    }
+  }, [isRestaurant]);
 
   // location
   const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
@@ -489,7 +498,9 @@ function MapPage() {
             Solo con richieste attive
           </label>
           <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
-            <label className="flex items-center gap-2"><Checkbox checked={showR} onCheckedChange={v=>setShowR(!!v)} /><Dot color="#4f46e5" /> Ristoratori</label>
+            {!isRestaurant && (
+              <label className="flex items-center gap-2"><Checkbox checked={showR} onCheckedChange={v=>setShowR(!!v)} /><Dot color="#4f46e5" /> Ristoratori</label>
+            )}
             <label className="flex items-center gap-2"><Checkbox checked={showW} onCheckedChange={v=>setShowW(!!v)} /><Dot color="#22c55e" /> Lavoratori</label>
             <label className="flex items-center gap-2"><Checkbox checked={showA} onCheckedChange={v=>setShowA(!!v)} /><Dot color="#06b6d4" /> Richieste</label>
           </div>
@@ -543,7 +554,9 @@ function MapPage() {
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2 text-sm">
-            <Button size="sm" variant={view === "restaurants" ? "secondary" : "ghost"} onClick={() => setView("restaurants")}>Lista ristoratori</Button>
+            {!isRestaurant && (
+              <Button size="sm" variant={view === "restaurants" ? "secondary" : "ghost"} onClick={() => setView("restaurants")}>Lista ristoratori</Button>
+            )}
             <Button size="sm" variant={view === "workers" ? "secondary" : "ghost"} onClick={() => setView("workers")}>Lista lavoratori</Button>
           </div>
         </div>
