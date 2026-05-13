@@ -699,6 +699,7 @@ export type Database = {
           hourly_availability: string | null
           hourly_rate: number | null
           id: string
+          id_document_back_path: string | null
           id_document_expires_at: string | null
           id_document_issued_at: string | null
           id_document_issuer: string | null
@@ -826,6 +827,7 @@ export type Database = {
           hourly_availability?: string | null
           hourly_rate?: number | null
           id: string
+          id_document_back_path?: string | null
           id_document_expires_at?: string | null
           id_document_issued_at?: string | null
           id_document_issuer?: string | null
@@ -953,6 +955,7 @@ export type Database = {
           hourly_availability?: string | null
           hourly_rate?: number | null
           id?: string
+          id_document_back_path?: string | null
           id_document_expires_at?: string | null
           id_document_issued_at?: string | null
           id_document_issuer?: string | null
