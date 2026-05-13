@@ -1329,6 +1329,64 @@ function Onboarding() {
                   <Input required placeholder="Es. Comune di Milano / MIT / Questura" value={personal.id_document_issuer} onChange={(e) => setPersonal({ ...personal, id_document_issuer: e.target.value })} />
                 </div>
               </div>
+              <div id="sec-id-document" className="space-y-2 pt-2 border-t border-border/60 scroll-mt-24">
+                <Label className="font-semibold">Upload documento *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Formati accettati: PDF, JPG, JPEG, PNG · max 10 MB.
+                </p>
+                <input
+                  ref={idDocInputRef}
+                  type="file"
+                  accept={ID_DOC_ACCEPT}
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (!f) return;
+                    const check = await validateIdDocumentFile(f);
+                    if (!check.ok) {
+                      toast.error(check.error);
+                      e.target.value = "";
+                      return;
+                    }
+                    if (idDocPreview) URL.revokeObjectURL(idDocPreview);
+                    const isImage = f.type === "image/jpeg" || f.type === "image/png";
+                    setIdDocPreview(isImage ? URL.createObjectURL(f) : null);
+                    setIdDocFile(f);
+                    setIdDocName(f.name);
+                  }}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant={idDocName ? "outline" : "default"}
+                    className="h-12 px-5 text-base"
+                    onClick={() => idDocInputRef.current?.click()}
+                  >
+                    {idDocName ? "Sostituisci documento" : "Carica documento"}
+                  </Button>
+                  {idDocName && (
+                    <span className="text-sm text-muted-foreground break-all">
+                      📎 {idDocName}
+                      {idDocFile ? " (nuovo file da salvare)" : " (già caricato)"}
+                    </span>
+                  )}
+                </div>
+                {idDocPreview && (
+                  <div className="mt-2">
+                    <img
+                      src={idDocPreview}
+                      alt="Anteprima documento"
+                      className="max-h-48 rounded-lg border object-contain bg-background"
+                    />
+                  </div>
+                )}
+                {!idDocName && (
+                  <p className="text-xs text-destructive">
+                    Carica il documento di identità per completare il profilo.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div id="sec-experience" className="scroll-mt-24">
