@@ -14,6 +14,7 @@ import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -61,6 +62,8 @@ function Browse() {
   const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successApp, setSuccessApp] = useState<{ id: string; ann: Ann } | null>(null);
+  const [applyMode, setApplyMode] = useState<"accept" | "counter">("accept");
+  const [counterAmount, setCounterAmount] = useState<string>("");
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
@@ -149,18 +152,44 @@ function Browse() {
       setConfirmAnn(null);
       return;
     }
+    // Validazione contro-offerta lato client
+    let counterValueNum: number | null = null;
+    if (applyMode === "counter") {
+      const v = parseFloat(counterAmount.replace(",", "."));
+      if (!Number.isFinite(v) || v <= 0) {
+        toast.error("Inserisci una tariffa valida.");
+        return;
+      }
+      if (v <= (confirmAnn.tariff_amount ?? 0)) {
+        toast.error(`La contro offerta deve essere superiore a € ${confirmAnn.tariff_amount}.`);
+        return;
+      }
+      if (v > 100) {
+        toast.error("Importo non valido (max € 100/h).");
+        return;
+      }
+      counterValueNum = Math.round(v * 100) / 100;
+    }
     setSubmitting(true);
-    const { data: app, error } = await supabase.from("applications").insert({
+    const insertPayload: any = {
       announcement_id: confirmAnn.id, worker_id: user.id, restaurant_id: confirmAnn.restaurant_id,
-    }).select("id").single();
+    };
+    if (counterValueNum != null) {
+      insertPayload.status = "counter_offer";
+      insertPayload.proposed_tariff = counterValueNum;
+      insertPayload.worker_response_at = new Date().toISOString();
+    }
+    const { data: app, error } = await supabase.from("applications").insert(insertPayload).select("id").single();
     if (error) { setSubmitting(false); return toast.error(error.message); }
     // Notifica al ristoratore (best-effort)
     if (app?.id) {
       await supabase.from("notifications").insert({
         user_id: confirmAnn.restaurant_id,
-        title: "Nuova candidatura ricevuta",
-        body: "Un lavoratore si è candidato per uno dei tuoi turni.",
-        link: `/announcements/${confirmAnn.id}`,
+        title: counterValueNum != null ? "Nuova contro offerta ricevuta" : "Nuova candidatura ricevuta",
+        body: counterValueNum != null
+          ? `Un lavoratore propone € ${counterValueNum}/h per uno dei tuoi turni.`
+          : "Un lavoratore si è candidato per uno dei tuoi turni.",
+        link: `/messages/${app.id}`,
       });
     }
     setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
@@ -170,6 +199,8 @@ function Browse() {
     }
     setConfirmAnn(null);
     setOpenId(null);
+    setApplyMode("accept");
+    setCounterAmount("");
   };
 
   if (role && role !== "worker") {
@@ -332,7 +363,11 @@ function Browse() {
         ann={confirmAnn}
         restaurantInfo={confirmAnn ? restaurantsById[confirmAnn.restaurant_id] : undefined}
         submitting={submitting}
-        onCancel={() => !submitting && setConfirmAnn(null)}
+        applyMode={applyMode}
+        setApplyMode={setApplyMode}
+        counterAmount={counterAmount}
+        setCounterAmount={setCounterAmount}
+        onCancel={() => { if (!submitting) { setConfirmAnn(null); setApplyMode("accept"); setCounterAmount(""); } }}
         onConfirm={submitApplication}
       />
 
@@ -352,11 +387,15 @@ function isNightShift(time?: string | null) {
 }
 
 function ApplyConfirmDialog({
-  ann, restaurantInfo, submitting, onCancel, onConfirm,
+  ann, restaurantInfo, submitting, applyMode, setApplyMode, counterAmount, setCounterAmount, onCancel, onConfirm,
 }: {
   ann: Ann | null;
   restaurantInfo?: { city: string | null; neighborhood: string | null };
   submitting: boolean;
+  applyMode: "accept" | "counter";
+  setApplyMode: (m: "accept" | "counter") => void;
+  counterAmount: string;
+  setCounterAmount: (v: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -417,6 +456,55 @@ function ApplyConfirmDialog({
                     <Hourglass className="h-3 w-3" />Turno lungo
                   </span>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {ann && (
+          <div className="px-6 pb-2 space-y-2">
+            <Label className="text-sm font-medium">Vuoi candidarti alla tariffa proposta o fare una contro offerta?</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setApplyMode("accept")}
+                className={`rounded-xl border p-3 text-left transition ${applyMode === "accept" ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/40"}`}
+              >
+                <div className="text-xs text-muted-foreground">Accetta tariffa</div>
+                <div className="font-semibold text-sm mt-0.5">€ {ann.tariff_amount} {ann.tariff_type === "hourly" ? "/h" : ""}</div>
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setApplyMode("counter")}
+                className={`rounded-xl border p-3 text-left transition ${applyMode === "counter" ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/40"}`}
+              >
+                <div className="text-xs text-muted-foreground">Fai contro offerta</div>
+                <div className="font-semibold text-sm mt-0.5">Proponi tariffa</div>
+              </button>
+            </div>
+            {applyMode === "counter" && (
+              <div className="pt-1 animate-fade-in">
+                <Label className="text-xs text-muted-foreground">La tua tariffa (EUR/h)</Label>
+                <div className="relative mt-1">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min={ann.tariff_amount + 0.01}
+                    max={100}
+                    step="0.5"
+                    placeholder={`min € ${ann.tariff_amount + 1}`}
+                    value={counterAmount}
+                    onChange={(e) => setCounterAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+                    disabled={submitting}
+                    className="pr-14"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">EUR/h</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Deve essere superiore a € {ann.tariff_amount}. Massimo € 100/h.
+                </p>
               </div>
             )}
           </div>
