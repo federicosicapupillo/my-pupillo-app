@@ -135,7 +135,6 @@ function Onboarding() {
     phone_code: DEFAULT_PHONE_PREFIX,
     phone_number: "",
     age: "",
-    professional_profile: "",
     languages: "",
     business_name: "",
     vat_number: "",
@@ -366,14 +365,13 @@ function Onboarding() {
 
     // worker (default)
     const personalDone = !!form.full_name.trim() && !!form.age && Number(form.age) >= 16;
-    const experienceDone = !!form.professional_profile.trim();
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
       !!form.service_area_city.trim() &&
       !!form.service_area_district.trim() &&
       form.service_area_address.trim().length >= 3 &&
       ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m));
-    const finalLocked = !(personalDone && experienceDone && languagesDone);
+    const finalLocked = !(personalDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
       {
@@ -388,13 +386,6 @@ function Onboarding() {
         hint: "Nome ed età",
         status: personalDone ? "done" : "todo",
         href: "#sec-personal",
-      },
-      {
-        id: "experience",
-        label: "Esperienza e ruoli",
-        hint: "Racconta il tuo profilo professionale",
-        status: experienceDone ? "done" : "todo",
-        href: "#sec-experience",
       },
       {
         id: "languages",
@@ -457,7 +448,6 @@ function Onboarding() {
         phone_code: (profile as any).phone_country_code || ph.code,
         phone_number: (profile as any).phone_number || ph.number,
         age: profile.age?.toString() ?? "",
-        professional_profile: profile.professional_profile ?? "",
         languages: (profile.languages ?? []).join(", "),
         business_name: profile.business_name ?? "",
         vat_number: profile.vat_number ?? "",
@@ -891,7 +881,6 @@ function Onboarding() {
             terms_accepted: true,
             profile_completed: true,
             age: form.age ? parseInt(form.age) : null,
-            professional_profile: form.professional_profile,
             languages: spokenLanguages.map((s) => s.language),
             spoken_languages: spokenLanguages,
             primary_role: workerRoles[0] ?? null,
@@ -1555,14 +1544,6 @@ function Onboarding() {
                 Seleziona i ruoli che vuoi ricoprire. Lasciando tutto selezionato risulterai disponibile per tutti i ruoli.
               </p>
               <WorkerRolesMultiSelect value={workerRoles} onChange={setWorkerRoles} />
-            </div>
-            <div>
-              <Label>Profilo professionale</Label>
-              <Textarea
-                rows={4}
-                value={form.professional_profile}
-                onChange={(e) => setForm({ ...form, professional_profile: e.target.value })}
-              />
             </div>
             <div id="sec-languages" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Lingue parlate</Label>
