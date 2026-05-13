@@ -664,40 +664,11 @@ function Onboarding() {
             </div>
 
             <div id="sec-contact" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
-              <h3 className="font-semibold flex items-center gap-2">📍 Luogo e Accesso</h3>
+              <h3 className="font-semibold flex items-center gap-2">👤 Referente operativo</h3>
               <p className="text-xs text-muted-foreground -mt-2">
-                Queste informazioni vengono mostrate ai lavoratori candidati e precompilate negli annunci.
+                Persona di riferimento per i lavoratori candidati.
               </p>
-              <div>
-                <Label>Restrizioni all'ingresso</Label>
-                <Textarea
-                  rows={2}
-                  placeholder="Es. Arrivare 15 minuti prima per accreditarsi"
-                  value={form.access_restrictions}
-                  onChange={(e) => setForm({ ...form, access_restrictions: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Indicazioni aggiuntive</Label>
-                <Textarea
-                  rows={2}
-                  placeholder="Es. Entrare dall'ingresso laterale, chiedere del responsabile di sala"
-                  value={form.additional_directions}
-                  onChange={(e) => setForm({ ...form, additional_directions: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Note per il lavoratore</Label>
-                <Textarea
-                  rows={2}
-                  placeholder="Informazioni utili che il lavoratore deve sapere prima di arrivare sul posto"
-                  value={form.location_notes}
-                  onChange={(e) => setForm({ ...form, location_notes: e.target.value })}
-                />
-              </div>
-              <div className="pt-2 border-t">
-                <Label className="text-sm font-semibold">Referente operativo</Label>
-                <div className="grid gap-3 md:grid-cols-2 mt-2">
+              <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <Label className="text-xs">Nome</Label>
                     <Input
@@ -759,7 +730,6 @@ function Onboarding() {
                       <p className="text-xs text-destructive mt-1">Inserisci un indirizzo email valido.</p>
                     )}
                   </div>
-                </div>
               </div>
             </div>
 
