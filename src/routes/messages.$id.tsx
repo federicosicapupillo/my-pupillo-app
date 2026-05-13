@@ -475,6 +475,13 @@ function Thread() {
     extra?: Record<string, unknown>,
   ) => {
     if (!app || !user) return;
+    // Charge credits to the restaurant only on shift assignment confirmation.
+    if (next === "accepted" && role === "restaurant" && app.status !== "accepted") {
+      const { consumeCredits } = await import("@/lib/credits");
+      const { CREDIT_COSTS } = await import("@/lib/pricing");
+      const ok = await consumeCredits(CREDIT_COSTS.assignWorker, "assign_worker", app.announcement_id ?? id);
+      if (!ok) return;
+    }
     const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
     const { error } = await supabase.from("applications").update(patch).eq("id", id);
