@@ -159,7 +159,7 @@ function Billing() {
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
             <div>
               <h3 className="font-semibold text-amber-900 dark:text-amber-200">Stai terminando i crediti</h3>
-              <p className="text-sm mt-1 text-amber-800/80 dark:text-amber-200/80">Evita interruzioni durante la ricerca del personale. SMART ti dà 10 conferme a un prezzo conveniente.</p>
+              <p className="text-sm mt-1 text-amber-800/80 dark:text-amber-200/80">Evita interruzioni durante la ricerca del personale. SMART ti dà 7 conferme a un prezzo conveniente.</p>
             </div>
           </div>
         </div>
