@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
 import { uploadWorkerIdDocument } from "@/lib/id-document-upload.functions";
+import { IdDocumentDropzone } from "@/components/IdDocumentDropzone";
 import {
   ID_DOC_PLACEHOLDER,
   ID_DOC_HINT,
@@ -72,10 +73,6 @@ import {
   isValidIdDocNumberForType,
   type IdDocumentType,
 } from "@/lib/id-document-format";
-import {
-  ID_DOC_ACCEPT_ATTR,
-  validateIdDocumentFile,
-} from "@/lib/id-document-file";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 
 /**
@@ -206,12 +203,15 @@ function Onboarding() {
   const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(
     null,
   );
+  // Worker ID document — stored as two separate files (fronte + retro).
   const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [idDocPath, setIdDocPath] = useState<string | null>(null);
   const [idDocName, setIdDocName] = useState<string | null>(null);
   const [idDocPreview, setIdDocPreview] = useState<string | null>(null);
-  const idDocInputRef = useRef<HTMLInputElement | null>(null);
-  const [idDocDragging, setIdDocDragging] = useState(false);
+  const [idDocBackFile, setIdDocBackFile] = useState<File | null>(null);
+  const [idDocBackPath, setIdDocBackPath] = useState<string | null>(null);
+  const [idDocBackName, setIdDocBackName] = useState<string | null>(null);
+  const [idDocBackPreview, setIdDocBackPreview] = useState<string | null>(null);
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -351,8 +351,6 @@ function Onboarding() {
     const d = String(t.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   })();
-
-  const ID_DOC_ACCEPT = ID_DOC_ACCEPT_ATTR;
 
   const vatDigits = form.vat_number.replace(/\D/g, "");
   const vatValid = vatDigits.length === 11;
@@ -549,6 +547,11 @@ function Onboarding() {
       setIdDocPath(p);
       setIdDocName(p.split("/").pop() ?? p);
     }
+    if (profile && (profile as any).id_document_back_path) {
+      const p = (profile as any).id_document_back_path as string;
+      setIdDocBackPath(p);
+      setIdDocBackName(p.split("/").pop() ?? p);
+    }
     if (profile && (profile as any).avatar_url) {
       const stored = (profile as any).avatar_url as string;
       // Reject legacy public/external URLs — only signed URLs from storage paths are allowed.
@@ -675,6 +678,7 @@ function Onboarding() {
     }
     setBusy(true);
     let uploadedPath: string | null = idDocPath;
+    let uploadedBackPath: string | null = idDocBackPath;
     let uploadedAvatarUrl: string | null = avatarUrl;
     if (role === "worker") {
       const required = [
@@ -712,7 +716,8 @@ function Onboarding() {
         !provinceOk ||
         !capOk ||
         !civicOk ||
-        (!idDocFile && !idDocPath)
+        (!idDocFile && !idDocPath) ||
+        (!idDocBackFile && !idDocBackPath)
       ) {
         setBusy(false);
         // Surface the issued-specific message before the generic copy so
@@ -730,6 +735,10 @@ function Onboarding() {
           toast.error("Seleziona un CAP valido per la città scelta.");
         } else if (!civicOk) {
           toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
+        } else if (!idDocFile && !idDocPath) {
+          toast.error("Carica il fronte del documento.");
+        } else if (!idDocBackFile && !idDocBackPath) {
+          toast.error("Carica il retro del documento.");
         } else {
           toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
         }
@@ -816,7 +825,12 @@ function Onboarding() {
       }
       if (!idDocFile && !idDocPath) {
         setBusy(false);
-        toast.error("Carica il documento di identità per completare il profilo.");
+        toast.error("Carica il fronte del documento.");
+        return;
+      }
+      if (!idDocBackFile && !idDocBackPath) {
+        setBusy(false);
+        toast.error("Carica il retro del documento.");
         return;
       }
       if (!avatarFile && !avatarUrl) {
@@ -848,6 +862,31 @@ function Onboarding() {
         setIdDocPath(docRes.path);
         setIdDocName(docRes.name);
         setIdDocFile(null);
+      }
+      if (idDocBackFile) {
+        const fd = new FormData();
+        fd.append("file", idDocBackFile);
+        let docRes: Awaited<ReturnType<typeof uploadIdDocumentFn>>;
+        try {
+          docRes = await uploadIdDocumentFn({ data: fd });
+        } catch (e) {
+          setBusy(false);
+          toast.error(
+            e instanceof Error && e.message
+              ? e.message
+              : "Caricamento documento non riuscito.",
+          );
+          return;
+        }
+        if (!docRes.ok) {
+          setBusy(false);
+          toast.error(docRes.error);
+          return;
+        }
+        uploadedBackPath = docRes.path;
+        setIdDocBackPath(docRes.path);
+        setIdDocBackName(docRes.name);
+        setIdDocBackFile(null);
       }
       if (avatarFile) {
         // Server-side validation: format (JPG/PNG/WEBP), size, min 500x500.
@@ -1000,6 +1039,7 @@ function Onboarding() {
               return ALLOWED_RADIUS_M.has(v) ? v : 10000;
             })(),
             id_document_path: uploadedPath,
+            id_document_back_path: uploadedBackPath,
             avatar_url: uploadedAvatarUrl,
             first_name: personal.first_name.trim(),
             last_name: personal.last_name.trim(),
@@ -1658,111 +1698,42 @@ function Onboarding() {
               <div id="sec-id-document" className="space-y-2 pt-2 border-t border-border/60 scroll-mt-24">
                 <Label className="font-semibold">Upload documento *</Label>
                 <p className="text-xs text-muted-foreground">
-                  Formati accettati: PDF, JPG, JPEG, PNG · max 10 MB.
+                  Carica entrambi i lati del documento. Da smartphone puoi scattare
+                  direttamente con la fotocamera. Formati: PDF, JPG, JPEG, PNG · max 10 MB.
                 </p>
-                <input
-                  ref={idDocInputRef}
-                  type="file"
-                  accept={ID_DOC_ACCEPT}
-                  className="hidden"
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0] ?? null;
-                    if (!f) return;
-                    const check = await validateIdDocumentFile(f);
-                    if (!check.ok) {
-                      toast.error(check.error);
-                      e.target.value = "";
-                      return;
-                    }
-                    if (idDocPreview) URL.revokeObjectURL(idDocPreview);
-                    const isImage = f.type === "image/jpeg" || f.type === "image/png";
-                    setIdDocPreview(isImage ? URL.createObjectURL(f) : null);
-                    setIdDocFile(f);
-                    setIdDocName(f.name);
-                  }}
-                />
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-label={idDocName ? "Sostituisci documento di identità" : "Carica documento di identità"}
-                  onClick={() => idDocInputRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      idDocInputRef.current?.click();
-                    }
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!idDocDragging) setIdDocDragging(true);
-                  }}
-                  onDragEnter={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIdDocDragging(true);
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIdDocDragging(false);
-                  }}
-                  onDrop={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIdDocDragging(false);
-                    const f = e.dataTransfer.files?.[0] ?? null;
-                    if (!f) return;
-                    const check = await validateIdDocumentFile(f);
-                    if (!check.ok) {
-                      toast.error(check.error);
-                      return;
-                    }
-                    if (idDocPreview) URL.revokeObjectURL(idDocPreview);
-                    const isImage = f.type === "image/jpeg" || f.type === "image/png";
-                    setIdDocPreview(isImage ? URL.createObjectURL(f) : null);
-                    setIdDocFile(f);
-                    setIdDocName(f.name);
-                  }}
-                  className={`flex flex-col items-center justify-center gap-2 w-full min-h-[160px] sm:min-h-[180px] px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-center select-none ${
-                    idDocDragging
-                      ? "border-primary bg-primary/10"
-                      : idDocName
-                        ? "border-emerald-500/60 bg-emerald-500/5 hover:bg-emerald-500/10"
-                        : "border-border bg-muted/30 hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="text-3xl" aria-hidden>
-                    {idDocName ? "✅" : "📤"}
-                  </div>
-                  <div className="text-base font-medium">
-                    {idDocName ? "Sostituisci documento" : "Carica documento"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Trascina qui il file o tocca per selezionarlo
-                  </div>
-                  {idDocName && (
-                    <div className="mt-1 text-sm text-foreground break-all max-w-full">
-                      📎 {idDocName}
-                      <span className="text-muted-foreground">
-                        {idDocFile ? " (nuovo file da salvare)" : " (già caricato)"}
-                      </span>
-                    </div>
-                  )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <IdDocumentDropzone
+                    side="fronte"
+                    file={idDocFile}
+                    storedPath={idDocPath}
+                    storedName={idDocName}
+                    preview={idDocPreview}
+                    onFileSelected={({ file: f, preview, name }) => {
+                      if (idDocPreview) URL.revokeObjectURL(idDocPreview);
+                      setIdDocPreview(preview);
+                      setIdDocFile(f);
+                      setIdDocName(name);
+                    }}
+                  />
+                  <IdDocumentDropzone
+                    side="retro"
+                    file={idDocBackFile}
+                    storedPath={idDocBackPath}
+                    storedName={idDocBackName}
+                    preview={idDocBackPreview}
+                    onFileSelected={({ file: f, preview, name }) => {
+                      if (idDocBackPreview) URL.revokeObjectURL(idDocBackPreview);
+                      setIdDocBackPreview(preview);
+                      setIdDocBackFile(f);
+                      setIdDocBackName(name);
+                    }}
+                  />
                 </div>
-                {idDocPreview && (
-                  <div className="mt-2">
-                    <img
-                      src={idDocPreview}
-                      alt="Anteprima documento"
-                      className="max-h-48 rounded-lg border object-contain bg-background"
-                    />
-                  </div>
+                {!(idDocFile || idDocPath) && (
+                  <p className="text-xs text-destructive">Carica il fronte del documento.</p>
                 )}
-                {!idDocName && (
-                  <p className="text-xs text-destructive">
-                    Carica il documento di identità per completare il profilo.
-                  </p>
+                {!(idDocBackFile || idDocBackPath) && (
+                  <p className="text-xs text-destructive">Carica il retro del documento.</p>
                 )}
               </div>
             </div>
