@@ -245,6 +245,11 @@ function Onboarding() {
     tax_code: "",
     nationality: "Italiana",
     residence_address: "",
+    // Local-only split of `residence_address` into a street part + civic
+    // number. Recombined into `residence_address` on save so the DB schema
+    // stays untouched.
+    residence_street: "",
+    residence_street_number: "",
     residence_city: "",
     residence_postal_code: "",
     residence_province: "",
