@@ -555,6 +555,14 @@ function Onboarding() {
       }
       // Block save if any date input is not a real dd/mm/yyyy value or
       // the rilascio/scadenza pair is inconsistent.
+      const perField = computeDateFieldErrors(
+        {
+          birth_date: personal.birth_date,
+          id_document_issued_at: personal.id_document_issued_at,
+          id_document_expires_at: personal.id_document_expires_at,
+        },
+        today,
+      );
       const dateGuard = evaluateOnboardingDateGuard(
         {
           birth_date: personal.birth_date,
@@ -565,9 +573,16 @@ function Onboarding() {
       );
       if (dateGuard.blocked) {
         setBusy(false);
+        setDateFieldErrors(perField);
         toast.error(dateGuard.message);
         return;
       }
+      // Clear any stale inline errors when all dates are valid.
+      setDateFieldErrors({
+        birth_date: null,
+        id_document_issued_at: null,
+        id_document_expires_at: null,
+      });
       // Server-side echo of the same validation: re-runs the rules under the
       // user's auth session so a tampered client cannot bypass them. The DB
       // trigger `enforce_worker_personal_data` is the final guard.
