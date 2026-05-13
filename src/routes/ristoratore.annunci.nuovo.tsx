@@ -15,6 +15,8 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
 import { AlertCircle, CheckCircle2, Eye, Loader2, Save, Send, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 import { buildDefaultsUpdate, hasSavedDefaults } from "@/lib/restaurant-defaults";
 import {
   BEARD_OPTIONS,
@@ -854,10 +856,35 @@ function NewRestaurantJobRequest() {
           </section>
         )}
 
-        <div className="sticky bottom-0 z-50 -mx-4 border-t bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="mx-auto flex max-w-5xl flex-col gap-2 sm:flex-row sm:justify-end">
-            <Link to="/announcements" className="sm:mr-auto"><Button type="button" variant="ghost" className="w-full gap-2" disabled={busy}><X className="h-4 w-4" />Annulla</Button></Link>
-            <Link to="/announcements"><Button type="button" variant="outline" className="w-full">Torna agli annunci</Button></Link>
+        <div className="sticky bottom-0 z-50 -mx-4 border-t bg-background/95 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          {/* Mobile: primary + overflow menu */}
+          <div className="mx-auto flex max-w-5xl items-center gap-2 sm:hidden">
+            <Button type="button" className="flex-1 gap-2" disabled={busy} onClick={() => requestSave("pubblicato")}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Pubblica annuncio
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="icon" aria-label="Altre azioni">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="top" sideOffset={8} className="w-56">
+                <DropdownMenuItem onSelect={() => showPreview()}>
+                  <Eye className="mr-2 h-4 w-4" />Anteprima
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={busy} onSelect={() => requestSave("bozza")}>
+                  <Save className="mr-2 h-4 w-4" />Salva bozza
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/announcements"><X className="mr-2 h-4 w-4" />Torna agli annunci</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {/* Desktop: full button row */}
+          <div className="mx-auto hidden max-w-5xl flex-row justify-end gap-2 sm:flex">
+            <Link to="/announcements" className="mr-auto"><Button type="button" variant="ghost" className="gap-2" disabled={busy}><X className="h-4 w-4" />Annulla</Button></Link>
+            <Link to="/announcements"><Button type="button" variant="outline">Torna agli annunci</Button></Link>
             <Button type="button" variant="outline" className="gap-2" onClick={showPreview}><Eye className="h-4 w-4" />Anteprima</Button>
             <Button type="button" variant="outline" className="gap-2" disabled={busy} onClick={() => requestSave("bozza")}><Save className="h-4 w-4" />Salva bozza</Button>
             <Button type="button" className="gap-2" disabled={busy} onClick={() => requestSave("pubblicato")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Pubblica annuncio</Button>
