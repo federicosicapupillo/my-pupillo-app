@@ -135,7 +135,6 @@ function Onboarding() {
     phone_code: DEFAULT_PHONE_PREFIX,
     phone_number: "",
     age: "",
-    professional_profile: "",
     languages: "",
     business_name: "",
     vat_number: "",
