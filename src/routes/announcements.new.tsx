@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { RequireAuth } from "@/components/RequireAuth";
+import { RequireRole } from "@/components/RequireRole";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
@@ -31,7 +31,7 @@ import { HourlyRateInput } from "@/components/HourlyRateInput";
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
   validateSearch: (s: Record<string, unknown>) => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
-  component: () => <RequireAuth><NewAnn /></RequireAuth>,
+  component: () => <RequireRole allow={["restaurant", "admin"]}><NewAnn /></RequireRole>,
 });
 
 function NewAnn() {
