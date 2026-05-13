@@ -175,6 +175,7 @@ function Onboarding() {
   const [idDocName, setIdDocName] = useState<string | null>(null);
   const [idDocPreview, setIdDocPreview] = useState<string | null>(null);
   const idDocInputRef = useRef<HTMLInputElement | null>(null);
+  const [idDocDragging, setIdDocDragging] = useState(false);
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -1406,21 +1407,73 @@ function Onboarding() {
                     setIdDocName(f.name);
                   }}
                 />
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    size="lg"
-                    variant={idDocName ? "outline" : "default"}
-                    className="h-12 px-5 text-base"
-                    onClick={() => idDocInputRef.current?.click()}
-                  >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={idDocName ? "Sostituisci documento di identità" : "Carica documento di identità"}
+                  onClick={() => idDocInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      idDocInputRef.current?.click();
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!idDocDragging) setIdDocDragging(true);
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIdDocDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIdDocDragging(false);
+                  }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIdDocDragging(false);
+                    const f = e.dataTransfer.files?.[0] ?? null;
+                    if (!f) return;
+                    const check = await validateIdDocumentFile(f);
+                    if (!check.ok) {
+                      toast.error(check.error);
+                      return;
+                    }
+                    if (idDocPreview) URL.revokeObjectURL(idDocPreview);
+                    const isImage = f.type === "image/jpeg" || f.type === "image/png";
+                    setIdDocPreview(isImage ? URL.createObjectURL(f) : null);
+                    setIdDocFile(f);
+                    setIdDocName(f.name);
+                  }}
+                  className={`flex flex-col items-center justify-center gap-2 w-full min-h-[160px] sm:min-h-[180px] px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-center select-none ${
+                    idDocDragging
+                      ? "border-primary bg-primary/10"
+                      : idDocName
+                        ? "border-emerald-500/60 bg-emerald-500/5 hover:bg-emerald-500/10"
+                        : "border-border bg-muted/30 hover:bg-muted/50"
+                  }`}
+                >
+                  <div className="text-3xl" aria-hidden>
+                    {idDocName ? "✅" : "📤"}
+                  </div>
+                  <div className="text-base font-medium">
                     {idDocName ? "Sostituisci documento" : "Carica documento"}
-                  </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Trascina qui il file o tocca per selezionarlo
+                  </div>
                   {idDocName && (
-                    <span className="text-sm text-muted-foreground break-all">
+                    <div className="mt-1 text-sm text-foreground break-all max-w-full">
                       📎 {idDocName}
-                      {idDocFile ? " (nuovo file da salvare)" : " (già caricato)"}
-                    </span>
+                      <span className="text-muted-foreground">
+                        {idDocFile ? " (nuovo file da salvare)" : " (già caricato)"}
+                      </span>
+                    </div>
                   )}
                 </div>
                 {idDocPreview && (
