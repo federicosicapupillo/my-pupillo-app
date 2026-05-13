@@ -33,7 +33,10 @@ import {
   validateRequiredDates,
   isValidISODate,
   DOC_DATE_ERRORS,
+  BIRTH_DATE_ERRORS,
   INVALID_DATE_MESSAGE,
+  validateBirthDate,
+  MIN_WORKER_AGE_YEARS,
   todayInRome,
 } from "@/lib/document-dates";
 import { evaluateOnboardingDateGuard } from "@/lib/onboarding-date-guard";
