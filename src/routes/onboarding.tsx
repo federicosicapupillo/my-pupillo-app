@@ -497,6 +497,12 @@ function Onboarding() {
     if (profile) {
       const ph = splitPhone((profile as any).phone_full ?? profile.phone);
       const cph = splitPhone((profile as any).contact_person_phone);
+      const loadedDistrict = ((profile as any).service_area_district ?? "") as string;
+      if (loadedDistrict === GEORADAR_SENTINEL) {
+        setAreaMode("georadar");
+      } else if (loadedDistrict.trim()) {
+        setAreaMode("zones");
+      }
       setForm((f) => ({
         ...f,
         full_name: profile.full_name ?? "",
