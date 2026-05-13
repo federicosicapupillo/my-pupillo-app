@@ -561,6 +561,8 @@ function Onboarding() {
             professional_profile: form.professional_profile,
             languages: spokenLanguages.map((s) => s.language),
             spoken_languages: spokenLanguages,
+            primary_role: workerRoles[0] ?? null,
+            secondary_roles: workerRoles,
             service_area_radius_m: parseInt(form.service_area_radius_m) || 500,
             id_document_path: uploadedPath,
             first_name: personal.first_name.trim(),
