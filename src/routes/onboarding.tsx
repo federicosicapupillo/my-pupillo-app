@@ -1883,7 +1883,7 @@ function Onboarding() {
                 </div>
                 )}
               </div>
-              {areaMode === "georadar" ? (
+              {areaMode === "georadar" && (
                 <div className="space-y-2 rounded-md border bg-muted/30 p-3">
                   <UseCurrentLocationButton
                     onLocated={(loc) => {
@@ -1895,7 +1895,6 @@ function Onboarding() {
                       setForm((prev) => ({
                         ...prev,
                         service_area_city: knownCity,
-                        service_area_address: loc.address,
                       }));
                     }}
                   />
@@ -1903,29 +1902,6 @@ function Onboarding() {
                     La posizione viene usata solo per il matching degli annunci
                     e non verrà mostrata pubblicamente in modo preciso.
                   </p>
-                  <div className="pt-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Oppure inserisci manualmente un indirizzo o punto di riferimento *
-                    </Label>
-                    <Input
-                      placeholder="es. Via Roma 1 oppure Stazione Centrale"
-                      value={form.service_area_address}
-                      onChange={(e) =>
-                        setForm({ ...form, service_area_address: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <Label>Indirizzo o punto di riferimento *</Label>
-                  <Input
-                    placeholder="es. Via Roma 1 oppure Stazione Centrale"
-                    value={form.service_area_address}
-                    onChange={(e) =>
-                      setForm({ ...form, service_area_address: e.target.value })
-                    }
-                  />
                 </div>
               )}
               {areaMode === "georadar" && (
