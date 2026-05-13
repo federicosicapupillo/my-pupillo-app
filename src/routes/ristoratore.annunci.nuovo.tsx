@@ -33,6 +33,7 @@ import { DistrictField } from "@/components/DistrictField";
 import { DateField } from "@/components/DateField";
 import { HourlyRateInput } from "@/components/HourlyRateInput";
 import { formatTariff } from "@/lib/format";
+import { LanguagesMultiSelect } from "@/components/RestaurantRequirements";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
@@ -789,7 +790,9 @@ function NewRestaurantJobRequest() {
             <Field label="Piercing ammessi"><Select value={f.piercings_allowed} onValueChange={v => setField("piercings_allowed", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PIERCING_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
             <Field label="Barba ammessa"><Select value={f.beard_allowed} onValueChange={v => setField("beard_allowed", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BEARD_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
           </div>
-          <ChoiceGroup title="Lingue richieste" items={LANGUAGE_OPTIONS} selected={languageReqs} onToggle={v => toggleIn(languageReqs, v, setLanguageReqs)} />
+          <Field label="Lingue richieste">
+            <LanguagesMultiSelect selected={languageReqs} onChange={setLanguageReqs} />
+          </Field>
           <ChoiceGroup title="Competenze richieste" items={SKILL_OPTIONS} selected={skills} onToggle={v => toggleIn(skills, v, setSkills)} />
           <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />
         </section>

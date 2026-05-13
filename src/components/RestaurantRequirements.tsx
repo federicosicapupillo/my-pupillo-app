@@ -78,7 +78,7 @@ function toggle<T>(list: T[], v: T): T[] {
   return list.includes(v) ? list.filter(x => x !== v) : [...list, v];
 }
 
-function LanguagesMultiSelect({ selected, onChange }: { selected: string[]; onChange: (next: string[]) => void }) {
+export function LanguagesMultiSelect({ selected, onChange }: { selected: string[]; onChange: (next: string[]) => void }) {
   const [open, setOpen] = useState(false);
   const toggleVal = (v: string) => onChange(selected.includes(v) ? selected.filter(x => x !== v) : [...selected, v]);
   const clear = () => onChange([]);
