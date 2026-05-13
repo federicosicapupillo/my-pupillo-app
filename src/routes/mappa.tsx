@@ -93,6 +93,7 @@ function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
 
 function MapPage() {
   const { role } = useAuth();
+  const isRestaurant = role === "restaurant";
   const isDev = typeof import.meta !== "undefined" && (import.meta as any).env?.DEV === true;
   const debugEnabled = role === "admin" || isDev;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -122,6 +123,14 @@ function MapPage() {
   const [wMinReliab, setWMinReliab] = useState("any");
   const [wExp, setWExp] = useState("any");
   const [view, setView] = useState<"restaurants" | "workers">("restaurants");
+
+  // For restaurant accounts: never display other restaurants on the map
+  useEffect(() => {
+    if (isRestaurant) {
+      setShowR(false);
+      setView("workers");
+    }
+  }, [isRestaurant]);
 
   // location
   const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
