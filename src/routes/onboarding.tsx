@@ -336,11 +336,10 @@ function Onboarding() {
     }
     if (profile && (profile as any).avatar_url) {
       const stored = (profile as any).avatar_url as string;
-      if (stored.startsWith("http")) {
-        // Legacy public URL — display as-is (will be replaced on next upload)
-        setAvatarUrl(stored);
+      // Reject legacy public/external URLs — only signed URLs from storage paths are allowed.
+      if (/^(https?:|data:|blob:|\/\/)/i.test(stored)) {
+        setAvatarUrl(null);
       } else {
-        // Storage path — generate a short-lived signed URL
         supabase.storage
           .from("avatars")
           .createSignedUrl(stored, 60 * 60)
