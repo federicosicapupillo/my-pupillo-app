@@ -117,6 +117,7 @@ function Onboarding() {
   const verifyVatFn = useServerFn(verifyVat);
   const uploadAvatarFn = useServerFn(uploadAvatar);
   const validateWorkerDatesFn = useServerFn(validateWorkerDocumentDates);
+  const uploadIdDocumentFn = useServerFn(uploadWorkerIdDocument);
 
   useEffect(() => {
     if (!profile) return;
