@@ -212,7 +212,10 @@ function Onboarding() {
     const experienceDone = !!form.professional_profile.trim();
     const languagesDone = spokenLanguages.length > 0;
     const availabilityDone =
-      !!form.service_area_address.trim() && !!form.service_area_radius_m;
+      !!form.service_area_city.trim() &&
+      !!form.service_area_district.trim() &&
+      form.service_area_address.trim().length >= 3 &&
+      ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m));
     const finalLocked = !(personalDone && experienceDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
