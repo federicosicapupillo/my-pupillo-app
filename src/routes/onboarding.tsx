@@ -528,20 +528,20 @@ function Onboarding() {
         // Server-side validation: format (JPG/PNG/WEBP), size, min 500x500.
         const fd = new FormData();
         fd.append("file", avatarFile);
+        let res;
         try {
-          const res = await uploadAvatarFn({ data: fd });
-          uploadedAvatarUrl = res.path;
+          res = await uploadAvatarFn({ data: fd });
         } catch (e) {
           setBusy(false);
-          const msg =
-            e instanceof Response
-              ? await e.text().catch(() => "Foto profilo non valida.")
-              : e instanceof Error
-                ? e.message
-                : "Foto profilo non valida.";
-          toast.error(msg || "Foto profilo non valida.");
+          toast.error(e instanceof Error ? e.message : "Foto profilo non valida.");
           return;
         }
+        if (!res.ok) {
+          setBusy(false);
+          toast.error(res.error);
+          return;
+        }
+        uploadedAvatarUrl = res.path;
       }
     }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
