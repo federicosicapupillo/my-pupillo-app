@@ -128,11 +128,11 @@ function AnnouncementsPage() {
               <div className="mt-3">
                 {role === "restaurant" ? (
                   (counts[a.id] ?? 0) > 0 ? (
-                    <Link to="/announcements/$id" params={{ id: a.id }}>
-                      <Button size="sm" variant="default" className="gap-1">
+                    <Button asChild size="sm" variant="default" className="gap-1">
+                      <Link to="/announcements/$id" params={{ id: a.id }} search={{ section: "candidature" } as never}>
                         Vedi candidature ({counts[a.id]})
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   ) : (
                     <Button size="sm" variant="outline" className="gap-1" disabled>
                       Nessuna candidatura
