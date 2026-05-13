@@ -11,7 +11,7 @@ export function WorkerServiceAreaMap({
         style={{ height }}
         className="rounded-2xl border bg-muted/40 flex items-center justify-center text-xs text-muted-foreground"
       >
-        Inserisci un indirizzo per vedere l'anteprima dell'area di copertura.
+        Usa la posizione attuale o inserisci città e zona per vedere l'anteprima dell'area di copertura.
       </div>
     );
   }
