@@ -305,7 +305,13 @@ function Onboarding() {
         venue_type_other: (profile as any).venue_type_other ?? "",
         address: profile.address ?? "",
         price_range: profile.price_range ?? "",
-        service_area_radius_m: String(profile.service_area_radius_m ?? 500),
+        service_area_address: (profile as any).service_area_address ?? "",
+        service_area_radius_m: (() => {
+          const v = profile.service_area_radius_m ?? 10000;
+          return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
+        })(),
+        service_area_city: (profile as any).service_area_city ?? "",
+        service_area_district: (profile as any).service_area_district ?? "",
         street_number: (profile as any).street_number ?? "",
         district: (profile as any).neighborhood ?? "",
         city: (profile as any).city ?? "",
