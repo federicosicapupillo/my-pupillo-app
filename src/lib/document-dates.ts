@@ -21,7 +21,7 @@ export const DOC_DATE_ERRORS = {
  */
 export const BIRTH_DATE_ERRORS = {
   FUTURE: "La data di nascita non può essere futura.",
-  UNDERAGE: "Devi avere almeno 18 anni per registrarti.",
+  UNDERAGE: "Devi avere almeno 18 anni per completare l'iscrizione.",
 } as const;
 
 export type BirthDateError =
