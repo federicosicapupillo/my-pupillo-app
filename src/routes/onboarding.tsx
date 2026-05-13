@@ -695,7 +695,7 @@ function Onboarding() {
       }
       if (!idDocFile && !idDocPath) {
         setBusy(false);
-        toast.error("Carica un documento di identità per completare il profilo.");
+        toast.error("Carica il documento di identità per completare il profilo.");
         return;
       }
       if (!avatarFile && !avatarUrl) {
