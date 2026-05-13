@@ -704,17 +704,29 @@ function Onboarding() {
         return;
       }
       if (idDocFile) {
-        const ext = idDocFile.name.split(".").pop()?.toLowerCase() || "bin";
-        const path = `${user.id}/id-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("worker-documents")
-          .upload(path, idDocFile, { upsert: true, contentType: idDocFile.type });
-        if (upErr) {
+        const fd = new FormData();
+        fd.append("file", idDocFile);
+        let docRes: Awaited<ReturnType<typeof uploadIdDocumentFn>>;
+        try {
+          docRes = await uploadIdDocumentFn({ data: fd });
+        } catch (e) {
           setBusy(false);
-          toast.error("Caricamento documento non riuscito: " + upErr.message);
+          toast.error(
+            e instanceof Error && e.message
+              ? e.message
+              : "Caricamento documento non riuscito.",
+          );
           return;
         }
-        uploadedPath = path;
+        if (!docRes.ok) {
+          setBusy(false);
+          toast.error(docRes.error);
+          return;
+        }
+        uploadedPath = docRes.path;
+        setIdDocPath(docRes.path);
+        setIdDocName(docRes.name);
+        setIdDocFile(null);
       }
       if (avatarFile) {
         // Server-side validation: format (JPG/PNG/WEBP), size, min 500x500.
