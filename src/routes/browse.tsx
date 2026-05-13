@@ -62,6 +62,8 @@ function Browse() {
   const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successApp, setSuccessApp] = useState<{ id: string; ann: Ann } | null>(null);
+  const [applyMode, setApplyMode] = useState<"accept" | "counter">("accept");
+  const [counterAmount, setCounterAmount] = useState<string>("");
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
