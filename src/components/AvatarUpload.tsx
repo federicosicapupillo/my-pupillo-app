@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -49,6 +49,7 @@ export function AvatarUpload({ value, onPickFile }: Props) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [busy, setBusy] = React.useState(false);
   const [preview, setPreview] = React.useState<string | null>(null);
+  const [hasLocal, setHasLocal] = React.useState(false);
 
   const display = preview ?? value ?? null;
 
@@ -65,13 +66,24 @@ export function AvatarUpload({ value, onPickFile }: Props) {
     setBusy(true);
     try {
       const { file, preview: p } = await processImage(f);
+      if (preview) URL.revokeObjectURL(preview);
       setPreview(p);
+      setHasLocal(true);
       onPickFile(file, p);
+      toast.success("Anteprima aggiornata. Salva per confermare.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Errore caricamento immagine.");
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleRemove = () => {
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(null);
+    setHasLocal(false);
+    if (inputRef.current) inputRef.current.value = "";
+    onPickFile(null, null);
   };
 
   return (
@@ -89,16 +101,23 @@ export function AvatarUpload({ value, onPickFile }: Props) {
         )}
       </div>
       <div className="space-y-1">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-        >
-          {display ? "Sostituisci foto" : "Carica foto"}
-        </Button>
-        <p className="text-xs text-muted-foreground">JPG, PNG o WEBP · min 500×500 px</p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+          >
+            {display ? "Sostituisci foto" : "Carica foto"}
+          </Button>
+          {hasLocal && (
+            <Button type="button" variant="ghost" size="sm" onClick={handleRemove} disabled={busy}>
+              <X className="h-4 w-4 mr-1" /> Rimuovi
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">JPG, PNG o WEBP · min 500×500 px · max 5MB</p>
         <input
           ref={inputRef}
           type="file"
