@@ -260,12 +260,11 @@ function AnnouncementsPage() {
               )}
               <div className="mt-3">
                 {role === "restaurant" ? (
-                  a.status === "active" ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="default" className="gap-1">
                           <Users className="h-3.5 w-3.5" />
-                          Candidati{counts[a.id] ? ` (${counts[a.id]})` : ""}
+                          Vedi candidature{counts[a.id] ? ` (${counts[a.id]})` : ""}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)] z-50">
@@ -273,19 +272,26 @@ function AnnouncementsPage() {
                         <DropdownMenuSeparator />
                         {(candidates[a.id]?.length ?? 0) === 0 ? (
                           <div className="px-2 py-3 text-xs text-muted-foreground">
-                            Nessun candidato disponibile per questo annuncio
+                            Nessuna candidatura ricevuta per questo annuncio
                           </div>
                         ) : (
-                          candidates[a.id].map((c) => (
+                          candidates[a.id].map((c) => {
+                            const isAssigned = a.assigned_worker_id === c.worker_id;
+                            return (
                             <DropdownMenuItem
                               key={c.worker_id}
                               onSelect={() => {
                                 navigate({ to: "/messages", search: { with: c.worker_id } });
                               }}
-                              className="flex flex-col items-start gap-0.5 cursor-pointer"
+                              className={`flex flex-col items-start gap-0.5 cursor-pointer ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
                             >
-                              <span className="text-sm font-medium text-foreground">
+                              <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
                                 {c.full_name || "Lavoratore"}
+                                {isAssigned && (
+                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 text-green-800 px-1.5 py-0.5 text-[10px] font-medium">
+                                    ✅ Assegnato
+                                  </span>
+                                )}
                               </span>
                               <span className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
                                 {c.professional_profile && <span>{c.professional_profile}</span>}
@@ -298,11 +304,11 @@ function AnnouncementsPage() {
                                 {c.badge && <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px]">{c.badge}</span>}
                               </span>
                             </DropdownMenuItem>
-                          ))
+                            );
+                          })
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  ) : null
                 ) : (
                   <Link to="/announcements/$id" params={{ id: a.id }}>
                     <Button size="sm" variant="outline" className="gap-1">Apri dettagli</Button>
