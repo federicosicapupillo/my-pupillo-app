@@ -325,6 +325,9 @@ function Onboarding() {
       setIdDocPath(p);
       setIdDocName(p.split("/").pop() ?? p);
     }
+    if (profile && (profile as any).avatar_url) {
+      setAvatarUrl((profile as any).avatar_url as string);
+    }
     if (profile) {
       const p = profile as any;
       setPersonal((s) => ({
