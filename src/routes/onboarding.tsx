@@ -993,6 +993,13 @@ function Onboarding() {
               <Label>Età</Label>
               <Input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} />
             </div>
+            <div id="sec-roles" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
+              <Label className="font-semibold">Renditi disponibile per</Label>
+              <p className="text-xs text-muted-foreground">
+                Seleziona i ruoli che vuoi ricoprire. Lasciando tutto selezionato risulterai disponibile per tutti i ruoli.
+              </p>
+              <WorkerRolesMultiSelect value={workerRoles} onChange={setWorkerRoles} />
+            </div>
             <div>
               <Label>Profilo professionale</Label>
               <Textarea
