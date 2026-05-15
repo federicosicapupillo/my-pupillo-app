@@ -1053,6 +1053,180 @@ function TemplatePicker(props: {
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// RecallProposalCard — renders the structured "Proposta nuovo servizio" message
+// ──────────────────────────────────────────────────────────────────────────────
+function parseRecallBody(body: string) {
+  const out: Record<string, string> = {};
+  let template = "";
+  for (const raw of body.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith("💬")) { template = line.replace(/^💬\s*/, ""); continue; }
+    const m = line.match(/^•\s*([^:]+):\s*(.+)$/);
+    if (m) {
+      const key = m[1].toLowerCase().replace(/[⚠️\s]+/g, " ").trim();
+      out[key] = m[2].trim();
+    }
+  }
+  return { fields: out, template };
+}
+
+function RecallProposalCard({
+  body, showCta, onAccept, onDecline,
+}: {
+  body: string;
+  showCta: boolean;
+  onAccept: () => void;
+  onDecline: () => void;
+}) {
+  const { fields, template } = parseRecallBody(body);
+  const role = fields["ruolo"];
+  const locale = fields["locale"];
+  const dataInizio = fields["data inizio"];
+  const fine = fields["fine"];
+  const tariffa = fields["tariffa"];
+  const zona = fields["zona"];
+  const indirizzo = fields["indirizzo"];
+  const dressCode = fields["dress code"];
+  const requisiti = fields["requisiti"];
+  const turnoLungo = fields["turno lungo"];
+  const note = fields["note"];
+
+  // derive date / time / duration from "dd/mm/yyyy · HH:MM" patterns
+  const splitDt = (s?: string) => {
+    if (!s) return { date: "", time: "" };
+    const [d, t] = s.split("·").map((x) => x.trim());
+    return { date: d ?? "", time: t ?? "" };
+  };
+  const start = splitDt(dataInizio);
+  const end = splitDt(fine);
+  const orario = start.time && end.time ? `${start.time} → ${end.time}` : (start.time || "");
+
+  let durata = "";
+  let isNight = false;
+  if (start.time && end.time) {
+    const [sh, sm] = start.time.split(":").map(Number);
+    const [eh, em] = end.time.split(":").map(Number);
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins <= 0) mins += 24 * 60;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    durata = m ? `${h}h ${m}m` : `${h} ore`;
+    isNight = eh < sh || eh < 6;
+  }
+
+  const Row = ({ icon: Icon, label, value }: { icon: typeof Utensils; label: string; value?: string }) => {
+    if (!value) return null;
+    return (
+      <div className="flex items-start gap-3 py-2">
+        <div className="shrink-0 h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{label}</div>
+          <div className="text-sm font-semibold text-foreground break-words">{value}</div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="w-full max-w-[440px] rounded-2xl border-2 border-primary/40 bg-card shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.45)] overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-4 py-4 border-b border-primary/20">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 uppercase tracking-wide">
+            <Sparkles className="h-3 w-3" /> Nuova proposta
+          </span>
+        </div>
+        <h3 className="text-lg sm:text-xl font-bold leading-tight text-foreground">Nuova proposta di servizio</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          Un locale dove hai già lavorato vorrebbe ricontattarti.
+        </p>
+      </div>
+
+      {/* Highlights */}
+      <div className="px-4 pt-3 pb-1">
+        <div className="grid grid-cols-2 gap-2">
+          {role && (
+            <div className="rounded-xl border bg-background p-3">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Ruolo</div>
+              <div className="text-sm font-bold leading-tight mt-0.5">{role}</div>
+            </div>
+          )}
+          {tariffa && (
+            <div className="rounded-xl border-2 border-primary/40 bg-primary/10 p-3">
+              <div className="text-[10px] uppercase tracking-wide text-primary/80 font-semibold">Tariffa</div>
+              <div className="text-sm font-bold leading-tight mt-0.5 text-primary">{tariffa}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div className="px-4 py-2 divide-y divide-border/60">
+        <div>
+          <Row icon={Utensils} label="Locale" value={locale} />
+          <Row icon={MapPin} label="Zona" value={zona} />
+          <Row icon={MapPin} label="Indirizzo" value={indirizzo} />
+        </div>
+        <div>
+          <Row icon={Calendar} label="Data" value={start.date} />
+          <Row icon={Clock} label="Orario" value={orario} />
+          {durata && <Row icon={Timer} label="Durata" value={durata} />}
+        </div>
+        {(isNight || turnoLungo || dressCode || requisiti || note) && (
+          <div>
+            {(isNight || turnoLungo) && (
+              <div className="flex flex-wrap gap-1.5 py-2">
+                {isNight && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 text-[11px] font-semibold px-2.5 py-1 border border-indigo-500/30">
+                    <Moon className="h-3 w-3" /> Turno notturno
+                  </span>
+                )}
+                {turnoLungo && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 text-[11px] font-semibold px-2.5 py-1 border border-amber-500/30">
+                    <Flame className="h-3 w-3" /> Turno lungo
+                  </span>
+                )}
+              </div>
+            )}
+            <Row icon={Shirt} label="Dress code" value={dressCode} />
+            <Row icon={Briefcase} label="Requisiti" value={requisiti} />
+            <Row icon={Coffee} label="Note operative" value={note} />
+          </div>
+        )}
+        {template && (
+          <div className="py-3">
+            <div className="rounded-xl bg-muted/60 border border-border px-3 py-2 text-sm italic text-foreground/90">
+              <FileText className="inline h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+              {template}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* CTA */}
+      {showCta && (
+        <div className="px-4 pb-4 pt-2 border-t border-border bg-background">
+          <p className="text-sm font-semibold text-center mb-3">
+            Vuoi confermare la tua disponibilità per questo servizio?
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button type="button" variant="outline" size="lg" className="flex-1 gap-2" onClick={onDecline}>
+              <X className="h-4 w-4" /> Non disponibile
+            </Button>
+            <Button type="button" size="lg" className="flex-1 gap-2 font-bold" onClick={onAccept}>
+              <Check className="h-4 w-4" /> Accetto il servizio
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0);
   return (
