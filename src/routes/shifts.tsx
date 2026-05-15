@@ -350,7 +350,15 @@ function ShiftsPage() {
                       );
                     })()}
                     {reviewed.has(s.id) ? (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Star className="h-3 w-3" /> Recensione inviata</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-[0_0_12px_-2px_rgba(16,185,129,0.35)] dark:text-emerald-400 dark:bg-emerald-500/10">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Recensione inviata
+                        </div>
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => openViewReview(s.id)}>
+                          <Eye className="h-4 w-4" /> Vedi recensione
+                        </Button>
+                      </div>
                     ) : reviewOpen === s.id ? (
                       <div className="space-y-2">
                         <div className="flex items-center gap-1">
