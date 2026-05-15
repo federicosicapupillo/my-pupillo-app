@@ -62,6 +62,8 @@ function ShiftsPage() {
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
+  const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
+  const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const { items: requiredReviews } = useRequiredReviews();
