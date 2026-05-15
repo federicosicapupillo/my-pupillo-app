@@ -190,21 +190,18 @@ function Page() {
     const tpl = RECALL_TEMPLATES.find((t) => t.id === selectedTemplateId) ?? RECALL_TEMPLATES[0];
     setInviteSubmitting(true);
     try {
-      // Avoid duplicate active applications for same announcement+worker
-      const { data: existing } = await supabase.from("applications")
-        .select("id").eq("announcement_id", annId).eq("worker_id", inviteFor.worker_id).maybeSingle();
-      let appId = existing?.id as string | undefined;
-      if (!appId) {
-        const { data: ins, error } = await supabase.from("applications")
-          .insert({
-            announcement_id: annId,
-            worker_id: inviteFor.worker_id,
-            restaurant_id: user.id,
-            status: "pending",
-          }).select("id").single();
-        if (error) throw error;
-        appId = ins!.id;
-      }
+      // Crea SEMPRE una nuova chat/candidatura per questa proposta:
+      // ogni "Ricontatta" deve generare una conversazione separata,
+      // indipendente dalle chat precedenti con lo stesso lavoratore.
+      const { data: ins, error } = await supabase.from("applications")
+        .insert({
+          announcement_id: annId,
+          worker_id: inviteFor.worker_id,
+          restaurant_id: user.id,
+          status: "pending",
+        }).select("id").single();
+      if (error) throw error;
+      const appId = ins!.id;
       // Compose a rich summary so the worker sees ALL details of the proposed service.
       const ann = openAnns.find((a) => a.id === annId);
       const summaryLines: string[] = ["📋 Proposta nuovo servizio", ""];
