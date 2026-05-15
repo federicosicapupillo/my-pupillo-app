@@ -186,11 +186,11 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Metric({ icon: Icon, label, value, sub }: { icon: typeof Star; label: string; value: string; sub?: string }) {
+function Metric({ icon: Icon, label, value, sub, iconClassName }: { icon: typeof Star; label: string; value: string; sub?: string; iconClassName?: string }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-2">
       <div className="flex items-center justify-center gap-1 text-muted-foreground">
-        <Icon className="h-3 w-3" /><span>{label}</span>
+        <Icon className={`h-3 w-3 ${iconClassName ?? ""}`} /><span>{label}</span>
       </div>
       <div className="font-semibold mt-0.5 text-center">{value}</div>
       {sub && <div className="text-[10px] text-muted-foreground text-center">{sub}</div>}
