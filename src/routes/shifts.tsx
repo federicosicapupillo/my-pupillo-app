@@ -7,8 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, MessageSquare, Clock } from "lucide-react";
+import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, MessageSquare, Clock, Eye } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { useRequiredReviews } from "@/lib/required-reviews";
 
@@ -61,6 +62,8 @@ function ShiftsPage() {
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
+  const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
+  const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const { items: requiredReviews } = useRequiredReviews();
@@ -161,6 +164,27 @@ function ShiftsPage() {
     setReviewOpen(null);
     setRating(5);
     setComment("");
+  };
+
+  const openViewReview = async (shiftId: string) => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("reviews")
+      .select("rating, comment")
+      .eq("author_id", user.id)
+      .eq("shift_id", shiftId)
+      .maybeSingle();
+    if (data) {
+      setViewReviewData(data as any);
+      setViewReviewShiftId(shiftId);
+    } else {
+      toast.error("Recensione non trovata");
+    }
+  };
+
+  const closeViewReview = () => {
+    setViewReviewShiftId(null);
+    setViewReviewData(null);
   };
 
   const filtered = useMemo(() => {
@@ -326,7 +350,15 @@ function ShiftsPage() {
                       );
                     })()}
                     {reviewed.has(s.id) ? (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Star className="h-3 w-3" /> Recensione inviata</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-[0_0_12px_-2px_rgba(16,185,129,0.35)] dark:text-emerald-400 dark:bg-emerald-500/10">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Recensione inviata
+                        </div>
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => openViewReview(s.id)}>
+                          <Eye className="h-4 w-4" /> Vedi recensione
+                        </Button>
+                      </div>
                     ) : reviewOpen === s.id ? (
                       <div className="space-y-2">
                         <div className="flex items-center gap-1">
@@ -356,6 +388,28 @@ function ShiftsPage() {
       )}
         </>
       )}
+
+      <Dialog open={!!viewReviewShiftId} onOpenChange={(open) => !open && closeViewReview()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>La tua recensione</DialogTitle>
+          </DialogHeader>
+          {viewReviewData && (
+            <div className="space-y-3 py-2">
+              <div className="flex items-center gap-1">
+                {[1,2,3,4,5].map(n => (
+                  <Star key={n} className={`h-6 w-6 ${n <= viewReviewData.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                ))}
+              </div>
+              {viewReviewData.comment ? (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{viewReviewData.comment}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Nessun commento</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
