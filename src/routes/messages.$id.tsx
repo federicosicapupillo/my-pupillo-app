@@ -1100,12 +1100,15 @@ function parseRecallBody(body: string) {
 }
 
 function RecallProposalCard({
-  body, showCta, onAccept, onDecline,
+  body, showCta, onAccept, onDecline, appStatus, viewerRole, mine,
 }: {
   body: string;
   showCta: boolean;
   onAccept: () => void;
   onDecline: () => void;
+  appStatus?: string;
+  viewerRole?: string | null;
+  mine?: boolean;
 }) {
   const { fields, template } = parseRecallBody(body);
   const role = fields["ruolo"];
@@ -1167,7 +1170,7 @@ function RecallProposalCard({
             <Sparkles className="h-3 w-3" /> Nuova proposta
           </span>
         </div>
-        <h3 className="text-lg sm:text-xl font-bold leading-tight text-foreground">Nuova proposta di servizio</h3>
+      <h3 className="text-lg sm:text-xl font-bold leading-tight text-foreground">Nuova proposta di lavoro</h3>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
           Un locale dove hai già lavorato vorrebbe ricontattarti.
         </p>
@@ -1241,13 +1244,28 @@ function RecallProposalCard({
             Vuoi confermare la tua disponibilità per questo servizio?
           </p>
           <div className="flex flex-col-reverse sm:flex-row gap-2">
-            <Button type="button" variant="outline" size="lg" className="flex-1 gap-2" onClick={onDecline}>
-              <X className="h-4 w-4" /> Non disponibile
+            <Button type="button" size="lg" className="flex-1 gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow" onClick={onDecline}>
+              <X className="h-5 w-5" /> Rifiuta
             </Button>
-            <Button type="button" size="lg" className="flex-1 gap-2 font-bold" onClick={onAccept}>
-              <Check className="h-4 w-4" /> Accetto il servizio
+            <Button type="button" size="lg" className="flex-1 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow" onClick={onAccept}>
+              <Check className="h-5 w-5" /> Conferma
             </Button>
           </div>
+        </div>
+      )}
+      {!showCta && (appStatus === "interested" || appStatus === "accepted" || appStatus === "not_interested" || appStatus === "rejected") && (
+        <div className="px-4 pb-4 pt-2 border-t border-border bg-background">
+          {(appStatus === "interested" || appStatus === "accepted") ? (
+            <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 px-4 py-3 font-semibold">
+              <Check className="h-5 w-5" />
+              {viewerRole === "worker" && !mine ? "Hai confermato questo servizio" : "Il lavoratore ha confermato questo servizio"}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 rounded-xl bg-red-500/15 border border-red-500/40 text-red-700 dark:text-red-300 px-4 py-3 font-semibold">
+              <X className="h-5 w-5" />
+              {viewerRole === "worker" && !mine ? "Hai rifiutato questo servizio" : "Il lavoratore ha rifiutato questo servizio"}
+            </div>
+          )}
         </div>
       )}
     </div>
