@@ -166,6 +166,27 @@ function ShiftsPage() {
     setComment("");
   };
 
+  const openViewReview = async (shiftId: string) => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("reviews")
+      .select("rating, comment")
+      .eq("author_id", user.id)
+      .eq("shift_id", shiftId)
+      .maybeSingle();
+    if (data) {
+      setViewReviewData(data as any);
+      setViewReviewShiftId(shiftId);
+    } else {
+      toast.error("Recensione non trovata");
+    }
+  };
+
+  const closeViewReview = () => {
+    setViewReviewShiftId(null);
+    setViewReviewData(null);
+  };
+
   const filtered = useMemo(() => {
     if (filter === "upcoming") return [] as Shift[]; // pending applications rendered separately
     if (filter === "past") return shifts.filter(s => s.status === "completed");
