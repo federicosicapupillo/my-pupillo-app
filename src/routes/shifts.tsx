@@ -162,7 +162,7 @@ function ShiftsPage() {
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Recensione inviata");
-    setReviewed(prev => new Set(prev).add(s.id));
+    setReviewMap(prev => ({ ...prev, [s.id]: rating }));
     setReviewOpen(null);
     setRating(5);
     setComment("");
