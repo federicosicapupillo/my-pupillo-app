@@ -351,15 +351,26 @@ function ShiftsPage() {
                         </div>
                       );
                     })()}
-                    {reviewed.has(s.id) ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-[0_0_12px_-2px_rgba(16,185,129,0.35)] dark:text-emerald-400 dark:bg-emerald-500/10">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Recensione inviata
+                    {reviewMap[s.id] != null ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-[0_0_12px_-2px_rgba(16,185,129,0.35)] dark:text-emerald-400 dark:bg-emerald-500/10">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Recensione inviata
+                          </div>
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => openViewReview(s.id)}>
+                            <Eye className="h-4 w-4" /> Vedi recensione
+                          </Button>
                         </div>
-                        <Button size="sm" variant="outline" className="gap-1" onClick={() => openViewReview(s.id)}>
-                          <Eye className="h-4 w-4" /> Vedi recensione
-                        </Button>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-muted-foreground">Recensione fatta dal ristoratore:</span>
+                          <div className="flex items-center gap-0.5">
+                            {[1,2,3,4,5].map(n => (
+                              <Star key={n} className={`h-4 w-4 ${n <= reviewMap[s.id] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                            ))}
+                          </div>
+                          <span className="font-semibold text-foreground">{reviewMap[s.id]}/5</span>
+                        </div>
                       </div>
                     ) : reviewOpen === s.id ? (
                       <div className="space-y-2">
