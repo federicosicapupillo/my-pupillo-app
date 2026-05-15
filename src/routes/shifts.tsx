@@ -388,6 +388,28 @@ function ShiftsPage() {
       )}
         </>
       )}
+
+      <Dialog open={!!viewReviewShiftId} onOpenChange={(open) => !open && closeViewReview()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>La tua recensione</DialogTitle>
+          </DialogHeader>
+          {viewReviewData && (
+            <div className="space-y-3 py-2">
+              <div className="flex items-center gap-1">
+                {[1,2,3,4,5].map(n => (
+                  <Star key={n} className={`h-6 w-6 ${n <= viewReviewData.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                ))}
+              </div>
+              {viewReviewData.comment ? (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{viewReviewData.comment}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Nessun commento</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
