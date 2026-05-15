@@ -845,13 +845,40 @@ function Thread() {
               const mine = m.sender_id === user?.id;
               const showCta =
                 role === "worker" && !mine && app?.status === "pending";
+              const handleRecallAccept = async () => {
+                await transition("interested");
+                if (app) {
+                  await supabase.from("messages").insert({
+                    application_id: app.id,
+                    sender_id: user!.id,
+                    receiver_id: app.restaurant_id,
+                    body: "⚙️ Sistema: Il lavoratore ha confermato il servizio proposto.",
+                    message_type: "system",
+                  });
+                }
+              };
+              const handleRecallDecline = async () => {
+                await transition("not_interested");
+                if (app) {
+                  await supabase.from("messages").insert({
+                    application_id: app.id,
+                    sender_id: user!.id,
+                    receiver_id: app.restaurant_id,
+                    body: "⚙️ Sistema: Il lavoratore ha rifiutato il servizio proposto.",
+                    message_type: "system",
+                  });
+                }
+              };
               return (
                 <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                   <RecallProposalCard
                     body={m.body}
                     showCta={showCta}
-                    onAccept={() => transition("interested")}
-                    onDecline={() => transition("not_interested")}
+                    appStatus={app?.status}
+                    viewerRole={role}
+                    mine={mine}
+                    onAccept={handleRecallAccept}
+                    onDecline={handleRecallDecline}
                   />
                 </div>
               );
