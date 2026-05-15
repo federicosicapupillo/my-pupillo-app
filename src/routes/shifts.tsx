@@ -363,7 +363,7 @@ function ShiftsPage() {
                           </Button>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="text-muted-foreground">Recensione fatta dal ristoratore:</span>
+                          <span className="text-muted-foreground">La tua valutazione:</span>
                           <div className="flex items-center gap-0.5">
                             {[1,2,3,4,5].map(n => (
                               <Star key={n} className={`h-4 w-4 ${n <= reviewMap[s.id] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
