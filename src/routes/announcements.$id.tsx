@@ -521,11 +521,11 @@ function AnnouncementDetail() {
   );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: typeof Star; label: string; value: string }) {
+function Metric({ icon: Icon, label, value, iconClassName }: { icon: typeof Star; label: string; value: string; iconClassName?: string }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-2 text-center">
       <div className="flex items-center justify-center gap-1 text-muted-foreground">
-        <Icon className="h-3 w-3" /><span>{label}</span>
+        <Icon className={`h-3 w-3 ${iconClassName ?? ""}`} /><span>{label}</span>
       </div>
       <div className="font-semibold mt-0.5">{value}</div>
     </div>
