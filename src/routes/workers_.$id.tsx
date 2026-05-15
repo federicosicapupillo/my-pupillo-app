@@ -102,7 +102,7 @@ function WorkerDetailPage() {
             </Badge>
           )}
           <div className="mt-4 grid grid-cols-3 gap-2 w-full text-xs">
-            <Metric icon={Star} label="Rating" value={w.rating_avg ? `${Number(w.rating_avg).toFixed(1)}` : "—"} sub={w.reviews_count ? `${w.reviews_count} rec.` : undefined} />
+            <Metric icon={Star} label="Rating" value={w.rating_avg ? `${Number(w.rating_avg).toFixed(1)}` : "—"} sub={w.reviews_count ? `${w.reviews_count} rec.` : undefined} iconClassName="text-yellow-500" />
             <Metric icon={Shield} label="Affidab." value={w.reliability_pct != null ? `${w.reliability_pct}%` : "—"} />
             <Metric icon={Briefcase} label="Turni" value={w.completed_shifts != null ? String(w.completed_shifts) : "—"} />
           </div>
