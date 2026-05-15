@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
+import { Utensils, MapPin, Briefcase, Calendar, Clock, Timer, Moon, Flame, Shirt, Coffee, FileText } from "lucide-react";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
@@ -837,6 +838,21 @@ function Thread() {
                   <div className="rounded-full px-3 py-1 text-xs bg-muted text-muted-foreground border">
                     {m.body.replace(/^⚙️ /, "")}
                   </div>
+                </div>
+              );
+            }
+            if (m.action_type === "recall_worker") {
+              const mine = m.sender_id === user?.id;
+              const showCta =
+                role === "worker" && !mine && app?.status === "pending";
+              return (
+                <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                  <RecallProposalCard
+                    body={m.body}
+                    showCta={showCta}
+                    onAccept={() => transition("interested")}
+                    onDecline={() => transition("not_interested")}
+                  />
                 </div>
               );
             }
