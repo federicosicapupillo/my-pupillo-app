@@ -117,8 +117,10 @@ function ShiftsPage() {
     }
     const shiftIds = list.map(s => s.id);
     if (shiftIds.length && user) {
-      const { data: rs } = await supabase.from("reviews").select("shift_id").eq("author_id", user.id).in("shift_id", shiftIds);
-      setReviewed(new Set((rs ?? []).map((r: any) => r.shift_id)));
+      const { data: rs } = await supabase.from("reviews").select("shift_id, rating").eq("author_id", user.id).in("shift_id", shiftIds);
+      const map: Record<string, number> = {};
+      (rs ?? []).forEach((r: any) => { map[r.shift_id] = r.rating; });
+      setReviewMap(map);
     }
     setLoading(false);
   };
