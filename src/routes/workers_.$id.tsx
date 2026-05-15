@@ -102,7 +102,7 @@ function WorkerDetailPage() {
             </Badge>
           )}
           <div className="mt-4 grid grid-cols-3 gap-2 w-full text-xs">
-            <Metric icon={Star} label="Rating" value={w.rating_avg ? `${Number(w.rating_avg).toFixed(1)}` : "—"} sub={w.reviews_count ? `${w.reviews_count} rec.` : undefined} />
+            <Metric icon={Star} label="Rating" value={w.rating_avg ? `${Number(w.rating_avg).toFixed(1)}` : "—"} sub={w.reviews_count ? `${w.reviews_count} rec.` : undefined} iconClassName="text-yellow-500" />
             <Metric icon={Shield} label="Affidab." value={w.reliability_pct != null ? `${w.reliability_pct}%` : "—"} />
             <Metric icon={Briefcase} label="Turni" value={w.completed_shifts != null ? String(w.completed_shifts) : "—"} />
           </div>
@@ -186,11 +186,11 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Metric({ icon: Icon, label, value, sub }: { icon: typeof Star; label: string; value: string; sub?: string }) {
+function Metric({ icon: Icon, label, value, sub, iconClassName }: { icon: typeof Star; label: string; value: string; sub?: string; iconClassName?: string }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-2">
       <div className="flex items-center justify-center gap-1 text-muted-foreground">
-        <Icon className="h-3 w-3" /><span>{label}</span>
+        <Icon className={`h-3 w-3 ${iconClassName ?? ""}`} /><span>{label}</span>
       </div>
       <div className="font-semibold mt-0.5 text-center">{value}</div>
       {sub && <div className="text-[10px] text-muted-foreground text-center">{sub}</div>}
