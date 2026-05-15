@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star } from "lucide-react";
+import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, MessageSquare, Clock } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { useRequiredReviews } from "@/lib/required-reviews";
@@ -30,6 +30,18 @@ type Shift = {
 };
 type Profile = { id: string; full_name: string | null; business_name: string | null; city: string | null };
 
+type PendingApp = {
+  id: string;
+  announcement_id: string;
+  worker_id: string;
+  restaurant_id: string;
+  status: "pending" | "interested" | "counter_offer";
+  proposed_tariff: number | null;
+  created_at: string;
+  service_date: string | null;
+  service_time: string | null;
+};
+
 const statusMeta: Record<Shift["status"], { label: string; color: string; icon: any }> = {
   scheduled: { label: "Programmato", color: "bg-blue-500/10 text-blue-700 border-blue-500/30", icon: CalendarClock },
   completed: { label: "Completato", color: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30", icon: CheckCircle2 },
@@ -47,6 +59,7 @@ function ShiftsPage() {
   );
   const [live, setLive] = useState(false);
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
+  const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -68,7 +81,31 @@ function ShiftsPage() {
     if (error) { toast.error("Errore nel caricamento turni"); return; }
     const list = (data ?? []) as Shift[];
     setShifts(list);
-    const ids = Array.from(new Set(list.map(s => role === "restaurant" ? s.worker_id : s.restaurant_id)));
+    // For restaurants, also load pending/in-flight applications (candidature in attesa)
+    let pending: PendingApp[] = [];
+    if (role === "restaurant") {
+      const { data: apps } = await (supabase as any)
+        .from("applications")
+        .select("id, announcement_id, worker_id, restaurant_id, status, proposed_tariff, created_at, announcements!inner(service_date, service_time)")
+        .eq("restaurant_id", user.id)
+        .in("status", ["pending", "interested", "counter_offer"])
+        .order("created_at", { ascending: false });
+      pending = (apps ?? []).map((a: any) => ({
+        id: a.id,
+        announcement_id: a.announcement_id,
+        worker_id: a.worker_id,
+        restaurant_id: a.restaurant_id,
+        status: a.status,
+        proposed_tariff: a.proposed_tariff,
+        created_at: a.created_at,
+        service_date: a.announcements?.service_date ?? null,
+        service_time: a.announcements?.service_time ?? null,
+      })) as PendingApp[];
+      setPendingApps(pending);
+    }
+    const otherIds = list.map(s => role === "restaurant" ? s.worker_id : s.restaurant_id);
+    const pendingWorkerIds = pending.map(p => p.worker_id);
+    const ids = Array.from(new Set([...otherIds, ...pendingWorkerIds]));
     if (ids.length) {
       const { data: ps } = await supabase.from("profiles").select("id,full_name,business_name,city").in("id", ids);
       const map: Record<string, Profile> = {};
@@ -127,12 +164,19 @@ function ShiftsPage() {
   };
 
   const filtered = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    if (filter === "upcoming") return shifts.filter(s => s.shift_date >= today);
-    if (filter === "past") return shifts.filter(s => s.shift_date < today);
+    if (filter === "upcoming") return [] as Shift[]; // pending applications rendered separately
+    if (filter === "past") return shifts.filter(s => s.status === "completed");
     if (filter === "to-review") return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
     return shifts;
   }, [shifts, filter, reqByShift]);
+
+  const counts = useMemo(() => {
+    const past = shifts.filter(s => s.status === "completed").length;
+    const toReview = shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
+    const pending = role === "restaurant" ? pendingApps.length : 0;
+    const all = shifts.length + pending;
+    return { all, pending, past, toReview };
+  }, [shifts, pendingApps, reqByShift, role]);
 
   const stats = useMemo(() => ({
     total: shifts.length,
@@ -155,16 +199,58 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["all", "upcoming", "past", "to-review"] as const).map(f => (
-          <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
-            {f === "all" ? "Tutti" : f === "upcoming" ? "In arrivo" : f === "past" ? "Passati" : `Da recensire${requiredReviews.length ? ` (${requiredReviews.length})` : ""}`}
-          </Button>
-        ))}
+        {(["all", "upcoming", "past", "to-review"] as const).map(f => {
+          const label =
+            f === "all" ? `Tutti (${counts.all})`
+            : f === "upcoming" ? `In attesa conferma (${counts.pending})`
+            : f === "past" ? `Passati (${counts.past})`
+            : `Da recensire (${counts.toReview})`;
+          return (
+            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
+              {label}
+            </Button>
+          );
+        })}
       </div>
 
       {role === "restaurant" && <RequiredReviewsBanner />}
 
-      {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
+      {loading ? <p className="text-muted-foreground">Caricamento…</p> : (
+        <>
+          {role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0 && (
+            <div className="space-y-3 mb-3">
+              {pendingApps.map(a => {
+                const w = profiles[a.worker_id];
+                const wName = w?.full_name || "Lavoratore";
+                const statusLabel =
+                  a.status === "counter_offer" ? "Contro offerta" :
+                  a.status === "interested" ? "Interessato" : "In attesa";
+                return (
+                  <div key={a.id} className="rounded-2xl border bg-card p-4 sm:p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{wName}</div>
+                        <div className="text-sm text-muted-foreground mt-0.5">
+                          {a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" }) : "—"}
+                          {a.service_time && <> · {a.service_time.slice(0,5)}</>}
+                          {a.proposed_tariff != null && <> · €{Number(a.proposed_tariff).toFixed(2)}</>}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="gap-1 bg-amber-500/10 text-amber-700 border-amber-500/30">
+                        <Clock className="h-3 w-3" />{statusLabel}
+                      </Badge>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button asChild size="sm" className="gap-1">
+                        <Link to="/messages/$id" params={{ id: a.id }}><MessageSquare className="h-4 w-4" /> Vedi candidatura</Link>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {filtered.length === 0 && !(role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0) ? (
         <div className="rounded-2xl border bg-card p-8 text-center">
           <CalendarClock className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
           <p className="text-muted-foreground">Nessun turno da mostrare.</p>
@@ -267,6 +353,8 @@ function ShiftsPage() {
             );
           })}
         </div>
+      )}
+        </>
       )}
     </AppShell>
   );
