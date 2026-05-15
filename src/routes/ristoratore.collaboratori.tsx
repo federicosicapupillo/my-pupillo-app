@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Star, MessageSquare, Send, Heart, Search, Calendar, Users, CheckCircle2 } from "lucide-react";
+import { Star, MessageSquare, Send, Heart, Search, Calendar, Users, CheckCircle2, Moon, Clock, MapPin, Euro, Shirt, ListChecks, Coffee } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -41,6 +41,15 @@ type AnnFull = AnnLite & {
   duration_hours: number | null;
   job_city: string | null;
   job_province: string | null;
+  end_date: string | null;
+  end_time: string | null;
+  is_long_shift: boolean | null;
+  long_shift_reason: string | null;
+  dress_code_items: string[] | null;
+  dress_code_notes: string | null;
+  required_skills: string[] | null;
+  notes: string | null;
+  job_address: string | null;
 };
 
 const RECALL_TEMPLATES = [
@@ -63,6 +72,7 @@ function Page() {
   const [selectedAnnId, setSelectedAnnId] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(RECALL_TEMPLATES[0].id);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [restaurantName, setRestaurantName] = useState<string>("");
 
   const load = async () => {
     if (!user) return;
@@ -161,13 +171,16 @@ function Page() {
       return;
     }
     const { data } = await supabase.from("announcements")
-      .select("id, service_date, service_time, location_address, professional_profile, tariff_amount, tariff_type, duration_hours, job_city, job_province, status")
+      .select("id, service_date, service_time, location_address, professional_profile, tariff_amount, tariff_type, duration_hours, job_city, job_province, status, end_date, end_time, is_long_shift, long_shift_reason, dress_code_items, dress_code_notes, required_skills, notes, job_address")
       .eq("restaurant_id", user.id)
       .eq("status", "active")
       .order("service_date", { ascending: true });
     setOpenAnns((data ?? []) as any);
     setSelectedAnnId(((data ?? [])[0] as any)?.id ?? null);
     setSelectedTemplateId(RECALL_TEMPLATES[0].id);
+    const { data: rest } = await supabase.from("profiles")
+      .select("business_name, full_name").eq("id", user.id).maybeSingle();
+    setRestaurantName((rest as any)?.business_name || (rest as any)?.full_name || "");
     setInviteFor(r);
   };
 
@@ -192,6 +205,32 @@ function Page() {
         if (error) throw error;
         appId = ins!.id;
       }
+      // Compose a rich summary so the worker sees ALL details of the proposed service.
+      const ann = openAnns.find((a) => a.id === annId);
+      const summaryLines: string[] = ["📋 Proposta nuovo servizio", ""];
+      if (ann?.professional_profile) summaryLines.push(`• Ruolo: ${ann.professional_profile}`);
+      if (restaurantName) summaryLines.push(`• Locale: ${restaurantName}`);
+      if (ann?.service_date) {
+        const d = new Date(ann.service_date).toLocaleDateString("it-IT");
+        summaryLines.push(`• Data inizio: ${d}${ann.service_time ? ` · ${ann.service_time.slice(0, 5)}` : ""}`);
+      }
+      if (ann?.end_date || ann?.end_time) {
+        const ed = ann.end_date ? new Date(ann.end_date).toLocaleDateString("it-IT") : (ann?.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "");
+        summaryLines.push(`• Fine: ${ed}${ann.end_time ? ` · ${ann.end_time.slice(0, 5)}` : ""}`);
+      }
+      if (ann?.tariff_amount != null) {
+        summaryLines.push(`• Tariffa: €${Number(ann.tariff_amount).toFixed(2)}${ann.tariff_type === "hourly" ? "/h" : ""}`);
+      }
+      const zone = [ann?.job_city, ann?.job_province].filter(Boolean).join(", ");
+      if (zone) summaryLines.push(`• Zona: ${zone}`);
+      if (ann?.job_address || ann?.location_address) summaryLines.push(`• Indirizzo: ${ann?.job_address || ann?.location_address}`);
+      if (ann?.dress_code_items && ann.dress_code_items.length) summaryLines.push(`• Dress code: ${ann.dress_code_items.join(", ")}`);
+      if (ann?.dress_code_notes) summaryLines.push(`  ${ann.dress_code_notes}`);
+      if (ann?.required_skills && ann.required_skills.length) summaryLines.push(`• Requisiti: ${ann.required_skills.join(", ")}`);
+      if (ann?.is_long_shift) summaryLines.push(`• ⚠️ Turno lungo${ann.long_shift_reason ? ` — ${ann.long_shift_reason}` : ""}`);
+      if (ann?.notes) summaryLines.push(`• Note: ${ann.notes}`);
+      summaryLines.push("", `💬 ${tpl.body}`);
+
       await supabase.from("messages").insert({
         application_id: appId,
         sender_id: user.id,
@@ -199,12 +238,12 @@ function Page() {
         message_type: "template",
         template_id: tpl.id,
         action_type: "recall_worker",
-        body: tpl.body,
+        body: summaryLines.join("\n"),
       });
       await supabase.from("notifications").insert({
         user_id: inviteFor.worker_id,
-        title: "Nuova proposta da un locale dove hai già lavorato",
-        body: "Il ristoratore ti ha invitato a valutare un nuovo servizio.",
+        title: "Nuova proposta di servizio",
+        body: "Un locale dove hai già lavorato ti ha proposto un nuovo turno.",
         link: `/messages/${appId}`,
       });
       toast.success("Proposta inviata");
@@ -218,6 +257,16 @@ function Page() {
   };
 
   const selectedAnn = openAnns.find((a) => a.id === selectedAnnId) ?? null;
+
+  const isNightShift = (() => {
+    if (!selectedAnn?.service_time) return false;
+    const start = selectedAnn.service_time.slice(0, 5);
+    const end = (selectedAnn.end_time || "").slice(0, 5);
+    if (!end) return false;
+    // crosses midnight if end <= start (lexicographic on HH:MM works)
+    return end <= start;
+  })();
+  const isLongShift = !!selectedAnn?.is_long_shift || (selectedAnn?.duration_hours ? Number(selectedAnn.duration_hours) > 8 : false);
 
   if (role !== "restaurant") {
     return <AppShell><p className="text-muted-foreground">Sezione riservata ai ristoratori.</p></AppShell>;
@@ -332,12 +381,11 @@ function Page() {
       )}
 
       <Dialog open={!!inviteFor} onOpenChange={(o) => !o && setInviteFor(null)}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto bg-background border-2 border-primary/40 shadow-2xl shadow-primary/20">
           <DialogHeader>
-            <DialogTitle>Proposta nuovo servizio</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl">Proponi un nuovo servizio</DialogTitle>
+            <DialogDescription className="text-foreground/80">
               Stai ricontattando {inviteFor?.full_name ?? "un lavoratore"} che ha già collaborato con il tuo locale.
-              Seleziona un annuncio attivo e un messaggio preimpostato. La conferma scalerà 7 crediti solo se il lavoratore accetta.
             </DialogDescription>
           </DialogHeader>
 
@@ -372,18 +420,43 @@ function Page() {
               </div>
 
               {selectedAnn && (
-                <div className="rounded-xl border bg-muted/30 p-3 text-xs space-y-1">
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Riepilogo proposta</div>
-                  {selectedAnn.professional_profile && <div><span className="text-muted-foreground">Ruolo:</span> <span className="font-medium capitalize">{selectedAnn.professional_profile}</span></div>}
-                  <div><span className="text-muted-foreground">Data:</span> <span className="font-medium">{new Date(selectedAnn.service_date).toLocaleDateString("it-IT")}</span></div>
-                  <div><span className="text-muted-foreground">Orario:</span> <span className="font-medium">{selectedAnn.service_time?.slice(0, 5)}{selectedAnn.duration_hours ? ` · ${selectedAnn.duration_hours}h` : ""}</span></div>
+                <div className="rounded-xl border-2 border-border bg-card p-4 text-sm space-y-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[11px] uppercase tracking-wide font-semibold text-primary">Riepilogo servizio</div>
+                    <div className="flex gap-1">
+                      {isNightShift && <Badge variant="secondary" className="gap-1 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300"><Moon className="h-3 w-3" />Notturno</Badge>}
+                      {isLongShift && <Badge variant="secondary" className="gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-300"><Clock className="h-3 w-3" />Turno lungo</Badge>}
+                    </div>
+                  </div>
+                  {selectedAnn.professional_profile && (
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground">Ruolo</span><span className="font-medium capitalize text-right">{selectedAnn.professional_profile}</span></div>
+                  )}
+                  {restaurantName && (
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground">Locale</span><span className="font-medium text-right truncate">{restaurantName}</span></div>
+                  )}
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground">Inizio</span><span className="font-medium text-right">{new Date(selectedAnn.service_date).toLocaleDateString("it-IT")} · {selectedAnn.service_time?.slice(0,5)}</span></div>
+                  {(selectedAnn.end_date || selectedAnn.end_time) && (
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground">Fine</span><span className="font-medium text-right">{(selectedAnn.end_date ? new Date(selectedAnn.end_date) : new Date(selectedAnn.service_date)).toLocaleDateString("it-IT")}{selectedAnn.end_time ? ` · ${selectedAnn.end_time.slice(0,5)}` : ""}</span></div>
+                  )}
                   {selectedAnn.tariff_amount != null && (
-                    <div><span className="text-muted-foreground">Tariffa:</span> <span className="font-medium">€{Number(selectedAnn.tariff_amount).toFixed(2)}{selectedAnn.tariff_type === "hourly" ? "/h" : ""}</span></div>
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground inline-flex items-center gap-1"><Euro className="h-3.5 w-3.5" />Tariffa</span><span className="font-medium text-right">€{Number(selectedAnn.tariff_amount).toFixed(2)}{selectedAnn.tariff_type === "hourly" ? "/h" : ""}</span></div>
                   )}
                   {(selectedAnn.job_city || selectedAnn.job_province) && (
-                    <div><span className="text-muted-foreground">Zona:</span> <span className="font-medium">{[selectedAnn.job_city, selectedAnn.job_province].filter(Boolean).join(", ")}</span></div>
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Zona</span><span className="font-medium text-right">{[selectedAnn.job_city, selectedAnn.job_province].filter(Boolean).join(", ")}</span></div>
                   )}
-                  <div><span className="text-muted-foreground">Locale:</span> <span className="font-medium truncate">{selectedAnn.location_address}</span></div>
+                  {(selectedAnn.job_address || selectedAnn.location_address) && (
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground">Indirizzo</span><span className="font-medium text-right truncate max-w-[60%]">{selectedAnn.job_address || selectedAnn.location_address}</span></div>
+                  )}
+                  {selectedAnn.dress_code_items && selectedAnn.dress_code_items.length > 0 && (
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground inline-flex items-center gap-1"><Shirt className="h-3.5 w-3.5" />Dress code</span><span className="font-medium text-right">{selectedAnn.dress_code_items.join(", ")}</span></div>
+                  )}
+                  {selectedAnn.required_skills && selectedAnn.required_skills.length > 0 && (
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground inline-flex items-center gap-1"><ListChecks className="h-3.5 w-3.5" />Requisiti</span><span className="font-medium text-right">{selectedAnn.required_skills.join(", ")}</span></div>
+                  )}
+                  {selectedAnn.is_long_shift && selectedAnn.long_shift_reason && (
+                    <div className="flex justify-between gap-2"><span className="text-muted-foreground inline-flex items-center gap-1"><Coffee className="h-3.5 w-3.5" />Motivazione</span><span className="font-medium text-right">{selectedAnn.long_shift_reason}</span></div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground pt-2 border-t mt-2">La conferma scalerà 7 crediti solo se il lavoratore accetta.</p>
                 </div>
               )}
 
