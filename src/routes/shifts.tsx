@@ -59,7 +59,7 @@ function ShiftsPage() {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "all"
   );
   const [live, setLive] = useState(false);
-  const [reviewed, setReviewed] = useState<Set<string>>(new Set());
+  const [reviewMap, setReviewMap] = useState<Record<string, number>>({});
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
