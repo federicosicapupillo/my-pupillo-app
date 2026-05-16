@@ -448,6 +448,68 @@ function Thread() {
         }, 50);
         return;
       }
+      // Caso speciale: "Sei disponibile per il turno..." → proposta strutturata con dropdown annuncio
+      if (selectedTpl.key === "r_app_avail" && role === "restaurant") {
+        if (activeAnns.length === 0) {
+          toast.error("Non hai annunci attivi. Crea prima un annuncio per proporre un turno.");
+          setSending(false);
+          return;
+        }
+        const annId = proposalAnnId ?? (activeAnns.length === 1 ? activeAnns[0].id : null);
+        if (!annId) {
+          toast.error("Seleziona un annuncio dal menù prima di inviare la proposta.");
+          setSending(false);
+          return;
+        }
+        const a = activeAnns.find(x => x.id === annId)!;
+        const restName = profile?.business_name || profile?.full_name || "il nostro locale";
+        const lines: string[] = ["📋 Proposta nuovo servizio", ""];
+        if (a.professional_profile) lines.push(`• Ruolo: ${a.professional_profile}`);
+        lines.push(`• Locale: ${restName}`);
+        if (a.service_date) {
+          const d = new Date(a.service_date).toLocaleDateString("it-IT");
+          lines.push(`• Data inizio: ${d}${a.service_time ? ` · ${a.service_time.slice(0,5)}` : ""}`);
+        }
+        if (a.end_date || a.end_time) {
+          const ed = a.end_date ? new Date(a.end_date).toLocaleDateString("it-IT") : (a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT") : "");
+          lines.push(`• Fine: ${ed}${a.end_time ? ` · ${a.end_time.slice(0,5)}` : ""}`);
+        }
+        if (a.tariff_amount != null) {
+          lines.push(`• Tariffa: €${Number(a.tariff_amount).toFixed(2)}${a.tariff_type === "hourly" ? "/h" : ""}`);
+        }
+        const zone = [a.job_city, a.job_province].filter(Boolean).join(", ");
+        if (zone) lines.push(`• Zona: ${zone}`);
+        if (a.job_address || a.location_address) lines.push(`• Indirizzo: ${a.job_address || a.location_address}`);
+        if (a.dress_code_items && a.dress_code_items.length) lines.push(`• Dress code: ${a.dress_code_items.join(", ")}`);
+        if (a.dress_code_notes) lines.push(`  ${a.dress_code_notes}`);
+        if (a.required_skills && a.required_skills.length) lines.push(`• Requisiti: ${a.required_skills.join(", ")}`);
+        if (a.is_long_shift) lines.push(`• ⚠️ Turno lungo${a.long_shift_reason ? ` — ${a.long_shift_reason}` : ""}`);
+        if (a.notes) lines.push(`• Note: ${a.notes}`);
+        lines.push("", `💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.`);
+        const body = lines.join("\n");
+        const createdAt = new Date().toISOString();
+        const { data, error } = await supabase.from("messages").insert({
+          application_id: app.id,
+          sender_id: user.id,
+          receiver_id: receiverId,
+          body,
+          created_at: createdAt,
+          read_at: null,
+          template_id: selectedTpl.key,
+          message_type: "template",
+          action_type: "recall_worker",
+        } as never).select("*").single();
+        if (error) throw error;
+        if (data) pushMessage(data as Msg);
+        await supabase.from("applications").update({
+          last_message_preview: "📋 Proposta nuovo servizio",
+          last_message_at: createdAt,
+        } as never).eq("id", app.id);
+        setSelectedTpl(null);
+        toast.success("Proposta inviata.");
+        setSending(false);
+        return;
+      }
       const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null, displayAddress);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
