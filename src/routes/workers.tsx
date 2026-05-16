@@ -189,6 +189,12 @@ function WorkersPage() {
     })();
   }, [user]);
 
+  // Load all workers by default when the page opens, so the list is never empty.
+  useEffect(() => {
+    void runSearch({ category: "all", subcategory: "", text: "", language: "" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (role !== "restaurant") return <AppShell><p>Solo i ristoratori.</p></AppShell>;
 
   const invite = async (workerId: string) => {
