@@ -14,7 +14,7 @@ import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialo
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import { formatDateIT, formatTariff } from "@/lib/format";
-import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote } from "lucide-react";
+import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
