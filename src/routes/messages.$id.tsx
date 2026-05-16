@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ import { Utensils, MapPin, Briefcase, Calendar, Clock, Timer, Moon, Flame, Shirt
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { ensureProposalApplication } from "@/lib/messages.functions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -268,6 +270,8 @@ function buildTimeline(status?: string): Step[] {
 
 function Thread() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
+  const ensureApplication = useServerFn(ensureProposalApplication);
   const { user, role, profile } = useAuth();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
