@@ -201,24 +201,95 @@ function MessagesLayout() {
   useEffect(() => {
     if (!user || !role) return;
     const col = role === "restaurant" ? "restaurant_id" : "worker_id";
+    const myAppIds = new Set(threads.map((t) => t.id));
+    // Debounce di sicurezza per eventi multipli ravvicinati (es. burst di letture
+    // da un altro dispositivo): un reload completo riallinea tutti i contatori.
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (reloadTimer) return;
+      reloadTimer = setTimeout(() => {
+        reloadTimer = null;
+        load();
+      }, 250);
+    };
     const ch = supabase
       .channel(`inbox-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "applications", filter: `${col}=eq.${user.id}` }, (payload) => {
         const row: any = payload.new || payload.old;
         if (!row) return;
+        if (payload.eventType === "INSERT") {
+          // Nuova application creata altrove (es. ricontatto da altro device):
+          // ricarica per popolarla con profilo/annuncio corretti.
+          scheduleReload();
+          return;
+        }
         setThreads((prev) => {
-          const prevStatus = prev.find((t) => t.id === row.id)?.status;
-          if (prevStatus && row.status && prevStatus !== row.status && STATUS_LABELS[row.status]) {
+          const existing = prev.find((t) => t.id === row.id);
+          if (!existing) { scheduleReload(); return prev; }
+          if (existing.status && row.status && existing.status !== row.status && STATUS_LABELS[row.status]) {
             toast.message(`Stato aggiornato: ${STATUS_LABELS[row.status]}`);
           }
-          return prev.map((t) => (t.id === row.id ? { ...t, status: row.status } : t));
+          return prev.map((t) =>
+            t.id === row.id
+              ? {
+                  ...t,
+                  status: row.status ?? t.status,
+                  lastBody: row.last_message_preview ?? t.lastBody,
+                  lastAt: row.last_message_at ?? t.lastAt,
+                }
+              : t,
+          );
         });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => { load(); })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const m: any = payload.new;
+        if (!m || !myAppIds.has(m.application_id)) { scheduleReload(); return; }
+        setThreads((prev) =>
+          prev.map((t) =>
+            t.id === m.application_id
+              ? {
+                  ...t,
+                  lastBody: m.body ?? t.lastBody,
+                  lastAt: m.created_at ?? t.lastAt,
+                  unread:
+                    m.sender_id !== user.id && !m.read_at && m.application_id !== selectedId
+                      ? t.unread + 1
+                      : t.unread,
+                }
+              : t,
+          ),
+        );
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, (payload) => {
+        const m: any = payload.new;
+        const old: any = payload.old;
+        if (!m || !myAppIds.has(m.application_id)) return;
+        // Lettura segnata altrove (altro dispositivo / altro tab):
+        // riallinea l'unread del thread.
+        if (!old?.read_at && m.read_at && m.sender_id !== user.id) {
+          setThreads((prev) =>
+            prev.map((t) =>
+              t.id === m.application_id ? { ...t, unread: Math.max(0, t.unread - 1) } : t,
+            ),
+          );
+        }
+      })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Sincronizzazione al ritorno sul tab / refresh: copre eventi realtime
+    // persi mentre la finestra era in background.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      supabase.removeChannel(ch);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, role]);
+  }, [user, role, threads.length, selectedId]);
 
   // Pre-filtra per ricerca/utente: i chip devono riflettere solo le conversazioni
   // attualmente in scope (così i conteggi restano coerenti con quello che vedi).
