@@ -201,7 +201,7 @@ function WorkersPage() {
           .select("worker_id, status")
           .eq("restaurant_id", user.id)
           .in("worker_id", ids)
-          .in("status", ["completed", "done", "closed"] as never),
+          .eq("status", "completed"),
         supabase
           .from("reviews")
           .select("target_id, rating, comment, created_at")
