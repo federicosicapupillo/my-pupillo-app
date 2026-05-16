@@ -14,7 +14,7 @@ const proposalApplicationSchema = z.object({
 const resetPendingPatch = {
   status: "pending",
   worker_response_at: null,
-};
+} as const;
 
 export const ensureProposalApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
