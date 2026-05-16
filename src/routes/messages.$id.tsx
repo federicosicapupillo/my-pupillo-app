@@ -504,7 +504,10 @@ function Thread() {
         await supabase.from("applications").update({
           last_message_preview: "📋 Proposta nuovo servizio",
           last_message_at: createdAt,
+          status: "pending",
+          worker_response_at: null,
         } as never).eq("id", app.id);
+        setApp({ ...app, status: "pending" } as App);
         setSelectedTpl(null);
         toast.success("Proposta inviata.");
         setSending(false);
