@@ -852,9 +852,15 @@ function Thread() {
                     application_id: app.id,
                     sender_id: user!.id,
                     receiver_id: app.restaurant_id,
-                    body: "⚙️ Sistema: Il lavoratore ha confermato il servizio proposto.",
+                    body: "⚙️ Sistema: Il lavoratore ha accettato la proposta di lavoro.",
                     message_type: "system",
                   });
+                  await supabase.from("notifications").insert({
+                    user_id: app.restaurant_id,
+                    title: "Proposta accettata",
+                    body: "Il lavoratore ha accettato la proposta di lavoro.",
+                    link: `/messages/${app.id}`,
+                  } as never);
                 }
               };
               const handleRecallDecline = async () => {
@@ -864,9 +870,15 @@ function Thread() {
                     application_id: app.id,
                     sender_id: user!.id,
                     receiver_id: app.restaurant_id,
-                    body: "⚙️ Sistema: Il lavoratore ha rifiutato il servizio proposto.",
+                    body: "⚙️ Sistema: Il lavoratore ha rifiutato la proposta di lavoro.",
                     message_type: "system",
                   });
+                  await supabase.from("notifications").insert({
+                    user_id: app.restaurant_id,
+                    title: "Proposta rifiutata",
+                    body: "Il lavoratore ha rifiutato la proposta di lavoro.",
+                    link: `/messages/${app.id}`,
+                  } as never);
                 }
               };
               return (
@@ -1244,11 +1256,11 @@ function RecallProposalCard({
             Vuoi confermare la tua disponibilità per questo servizio?
           </p>
           <div className="flex flex-col-reverse sm:flex-row gap-2">
-            <Button type="button" size="lg" className="flex-1 gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow" onClick={onDecline}>
+            <Button type="button" size="lg" className="flex-1 gap-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow h-12 text-base" onClick={onDecline}>
               <X className="h-5 w-5" /> Rifiuta
             </Button>
-            <Button type="button" size="lg" className="flex-1 gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow" onClick={onAccept}>
-              <Check className="h-5 w-5" /> Conferma
+            <Button type="button" size="lg" className="flex-1 gap-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow h-12 text-base" onClick={onAccept}>
+              <Check className="h-5 w-5" /> Accetta
             </Button>
           </div>
         </div>
@@ -1258,12 +1270,12 @@ function RecallProposalCard({
           {(appStatus === "interested" || appStatus === "accepted") ? (
             <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 px-4 py-3 font-semibold">
               <Check className="h-5 w-5" />
-              {viewerRole === "worker" && !mine ? "Hai confermato questo servizio" : "Il lavoratore ha confermato questo servizio"}
+              {viewerRole === "worker" && !mine ? "Hai accettato questa proposta" : "Il lavoratore ha accettato la proposta di lavoro"}
             </div>
           ) : (
             <div className="flex items-center justify-center gap-2 rounded-xl bg-red-500/15 border border-red-500/40 text-red-700 dark:text-red-300 px-4 py-3 font-semibold">
               <X className="h-5 w-5" />
-              {viewerRole === "worker" && !mine ? "Hai rifiutato questo servizio" : "Il lavoratore ha rifiutato questo servizio"}
+              {viewerRole === "worker" && !mine ? "Hai rifiutato questa proposta" : "Il lavoratore ha rifiutato la proposta di lavoro"}
             </div>
           )}
         </div>
