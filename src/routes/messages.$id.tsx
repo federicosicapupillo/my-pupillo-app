@@ -289,6 +289,8 @@ function Thread() {
   const [shift, setShift] = useState<Shift | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [activeAnns, setActiveAnns] = useState<AnnProposal[]>([]);
+  const [proposalAnnId, setProposalAnnId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -367,6 +369,28 @@ function Thread() {
   }, [id, user]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  // Carica gli annunci attivi del ristoratore per la proposta turno via dropdown
+  useEffect(() => {
+    (async () => {
+      if (!user || role !== "restaurant") { setActiveAnns([]); return; }
+      const { data } = await supabase.from("announcements")
+        .select("id, service_date, service_time, location_address, tariff_amount, tariff_type, professional_profile, job_city, job_province, job_address, end_date, end_time, is_long_shift, long_shift_reason, dress_code_items, dress_code_notes, required_skills, notes")
+        .eq("restaurant_id", user.id)
+        .eq("status", "active")
+        .order("service_date", { ascending: true });
+      const list = (data ?? []) as AnnProposal[];
+      setActiveAnns(list);
+      setProposalAnnId(prev => prev && list.some(a => a.id === prev) ? prev : (list.length === 1 ? list[0].id : null));
+    })();
+  }, [user, role]);
+
+  // Auto-seleziona unico annuncio quando si sceglie il template "Sei disponibile..."
+  useEffect(() => {
+    if (selectedTpl?.key === "r_app_avail" && activeAnns.length === 1 && !proposalAnnId) {
+      setProposalAnnId(activeAnns[0].id);
+    }
+  }, [selectedTpl, activeAnns, proposalAnnId]);
 
   const pushMessage = (message: Msg) => {
     setMsgs(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
