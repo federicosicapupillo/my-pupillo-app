@@ -12,6 +12,7 @@ import { Star, MessageSquare, Send, Heart, Search, Calendar, Users, CheckCircle2
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { sendShiftProposal } from "@/lib/shift-proposal";
+import { setLastAnnouncementId } from "@/lib/last-announcement";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -183,6 +184,7 @@ function Page() {
         restaurantId: user.id,
         workerId: inviteFor.worker_id,
       });
+      setLastAnnouncementId(user.id, annId);
       // Notify worker
       await supabase.from("notifications").insert({
         user_id: inviteFor.worker_id,

@@ -11,6 +11,7 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { otherColumnForRole, groupThreadsByOther } from "@/lib/messages-grouping";
+import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -73,6 +74,7 @@ function MessagesLayout() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [pendingReviewAppIds, setPendingReviewAppIds] = useState<Set<string>>(new Set());
+  const [lastAnn, setLastAnn] = useState<{ id: string; label: string } | null>(null);
 
   const load = async () => {
     if (!user || !role) return;
@@ -200,10 +202,59 @@ function MessagesLayout() {
   });
   const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "");
 
+  // Load last-selected announcement context for restaurant quick-reuse.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user || role !== "restaurant") { setLastAnn(null); return; }
+      const savedId = getLastAnnouncementId(user.id);
+      if (!savedId) { setLastAnn(null); return; }
+      const { data } = await supabase
+        .from("announcements")
+        .select("id, status, service_date, location_address, professional_profile")
+        .eq("id", savedId)
+        .eq("restaurant_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (!data || data.status !== "active") {
+        setLastAnn(null);
+        setLastAnnouncementId(user.id, null);
+        return;
+      }
+      const date = data.service_date ? new Date(data.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "";
+      const parts = [data.professional_profile, date, data.location_address].filter(Boolean);
+      setLastAnn({ id: data.id as string, label: parts.join(" · ") || "Annuncio" });
+    })();
+    return () => { cancelled = true; };
+  }, [user, role]);
+
   return (
     <AppShell>
       <PageHeader title="Messaggi" subtitle="Le tue conversazioni" />
       <RequiredReviewsBanner />
+      {role === "restaurant" && lastAnn && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
+          <div className="min-w-0">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Ultimo annuncio</span>
+            <div className="truncate font-medium">{lastAnn.label}</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/announcements/$id"
+              params={{ id: lastAnn.id }}
+              className="rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+            >
+              Apri annuncio
+            </Link>
+            <Link
+              to="/workers"
+              className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+            >
+              Cerca lavoratori
+            </Link>
+          </div>
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]">
         <section className={`${selectedId ? "hidden lg:block" : "block"} min-w-0`} aria-label="Lista conversazioni">
           {withUser && (

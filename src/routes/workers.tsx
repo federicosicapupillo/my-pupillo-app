@@ -18,6 +18,7 @@ import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { sendShiftProposal } from "@/lib/shift-proposal";
+import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -184,8 +185,14 @@ function WorkersPage() {
     (async () => {
       if (user) {
         const { data } = await supabase.from("announcements").select("id, service_date, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
-        setAnns((data as Ann[]) ?? []);
-        if (data?.[0]) setSelected(data[0].id);
+        const list = (data as Ann[]) ?? [];
+        setAnns(list);
+        if (list.length) {
+          const saved = getLastAnnouncementId(user.id);
+          const preferred = saved && list.some((a) => a.id === saved) ? saved : list[0].id;
+          setSelected(preferred);
+          setLastAnnouncementId(user.id, preferred);
+        }
       }
     })();
   }, [user]);
@@ -427,7 +434,7 @@ function WorkersPage() {
           <label className="text-sm font-medium">Annuncio per cui contattare</label>
           <select
             value={selected}
-            onChange={(e) => setSelected(e.target.value)}
+            onChange={(e) => { setSelected(e.target.value); setLastAnnouncementId(user?.id, e.target.value); }}
             className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="">Nessun annuncio attivo</option>
@@ -541,7 +548,7 @@ function WorkersPage() {
             {anns.map(a => (
               <button
                 key={a.id}
-                onClick={() => { setSelected(a.id); setView("map"); }}
+                onClick={() => { setSelected(a.id); setLastAnnouncementId(user?.id, a.id); setView("map"); }}
                 className={`shrink-0 rounded-xl border px-3 py-2 text-left text-sm transition ${selected===a.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card hover:bg-accent"}`}
               >
                 <div className="font-medium">{new Date(a.service_date).toLocaleDateString("it-IT")}</div>
@@ -561,7 +568,7 @@ function WorkersPage() {
                 address={selectedAnn.location_address}
                 height={420}
                 selectedId={selectedAnn.id}
-                onSelect={(id) => setSelected(id)}
+                onSelect={(id) => { setSelected(id); setLastAnnouncementId(user?.id, id); }}
                 markers={anns
                   .filter((a) => a.location_lat != null && a.location_lng != null)
                   .map((a) => ({ id: a.id, lat: a.location_lat as number, lng: a.location_lng as number, address: a.location_address }))}
