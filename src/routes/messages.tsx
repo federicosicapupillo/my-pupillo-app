@@ -313,6 +313,7 @@ function MessagesLayout() {
                 const last = g.items[0];
                 const statusTally = g.items.reduce<Record<string, number>>((acc, t) => { acc[t.status] = (acc[t.status] ?? 0) + 1; return acc; }, {});
                 const hasPendingReview = g.items.some((t) => pendingReviewAppIds.has(t.id));
+                const latestStatus = last?.status ?? null;
                 return (
                   <Link
                     key={g.id}
@@ -323,15 +324,29 @@ function MessagesLayout() {
                     <div className="relative shrink-0">
                       <UserAvatar userId={g.id} name={g.name} className="h-10 w-10" />
                       {g.unread > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                        <span
+                          className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-primary text-primary-foreground text-[11px] font-bold ring-2 ring-card flex items-center justify-center shadow-sm"
+                          aria-label={`${g.unread} messaggi non letti`}
+                        >
                           {g.unread > 9 ? "9+" : g.unread}
                         </span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
-                        <div className={`truncate text-primary group-hover:underline underline-offset-2 ${g.unread > 0 ? "font-semibold" : "font-medium"}`}>
-                          {g.name}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`truncate text-primary group-hover:underline underline-offset-2 ${g.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                            {g.name}
+                          </div>
+                          {g.unread > 0 && (
+                            <span
+                              className="shrink-0 inline-flex items-center gap-1 text-[10px] rounded-full px-2 py-0.5 bg-primary text-primary-foreground font-semibold"
+                              aria-label={`${g.unread} non letti`}
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+                              {g.unread} non {g.unread === 1 ? "letto" : "letti"}
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(g.lastAt)}</div>
                       </div>
@@ -344,19 +359,26 @@ function MessagesLayout() {
                         </span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-1">
-                        {g.unread > 0 && (
-                          <span className="text-[10px] rounded-full px-2 py-0.5 bg-primary/15 text-primary font-medium">Non letto</span>
+                        {latestStatus && (
+                          <span
+                            className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ring-foreground/10 ${STATUS_CLS[latestStatus] || "bg-muted text-muted-foreground"}`}
+                            title="Stato più recente"
+                          >
+                            Ultimo: {STATUS_LABELS[latestStatus] || latestStatus}
+                          </span>
                         )}
                         {hasPendingReview && (
                           <span className="text-[10px] rounded-full px-2 py-0.5 bg-amber-500/15 text-amber-700 font-medium">
                             Recensione da inviare
                           </span>
                         )}
-                        {Object.entries(statusTally).map(([s, c]) => (
-                          <span key={s} className={`text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[s] || "bg-muted text-muted-foreground"}`}>
-                            {c} {STATUS_LABELS[s] || s}
-                          </span>
-                        ))}
+                        {Object.entries(statusTally)
+                          .filter(([s]) => s !== latestStatus)
+                          .map(([s, c]) => (
+                            <span key={s} className={`text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[s] || "bg-muted text-muted-foreground"}`}>
+                              {c} {STATUS_LABELS[s] || s}
+                            </span>
+                          ))}
                       </div>
                     </div>
                   </Link>
