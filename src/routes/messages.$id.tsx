@@ -492,8 +492,10 @@ function Thread() {
         lines.push("", `💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.`);
         const body = lines.join("\n");
         const createdAt = new Date().toISOString();
+        const target = await ensureApplication({ data: { announcementId: annId, workerId: app.worker_id } });
+        const targetAppId = target.applicationId;
         const { data, error } = await supabase.from("messages").insert({
-          application_id: app.id,
+          application_id: targetAppId,
           sender_id: user.id,
           receiver_id: receiverId,
           body,
@@ -504,14 +506,18 @@ function Thread() {
           action_type: "recall_worker",
         } as never).select("*").single();
         if (error) throw error;
-        if (data) pushMessage(data as Msg);
+        if (data && targetAppId === app.id) pushMessage(data as Msg);
         await supabase.from("applications").update({
           last_message_preview: "📋 Proposta nuovo servizio",
           last_message_at: createdAt,
           status: "pending",
           worker_response_at: null,
-        } as never).eq("id", app.id);
-        setApp({ ...app, status: "pending" } as App);
+        } as never).eq("id", targetAppId);
+        if (targetAppId === app.id) {
+          setApp({ ...app, status: "pending" } as App);
+        } else {
+          navigate({ to: "/messages/$id", params: { id: targetAppId } });
+        }
         setSelectedTpl(null);
         toast.success("Proposta inviata.");
         setSending(false);
