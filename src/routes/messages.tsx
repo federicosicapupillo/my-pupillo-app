@@ -47,7 +47,29 @@ const STATUS_CLS: Record<string, string> = {
   accepted: "bg-emerald-500/15 text-emerald-700",
   rejected: "bg-red-500/15 text-red-700",
   expired: "bg-muted text-muted-foreground",
+  completed: "bg-slate-500/15 text-slate-700",
 };
+
+// Stato "effettivo" usato dal filtro utente: una proposta accettata il cui turno
+// è già passato viene considerata "Completato".
+function effectiveStatus(t: Thread): string {
+  if (t.status === "accepted" && t.ann?.date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(t.ann.date);
+    d.setHours(0, 0, 0, 0);
+    if (d.getTime() < today.getTime()) return "completed";
+  }
+  return t.status;
+}
+
+// Filtri esposti all'utente (in ordine).
+const STATUS_FILTERS: { key: string; label: string }[] = [
+  { key: "pending", label: "In attesa" },
+  { key: "accepted", label: "Accettato" },
+  { key: "rejected", label: "Rifiutato" },
+  { key: "completed", label: "Completato" },
+];
 
 // Priorità del badge aggregato di gruppo.
 // Più alto = più importante. Le proposte che richiedono un'azione vengono prima,
