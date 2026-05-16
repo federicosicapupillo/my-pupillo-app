@@ -1454,6 +1454,14 @@ function RecallProposalCard({
           )}
         </div>
       )}
+      {!showCta && appStatus === "pending" && viewerRole === "restaurant" && mine && (
+        <div className="px-4 pb-4 pt-2 border-t border-border bg-background">
+          <div className="flex items-center justify-center gap-2 rounded-xl bg-muted border border-border text-muted-foreground px-4 py-3 font-semibold">
+            <Clock className="h-5 w-5" />
+            In attesa di risposta del lavoratore
+          </div>
+        </div>
+      )}
     </div>
   );
 }
