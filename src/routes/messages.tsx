@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -75,6 +75,14 @@ function MessagesLayout() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [pendingReviewAppIds, setPendingReviewAppIds] = useState<Set<string>>(new Set());
   const [lastAnn, setLastAnn] = useState<{ id: string; label: string } | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = (id: string) =>
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const load = async () => {
     if (!user || !role) return;
@@ -396,15 +404,20 @@ function MessagesLayout() {
             <div className="space-y-2">
               {visibleGroups.map((g) => {
                 const last = g.items[0];
-                const statusTally = g.items.reduce<Record<string, number>>((acc, t) => { acc[t.status] = (acc[t.status] ?? 0) + 1; return acc; }, {});
                 const hasPendingReview = g.items.some((t) => pendingReviewAppIds.has(t.id));
                 const latestStatus = last?.status ?? null;
+                const expanded = expandedGroups.has(g.id);
+                const latestId = last?.id ?? null;
                 return (
-                  <Link
+                  <div
                     key={g.id}
-                    to="/messages"
-                    search={{ with: g.id }}
-                    className="group flex items-center gap-3 rounded-2xl border p-4 transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-card hover:bg-accent"
+                    className={`rounded-2xl border transition ${g.unread > 0 ? "border-primary/50 bg-primary/5" : "bg-card"}`}
+                  >
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(g.id)}
+                    aria-expanded={expanded}
+                    className="group flex w-full items-center gap-3 rounded-2xl p-4 text-left transition outline-none focus-visible:ring-2 focus-visible:ring-ring hover:bg-accent/60"
                   >
                     <div className="relative shrink-0">
                       <UserAvatar userId={g.id} name={g.name} className="h-10 w-10" />
@@ -420,7 +433,7 @@ function MessagesLayout() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className={`truncate text-primary group-hover:underline underline-offset-2 ${g.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                          <div className={`truncate ${g.unread > 0 ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>
                             {g.name}
                           </div>
                           {g.unread > 0 && (
@@ -429,7 +442,7 @@ function MessagesLayout() {
                               aria-label={`${g.unread} non letti`}
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
-                              {g.unread} non {g.unread === 1 ? "letto" : "letti"}
+                              Nuovo messaggio
                             </span>
                           )}
                         </div>
@@ -440,7 +453,7 @@ function MessagesLayout() {
                           {last?.lastBody ?? "Nessun messaggio"}
                         </div>
                         <span className="shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 bg-muted text-foreground">
-                          {g.items.length} {g.items.length === 1 ? "proposta" : "proposte"}
+                          {g.items.length} {g.items.length === 1 ? "chat" : "chat"}
                         </span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -457,16 +470,63 @@ function MessagesLayout() {
                             Recensione da inviare
                           </span>
                         )}
-                        {Object.entries(statusTally)
-                          .filter(([s]) => s !== latestStatus)
-                          .map(([s, c]) => (
-                            <span key={s} className={`text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[s] || "bg-muted text-muted-foreground"}`}>
-                              {c} {STATUS_LABELS[s] || s}
-                            </span>
-                          ))}
                       </div>
                     </div>
-                  </Link>
+                    <div className="shrink-0 text-muted-foreground" aria-hidden>
+                      {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </button>
+                  {expanded && (
+                    <ul className="border-t px-2 py-2 space-y-1" role="list">
+                      {g.items.map((t) => {
+                        const isLatest = t.id === latestId;
+                        const isUnread = t.unread > 0;
+                        const highlight = isUnread
+                          ? "border-primary/60 bg-primary/10"
+                          : isLatest
+                            ? "border-primary/30 bg-primary/5"
+                            : "border-transparent bg-transparent hover:bg-accent";
+                        return (
+                          <li key={t.id}>
+                            <Link
+                              to="/messages/$id"
+                              params={{ id: t.id }}
+                              className={`flex flex-col gap-1 rounded-xl border px-3 py-2 transition ${highlight}`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className={`min-w-0 truncate text-sm ${isUnread ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>
+                                  {[t.annRole || "Annuncio", fmtDate(t.annDate)].filter(Boolean).join(" — ")}
+                                </div>
+                                <div className="shrink-0 text-[10px] text-muted-foreground">{formatWhen(t.lastAt)}</div>
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className={`min-w-0 truncate text-xs ${isUnread ? "text-foreground" : "text-muted-foreground"}`}>
+                                  {t.lastBody ?? "Nessun messaggio"}
+                                </div>
+                                <div className="flex shrink-0 items-center gap-1">
+                                  {isUnread && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+                                      Nuovo
+                                    </span>
+                                  )}
+                                  {pendingReviewAppIds.has(t.id) && (
+                                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                                      Recensione
+                                    </span>
+                                  )}
+                                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
+                                    {STATUS_LABELS[t.status] || t.status}
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  </div>
                 );
               })}
             </div>
