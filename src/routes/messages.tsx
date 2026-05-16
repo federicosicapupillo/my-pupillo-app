@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-rout
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
 import {
@@ -220,18 +220,13 @@ function MessagesLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, role]);
 
-  const totalUnread = threads.reduce((n, t) => n + (t.unread > 0 ? 1 : 0), 0);
-  const statusCounts = threads.reduce<Record<string, number>>((acc, t) => {
-    const eff = effectiveStatus(t);
-    acc[eff] = (acc[eff] ?? 0) + 1;
-    return acc;
-  }, {});
-  const visible = threads.filter((t) => {
-    if (filter === "unread" && t.unread === 0) return false;
-    if (statusFilter !== "all" && effectiveStatus(t) !== statusFilter) return false;
-    if (withUser && t.other.id !== withUser) return false;
+  // Pre-filtra per ricerca/utente: i chip devono riflettere solo le conversazioni
+  // attualmente in scope (così i conteggi restano coerenti con quello che vedi).
+  const searchScoped = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (q) {
+    return threads.filter((t) => {
+      if (withUser && t.other.id !== withUser) return false;
+      if (!q) return true;
       const role = t.ann?.role ?? "";
       const date = t.ann?.date
         ? new Date(t.ann.date).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })
@@ -247,10 +242,37 @@ function MessagesLayout() {
       ]
         .join(" ")
         .toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
+      return hay.includes(q);
+    });
+  }, [threads, query, withUser]);
+
+  // Conteggi reattivi: dipendono da `threads` (stato/lettura) e dallo scope di ricerca.
+  // Aggiornano in tempo reale all'apertura di una proposta (markRead → unread=0),
+  // ai cambi di stato via realtime e alla digitazione nella barra di ricerca.
+  const totalCount = searchScoped.length;
+  const totalUnread = useMemo(
+    () => searchScoped.reduce((n, t) => n + (t.unread > 0 ? 1 : 0), 0),
+    [searchScoped],
+  );
+  const statusCounts = useMemo(
+    () =>
+      searchScoped.reduce<Record<string, number>>((acc, t) => {
+        const eff = effectiveStatus(t);
+        acc[eff] = (acc[eff] ?? 0) + 1;
+        return acc;
+      }, {}),
+    [searchScoped],
+  );
+
+  const visible = useMemo(
+    () =>
+      searchScoped.filter((t) => {
+        if (filter === "unread" && t.unread === 0) return false;
+        if (statusFilter !== "all" && effectiveStatus(t) !== statusFilter) return false;
+        return true;
+      }),
+    [searchScoped, filter, statusFilter],
+  );
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
 
   // Raggruppa per controparte (worker se sono ristoratore, ristoratore se sono lavoratore).
@@ -342,7 +364,7 @@ function MessagesLayout() {
               onClick={() => setFilter("all")}
               className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
             >
-              Tutte ({threads.length})
+              Tutte ({totalCount})
             </button>
             <button
               type="button"
