@@ -627,50 +627,81 @@ function ReviewSection({
   dueDate,
   onSubmit,
 }: {
-  existing: { id: string; rating: number; comment: string | null; tags: string[] | null } | null;
+  existing: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    punctuality: number | null;
+    professionalism: number | null;
+    competence: number | null;
+    reliability: number | null;
+    teamwork: number | null;
+  } | null;
   workerName: string | null;
   isOverdue: boolean;
   dueDate: string | null;
-  onSubmit: (rating: number, text: string, tags: string[]) => Promise<void>;
+  onSubmit: (
+    scores: Required<ReviewScores>,
+    text: string,
+  ) => Promise<void>;
 }) {
-  const [rating, setRating] = useState(0);
+  const [scores, setScores] = useState<ReviewScores>({});
   const [text, setText] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   if (existing) {
+    const existingScores: ReviewScores = {
+      punctuality: existing.punctuality ?? undefined,
+      professionalism: existing.professionalism ?? undefined,
+      competence: existing.competence ?? undefined,
+      reliability: existing.reliability ?? undefined,
+      teamwork: existing.teamwork ?? undefined,
+    };
+    const overall = computeOverallRating(existingScores) ?? existing.rating;
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-          <h3 className="font-semibold text-sm">Recensione inviata</h3>
+          <h3 className="font-semibold text-sm">Recensione già inviata</h3>
         </div>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <Star key={n} className={`h-5 w-5 ${n <= existing.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} strokeWidth={1.5} />
-          ))}
-          <span className="ml-2 text-sm font-medium">{existing.rating}.0 — {RATING_LABELS[existing.rating]}</span>
+        <ul className="space-y-1.5 text-sm">
+          {REVIEW_CRITERIA.map((c) => {
+            const v = existingScores[c];
+            return (
+              <li key={c} className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">{CRITERION_LABEL[c]}</span>
+                <span className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star key={n} className={`h-4 w-4 ${v && n <= v ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} strokeWidth={1.5} />
+                  ))}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="rounded-lg border bg-muted/40 p-3 text-sm flex items-center justify-between">
+          <span className="font-semibold">Valutazione complessiva</span>
+          <span className="font-bold tabular-nums">{overall.toFixed(1)} / 5</span>
         </div>
-        {existing.comment && <p className="text-sm">{existing.comment}</p>}
-        {existing.tags && existing.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {existing.tags.map((t) => (
-              <span key={t} className="text-[11px] rounded-full bg-secondary px-2 py-0.5">{t}</span>
-            ))}
-          </div>
-        )}
+        {existing.comment && <p className="rounded-lg bg-muted/30 p-3 text-sm italic">“{existing.comment}”</p>}
         <p className="text-xs text-muted-foreground">Hai già recensito questo turno. Non è possibile modificarla.</p>
       </div>
     );
   }
 
   const charCount = text.trim().length;
-  const canSubmit = rating > 0 && charCount >= 20 && charCount <= 500 && !submitting;
-  const toggleTag = (t: string) => setTags((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
+  const allValued = REVIEW_CRITERIA.every((c) => {
+    const v = scores[c];
+    return typeof v === "number" && v >= 1 && v <= 5;
+  });
+  const overallLive = computeOverallRating(scores);
+  const canSubmit = allValued && charCount <= 1000 && !submitting;
+  const setScore = (c: ReviewCriterion, n: number) =>
+    setScores((p) => ({ ...p, [c]: n }));
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    try { await onSubmit(rating, text, tags); }
+    try { await onSubmit(scores as Required<ReviewScores>, text); }
     finally { setSubmitting(false); }
   };
 
@@ -696,63 +727,37 @@ function ReviewSection({
           <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
           <h3 className="font-semibold text-base">Com'è andato il turno{workerName ? ` con ${workerName}` : ""}?</h3>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">Conferma la fine del turno e lascia una recensione al lavoratore.</p>
+        <p className="text-xs text-muted-foreground mt-1">Valuta ogni parametro da 1 a 5 stelle.</p>
       </div>
 
-      <div>
-        <label className="block text-xs font-medium mb-2">Valutazione *</label>
-        <StarPicker value={rating} onChange={setRating} />
+      <ul className="space-y-2.5">
+        {REVIEW_CRITERIA.map((c) => (
+          <li key={c} className="flex items-center justify-between gap-3">
+            <span className="text-sm">{CRITERION_LABEL[c]}</span>
+            <StarPicker value={scores[c] ?? 0} onChange={(n) => setScore(c, n)} />
+          </li>
+        ))}
+      </ul>
+
+      <div className="rounded-lg border bg-muted/30 p-3 text-sm flex items-center justify-between">
+        <span className="font-semibold">Valutazione complessiva</span>
+        <span className="font-bold tabular-nums">
+          {overallLive == null ? "—" : `${overallLive.toFixed(1)} / 5`}
+        </span>
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-medium">Recensione *</label>
-          <span className={`text-[11px] ${charCount > 500 ? "text-destructive" : "text-muted-foreground"}`}>{charCount}/500</span>
+          <label className="text-xs font-medium">Commento (facoltativo, consigliato)</label>
+          <span className={`text-[11px] ${charCount > 1000 ? "text-destructive" : "text-muted-foreground"}`}>{charCount}/1000</span>
         </div>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Scrivi una recensione chiara e utile sul lavoratore."
+          placeholder="Scrivi un commento sulla prestazione del lavoratore"
           rows={4}
-          maxLength={500}
+          maxLength={1000}
         />
-        {charCount > 0 && charCount < 20 && (
-          <p className="text-[11px] text-destructive mt-1">Minimo 20 caratteri ({20 - charCount} mancanti).</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium mb-2">Tag rapidi (opzionali)</label>
-        <div className="space-y-2">
-          <div>
-            <div className="text-[11px] text-muted-foreground mb-1">Positivi</div>
-            <div className="flex flex-wrap gap-1.5">
-              {POSITIVE_TAGS.map((t) => {
-                const active = tags.includes(t);
-                return (
-                  <button key={t} type="button" onClick={() => toggleTag(t)}
-                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground mb-1">Critici</div>
-            <div className="flex flex-wrap gap-1.5">
-              {CRITICAL_TAGS.map((t) => {
-                const active = tags.includes(t);
-                return (
-                  <button key={t} type="button" onClick={() => toggleTag(t)}
-                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-destructive/20 border-destructive text-destructive" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
       </div>
 
       <Button type="button" onClick={handleSubmit} disabled={!canSubmit} className="w-full gap-2">
