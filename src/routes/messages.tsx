@@ -18,6 +18,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useServerFn } from "@tanstack/react-start";
 import { markApplicationRead } from "@/lib/messages.functions";
+import { AnimatedCount } from "@/components/AnimatedCount";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -435,14 +436,14 @@ function MessagesLayout() {
               onClick={() => setFilter("all")}
               className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
             >
-              Tutte ({totalCount})
+              Tutte (<AnimatedCount value={totalCount} />)
             </button>
             <button
               type="button"
               onClick={() => setFilter("unread")}
               className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "unread" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
             >
-              Non lette ({totalUnread})
+              Non lette (<AnimatedCount value={totalUnread} tone="unread" />)
             </button>
           </div>
           <div className="mb-4 flex items-center gap-2 flex-wrap">
@@ -463,7 +464,7 @@ function MessagesLayout() {
                   onClick={() => setStatusFilter(key)}
                   className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[key]} border-transparent hover:opacity-80`}`}
                 >
-                  {label} ({count})
+                  {label} (<AnimatedCount value={count} tone="status" />)
                 </button>
               );
             })}
