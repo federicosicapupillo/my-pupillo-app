@@ -78,7 +78,7 @@ function MessagesLayout() {
     if (!user || !role) return;
     setLoading(true);
     const col = role === "restaurant" ? "restaurant_id" : "worker_id";
-    const otherCol = role === "restaurant" ? "worker_id" : "restaurant_id";
+    const otherCol = otherColumnForRole(role);
     const { data: apps, error: appsError } = await supabase
       .from("applications")
       .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
