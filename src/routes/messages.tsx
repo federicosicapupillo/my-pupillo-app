@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -84,6 +84,7 @@ function MessagesLayout() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState("");
 
   const load = async () => {
     if (!user || !role) return;
@@ -206,6 +207,25 @@ function MessagesLayout() {
     if (filter === "unread" && t.unread === 0) return false;
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (withUser && t.other.id !== withUser) return false;
+    const q = query.trim().toLowerCase();
+    if (q) {
+      const role = t.ann?.role ?? "";
+      const date = t.ann?.date
+        ? new Date(t.ann.date).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })
+        : "";
+      const time = t.ann?.time ? t.ann.time.slice(0, 5) : "";
+      const hay = [
+        t.other.name,
+        role,
+        date,
+        time,
+        t.ann?.date ?? "",
+        t.lastBody ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
@@ -272,6 +292,27 @@ function MessagesLayout() {
               </Link>
             </div>
           )}
+          <div className="relative mb-3">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cerca per nome, ruolo o data turno…"
+              className="w-full rounded-xl border bg-card pl-9 pr-9 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Cerca conversazioni"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-accent"
+                aria-label="Pulisci ricerca"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <div className="mb-3 flex items-center gap-2 flex-wrap">
             <button
               type="button"
