@@ -49,6 +49,19 @@ const STATUS_CLS: Record<string, string> = {
   expired: "bg-muted text-muted-foreground",
 };
 
+// Priorità del badge aggregato di gruppo.
+// Più alto = più importante. Le proposte che richiedono un'azione vengono prima,
+// poi gli esiti positivi, infine quelli conclusi/negativi.
+const STATUS_PRIORITY: Record<string, number> = {
+  pending: 60,         // richiede risposta -> massima priorità
+  counter_offer: 55,   // in negoziazione -> azione richiesta
+  interested: 50,      // interesse mostrato, in evoluzione
+  accepted: 40,        // esito positivo concluso
+  rejected: 20,        // esito negativo
+  expired: 10,         // chiuso senza esito
+};
+const statusRank = (s: string) => STATUS_PRIORITY[s] ?? 0;
+
 function formatWhen(iso: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
