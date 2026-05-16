@@ -386,15 +386,17 @@ function ShiftsPage() {
                       <div className="space-y-3">
                         <div className="flex items-center gap-1">
                           {[1,2,3,4,5].map(n => (
-                            <button key={n} type="button" onClick={() => setRating(n)} className="p-1">
+                            <button key={n} type="button" onClick={() => setRating(n)} className="p-1 disabled:opacity-50" disabled={submittingReview === s.id}>
                               <Star className={`h-6 w-6 transition ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                             </button>
                           ))}
                         </div>
-                        <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} />
+                        <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} disabled={submittingReview === s.id} />
                         <div className="flex flex-wrap gap-2">
-                          <Button size="sm" onClick={() => submitReview(s)}>Invia recensione</Button>
-                          <Button size="sm" variant="ghost" onClick={() => setReviewOpen(null)}>Annulla</Button>
+                          <Button size="sm" onClick={() => submitReview(s)} disabled={submittingReview === s.id} className="gap-1.5">
+                            {submittingReview === s.id ? (<><Loader2 className="h-4 w-4 animate-spin" /> Invio…</>) : "Invia recensione"}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setReviewOpen(null)} disabled={submittingReview === s.id}>Annulla</Button>
                         </div>
                       </div>
                     ) : (
