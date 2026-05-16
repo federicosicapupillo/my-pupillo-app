@@ -57,3 +57,64 @@ export function effectiveStatus(
   }
   return t.status;
 }
+
+// Forma minimale di un thread necessaria al filtro di ricerca e ai conteggi
+// dei chip. Estratta qui per essere testabile senza renderizzare la pagina.
+export type SearchableThread = ThreadLike & {
+  other: { id: string; name: string };
+  lastBody: string | null;
+  unread: number;
+};
+
+// Replica della pre-filtrazione applicata in /messages: filtra per utente
+// "focalizzato" (?with=) e per query testuale (nome controparte, ruolo,
+// data/ora del turno, ultimo messaggio).
+export function searchScopeThreads<T extends SearchableThread>(
+  threads: T[],
+  query: string,
+  withUser: string,
+): T[] {
+  const q = query.trim().toLowerCase();
+  return threads.filter((t) => {
+    if (withUser && t.other.id !== withUser) return false;
+    if (!q) return true;
+    const role = t.ann?.role ?? "";
+    const date = t.ann?.date
+      ? new Date(t.ann.date).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })
+      : "";
+    const time = t.ann?.time ? t.ann.time.slice(0, 5) : "";
+    const hay = [
+      t.other.name,
+      role,
+      date,
+      time,
+      t.ann?.date ?? "",
+      t.lastBody ?? "",
+    ]
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+export type ChipCounts = {
+  total: number;
+  unread: number;
+  byStatus: Record<string, number>;
+};
+
+// Calcola i conteggi dei chip (Tutte, Non lette, e per stato effettivo)
+// a partire dai thread già passati per searchScopeThreads.
+export function computeChipCounts<T extends SearchableThread>(
+  scoped: T[],
+  now: Date = new Date(),
+): ChipCounts {
+  const byStatus: Record<string, number> = {};
+  let unread = 0;
+  for (const t of scoped) {
+    if (t.unread > 0) unread += 1;
+    const eff = effectiveStatus(t, now);
+    byStatus[eff] = (byStatus[eff] ?? 0) + 1;
+  }
+  return { total: scoped.length, unread, byStatus };
+}
