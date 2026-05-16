@@ -132,6 +132,7 @@ function WorkersPage() {
   const [langDraft, setLangDraft] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
+  const [collabMap, setCollabMap] = useState<Record<string, { worked: boolean; review: { rating: number; comment: string | null; created_at: string } | null }>>({});
 
   const runSearch = async (overrides?: { category?: Category; subcategory?: string; text?: string; language?: string }) => {
     const nextCategory = overrides?.category ?? catDraft;
@@ -188,6 +189,38 @@ function WorkersPage() {
       }
     })();
   }, [user]);
+
+  // Load "already worked with you" + last private review (by this restaurant) for the visible workers.
+  useEffect(() => {
+    (async () => {
+      if (!user || workers.length === 0) { setCollabMap({}); return; }
+      const ids = workers.map((w) => w.id);
+      const [{ data: shiftsData }, { data: reviewsData }] = await Promise.all([
+        supabase
+          .from("shifts")
+          .select("worker_id, status")
+          .eq("restaurant_id", user.id)
+          .in("worker_id", ids)
+          .eq("status", "completed"),
+        supabase
+          .from("reviews")
+          .select("target_id, rating, comment, created_at")
+          .eq("author_id", user.id)
+          .in("target_id", ids)
+          .order("created_at", { ascending: false }),
+      ]);
+      const workedSet = new Set<string>((shiftsData ?? []).map((s: any) => s.worker_id));
+      const latestReview: Record<string, { rating: number; comment: string | null; created_at: string }> = {};
+      for (const r of (reviewsData as any[]) ?? []) {
+        if (!latestReview[r.target_id]) latestReview[r.target_id] = { rating: r.rating, comment: r.comment, created_at: r.created_at };
+      }
+      const map: typeof collabMap = {};
+      for (const id of ids) {
+        map[id] = { worked: workedSet.has(id), review: latestReview[id] ?? null };
+      }
+      setCollabMap(map);
+    })();
+  }, [user, workers]);
 
   // Load all workers by default when the page opens, so the list is never empty.
   useEffect(() => {
@@ -398,6 +431,10 @@ function WorkersPage() {
     return true;
   });
   const sorted = [...distFiltered].sort((a, b) => {
+    // Prioritize "già lavorato con te" workers, but keep all visible.
+    const aw = collabMap[a.id]?.worked ? 1 : 0;
+    const bw = collabMap[b.id]?.worked ? 1 : 0;
+    if (aw !== bw) return bw - aw;
     if (category === "all") {
       if (subcategory === "Ultimi attivi") return (new Date(b.last_active_at ?? 0).getTime()) - (new Date(a.last_active_at ?? 0).getTime());
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
@@ -584,8 +621,11 @@ function WorkersPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sorted.map((w) => {
           const near = inRange(w);
+          const collab = collabMap[w.id];
+          const worked = !!collab?.worked;
+          const lastReview = collab?.review ?? null;
           return (
-          <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
+          <div key={w.id} className={`rounded-2xl border p-5 ${worked ? "border-primary/40 bg-primary/5" : near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
               <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
               <div>
@@ -594,6 +634,30 @@ function WorkersPage() {
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
+            {worked && (
+              <div className="mt-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
+                <div className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-[11px] font-semibold">
+                  ★ Già lavorato con te
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">Ultima tua recensione:</div>
+                {lastReview ? (
+                  <div className="mt-1">
+                    <div className="text-amber-500 text-sm" aria-label={`${lastReview.rating} stelle`}>
+                      {"★".repeat(Math.max(0, Math.min(5, lastReview.rating)))}
+                      <span className="text-muted-foreground/40">{"★".repeat(Math.max(0, 5 - lastReview.rating))}</span>
+                    </div>
+                    {lastReview.comment && (
+                      <p className="mt-1 text-sm italic line-clamp-2">"{lastReview.comment}"</p>
+                    )}
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      {new Date(lastReview.created_at).toLocaleDateString("it-IT")}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs italic text-muted-foreground">Recensione non ancora inserita</p>
+                )}
+              </div>
+            )}
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
             {(() => {
               const langs: SpokenLanguage[] = normalizeSpokenLanguages(w.spoken_languages);
