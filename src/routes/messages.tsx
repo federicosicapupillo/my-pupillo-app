@@ -162,6 +162,18 @@ function MessagesLayout() {
 
   useEffect(() => { if (!authLoading) load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user, role, authLoading]);
 
+  // Quando si apre una proposta (click o navigazione diretta), considerala letta:
+  // azzera l'unread del thread selezionato così il badge del gruppo e della riga
+  // si aggiornano subito, senza aspettare l'evento realtime.
+  useEffect(() => {
+    if (!selectedId) return;
+    setThreads((prev) =>
+      prev.some((t) => t.id === selectedId && t.unread > 0)
+        ? prev.map((t) => (t.id === selectedId ? { ...t, unread: 0 } : t))
+        : prev
+    );
+  }, [selectedId]);
+
   // Realtime: status updates + new messages
   useEffect(() => {
     if (!user || !role) return;
