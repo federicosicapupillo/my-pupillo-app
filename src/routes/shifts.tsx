@@ -337,14 +337,14 @@ function ShiftsPage() {
                 )}
 
                 {s.status === "completed" && (
-                  <div className="mt-4 border-t pt-3">
+                  <div className="mt-4 border-t border-white/5 pt-4">
                     {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (() => {
                       const due = new Date(reqByShift[s.id].due_date).getTime();
                       const now = Date.now();
                       const overdue = reqByShift[s.id].status === "overdue" || due < now;
                       const soon = !overdue && (due - now) < 24 * 60 * 60 * 1000;
                       return (
-                        <div className={`mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        <div className={`mb-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
                           overdue ? "bg-destructive/15 text-destructive" : soon ? "bg-amber-500/15 text-amber-700" : "bg-muted text-muted-foreground"
                         }`}>
                           {overdue ? "Scaduta" : soon ? "In scadenza" : `Entro il ${new Date(reqByShift[s.id].due_date).toLocaleDateString("it-IT")}`}
@@ -352,45 +352,45 @@ function ShiftsPage() {
                       );
                     })()}
                     {reviewMap[s.id] != null ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-sm font-semibold text-emerald-700 shadow-[0_0_12px_-2px_rgba(16,185,129,0.35)] dark:text-emerald-400 dark:bg-emerald-500/10">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Recensione inviata
-                          </div>
-                          <Button size="sm" variant="outline" className="gap-1" onClick={() => openViewReview(s.id)}>
-                            <Eye className="h-4 w-4" /> Vedi recensione
-                          </Button>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-sm font-semibold text-emerald-700 shadow-[0_0_12px_-2px_rgba(16,185,129,0.35)] dark:text-emerald-400 dark:bg-emerald-500/10">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Recensione inviata</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-muted-foreground">Recensione fatta dal ristoratore:</span>
-                          <div className="flex items-center gap-0.5">
-                            {[1,2,3,4,5].map(n => (
-                              <Star key={n} className={`h-4 w-4 ${n <= reviewMap[s.id] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
-                            ))}
-                          </div>
-                          <span className="font-semibold text-foreground">{reviewMap[s.id]}/5</span>
+                        <div className="flex items-center gap-1">
+                          {[1,2,3,4,5].map(n => (
+                            <Star key={n} className={`h-4 w-4 ${n <= reviewMap[s.id] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                          ))}
+                          <span className="ml-1 text-sm font-semibold text-foreground">{reviewMap[s.id]}/5</span>
                         </div>
+                        <Button size="sm" variant="outline" className="gap-1 ml-auto" onClick={() => openViewReview(s.id)}>
+                          <Eye className="h-4 w-4" /> Vedi recensione
+                        </Button>
                       </div>
                     ) : reviewOpen === s.id ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="flex items-center gap-1">
                           {[1,2,3,4,5].map(n => (
                             <button key={n} type="button" onClick={() => setRating(n)} className="p-1">
-                              <Star className={`h-5 w-5 ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                              <Star className={`h-6 w-6 transition ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                             </button>
                           ))}
                         </div>
                         <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} />
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button size="sm" onClick={() => submitReview(s)}>Invia recensione</Button>
                           <Button size="sm" variant="ghost" onClick={() => setReviewOpen(null)}>Annulla</Button>
                         </div>
                       </div>
                     ) : (
-                      <Button size="sm" variant="outline" className="gap-1" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); }}>
-                        <Star className="h-4 w-4" /> Lascia recensione
-                      </Button>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); }}>
+                          <Star className="h-4 w-4" /> Lascia recensione
+                        </Button>
+                        {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (
+                          <span className="text-xs text-muted-foreground">Obbligatoria per contattare nuovi lavoratori</span>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
