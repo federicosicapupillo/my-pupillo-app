@@ -63,6 +63,24 @@ function expiresLabel(iso: string) {
   return { text: `Scade tra ${days}g`, tone: "ok" as const };
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  draft: "In bozza",
+  active: "Attivo",
+  assigned: "Assegnato",
+  completed: "Completato",
+  expired: "Scaduto",
+  cancelled: "Annullato",
+};
+
+const STATUS_CLS: Record<string, string> = {
+  draft: "bg-amber-100 text-amber-800",
+  active: "bg-green-100 text-green-800",
+  assigned: "bg-blue-100 text-blue-800",
+  completed: "bg-blue-100 text-blue-800",
+  expired: "bg-muted text-muted-foreground",
+  cancelled: "bg-red-100 text-red-800",
+};
+
 function AnnouncementsPage() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
@@ -211,7 +229,18 @@ function AnnouncementsPage() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span className={`text-xs rounded-full px-2 py-1 ${a.status === 'active' ? 'bg-green-100 text-green-800' : a.status === 'assigned' ? 'bg-blue-100 text-blue-800' : 'bg-muted text-muted-foreground'}`}>{a.status}</span>
+                  <span className={`text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[a.status] ?? 'bg-muted text-muted-foreground'}`}>
+                    {STATUS_LABEL[a.status] ?? a.status}
+                  </span>
+                  {role === "restaurant" && (
+                    <span
+                      className={`inline-flex items-center gap-1 text-[11px] rounded-full px-2 py-0.5 font-medium ${(counts[a.id] ?? 0) > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+                      title={`${counts[a.id] ?? 0} candidatur${(counts[a.id] ?? 0) === 1 ? 'a' : 'e'}`}
+                    >
+                      <Users className="h-3 w-3" />
+                      {counts[a.id] ?? 0} candidat{(counts[a.id] ?? 0) === 1 ? 'o' : 'i'}
+                    </span>
+                  )}
                   {a.status === 'active' && (() => {
                     const e = expiresLabel(a.expires_at);
                     return <span className={`text-[10px] rounded-full px-2 py-0.5 ${e.tone === 'warn' ? 'bg-yellow-100 text-yellow-800' : e.tone === 'ok' ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground'}`}>{e.text}</span>;
