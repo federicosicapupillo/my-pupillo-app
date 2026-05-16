@@ -178,13 +178,23 @@ function MessagesLayout() {
   // Quando si apre una proposta (click o navigazione diretta), considerala letta:
   // azzera l'unread del thread selezionato così il badge del gruppo e della riga
   // si aggiornano subito, senza aspettare l'evento realtime.
+  const markRead = useServerFn(markApplicationRead);
   useEffect(() => {
     if (!selectedId) return;
+    const hadUnread = threads.some((t) => t.id === selectedId && t.unread > 0);
     setThreads((prev) =>
       prev.some((t) => t.id === selectedId && t.unread > 0)
         ? prev.map((t) => (t.id === selectedId ? { ...t, unread: 0 } : t))
         : prev
     );
+    // Sincronizza con il backend così altri dispositivi vedono i messaggi come letti.
+    if (hadUnread) {
+      markRead({ data: { applicationId: selectedId } }).catch(() => {
+        // Best-effort: il prossimo caricamento o la sottoscrizione realtime
+        // riallineerà comunque i contatori.
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
   // Realtime: status updates + new messages
