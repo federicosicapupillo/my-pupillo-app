@@ -1271,9 +1271,33 @@ function ProposalCard(props: {
 }) {
   const { ann, venueName, displayAddress, isWorker, status, onAccept, onReject } = props;
   const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
+  // The proposal expires at the end of the shift (or, lacking end_time,
+  // at service_time + duration). After that it cannot be accepted/refused.
+  const deadline = useMemo<Date | null>(() => {
+    if (!ann?.service_date) return null;
+    const datePart = ann.service_date;
+    const endTime = (ann.end_time ?? "").slice(0, 5);
+    if (endTime) {
+      const d = new Date(`${datePart}T${endTime}:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const startTime = (ann.service_time ?? "").slice(0, 5);
+    if (!startTime) return null;
+    const start = new Date(`${datePart}T${startTime}:00`);
+    if (isNaN(start.getTime())) return null;
+    const hours = Number(ann.duration_hours ?? 4) || 4;
+    return new Date(start.getTime() + hours * 60 * 60 * 1000);
+  }, [ann?.service_date, ann?.service_time, ann?.end_time, ann?.duration_hours]);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!deadline) return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [deadline]);
+  const timeExpired = deadline ? deadline.getTime() <= now : false;
   const accepted = status === "accepted";
   const rejected = status === "rejected" || status === "not_interested";
-  const expired = status === "expired";
+  const expired = status === "expired" || (!accepted && !rejected && timeExpired);
   const decided = accepted || rejected || expired;
 
   const handle = async (kind: "accept" | "reject") => {
@@ -1320,13 +1344,30 @@ function ProposalCard(props: {
         </dl>
         <p className="px-4 pb-3 text-xs text-muted-foreground">Fammi sapere se puoi esserci.</p>
 
+        {deadline && !accepted && !rejected && (
+          <div className={`mx-4 mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+            expired
+              ? "border-destructive/30 bg-destructive/10 text-destructive"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+          }`}>
+            <AlarmClock className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {expired
+                ? `Scaduta il ${deadline.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${deadline.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`
+                : `Valida fino al ${deadline.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${deadline.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`}
+            </span>
+          </div>
+        )}
+
         {decided ? (
           <div className={`px-4 py-3 border-t text-sm font-semibold flex items-center justify-center gap-2 ${
             accepted
               ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-              : "bg-destructive/10 text-destructive border-destructive/30"
+              : expired
+                ? "bg-muted text-muted-foreground border-border"
+                : "bg-destructive/10 text-destructive border-destructive/30"
           }`}>
-            {accepted ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            {accepted ? <Check className="h-4 w-4" /> : expired ? <AlarmClock className="h-4 w-4" /> : <X className="h-4 w-4" />}
             {accepted ? (isWorker ? "Hai accettato questa proposta." : "Proposta accettata") :
               expired ? "Proposta scaduta" :
               (isWorker ? "Hai rifiutato questa proposta." : "Proposta rifiutata")}
