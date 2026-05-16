@@ -542,6 +542,13 @@ function WorkersPage() {
   const cost = CREDIT_COSTS.assignWorker;
   const canAfford = isPaid || credits >= cost;
 
+  const selectedAnnFull = anns.find((a) => a.id === selected) ?? null;
+  const previewBody = useMemo(() => {
+    if (!selectedAnnFull) return "";
+    const restName = profile?.business_name || profile?.full_name || "il nostro locale";
+    return buildProposalBody(selectedAnnFull, restName);
+  }, [selectedAnnFull, profile?.business_name, profile?.full_name]);
+
   return (
     <AppShell>
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
@@ -584,6 +591,21 @@ function WorkersPage() {
               <option key={a.id} value={a.id}>{fmtAnnLabel(a)}</option>
             ))}
           </select>
+        )}
+        {previewBody && (
+          <div className="mt-3 rounded-xl border bg-background p-3">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Anteprima messaggio
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                Si aggiorna automaticamente in base all'annuncio scelto
+              </span>
+            </div>
+            <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground font-sans max-h-56 overflow-auto">
+{previewBody}
+            </pre>
+          </div>
         )}
       </div>
       <div className="mb-4 grid gap-3 md:grid-cols-2">
