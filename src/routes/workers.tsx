@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -135,6 +135,35 @@ function fmtAnnLabel(a: Ann): string {
   const orario = t1 && t2 ? `${t1}/${t2}` : t1;
   const luogo = a.job_city || a.location_address || "";
   return [role, date, orario, luogo].filter(Boolean).join(" — ");
+}
+
+function buildProposalBody(ann: Ann, restName: string): string {
+  const lines: string[] = ["📋 Proposta nuovo servizio", ""];
+  if (ann.professional_profile) lines.push(`• Ruolo: ${ann.professional_profile}`);
+  lines.push(`• Locale: ${restName}`);
+  if (ann.service_date) {
+    const d = new Date(ann.service_date).toLocaleDateString("it-IT");
+    lines.push(`• Data inizio: ${d}${ann.service_time ? ` · ${ann.service_time.slice(0, 5)}` : ""}`);
+  }
+  if (ann.end_date || ann.end_time) {
+    const ed = ann.end_date
+      ? new Date(ann.end_date).toLocaleDateString("it-IT")
+      : (ann.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "");
+    lines.push(`• Fine: ${ed}${ann.end_time ? ` · ${ann.end_time.slice(0, 5)}` : ""}`);
+  }
+  if (ann.tariff_amount != null) {
+    lines.push(`• Tariffa: €${Number(ann.tariff_amount).toFixed(2)}${ann.tariff_type === "hourly" ? "/h" : ""}`);
+  }
+  const zone = [ann.job_city, ann.job_province].filter(Boolean).join(", ");
+  if (zone) lines.push(`• Zona: ${zone}`);
+  if (ann.job_address || ann.location_address) lines.push(`• Indirizzo: ${ann.job_address || ann.location_address}`);
+  if (ann.dress_code_items && ann.dress_code_items.length) lines.push(`• Dress code: ${ann.dress_code_items.join(", ")}`);
+  if (ann.dress_code_notes) lines.push(`  ${ann.dress_code_notes}`);
+  if (ann.required_skills && ann.required_skills.length) lines.push(`• Requisiti: ${ann.required_skills.join(", ")}`);
+  if (ann.is_long_shift) lines.push(`• ⚠️ Turno lungo${ann.long_shift_reason ? ` — ${ann.long_shift_reason}` : ""}`);
+  if (ann.notes) lines.push(`• Note: ${ann.notes}`);
+  lines.push("", "💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.");
+  return lines.join("\n");
 }
 
 function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -321,32 +350,7 @@ function WorkersPage() {
     }
     // Costruisci il messaggio strutturato "recall_worker" con i dettagli dell'annuncio.
     const restName = profile?.business_name || profile?.full_name || "il nostro locale";
-    const lines: string[] = ["📋 Proposta nuovo servizio", ""];
-    if (ann.professional_profile) lines.push(`• Ruolo: ${ann.professional_profile}`);
-    lines.push(`• Locale: ${restName}`);
-    if (ann.service_date) {
-      const d = new Date(ann.service_date).toLocaleDateString("it-IT");
-      lines.push(`• Data inizio: ${d}${ann.service_time ? ` · ${ann.service_time.slice(0, 5)}` : ""}`);
-    }
-    if (ann.end_date || ann.end_time) {
-      const ed = ann.end_date
-        ? new Date(ann.end_date).toLocaleDateString("it-IT")
-        : (ann.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "");
-      lines.push(`• Fine: ${ed}${ann.end_time ? ` · ${ann.end_time.slice(0, 5)}` : ""}`);
-    }
-    if (ann.tariff_amount != null) {
-      lines.push(`• Tariffa: €${Number(ann.tariff_amount).toFixed(2)}${ann.tariff_type === "hourly" ? "/h" : ""}`);
-    }
-    const zone = [ann.job_city, ann.job_province].filter(Boolean).join(", ");
-    if (zone) lines.push(`• Zona: ${zone}`);
-    if (ann.job_address || ann.location_address) lines.push(`• Indirizzo: ${ann.job_address || ann.location_address}`);
-    if (ann.dress_code_items && ann.dress_code_items.length) lines.push(`• Dress code: ${ann.dress_code_items.join(", ")}`);
-    if (ann.dress_code_notes) lines.push(`  ${ann.dress_code_notes}`);
-    if (ann.required_skills && ann.required_skills.length) lines.push(`• Requisiti: ${ann.required_skills.join(", ")}`);
-    if (ann.is_long_shift) lines.push(`• ⚠️ Turno lungo${ann.long_shift_reason ? ` — ${ann.long_shift_reason}` : ""}`);
-    if (ann.notes) lines.push(`• Note: ${ann.notes}`);
-    lines.push("", "💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.");
-    const body = lines.join("\n");
+    const body = buildProposalBody(ann, restName);
     const createdAt = new Date().toISOString();
     await supabase.from("messages").insert({
       application_id: appId!,
@@ -538,6 +542,13 @@ function WorkersPage() {
   const cost = CREDIT_COSTS.assignWorker;
   const canAfford = isPaid || credits >= cost;
 
+  const selectedAnnFull = anns.find((a) => a.id === selected) ?? null;
+  const previewBody = useMemo(() => {
+    if (!selectedAnnFull) return "";
+    const restName = profile?.business_name || profile?.full_name || "il nostro locale";
+    return buildProposalBody(selectedAnnFull, restName);
+  }, [selectedAnnFull, profile?.business_name, profile?.full_name]);
+
   return (
     <AppShell>
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
@@ -580,6 +591,21 @@ function WorkersPage() {
               <option key={a.id} value={a.id}>{fmtAnnLabel(a)}</option>
             ))}
           </select>
+        )}
+        {previewBody && (
+          <div className="mt-3 rounded-xl border bg-background p-3">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Anteprima messaggio
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                Si aggiorna automaticamente in base all'annuncio scelto
+              </span>
+            </div>
+            <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground font-sans max-h-56 overflow-auto">
+{previewBody}
+            </pre>
+          </div>
         )}
       </div>
       <div className="mb-4 grid gap-3 md:grid-cols-2">
@@ -686,7 +712,7 @@ function WorkersPage() {
             {anns.map(a => (
               <button
                 key={a.id}
-                onClick={() => { setSelected(a.id); setView("map"); }}
+                onClick={() => setSelected(a.id)}
                 className={`shrink-0 rounded-xl border px-3 py-2 text-left text-sm transition ${selected===a.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card hover:bg-accent"}`}
               >
                 <div className="font-medium">{new Date(a.service_date).toLocaleDateString("it-IT")}</div>
