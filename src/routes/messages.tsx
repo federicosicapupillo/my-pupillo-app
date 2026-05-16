@@ -57,18 +57,7 @@ const STATUS_CLS: Record<string, string> = {
   completed: "bg-slate-500/15 text-slate-700",
 };
 
-// Stato "effettivo" usato dal filtro utente: una proposta accettata il cui turno
-// è già passato viene considerata "Completato".
-function effectiveStatus(t: Thread): string {
-  if (t.status === "accepted" && t.ann?.date) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const d = new Date(t.ann.date);
-    d.setHours(0, 0, 0, 0);
-    if (d.getTime() < today.getTime()) return "completed";
-  }
-  return t.status;
-}
+const effectiveStatus = (t: Thread): string => effectiveStatusLib(t);
 
 // Filtri esposti all'utente (in ordine).
 const STATUS_FILTERS: { key: string; label: string }[] = [
@@ -78,18 +67,9 @@ const STATUS_FILTERS: { key: string; label: string }[] = [
   { key: "completed", label: "Completato" },
 ];
 
-// Priorità del badge aggregato di gruppo.
-// Più alto = più importante. Le proposte che richiedono un'azione vengono prima,
-// poi gli esiti positivi, infine quelli conclusi/negativi.
-const STATUS_PRIORITY: Record<string, number> = {
-  pending: 60,         // richiede risposta -> massima priorità
-  counter_offer: 55,   // in negoziazione -> azione richiesta
-  interested: 50,      // interesse mostrato, in evoluzione
-  accepted: 40,        // esito positivo concluso
-  rejected: 20,        // esito negativo
-  expired: 10,         // chiuso senza esito
-};
-const statusRank = (s: string) => STATUS_PRIORITY[s] ?? 0;
+// STATUS_PRIORITY / statusRank importati da @/lib/message-grouping.
+void STATUS_PRIORITY;
+void statusRank;
 
 function formatWhen(iso: string | null) {
   if (!iso) return "";
