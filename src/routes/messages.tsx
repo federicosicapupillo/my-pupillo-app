@@ -292,6 +292,27 @@ function MessagesLayout() {
               </Link>
             </div>
           )}
+          <div className="relative mb-3">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cerca per nome, ruolo o data turno…"
+              className="w-full rounded-xl border bg-card pl-9 pr-9 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Cerca conversazioni"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-accent"
+                aria-label="Pulisci ricerca"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <div className="mb-3 flex items-center gap-2 flex-wrap">
             <button
               type="button"
