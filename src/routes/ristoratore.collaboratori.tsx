@@ -329,9 +329,12 @@ function Page() {
               >
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Calendar className="h-4 w-4 text-primary" />
-                  {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}
+                  {new Date(a.service_date).toLocaleDateString("it-IT")}
+                  {a.service_time ? ` · ${a.service_time.slice(0,5)}` : ""}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1 truncate">{a.location_address}</div>
+                {a.location_address && (
+                  <div className="text-xs text-muted-foreground mt-1 truncate">{a.location_address}</div>
+                )}
               </button>
             ))}
           </div>
