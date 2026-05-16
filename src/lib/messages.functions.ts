@@ -22,6 +22,16 @@ export const ensureProposalApplication = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    const { data: announcement, error: announcementError } = await supabase
+      .from("announcements")
+      .select("id")
+      .eq("id", data.announcementId)
+      .eq("restaurant_id", userId)
+      .maybeSingle();
+
+    if (announcementError) throw new Error(announcementError.message);
+    if (!announcement) throw new Error("Annuncio non valido per questo ristoratore.");
+
     const { data: existing, error: existingError } = await supabase
       .from("applications")
       .select("id")
