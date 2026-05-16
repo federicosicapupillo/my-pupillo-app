@@ -835,10 +835,22 @@ function Thread() {
           {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             if (isSystem) {
+              const isAccept = m.action_type === "accept_application";
+              const isReject = m.action_type === "reject_application";
+              const tone = isAccept
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                : isReject
+                  ? "bg-destructive/10 text-destructive border-destructive/30"
+                  : "bg-muted text-muted-foreground border";
+              const label = isAccept
+                ? "Proposta accettata"
+                : isReject
+                  ? "Proposta rifiutata"
+                  : m.body.replace(/^⚙️ Sistema:\s*/, "").replace(/^⚙️ /, "");
               return (
                 <div key={m.id} className="flex justify-center">
-                  <div className="rounded-full px-3 py-1 text-xs bg-muted text-muted-foreground border">
-                    {m.body.replace(/^⚙️ /, "")}
+                  <div className={`rounded-full px-3 py-1 text-xs font-medium border ${tone}`}>
+                    {label}
                   </div>
                 </div>
               );
@@ -854,12 +866,28 @@ function Thread() {
                   isWorker={role === "worker"}
                   status={app?.status ?? "pending"}
                   onAccept={async () => {
-                    await transition("accepted");
-                    await insertSystemMessage("Il lavoratore ha accettato la proposta di lavoro.", "accept_application");
+                    try {
+                      await transition("accepted");
+                    } finally {
+                      // Always emit a system message so both sides see the outcome,
+                      // even if the status update partially fails.
+                      try {
+                        await insertSystemMessage("Proposta accettata", "accept_application");
+                      } catch (err) {
+                        console.error("[proposal] system message insert failed", err);
+                      }
+                    }
                   }}
                   onReject={async () => {
-                    await transition("rejected");
-                    await insertSystemMessage("Il lavoratore ha rifiutato la proposta di lavoro.", "reject_application");
+                    try {
+                      await transition("rejected");
+                    } finally {
+                      try {
+                        await insertSystemMessage("Proposta rifiutata", "reject_application");
+                      } catch (err) {
+                        console.error("[proposal] system message insert failed", err);
+                      }
+                    }
                   }}
                 />
               );
