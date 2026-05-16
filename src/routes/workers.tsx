@@ -237,16 +237,19 @@ function WorkersPage() {
       nav({ to: "/shifts", search: { tab: "to-review" } as never });
       return;
     }
-    // Reuse existing generic chat with this worker if any (independent of "Ricontatta"/shift proposals).
+    // Riapri la chat esistente SOLO se è ancora "pending" (in attesa di risposta).
+    // Se l'ultima proposta è stata accettata/rifiutata/chiusa, ogni nuovo
+    // contatto (Messaggia/Ricontatta) crea una NUOVA proposta indipendente,
+    // così lo stato della vecchia conversazione non viene ereditato.
     const { data: existing } = await supabase
       .from("applications")
-      .select("id, created_at")
+      .select("id, status, created_at")
       .eq("restaurant_id", user.id)
       .eq("worker_id", workerId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (existing?.id) {
+    if (existing?.id && existing.status === "pending") {
       nav({ to: "/messages/$id", params: { id: existing.id } });
       return;
     }

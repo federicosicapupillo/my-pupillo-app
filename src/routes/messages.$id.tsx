@@ -504,7 +504,10 @@ function Thread() {
         await supabase.from("applications").update({
           last_message_preview: "📋 Proposta nuovo servizio",
           last_message_at: createdAt,
+          status: "pending",
+          worker_response_at: null,
         } as never).eq("id", app.id);
+        setApp({ ...app, status: "pending" } as App);
         setSelectedTpl(null);
         toast.success("Proposta inviata.");
         setSending(false);
@@ -937,7 +940,9 @@ function Thread() {
 
         <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
-          {msgs.map(m => {
+          {(() => {
+            const lastRecallId = [...msgs].reverse().find(m => m.action_type === "recall_worker")?.id ?? null;
+            return msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             if (isSystem) {
               return (
@@ -950,8 +955,9 @@ function Thread() {
             }
             if (m.action_type === "recall_worker") {
               const mine = m.sender_id === user?.id;
+              const isLatestRecall = m.id === lastRecallId;
               const showCta =
-                role === "worker" && !mine && app?.status === "pending";
+                role === "worker" && !mine && app?.status === "pending" && isLatestRecall;
               const handleRecallAccept = async () => {
                 await transition("interested");
                 if (app) {
@@ -993,7 +999,7 @@ function Thread() {
                   <RecallProposalCard
                     body={m.body}
                     showCta={showCta}
-                    appStatus={app?.status}
+                    appStatus={isLatestRecall ? app?.status : "pending"}
                     viewerRole={role}
                     mine={mine}
                     onAccept={handleRecallAccept}
@@ -1013,7 +1019,8 @@ function Thread() {
                 )}
               </div>
             );
-          })}
+            });
+          })()}
           <div ref={endRef} />
         </div>
         {role === "restaurant" && app && shift && (() => {
@@ -1445,6 +1452,14 @@ function RecallProposalCard({
               {viewerRole === "worker" && !mine ? "Hai rifiutato questa proposta" : "Il lavoratore ha rifiutato la proposta di lavoro"}
             </div>
           )}
+        </div>
+      )}
+      {!showCta && appStatus === "pending" && viewerRole === "restaurant" && mine && (
+        <div className="px-4 pb-4 pt-2 border-t border-border bg-background">
+          <div className="flex items-center justify-center gap-2 rounded-xl bg-muted border border-border text-muted-foreground px-4 py-3 font-semibold">
+            <Clock className="h-5 w-5" />
+            In attesa di risposta del lavoratore
+          </div>
         </div>
       )}
     </div>
