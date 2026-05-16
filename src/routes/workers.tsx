@@ -102,7 +102,40 @@ const PLACEHOLDER_BY_CATEGORY: Record<Category, string> = {
   availability: "Aggiungi nome o ruolo",
   custom: "Scrivi qualsiasi parola chiave",
 };
-type Ann = { id: string; service_date: string; location_address: string; location_lat: number | null; location_lng: number | null };
+type Ann = {
+  id: string;
+  service_date: string;
+  service_time: string | null;
+  end_date: string | null;
+  end_time: string | null;
+  location_address: string;
+  location_lat: number | null;
+  location_lng: number | null;
+  professional_profile: string | null;
+  job_city: string | null;
+  job_province: string | null;
+  job_address: string | null;
+  tariff_amount: number | null;
+  tariff_type: string | null;
+  dress_code_items: string[] | null;
+  dress_code_notes: string | null;
+  required_skills: string[] | null;
+  is_long_shift: boolean | null;
+  long_shift_reason: string | null;
+  notes: string | null;
+};
+
+function fmtAnnLabel(a: Ann): string {
+  const role = a.professional_profile || "Annuncio";
+  const date = a.service_date
+    ? new Date(a.service_date).toLocaleDateString("it-IT", { day: "numeric", month: "long" })
+    : "";
+  const t1 = a.service_time ? a.service_time.slice(0, 5) : "";
+  const t2 = a.end_time ? a.end_time.slice(0, 5) : "";
+  const orario = t1 && t2 ? `${t1}/${t2}` : t1;
+  const luogo = a.job_city || a.location_address || "";
+  return [role, date, orario, luogo].filter(Boolean).join(" — ");
+}
 
 function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371000;
@@ -183,9 +216,16 @@ function WorkersPage() {
   useEffect(() => {
     (async () => {
       if (user) {
-        const { data } = await supabase.from("announcements").select("id, service_date, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
-        setAnns((data as Ann[]) ?? []);
-        if (data?.[0]) setSelected(data[0].id);
+        const { data } = await supabase
+          .from("announcements")
+          .select("id, service_date, service_time, end_date, end_time, location_address, location_lat, location_lng, professional_profile, job_city, job_province, job_address, tariff_amount, tariff_type, dress_code_items, dress_code_notes, required_skills, is_long_shift, long_shift_reason, notes")
+          .eq("restaurant_id", user.id)
+          .eq("status", "active")
+          .order("service_date", { ascending: true });
+        const list = (data as Ann[]) ?? [];
+        setAnns(list);
+        // Auto-seleziona solo se c'è un singolo annuncio attivo.
+        if (list.length === 1) setSelected(list[0].id);
       }
     })();
   }, [user]);
@@ -237,6 +277,20 @@ function WorkersPage() {
       nav({ to: "/shifts", search: { tab: "to-review" } as never });
       return;
     }
+    if (anns.length === 0) {
+      toast.error("Non hai annunci attivi. Crea prima un annuncio per proporre un turno.");
+      nav({ to: "/announcements/new" as never });
+      return;
+    }
+    if (!selected) {
+      toast.error("Seleziona prima un annuncio dal menù in alto.");
+      return;
+    }
+    const ann = anns.find((x) => x.id === selected);
+    if (!ann) {
+      toast.error("Annuncio non valido. Selezionane un altro.");
+      return;
+    }
     // Riapri la chat esistente SOLO se è ancora "pending" (in attesa di risposta).
     // Se l'ultima proposta è stata accettata/rifiutata/chiusa, ogni nuovo
     // contatto (Messaggia/Ricontatta) crea una NUOVA proposta indipendente,
@@ -249,41 +303,74 @@ function WorkersPage() {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    let appId: string | null = null;
     if (existing?.id && existing.status === "pending") {
-      nav({ to: "/messages/$id", params: { id: existing.id } });
-      return;
-    }
-    // Need an announcement_id (NOT NULL). Use selected, else most recent restaurant announcement.
-    let announcementId = selected;
-    if (!announcementId) {
-      const { data: ann } = await supabase
-        .from("announcements")
+      appId = existing.id;
+      await supabase
+        .from("applications")
+        .update({ announcement_id: selected, status: "pending", worker_response_at: null } as never)
+        .eq("id", existing.id);
+    } else {
+      const { data: created, error } = await supabase
+        .from("applications")
+        .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
         .select("id")
-        .eq("restaurant_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      announcementId = ann?.id ?? "";
+        .single();
+      if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
+      appId = created.id;
     }
-    if (!announcementId) {
-      toast.error("Crea prima un annuncio per poter contattare i lavoratori.");
-      nav({ to: "/announcements/new" as never });
-      return;
+    // Costruisci il messaggio strutturato "recall_worker" con i dettagli dell'annuncio.
+    const restName = profile?.business_name || profile?.full_name || "il nostro locale";
+    const lines: string[] = ["📋 Proposta nuovo servizio", ""];
+    if (ann.professional_profile) lines.push(`• Ruolo: ${ann.professional_profile}`);
+    lines.push(`• Locale: ${restName}`);
+    if (ann.service_date) {
+      const d = new Date(ann.service_date).toLocaleDateString("it-IT");
+      lines.push(`• Data inizio: ${d}${ann.service_time ? ` · ${ann.service_time.slice(0, 5)}` : ""}`);
     }
-    const { data: created, error } = await supabase
-      .from("applications")
-      .insert({ announcement_id: announcementId, worker_id: workerId, restaurant_id: user.id, status: "pending" })
-      .select("id")
-      .single();
-    if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
+    if (ann.end_date || ann.end_time) {
+      const ed = ann.end_date
+        ? new Date(ann.end_date).toLocaleDateString("it-IT")
+        : (ann.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "");
+      lines.push(`• Fine: ${ed}${ann.end_time ? ` · ${ann.end_time.slice(0, 5)}` : ""}`);
+    }
+    if (ann.tariff_amount != null) {
+      lines.push(`• Tariffa: €${Number(ann.tariff_amount).toFixed(2)}${ann.tariff_type === "hourly" ? "/h" : ""}`);
+    }
+    const zone = [ann.job_city, ann.job_province].filter(Boolean).join(", ");
+    if (zone) lines.push(`• Zona: ${zone}`);
+    if (ann.job_address || ann.location_address) lines.push(`• Indirizzo: ${ann.job_address || ann.location_address}`);
+    if (ann.dress_code_items && ann.dress_code_items.length) lines.push(`• Dress code: ${ann.dress_code_items.join(", ")}`);
+    if (ann.dress_code_notes) lines.push(`  ${ann.dress_code_notes}`);
+    if (ann.required_skills && ann.required_skills.length) lines.push(`• Requisiti: ${ann.required_skills.join(", ")}`);
+    if (ann.is_long_shift) lines.push(`• ⚠️ Turno lungo${ann.long_shift_reason ? ` — ${ann.long_shift_reason}` : ""}`);
+    if (ann.notes) lines.push(`• Note: ${ann.notes}`);
+    lines.push("", "💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.");
+    const body = lines.join("\n");
+    const createdAt = new Date().toISOString();
+    await supabase.from("messages").insert({
+      application_id: appId!,
+      sender_id: user.id,
+      receiver_id: workerId,
+      body,
+      created_at: createdAt,
+      read_at: null,
+      template_id: "r_app_avail",
+      message_type: "template",
+      action_type: "recall_worker",
+    } as never);
+    await supabase.from("applications").update({
+      last_message_preview: "📋 Proposta nuovo servizio",
+      last_message_at: createdAt,
+    } as never).eq("id", appId!);
     await supabase.from("notifications").insert({
       user_id: workerId,
-      title: "Nuova richiesta di contatto",
-      body: "Un ristoratore ti ha contattato. In attesa di risposta.",
-      link: `/messages/${created.id}`,
+      title: "Nuova proposta di lavoro",
+      body: "Hai ricevuto una nuova proposta di turno. Apri la chat per accettare o rifiutare.",
+      link: `/messages/${appId}`,
     });
-    toast.success("Chat aperta con il lavoratore");
-    nav({ to: "/messages/$id", params: { id: created.id } });
+    toast.success("Proposta inviata al lavoratore");
+    nav({ to: "/messages/$id", params: { id: appId! } });
   };
 
   const fieldsOf = (w: W) => {
@@ -470,23 +557,33 @@ function WorkersPage() {
           <Link to="/billing"><Button size="sm" variant="outline" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
         )}
       </div>
-      <div className="mb-4 grid gap-3 md:grid-cols-2">
-        <div>
-          <label className="text-sm font-medium">Annuncio per cui contattare</label>
+      <div className="mb-4 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
+        <label className="block text-sm font-semibold mb-1">Seleziona un annuncio da proporre</label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Scegli l'annuncio: il messaggio inviato al lavoratore conterrà automaticamente i dettagli del turno.
+        </p>
+        {anns.length === 0 ? (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            <p className="font-medium mb-2">Non hai annunci attivi. Crea prima un annuncio per proporre un turno.</p>
+            <Link to="/announcements/new" as never}>
+              <Button size="sm" variant="outline">Crea annuncio</Button>
+            </Link>
+          </div>
+        ) : (
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            className="mt-1 flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="">Nessun annuncio attivo</option>
+            <option value="">— Seleziona un annuncio —</option>
             {anns.map((a) => (
-              <option key={a.id} value={a.id}>
-                {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.location_address}
-              </option>
+              <option key={a.id} value={a.id}>{fmtAnnLabel(a)}</option>
             ))}
           </select>
-        </div>
-        <div>
+        )}
+      </div>
+      <div className="mb-4 grid gap-3 md:grid-cols-2">
+        <div className="md:col-span-2">
           <label className="text-sm font-medium">Lingua (filtro rapido)</label>
           <Select value={langDraft || "__all"} onValueChange={(v) => setLangDraft(v === "__all" ? "" : v)}>
             <SelectTrigger className="mt-1 h-9 w-full"><SelectValue placeholder="Tutte le lingue" /></SelectTrigger>
@@ -678,12 +775,24 @@ function WorkersPage() {
               size="sm"
               className="mt-4 w-full gap-1"
               onClick={() => invite(w.id)}
-              disabled={isBlocked}
-              title={isBlocked ? "Bloccato: completa le recensioni scadute" : undefined}
+              disabled={isBlocked || anns.length === 0 || !selected}
+              title={
+                isBlocked
+                  ? "Bloccato: completa le recensioni scadute"
+                  : anns.length === 0
+                    ? "Crea prima un annuncio"
+                    : !selected
+                      ? "Seleziona prima un annuncio dal menù in alto"
+                      : undefined
+              }
             >
               <MessageSquare className="h-3.5 w-3.5" />
               {isBlocked ? `Bloccato (${overdueCount} recension${overdueCount > 1 ? "i" : "e"} scadut${overdueCount > 1 ? "e" : "a"})` : (
-                <>{worked ? "Ricontatta gratis" : "Messaggia"}</>
+                anns.length === 0
+                  ? "Crea prima un annuncio"
+                  : !selected
+                    ? "Seleziona prima un annuncio"
+                    : (worked ? "Ricontatta gratis · Invia proposta" : "Invia proposta")
               )}
             </Button>
           </div>
