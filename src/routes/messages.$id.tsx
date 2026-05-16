@@ -268,6 +268,7 @@ function Thread() {
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
   const [sending, setSending] = useState(false);
   const [shift, setShift] = useState<Shift | null>(null);
+  const [proposalStatuses, setProposalStatuses] = useState<Record<string, "accepted" | "rejected">>({});
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -301,6 +302,22 @@ function Thread() {
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
       setMsgs((m as Msg[]) ?? []);
+      // Per-proposal responses (decoupled from app.status so each
+      // proposal card has its own accepted/rejected state).
+      const proposalIds = ((m as Msg[]) ?? [])
+        .filter((x) => x.template_id === PROPOSAL_TEMPLATE_ID)
+        .map((x) => x.id);
+      if (proposalIds.length) {
+        const { data: resp } = await supabase
+          .from("proposal_responses")
+          .select("message_id, status, created_at")
+          .in("message_id", proposalIds);
+        const map: Record<string, "accepted" | "rejected"> = {};
+        (resp ?? []).forEach((r: any) => { map[r.message_id] = r.status; });
+        setProposalStatuses(map);
+      } else {
+        setProposalStatuses({});
+      }
       // Mark received messages as read
       if (user) {
         const unreadIds = ((m as Msg[]) ?? [])
@@ -856,6 +873,11 @@ function Thread() {
               );
             }
             if (m.template_id === PROPOSAL_TEMPLATE_ID) {
+              const ownStatus = proposalStatuses[m.id];
+              const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
+              // Per-proposal status is authoritative. Legacy proposals (no recorded
+              // response anywhere) fall back to the application status once.
+              const effectiveStatus = ownStatus ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
               return (
                 <ProposalCard
                   key={m.id}
@@ -864,10 +886,28 @@ function Thread() {
                   venueName={other?.name ?? null}
                   displayAddress={displayAddress}
                   isWorker={role === "worker"}
-                  status={app?.status ?? "pending"}
+                  status={effectiveStatus}
                   onAccept={async () => {
+                    if (user) {
+                      const { error: respErr } = await supabase.from("proposal_responses").insert({
+                        message_id: m.id,
+                        application_id: id,
+                        responder_id: user.id,
+                        status: "accepted",
+                      } as never);
+                      if (!respErr) {
+                        setProposalStatuses((prev) => ({ ...prev, [m.id]: "accepted" }));
+                      } else if (!String(respErr.message ?? "").toLowerCase().includes("duplicate")) {
+                        console.error("[proposal] response insert failed", respErr);
+                      }
+                    }
                     try {
-                      await transition("accepted");
+                      // Keep the application transition for the FIRST accepted proposal so
+                      // shift creation / notifications triggers still fire. Later proposals
+                      // in the same conversation only update the per-proposal record.
+                      if ((app?.status ?? "pending") !== "accepted") {
+                        await transition("accepted");
+                      }
                     } finally {
                       // Always emit a system message so both sides see the outcome,
                       // even if the status update partially fails.
@@ -879,8 +919,23 @@ function Thread() {
                     }
                   }}
                   onReject={async () => {
+                    if (user) {
+                      const { error: respErr } = await supabase.from("proposal_responses").insert({
+                        message_id: m.id,
+                        application_id: id,
+                        responder_id: user.id,
+                        status: "rejected",
+                      } as never);
+                      if (!respErr) {
+                        setProposalStatuses((prev) => ({ ...prev, [m.id]: "rejected" }));
+                      } else if (!String(respErr.message ?? "").toLowerCase().includes("duplicate")) {
+                        console.error("[proposal] response insert failed", respErr);
+                      }
+                    }
                     try {
-                      await transition("rejected");
+                      // Do NOT close the whole application on a single proposal refusal —
+                      // other live proposals may exist in the same conversation. The
+                      // per-proposal record + system message communicate THIS refusal.
                     } finally {
                       try {
                         await insertSystemMessage("Proposta rifiutata", "reject_application");

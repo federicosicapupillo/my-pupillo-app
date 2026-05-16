@@ -1059,6 +1059,33 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_responses: {
+        Row: {
+          application_id: string
+          created_at: string
+          id: string
+          message_id: string
+          responder_id: string
+          status: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          id?: string
+          message_id: string
+          responder_id: string
+          status: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          id?: string
+          message_id?: string
+          responder_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       referral_invites: {
         Row: {
           completed_at: string | null
