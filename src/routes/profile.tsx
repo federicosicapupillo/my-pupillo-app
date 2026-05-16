@@ -19,6 +19,13 @@ import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 import { Settings2 } from "lucide-react";
 import { provinceCode } from "@/lib/italian-locations";
 import { ReferralCard } from "@/components/ReferralCard";
+import {
+  CRITERION_LABEL,
+  REVIEW_CRITERIA,
+  BADGE_LABEL,
+  computeWorkerBadges,
+  type WorkerStats,
+} from "@/lib/reviews";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -239,19 +246,7 @@ function Profile() {
           <p className="text-xs text-muted-foreground mt-3">I crediti vengono usati per pubblicare annunci urgenti e contattare lavoratori.</p>
         )}
         {role === "worker" && (
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border p-3 flex items-center gap-2">
-              <Star className="h-4 w-4 text-yellow-500" />
-              <div>
-                <div className="text-xs text-muted-foreground">Valutazione</div>
-                <div className="text-sm font-semibold">{Number(profile?.rating_avg ?? 0).toFixed(1)} · {profile?.reviews_count ?? 0} recensioni</div>
-              </div>
-            </div>
-            <div className="rounded-xl border p-3">
-              <div className="text-xs text-muted-foreground">Affidabilità</div>
-              <div className="text-sm font-semibold">{profile?.reliability_pct ?? 100}%</div>
-            </div>
-          </div>
+          <WorkerReputationBlock profile={profile as any} />
         )}
       </div>
 
