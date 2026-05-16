@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type S
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ensureProposalApplication } from "@/lib/messages.functions";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -178,6 +180,7 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const ensureApplication = useServerFn(ensureProposalApplication);
   const { isBlocked, overdueCount } = useRequiredReviews();
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
@@ -320,40 +323,20 @@ function WorkersPage() {
       toast.error("Annuncio non valido. Selezionane un altro.");
       return;
     }
-    // Riapri la chat esistente SOLO se è ancora "pending" (in attesa di risposta).
-    // Se l'ultima proposta è stata accettata/rifiutata/chiusa, ogni nuovo
-    // contatto (Messaggia/Ricontatta) crea una NUOVA proposta indipendente,
-    // così lo stato della vecchia conversazione non viene ereditato.
-    const { data: existing } = await supabase
-      .from("applications")
-      .select("id, status, created_at")
-      .eq("restaurant_id", user.id)
-      .eq("worker_id", workerId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    let appId: string | null = null;
-    if (existing?.id && existing.status === "pending") {
-      appId = existing.id;
-      await supabase
-        .from("applications")
-        .update({ announcement_id: selected, status: "pending", worker_response_at: null } as never)
-        .eq("id", existing.id);
-    } else {
-      const { data: created, error } = await supabase
-        .from("applications")
-        .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
-        .select("id")
-        .single();
-      if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
-      appId = created.id;
+    let appId: string;
+    try {
+      const result = await ensureApplication({ data: { announcementId: selected, workerId } });
+      appId = result.applicationId;
+    } catch (error: any) {
+      toast.error(error?.message ?? "Errore nella creazione della proposta");
+      return;
     }
     // Costruisci il messaggio strutturato "recall_worker" con i dettagli dell'annuncio.
     const restName = profile?.business_name || profile?.full_name || "il nostro locale";
     const body = buildProposalBody(ann, restName);
     const createdAt = new Date().toISOString();
     await supabase.from("messages").insert({
-      application_id: appId!,
+      application_id: appId,
       sender_id: user.id,
       receiver_id: workerId,
       body,
@@ -366,7 +349,7 @@ function WorkersPage() {
     await supabase.from("applications").update({
       last_message_preview: "📋 Proposta nuovo servizio",
       last_message_at: createdAt,
-    } as never).eq("id", appId!);
+    } as never).eq("id", appId);
     await supabase.from("notifications").insert({
       user_id: workerId,
       title: "Nuova proposta di lavoro",
@@ -374,7 +357,7 @@ function WorkersPage() {
       link: `/messages/${appId}`,
     });
     toast.success("Proposta inviata al lavoratore");
-    nav({ to: "/messages/$id", params: { id: appId! } });
+    nav({ to: "/messages/$id", params: { id: appId } });
   };
 
   const fieldsOf = (w: W) => {

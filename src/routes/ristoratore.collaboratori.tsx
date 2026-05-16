@@ -3,6 +3,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { toast } from "sonner";
 import { Star, MessageSquare, Send, Heart, Search, Calendar, Users, CheckCircle2, Moon, Clock, MapPin, Euro, Shirt, ListChecks, Coffee } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ensureProposalApplication } from "@/lib/messages.functions";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -63,6 +65,7 @@ const RECALL_TEMPLATES = [
 function Page() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
+  const ensureApplication = useServerFn(ensureProposalApplication);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -190,18 +193,10 @@ function Page() {
     const tpl = RECALL_TEMPLATES.find((t) => t.id === selectedTemplateId) ?? RECALL_TEMPLATES[0];
     setInviteSubmitting(true);
     try {
-      // Crea SEMPRE una nuova chat/candidatura per questa proposta:
-      // ogni "Ricontatta" deve generare una conversazione separata,
-      // indipendente dalle chat precedenti con lo stesso lavoratore.
-      const { data: ins, error } = await supabase.from("applications")
-        .insert({
-          announcement_id: annId,
-          worker_id: inviteFor.worker_id,
-          restaurant_id: user.id,
-          status: "pending",
-        }).select("id").single();
-      if (error) throw error;
-      const appId = ins!.id;
+      const result = await ensureApplication({
+        data: { announcementId: annId, workerId: inviteFor.worker_id },
+      });
+      const appId = result.applicationId;
       // Compose a rich summary so the worker sees ALL details of the proposed service.
       const ann = openAnns.find((a) => a.id === annId);
       const summaryLines: string[] = ["📋 Proposta nuovo servizio", ""];
