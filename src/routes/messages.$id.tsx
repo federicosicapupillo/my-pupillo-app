@@ -1118,12 +1118,48 @@ function TemplatePicker(props: {
   otherName: string | null;
   addressOverride?: string | null;
   disabled?: boolean;
+  activeAnns?: AnnProposal[];
+  proposalAnnId?: string | null;
+  setProposalAnnId?: (id: string | null) => void;
 }) {
-  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled } = props;
+  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled, activeAnns = [], proposalAnnId = null, setProposalAnnId } = props;
   const available = TEMPLATES.filter(t => (t.role === role || t.role === "both") && t.category !== "post_shift");
   const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
   const inCat = available.filter(t => t.category === category);
   const isClosureForRestaurant = role === "restaurant" && category === "post_shift";
+  const isAvailTpl = role === "restaurant" && selected?.key === "r_app_avail";
+  const proposalAnn = isAvailTpl ? (activeAnns.find(a => a.id === proposalAnnId) ?? null) : null;
+  const fmtOption = (a: AnnProposal) => {
+    const dt = a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "long" }) : "—";
+    const start = a.service_time ? a.service_time.slice(0,5) : "";
+    const end = a.end_time ? a.end_time.slice(0,5) : "";
+    const orario = start && end ? `${start}/${end}` : start;
+    const luogo = a.job_city || a.location_address || "";
+    return [a.professional_profile || "Turno", dt, orario, luogo].filter(Boolean).join(" — ");
+  };
+  const previewBody = (() => {
+    if (!selected) return "";
+    if (isAvailTpl && proposalAnn) {
+      const a = proposalAnn;
+      const dt = a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT") : "—";
+      const start = a.service_time ? a.service_time.slice(0,5) : "";
+      const end = a.end_time ? a.end_time.slice(0,5) : "";
+      const orario = start && end ? `${start} - ${end}` : start || "—";
+      const luogo = a.job_city || "—";
+      return [
+        "Ciao, sei disponibile per questo turno?",
+        "",
+        `Ruolo: ${a.professional_profile || "—"}`,
+        `Data: ${dt}`,
+        `Orario: ${orario}`,
+        `Luogo: ${luogo}`,
+        `Locale: ${otherName ?? "—"}`,
+        "",
+        "Fammi sapere se puoi esserci.",
+      ].join("\n");
+    }
+    return renderTemplate(selected.text, ann, otherName, addressOverride);
+  })();
 
   return (
     <div className="mt-4 rounded-2xl border bg-card p-4 space-y-3">
@@ -1174,10 +1210,31 @@ function TemplatePicker(props: {
           })}
         </div>
       )}
+      {isAvailTpl && (
+        <div className="rounded-xl border bg-secondary/30 p-3 space-y-2">
+          <label className="text-xs font-semibold text-foreground">Per quale annuncio vuoi proporre il turno?</label>
+          {activeAnns.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Non hai annunci attivi. Crea prima un annuncio per proporre un turno.
+            </p>
+          ) : (
+            <select
+              className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+              value={proposalAnnId ?? ""}
+              onChange={(e) => setProposalAnnId?.(e.target.value || null)}
+            >
+              <option value="">— Seleziona un annuncio —</option>
+              {activeAnns.map(a => (
+                <option key={a.id} value={a.id}>{fmtOption(a)}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
       {selected && !isClosureForRestaurant && (
         <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
           <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
-          {renderTemplate(selected.text, ann, otherName, addressOverride)}
+          <div className="whitespace-pre-wrap">{previewBody}</div>
         </div>
       )}
       {!isClosureForRestaurant && (
@@ -1185,7 +1242,7 @@ function TemplatePicker(props: {
         <Button
           type="button"
           onClick={onSend}
-          disabled={!selected || sending || disabled}
+          disabled={!selected || sending || disabled || (isAvailTpl && (activeAnns.length === 0 || !proposalAnnId))}
           className="gap-2"
         >
           <Send className="h-4 w-4" />
