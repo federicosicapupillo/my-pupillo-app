@@ -1005,6 +1005,22 @@ function Thread() {
           {(() => {
             const lastRecallId = [...msgs].reverse().find(m => m.action_type === "recall_worker")?.id ?? null;
             return msgs.map(m => {
+            if (m.action_type === "review") {
+              const payload = parseReviewBody(m.body);
+              if (payload) {
+                const isRecipient = m.sender_id !== user?.id;
+                return (
+                  <div key={m.id} className={`flex ${isRecipient ? "justify-start" : "justify-end"}`}>
+                    <ReviewMessageCard
+                      messageId={m.id}
+                      payload={payload}
+                      isRecipient={isRecipient}
+                      alreadyRead={!!m.read_at}
+                    />
+                  </div>
+                );
+              }
+            }
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             if (isSystem) {
               return (
