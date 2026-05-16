@@ -843,6 +843,27 @@ function Thread() {
                 </div>
               );
             }
+            if (m.template_id === PROPOSAL_TEMPLATE_ID) {
+              return (
+                <ProposalCard
+                  key={m.id}
+                  message={m}
+                  ann={ann}
+                  venueName={other?.name ?? null}
+                  displayAddress={displayAddress}
+                  isWorker={role === "worker"}
+                  status={app?.status ?? "pending"}
+                  onAccept={async () => {
+                    await transition("accepted");
+                    await insertSystemMessage("Il lavoratore ha accettato la proposta di lavoro.", "accept_application");
+                  }}
+                  onReject={async () => {
+                    await transition("rejected");
+                    await insertSystemMessage("Il lavoratore ha rifiutato la proposta di lavoro.", "reject_application");
+                  }}
+                />
+              );
+            }
             return (
               <div key={m.id} className={`flex items-end gap-2 ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
                 {m.sender_id === app?.worker_id && m.sender_id !== user?.id && (
