@@ -71,6 +71,7 @@ function MessagesLayout() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [pendingReviewAppIds, setPendingReviewAppIds] = useState<Set<string>>(new Set());
 
   const load = async () => {
     if (!user || !role) return;
@@ -136,6 +137,18 @@ function MessagesLayout() {
     });
     next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
     setThreads(next);
+    // Restaurant side: load pending/overdue required reviews to flag groups
+    if (role === "restaurant" && ids.length) {
+      const { data: rr } = await (supabase as any)
+        .from("required_reviews")
+        .select("application_id")
+        .eq("restaurant_user_id", user.id)
+        .in("status", ["pending", "overdue"])
+        .in("application_id", ids);
+      setPendingReviewAppIds(new Set(((rr ?? []) as any[]).map((r) => r.application_id).filter(Boolean)));
+    } else {
+      setPendingReviewAppIds(new Set());
+    }
     setLoading(false);
   };
 
@@ -313,6 +326,7 @@ function MessagesLayout() {
               {visibleGroups.map((g) => {
                 const last = g.items[0];
                 const statusTally = g.items.reduce<Record<string, number>>((acc, t) => { acc[t.status] = (acc[t.status] ?? 0) + 1; return acc; }, {});
+                const hasPendingReview = g.items.some((t) => pendingReviewAppIds.has(t.id));
                 return (
                   <Link
                     key={g.id}
@@ -346,6 +360,11 @@ function MessagesLayout() {
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {g.unread > 0 && (
                           <span className="text-[10px] rounded-full px-2 py-0.5 bg-primary/15 text-primary font-medium">Non letto</span>
+                        )}
+                        {hasPendingReview && (
+                          <span className="text-[10px] rounded-full px-2 py-0.5 bg-amber-500/15 text-amber-700 font-medium">
+                            Recensione da inviare
+                          </span>
                         )}
                         {Object.entries(statusTally).map(([s, c]) => (
                           <span key={s} className={`text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[s] || "bg-muted text-muted-foreground"}`}>
