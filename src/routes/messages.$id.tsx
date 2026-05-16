@@ -301,6 +301,22 @@ function Thread() {
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
       setMsgs((m as Msg[]) ?? []);
+      // Per-proposal responses (decoupled from app.status so each
+      // proposal card has its own accepted/rejected state).
+      const proposalIds = ((m as Msg[]) ?? [])
+        .filter((x) => x.template_id === PROPOSAL_TEMPLATE_ID)
+        .map((x) => x.id);
+      if (proposalIds.length) {
+        const { data: resp } = await supabase
+          .from("proposal_responses")
+          .select("message_id, status, created_at")
+          .in("message_id", proposalIds);
+        const map: Record<string, "accepted" | "rejected"> = {};
+        (resp ?? []).forEach((r: any) => { map[r.message_id] = r.status; });
+        setProposalStatuses(map);
+      } else {
+        setProposalStatuses({});
+      }
       // Mark received messages as read
       if (user) {
         const unreadIds = ((m as Msg[]) ?? [])
