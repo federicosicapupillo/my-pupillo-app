@@ -5,7 +5,7 @@ export type ThreadLike = {
   status: string;
   lastAt: string | null;
   createdAt: string | null;
-  ann: { date: string | null; time: string | null } | null;
+  ann: { date: string | null; time: string | null; role?: string | null } | null;
 };
 
 // Priorità del badge aggregato di gruppo.
