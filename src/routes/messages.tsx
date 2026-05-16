@@ -360,18 +360,17 @@ function MessagesLayout() {
             >
               Tutti gli stati
             </button>
-            {Object.keys(STATUS_LABELS).map((s) => {
-              const count = statusCounts[s] ?? 0;
-              if (count === 0) return null;
-              const active = statusFilter === s;
+            {STATUS_FILTERS.map(({ key, label }) => {
+              const count = statusCounts[key] ?? 0;
+              const active = statusFilter === key;
               return (
                 <button
-                  key={s}
+                  key={key}
                   type="button"
-                  onClick={() => setStatusFilter(s)}
-                  className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
+                  onClick={() => setStatusFilter(key)}
+                  className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[key]} border-transparent hover:opacity-80`}`}
                 >
-                  {STATUS_LABELS[s]} ({count})
+                  {label} ({count})
                 </button>
               );
             })}
