@@ -459,7 +459,7 @@ function AnnouncementDetail() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-                      <Metric icon={Star} label="Rating" value={w?.rating_avg ? `${Number(w.rating_avg).toFixed(1)} (${w.reviews_count ?? 0})` : "—"} iconClassName="text-yellow-500" />
+                      <Metric icon={Star} label="Rating" value={w?.rating_avg ? `${Number(w.rating_avg).toFixed(1)} (${w.reviews_count ?? 0})` : "—"} />
                       <Metric icon={Shield} label="Affidabilità" value={w?.reliability_pct != null ? `${w.reliability_pct}%` : "—"} />
                       <Metric icon={Award} label="Esperienza" value={w?.experience_years != null ? `${w.experience_years}a` : (w?.completed_shifts ? `${w.completed_shifts} turni` : "—")} />
                     </div>
@@ -521,11 +521,11 @@ function AnnouncementDetail() {
   );
 }
 
-function Metric({ icon: Icon, label, value, iconClassName }: { icon: typeof Star; label: string; value: string; iconClassName?: string }) {
+function Metric({ icon: Icon, label, value }: { icon: typeof Star; label: string; value: string }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-2 text-center">
       <div className="flex items-center justify-center gap-1 text-muted-foreground">
-        <Icon className={`h-3 w-3 ${iconClassName ?? ""}`} /><span>{label}</span>
+        <Icon className="h-3 w-3" /><span>{label}</span>
       </div>
       <div className="font-semibold mt-0.5">{value}</div>
     </div>

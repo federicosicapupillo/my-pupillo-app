@@ -297,7 +297,7 @@ function AnnouncementsPage() {
                                 {c.professional_profile && <span>{c.professional_profile}</span>}
                                 {c.rating_avg != null && (
                                   <span className="inline-flex items-center gap-0.5">
-                                    <Star className="h-3 w-3 fill-current text-yellow-500" />
+                                    <Star className="h-3 w-3 fill-current" />
                                     {Number(c.rating_avg).toFixed(1)}
                                   </span>
                                 )}

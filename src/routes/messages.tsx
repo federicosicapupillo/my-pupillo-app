@@ -2,25 +2,14 @@ import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-rout
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
-import {
-  STATUS_PRIORITY,
-  statusRank,
-  computePrimaryStatus,
-  effectiveStatus as effectiveStatusLib,
-  searchScopeThreads,
-  computeChipCounts,
-} from "@/lib/message-grouping";
+import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
-import { useServerFn } from "@tanstack/react-start";
-import { markApplicationRead } from "@/lib/messages.functions";
-import { AnimatedCount } from "@/components/AnimatedCount";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -39,16 +28,14 @@ type Thread = {
   other: { id: string; name: string };
   lastBody: string | null;
   lastAt: string | null;
-  createdAt: string | null;
   unread: number;
-  ann: { role: string | null; date: string | null; time: string | null } | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "In attesa di risposta",
+  pending: "In attesa",
   interested: "Interesse mostrato",
   counter_offer: "Controproposta",
-  accepted: "Accettato",
+  accepted: "Confermato",
   rejected: "Rifiutato",
   expired: "Scaduto",
 };
@@ -59,22 +46,7 @@ const STATUS_CLS: Record<string, string> = {
   accepted: "bg-emerald-500/15 text-emerald-700",
   rejected: "bg-red-500/15 text-red-700",
   expired: "bg-muted text-muted-foreground",
-  completed: "bg-slate-500/15 text-slate-700",
 };
-
-const effectiveStatus = (t: Thread): string => effectiveStatusLib(t);
-
-// Filtri esposti all'utente (in ordine).
-const STATUS_FILTERS: { key: string; label: string }[] = [
-  { key: "pending", label: "In attesa" },
-  { key: "accepted", label: "Accettato" },
-  { key: "rejected", label: "Rifiutato" },
-  { key: "completed", label: "Completato" },
-];
-
-// STATUS_PRIORITY / statusRank importati da @/lib/message-grouping.
-void STATUS_PRIORITY;
-void statusRank;
 
 function formatWhen(iso: string | null) {
   if (!iso) return "";
@@ -97,8 +69,6 @@ function MessagesLayout() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [query, setQuery] = useState("");
 
   const load = async () => {
     if (!user || !role) return;
@@ -107,7 +77,7 @@ function MessagesLayout() {
     const otherCol = role === "restaurant" ? "worker_id" : "restaurant_id";
     const { data: apps, error: appsError } = await supabase
       .from("applications")
-      .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, created_at, ${otherCol}`)
+      .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
       .eq(col, user.id);
     if (appsError) {
       toast.error(appsError.message);
@@ -118,8 +88,7 @@ function MessagesLayout() {
     const list = (apps ?? []) as any[];
     const others = list.map((a) => a[otherCol]).filter(Boolean);
     const ids = list.map((a) => a.id);
-    const annIds = Array.from(new Set(list.map((a) => a.announcement_id).filter(Boolean)));
-    const [{ data: profs }, { data: msgs }, { data: annsData }] = await Promise.all([
+    const [{ data: profs }, { data: msgs }] = await Promise.all([
       others.length
         ? supabase.from("profiles").select("id, full_name, business_name").in("id", others)
         : Promise.resolve({ data: [] as any[] }),
@@ -130,15 +99,8 @@ function MessagesLayout() {
             .in("application_id", ids)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
-      annIds.length
-        ? supabase
-            .from("announcements")
-            .select("id, professional_profile, service_date, service_time")
-            .in("id", annIds as string[])
-        : Promise.resolve({ data: [] as any[] }),
     ]);
     const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
-    const amap = new Map((annsData ?? []).map((a: any) => [a.id, a]));
     const lastByApp = new Map<string, any>();
     const unreadByApp = new Map<string, number>();
     for (const m of (msgs ?? []) as any[]) {
@@ -150,7 +112,6 @@ function MessagesLayout() {
     const next: Thread[] = list.map((a) => {
       const p = pmap.get(a[otherCol]);
       const last = lastByApp.get(a.id);
-      const ann = a.announcement_id ? amap.get(a.announcement_id) : null;
       return {
         id: a.id,
         status: a.status,
@@ -160,15 +121,7 @@ function MessagesLayout() {
         other: { id: a[otherCol], name: p?.business_name || p?.full_name || "Utente" },
         lastBody: a.last_message_preview ?? last?.body ?? null,
         lastAt: a.last_message_at ?? last?.created_at ?? null,
-        createdAt: a.created_at ?? null,
         unread: unreadByApp.get(a.id) ?? 0,
-        ann: ann
-          ? {
-              role: ann.professional_profile ?? null,
-              date: ann.service_date ?? null,
-              time: ann.service_time ?? null,
-            }
-          : null,
       };
     });
     next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
@@ -178,192 +131,41 @@ function MessagesLayout() {
 
   useEffect(() => { if (!authLoading) load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user, role, authLoading]);
 
-  // Quando si apre una proposta (click o navigazione diretta), considerala letta:
-  // azzera l'unread del thread selezionato così il badge del gruppo e della riga
-  // si aggiornano subito, senza aspettare l'evento realtime.
-  const markRead = useServerFn(markApplicationRead);
-  useEffect(() => {
-    if (!selectedId) return;
-    const hadUnread = threads.some((t) => t.id === selectedId && t.unread > 0);
-    setThreads((prev) =>
-      prev.some((t) => t.id === selectedId && t.unread > 0)
-        ? prev.map((t) => (t.id === selectedId ? { ...t, unread: 0 } : t))
-        : prev
-    );
-    // Sincronizza con il backend così altri dispositivi vedono i messaggi come letti.
-    if (hadUnread) {
-      markRead({ data: { applicationId: selectedId } }).catch(() => {
-        // Best-effort: il prossimo caricamento o la sottoscrizione realtime
-        // riallineerà comunque i contatori.
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId]);
-
   // Realtime: status updates + new messages
   useEffect(() => {
     if (!user || !role) return;
     const col = role === "restaurant" ? "restaurant_id" : "worker_id";
-    const myAppIds = new Set(threads.map((t) => t.id));
-    // Debounce di sicurezza per eventi multipli ravvicinati (es. burst di letture
-    // da un altro dispositivo): un reload completo riallinea tutti i contatori.
-    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
-    const scheduleReload = () => {
-      if (reloadTimer) return;
-      reloadTimer = setTimeout(() => {
-        reloadTimer = null;
-        load();
-      }, 250);
-    };
     const ch = supabase
       .channel(`inbox-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "applications", filter: `${col}=eq.${user.id}` }, (payload) => {
         const row: any = payload.new || payload.old;
         if (!row) return;
-        if (payload.eventType === "INSERT") {
-          // Nuova application creata altrove (es. ricontatto da altro device):
-          // ricarica per popolarla con profilo/annuncio corretti.
-          scheduleReload();
-          return;
-        }
         setThreads((prev) => {
-          const existing = prev.find((t) => t.id === row.id);
-          if (!existing) { scheduleReload(); return prev; }
-          if (existing.status && row.status && existing.status !== row.status && STATUS_LABELS[row.status]) {
+          const prevStatus = prev.find((t) => t.id === row.id)?.status;
+          if (prevStatus && row.status && prevStatus !== row.status && STATUS_LABELS[row.status]) {
             toast.message(`Stato aggiornato: ${STATUS_LABELS[row.status]}`);
           }
-          return prev.map((t) =>
-            t.id === row.id
-              ? {
-                  ...t,
-                  status: row.status ?? t.status,
-                  lastBody: row.last_message_preview ?? t.lastBody,
-                  lastAt: row.last_message_at ?? t.lastAt,
-                }
-              : t,
-          );
+          return prev.map((t) => (t.id === row.id ? { ...t, status: row.status } : t));
         });
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
-        const m: any = payload.new;
-        if (!m || !myAppIds.has(m.application_id)) { scheduleReload(); return; }
-        setThreads((prev) =>
-          prev.map((t) =>
-            t.id === m.application_id
-              ? {
-                  ...t,
-                  lastBody: m.body ?? t.lastBody,
-                  lastAt: m.created_at ?? t.lastAt,
-                  unread:
-                    m.sender_id !== user.id && !m.read_at && m.application_id !== selectedId
-                      ? t.unread + 1
-                      : t.unread,
-                }
-              : t,
-          ),
-        );
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, (payload) => {
-        const m: any = payload.new;
-        const old: any = payload.old;
-        if (!m || !myAppIds.has(m.application_id)) return;
-        // Lettura segnata altrove (altro dispositivo / altro tab):
-        // riallinea l'unread del thread.
-        if (!old?.read_at && m.read_at && m.sender_id !== user.id) {
-          setThreads((prev) =>
-            prev.map((t) =>
-              t.id === m.application_id ? { ...t, unread: Math.max(0, t.unread - 1) } : t,
-            ),
-          );
-        }
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => { load(); })
       .subscribe();
-    // Sincronizzazione al ritorno sul tab / refresh: copre eventi realtime
-    // persi mentre la finestra era in background.
-    const onVisible = () => {
-      if (document.visibilityState === "visible") load();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      if (reloadTimer) clearTimeout(reloadTimer);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-      supabase.removeChannel(ch);
-    };
+    return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, role, threads.length, selectedId]);
+  }, [user, role]);
 
-  // Pre-filtra per ricerca/utente: i chip devono riflettere solo le conversazioni
-  // attualmente in scope (così i conteggi restano coerenti con quello che vedi).
-  const searchScoped = useMemo(
-    () => searchScopeThreads(threads, query, withUser),
-    [threads, query, withUser],
-  );
-
-  // Conteggi reattivi: dipendono da `threads` (stato/lettura) e dallo scope di ricerca.
-  // Aggiornano in tempo reale all'apertura di una proposta (markRead → unread=0),
-  // ai cambi di stato via realtime e alla digitazione nella barra di ricerca.
-  const chipCounts = useMemo(() => computeChipCounts(searchScoped), [searchScoped]);
-  const totalCount = chipCounts.total;
-  const totalUnread = chipCounts.unread;
-  const statusCounts = chipCounts.byStatus;
-
-  const visible = useMemo(
-    () =>
-      searchScoped.filter((t) => {
-        if (filter === "unread" && t.unread === 0) return false;
-        if (statusFilter !== "all" && effectiveStatus(t) !== statusFilter) return false;
-        return true;
-      }),
-    [searchScoped, filter, statusFilter],
-  );
+  const totalUnread = threads.reduce((n, t) => n + (t.unread > 0 ? 1 : 0), 0);
+  const statusCounts = threads.reduce<Record<string, number>>((acc, t) => {
+    acc[t.status] = (acc[t.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const visible = threads.filter((t) => {
+    if (filter === "unread" && t.unread === 0) return false;
+    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (withUser && t.other.id !== withUser) return false;
+    return true;
+  });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
-
-  // Raggruppa per controparte (worker se sono ristoratore, ristoratore se sono lavoratore).
-  // Ogni proposta resta una conversazione separata: il raggruppamento è solo visivo.
-  type Group = { otherId: string; name: string; threads: Thread[]; lastAt: string | null; unread: number };
-  const groupsMap = new Map<string, Group>();
-  for (const t of visible) {
-    let g = groupsMap.get(t.other.id);
-    if (!g) {
-      g = { otherId: t.other.id, name: t.other.name, threads: [], lastAt: null, unread: 0 };
-      groupsMap.set(t.other.id, g);
-    }
-    g.threads.push(t);
-    g.unread += t.unread;
-    if ((t.lastAt ?? "") > (g.lastAt ?? "")) g.lastAt = t.lastAt;
-  }
-  const groups = Array.from(groupsMap.values())
-    .map((g) => ({
-      ...g,
-      threads: [...g.threads].sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")),
-    }))
-    .sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.name.localeCompare(b.name));
-
-  // Espandi automaticamente il gruppo che contiene la chat selezionata.
-  const autoExpandedId = selectedId
-    ? threads.find((t) => t.id === selectedId)?.other.id ?? null
-    : null;
-  const isExpanded = (otherId: string) =>
-    expanded.has(otherId) || otherId === autoExpandedId || groups.length === 1;
-  const toggleGroup = (otherId: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(otherId)) next.delete(otherId);
-      else next.add(otherId);
-      return next;
-    });
-  };
-
-  const fmtAnnLine = (t: Thread) => {
-    const role = t.ann?.role ?? "Proposta";
-    const date = t.ann?.date
-      ? new Date(t.ann.date).toLocaleDateString("it-IT", { day: "numeric", month: "long" })
-      : "";
-    const time = t.ann?.time ? t.ann.time.slice(0, 5) : "";
-    return [role, date, time].filter(Boolean).join(" — ");
-  };
 
   return (
     <AppShell>
@@ -382,41 +184,20 @@ function MessagesLayout() {
               </Link>
             </div>
           )}
-          <div className="relative mb-3">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca per nome, ruolo o data turno…"
-              className="w-full rounded-xl border bg-card pl-9 pr-9 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Cerca conversazioni"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-accent"
-                aria-label="Pulisci ricerca"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
           <div className="mb-3 flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setFilter("all")}
               className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
             >
-              Tutte (<AnimatedCount value={totalCount} />)
+              Tutte ({threads.length})
             </button>
             <button
               type="button"
               onClick={() => setFilter("unread")}
               className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "unread" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
             >
-              Non lette (<AnimatedCount value={totalUnread} tone="unread" />)
+              Non lette ({totalUnread})
             </button>
           </div>
           <div className="mb-4 flex items-center gap-2 flex-wrap">
@@ -427,17 +208,18 @@ function MessagesLayout() {
             >
               Tutti gli stati
             </button>
-            {STATUS_FILTERS.map(({ key, label }) => {
-              const count = statusCounts[key] ?? 0;
-              const active = statusFilter === key;
+            {Object.keys(STATUS_LABELS).map((s) => {
+              const count = statusCounts[s] ?? 0;
+              if (count === 0) return null;
+              const active = statusFilter === s;
               return (
                 <button
-                  key={key}
+                  key={s}
                   type="button"
-                  onClick={() => setStatusFilter(key)}
-                  className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[key]} border-transparent hover:opacity-80`}`}
+                  onClick={() => setStatusFilter(s)}
+                  className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
                 >
-                  {label} (<AnimatedCount value={count} tone="status" />)
+                  {STATUS_LABELS[s]} ({count})
                 </button>
               );
             })}
@@ -454,99 +236,41 @@ function MessagesLayout() {
             </div>
           ) : (
             <div className="space-y-2">
-              {groups.map((g) => {
-                const open = isExpanded(g.otherId);
-                const last = g.threads[0];
-                const statusCount = g.threads.reduce<Record<string, number>>((acc, t) => {
-                  acc[t.status] = (acc[t.status] ?? 0) + 1;
-                  return acc;
-                }, {});
-                // Stato primario del gruppo (logica testata in @/lib/message-grouping).
-                const primaryStatus = computePrimaryStatus(g.threads);
-                const summaryBadges = primaryStatus
-                  ? [
-                      [primaryStatus, statusCount[primaryStatus] ?? 1] as [string, number],
-                    ]
-                  : [];
-                const groupHasActive = g.threads.some((t) => t.id === selectedId);
+              {visible.map((t) => {
+                const active = selectedId === t.id;
                 return (
-                  <div
-                    key={g.otherId}
-                    className={`rounded-2xl border bg-card transition ${groupHasActive ? "border-primary/40" : ""}`}
+                  <Link
+                    key={t.id}
+                    to="/messages/$id"
+                    params={{ id: t.id }}
+                    className={`group flex items-center gap-3 rounded-2xl border p-4 transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${active ? "bg-primary/10 border-primary/40" : "bg-card hover:bg-accent"}`}
+                    aria-current={active ? "page" : undefined}
                   >
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(g.otherId)}
-                      className="flex w-full items-center gap-3 p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
-                      aria-expanded={open}
-                    >
-                      <div className="relative shrink-0">
-                        <UserAvatar userId={g.otherId} name={g.name} className="h-10 w-10" />
-                        {g.unread > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
-                            {g.unread > 9 ? "9+" : g.unread}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <div className={`truncate ${g.unread > 0 ? "font-semibold" : "font-medium"}`}>
-                            {g.name}
-                          </div>
-                          <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(g.lastAt)}</div>
+                    <div className="relative shrink-0">
+                      <UserAvatar userId={t.other.id} name={t.other.name} className="h-10 w-10" />
+                      {t.unread > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                          {t.unread > 9 ? "9+" : t.unread}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                          {t.other.name}
                         </div>
-                        <div className="mt-0.5 flex items-center justify-between gap-2">
-                          <div className="text-[11px] text-muted-foreground">
-                            {g.threads.length} {g.threads.length === 1 ? "proposta" : "proposte"}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1">
-                            {summaryBadges.map(([s, n]) => (
-                              <span key={s} className={`text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[s] || "bg-muted text-muted-foreground"}`}>
-                                {n} {STATUS_LABELS[s] || s}
-                              </span>
-                            ))}
-                          </div>
+                        <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                          {t.lastBody ?? "Nessun messaggio"}
                         </div>
-                        {last?.lastBody && (
-                          <div className="mt-1 text-xs text-muted-foreground truncate">{last.lastBody}</div>
-                        )}
+                        <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
+                          {STATUS_LABELS[t.status] || t.status}
+                        </span>
                       </div>
-                      <div className="shrink-0 text-muted-foreground">
-                        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      </div>
-                    </button>
-                    {open && (
-                      <div className="border-t bg-muted/30 px-2 py-2 space-y-1">
-                        {g.threads.map((t) => {
-                          const active = selectedId === t.id;
-                          return (
-                            <Link
-                              key={t.id}
-                              to="/messages/$id"
-                              params={{ id: t.id }}
-                              className={`block rounded-xl border p-3 transition outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-primary/10 border-primary/40" : "bg-card hover:bg-accent border-transparent"}`}
-                              aria-current={active ? "page" : undefined}
-                            >
-                              <div className="flex items-baseline justify-between gap-2">
-                                <div className={`truncate text-sm ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
-                                  {fmtAnnLine(t)}
-                                </div>
-                                <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
-                              </div>
-                              <div className="mt-1 flex items-center justify-between gap-2">
-                                <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                                  {t.lastBody ?? "Nessun messaggio"}
-                                </div>
-                                <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
-                                  {STATUS_LABELS[t.status] || t.status}
-                                </span>
-                              </div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  </Link>
                 );
               })}
             </div>

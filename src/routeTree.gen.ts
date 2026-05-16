@@ -32,7 +32,6 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkersIdRouteImport } from './routes/workers_.$id'
 import { Route as RistoratoreCollaboratoriRouteImport } from './routes/ristoratore.collaboratori'
-import { Route as ReviewsReviewIdRouteImport } from './routes/reviews.$reviewId'
 import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
 import { Route as MessagesIdRouteImport } from './routes/messages.$id'
 import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
@@ -158,11 +157,6 @@ const RistoratoreCollaboratoriRoute =
     path: '/ristoratore/collaboratori',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ReviewsReviewIdRoute = ReviewsReviewIdRouteImport.update({
-  id: '/reviews/$reviewId',
-  path: '/reviews/$reviewId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RestaurantsIdRoute = RestaurantsIdRouteImport.update({
   id: '/restaurants/$id',
   path: '/restaurants/$id',
@@ -232,7 +226,6 @@ export interface FileRoutesByFullPath {
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
-  '/reviews/$reviewId': typeof ReviewsReviewIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/workers/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
@@ -266,7 +259,6 @@ export interface FileRoutesByTo {
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
-  '/reviews/$reviewId': typeof ReviewsReviewIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/workers/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
@@ -301,7 +293,6 @@ export interface FileRoutesById {
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
   '/restaurants/$id': typeof RestaurantsIdRoute
-  '/reviews/$reviewId': typeof ReviewsReviewIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/workers_/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
@@ -337,7 +328,6 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
-    | '/reviews/$reviewId'
     | '/ristoratore/collaboratori'
     | '/workers/$id'
     | '/ristoratore/annunci/nuovo'
@@ -371,7 +361,6 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
-    | '/reviews/$reviewId'
     | '/ristoratore/collaboratori'
     | '/workers/$id'
     | '/ristoratore/annunci/nuovo'
@@ -405,7 +394,6 @@ export interface FileRouteTypes {
     | '/announcements/new'
     | '/messages/$id'
     | '/restaurants/$id'
-    | '/reviews/$reviewId'
     | '/ristoratore/collaboratori'
     | '/workers_/$id'
     | '/ristoratore/annunci/nuovo'
@@ -437,7 +425,6 @@ export interface RootRouteChildren {
   VerifyPhoneRoute: typeof VerifyPhoneRoute
   WorkersRoute: typeof WorkersRoute
   RestaurantsIdRoute: typeof RestaurantsIdRoute
-  ReviewsReviewIdRoute: typeof ReviewsReviewIdRoute
   RistoratoreCollaboratoriRoute: typeof RistoratoreCollaboratoriRoute
   WorkersIdRoute: typeof WorkersIdRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
@@ -609,13 +596,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RistoratoreCollaboratoriRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reviews/$reviewId': {
-      id: '/reviews/$reviewId'
-      path: '/reviews/$reviewId'
-      fullPath: '/reviews/$reviewId'
-      preLoaderRoute: typeof ReviewsReviewIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/restaurants/$id': {
       id: '/restaurants/$id'
       path: '/restaurants/$id'
@@ -724,7 +704,6 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyPhoneRoute: VerifyPhoneRoute,
   WorkersRoute: WorkersRoute,
   RestaurantsIdRoute: RestaurantsIdRoute,
-  ReviewsReviewIdRoute: ReviewsReviewIdRoute,
   RistoratoreCollaboratoriRoute: RistoratoreCollaboratoriRoute,
   WorkersIdRoute: WorkersIdRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,

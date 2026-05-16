@@ -1,5 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
@@ -10,11 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
-import { Utensils, MapPin, Briefcase, Calendar, Clock, Timer, Moon, Flame, Shirt, Coffee, FileText } from "lucide-react";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
-import { ensureProposalApplication } from "@/lib/messages.functions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,27 +45,6 @@ type App = {
   announcement_id: string; proposed_tariff: number | null;
 };
 type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string };
-
-type AnnProposal = {
-  id: string;
-  service_date: string;
-  service_time: string;
-  location_address: string | null;
-  tariff_amount: number | null;
-  tariff_type: string | null;
-  professional_profile: string | null;
-  job_city: string | null;
-  job_province: string | null;
-  job_address: string | null;
-  end_date: string | null;
-  end_time: string | null;
-  is_long_shift: boolean | null;
-  long_shift_reason: string | null;
-  dress_code_items: string[] | null;
-  dress_code_notes: string | null;
-  required_skills: string[] | null;
-  notes: string | null;
-};
 
 type Shift = {
   id: string;
@@ -270,8 +246,6 @@ function buildTimeline(status?: string): Step[] {
 
 function Thread() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
-  const ensureApplication = useServerFn(ensureProposalApplication);
   const { user, role, profile } = useAuth();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
@@ -293,8 +267,6 @@ function Thread() {
   const [shift, setShift] = useState<Shift | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [activeAnns, setActiveAnns] = useState<AnnProposal[]>([]);
-  const [proposalAnnId, setProposalAnnId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -374,28 +346,6 @@ function Thread() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  // Carica gli annunci attivi del ristoratore per la proposta turno via dropdown
-  useEffect(() => {
-    (async () => {
-      if (!user || role !== "restaurant") { setActiveAnns([]); return; }
-      const { data } = await supabase.from("announcements")
-        .select("id, service_date, service_time, location_address, tariff_amount, tariff_type, professional_profile, job_city, job_province, job_address, end_date, end_time, is_long_shift, long_shift_reason, dress_code_items, dress_code_notes, required_skills, notes")
-        .eq("restaurant_id", user.id)
-        .eq("status", "active")
-        .order("service_date", { ascending: true });
-      const list = (data ?? []) as AnnProposal[];
-      setActiveAnns(list);
-      setProposalAnnId(prev => prev && list.some(a => a.id === prev) ? prev : (list.length === 1 ? list[0].id : null));
-    })();
-  }, [user, role]);
-
-  // Auto-seleziona unico annuncio quando si sceglie il template "Sei disponibile..."
-  useEffect(() => {
-    if (selectedTpl?.key === "r_app_avail" && activeAnns.length === 1 && !proposalAnnId) {
-      setProposalAnnId(activeAnns[0].id);
-    }
-  }, [selectedTpl, activeAnns, proposalAnnId]);
-
   const pushMessage = (message: Msg) => {
     setMsgs(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
   };
@@ -450,77 +400,6 @@ function Thread() {
         setTimeout(() => {
           document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 50);
-        return;
-      }
-      // Caso speciale: "Sei disponibile per il turno..." → proposta strutturata con dropdown annuncio
-      if (selectedTpl.key === "r_app_avail" && role === "restaurant") {
-        if (activeAnns.length === 0) {
-          toast.error("Non hai annunci attivi. Crea prima un annuncio per proporre un turno.");
-          setSending(false);
-          return;
-        }
-        const annId = proposalAnnId ?? (activeAnns.length === 1 ? activeAnns[0].id : null);
-        if (!annId) {
-          toast.error("Seleziona un annuncio dal menù prima di inviare la proposta.");
-          setSending(false);
-          return;
-        }
-        const a = activeAnns.find(x => x.id === annId)!;
-        const restName = profile?.business_name || profile?.full_name || "il nostro locale";
-        const lines: string[] = ["📋 Proposta nuovo servizio", ""];
-        if (a.professional_profile) lines.push(`• Ruolo: ${a.professional_profile}`);
-        lines.push(`• Locale: ${restName}`);
-        if (a.service_date) {
-          const d = new Date(a.service_date).toLocaleDateString("it-IT");
-          lines.push(`• Data inizio: ${d}${a.service_time ? ` · ${a.service_time.slice(0,5)}` : ""}`);
-        }
-        if (a.end_date || a.end_time) {
-          const ed = a.end_date ? new Date(a.end_date).toLocaleDateString("it-IT") : (a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT") : "");
-          lines.push(`• Fine: ${ed}${a.end_time ? ` · ${a.end_time.slice(0,5)}` : ""}`);
-        }
-        if (a.tariff_amount != null) {
-          lines.push(`• Tariffa: €${Number(a.tariff_amount).toFixed(2)}${a.tariff_type === "hourly" ? "/h" : ""}`);
-        }
-        const zone = [a.job_city, a.job_province].filter(Boolean).join(", ");
-        if (zone) lines.push(`• Zona: ${zone}`);
-        if (a.job_address || a.location_address) lines.push(`• Indirizzo: ${a.job_address || a.location_address}`);
-        if (a.dress_code_items && a.dress_code_items.length) lines.push(`• Dress code: ${a.dress_code_items.join(", ")}`);
-        if (a.dress_code_notes) lines.push(`  ${a.dress_code_notes}`);
-        if (a.required_skills && a.required_skills.length) lines.push(`• Requisiti: ${a.required_skills.join(", ")}`);
-        if (a.is_long_shift) lines.push(`• ⚠️ Turno lungo${a.long_shift_reason ? ` — ${a.long_shift_reason}` : ""}`);
-        if (a.notes) lines.push(`• Note: ${a.notes}`);
-        lines.push("", `💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.`);
-        const body = lines.join("\n");
-        const createdAt = new Date().toISOString();
-        const target = await ensureApplication({ data: { announcementId: annId, workerId: app.worker_id } });
-        const targetAppId = target.applicationId;
-        const { data, error } = await supabase.from("messages").insert({
-          application_id: targetAppId,
-          sender_id: user.id,
-          receiver_id: receiverId,
-          body,
-          created_at: createdAt,
-          read_at: null,
-          template_id: selectedTpl.key,
-          message_type: "template",
-          action_type: "recall_worker",
-        } as never).select("*").single();
-        if (error) throw error;
-        if (data && targetAppId === app.id) pushMessage(data as Msg);
-        await supabase.from("applications").update({
-          last_message_preview: "📋 Proposta nuovo servizio",
-          last_message_at: createdAt,
-          status: "pending",
-          worker_response_at: null,
-        } as never).eq("id", targetAppId);
-        if (targetAppId === app.id) {
-          setApp({ ...app, status: "pending" } as App);
-        } else {
-          navigate({ to: "/messages/$id", params: { id: targetAppId } });
-        }
-        setSelectedTpl(null);
-        toast.success("Proposta inviata.");
-        setSending(false);
         return;
       }
       const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null, displayAddress);
@@ -950,9 +829,7 @@ function Thread() {
 
         <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
-          {(() => {
-            const lastRecallId = [...msgs].reverse().find(m => m.action_type === "recall_worker")?.id ?? null;
-            return msgs.map(m => {
+          {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             if (isSystem) {
               return (
@@ -960,61 +837,6 @@ function Thread() {
                   <div className="rounded-full px-3 py-1 text-xs bg-muted text-muted-foreground border">
                     {m.body.replace(/^⚙️ /, "")}
                   </div>
-                </div>
-              );
-            }
-            if (m.action_type === "recall_worker") {
-              const mine = m.sender_id === user?.id;
-              const isLatestRecall = m.id === lastRecallId;
-              const showCta =
-                role === "worker" && !mine && app?.status === "pending" && isLatestRecall;
-              const handleRecallAccept = async () => {
-                await transition("interested");
-                if (app) {
-                  await supabase.from("messages").insert({
-                    application_id: app.id,
-                    sender_id: user!.id,
-                    receiver_id: app.restaurant_id,
-                    body: "⚙️ Sistema: Il lavoratore ha accettato la proposta di lavoro.",
-                    message_type: "system",
-                  });
-                  await supabase.from("notifications").insert({
-                    user_id: app.restaurant_id,
-                    title: "Proposta accettata",
-                    body: "Il lavoratore ha accettato la proposta di lavoro.",
-                    link: `/messages/${app.id}`,
-                  } as never);
-                }
-              };
-              const handleRecallDecline = async () => {
-                await transition("not_interested");
-                if (app) {
-                  await supabase.from("messages").insert({
-                    application_id: app.id,
-                    sender_id: user!.id,
-                    receiver_id: app.restaurant_id,
-                    body: "⚙️ Sistema: Il lavoratore ha rifiutato la proposta di lavoro.",
-                    message_type: "system",
-                  });
-                  await supabase.from("notifications").insert({
-                    user_id: app.restaurant_id,
-                    title: "Proposta rifiutata",
-                    body: "Il lavoratore ha rifiutato la proposta di lavoro.",
-                    link: `/messages/${app.id}`,
-                  } as never);
-                }
-              };
-              return (
-                <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <RecallProposalCard
-                    body={m.body}
-                    showCta={showCta}
-                    appStatus={isLatestRecall ? app?.status : "pending"}
-                    viewerRole={role}
-                    mine={mine}
-                    onAccept={handleRecallAccept}
-                    onDecline={handleRecallDecline}
-                  />
                 </div>
               );
             }
@@ -1029,8 +851,7 @@ function Thread() {
                 )}
               </div>
             );
-            });
-          })()}
+          })}
           <div ref={endRef} />
         </div>
         {role === "restaurant" && app && shift && (() => {
@@ -1097,9 +918,6 @@ function Thread() {
           otherName={other?.name ?? null}
           addressOverride={displayAddress}
           disabled={isConversationClosed}
-          activeAnns={activeAnns}
-          proposalAnnId={proposalAnnId}
-          setProposalAnnId={setProposalAnnId}
         />
 
         {role === "restaurant" && tplCategory === "post_shift" && app && (
@@ -1135,48 +953,12 @@ function TemplatePicker(props: {
   otherName: string | null;
   addressOverride?: string | null;
   disabled?: boolean;
-  activeAnns?: AnnProposal[];
-  proposalAnnId?: string | null;
-  setProposalAnnId?: (id: string | null) => void;
 }) {
-  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled, activeAnns = [], proposalAnnId = null, setProposalAnnId } = props;
+  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled } = props;
   const available = TEMPLATES.filter(t => (t.role === role || t.role === "both") && t.category !== "post_shift");
   const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
   const inCat = available.filter(t => t.category === category);
   const isClosureForRestaurant = role === "restaurant" && category === "post_shift";
-  const isAvailTpl = role === "restaurant" && selected?.key === "r_app_avail";
-  const proposalAnn = isAvailTpl ? (activeAnns.find(a => a.id === proposalAnnId) ?? null) : null;
-  const fmtOption = (a: AnnProposal) => {
-    const dt = a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "long" }) : "—";
-    const start = a.service_time ? a.service_time.slice(0,5) : "";
-    const end = a.end_time ? a.end_time.slice(0,5) : "";
-    const orario = start && end ? `${start}/${end}` : start;
-    const luogo = a.job_city || a.location_address || "";
-    return [a.professional_profile || "Turno", dt, orario, luogo].filter(Boolean).join(" — ");
-  };
-  const previewBody = (() => {
-    if (!selected) return "";
-    if (isAvailTpl && proposalAnn) {
-      const a = proposalAnn;
-      const dt = a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT") : "—";
-      const start = a.service_time ? a.service_time.slice(0,5) : "";
-      const end = a.end_time ? a.end_time.slice(0,5) : "";
-      const orario = start && end ? `${start} - ${end}` : start || "—";
-      const luogo = a.job_city || "—";
-      return [
-        "Ciao, sei disponibile per questo turno?",
-        "",
-        `Ruolo: ${a.professional_profile || "—"}`,
-        `Data: ${dt}`,
-        `Orario: ${orario}`,
-        `Luogo: ${luogo}`,
-        `Locale: ${otherName ?? "—"}`,
-        "",
-        "Fammi sapere se puoi esserci.",
-      ].join("\n");
-    }
-    return renderTemplate(selected.text, ann, otherName, addressOverride);
-  })();
 
   return (
     <div className="mt-4 rounded-2xl border bg-card p-4 space-y-3">
@@ -1227,31 +1009,10 @@ function TemplatePicker(props: {
           })}
         </div>
       )}
-      {isAvailTpl && (
-        <div className="rounded-xl border bg-secondary/30 p-3 space-y-2">
-          <label className="text-xs font-semibold text-foreground">Per quale annuncio vuoi proporre il turno?</label>
-          {activeAnns.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Non hai annunci attivi. Crea prima un annuncio per proporre un turno.
-            </p>
-          ) : (
-            <select
-              className="w-full h-10 rounded-md border bg-background px-3 text-sm"
-              value={proposalAnnId ?? ""}
-              onChange={(e) => setProposalAnnId?.(e.target.value || null)}
-            >
-              <option value="">— Seleziona un annuncio —</option>
-              {activeAnns.map(a => (
-                <option key={a.id} value={a.id}>{fmtOption(a)}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
       {selected && !isClosureForRestaurant && (
         <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
           <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
-          <div className="whitespace-pre-wrap">{previewBody}</div>
+          {renderTemplate(selected.text, ann, otherName, addressOverride)}
         </div>
       )}
       {!isClosureForRestaurant && (
@@ -1259,7 +1020,7 @@ function TemplatePicker(props: {
         <Button
           type="button"
           onClick={onSend}
-          disabled={!selected || sending || disabled || (isAvailTpl && (activeAnns.length === 0 || !proposalAnnId))}
+          disabled={!selected || sending || disabled}
           className="gap-2"
         >
           <Send className="h-4 w-4" />
@@ -1271,206 +1032,6 @@ function TemplatePicker(props: {
         <p className="text-xs text-muted-foreground text-center">
           Conversazione chiusa: non è possibile inviare nuovi messaggi.
         </p>
-      )}
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// RecallProposalCard — renders the structured "Proposta nuovo servizio" message
-// ──────────────────────────────────────────────────────────────────────────────
-function parseRecallBody(body: string) {
-  const out: Record<string, string> = {};
-  let template = "";
-  for (const raw of body.split("\n")) {
-    const line = raw.trim();
-    if (!line) continue;
-    if (line.startsWith("💬")) { template = line.replace(/^💬\s*/, ""); continue; }
-    const m = line.match(/^•\s*([^:]+):\s*(.+)$/);
-    if (m) {
-      const key = m[1].toLowerCase().replace(/[⚠️\s]+/g, " ").trim();
-      out[key] = m[2].trim();
-    }
-  }
-  return { fields: out, template };
-}
-
-function RecallProposalCard({
-  body, showCta, onAccept, onDecline, appStatus, viewerRole, mine,
-}: {
-  body: string;
-  showCta: boolean;
-  onAccept: () => void;
-  onDecline: () => void;
-  appStatus?: string;
-  viewerRole?: string | null;
-  mine?: boolean;
-}) {
-  const { fields, template } = parseRecallBody(body);
-  const role = fields["ruolo"];
-  const locale = fields["locale"];
-  const dataInizio = fields["data inizio"];
-  const fine = fields["fine"];
-  const tariffa = fields["tariffa"];
-  const zona = fields["zona"];
-  const indirizzo = fields["indirizzo"];
-  const dressCode = fields["dress code"];
-  const requisiti = fields["requisiti"];
-  const turnoLungo = fields["turno lungo"];
-  const note = fields["note"];
-
-  // derive date / time / duration from "dd/mm/yyyy · HH:MM" patterns
-  const splitDt = (s?: string) => {
-    if (!s) return { date: "", time: "" };
-    const [d, t] = s.split("·").map((x) => x.trim());
-    return { date: d ?? "", time: t ?? "" };
-  };
-  const start = splitDt(dataInizio);
-  const end = splitDt(fine);
-  const orario = start.time && end.time ? `${start.time} → ${end.time}` : (start.time || "");
-
-  let durata = "";
-  let isNight = false;
-  if (start.time && end.time) {
-    const [sh, sm] = start.time.split(":").map(Number);
-    const [eh, em] = end.time.split(":").map(Number);
-    let mins = (eh * 60 + em) - (sh * 60 + sm);
-    if (mins <= 0) mins += 24 * 60;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    durata = m ? `${h}h ${m}m` : `${h} ore`;
-    isNight = eh < sh || eh < 6;
-  }
-
-  const Row = ({ icon: Icon, label, value }: { icon: typeof Utensils; label: string; value?: string }) => {
-    if (!value) return null;
-    return (
-      <div className="flex items-start gap-3 py-2">
-        <div className="shrink-0 h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{label}</div>
-          <div className="text-sm font-semibold text-foreground break-words">{value}</div>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="w-full max-w-[440px] rounded-2xl border-2 border-primary/40 bg-card shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.45)] overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-4 py-4 border-b border-primary/20">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 uppercase tracking-wide">
-            <Sparkles className="h-3 w-3" /> Nuova proposta
-          </span>
-        </div>
-      <h3 className="text-lg sm:text-xl font-bold leading-tight text-foreground">Nuova proposta di lavoro</h3>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-          Un locale dove hai già lavorato vorrebbe ricontattarti.
-        </p>
-      </div>
-
-      {/* Highlights */}
-      <div className="px-4 pt-3 pb-1">
-        <div className="grid grid-cols-2 gap-2">
-          {role && (
-            <div className="rounded-xl border bg-background p-3">
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Ruolo</div>
-              <div className="text-sm font-bold leading-tight mt-0.5">{role}</div>
-            </div>
-          )}
-          {tariffa && (
-            <div className="rounded-xl border-2 border-primary/40 bg-primary/10 p-3">
-              <div className="text-[10px] uppercase tracking-wide text-primary/80 font-semibold">Tariffa</div>
-              <div className="text-sm font-bold leading-tight mt-0.5 text-primary">{tariffa}</div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Sections */}
-      <div className="px-4 py-2 divide-y divide-border/60">
-        <div>
-          <Row icon={Utensils} label="Locale" value={locale} />
-          <Row icon={MapPin} label="Zona" value={zona} />
-          <Row icon={MapPin} label="Indirizzo" value={indirizzo} />
-        </div>
-        <div>
-          <Row icon={Calendar} label="Data" value={start.date} />
-          <Row icon={Clock} label="Orario" value={orario} />
-          {durata && <Row icon={Timer} label="Durata" value={durata} />}
-        </div>
-        {(isNight || turnoLungo || dressCode || requisiti || note) && (
-          <div>
-            {(isNight || turnoLungo) && (
-              <div className="flex flex-wrap gap-1.5 py-2">
-                {isNight && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 text-[11px] font-semibold px-2.5 py-1 border border-indigo-500/30">
-                    <Moon className="h-3 w-3" /> Turno notturno
-                  </span>
-                )}
-                {turnoLungo && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 text-[11px] font-semibold px-2.5 py-1 border border-amber-500/30">
-                    <Flame className="h-3 w-3" /> Turno lungo
-                  </span>
-                )}
-              </div>
-            )}
-            <Row icon={Shirt} label="Dress code" value={dressCode} />
-            <Row icon={Briefcase} label="Requisiti" value={requisiti} />
-            <Row icon={Coffee} label="Note operative" value={note} />
-          </div>
-        )}
-        {template && (
-          <div className="py-3">
-            <div className="rounded-xl bg-muted/60 border border-border px-3 py-2 text-sm italic text-foreground/90">
-              <FileText className="inline h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-              {template}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* CTA */}
-      {showCta && (
-        <div className="px-4 pb-4 pt-2 border-t border-border bg-background">
-          <p className="text-sm font-semibold text-center mb-3">
-            Vuoi confermare la tua disponibilità per questo servizio?
-          </p>
-          <div className="flex flex-col-reverse sm:flex-row gap-2">
-            <Button type="button" size="lg" className="flex-1 gap-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow h-12 text-base" onClick={onDecline}>
-              <X className="h-5 w-5" /> Rifiuta
-            </Button>
-            <Button type="button" size="lg" className="flex-1 gap-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow h-12 text-base" onClick={onAccept}>
-              <Check className="h-5 w-5" /> Accetta
-            </Button>
-          </div>
-        </div>
-      )}
-      {!showCta && (appStatus === "interested" || appStatus === "accepted" || appStatus === "not_interested" || appStatus === "rejected") && (
-        <div className="px-4 pb-4 pt-2 border-t border-border bg-background">
-          {(appStatus === "interested" || appStatus === "accepted") ? (
-            <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 px-4 py-3 font-semibold">
-              <Check className="h-5 w-5" />
-              {viewerRole === "worker" && !mine ? "Hai accettato questa proposta" : "Il lavoratore ha accettato la proposta di lavoro"}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-2 rounded-xl bg-red-500/15 border border-red-500/40 text-red-700 dark:text-red-300 px-4 py-3 font-semibold">
-              <X className="h-5 w-5" />
-              {viewerRole === "worker" && !mine ? "Hai rifiutato questa proposta" : "Il lavoratore ha rifiutato la proposta di lavoro"}
-            </div>
-          )}
-        </div>
-      )}
-      {!showCta && appStatus === "pending" && viewerRole === "restaurant" && mine && (
-        <div className="px-4 pb-4 pt-2 border-t border-border bg-background">
-          <div className="flex items-center justify-center gap-2 rounded-xl bg-muted border border-border text-muted-foreground px-4 py-3 font-semibold">
-            <Clock className="h-5 w-5" />
-            In attesa di risposta del lavoratore
-          </div>
-        </div>
       )}
     </div>
   );

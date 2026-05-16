@@ -16,15 +16,6 @@ import {
   ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
   XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check, Heart,
 } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { submitWorkerReview } from "@/lib/reviews.functions";
-import {
-  CRITERION_LABEL,
-  REVIEW_CRITERIA,
-  computeOverallRating,
-  type ReviewCriterion,
-  type ReviewScores,
-} from "@/lib/reviews";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
@@ -127,17 +118,7 @@ function ShiftDetailPage() {
   const [jobReq, setJobReq] = useState<JobReq | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
   const [appCount, setAppCount] = useState<number>(0);
-  type ExistingReview = {
-    id: string;
-    rating: number;
-    comment: string | null;
-    punctuality: number | null;
-    professionalism: number | null;
-    competence: number | null;
-    reliability: number | null;
-    teamwork: number | null;
-  };
-  const [existingReview, setExistingReview] = useState<ExistingReview | null>(null);
+  const [existingReview, setExistingReview] = useState<{ id: string; rating: number; comment: string | null; tags: string[] | null } | null>(null);
   const hasReview = !!existingReview;
   const [requiredReview, setRequiredReview] = useState<{ status: string; due_date: string; review_id?: string | null } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -202,12 +183,7 @@ function ShiftDetailPage() {
         ? supabase.from("applications").select("id, worker_id, status").eq("announcement_id", s.announcement_id)
         : Promise.resolve({ data: [] as any[] }),
       user
-        ? supabase
-            .from("reviews")
-            .select("id, rating, comment, punctuality, professionalism, competence, reliability, teamwork")
-            .eq("shift_id", s.id)
-            .eq("author_id", user.id)
-            .maybeSingle()
+        ? supabase.from("reviews").select("id, rating, comment, tags").eq("shift_id", s.id).eq("author_id", user.id).maybeSingle()
         : Promise.resolve({ data: null }),
       (supabase as any).from("required_reviews")
         .select("status, due_date, review_id")
@@ -281,42 +257,48 @@ function ShiftDetailPage() {
     nav({ to: "/ristoratore/turni/$shiftId", params: { shiftId: shift.id }, search: { section: "recensione" } });
   };
 
-  const submitReviewFn = useServerFn(submitWorkerReview);
-  const submitReview = async (scores: Required<ReviewScores>, text: string) => {
+  const submitReview = async (rating: number, text: string, tags: string[]) => {
     if (!user || !shift) return;
-    const overall = computeOverallRating(scores);
-    if (overall == null) {
-      toast.error("Valuta tutti i parametri da 1 a 5 stelle.");
+    if (rating < 1 || rating > 5) { toast.error("Seleziona una valutazione."); return; }
+    const trimmed = text.trim();
+    if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
+    if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
+    // Anti-duplicato
+    const { data: dup } = await supabase.from("reviews")
+      .select("id, rating, comment, tags")
+      .eq("shift_id", shift.id)
+      .eq("author_id", user.id)
+      .eq("target_id", shift.worker_id)
+      .maybeSingle();
+    if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
+    const { data: created, error } = await supabase.from("reviews").insert({
+      author_id: user.id,
+      target_id: shift.worker_id,
+      shift_id: shift.id,
+      announcement_id: shift.announcement_id,
+      application_id: appId,
+      rating,
+      comment: trimmed,
+      tags,
+    } as never).select("id, rating, comment, tags").single();
+    if (error) {
+      toast.error(error.message.includes("duplicate") || error.message.includes("unique") ? "Recensione già presente per questo turno." : error.message);
+      await load();
       return;
     }
-    try {
-      await submitReviewFn({
-        data: {
-          shiftId: shift.id,
-          punctuality: scores.punctuality,
-          professionalism: scores.professionalism,
-          competence: scores.competence,
-          reliability: scores.reliability,
-          teamwork: scores.teamwork,
-          comment: text.trim(),
-        },
-      });
-      // Messaggio di sistema in chat (best effort)
-      if (appId) {
-        await supabase.from("messages").insert({
-          application_id: appId,
-          sender_id: user.id,
-          body: "Sistema: il turno è stato completato e il lavoratore ha ricevuto una recensione.",
-          message_type: "system",
-          action_type: "review_submitted",
-        } as never);
-      }
-      toast.success("Recensione inviata");
-      await load();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Errore durante l'invio della recensione.");
-      await load();
+    // Messaggio di sistema in chat (best effort)
+    if (appId) {
+      await supabase.from("messages").insert({
+        application_id: appId,
+        sender_id: user.id,
+        body: "Sistema: il turno è stato completato e il lavoratore ha ricevuto una recensione.",
+        message_type: "system",
+        action_type: "review_submitted",
+      } as never);
     }
+    toast.success("Recensione inviata");
+    setExistingReview(created as any);
+    await load();
   };
 
   if (loading) {
@@ -627,81 +609,50 @@ function ReviewSection({
   dueDate,
   onSubmit,
 }: {
-  existing: {
-    id: string;
-    rating: number;
-    comment: string | null;
-    punctuality: number | null;
-    professionalism: number | null;
-    competence: number | null;
-    reliability: number | null;
-    teamwork: number | null;
-  } | null;
+  existing: { id: string; rating: number; comment: string | null; tags: string[] | null } | null;
   workerName: string | null;
   isOverdue: boolean;
   dueDate: string | null;
-  onSubmit: (
-    scores: Required<ReviewScores>,
-    text: string,
-  ) => Promise<void>;
+  onSubmit: (rating: number, text: string, tags: string[]) => Promise<void>;
 }) {
-  const [scores, setScores] = useState<ReviewScores>({});
+  const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   if (existing) {
-    const existingScores: ReviewScores = {
-      punctuality: existing.punctuality ?? undefined,
-      professionalism: existing.professionalism ?? undefined,
-      competence: existing.competence ?? undefined,
-      reliability: existing.reliability ?? undefined,
-      teamwork: existing.teamwork ?? undefined,
-    };
-    const overall = computeOverallRating(existingScores) ?? existing.rating;
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-          <h3 className="font-semibold text-sm">Recensione già inviata</h3>
+          <h3 className="font-semibold text-sm">Recensione inviata</h3>
         </div>
-        <ul className="space-y-1.5 text-sm">
-          {REVIEW_CRITERIA.map((c) => {
-            const v = existingScores[c];
-            return (
-              <li key={c} className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">{CRITERION_LABEL[c]}</span>
-                <span className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Star key={n} className={`h-4 w-4 ${v && n <= v ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} strokeWidth={1.5} />
-                  ))}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="rounded-lg border bg-muted/40 p-3 text-sm flex items-center justify-between">
-          <span className="font-semibold">Valutazione complessiva</span>
-          <span className="font-bold tabular-nums">{overall.toFixed(1)} / 5</span>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star key={n} className={`h-5 w-5 ${n <= existing.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} strokeWidth={1.5} />
+          ))}
+          <span className="ml-2 text-sm font-medium">{existing.rating}.0 — {RATING_LABELS[existing.rating]}</span>
         </div>
-        {existing.comment && <p className="rounded-lg bg-muted/30 p-3 text-sm italic">“{existing.comment}”</p>}
+        {existing.comment && <p className="text-sm">{existing.comment}</p>}
+        {existing.tags && existing.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {existing.tags.map((t) => (
+              <span key={t} className="text-[11px] rounded-full bg-secondary px-2 py-0.5">{t}</span>
+            ))}
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">Hai già recensito questo turno. Non è possibile modificarla.</p>
       </div>
     );
   }
 
   const charCount = text.trim().length;
-  const allValued = REVIEW_CRITERIA.every((c) => {
-    const v = scores[c];
-    return typeof v === "number" && v >= 1 && v <= 5;
-  });
-  const overallLive = computeOverallRating(scores);
-  const canSubmit = allValued && charCount <= 1000 && !submitting;
-  const setScore = (c: ReviewCriterion, n: number) =>
-    setScores((p) => ({ ...p, [c]: n }));
+  const canSubmit = rating > 0 && charCount >= 20 && charCount <= 500 && !submitting;
+  const toggleTag = (t: string) => setTags((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    try { await onSubmit(scores as Required<ReviewScores>, text); }
+    try { await onSubmit(rating, text, tags); }
     finally { setSubmitting(false); }
   };
 
@@ -727,37 +678,63 @@ function ReviewSection({
           <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
           <h3 className="font-semibold text-base">Com'è andato il turno{workerName ? ` con ${workerName}` : ""}?</h3>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">Valuta ogni parametro da 1 a 5 stelle.</p>
+        <p className="text-xs text-muted-foreground mt-1">Conferma la fine del turno e lascia una recensione al lavoratore.</p>
       </div>
 
-      <ul className="space-y-2.5">
-        {REVIEW_CRITERIA.map((c) => (
-          <li key={c} className="flex items-center justify-between gap-3">
-            <span className="text-sm">{CRITERION_LABEL[c]}</span>
-            <StarPicker value={scores[c] ?? 0} onChange={(n) => setScore(c, n)} />
-          </li>
-        ))}
-      </ul>
-
-      <div className="rounded-lg border bg-muted/30 p-3 text-sm flex items-center justify-between">
-        <span className="font-semibold">Valutazione complessiva</span>
-        <span className="font-bold tabular-nums">
-          {overallLive == null ? "—" : `${overallLive.toFixed(1)} / 5`}
-        </span>
+      <div>
+        <label className="block text-xs font-medium mb-2">Valutazione *</label>
+        <StarPicker value={rating} onChange={setRating} />
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-medium">Commento (facoltativo, consigliato)</label>
-          <span className={`text-[11px] ${charCount > 1000 ? "text-destructive" : "text-muted-foreground"}`}>{charCount}/1000</span>
+          <label className="text-xs font-medium">Recensione *</label>
+          <span className={`text-[11px] ${charCount > 500 ? "text-destructive" : "text-muted-foreground"}`}>{charCount}/500</span>
         </div>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Scrivi un commento sulla prestazione del lavoratore"
+          placeholder="Scrivi una recensione chiara e utile sul lavoratore."
           rows={4}
-          maxLength={1000}
+          maxLength={500}
         />
+        {charCount > 0 && charCount < 20 && (
+          <p className="text-[11px] text-destructive mt-1">Minimo 20 caratteri ({20 - charCount} mancanti).</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium mb-2">Tag rapidi (opzionali)</label>
+        <div className="space-y-2">
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1">Positivi</div>
+            <div className="flex flex-wrap gap-1.5">
+              {POSITIVE_TAGS.map((t) => {
+                const active = tags.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTag(t)}
+                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-1">Critici</div>
+            <div className="flex flex-wrap gap-1.5">
+              {CRITICAL_TAGS.map((t) => {
+                const active = tags.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => toggleTag(t)}
+                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-destructive/20 border-destructive text-destructive" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       <Button type="button" onClick={handleSubmit} disabled={!canSubmit} className="w-full gap-2">

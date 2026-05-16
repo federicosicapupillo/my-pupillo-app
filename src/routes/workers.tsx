@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import { useEffect, useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type S
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
-import { ensureProposalApplication } from "@/lib/messages.functions";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -104,69 +102,7 @@ const PLACEHOLDER_BY_CATEGORY: Record<Category, string> = {
   availability: "Aggiungi nome o ruolo",
   custom: "Scrivi qualsiasi parola chiave",
 };
-type Ann = {
-  id: string;
-  service_date: string;
-  service_time: string | null;
-  end_date: string | null;
-  end_time: string | null;
-  location_address: string;
-  location_lat: number | null;
-  location_lng: number | null;
-  professional_profile: string | null;
-  job_city: string | null;
-  job_province: string | null;
-  job_address: string | null;
-  tariff_amount: number | null;
-  tariff_type: string | null;
-  dress_code_items: string[] | null;
-  dress_code_notes: string | null;
-  required_skills: string[] | null;
-  is_long_shift: boolean | null;
-  long_shift_reason: string | null;
-  notes: string | null;
-};
-
-function fmtAnnLabel(a: Ann): string {
-  const role = a.professional_profile || "Annuncio";
-  const date = a.service_date
-    ? new Date(a.service_date).toLocaleDateString("it-IT", { day: "numeric", month: "long" })
-    : "";
-  const t1 = a.service_time ? a.service_time.slice(0, 5) : "";
-  const t2 = a.end_time ? a.end_time.slice(0, 5) : "";
-  const orario = t1 && t2 ? `${t1}/${t2}` : t1;
-  const luogo = a.job_city || a.location_address || "";
-  return [role, date, orario, luogo].filter(Boolean).join(" — ");
-}
-
-function buildProposalBody(ann: Ann, restName: string): string {
-  const lines: string[] = ["📋 Proposta nuovo servizio", ""];
-  if (ann.professional_profile) lines.push(`• Ruolo: ${ann.professional_profile}`);
-  lines.push(`• Locale: ${restName}`);
-  if (ann.service_date) {
-    const d = new Date(ann.service_date).toLocaleDateString("it-IT");
-    lines.push(`• Data inizio: ${d}${ann.service_time ? ` · ${ann.service_time.slice(0, 5)}` : ""}`);
-  }
-  if (ann.end_date || ann.end_time) {
-    const ed = ann.end_date
-      ? new Date(ann.end_date).toLocaleDateString("it-IT")
-      : (ann.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "");
-    lines.push(`• Fine: ${ed}${ann.end_time ? ` · ${ann.end_time.slice(0, 5)}` : ""}`);
-  }
-  if (ann.tariff_amount != null) {
-    lines.push(`• Tariffa: €${Number(ann.tariff_amount).toFixed(2)}${ann.tariff_type === "hourly" ? "/h" : ""}`);
-  }
-  const zone = [ann.job_city, ann.job_province].filter(Boolean).join(", ");
-  if (zone) lines.push(`• Zona: ${zone}`);
-  if (ann.job_address || ann.location_address) lines.push(`• Indirizzo: ${ann.job_address || ann.location_address}`);
-  if (ann.dress_code_items && ann.dress_code_items.length) lines.push(`• Dress code: ${ann.dress_code_items.join(", ")}`);
-  if (ann.dress_code_notes) lines.push(`  ${ann.dress_code_notes}`);
-  if (ann.required_skills && ann.required_skills.length) lines.push(`• Requisiti: ${ann.required_skills.join(", ")}`);
-  if (ann.is_long_shift) lines.push(`• ⚠️ Turno lungo${ann.long_shift_reason ? ` — ${ann.long_shift_reason}` : ""}`);
-  if (ann.notes) lines.push(`• Note: ${ann.notes}`);
-  lines.push("", "💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.");
-  return lines.join("\n");
-}
+type Ann = { id: string; service_date: string; location_address: string; location_lat: number | null; location_lng: number | null };
 
 function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371000;
@@ -180,7 +116,6 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
-  const ensureApplication = useServerFn(ensureProposalApplication);
   const { isBlocked, overdueCount } = useRequiredReviews();
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
@@ -197,7 +132,6 @@ function WorkersPage() {
   const [langDraft, setLangDraft] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
-  const [collabMap, setCollabMap] = useState<Record<string, { worked: boolean; review: { rating: number; comment: string | null; created_at: string } | null }>>({});
 
   const runSearch = async (overrides?: { category?: Category; subcategory?: string; text?: string; language?: string }) => {
     const nextCategory = overrides?.category ?? catDraft;
@@ -248,116 +182,43 @@ function WorkersPage() {
   useEffect(() => {
     (async () => {
       if (user) {
-        const { data } = await supabase
-          .from("announcements")
-          .select("id, service_date, service_time, end_date, end_time, location_address, location_lat, location_lng, professional_profile, job_city, job_province, job_address, tariff_amount, tariff_type, dress_code_items, dress_code_notes, required_skills, is_long_shift, long_shift_reason, notes")
-          .eq("restaurant_id", user.id)
-          .eq("status", "active")
-          .order("service_date", { ascending: true });
-        const list = (data as Ann[]) ?? [];
-        setAnns(list);
-        // Auto-seleziona solo se c'è un singolo annuncio attivo.
-        if (list.length === 1) setSelected(list[0].id);
+        const { data } = await supabase.from("announcements").select("id, service_date, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
+        setAnns((data as Ann[]) ?? []);
+        if (data?.[0]) setSelected(data[0].id);
       }
     })();
   }, [user]);
 
-  // Load "already worked with you" + last private review (by this restaurant) for the visible workers.
-  useEffect(() => {
-    (async () => {
-      if (!user || workers.length === 0) { setCollabMap({}); return; }
-      const ids = workers.map((w) => w.id);
-      const [{ data: shiftsData }, { data: reviewsData }] = await Promise.all([
-        supabase
-          .from("shifts")
-          .select("worker_id, status")
-          .eq("restaurant_id", user.id)
-          .in("worker_id", ids)
-          .eq("status", "completed"),
-        supabase
-          .from("reviews")
-          .select("target_id, rating, comment, created_at")
-          .eq("author_id", user.id)
-          .in("target_id", ids)
-          .order("created_at", { ascending: false }),
-      ]);
-      const workedSet = new Set<string>((shiftsData ?? []).map((s: any) => s.worker_id));
-      const latestReview: Record<string, { rating: number; comment: string | null; created_at: string }> = {};
-      for (const r of (reviewsData as any[]) ?? []) {
-        if (!latestReview[r.target_id]) latestReview[r.target_id] = { rating: r.rating, comment: r.comment, created_at: r.created_at };
-      }
-      const map: typeof collabMap = {};
-      for (const id of ids) {
-        map[id] = { worked: workedSet.has(id), review: latestReview[id] ?? null };
-      }
-      setCollabMap(map);
-    })();
-  }, [user, workers]);
-
-  // Load all workers by default when the page opens, so the list is never empty.
-  useEffect(() => {
-    void runSearch({ category: "all", subcategory: "", text: "", language: "" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   if (role !== "restaurant") return <AppShell><p>Solo i ristoratori.</p></AppShell>;
 
   const invite = async (workerId: string) => {
-    if (!user) return;
+    if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
     if (isBlocked) {
       toast.error("Per contattare nuovi lavoratori devi prima completare le recensioni obbligatorie dei turni conclusi.");
       nav({ to: "/shifts", search: { tab: "to-review" } as never });
       return;
     }
-    if (anns.length === 0) {
-      toast.error("Non hai annunci attivi. Crea prima un annuncio per proporre un turno.");
-      nav({ to: "/announcements/new" as never });
+    // If a conversation already exists for this restaurant + worker + announcement, just open it.
+    const { data: existing } = await supabase
+      .from("applications")
+      .select("id")
+      .eq("announcement_id", selected)
+      .eq("worker_id", workerId)
+      .eq("restaurant_id", user.id)
+      .maybeSingle();
+    if (existing?.id) {
+      nav({ to: "/messages/$id", params: { id: existing.id } });
       return;
     }
-    if (!selected) {
-      toast.error("Seleziona prima un annuncio dal menù in alto.");
-      return;
-    }
-    const ann = anns.find((x) => x.id === selected);
-    if (!ann) {
-      toast.error("Annuncio non valido. Selezionane un altro.");
-      return;
-    }
-    let appId: string;
-    try {
-      const result = await ensureApplication({ data: { announcementId: selected, workerId } });
-      appId = result.applicationId;
-    } catch (error: any) {
-      toast.error(error?.message ?? "Errore nella creazione della proposta");
-      return;
-    }
-    // Costruisci il messaggio strutturato "recall_worker" con i dettagli dell'annuncio.
-    const restName = profile?.business_name || profile?.full_name || "il nostro locale";
-    const body = buildProposalBody(ann, restName);
-    const createdAt = new Date().toISOString();
-    await supabase.from("messages").insert({
-      application_id: appId,
-      sender_id: user.id,
-      receiver_id: workerId,
-      body,
-      created_at: createdAt,
-      read_at: null,
-      template_id: "r_app_avail",
-      message_type: "template",
-      action_type: "recall_worker",
-    } as never);
-    await supabase.from("applications").update({
-      last_message_preview: "📋 Proposta nuovo servizio",
-      last_message_at: createdAt,
-    } as never).eq("id", appId);
-    await supabase.from("notifications").insert({
-      user_id: workerId,
-      title: "Nuova proposta di lavoro",
-      body: "Hai ricevuto una nuova proposta di turno. Apri la chat per accettare o rifiutare.",
-      link: `/messages/${appId}`,
-    });
-    toast.success("Proposta inviata al lavoratore");
-    nav({ to: "/messages/$id", params: { id: appId } });
+    const { data: created, error } = await supabase
+      .from("applications")
+      .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
+      .select("id")
+      .single();
+    if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
+    await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: `/messages/${created.id}` });
+    toast.success("Chat aperta con il lavoratore");
+    nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
   const fieldsOf = (w: W) => {
@@ -508,10 +369,6 @@ function WorkersPage() {
     return true;
   });
   const sorted = [...distFiltered].sort((a, b) => {
-    // Prioritize "già lavorato con te" workers, but keep all visible.
-    const aw = collabMap[a.id]?.worked ? 1 : 0;
-    const bw = collabMap[b.id]?.worked ? 1 : 0;
-    if (aw !== bw) return bw - aw;
     if (category === "all") {
       if (subcategory === "Ultimi attivi") return (new Date(b.last_active_at ?? 0).getTime()) - (new Date(a.last_active_at ?? 0).getTime());
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
@@ -524,13 +381,6 @@ function WorkersPage() {
   const isPaid = profile?.plan === "pro" || profile?.plan === "business";
   const cost = CREDIT_COSTS.assignWorker;
   const canAfford = isPaid || credits >= cost;
-
-  const selectedAnnFull = anns.find((a) => a.id === selected) ?? null;
-  const previewBody = useMemo(() => {
-    if (!selectedAnnFull) return "";
-    const restName = profile?.business_name || profile?.full_name || "il nostro locale";
-    return buildProposalBody(selectedAnnFull, restName);
-  }, [selectedAnnFull, profile?.business_name, profile?.full_name]);
 
   return (
     <AppShell>
@@ -551,48 +401,23 @@ function WorkersPage() {
           <Link to="/billing"><Button size="sm" variant="outline" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
         )}
       </div>
-      <div className="mb-4 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
-        <label className="block text-sm font-semibold mb-1">Seleziona un annuncio da proporre</label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Scegli l'annuncio: il messaggio inviato al lavoratore conterrà automaticamente i dettagli del turno.
-        </p>
-        {anns.length === 0 ? (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-            <p className="font-medium mb-2">Non hai annunci attivi. Crea prima un annuncio per proporre un turno.</p>
-            <Link to={"/announcements/new" as never}>
-              <Button size="sm" variant="outline">Crea annuncio</Button>
-            </Link>
-          </div>
-        ) : (
+      <div className="mb-4 grid gap-3 md:grid-cols-2">
+        <div>
+          <label className="text-sm font-medium">Annuncio per cui contattare</label>
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="mt-1 flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="">— Seleziona un annuncio —</option>
+            <option value="">Nessun annuncio attivo</option>
             {anns.map((a) => (
-              <option key={a.id} value={a.id}>{fmtAnnLabel(a)}</option>
+              <option key={a.id} value={a.id}>
+                {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.location_address}
+              </option>
             ))}
           </select>
-        )}
-        {previewBody && (
-          <div className="mt-3 rounded-xl border bg-background p-3">
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Anteprima messaggio
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                Si aggiorna automaticamente in base all'annuncio scelto
-              </span>
-            </div>
-            <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground font-sans max-h-56 overflow-auto">
-{previewBody}
-            </pre>
-          </div>
-        )}
-      </div>
-      <div className="mb-4 grid gap-3 md:grid-cols-2">
-        <div className="md:col-span-2">
+        </div>
+        <div>
           <label className="text-sm font-medium">Lingua (filtro rapido)</label>
           <Select value={langDraft || "__all"} onValueChange={(v) => setLangDraft(v === "__all" ? "" : v)}>
             <SelectTrigger className="mt-1 h-9 w-full"><SelectValue placeholder="Tutte le lingue" /></SelectTrigger>
@@ -695,7 +520,7 @@ function WorkersPage() {
             {anns.map(a => (
               <button
                 key={a.id}
-                onClick={() => setSelected(a.id)}
+                onClick={() => { setSelected(a.id); setView("map"); }}
                 className={`shrink-0 rounded-xl border px-3 py-2 text-left text-sm transition ${selected===a.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card hover:bg-accent"}`}
               >
                 <div className="font-medium">{new Date(a.service_date).toLocaleDateString("it-IT")}</div>
@@ -730,11 +555,8 @@ function WorkersPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sorted.map((w) => {
           const near = inRange(w);
-          const collab = collabMap[w.id];
-          const worked = !!collab?.worked;
-          const lastReview = collab?.review ?? null;
           return (
-          <div key={w.id} className={`rounded-2xl border p-5 ${worked ? "border-primary/40 bg-primary/5" : near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
+          <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
               <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
               <div>
@@ -743,35 +565,6 @@ function WorkersPage() {
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
-            {worked && (
-              <div className="mt-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-[11px] font-semibold">
-                    ★ Già lavorato con te
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-semibold">
-                    Ricontatto gratuito
-                  </span>
-                </div>
-                <div className="mt-2 text-xs text-muted-foreground">Ultima tua recensione:</div>
-                {lastReview ? (
-                  <div className="mt-1">
-                    <div className="text-amber-500 text-sm" aria-label={`${lastReview.rating} stelle`}>
-                      {"★".repeat(Math.max(0, Math.min(5, lastReview.rating)))}
-                      <span className="text-muted-foreground/40">{"★".repeat(Math.max(0, 5 - lastReview.rating))}</span>
-                    </div>
-                    {lastReview.comment && (
-                      <p className="mt-1 text-sm italic line-clamp-2">"{lastReview.comment}"</p>
-                    )}
-                    <div className="mt-1 text-[11px] text-muted-foreground">
-                      {new Date(lastReview.created_at).toLocaleDateString("it-IT")}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="mt-1 text-xs italic text-muted-foreground">Recensione non ancora inserita</p>
-                )}
-              </div>
-            )}
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
             {(() => {
               const langs: SpokenLanguage[] = normalizeSpokenLanguages(w.spoken_languages);
@@ -784,24 +577,12 @@ function WorkersPage() {
               size="sm"
               className="mt-4 w-full gap-1"
               onClick={() => invite(w.id)}
-              disabled={isBlocked || anns.length === 0 || !selected}
-              title={
-                isBlocked
-                  ? "Bloccato: completa le recensioni scadute"
-                  : anns.length === 0
-                    ? "Crea prima un annuncio"
-                    : !selected
-                      ? "Seleziona prima un annuncio dal menù in alto"
-                      : undefined
-              }
+              disabled={!selected || isBlocked}
+              title={isBlocked ? "Bloccato: completa le recensioni scadute" : (!selected ? "Seleziona prima un annuncio" : undefined)}
             >
               <MessageSquare className="h-3.5 w-3.5" />
               {isBlocked ? `Bloccato (${overdueCount} recension${overdueCount > 1 ? "i" : "e"} scadut${overdueCount > 1 ? "e" : "a"})` : (
-                anns.length === 0
-                  ? "Crea prima un annuncio"
-                  : !selected
-                    ? "Seleziona prima un annuncio"
-                    : (worked ? "Ricontatta gratis · Invia proposta" : "Invia proposta")
+                <>Messaggia</>
               )}
             </Button>
           </div>

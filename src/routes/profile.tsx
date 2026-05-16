@@ -19,13 +19,6 @@ import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 import { Settings2 } from "lucide-react";
 import { provinceCode } from "@/lib/italian-locations";
 import { ReferralCard } from "@/components/ReferralCard";
-import {
-  CRITERION_LABEL,
-  REVIEW_CRITERIA,
-  BADGE_LABEL,
-  computeWorkerBadges,
-  type WorkerStats,
-} from "@/lib/reviews";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -246,7 +239,19 @@ function Profile() {
           <p className="text-xs text-muted-foreground mt-3">I crediti vengono usati per pubblicare annunci urgenti e contattare lavoratori.</p>
         )}
         {role === "worker" && (
-          <WorkerReputationBlock profile={profile as any} />
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border p-3 flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-500" />
+              <div>
+                <div className="text-xs text-muted-foreground">Valutazione</div>
+                <div className="text-sm font-semibold">{Number(profile?.rating_avg ?? 0).toFixed(1)} · {profile?.reviews_count ?? 0} recensioni</div>
+              </div>
+            </div>
+            <div className="rounded-xl border p-3">
+              <div className="text-xs text-muted-foreground">Affidabilità</div>
+              <div className="text-sm font-semibold">{profile?.reliability_pct ?? 100}%</div>
+            </div>
+          </div>
         )}
       </div>
 
@@ -264,81 +269,6 @@ function Row({ label, value }: { label: string; value?: string | null }) {
     <div className="flex justify-between gap-4 py-2 border-b last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium text-right">{value || "—"}</span>
-    </div>
-  );
-}
-
-function WorkerReputationBlock({ profile }: { profile: any }) {
-  const stats: WorkerStats = {
-    rating_avg: Number(profile?.rating_avg ?? 0),
-    reviews_count: Number(profile?.reviews_count ?? 0),
-    avg_punctuality: Number(profile?.avg_punctuality ?? 0),
-    avg_professionalism: Number(profile?.avg_professionalism ?? 0),
-    avg_competence: Number(profile?.avg_competence ?? 0),
-    avg_reliability: Number(profile?.avg_reliability ?? 0),
-    avg_teamwork: Number(profile?.avg_teamwork ?? 0),
-  };
-  const paramAvgs: Record<string, number> = {
-    punctuality: stats.avg_punctuality,
-    professionalism: stats.avg_professionalism,
-    competence: stats.avg_competence,
-    reliability: stats.avg_reliability,
-    teamwork: stats.avg_teamwork,
-  };
-  const badges = computeWorkerBadges(stats);
-  return (
-    <div className="mt-4 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border p-3 flex items-center gap-2">
-          <Star className="h-4 w-4 text-yellow-500" />
-          <div>
-            <div className="text-xs text-muted-foreground">Valutazione media</div>
-            <div className="text-sm font-semibold">
-              {stats.rating_avg > 0 ? stats.rating_avg.toFixed(1) : "—"} · {stats.reviews_count} recension{stats.reviews_count === 1 ? "e" : "i"}
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border p-3">
-          <div className="text-xs text-muted-foreground">Affidabilità</div>
-          <div className="text-sm font-semibold">{profile?.reliability_pct ?? 100}%</div>
-        </div>
-      </div>
-      {stats.reviews_count > 0 && (
-        <div className="rounded-xl border p-3 space-y-1.5">
-          <div className="text-xs text-muted-foreground mb-1">Medie per parametro</div>
-          {REVIEW_CRITERIA.map((c) => {
-            const v = paramAvgs[c] || 0;
-            return (
-              <div key={c} className="flex items-center justify-between gap-2">
-                <span className="text-sm text-muted-foreground">{CRITERION_LABEL[c]}</span>
-                <div className="flex items-center gap-2">
-                  <div className="h-1.5 w-24 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-primary"
-                      style={{ width: `${Math.max(0, Math.min(100, (v / 5) * 100))}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium w-8 text-right tabular-nums">
-                    {v > 0 ? v.toFixed(1) : "—"}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {badges.length > 0 && (
-        <div className="rounded-xl border p-3">
-          <div className="text-xs text-muted-foreground mb-2">Badge guadagnati</div>
-          <div className="flex flex-wrap gap-1.5">
-            {badges.map((b) => (
-              <span key={b} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold">
-                ✦ {BADGE_LABEL[b]}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
