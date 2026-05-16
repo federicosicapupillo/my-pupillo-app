@@ -47,7 +47,29 @@ const STATUS_CLS: Record<string, string> = {
   accepted: "bg-emerald-500/15 text-emerald-700",
   rejected: "bg-red-500/15 text-red-700",
   expired: "bg-muted text-muted-foreground",
+  completed: "bg-slate-500/15 text-slate-700",
 };
+
+// Stato "effettivo" usato dal filtro utente: una proposta accettata il cui turno
+// è già passato viene considerata "Completato".
+function effectiveStatus(t: Thread): string {
+  if (t.status === "accepted" && t.ann?.date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(t.ann.date);
+    d.setHours(0, 0, 0, 0);
+    if (d.getTime() < today.getTime()) return "completed";
+  }
+  return t.status;
+}
+
+// Filtri esposti all'utente (in ordine).
+const STATUS_FILTERS: { key: string; label: string }[] = [
+  { key: "pending", label: "In attesa" },
+  { key: "accepted", label: "Accettato" },
+  { key: "rejected", label: "Rifiutato" },
+  { key: "completed", label: "Completato" },
+];
 
 // Priorità del badge aggregato di gruppo.
 // Più alto = più importante. Le proposte che richiedono un'azione vengono prima,
@@ -200,12 +222,13 @@ function MessagesLayout() {
 
   const totalUnread = threads.reduce((n, t) => n + (t.unread > 0 ? 1 : 0), 0);
   const statusCounts = threads.reduce<Record<string, number>>((acc, t) => {
-    acc[t.status] = (acc[t.status] ?? 0) + 1;
+    const eff = effectiveStatus(t);
+    acc[eff] = (acc[eff] ?? 0) + 1;
     return acc;
   }, {});
   const visible = threads.filter((t) => {
     if (filter === "unread" && t.unread === 0) return false;
-    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (statusFilter !== "all" && effectiveStatus(t) !== statusFilter) return false;
     if (withUser && t.other.id !== withUser) return false;
     const q = query.trim().toLowerCase();
     if (q) {
@@ -337,18 +360,17 @@ function MessagesLayout() {
             >
               Tutti gli stati
             </button>
-            {Object.keys(STATUS_LABELS).map((s) => {
-              const count = statusCounts[s] ?? 0;
-              if (count === 0) return null;
-              const active = statusFilter === s;
+            {STATUS_FILTERS.map(({ key, label }) => {
+              const count = statusCounts[key] ?? 0;
+              const active = statusFilter === key;
               return (
                 <button
-                  key={s}
+                  key={key}
                   type="button"
-                  onClick={() => setStatusFilter(s)}
-                  className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
+                  onClick={() => setStatusFilter(key)}
+                  className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[key]} border-transparent hover:opacity-80`}`}
                 >
-                  {STATUS_LABELS[s]} ({count})
+                  {label} ({count})
                 </button>
               );
             })}
