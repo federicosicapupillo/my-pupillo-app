@@ -1,5 +1,3 @@
-export type Role = "restaurant" | "worker";
-
 /**
  * Returns the column name on `applications` that identifies the "other" party
  * in a conversation, given the current user's role.
@@ -7,7 +5,7 @@ export type Role = "restaurant" | "worker";
  * - Restaurant viewing messages → other = worker → column "worker_id"
  * - Worker viewing messages → other = restaurant → column "restaurant_id"
  */
-export function otherColumnForRole(role: Role): "worker_id" | "restaurant_id" {
+export function otherColumnForRole(role: string | null | undefined): "worker_id" | "restaurant_id" {
   return role === "restaurant" ? "worker_id" : "restaurant_id";
 }
 
