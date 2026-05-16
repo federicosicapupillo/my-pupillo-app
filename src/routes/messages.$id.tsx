@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ import { Utensils, MapPin, Briefcase, Calendar, Clock, Timer, Moon, Flame, Shirt
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { ensureProposalApplication } from "@/lib/messages.functions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -268,6 +270,8 @@ function buildTimeline(status?: string): Step[] {
 
 function Thread() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
+  const ensureApplication = useServerFn(ensureProposalApplication);
   const { user, role, profile } = useAuth();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
@@ -488,8 +492,10 @@ function Thread() {
         lines.push("", `💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.`);
         const body = lines.join("\n");
         const createdAt = new Date().toISOString();
+        const target = await ensureApplication({ data: { announcementId: annId, workerId: app.worker_id } });
+        const targetAppId = target.applicationId;
         const { data, error } = await supabase.from("messages").insert({
-          application_id: app.id,
+          application_id: targetAppId,
           sender_id: user.id,
           receiver_id: receiverId,
           body,
@@ -500,14 +506,18 @@ function Thread() {
           action_type: "recall_worker",
         } as never).select("*").single();
         if (error) throw error;
-        if (data) pushMessage(data as Msg);
+        if (data && targetAppId === app.id) pushMessage(data as Msg);
         await supabase.from("applications").update({
           last_message_preview: "📋 Proposta nuovo servizio",
           last_message_at: createdAt,
           status: "pending",
           worker_response_at: null,
-        } as never).eq("id", app.id);
-        setApp({ ...app, status: "pending" } as App);
+        } as never).eq("id", targetAppId);
+        if (targetAppId === app.id) {
+          setApp({ ...app, status: "pending" } as App);
+        } else {
+          navigate({ to: "/messages/$id", params: { id: targetAppId } });
+        }
         setSelectedTpl(null);
         toast.success("Proposta inviata.");
         setSending(false);
