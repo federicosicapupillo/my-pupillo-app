@@ -17,6 +17,7 @@ import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type S
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
+import { sendShiftProposal } from "@/lib/shift-proposal";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -215,6 +216,13 @@ function WorkersPage() {
       .eq("restaurant_id", user.id)
       .maybeSingle();
     if (existing?.id) {
+      // Send a fresh proposal each time the restaurant re-contacts.
+      await sendShiftProposal({
+        applicationId: existing.id,
+        announcementId: selected,
+        restaurantId: user.id,
+        workerId: workerId,
+      });
       nav({ to: "/messages/$id", params: { id: existing.id } });
       return;
     }
@@ -224,6 +232,12 @@ function WorkersPage() {
       .select("id")
       .single();
     if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
+    await sendShiftProposal({
+      applicationId: created.id,
+      announcementId: selected,
+      restaurantId: user.id,
+      workerId: workerId,
+    });
     await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: `/messages/${created.id}` });
     toast.success("Chat aperta con il lavoratore");
     nav({ to: "/messages/$id", params: { id: created.id } });
