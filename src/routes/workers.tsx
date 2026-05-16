@@ -565,7 +565,7 @@ function WorkersPage() {
         {anns.length === 0 ? (
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
             <p className="font-medium mb-2">Non hai annunci attivi. Crea prima un annuncio per proporre un turno.</p>
-            <Link to="/announcements/new" as never}>
+            <Link to={"/announcements/new" as never}>
               <Button size="sm" variant="outline">Crea annuncio</Button>
             </Link>
           </div>
