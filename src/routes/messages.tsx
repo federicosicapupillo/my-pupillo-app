@@ -268,14 +268,14 @@ function MessagesLayout() {
                 <>
                   <h3 className="text-base font-semibold text-foreground">Nessuna conversazione con un lavoratore</h3>
                   <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                    Per iniziare, seleziona un annuncio e contatta un lavoratore dalla pagina <span className="font-medium text-foreground">Cerca lavoratori</span>.
+                    Per iniziare un contatto, seleziona uno dei tuoi annunci attivi e scegli un candidato.
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
-                    <Link to="/workers" className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-                      Cerca lavoratori
+                    <Link to="/announcements" className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+                      Seleziona un annuncio
                     </Link>
-                    <Link to="/announcements" className="rounded-full border px-4 py-2 text-sm font-medium hover:bg-accent">
-                      Gestisci annunci
+                    <Link to="/ristoratore/annunci/nuovo" className="rounded-full border px-4 py-2 text-sm font-medium hover:bg-accent">
+                      Pubblica nuovo annuncio
                     </Link>
                   </div>
                 </>
