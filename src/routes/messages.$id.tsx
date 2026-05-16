@@ -1405,23 +1405,31 @@ function ProposalCard(props: {
           <p className="text-xs text-muted-foreground mt-1">Ciao, sei disponibile per questo turno?</p>
         </div>
         <dl className="px-4 py-3 space-y-2 text-sm">
-          <ProposalRow icon={Briefcase} label="Ruolo" value={ann?.professional_profile || "—"} />
-          <ProposalRow icon={Calendar} label="Data" value={ann?.service_date ? formatDateIT(ann.service_date) : "—"} />
-          <ProposalRow
-            icon={Clock}
-            label="Orario"
-            value={
-              ann?.service_time
-                ? `${ann.service_time.slice(0, 5)}${ann.end_time ? " - " + ann.end_time.slice(0, 5) : ""}`
-                : "—"
-            }
-          />
-          <ProposalRow icon={Building2} label="Locale" value={venueName || "—"} />
-          <ProposalRow icon={MapPin} label="Luogo" value={displayAddress || ann?.job_city || "—"} />
-          {ann?.tariff_amount != null && (
-            <ProposalRow icon={Euro} label="Compenso" value={formatTariff(ann.tariff_amount, ann.tariff_type ?? null)} />
+          <ProposalRow icon={Briefcase} label="Ruolo" value={ann?.professional_profile?.trim() || "Da definire"} />
+          {ann?.service_date && (
+            <ProposalRow icon={Calendar} label="Data" value={formatDateIT(ann.service_date)} />
           )}
-          {ann?.notes && ann.notes.trim() && (
+          {ann?.service_time && (
+            <ProposalRow
+              icon={Clock}
+              label="Orario"
+              value={`${ann.service_time.slice(0, 5)}${ann.end_time ? " - " + ann.end_time.slice(0, 5) : ""}`}
+            />
+          )}
+          <ProposalRow icon={Building2} label="Locale" value={venueName?.trim() || "Locale da confermare"} />
+          {(() => {
+            const luogo = [displayAddress, ann?.job_city]
+              .map((v) => (typeof v === "string" ? v.trim() : ""))
+              .find((v) => v && v.toLowerCase() !== "undefined" && v.toLowerCase() !== "null");
+            return luogo ? <ProposalRow icon={MapPin} label="Luogo" value={luogo} /> : null;
+          })()}
+          {(() => {
+            if (ann?.tariff_amount == null) return null;
+            const n = Number(ann.tariff_amount);
+            if (!Number.isFinite(n) || n <= 0) return null;
+            return <ProposalRow icon={Euro} label="Compenso" value={formatTariff(ann.tariff_amount, ann.tariff_type ?? null)} />;
+          })()}
+          {ann?.notes && ann.notes.trim() && ann.notes.trim().toLowerCase() !== "undefined" && (
             <ProposalRow icon={StickyNote} label="Note" value={ann.notes.trim()} />
           )}
         </dl>
