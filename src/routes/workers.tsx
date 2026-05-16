@@ -548,7 +548,7 @@ function WorkersPage() {
             {anns.map(a => (
               <button
                 key={a.id}
-                onClick={() => { setSelected(a.id); setView("map"); }}
+                onClick={() => { setSelected(a.id); setLastAnnouncementId(user?.id, a.id); setView("map"); }}
                 className={`shrink-0 rounded-xl border px-3 py-2 text-left text-sm transition ${selected===a.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card hover:bg-accent"}`}
               >
                 <div className="font-medium">{new Date(a.service_date).toLocaleDateString("it-IT")}</div>
@@ -568,7 +568,7 @@ function WorkersPage() {
                 address={selectedAnn.location_address}
                 height={420}
                 selectedId={selectedAnn.id}
-                onSelect={(id) => setSelected(id)}
+                onSelect={(id) => { setSelected(id); setLastAnnouncementId(user?.id, id); }}
                 markers={anns
                   .filter((a) => a.location_lat != null && a.location_lng != null)
                   .map((a) => ({ id: a.id, lat: a.location_lat as number, lng: a.location_lng as number, address: a.location_address }))}
