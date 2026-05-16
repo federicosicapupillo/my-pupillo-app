@@ -260,8 +260,42 @@ function MessagesLayout() {
           {loading ? (
             <p className="text-muted-foreground">Caricamento…</p>
           ) : threads.length === 0 ? (
-            <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-              Nessun messaggio ancora. Le conversazioni appariranno qui quando nasce un contatto tra ristoratore e lavoratore.
+            <div className="rounded-2xl border bg-card p-10 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <MessageSquare className="h-6 w-6" aria-hidden />
+              </div>
+              {role === "restaurant" ? (
+                <>
+                  <h3 className="text-base font-semibold text-foreground">Nessuna conversazione con un lavoratore</h3>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+                    Per iniziare, seleziona un annuncio e contatta un lavoratore dalla pagina <span className="font-medium text-foreground">Cerca lavoratori</span>.
+                  </p>
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    <Link to="/workers" className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+                      Cerca lavoratori
+                    </Link>
+                    <Link to="/announcements" className="rounded-full border px-4 py-2 text-sm font-medium hover:bg-accent">
+                      Gestisci annunci
+                    </Link>
+                  </div>
+                </>
+              ) : role === "worker" ? (
+                <>
+                  <h3 className="text-base font-semibold text-foreground">Nessuna conversazione con un ristorante</h3>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+                    Quando un ristoratore ti contatterà per un turno, la conversazione apparirà qui. Nel frattempo, mantieni aggiornati profilo e disponibilità per ricevere più proposte.
+                  </p>
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    <Link to="/profile" className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+                      Aggiorna il profilo
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nessun messaggio ancora.
+                </p>
+              )}
             </div>
           ) : (withUser ? visible.length === 0 : visibleGroups.length === 0) ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
