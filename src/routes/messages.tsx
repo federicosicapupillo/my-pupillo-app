@@ -222,12 +222,13 @@ function MessagesLayout() {
 
   const totalUnread = threads.reduce((n, t) => n + (t.unread > 0 ? 1 : 0), 0);
   const statusCounts = threads.reduce<Record<string, number>>((acc, t) => {
-    acc[t.status] = (acc[t.status] ?? 0) + 1;
+    const eff = effectiveStatus(t);
+    acc[eff] = (acc[eff] ?? 0) + 1;
     return acc;
   }, {});
   const visible = threads.filter((t) => {
     if (filter === "unread" && t.unread === 0) return false;
-    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (statusFilter !== "all" && effectiveStatus(t) !== statusFilter) return false;
     if (withUser && t.other.id !== withUser) return false;
     const q = query.trim().toLowerCase();
     if (q) {
