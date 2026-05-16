@@ -13,7 +13,6 @@ import { Utensils, MapPin, Briefcase, Calendar, Clock, Timer, Moon, Flame, Shirt
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
-import { ReviewMessageCard, parseReviewBody } from "@/components/ReviewMessageCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -761,70 +760,9 @@ function Thread() {
       return;
     }
     setExistingReview(data as Review);
-    // Messaggio dedicato di recensione in chat (verrà reso con card celebrativa)
+    // Messaggio di sistema in chat
     try {
-      const receiverId = app.worker_id;
-      // Recupera il profilo professionale richiesto dall'annuncio (ruolo).
-      let roleLabel: string | null = null;
-      if (app.announcement_id) {
-        const { data: annRow } = await supabase
-          .from("announcements")
-          .select("professional_profile")
-          .eq("id", app.announcement_id)
-          .maybeSingle();
-        roleLabel = (annRow as { professional_profile?: string | null } | null)?.professional_profile ?? null;
-      }
-      const restaurantName = profile?.business_name || profile?.full_name || "Locale";
-      const shiftDate = shift?.shift_date ?? ann?.service_date ?? null;
-      // Calcolo reputazione migliorata: media post-inserimento più alta della precedente.
-      let reputationImproved = false;
-      let newBadge: string | null = null;
-      try {
-        const { data: workerProf } = await supabase
-          .from("profiles")
-          .select("rating_avg, reviews_count, badge")
-          .eq("id", app.worker_id)
-          .maybeSingle();
-        const prevAvg = Number((workerProf as any)?.rating_avg ?? 0);
-        const prevCount = Number((workerProf as any)?.reviews_count ?? 0);
-        // proiezione dopo questa recensione (utile se i trigger DB non hanno aggiornato in tempo)
-        const projectedAvg = prevCount > 0
-          ? (prevAvg * prevCount + rating) / (prevCount + 1)
-          : rating;
-        reputationImproved = rating >= 4 && projectedAvg >= prevAvg;
-        // Badge: se la nuova media supera soglie note, segnaliamo lo sblocco.
-        const oldBadge = (workerProf as any)?.badge ?? "basic";
-        if (projectedAvg >= 4.8 && oldBadge !== "elite") newBadge = "Elite";
-        else if (projectedAvg >= 4.5 && oldBadge === "basic") newBadge = "Pro";
-      } catch { /* non bloccante */ }
-      const payload = {
-        rating,
-        comment: trimmed,
-        restaurantName,
-        role: roleLabel,
-        shiftDate,
-        reputationImproved,
-        newBadge,
-      };
-      const body = `⭐ Recensione ricevuta ${JSON.stringify(payload)}`;
-      const { data: msgRow, error: msgErr } = await supabase.from("messages").insert({
-        application_id: id,
-        sender_id: user.id,
-        receiver_id: receiverId,
-        body,
-        message_type: "system",
-        action_type: "review",
-      } as never).select("*").single();
-      if (!msgErr && msgRow) pushMessage(msgRow as Msg);
-      // Notifica push in-app
-      await supabase.from("notifications").insert({
-        user_id: receiverId,
-        title: "Hai ricevuto una nuova valutazione",
-        body: rating >= 4
-          ? `Ottimo lavoro! Hai ricevuto ${rating} stelle da ${restaurantName}.`
-          : `Hai ricevuto ${rating} ${rating === 1 ? "stella" : "stelle"} da ${restaurantName}.`,
-        link: `/messages/${id}`,
-      } as never);
+      await insertSystemMessage(`il turno è stato completato e il lavoratore ha ricevuto una recensione. Valutazione: ${rating} ${rating === 1 ? "stella" : "stelle"}.`, "complete_shift");
     } catch (e) { /* non bloccante */ }
     // Marca l'annuncio come completato
     if (app.announcement_id) {
@@ -1005,22 +943,6 @@ function Thread() {
           {(() => {
             const lastRecallId = [...msgs].reverse().find(m => m.action_type === "recall_worker")?.id ?? null;
             return msgs.map(m => {
-            if (m.action_type === "review") {
-              const payload = parseReviewBody(m.body);
-              if (payload) {
-                const isRecipient = m.sender_id !== user?.id;
-                return (
-                  <div key={m.id} className={`flex ${isRecipient ? "justify-start" : "justify-end"}`}>
-                    <ReviewMessageCard
-                      messageId={m.id}
-                      payload={payload}
-                      isRecipient={isRecipient}
-                      alreadyRead={!!m.read_at}
-                    />
-                  </div>
-                );
-              }
-            }
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             if (isSystem) {
               return (
