@@ -19,19 +19,27 @@ export type ProposalAnnouncement = {
 
 /** Plain-text fallback body for the proposal (also shown if the card UI can't render). */
 export function buildProposalBody(ann: ProposalAnnouncement, venueName: string | null): string {
-  const lines = [
-    "Nuova proposta di lavoro",
-    "",
-    "Ciao, sei disponibile per questo turno?",
-    "",
-    `Ruolo: ${ann.professional_profile || "—"}`,
-    `Data: ${ann.service_date ? formatDateIT(ann.service_date) : "—"}`,
-    `Orario: ${ann.service_time ? ann.service_time.slice(0, 5) : "—"}${ann.end_time ? " - " + ann.end_time.slice(0, 5) : ""}`,
-    `Locale: ${venueName || "—"}`,
-    `Luogo: ${ann.location_address || ann.job_city || "—"}`,
-    `Compenso: ${formatTariff(ann.tariff_amount ?? null, ann.tariff_type ?? null)}`,
-  ];
-  if (ann.notes && ann.notes.trim()) lines.push(`Note: ${ann.notes.trim()}`);
+  const clean = (v: unknown): string => {
+    if (v == null) return "";
+    const s = String(v).trim();
+    if (!s || s.toLowerCase() === "undefined" || s.toLowerCase() === "null") return "";
+    return s;
+  };
+  const lines: string[] = ["Nuova proposta di lavoro", "", "Ciao, sei disponibile per questo turno?", ""];
+  lines.push(`Ruolo: ${clean(ann.professional_profile) || "Da definire"}`);
+  if (ann.service_date) lines.push(`Data: ${formatDateIT(ann.service_date)}`);
+  if (ann.service_time) {
+    lines.push(`Orario: ${ann.service_time.slice(0, 5)}${ann.end_time ? " - " + ann.end_time.slice(0, 5) : ""}`);
+  }
+  lines.push(`Locale: ${clean(venueName) || "Locale da confermare"}`);
+  const luogo = clean(ann.location_address) || clean(ann.job_city);
+  if (luogo) lines.push(`Luogo: ${luogo}`);
+  const amt = ann.tariff_amount == null ? null : Number(ann.tariff_amount);
+  if (amt != null && Number.isFinite(amt) && amt > 0) {
+    lines.push(`Compenso: ${formatTariff(ann.tariff_amount ?? null, ann.tariff_type ?? null)}`);
+  }
+  const notes = clean(ann.notes);
+  if (notes) lines.push(`Note: ${notes}`);
   lines.push("", "Fammi sapere se puoi esserci.");
   return lines.join("\n");
 }
