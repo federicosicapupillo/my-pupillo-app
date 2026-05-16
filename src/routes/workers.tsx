@@ -621,8 +621,11 @@ function WorkersPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sorted.map((w) => {
           const near = inRange(w);
+          const collab = collabMap[w.id];
+          const worked = !!collab?.worked;
+          const lastReview = collab?.review ?? null;
           return (
-          <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
+          <div key={w.id} className={`rounded-2xl border p-5 ${worked ? "border-primary/40 bg-primary/5" : near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
               <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
               <div>
@@ -631,6 +634,30 @@ function WorkersPage() {
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
+            {worked && (
+              <div className="mt-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
+                <div className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-[11px] font-semibold">
+                  ★ Già lavorato con te
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">Ultima tua recensione:</div>
+                {lastReview ? (
+                  <div className="mt-1">
+                    <div className="text-amber-500 text-sm" aria-label={`${lastReview.rating} stelle`}>
+                      {"★".repeat(Math.max(0, Math.min(5, lastReview.rating)))}
+                      <span className="text-muted-foreground/40">{"★".repeat(Math.max(0, 5 - lastReview.rating))}</span>
+                    </div>
+                    {lastReview.comment && (
+                      <p className="mt-1 text-sm italic line-clamp-2">"{lastReview.comment}"</p>
+                    )}
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      {new Date(lastReview.created_at).toLocaleDateString("it-IT")}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs italic text-muted-foreground">Recensione non ancora inserita</p>
+                )}
+              </div>
+            )}
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
             {(() => {
               const langs: SpokenLanguage[] = normalizeSpokenLanguages(w.spoken_languages);
