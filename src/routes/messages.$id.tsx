@@ -12,6 +12,9 @@ import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, 
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
+import { formatDateIT, formatTariff } from "@/lib/format";
+import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +47,7 @@ type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
 };
-type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string };
+type Ann = { id: string; service_date: string; service_time: string; end_time?: string | null; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string; notes?: string | null; professional_profile?: string | null };
 
 type Shift = {
   id: string;
@@ -287,7 +290,7 @@ function Thread() {
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
           supabase.from("profiles").select("full_name, business_name, city, neighborhood").eq("id", otherId).maybeSingle(),
-          supabase.from("announcements").select("id, service_date, service_time, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id").eq("id", a.announcement_id).maybeSingle(),
+          supabase.from("announcements").select("id, service_date, service_time, end_time, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id, notes, professional_profile").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({
           name: p?.business_name || p?.full_name || "Utente",
