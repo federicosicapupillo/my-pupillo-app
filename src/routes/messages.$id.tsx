@@ -47,6 +47,27 @@ type App = {
 };
 type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string };
 
+type AnnProposal = {
+  id: string;
+  service_date: string;
+  service_time: string;
+  location_address: string | null;
+  tariff_amount: number | null;
+  tariff_type: string | null;
+  professional_profile: string | null;
+  job_city: string | null;
+  job_province: string | null;
+  job_address: string | null;
+  end_date: string | null;
+  end_time: string | null;
+  is_long_shift: boolean | null;
+  long_shift_reason: string | null;
+  dress_code_items: string[] | null;
+  dress_code_notes: string | null;
+  required_skills: string[] | null;
+  notes: string | null;
+};
+
 type Shift = {
   id: string;
   status: string;
@@ -268,6 +289,8 @@ function Thread() {
   const [shift, setShift] = useState<Shift | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [activeAnns, setActiveAnns] = useState<AnnProposal[]>([]);
+  const [proposalAnnId, setProposalAnnId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -347,6 +370,28 @@ function Thread() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
+  // Carica gli annunci attivi del ristoratore per la proposta turno via dropdown
+  useEffect(() => {
+    (async () => {
+      if (!user || role !== "restaurant") { setActiveAnns([]); return; }
+      const { data } = await supabase.from("announcements")
+        .select("id, service_date, service_time, location_address, tariff_amount, tariff_type, professional_profile, job_city, job_province, job_address, end_date, end_time, is_long_shift, long_shift_reason, dress_code_items, dress_code_notes, required_skills, notes")
+        .eq("restaurant_id", user.id)
+        .eq("status", "active")
+        .order("service_date", { ascending: true });
+      const list = (data ?? []) as AnnProposal[];
+      setActiveAnns(list);
+      setProposalAnnId(prev => prev && list.some(a => a.id === prev) ? prev : (list.length === 1 ? list[0].id : null));
+    })();
+  }, [user, role]);
+
+  // Auto-seleziona unico annuncio quando si sceglie il template "Sei disponibile..."
+  useEffect(() => {
+    if (selectedTpl?.key === "r_app_avail" && activeAnns.length === 1 && !proposalAnnId) {
+      setProposalAnnId(activeAnns[0].id);
+    }
+  }, [selectedTpl, activeAnns, proposalAnnId]);
+
   const pushMessage = (message: Msg) => {
     setMsgs(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
   };
@@ -401,6 +446,68 @@ function Thread() {
         setTimeout(() => {
           document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 50);
+        return;
+      }
+      // Caso speciale: "Sei disponibile per il turno..." → proposta strutturata con dropdown annuncio
+      if (selectedTpl.key === "r_app_avail" && role === "restaurant") {
+        if (activeAnns.length === 0) {
+          toast.error("Non hai annunci attivi. Crea prima un annuncio per proporre un turno.");
+          setSending(false);
+          return;
+        }
+        const annId = proposalAnnId ?? (activeAnns.length === 1 ? activeAnns[0].id : null);
+        if (!annId) {
+          toast.error("Seleziona un annuncio dal menù prima di inviare la proposta.");
+          setSending(false);
+          return;
+        }
+        const a = activeAnns.find(x => x.id === annId)!;
+        const restName = profile?.business_name || profile?.full_name || "il nostro locale";
+        const lines: string[] = ["📋 Proposta nuovo servizio", ""];
+        if (a.professional_profile) lines.push(`• Ruolo: ${a.professional_profile}`);
+        lines.push(`• Locale: ${restName}`);
+        if (a.service_date) {
+          const d = new Date(a.service_date).toLocaleDateString("it-IT");
+          lines.push(`• Data inizio: ${d}${a.service_time ? ` · ${a.service_time.slice(0,5)}` : ""}`);
+        }
+        if (a.end_date || a.end_time) {
+          const ed = a.end_date ? new Date(a.end_date).toLocaleDateString("it-IT") : (a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT") : "");
+          lines.push(`• Fine: ${ed}${a.end_time ? ` · ${a.end_time.slice(0,5)}` : ""}`);
+        }
+        if (a.tariff_amount != null) {
+          lines.push(`• Tariffa: €${Number(a.tariff_amount).toFixed(2)}${a.tariff_type === "hourly" ? "/h" : ""}`);
+        }
+        const zone = [a.job_city, a.job_province].filter(Boolean).join(", ");
+        if (zone) lines.push(`• Zona: ${zone}`);
+        if (a.job_address || a.location_address) lines.push(`• Indirizzo: ${a.job_address || a.location_address}`);
+        if (a.dress_code_items && a.dress_code_items.length) lines.push(`• Dress code: ${a.dress_code_items.join(", ")}`);
+        if (a.dress_code_notes) lines.push(`  ${a.dress_code_notes}`);
+        if (a.required_skills && a.required_skills.length) lines.push(`• Requisiti: ${a.required_skills.join(", ")}`);
+        if (a.is_long_shift) lines.push(`• ⚠️ Turno lungo${a.long_shift_reason ? ` — ${a.long_shift_reason}` : ""}`);
+        if (a.notes) lines.push(`• Note: ${a.notes}`);
+        lines.push("", `💬 Ciao, sei disponibile per questo turno? Fammi sapere se puoi esserci.`);
+        const body = lines.join("\n");
+        const createdAt = new Date().toISOString();
+        const { data, error } = await supabase.from("messages").insert({
+          application_id: app.id,
+          sender_id: user.id,
+          receiver_id: receiverId,
+          body,
+          created_at: createdAt,
+          read_at: null,
+          template_id: selectedTpl.key,
+          message_type: "template",
+          action_type: "recall_worker",
+        } as never).select("*").single();
+        if (error) throw error;
+        if (data) pushMessage(data as Msg);
+        await supabase.from("applications").update({
+          last_message_preview: "📋 Proposta nuovo servizio",
+          last_message_at: createdAt,
+        } as never).eq("id", app.id);
+        setSelectedTpl(null);
+        toast.success("Proposta inviata.");
+        setSending(false);
         return;
       }
       const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null, displayAddress);
@@ -973,6 +1080,9 @@ function Thread() {
           otherName={other?.name ?? null}
           addressOverride={displayAddress}
           disabled={isConversationClosed}
+          activeAnns={activeAnns}
+          proposalAnnId={proposalAnnId}
+          setProposalAnnId={setProposalAnnId}
         />
 
         {role === "restaurant" && tplCategory === "post_shift" && app && (
@@ -1008,12 +1118,48 @@ function TemplatePicker(props: {
   otherName: string | null;
   addressOverride?: string | null;
   disabled?: boolean;
+  activeAnns?: AnnProposal[];
+  proposalAnnId?: string | null;
+  setProposalAnnId?: (id: string | null) => void;
 }) {
-  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled } = props;
+  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled, activeAnns = [], proposalAnnId = null, setProposalAnnId } = props;
   const available = TEMPLATES.filter(t => (t.role === role || t.role === "both") && t.category !== "post_shift");
   const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
   const inCat = available.filter(t => t.category === category);
   const isClosureForRestaurant = role === "restaurant" && category === "post_shift";
+  const isAvailTpl = role === "restaurant" && selected?.key === "r_app_avail";
+  const proposalAnn = isAvailTpl ? (activeAnns.find(a => a.id === proposalAnnId) ?? null) : null;
+  const fmtOption = (a: AnnProposal) => {
+    const dt = a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "long" }) : "—";
+    const start = a.service_time ? a.service_time.slice(0,5) : "";
+    const end = a.end_time ? a.end_time.slice(0,5) : "";
+    const orario = start && end ? `${start}/${end}` : start;
+    const luogo = a.job_city || a.location_address || "";
+    return [a.professional_profile || "Turno", dt, orario, luogo].filter(Boolean).join(" — ");
+  };
+  const previewBody = (() => {
+    if (!selected) return "";
+    if (isAvailTpl && proposalAnn) {
+      const a = proposalAnn;
+      const dt = a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT") : "—";
+      const start = a.service_time ? a.service_time.slice(0,5) : "";
+      const end = a.end_time ? a.end_time.slice(0,5) : "";
+      const orario = start && end ? `${start} - ${end}` : start || "—";
+      const luogo = a.job_city || "—";
+      return [
+        "Ciao, sei disponibile per questo turno?",
+        "",
+        `Ruolo: ${a.professional_profile || "—"}`,
+        `Data: ${dt}`,
+        `Orario: ${orario}`,
+        `Luogo: ${luogo}`,
+        `Locale: ${otherName ?? "—"}`,
+        "",
+        "Fammi sapere se puoi esserci.",
+      ].join("\n");
+    }
+    return renderTemplate(selected.text, ann, otherName, addressOverride);
+  })();
 
   return (
     <div className="mt-4 rounded-2xl border bg-card p-4 space-y-3">
@@ -1064,10 +1210,31 @@ function TemplatePicker(props: {
           })}
         </div>
       )}
+      {isAvailTpl && (
+        <div className="rounded-xl border bg-secondary/30 p-3 space-y-2">
+          <label className="text-xs font-semibold text-foreground">Per quale annuncio vuoi proporre il turno?</label>
+          {activeAnns.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Non hai annunci attivi. Crea prima un annuncio per proporre un turno.
+            </p>
+          ) : (
+            <select
+              className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+              value={proposalAnnId ?? ""}
+              onChange={(e) => setProposalAnnId?.(e.target.value || null)}
+            >
+              <option value="">— Seleziona un annuncio —</option>
+              {activeAnns.map(a => (
+                <option key={a.id} value={a.id}>{fmtOption(a)}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
       {selected && !isClosureForRestaurant && (
         <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
           <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
-          {renderTemplate(selected.text, ann, otherName, addressOverride)}
+          <div className="whitespace-pre-wrap">{previewBody}</div>
         </div>
       )}
       {!isClosureForRestaurant && (
@@ -1075,7 +1242,7 @@ function TemplatePicker(props: {
         <Button
           type="button"
           onClick={onSend}
-          disabled={!selected || sending || disabled}
+          disabled={!selected || sending || disabled || (isAvailTpl && (activeAnns.length === 0 || !proposalAnnId))}
           className="gap-2"
         >
           <Send className="h-4 w-4" />
