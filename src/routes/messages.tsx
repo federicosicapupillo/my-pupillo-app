@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -84,6 +84,7 @@ function MessagesLayout() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState("");
 
   const load = async () => {
     if (!user || !role) return;
@@ -206,6 +207,25 @@ function MessagesLayout() {
     if (filter === "unread" && t.unread === 0) return false;
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (withUser && t.other.id !== withUser) return false;
+    const q = query.trim().toLowerCase();
+    if (q) {
+      const role = t.ann?.role ?? "";
+      const date = t.ann?.date
+        ? new Date(t.ann.date).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })
+        : "";
+      const time = t.ann?.time ? t.ann.time.slice(0, 5) : "";
+      const hay = [
+        t.other.name,
+        role,
+        date,
+        time,
+        t.ann?.date ?? "",
+        t.lastBody ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
