@@ -29,6 +29,8 @@ type Thread = {
   lastBody: string | null;
   lastAt: string | null;
   unread: number;
+  annRole: string | null;
+  annDate: string | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -88,7 +90,8 @@ function MessagesLayout() {
     const list = (apps ?? []) as any[];
     const others = list.map((a) => a[otherCol]).filter(Boolean);
     const ids = list.map((a) => a.id);
-    const [{ data: profs }, { data: msgs }] = await Promise.all([
+    const annIds = Array.from(new Set(list.map((a) => a.announcement_id).filter(Boolean))) as string[];
+    const [{ data: profs }, { data: msgs }, { data: anns }] = await Promise.all([
       others.length
         ? supabase.from("profiles").select("id, full_name, business_name").in("id", others)
         : Promise.resolve({ data: [] as any[] }),
@@ -99,8 +102,12 @@ function MessagesLayout() {
             .in("application_id", ids)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
+      annIds.length
+        ? supabase.from("announcements").select("id, professional_profile, service_date").in("id", annIds)
+        : Promise.resolve({ data: [] as any[] }),
     ]);
     const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+    const amap = new Map((anns ?? []).map((a: any) => [a.id, a]));
     const lastByApp = new Map<string, any>();
     const unreadByApp = new Map<string, number>();
     for (const m of (msgs ?? []) as any[]) {
@@ -112,6 +119,7 @@ function MessagesLayout() {
     const next: Thread[] = list.map((a) => {
       const p = pmap.get(a[otherCol]);
       const last = lastByApp.get(a.id);
+      const ann = amap.get(a.announcement_id);
       return {
         id: a.id,
         status: a.status,
@@ -122,6 +130,8 @@ function MessagesLayout() {
         lastBody: a.last_message_preview ?? last?.body ?? null,
         lastAt: a.last_message_at ?? last?.created_at ?? null,
         unread: unreadByApp.get(a.id) ?? 0,
+        annRole: ann?.professional_profile ?? null,
+        annDate: ann?.service_date ?? null,
       };
     });
     next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
@@ -166,6 +176,30 @@ function MessagesLayout() {
     return true;
   });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
+
+  // Build groups by other-user (visual only) when no specific user is focused
+  const groups = (() => {
+    const m = new Map<string, { id: string; name: string; items: Thread[]; lastAt: string | null; unread: number }>();
+    for (const t of threads) {
+      const g = m.get(t.other.id) ?? { id: t.other.id, name: t.other.name, items: [], lastAt: null, unread: 0 };
+      g.items.push(t);
+      if ((t.lastAt ?? "") > (g.lastAt ?? "")) g.lastAt = t.lastAt;
+      g.unread += t.unread;
+      m.set(t.other.id, g);
+    }
+    const arr = Array.from(m.values());
+    arr.forEach((g) =>
+      g.items.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")),
+    );
+    arr.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.name.localeCompare(b.name));
+    return arr;
+  })();
+  const visibleGroups = groups.filter((g) => {
+    if (filter === "unread" && g.unread === 0) return false;
+    if (statusFilter !== "all" && !g.items.some((t) => t.status === statusFilter)) return false;
+    return true;
+  });
+  const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "");
 
   return (
     <AppShell>
@@ -230,11 +264,11 @@ function MessagesLayout() {
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
               Nessun messaggio ancora. Le conversazioni appariranno qui quando nasce un contatto tra ristoratore e lavoratore.
             </div>
-          ) : visible.length === 0 ? (
+          ) : (withUser ? visible.length === 0 : visibleGroups.length === 0) ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
               Nessuna conversazione corrisponde ai filtri selezionati.
             </div>
-          ) : (
+          ) : withUser ? (
             <div className="space-y-2">
               {visible.map((t) => {
                 const active = selectedId === t.id;
@@ -257,7 +291,7 @@ function MessagesLayout() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
                         <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
-                          {t.other.name}
+                          {[t.annRole, fmtDate(t.annDate)].filter(Boolean).join(" — ") || t.other.name}
                         </div>
                         <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
                       </div>
@@ -268,6 +302,56 @@ function MessagesLayout() {
                         <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
                           {STATUS_LABELS[t.status] || t.status}
                         </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visibleGroups.map((g) => {
+                const last = g.items[0];
+                const statusTally = g.items.reduce<Record<string, number>>((acc, t) => { acc[t.status] = (acc[t.status] ?? 0) + 1; return acc; }, {});
+                return (
+                  <Link
+                    key={g.id}
+                    to="/messages"
+                    search={{ with: g.id }}
+                    className="group flex items-center gap-3 rounded-2xl border p-4 transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-card hover:bg-accent"
+                  >
+                    <div className="relative shrink-0">
+                      <UserAvatar userId={g.id} name={g.name} className="h-10 w-10" />
+                      {g.unread > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                          {g.unread > 9 ? "9+" : g.unread}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className={`truncate text-primary group-hover:underline underline-offset-2 ${g.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                          {g.name}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(g.lastAt)}</div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className={`text-xs truncate ${g.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                          {last?.lastBody ?? "Nessun messaggio"}
+                        </div>
+                        <span className="shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 bg-muted text-foreground">
+                          {g.items.length} {g.items.length === 1 ? "proposta" : "proposte"}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {g.unread > 0 && (
+                          <span className="text-[10px] rounded-full px-2 py-0.5 bg-primary/15 text-primary font-medium">Non letto</span>
+                        )}
+                        {Object.entries(statusTally).map(([s, c]) => (
+                          <span key={s} className={`text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[s] || "bg-muted text-muted-foreground"}`}>
+                            {c} {STATUS_LABELS[s] || s}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </Link>
