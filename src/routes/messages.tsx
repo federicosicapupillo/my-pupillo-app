@@ -10,6 +10,7 @@ import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
+import { otherColumnForRole, groupThreadsByOther } from "@/lib/messages-grouping";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -77,7 +78,7 @@ function MessagesLayout() {
     if (!user || !role) return;
     setLoading(true);
     const col = role === "restaurant" ? "restaurant_id" : "worker_id";
-    const otherCol = role === "restaurant" ? "worker_id" : "restaurant_id";
+    const otherCol = otherColumnForRole(role);
     const { data: apps, error: appsError } = await supabase
       .from("applications")
       .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
@@ -191,22 +192,7 @@ function MessagesLayout() {
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
 
   // Build groups by other-user (visual only) when no specific user is focused
-  const groups = (() => {
-    const m = new Map<string, { id: string; name: string; items: Thread[]; lastAt: string | null; unread: number }>();
-    for (const t of threads) {
-      const g = m.get(t.other.id) ?? { id: t.other.id, name: t.other.name, items: [], lastAt: null, unread: 0 };
-      g.items.push(t);
-      if ((t.lastAt ?? "") > (g.lastAt ?? "")) g.lastAt = t.lastAt;
-      g.unread += t.unread;
-      m.set(t.other.id, g);
-    }
-    const arr = Array.from(m.values());
-    arr.forEach((g) =>
-      g.items.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")),
-    );
-    arr.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.name.localeCompare(b.name));
-    return arr;
-  })();
+  const groups = groupThreadsByOther(threads);
   const visibleGroups = groups.filter((g) => {
     if (filter === "unread" && g.unread === 0) return false;
     if (statusFilter !== "all" && !g.items.some((t) => t.status === statusFilter)) return false;
