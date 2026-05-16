@@ -13,6 +13,7 @@ import { Utensils, MapPin, Briefcase, Calendar, Clock, Timer, Moon, Flame, Shirt
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { ReviewMessageCard, parseReviewBody } from "@/components/ReviewMessageCard";
 import {
   AlertDialog,
   AlertDialogAction,
