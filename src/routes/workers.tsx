@@ -189,6 +189,14 @@ function WorkersPage() {
     })();
   }, [user]);
 
+  // Carica tutti i lavoratori di default all'apertura della pagina
+  useEffect(() => {
+    if (role === "restaurant") {
+      void runSearch({ category: "all", subcategory: "", text: "", language: "" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
+
   if (role !== "restaurant") return <AppShell><p>Solo i ristoratori.</p></AppShell>;
 
   const invite = async (workerId: string) => {
@@ -336,8 +344,7 @@ function WorkersPage() {
     setCategory("all"); setSubcategory("");
     setQInput(""); setQ("");
     setLang(""); setLangDraft("");
-    setWorkers([]);
-    setHasSearched(false);
+    void runSearch({ category: "all", subcategory: "", text: "", language: "" });
   };
   const onChangeCategory = (c: Category) => { setCatDraft(c); setSubDraft(""); };
   const removeCategoryChip = () => { setCatDraft("all"); setSubDraft(""); void runSearch({ category: "all", subcategory: "" }); };
@@ -582,17 +589,18 @@ function WorkersPage() {
             >
               <MessageSquare className="h-3.5 w-3.5" />
               {isBlocked ? `Bloccato (${overdueCount} recension${overdueCount > 1 ? "i" : "e"} scadut${overdueCount > 1 ? "e" : "a"})` : (
-                <>Messaggia</>
+                <>{selected ? "Messaggia" : "Seleziona prima un annuncio"}</>
               )}
             </Button>
           </div>
           );
         })}
-        {!hasSearched && !searching && (
-          <p className="text-muted-foreground col-span-full">Imposta i filtri e clicca su Cerca per visualizzare i lavoratori disponibili.</p>
-        )}
         {hasSearched && !searching && sorted.length === 0 && (
-          <p className="text-muted-foreground col-span-full">Nessun lavoratore trovato. Prova a modificare i filtri o la parola chiave.</p>
+          <p className="text-muted-foreground col-span-full">
+            {(category === "all" && !subcategory && !q && !lang)
+              ? "Nessun lavoratore disponibile al momento."
+              : "Nessun lavoratore trovato. Prova a modificare i filtri o la parola chiave."}
+          </p>
         )}
       </div>
       )}
