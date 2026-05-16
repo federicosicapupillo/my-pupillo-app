@@ -16,6 +16,15 @@ import {
   ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
   XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check, Heart,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { submitWorkerReview } from "@/lib/reviews.functions";
+import {
+  CRITERION_LABEL,
+  REVIEW_CRITERIA,
+  computeOverallRating,
+  type ReviewCriterion,
+  type ReviewScores,
+} from "@/lib/reviews";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
@@ -118,7 +127,17 @@ function ShiftDetailPage() {
   const [jobReq, setJobReq] = useState<JobReq | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
   const [appCount, setAppCount] = useState<number>(0);
-  const [existingReview, setExistingReview] = useState<{ id: string; rating: number; comment: string | null; tags: string[] | null } | null>(null);
+  type ExistingReview = {
+    id: string;
+    rating: number;
+    comment: string | null;
+    punctuality: number | null;
+    professionalism: number | null;
+    competence: number | null;
+    reliability: number | null;
+    teamwork: number | null;
+  };
+  const [existingReview, setExistingReview] = useState<ExistingReview | null>(null);
   const hasReview = !!existingReview;
   const [requiredReview, setRequiredReview] = useState<{ status: string; due_date: string; review_id?: string | null } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -183,7 +202,12 @@ function ShiftDetailPage() {
         ? supabase.from("applications").select("id, worker_id, status").eq("announcement_id", s.announcement_id)
         : Promise.resolve({ data: [] as any[] }),
       user
-        ? supabase.from("reviews").select("id, rating, comment, tags").eq("shift_id", s.id).eq("author_id", user.id).maybeSingle()
+        ? supabase
+            .from("reviews")
+            .select("id, rating, comment, punctuality, professionalism, competence, reliability, teamwork")
+            .eq("shift_id", s.id)
+            .eq("author_id", user.id)
+            .maybeSingle()
         : Promise.resolve({ data: null }),
       (supabase as any).from("required_reviews")
         .select("status, due_date, review_id")
@@ -257,48 +281,42 @@ function ShiftDetailPage() {
     nav({ to: "/ristoratore/turni/$shiftId", params: { shiftId: shift.id }, search: { section: "recensione" } });
   };
 
-  const submitReview = async (rating: number, text: string, tags: string[]) => {
+  const submitReviewFn = useServerFn(submitWorkerReview);
+  const submitReview = async (scores: Required<ReviewScores>, text: string) => {
     if (!user || !shift) return;
-    if (rating < 1 || rating > 5) { toast.error("Seleziona una valutazione."); return; }
-    const trimmed = text.trim();
-    if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
-    if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
-    // Anti-duplicato
-    const { data: dup } = await supabase.from("reviews")
-      .select("id, rating, comment, tags")
-      .eq("shift_id", shift.id)
-      .eq("author_id", user.id)
-      .eq("target_id", shift.worker_id)
-      .maybeSingle();
-    if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
-    const { data: created, error } = await supabase.from("reviews").insert({
-      author_id: user.id,
-      target_id: shift.worker_id,
-      shift_id: shift.id,
-      announcement_id: shift.announcement_id,
-      application_id: appId,
-      rating,
-      comment: trimmed,
-      tags,
-    } as never).select("id, rating, comment, tags").single();
-    if (error) {
-      toast.error(error.message.includes("duplicate") || error.message.includes("unique") ? "Recensione già presente per questo turno." : error.message);
-      await load();
+    const overall = computeOverallRating(scores);
+    if (overall == null) {
+      toast.error("Valuta tutti i parametri da 1 a 5 stelle.");
       return;
     }
-    // Messaggio di sistema in chat (best effort)
-    if (appId) {
-      await supabase.from("messages").insert({
-        application_id: appId,
-        sender_id: user.id,
-        body: "Sistema: il turno è stato completato e il lavoratore ha ricevuto una recensione.",
-        message_type: "system",
-        action_type: "review_submitted",
-      } as never);
+    try {
+      await submitReviewFn({
+        data: {
+          shiftId: shift.id,
+          punctuality: scores.punctuality,
+          professionalism: scores.professionalism,
+          competence: scores.competence,
+          reliability: scores.reliability,
+          teamwork: scores.teamwork,
+          comment: text.trim(),
+        },
+      });
+      // Messaggio di sistema in chat (best effort)
+      if (appId) {
+        await supabase.from("messages").insert({
+          application_id: appId,
+          sender_id: user.id,
+          body: "Sistema: il turno è stato completato e il lavoratore ha ricevuto una recensione.",
+          message_type: "system",
+          action_type: "review_submitted",
+        } as never);
+      }
+      toast.success("Recensione inviata");
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Errore durante l'invio della recensione.");
+      await load();
     }
-    toast.success("Recensione inviata");
-    setExistingReview(created as any);
-    await load();
   };
 
   if (loading) {
