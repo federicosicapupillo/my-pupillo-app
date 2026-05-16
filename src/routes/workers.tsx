@@ -636,8 +636,13 @@ function WorkersPage() {
             </div>
             {worked && (
               <div className="mt-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
-                <div className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-[11px] font-semibold">
-                  ★ Già lavorato con te
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-[11px] font-semibold">
+                    ★ Già lavorato con te
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-semibold">
+                    Ricontatto gratuito
+                  </span>
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">Ultima tua recensione:</div>
                 {lastReview ? (
@@ -675,7 +680,7 @@ function WorkersPage() {
             >
               <MessageSquare className="h-3.5 w-3.5" />
               {isBlocked ? `Bloccato (${overdueCount} recension${overdueCount > 1 ? "i" : "e"} scadut${overdueCount > 1 ? "e" : "a"})` : (
-                <>Messaggia</>
+                <>{worked ? "Ricontatta gratis" : "Messaggia"}</>
               )}
             </Button>
           </div>
