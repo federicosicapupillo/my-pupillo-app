@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
 };
-type Ann = { id: string; service_date: string; service_time: string; end_time?: string | null; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string; notes?: string | null; professional_profile?: string | null };
+type Ann = { id: string; service_date: string; service_time: string; end_time?: string | null; duration_hours?: number | null; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string; notes?: string | null; professional_profile?: string | null };
 
 type Shift = {
   id: string;
