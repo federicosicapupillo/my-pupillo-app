@@ -132,6 +132,7 @@ function WorkersPage() {
   const [langDraft, setLangDraft] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
+  const [collabMap, setCollabMap] = useState<Record<string, { worked: boolean; review: { rating: number; comment: string | null; created_at: string } | null }>>({});
 
   const runSearch = async (overrides?: { category?: Category; subcategory?: string; text?: string; language?: string }) => {
     const nextCategory = overrides?.category ?? catDraft;
@@ -188,6 +189,38 @@ function WorkersPage() {
       }
     })();
   }, [user]);
+
+  // Load "already worked with you" + last private review (by this restaurant) for the visible workers.
+  useEffect(() => {
+    (async () => {
+      if (!user || workers.length === 0) { setCollabMap({}); return; }
+      const ids = workers.map((w) => w.id);
+      const [{ data: shiftsData }, { data: reviewsData }] = await Promise.all([
+        supabase
+          .from("shifts")
+          .select("worker_id, status")
+          .eq("restaurant_id", user.id)
+          .in("worker_id", ids)
+          .in("status", ["completed", "done", "closed"] as never),
+        supabase
+          .from("reviews")
+          .select("target_id, rating, comment, created_at")
+          .eq("author_id", user.id)
+          .in("target_id", ids)
+          .order("created_at", { ascending: false }),
+      ]);
+      const workedSet = new Set<string>((shiftsData ?? []).map((s: any) => s.worker_id));
+      const latestReview: Record<string, { rating: number; comment: string | null; created_at: string }> = {};
+      for (const r of (reviewsData as any[]) ?? []) {
+        if (!latestReview[r.target_id]) latestReview[r.target_id] = { rating: r.rating, comment: r.comment, created_at: r.created_at };
+      }
+      const map: typeof collabMap = {};
+      for (const id of ids) {
+        map[id] = { worked: workedSet.has(id), review: latestReview[id] ?? null };
+      }
+      setCollabMap(map);
+    })();
+  }, [user, workers]);
 
   // Load all workers by default when the page opens, so the list is never empty.
   useEffect(() => {
@@ -398,6 +431,10 @@ function WorkersPage() {
     return true;
   });
   const sorted = [...distFiltered].sort((a, b) => {
+    // Prioritize "già lavorato con te" workers, but keep all visible.
+    const aw = collabMap[a.id]?.worked ? 1 : 0;
+    const bw = collabMap[b.id]?.worked ? 1 : 0;
+    if (aw !== bw) return bw - aw;
     if (category === "all") {
       if (subcategory === "Ultimi attivi") return (new Date(b.last_active_at ?? 0).getTime()) - (new Date(a.last_active_at ?? 0).getTime());
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
