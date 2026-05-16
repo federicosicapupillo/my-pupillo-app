@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Star, MessageSquare, Send, Heart, Search, Calendar, Users, CheckCircle2 } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { sendShiftProposal } from "@/lib/shift-proposal";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -175,14 +176,12 @@ function Page() {
         if (error) throw error;
         appId = ins!.id;
       }
-      // Auto-message template (Ricontatto)
-      await supabase.from("messages").insert({
-        application_id: appId,
-        sender_id: user.id,
-        receiver_id: inviteFor.worker_id,
-        message_type: "template",
-        template_id: "recontact_invite",
-        body: "Ciao! Abbiamo già collaborato in passato e vorremmo proporti un nuovo turno. Sei disponibile?",
+      // Auto-message: graphical shift proposal pre-filled with announcement details.
+      await sendShiftProposal({
+        applicationId: appId,
+        announcementId: annId,
+        restaurantId: user.id,
+        workerId: inviteFor.worker_id,
       });
       // Notify worker
       await supabase.from("notifications").insert({

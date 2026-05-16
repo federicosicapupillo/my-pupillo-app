@@ -12,6 +12,9 @@ import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, 
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
+import { formatDateIT, formatTariff } from "@/lib/format";
+import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +47,7 @@ type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
 };
-type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string };
+type Ann = { id: string; service_date: string; service_time: string; end_time?: string | null; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string; notes?: string | null; professional_profile?: string | null };
 
 type Shift = {
   id: string;
@@ -287,7 +290,7 @@ function Thread() {
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
           supabase.from("profiles").select("full_name, business_name, city, neighborhood").eq("id", otherId).maybeSingle(),
-          supabase.from("announcements").select("id, service_date, service_time, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id").eq("id", a.announcement_id).maybeSingle(),
+          supabase.from("announcements").select("id, service_date, service_time, end_time, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id, notes, professional_profile").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({
           name: p?.business_name || p?.full_name || "Utente",
@@ -840,6 +843,27 @@ function Thread() {
                 </div>
               );
             }
+            if (m.template_id === PROPOSAL_TEMPLATE_ID) {
+              return (
+                <ProposalCard
+                  key={m.id}
+                  message={m}
+                  ann={ann}
+                  venueName={other?.name ?? null}
+                  displayAddress={displayAddress}
+                  isWorker={role === "worker"}
+                  status={app?.status ?? "pending"}
+                  onAccept={async () => {
+                    await transition("accepted");
+                    await insertSystemMessage("Il lavoratore ha accettato la proposta di lavoro.", "accept_application");
+                  }}
+                  onReject={async () => {
+                    await transition("rejected");
+                    await insertSystemMessage("Il lavoratore ha rifiutato la proposta di lavoro.", "reject_application");
+                  }}
+                />
+              );
+            }
             return (
               <div key={m.id} className={`flex items-end gap-2 ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
                 {m.sender_id === app?.worker_id && m.sender_id !== user?.id && (
@@ -1231,6 +1255,122 @@ function ReviewBlock(props: {
           Il turno risulta annullato: usa il flusso di segnalazione invece della recensione standard.
         </p>
       )}
+    </div>
+  );
+}
+
+function ProposalCard(props: {
+  message: Msg;
+  ann: Ann | null;
+  venueName: string | null;
+  displayAddress: string | null;
+  isWorker: boolean;
+  status: string;
+  onAccept: () => Promise<void>;
+  onReject: () => Promise<void>;
+}) {
+  const { ann, venueName, displayAddress, isWorker, status, onAccept, onReject } = props;
+  const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
+  const accepted = status === "accepted";
+  const rejected = status === "rejected" || status === "not_interested";
+  const expired = status === "expired";
+  const decided = accepted || rejected || expired;
+
+  const handle = async (kind: "accept" | "reject") => {
+    if (busy || decided) return;
+    setBusy(kind);
+    try {
+      if (kind === "accept") await onAccept();
+      else await onReject();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="flex justify-center my-2">
+      <div className="w-full max-w-md rounded-2xl border-2 border-primary/40 bg-card shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.45)] overflow-hidden">
+        <div className="bg-primary/10 px-4 py-3 border-b border-primary/30">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h4 className="font-bold text-sm">Nuova proposta di lavoro</h4>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Ciao, sei disponibile per questo turno?</p>
+        </div>
+        <dl className="px-4 py-3 space-y-2 text-sm">
+          <ProposalRow icon={Briefcase} label="Ruolo" value={ann?.professional_profile || "—"} />
+          <ProposalRow icon={Calendar} label="Data" value={ann?.service_date ? formatDateIT(ann.service_date) : "—"} />
+          <ProposalRow
+            icon={Clock}
+            label="Orario"
+            value={
+              ann?.service_time
+                ? `${ann.service_time.slice(0, 5)}${ann.end_time ? " - " + ann.end_time.slice(0, 5) : ""}`
+                : "—"
+            }
+          />
+          <ProposalRow icon={Building2} label="Locale" value={venueName || "—"} />
+          <ProposalRow icon={MapPin} label="Luogo" value={displayAddress || ann?.job_city || "—"} />
+          {ann?.tariff_amount != null && (
+            <ProposalRow icon={Euro} label="Compenso" value={formatTariff(ann.tariff_amount, ann.tariff_type ?? null)} />
+          )}
+          {ann?.notes && ann.notes.trim() && (
+            <ProposalRow icon={StickyNote} label="Note" value={ann.notes.trim()} />
+          )}
+        </dl>
+        <p className="px-4 pb-3 text-xs text-muted-foreground">Fammi sapere se puoi esserci.</p>
+
+        {decided ? (
+          <div className={`px-4 py-3 border-t text-sm font-semibold flex items-center justify-center gap-2 ${
+            accepted
+              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+              : "bg-destructive/10 text-destructive border-destructive/30"
+          }`}>
+            {accepted ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            {accepted ? (isWorker ? "Hai accettato questa proposta." : "Proposta accettata") :
+              expired ? "Proposta scaduta" :
+              (isWorker ? "Hai rifiutato questa proposta." : "Proposta rifiutata")}
+          </div>
+        ) : isWorker ? (
+          <div className="px-4 py-3 border-t bg-secondary/30 flex gap-2">
+            <Button
+              type="button"
+              onClick={() => handle("accept")}
+              disabled={!!busy}
+              className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
+            >
+              <Check className="h-4 w-4" />
+              {busy === "accept" ? "Invio…" : "Accetta"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handle("reject")}
+              disabled={!!busy}
+              variant="outline"
+              className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
+            >
+              <X className="h-4 w-4" />
+              {busy === "reject" ? "Invio…" : "Rifiuta"}
+            </Button>
+          </div>
+        ) : (
+          <div className="px-4 py-3 border-t bg-secondary/20 text-xs text-muted-foreground text-center">
+            In attesa di risposta dal lavoratore.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProposalRow({ icon: Icon, label, value }: { icon: typeof Send; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <span className="text-xs text-muted-foreground">{label}: </span>
+        <span className="font-medium break-words">{value}</span>
+      </div>
     </div>
   );
 }
