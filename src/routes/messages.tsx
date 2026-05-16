@@ -5,6 +5,12 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
+import {
+  STATUS_PRIORITY,
+  statusRank,
+  computePrimaryStatus,
+  effectiveStatus as effectiveStatusLib,
+} from "@/lib/message-grouping";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
