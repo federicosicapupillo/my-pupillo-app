@@ -10,6 +10,8 @@ import {
   statusRank,
   computePrimaryStatus,
   effectiveStatus as effectiveStatusLib,
+  searchScopeThreads,
+  computeChipCounts,
 } from "@/lib/message-grouping";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -294,47 +296,18 @@ function MessagesLayout() {
 
   // Pre-filtra per ricerca/utente: i chip devono riflettere solo le conversazioni
   // attualmente in scope (così i conteggi restano coerenti con quello che vedi).
-  const searchScoped = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return threads.filter((t) => {
-      if (withUser && t.other.id !== withUser) return false;
-      if (!q) return true;
-      const role = t.ann?.role ?? "";
-      const date = t.ann?.date
-        ? new Date(t.ann.date).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })
-        : "";
-      const time = t.ann?.time ? t.ann.time.slice(0, 5) : "";
-      const hay = [
-        t.other.name,
-        role,
-        date,
-        time,
-        t.ann?.date ?? "",
-        t.lastBody ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [threads, query, withUser]);
+  const searchScoped = useMemo(
+    () => searchScopeThreads(threads, query, withUser),
+    [threads, query, withUser],
+  );
 
   // Conteggi reattivi: dipendono da `threads` (stato/lettura) e dallo scope di ricerca.
   // Aggiornano in tempo reale all'apertura di una proposta (markRead → unread=0),
   // ai cambi di stato via realtime e alla digitazione nella barra di ricerca.
-  const totalCount = searchScoped.length;
-  const totalUnread = useMemo(
-    () => searchScoped.reduce((n, t) => n + (t.unread > 0 ? 1 : 0), 0),
-    [searchScoped],
-  );
-  const statusCounts = useMemo(
-    () =>
-      searchScoped.reduce<Record<string, number>>((acc, t) => {
-        const eff = effectiveStatus(t);
-        acc[eff] = (acc[eff] ?? 0) + 1;
-        return acc;
-      }, {}),
-    [searchScoped],
-  );
+  const chipCounts = useMemo(() => computeChipCounts(searchScoped), [searchScoped]);
+  const totalCount = chipCounts.total;
+  const totalUnread = chipCounts.unread;
+  const statusCounts = chipCounts.byStatus;
 
   const visible = useMemo(
     () =>
