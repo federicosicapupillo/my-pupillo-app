@@ -440,7 +440,8 @@ function WorkersPage() {
             <option value="">Nessun annuncio attivo</option>
             {anns.map((a) => (
               <option key={a.id} value={a.id}>
-                {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.location_address}
+                {new Date(a.service_date).toLocaleDateString("it-IT")}
+                {a.location_address ? ` · ${a.location_address}` : ""}
               </option>
             ))}
           </select>
@@ -552,7 +553,9 @@ function WorkersPage() {
                 className={`shrink-0 rounded-xl border px-3 py-2 text-left text-sm transition ${selected===a.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card hover:bg-accent"}`}
               >
                 <div className="font-medium">{new Date(a.service_date).toLocaleDateString("it-IT")}</div>
-                <div className="text-xs text-muted-foreground line-clamp-1 max-w-[220px]">{a.location_address}</div>
+                {a.location_address && (
+                  <div className="text-xs text-muted-foreground line-clamp-1 max-w-[220px]">{a.location_address}</div>
+                )}
               </button>
             ))}
           </div>
