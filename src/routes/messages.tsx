@@ -16,6 +16,8 @@ import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
+import { useServerFn } from "@tanstack/react-start";
+import { markApplicationRead } from "@/lib/messages.functions";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
