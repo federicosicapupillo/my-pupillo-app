@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -29,13 +29,14 @@ type Thread = {
   lastBody: string | null;
   lastAt: string | null;
   unread: number;
+  ann: { role: string | null; date: string | null; time: string | null } | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "In attesa",
+  pending: "In attesa di risposta",
   interested: "Interesse mostrato",
   counter_offer: "Controproposta",
-  accepted: "Confermato",
+  accepted: "Accettato",
   rejected: "Rifiutato",
   expired: "Scaduto",
 };
@@ -69,6 +70,7 @@ function MessagesLayout() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const load = async () => {
     if (!user || !role) return;
@@ -88,7 +90,8 @@ function MessagesLayout() {
     const list = (apps ?? []) as any[];
     const others = list.map((a) => a[otherCol]).filter(Boolean);
     const ids = list.map((a) => a.id);
-    const [{ data: profs }, { data: msgs }] = await Promise.all([
+    const annIds = Array.from(new Set(list.map((a) => a.announcement_id).filter(Boolean)));
+    const [{ data: profs }, { data: msgs }, { data: annsData }] = await Promise.all([
       others.length
         ? supabase.from("profiles").select("id, full_name, business_name").in("id", others)
         : Promise.resolve({ data: [] as any[] }),
@@ -99,8 +102,15 @@ function MessagesLayout() {
             .in("application_id", ids)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
+      annIds.length
+        ? supabase
+            .from("announcements")
+            .select("id, professional_profile, service_date, service_time")
+            .in("id", annIds as string[])
+        : Promise.resolve({ data: [] as any[] }),
     ]);
     const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+    const amap = new Map((annsData ?? []).map((a: any) => [a.id, a]));
     const lastByApp = new Map<string, any>();
     const unreadByApp = new Map<string, number>();
     for (const m of (msgs ?? []) as any[]) {
@@ -112,6 +122,7 @@ function MessagesLayout() {
     const next: Thread[] = list.map((a) => {
       const p = pmap.get(a[otherCol]);
       const last = lastByApp.get(a.id);
+      const ann = a.announcement_id ? amap.get(a.announcement_id) : null;
       return {
         id: a.id,
         status: a.status,
@@ -122,6 +133,13 @@ function MessagesLayout() {
         lastBody: a.last_message_preview ?? last?.body ?? null,
         lastAt: a.last_message_at ?? last?.created_at ?? null,
         unread: unreadByApp.get(a.id) ?? 0,
+        ann: ann
+          ? {
+              role: ann.professional_profile ?? null,
+              date: ann.service_date ?? null,
+              time: ann.service_time ?? null,
+            }
+          : null,
       };
     });
     next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
@@ -166,6 +184,51 @@ function MessagesLayout() {
     return true;
   });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
+
+  // Raggruppa per controparte (worker se sono ristoratore, ristoratore se sono lavoratore).
+  // Ogni proposta resta una conversazione separata: il raggruppamento è solo visivo.
+  type Group = { otherId: string; name: string; threads: Thread[]; lastAt: string | null; unread: number };
+  const groupsMap = new Map<string, Group>();
+  for (const t of visible) {
+    let g = groupsMap.get(t.other.id);
+    if (!g) {
+      g = { otherId: t.other.id, name: t.other.name, threads: [], lastAt: null, unread: 0 };
+      groupsMap.set(t.other.id, g);
+    }
+    g.threads.push(t);
+    g.unread += t.unread;
+    if ((t.lastAt ?? "") > (g.lastAt ?? "")) g.lastAt = t.lastAt;
+  }
+  const groups = Array.from(groupsMap.values())
+    .map((g) => ({
+      ...g,
+      threads: [...g.threads].sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")),
+    }))
+    .sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.name.localeCompare(b.name));
+
+  // Espandi automaticamente il gruppo che contiene la chat selezionata.
+  const autoExpandedId = selectedId
+    ? threads.find((t) => t.id === selectedId)?.other.id ?? null
+    : null;
+  const isExpanded = (otherId: string) =>
+    expanded.has(otherId) || otherId === autoExpandedId || groups.length === 1;
+  const toggleGroup = (otherId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(otherId)) next.delete(otherId);
+      else next.add(otherId);
+      return next;
+    });
+  };
+
+  const fmtAnnLine = (t: Thread) => {
+    const role = t.ann?.role ?? "Proposta";
+    const date = t.ann?.date
+      ? new Date(t.ann.date).toLocaleDateString("it-IT", { day: "numeric", month: "long" })
+      : "";
+    const time = t.ann?.time ? t.ann.time.slice(0, 5) : "";
+    return [role, date, time].filter(Boolean).join(" — ");
+  };
 
   return (
     <AppShell>
@@ -236,41 +299,95 @@ function MessagesLayout() {
             </div>
           ) : (
             <div className="space-y-2">
-              {visible.map((t) => {
-                const active = selectedId === t.id;
+              {groups.map((g) => {
+                const open = isExpanded(g.otherId);
+                const last = g.threads[0];
+                const statusCount = g.threads.reduce<Record<string, number>>((acc, t) => {
+                  acc[t.status] = (acc[t.status] ?? 0) + 1;
+                  return acc;
+                }, {});
+                const summaryBadges = Object.entries(statusCount)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 2);
+                const groupHasActive = g.threads.some((t) => t.id === selectedId);
                 return (
-                  <Link
-                    key={t.id}
-                    to="/messages/$id"
-                    params={{ id: t.id }}
-                    className={`group flex items-center gap-3 rounded-2xl border p-4 transition outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${active ? "bg-primary/10 border-primary/40" : "bg-card hover:bg-accent"}`}
-                    aria-current={active ? "page" : undefined}
+                  <div
+                    key={g.otherId}
+                    className={`rounded-2xl border bg-card transition ${groupHasActive ? "border-primary/40" : ""}`}
                   >
-                    <div className="relative shrink-0">
-                      <UserAvatar userId={t.other.id} name={t.other.name} className="h-10 w-10" />
-                      {t.unread > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
-                          {t.unread > 9 ? "9+" : t.unread}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
-                          {t.other.name}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(g.otherId)}
+                      className="flex w-full items-center gap-3 p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
+                      aria-expanded={open}
+                    >
+                      <div className="relative shrink-0">
+                        <UserAvatar userId={g.otherId} name={g.name} className="h-10 w-10" />
+                        {g.unread > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                            {g.unread > 9 ? "9+" : g.unread}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between gap-2 mt-0.5">
-                        <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
-                          {t.lastBody ?? "Nessun messaggio"}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <div className={`truncate ${g.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                            {g.name}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(g.lastAt)}</div>
                         </div>
-                        <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
-                          {STATUS_LABELS[t.status] || t.status}
-                        </span>
+                        <div className="mt-0.5 flex items-center justify-between gap-2">
+                          <div className="text-[11px] text-muted-foreground">
+                            {g.threads.length} {g.threads.length === 1 ? "proposta" : "proposte"}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1">
+                            {summaryBadges.map(([s, n]) => (
+                              <span key={s} className={`text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[s] || "bg-muted text-muted-foreground"}`}>
+                                {n} {STATUS_LABELS[s] || s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        {last?.lastBody && (
+                          <div className="mt-1 text-xs text-muted-foreground truncate">{last.lastBody}</div>
+                        )}
                       </div>
-                    </div>
-                  </Link>
+                      <div className="shrink-0 text-muted-foreground">
+                        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </div>
+                    </button>
+                    {open && (
+                      <div className="border-t bg-muted/30 px-2 py-2 space-y-1">
+                        {g.threads.map((t) => {
+                          const active = selectedId === t.id;
+                          return (
+                            <Link
+                              key={t.id}
+                              to="/messages/$id"
+                              params={{ id: t.id }}
+                              className={`block rounded-xl border p-3 transition outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-primary/10 border-primary/40" : "bg-card hover:bg-accent border-transparent"}`}
+                              aria-current={active ? "page" : undefined}
+                            >
+                              <div className="flex items-baseline justify-between gap-2">
+                                <div className={`truncate text-sm ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
+                                  {fmtAnnLine(t)}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2">
+                                <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                                  {t.lastBody ?? "Nessun messaggio"}
+                                </div>
+                                <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
+                                  {STATUS_LABELS[t.status] || t.status}
+                                </span>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
