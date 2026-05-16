@@ -192,16 +192,45 @@ function WorkersPage() {
   if (role !== "restaurant") return <AppShell><p>Solo i ristoratori.</p></AppShell>;
 
   const invite = async (workerId: string) => {
-    if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
+    if (!user) return;
     if (isBlocked) {
       toast.error("Per contattare nuovi lavoratori devi prima completare le recensioni obbligatorie dei turni conclusi.");
       nav({ to: "/shifts", search: { tab: "to-review" } as never });
       return;
     }
-    // Always create a NEW conversation (independent of any previous chat with this worker).
+    // Reuse existing generic chat with this worker if any (independent of "Ricontatta"/shift proposals).
+    const { data: existing } = await supabase
+      .from("applications")
+      .select("id, created_at")
+      .eq("restaurant_id", user.id)
+      .eq("worker_id", workerId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing?.id) {
+      nav({ to: "/messages/$id", params: { id: existing.id } });
+      return;
+    }
+    // Need an announcement_id (NOT NULL). Use selected, else most recent restaurant announcement.
+    let announcementId = selected;
+    if (!announcementId) {
+      const { data: ann } = await supabase
+        .from("announcements")
+        .select("id")
+        .eq("restaurant_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      announcementId = ann?.id ?? "";
+    }
+    if (!announcementId) {
+      toast.error("Crea prima un annuncio per poter contattare i lavoratori.");
+      nav({ to: "/announcements/new" as never });
+      return;
+    }
     const { data: created, error } = await supabase
       .from("applications")
-      .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
+      .insert({ announcement_id: announcementId, worker_id: workerId, restaurant_id: user.id, status: "pending" })
       .select("id")
       .single();
     if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
@@ -211,7 +240,7 @@ function WorkersPage() {
       body: "Un ristoratore ti ha contattato. In attesa di risposta.",
       link: `/messages/${created.id}`,
     });
-    toast.success("Nuova chat creata con il lavoratore");
+    toast.success("Chat aperta con il lavoratore");
     nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
@@ -571,8 +600,8 @@ function WorkersPage() {
               size="sm"
               className="mt-4 w-full gap-1"
               onClick={() => invite(w.id)}
-              disabled={!selected || isBlocked}
-              title={isBlocked ? "Bloccato: completa le recensioni scadute" : (!selected ? "Seleziona prima un annuncio" : undefined)}
+              disabled={isBlocked}
+              title={isBlocked ? "Bloccato: completa le recensioni scadute" : undefined}
             >
               <MessageSquare className="h-3.5 w-3.5" />
               {isBlocked ? `Bloccato (${overdueCount} recension${overdueCount > 1 ? "i" : "e"} scadut${overdueCount > 1 ? "e" : "a"})` : (
