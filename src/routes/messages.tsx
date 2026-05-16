@@ -382,17 +382,8 @@ function MessagesLayout() {
                   acc[t.status] = (acc[t.status] ?? 0) + 1;
                   return acc;
                 }, {});
-                // Stato primario del gruppo: priorità più alta;
-                // a parità di priorità vince la proposta più recente — preferiamo
-                // l'ultimo messaggio (lastAt); se manca, ripieghiamo sulla data
-                // di creazione della proposta e infine sulla data del turno.
-                const recencyKey = (t: Thread) =>
-                  t.lastAt ?? t.createdAt ?? (t.ann?.date ? `${t.ann.date}T${t.ann.time ?? "00:00"}` : "");
-                const primaryStatus = [...g.threads].sort((a, b) => {
-                  const pr = statusRank(b.status) - statusRank(a.status);
-                  if (pr !== 0) return pr;
-                  return recencyKey(b).localeCompare(recencyKey(a));
-                })[0]?.status;
+                // Stato primario del gruppo (logica testata in @/lib/message-grouping).
+                const primaryStatus = computePrimaryStatus(g.threads);
                 const summaryBadges = primaryStatus
                   ? [
                       [primaryStatus, statusCount[primaryStatus] ?? 1] as [string, number],
