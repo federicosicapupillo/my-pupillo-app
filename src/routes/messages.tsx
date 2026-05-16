@@ -319,9 +319,18 @@ function MessagesLayout() {
                   acc[t.status] = (acc[t.status] ?? 0) + 1;
                   return acc;
                 }, {});
-                const summaryBadges = Object.entries(statusCount)
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 2);
+                // Stato primario del gruppo: priorità più alta;
+                // a parità di priorità, vince lo stato della proposta più recente.
+                const primaryStatus = [...g.threads].sort((a, b) => {
+                  const pr = statusRank(b.status) - statusRank(a.status);
+                  if (pr !== 0) return pr;
+                  return (b.lastAt ?? "").localeCompare(a.lastAt ?? "");
+                })[0]?.status;
+                const summaryBadges = primaryStatus
+                  ? [
+                      [primaryStatus, statusCount[primaryStatus] ?? 1] as [string, number],
+                    ]
+                  : [];
                 const groupHasActive = g.threads.some((t) => t.id === selectedId);
                 return (
                   <div
