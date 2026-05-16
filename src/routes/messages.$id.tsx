@@ -47,6 +47,27 @@ type App = {
 };
 type Ann = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string };
 
+type AnnProposal = {
+  id: string;
+  service_date: string;
+  service_time: string;
+  location_address: string | null;
+  tariff_amount: number | null;
+  tariff_type: string | null;
+  professional_profile: string | null;
+  job_city: string | null;
+  job_province: string | null;
+  job_address: string | null;
+  end_date: string | null;
+  end_time: string | null;
+  is_long_shift: boolean | null;
+  long_shift_reason: string | null;
+  dress_code_items: string[] | null;
+  dress_code_notes: string | null;
+  required_skills: string[] | null;
+  notes: string | null;
+};
+
 type Shift = {
   id: string;
   status: string;
