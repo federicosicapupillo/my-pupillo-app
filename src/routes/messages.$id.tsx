@@ -1080,6 +1080,9 @@ function Thread() {
           otherName={other?.name ?? null}
           addressOverride={displayAddress}
           disabled={isConversationClosed}
+          activeAnns={activeAnns}
+          proposalAnnId={proposalAnnId}
+          setProposalAnnId={setProposalAnnId}
         />
 
         {role === "restaurant" && tplCategory === "post_shift" && app && (
