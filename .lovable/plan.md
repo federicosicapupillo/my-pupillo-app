@@ -1,61 +1,84 @@
-## Piano: Sistema Referral + Codici Sconto
+# Sistema recensioni post-turno
 
-Funzionalità grande e trasversale (DB, frontend ristoratore/lavoratore, checkout, admin). La divido in 4 fasi con migrazioni separate.
+## Riepilogo
+Estendere il flusso recensioni esistente per supportare 5 parametri specifici (puntualità, professionalità, competenza, affidabilità, collaborazione), gating sul turno completato, effetto celebrativo lato lavoratore, badge reputazionali e badge "Già lavorato con te" nella ricerca.
 
-### Fase 1 — Database
+## 1. Database (un'unica migrazione)
 
-**Migrazione 1: Referral**
-- `profiles`: aggiungere `referral_code` (text unique), `referred_by_user_id` (uuid), `referral_credits_earned` (int default 0)
-- Trigger su INSERT profiles → genera codice tipo `PUPILLO-XXXXXX` (6 char random)
-- Backfill codici per utenti esistenti
-- Nuova tabella `referral_invites` (id, referrer_user_id, referred_user_id, referral_code, status enum [pending/registered/verified/completed/rejected], credits_awarded bool, credits_amount int, created_at, completed_at)
-- RLS: utente vede i propri inviti
-- Funzione `award_referral_credits(_referred_user_id)` SECURITY DEFINER:
-  - controlla referred_by_user_id sul profilo
-  - controlla profile_completed && phone_verified
-  - controlla che non esista già una riga `completed` per quel referred
-  - chiama `grant_credits(referrer, 5, 'referral', ...)`
-  - aggiorna `referral_invites` → completed
-- Trigger su `profiles` AFTER UPDATE: quando `phone_verified` o `profile_completed` passa a true e `referred_by_user_id` non null → chiama `award_referral_credits`
+Estendere `public.reviews` con i parametri specifici e il tracking apertura lato lavoratore.
 
-**Migrazione 2: Codici sconto**
-- Tabella `discount_codes` (code unique citext o lower-saved, description, discount_type enum [percentage/fixed_amount/free_credits], discount_value numeric, max_uses int, used_count int default 0, valid_from, valid_until, is_active bool, applies_to enum [credits/premium/all])
-- Tabella `discount_redemptions` (discount_code_id, user_id, order_id text, used_at, discount_amount numeric)
-- RLS: lettura codici a tutti gli autenticati (necessario per validare); scrittura solo admin; redemptions visibili al proprietario, insert da service_role
-- Funzione `validate_discount_code(_code, _applies_to)` STABLE → restituisce JSON { valid, type, value, message }
-- Seed dei 3 codici demo: PUPILLO10, START20, CREDITI5
+```text
+ALTER TABLE reviews
+  ADD punctuality          smallint CHECK (BETWEEN 1 AND 5),
+  ADD professionalism      smallint CHECK (BETWEEN 1 AND 5),
+  ADD competence           smallint CHECK (BETWEEN 1 AND 5),
+  ADD reliability          smallint CHECK (BETWEEN 1 AND 5),
+  ADD teamwork             smallint CHECK (BETWEEN 1 AND 5),
+  ADD seen_by_worker_at    timestamptz;
+```
 
-### Fase 2 — Frontend Referral
+- `rating` esistente viene popolato dalla media dei 5 parametri (trigger BEFORE INSERT/UPDATE).
+- Unique constraint: `UNIQUE (author_id, target_id, shift_id)` → blocca doppie recensioni stesso turno.
+- RLS: aggiungere policy `Worker marks own review as seen` (UPDATE solo su `seen_by_worker_at` quando `target_id = auth.uid()`).
 
-- Componente `ReferralCard.tsx` riusabile con: codice, link (`${origin}/auth?role=...&ref=CODE`), copia codice, copia link, condividi WhatsApp, statistiche (invitati, registrati, in attesa, crediti)
-- Inserito in: `/dashboard` (sia ristoratore che lavoratore), `/profile`
-- Hook `useReferralStats()` che legge da `referral_invites`
-- In `/auth` (signup): leggere `?ref=` da URL, mostrare badge "Codice referral applicato: XXX", al submit salvare in `profiles.referred_by_user_id` (lookup tramite `referral_code`)
-- Validazione anti-abuso lato client: non può essere il proprio codice (ma controllo finale lato DB tramite trigger)
+Estendere `public.profiles` con medie per parametro (aggiornate dal trigger esistente `handle_new_review`, esteso):
+```text
+avg_punctuality, avg_professionalism, avg_competence,
+avg_reliability, avg_teamwork  (numeric, default 0)
+```
 
-### Fase 3 — Codice sconto in checkout
+Aggiornare `handle_new_review()` per ricalcolare anche queste 5 medie del worker target.
 
-- File `src/routes/billing.tsx` (e/o `StripeEmbeddedCheckout`): aggiungere input "Codice sconto" + bottone "Applica"
-- Server function `validateDiscountCode` (`src/lib/discounts.functions.ts`) → chiama RPC `validate_discount_code`
-- Mostrare riepilogo sconto + totale aggiornato
-- Per Stripe: passare `discount` o creare coupon dinamico — semplificazione: per ora applichiamo lo sconto come `coupon` Stripe via API (creo coupon one-shot in `createCheckoutSession` se viene passato `discountCode`). Per `free_credits` invece: bypass Stripe, chiamare direttamente `grant_credits` se max_uses ok.
-- Aggiornare `createCheckoutSession` per accettare opzionale `discountCode`
-- Insert in `discount_redemptions` dopo conferma pagamento (nel webhook `/api/public/payments/webhook.ts`) + increment `used_count`
+## 2. Server functions (`src/lib/reviews.functions.ts`)
 
-### Fase 4 — Admin
+- `submitWorkerReview` (`POST`, requireSupabaseAuth, restaurant only): valida i 5 punteggi 1–5 + shift_id, verifica che lo shift sia `completed` e di proprietà del ristoratore, calcola `rating` come media, inserisce o aggiorna (gestione unique).
+- `getReviewForShift` (`POST`): restituisce la recensione esistente per uno shift (sia per ristoratore — vedere stato già inviato — sia per worker — vedere dettagli).
+- `markReviewSeen` (`POST`, worker only): set `seen_by_worker_at = now()` se null, e restituisce se era la prima apertura (per attivare l'effetto celebrativo solo una volta).
+- `getLastReviewBetween` (`POST`): per la pagina "Cerca lavoratori", ultima recensione di `restaurant_id` su `worker_id`.
 
-- In `/admin` aggiungere tab "Referral e Sconti"
-- Tabella inviti: join referrer/referred profiles
-- CRUD codici sconto (form crea/modifica, toggle is_active)
-- RLS già limita ad admin via `has_role`
+## 3. UI ristoratore
 
-### Note tecniche
-- I controlli anti-abuso (no auto-referral, codice unico per utente, no doppio accredito) sono nei trigger DB, non solo client.
-- `referral_code` univoco, formato `PUPILLO-` + 6 char alfanumerici uppercase.
-- Codici sconto case-insensitive: salvare upper, query upper.
+### Form recensione
+Nuovo componente `ReviewWorkerDialog.tsx`:
+- 5 righe StarRating (1–5), commento facoltativo
+- Riepilogo live: lista parametri + media calcolata
+- CTA "Invia recensione"
+- Mostra "Recensione già inviata" + lettura sola se esiste
 
-### Limitazioni / cose da chiarire
-- Per i codici `free_credits` durante l'acquisto crediti: aggiungo i crediti gratis al pacchetto invece di scontare il prezzo.
-- Per ora i refresh dei crediti referral avvengono via trigger su `profiles` (quando `phone_verified` diventa true E `profile_completed` true). Non includo email confirmation.
+### "I miei turni" (`src/routes/ristoratore.turni.*` o equivalente)
+- Per ogni turno `completed`: bottone "Recensisci" se nessuna review, badge "Recensito ★ 4.6" se inviata
+- Click → apre il dialog (in lettura se già inviata)
 
-Procedo con questo piano?
+### "Cerca lavoratori" (`src/routes/workers.tsx`)
+- Server fn batch `getWorkedTogether(workerIds)` per ristoratore loggato
+- Se presente: badge "Già lavorato con te", stelle complessive ultima review, snippet commento, dicitura "Ricontatto gratuito"
+
+## 4. UI lavoratore
+
+### Notifica
+Trigger `handle_new_review` già crea notifica: aggiornare title in "Hai ricevuto una nuova valutazione" e link verso nuova route `/reviews/$id`.
+
+### Pagina dettaglio recensione `/reviews/$id`
+- Locale, ruolo, data turno, valutazione complessiva, 5 parametri con stelle, commento
+- Al mount chiama `markReviewSeen`. Se era la prima apertura → trigger effetto celebrativo basato sulla media:
+  - ≥4.5: confetti + glow + testo "Ottimo lavoro!…" (lib `canvas-confetti` già è leggera ~5kB; aggiungerla)
+  - 4.0–4.4: animazione fade/scale leggera + testo positivo
+  - 3.0–3.9: nessun effetto, testo neutro
+  - <3.0: nessun effetto, testo serio/costruttivo
+
+### Profilo lavoratore
+Mostrare media complessiva, totale recensioni e medie per parametro. Calcolare badge runtime:
+- "Sempre puntuale" se `avg_punctuality > 4.7`
+- "Affidabile" se `avg_reliability > 4.7`
+- "Top Team Player" se `avg_teamwork > 4.7`
+- "Professionista verificato" se `reviews_count ≥ 10 && rating_avg > 4.5`
+
+## 5. Test
+
+- `src/lib/__tests__/reviews-aggregation.test.ts`: calcolo media complessiva, soglie badge, soglie effetto celebrativo
+- (Opzionale) `src/lib/__tests__/celebration-tier.test.ts` per la funzione che mappa media → tier
+
+## Note tecniche
+- I parametri "futuri" (velocità, immagine, stress, …) non implementati ora; lasciato hook nei tipi per estensione.
+- Nessun edit di `handle_new_review` distruttivo: si aggiungono soltanto i nuovi `UPDATE` delle medie per-parametro.
+- L'effetto celebrativo si basa SOLO su `seen_by_worker_at IS NULL` al momento del fetch, così resta one-shot anche tra device diversi.
