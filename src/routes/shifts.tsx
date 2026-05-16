@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, MessageSquare, Clock, Eye } from "lucide-react";
+import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, MessageSquare, Clock, Eye, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
@@ -62,6 +62,7 @@ function ShiftsPage() {
   const [reviewMap, setReviewMap] = useState<Record<string, number>>({});
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
+  const [submittingReview, setSubmittingReview] = useState<string | null>(null);
   const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
   const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
@@ -156,16 +157,30 @@ function ShiftsPage() {
 
   const submitReview = async (s: Shift) => {
     if (!user) return;
+    if (submittingReview) return;
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
-    const { error } = await supabase.from("reviews").insert({
-      author_id: user.id, target_id: targetId, shift_id: s.id, rating, comment: comment.trim() || null,
-    });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Recensione inviata");
-    setReviewMap(prev => ({ ...prev, [s.id]: rating }));
-    setReviewOpen(null);
-    setRating(5);
-    setComment("");
+    const submittedRating = rating;
+    setSubmittingReview(s.id);
+    const tId = toast.loading("Invio recensione in corso…");
+    try {
+      const { error } = await supabase.from("reviews").insert({
+        author_id: user.id, target_id: targetId, shift_id: s.id, rating: submittedRating, comment: comment.trim() || null,
+      });
+      if (error) {
+        toast.error(`Impossibile inviare la recensione: ${error.message}`, { id: tId });
+        return;
+      }
+      toast.success("Recensione inviata", { id: tId });
+      // Optimistic, immediate card update — no page reload needed
+      setReviewMap(prev => ({ ...prev, [s.id]: submittedRating }));
+      setReviewOpen(null);
+      setRating(5);
+      setComment("");
+    } catch (e: any) {
+      toast.error(`Errore di rete: ${e?.message ?? "riprova"}`, { id: tId });
+    } finally {
+      setSubmittingReview(null);
+    }
   };
 
   const openViewReview = async (shiftId: string) => {
