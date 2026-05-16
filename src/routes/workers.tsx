@@ -198,26 +198,20 @@ function WorkersPage() {
       nav({ to: "/shifts", search: { tab: "to-review" } as never });
       return;
     }
-    // If a conversation already exists for this restaurant + worker + announcement, just open it.
-    const { data: existing } = await supabase
-      .from("applications")
-      .select("id")
-      .eq("announcement_id", selected)
-      .eq("worker_id", workerId)
-      .eq("restaurant_id", user.id)
-      .maybeSingle();
-    if (existing?.id) {
-      nav({ to: "/messages/$id", params: { id: existing.id } });
-      return;
-    }
+    // Always create a NEW conversation (independent of any previous chat with this worker).
     const { data: created, error } = await supabase
       .from("applications")
       .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
       .select("id")
       .single();
     if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
-    await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: `/messages/${created.id}` });
-    toast.success("Chat aperta con il lavoratore");
+    await supabase.from("notifications").insert({
+      user_id: workerId,
+      title: "Nuova richiesta di contatto",
+      body: "Un ristoratore ti ha contattato. In attesa di risposta.",
+      link: `/messages/${created.id}`,
+    });
+    toast.success("Nuova chat creata con il lavoratore");
     nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
