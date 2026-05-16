@@ -28,6 +28,7 @@ type Thread = {
   other: { id: string; name: string };
   lastBody: string | null;
   lastAt: string | null;
+  createdAt: string | null;
   unread: number;
   ann: { role: string | null; date: string | null; time: string | null } | null;
 };
@@ -115,7 +116,7 @@ function MessagesLayout() {
     const otherCol = role === "restaurant" ? "worker_id" : "restaurant_id";
     const { data: apps, error: appsError } = await supabase
       .from("applications")
-      .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
+      .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, created_at, ${otherCol}`)
       .eq(col, user.id);
     if (appsError) {
       toast.error(appsError.message);
@@ -168,6 +169,7 @@ function MessagesLayout() {
         other: { id: a[otherCol], name: p?.business_name || p?.full_name || "Utente" },
         lastBody: a.last_message_preview ?? last?.body ?? null,
         lastAt: a.last_message_at ?? last?.created_at ?? null,
+        createdAt: a.created_at ?? null,
         unread: unreadByApp.get(a.id) ?? 0,
         ann: ann
           ? {
@@ -395,11 +397,15 @@ function MessagesLayout() {
                   return acc;
                 }, {});
                 // Stato primario del gruppo: priorità più alta;
-                // a parità di priorità, vince lo stato della proposta più recente.
+                // a parità di priorità vince la proposta più recente — preferiamo
+                // l'ultimo messaggio (lastAt); se manca, ripieghiamo sulla data
+                // di creazione della proposta e infine sulla data del turno.
+                const recencyKey = (t: Thread) =>
+                  t.lastAt ?? t.createdAt ?? (t.ann?.date ? `${t.ann.date}T${t.ann.time ?? "00:00"}` : "");
                 const primaryStatus = [...g.threads].sort((a, b) => {
                   const pr = statusRank(b.status) - statusRank(a.status);
                   if (pr !== 0) return pr;
-                  return (b.lastAt ?? "").localeCompare(a.lastAt ?? "");
+                  return recencyKey(b).localeCompare(recencyKey(a));
                 })[0]?.status;
                 const summaryBadges = primaryStatus
                   ? [
