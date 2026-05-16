@@ -659,6 +659,11 @@ export type Database = {
           age_verified_at: string | null
           all_zones: boolean
           avatar_url: string | null
+          avg_competence: number
+          avg_professionalism: number
+          avg_punctuality: number
+          avg_reliability: number
+          avg_teamwork: number
           badge: Database["public"]["Enums"]["worker_badge"] | null
           birth_date: string | null
           birth_place: string | null
@@ -790,6 +795,11 @@ export type Database = {
           age_verified_at?: string | null
           all_zones?: boolean
           avatar_url?: string | null
+          avg_competence?: number
+          avg_professionalism?: number
+          avg_punctuality?: number
+          avg_reliability?: number
+          avg_teamwork?: number
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
           birth_place?: string | null
@@ -921,6 +931,11 @@ export type Database = {
           age_verified_at?: string | null
           all_zones?: boolean
           avatar_url?: string | null
+          avg_competence?: number
+          avg_professionalism?: number
+          avg_punctuality?: number
+          avg_reliability?: number
+          avg_teamwork?: number
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
           birth_place?: string | null
@@ -1155,14 +1170,20 @@ export type Database = {
           application_id: string | null
           author_id: string
           comment: string | null
+          competence: number | null
           created_at: string
           id: string
           is_visible_to_restaurants: boolean
           is_visible_to_worker: boolean
+          professionalism: number | null
+          punctuality: number | null
           rating: number
+          reliability: number | null
+          seen_by_worker_at: string | null
           shift_id: string | null
           tags: string[]
           target_id: string
+          teamwork: number | null
           updated_at: string
         }
         Insert: {
@@ -1170,14 +1191,20 @@ export type Database = {
           application_id?: string | null
           author_id: string
           comment?: string | null
+          competence?: number | null
           created_at?: string
           id?: string
           is_visible_to_restaurants?: boolean
           is_visible_to_worker?: boolean
+          professionalism?: number | null
+          punctuality?: number | null
           rating: number
+          reliability?: number | null
+          seen_by_worker_at?: string | null
           shift_id?: string | null
           tags?: string[]
           target_id: string
+          teamwork?: number | null
           updated_at?: string
         }
         Update: {
@@ -1185,14 +1212,20 @@ export type Database = {
           application_id?: string | null
           author_id?: string
           comment?: string | null
+          competence?: number | null
           created_at?: string
           id?: string
           is_visible_to_restaurants?: boolean
           is_visible_to_worker?: boolean
+          professionalism?: number | null
+          punctuality?: number | null
           rating?: number
+          reliability?: number | null
+          seen_by_worker_at?: string | null
           shift_id?: string | null
           tags?: string[]
           target_id?: string
+          teamwork?: number | null
           updated_at?: string
         }
         Relationships: []
