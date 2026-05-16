@@ -9,6 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Phone, Shield, Star, Users } from "lucide-react";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { UserAvatar } from "@/components/UserAvatar";
+import {
+  CRITERION_LABEL,
+  REVIEW_CRITERIA,
+  BADGE_LABEL,
+  computeWorkerBadges,
+  type WorkerStats,
+} from "@/lib/reviews";
 
 export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
@@ -41,6 +48,11 @@ type Worker = {
   phone: string | null;
   email: string | null;
   is_motorized: boolean | null;
+  avg_punctuality: number | null;
+  avg_professionalism: number | null;
+  avg_competence: number | null;
+  avg_reliability: number | null;
+  avg_teamwork: number | null;
 };
 
 function initials(name: string | null) {
@@ -59,7 +71,7 @@ function WorkerDetailPage() {
     let cancelled = false;
     (async () => {
       const { data } = await supabase.from("profiles")
-        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,short_bio,age,phone,email,is_motorized")
+        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,short_bio,age,phone,email,is_motorized,avg_punctuality,avg_professionalism,avg_competence,avg_reliability,avg_teamwork")
         .eq("id", id).maybeSingle();
       if (cancelled) return;
       setW((data as any) ?? null);
@@ -80,6 +92,24 @@ function WorkerDetailPage() {
   const cityLine = [w.city, w.neighborhood, w.province].filter(Boolean).join(" · ");
   const roleLine = [w.professional_profile || w.primary_role, ...(w.secondary_roles ?? [])].filter(Boolean).join(" · ");
   const langsJson = normalizeSpokenLanguages(w.spoken_languages);
+
+  const stats: WorkerStats = {
+    rating_avg: Number(w.rating_avg ?? 0),
+    reviews_count: Number(w.reviews_count ?? 0),
+    avg_punctuality: Number(w.avg_punctuality ?? 0),
+    avg_professionalism: Number(w.avg_professionalism ?? 0),
+    avg_competence: Number(w.avg_competence ?? 0),
+    avg_reliability: Number(w.avg_reliability ?? 0),
+    avg_teamwork: Number(w.avg_teamwork ?? 0),
+  };
+  const paramAvgs: Record<string, number> = {
+    punctuality: stats.avg_punctuality,
+    professionalism: stats.avg_professionalism,
+    competence: stats.avg_competence,
+    reliability: stats.avg_reliability,
+    teamwork: stats.avg_teamwork,
+  };
+  const earnedBadges = computeWorkerBadges(stats);
 
   return (
     <AppShell>
@@ -115,6 +145,57 @@ function WorkerDetailPage() {
             <Row label="Tariffa oraria" value={w.hourly_rate != null ? `€${w.hourly_rate}/h` : "—"} />
             <Row label="Automunito" value={w.is_motorized ? "Sì" : "No"} />
             {w.short_bio && <p className="pt-2 border-t text-sm whitespace-pre-wrap">{w.short_bio}</p>}
+          </Card>
+
+          <Card title="Valutazioni">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold">
+                {stats.rating_avg > 0 ? stats.rating_avg.toFixed(1) : "—"}
+              </span>
+              <span className="text-amber-500 text-sm" aria-hidden>
+                {"★".repeat(Math.round(stats.rating_avg))}
+                <span className="text-muted-foreground/40">
+                  {"★".repeat(Math.max(0, 5 - Math.round(stats.rating_avg)))}
+                </span>
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {stats.reviews_count} recension{stats.reviews_count === 1 ? "e" : "i"}
+              </span>
+            </div>
+            {stats.reviews_count > 0 ? (
+              <div className="pt-2 space-y-1.5">
+                {REVIEW_CRITERIA.map((c) => {
+                  const v = paramAvgs[c] || 0;
+                  return (
+                    <div key={c} className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">{CRITERION_LABEL[c]}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-24 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary"
+                            style={{ width: `${Math.max(0, Math.min(100, (v / 5) * 100))}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium w-8 text-right tabular-nums">
+                          {v > 0 ? v.toFixed(1) : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nessuna recensione ancora.</p>
+            )}
+            {earnedBadges.length > 0 && (
+              <div className="pt-3 border-t flex flex-wrap gap-1.5">
+                {earnedBadges.map((b) => (
+                  <Badge key={b} className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 border-emerald-500/30">
+                    <Award className="h-3 w-3 mr-1" />{BADGE_LABEL[b]}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </Card>
 
           <Card title="Lingue parlate">
