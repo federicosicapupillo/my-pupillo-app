@@ -1553,12 +1553,15 @@ function ProposalCard(props: {
               value={`${ann.service_time.slice(0, 5)}${ann.end_time ? " - " + ann.end_time.slice(0, 5) : ""}`}
             />
           )}
-          <ProposalRow icon={Building2} label="Locale" value={venueName?.trim() || "Locale da confermare"} />
+          {canSeePreciseInfo && (
+            <ProposalRow icon={Building2} label="Locale" value={venueName?.trim() || "Locale da confermare"} />
+          )}
           {(() => {
             const luogo = [displayAddress, ann?.job_city]
               .map((v) => (typeof v === "string" ? v.trim() : ""))
               .find((v) => v && v.toLowerCase() !== "undefined" && v.toLowerCase() !== "null");
-            return luogo ? <ProposalRow icon={MapPin} label="Luogo" value={luogo} /> : null;
+            const label = canSeePreciseInfo ? "Luogo" : "Zona";
+            return luogo ? <ProposalRow icon={MapPin} label={label} value={luogo} /> : null;
           })()}
           {(() => {
             if (ann?.tariff_amount == null) return null;
@@ -1566,11 +1569,40 @@ function ProposalCard(props: {
             if (!Number.isFinite(n) || n <= 0) return null;
             return <ProposalRow icon={Euro} label="Compenso" value={formatTariff(ann.tariff_amount, ann.tariff_type ?? null)} />;
           })()}
+          {(() => {
+            const items = labelsOf(ann?.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
+            const notes = (ann?.dress_code_notes ?? "").trim();
+            const value = [items.join(", "), notes].filter(Boolean).join(" — ");
+            return value ? <ProposalRow icon={Shirt} label="Dress code" value={value} /> : null;
+          })()}
+          {(() => {
+            const items = labelsOf(ann?.required_skills ?? [], SKILL_OPTIONS as any);
+            return items.length ? <ProposalRow icon={ListChecks} label="Mansioni" value={items.join(", ")} /> : null;
+          })()}
+          {(() => {
+            const items = labelsOf(ann?.language_requirements ?? [], LANGUAGE_OPTIONS as any);
+            return items.length ? <ProposalRow icon={LanguagesIcon} label="Lingue richieste" value={items.join(", ")} /> : null;
+          })()}
+          {(() => {
+            const lic = labelOf(ann?.license_requirement ?? null, LICENSE_OPTIONS as any);
+            return lic ? <ProposalRow icon={BadgeCheck} label="Requisiti" value={lic} /> : null;
+          })()}
+          {(() => {
+            const directions = (ann?.job_additional_directions ?? "").trim();
+            return directions ? <ProposalRow icon={Info} label="Indicazioni operative" value={directions} /> : null;
+          })()}
           {ann?.notes && ann.notes.trim() && ann.notes.trim().toLowerCase() !== "undefined" && (
             <ProposalRow icon={StickyNote} label="Note" value={ann.notes.trim()} />
           )}
         </dl>
-        <p className="px-4 pb-3 text-xs text-muted-foreground">Fammi sapere se puoi esserci.</p>
+        {!canSeePreciseInfo ? (
+          <div className="mx-4 mb-3 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>La posizione esatta e il referente saranno visibili solo dopo l'assegnazione definitiva.</span>
+          </div>
+        ) : (
+          <p className="px-4 pb-3 text-xs text-muted-foreground">Fammi sapere se puoi esserci.</p>
+        )}
 
         {deadline && !accepted && !rejected && (
           <div className={`mx-4 mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
