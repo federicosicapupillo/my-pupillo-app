@@ -18,6 +18,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
+import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 
 function AnnouncementMapBlock({
   annId, lat, lng, address, open, onToggle,
@@ -127,7 +128,6 @@ function formatRange(a: Ann) {
   return `${startD} ${startT} → ${endD} ${endT}`;
 }
 
-import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 
 type EffectiveStatus = "active" | "soon" | "expired" | "completed" | "assigned" | "draft" | "cancelled";
 
