@@ -298,6 +298,52 @@ function ShiftsPage() {
       </div>
 
       {role === "restaurant" && <RequiredReviewsBanner />}
+      {role === "restaurant" && actionShifts.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <h3 className="font-semibold text-sm">Azioni richieste ({actionShifts.length})</h3>
+          </div>
+          <div className="space-y-2">
+            {actionShifts.map((a: ActionShift) => {
+              const s = shifts.find(x => x.id === a.shift_id);
+              const closeAndReview = async () => {
+                if (s && s.status === "scheduled") {
+                  await updateStatus(s, "completed");
+                }
+                setFilter("to-review");
+                setReviewOpen(a.shift_id);
+                setRating(5);
+                setComment("");
+                setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+                setTimeout(() => {
+                  document.getElementById(`shift-${a.shift_id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 200);
+              };
+              return (
+                <div key={a.shift_id} className="rounded-xl border bg-card p-3 flex items-center gap-3 flex-wrap">
+                  <UserAvatar userId={a.worker_id} name={a.worker_name} className="h-9 w-9 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{a.worker_name ?? "Lavoratore"}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {a.worker_role && <span className="capitalize">{a.worker_role} · </span>}
+                      {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+                      {a.service_time && ` · ${a.service_time.slice(0,5)}`}
+                      {a.end_time && `–${a.end_time.slice(0,5)}`}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className={a.kind === "to_close" ? "bg-amber-500/15 text-amber-700 border-amber-500/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
+                    {a.kind === "to_close" ? "Da chiudere" : "Recensione da inviare"}
+                  </Badge>
+                  <Button size="sm" className="gap-1" onClick={closeAndReview}>
+                    <Star className="h-3.5 w-3.5" /> Chiudi e recensisci
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : (
         <>
