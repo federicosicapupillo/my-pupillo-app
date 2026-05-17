@@ -25,6 +25,7 @@ export function WorkerReputationBadge({
   className?: string;
 }) {
   const s = summarizeReputation(profile);
+  const hasEnoughReviews = s.reviewsCount >= 3;
   return (
     <TooltipProvider delayDuration={150}>
       <Tooltip>
@@ -40,7 +41,7 @@ export function WorkerReputationBadge({
                 {s.score}/100
               </span>
             )}
-            {s.showScore && s.rating > 0 && (
+            {s.showScore && s.rating > 0 && hasEnoughReviews && (
               <span className="inline-flex items-center gap-0.5 text-amber-600">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                 <span className="tabular-nums">{s.rating.toFixed(1)}</span>
@@ -67,10 +68,17 @@ export function WorkerReputationBadge({
               <span className="tabular-nums text-right">{s.completedShifts}</span>
               <span className="text-muted-foreground">Recensioni</span>
               <span className="tabular-nums text-right">{s.reviewsCount}</span>
-              {s.rating > 0 && (
+              {s.rating > 0 && hasEnoughReviews ? (
                 <>
                   <span className="text-muted-foreground">Valutazione media</span>
                   <span className="tabular-nums text-right">{s.rating.toFixed(1)}/5</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-muted-foreground">Valutazione media</span>
+                  <span className="text-right text-muted-foreground">
+                    {s.reviewsCount === 0 ? "non disponibile" : "in costruzione"}
+                  </span>
                 </>
               )}
             </div>
