@@ -641,13 +641,20 @@ function LocationAccessSection({ ann, restaurant, isOwner, canSeeAddress }: { an
       city: restaurant?.city,
       neighborhood: restaurant?.neighborhood,
     });
+    const approxLat = ann.job_latitude ?? ann.location_lat ?? restaurant?.latitude ?? restaurant?.service_area_lat ?? null;
+    const approxLng = ann.job_longitude ?? ann.location_lng ?? restaurant?.longitude ?? restaurant?.service_area_lng ?? null;
     return (
       <div className="rounded-2xl border bg-card p-6 mb-6">
-        <h2 className="text-2xl font-bold text-primary mb-4">Luogo</h2>
+        <h2 className="text-2xl font-bold text-primary mb-4">Zona indicativa del turno</h2>
         <div className="flex items-center gap-2 text-base">
           <MapPin className="h-5 w-5 text-primary" />
           <span className="font-medium">{masked}</span>
         </div>
+        {approxLat != null && approxLng != null && (
+          <div className="mt-4">
+            <ApproximateAreaMap lat={approxLat} lng={approxLng} height={220} radiusM={1200} />
+          </div>
+        )}
         <p className="mt-3 text-sm text-muted-foreground">{PRECISE_ADDRESS_HINT}</p>
       </div>
     );
