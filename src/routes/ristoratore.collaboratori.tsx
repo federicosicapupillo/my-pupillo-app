@@ -224,6 +224,7 @@ function Page() {
         title="Collaboratori già utilizzati"
         subtitle="Ritrova e ricontatta i lavoratori che hanno già svolto un turno con il tuo locale."
       />
+      <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
 
       <div className="flex flex-col sm:flex-row gap-2 mb-5">
         <div className="relative flex-1">
