@@ -450,9 +450,27 @@ function ShiftsPage() {
                     </div>
                   </div>
                   <Badge variant="outline" className={`gap-1 ${meta.color}`}>
-                    <Icon className="h-3 w-3" />{meta.label}
+                    <Icon className="h-3 w-3" />
+                    {filter === "assigned" && s.status === "scheduled" ? (acceptedAppMap[s.announcement_id || ""]?.status === "confirmed" ? "Confermato" : "Assegnato") : meta.label}
                   </Badge>
                 </div>
+                {(() => {
+                  const ann = announcementsMap[s.announcement_id || ""];
+                  return ann ? (
+                    <div className="mt-2 text-sm text-muted-foreground space-y-0.5">
+                      {ann.professional_profile && <div className="capitalize">{ann.professional_profile}</div>}
+                      {ann.service_time && (
+                        <div>{ann.service_time.slice(0,5)}{ann.end_time && `–${ann.end_time.slice(0,5)}`}</div>
+                      )}
+                      {(ann.location_address || ann.job_address) && (
+                        <div className="truncate">{ann.location_address || `${ann.job_address}${ann.job_city ? `, ${ann.job_city}` : ""}`}</div>
+                      )}
+                      {ann.tariff_amount != null && (
+                        <div>€{Number(ann.tariff_amount).toFixed(2)} {ann.tariff_type === "hourly" ? "/ora" : "fisso"}</div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
 
                 {(canRestaurantAct || canWorkerComplete) && (
                   <div className="mt-4 flex flex-wrap gap-2">
