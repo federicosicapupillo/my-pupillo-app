@@ -499,11 +499,22 @@ function WorkersPage() {
     return true;
   });
   const sorted = [...distFiltered].sort((a, b) => {
+    // Ordinamento personale per ristoratore: priorità a chi è già stato
+    // contattato / ha già lavorato con questo ristoratore. I filtri di
+    // ordinamento espliciti (subcategoria di "Tutto") vincono.
     if (category === "all") {
       if (subcategory === "Ultimi attivi") return (new Date(b.last_active_at ?? 0).getTime()) - (new Date(a.last_active_at ?? 0).getTime());
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
       if (subcategory === "Più affidabili") return (b.reliability_pct ?? 0) - (a.reliability_pct ?? 0);
     }
+    const ra = rel[a.id]; const rb = rel[b.id];
+    const ta = tierOf(ra, a.rating_avg); const tb = tierOf(rb, b.rating_avg);
+    if (ta !== tb) return ta - tb;
+    // dentro lo stesso gruppo: ultimo contatto più recente, poi rating, poi in zona
+    const la = ra?.lastContactAt ?? 0; const lb = rb?.lastContactAt ?? 0;
+    if (la !== lb) return lb - la;
+    const ar = a.rating_avg ?? 0; const br = b.rating_avg ?? 0;
+    if (ar !== br) return br - ar;
     return Number(inRange(b)) - Number(inRange(a));
   });
 
