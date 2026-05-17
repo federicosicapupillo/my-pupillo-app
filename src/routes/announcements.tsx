@@ -433,11 +433,14 @@ function AnnouncementsPage() {
                 const eff = computeEffectiveStatus(a, now);
                 const label = eff.kind === "expired" ? "Ripubblica annuncio" : "Riusa come nuovo";
                 return (
-                  <Link to="/ristoratore/annunci/nuovo" search={{ reuse: a.id } as never} className="mt-3 inline-flex">
-                    <Button variant={eff.kind === "expired" ? "default" : "outline"} size="sm" className="gap-2">
-                      <RotateCw className="h-3 w-3" />{label}
-                    </Button>
-                  </Link>
+                  <Button
+                    variant={eff.kind === "expired" ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2 mt-3"
+                    onClick={() => { setRepublishAnn(a); setRepublishOpen(true); }}
+                  >
+                    <RotateCw className="h-3 w-3" />{label}
+                  </Button>
                 );
               })()}
               <div className="mt-3">
