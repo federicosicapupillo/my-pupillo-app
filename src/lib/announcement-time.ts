@@ -72,15 +72,20 @@ export function getShiftEndDate(a: AnnTimeInput): Date | null {
 }
 
 /**
- * `expires_at` (timestamp UTC sul DB) come Date.
- * Fallback: l'inizio del turno se la colonna è vuota o non parsabile.
+ * Scadenza effettiva dell'annuncio: per regola di prodotto coincide SEMPRE con
+ * l'inizio del turno (`service_date` + `service_time` interpretati in Europa/Roma).
+ * La colonna `expires_at` del DB rappresenta solo la deadline tecnica di pubblicazione
+ * (default +7 giorni) e NON è più usata come scadenza visibile all'utente.
  */
 export function getExpiresAtDate(a: AnnTimeInput): Date | null {
-  if (a.expires_at) {
-    const d = new Date(a.expires_at);
-    if (!isNaN(d.getTime())) return d;
-  }
   return getShiftStartDate(a);
+}
+
+/** True quando l'annuncio è scaduto (now >= inizio turno). */
+export function isAnnouncementExpired(a: AnnTimeInput, now: Date = new Date()): boolean {
+  const start = getShiftStartDate(a);
+  if (!start) return false;
+  return now.getTime() >= start.getTime();
 }
 
 /**
