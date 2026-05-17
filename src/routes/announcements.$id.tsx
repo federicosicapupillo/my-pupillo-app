@@ -450,7 +450,7 @@ function AnnouncementDetail() {
                 const tariff = a.proposed_tariff ?? ann.tariff_amount;
                 const isAccepted = a.status === "accepted";
                 const isRejected = ["rejected","not_interested","expired"].includes(a.status);
-                const canAct = (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
+                const canAct = !isAnnInactive && (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
                 return (
                   <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -505,8 +505,14 @@ function AnnouncementDetail() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
-                      <Button size="sm" variant="outline" className="gap-1"
-                        onClick={() => nav({ to: "/messages/$id", params: { id: a.id } })}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        disabled={isAnnInactive}
+                        title={isAnnInactive ? "Annuncio scaduto o completato: messaggistica disabilitata" : undefined}
+                        onClick={() => { if (!isAnnInactive) nav({ to: "/messages/$id", params: { id: a.id } }); }}
+                      >
                         <MessageSquare className="h-3.5 w-3.5" />Messaggia
                       </Button>
                       {canAct && (
