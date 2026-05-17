@@ -163,7 +163,8 @@ function ShiftsPage() {
     if (!user) return;
     if (submittingReview) return;
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
-    const submittedRating = rating;
+    const avg = (criteria.punctuality + criteria.professionalism + criteria.competence + criteria.reliability + criteria.teamwork) / 5;
+    const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
     setSubmittingReview(s.id);
     setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
     const tId = toast.loading("Invio recensione in corso…");
