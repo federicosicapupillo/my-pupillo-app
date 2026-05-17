@@ -535,7 +535,7 @@ function WorkersPage() {
             {anns.map(a => (
               <button
                 key={a.id}
-                onClick={() => { setSelected(a.id); setLastAnnouncementId(user?.id, a.id); setView("map"); }}
+                onClick={() => { setSelected(a.id); setLastAnnouncementId(user?.id, a.id); }}
                 className={`shrink-0 rounded-xl border px-3 py-2 text-left text-sm transition ${selected===a.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card hover:bg-accent"}`}
               >
                 <div className="font-medium">{new Date(a.service_date).toLocaleDateString("it-IT")}</div>
