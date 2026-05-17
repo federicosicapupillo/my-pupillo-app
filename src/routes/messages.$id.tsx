@@ -991,6 +991,7 @@ function Thread() {
                   ann={ann}
                   venueName={other?.name ?? null}
                   displayAddress={displayAddress}
+                  canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
                   status={effectiveStatus}
                   onAccept={async () => {
