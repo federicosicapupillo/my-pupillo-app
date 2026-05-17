@@ -3,15 +3,23 @@ import { AlertTriangle, Clock, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRequiredReviews } from "@/lib/required-reviews";
 
+function formatDeadline(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} ore ${d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
 /**
  * Shown to restaurants. Non-blocking when only pending; visually stronger when overdue.
  * The actual contact-block enforcement happens in `canRestaurantContact()`.
  */
 export function RequiredReviewsBanner() {
-  const { items, overdueCount, pendingCount } = useRequiredReviews();
-  if (items.length === 0) return null;
+  const { actionShifts, overdueShifts, warningShifts, isBlocked, nearestDeadline } = useRequiredReviews();
+  if (actionShifts.length === 0) return null;
 
-  const overdue = overdueCount > 0;
+  const overdue = isBlocked;
+  const overdueCount = overdueShifts.length;
+  const warningCount = warningShifts.length;
 
   return (
     <div
@@ -30,13 +38,13 @@ export function RequiredReviewsBanner() {
         <div className="text-sm">
           <div className="font-semibold">
             {overdue
-              ? `${overdueCount} recensione${overdueCount > 1 ? "i" : ""} scaduta${overdueCount > 1 ? "e" : ""}`
-              : "Recensione da completare"}
+              ? `${overdueCount} recensione${overdueCount > 1 ? "i" : ""} obbligatoria${overdueCount > 1 ? "e" : ""} scaduta${overdueCount > 1 ? "e" : ""}`
+              : `Hai ${warningCount} turn${warningCount > 1 ? "i" : "o"} concluso${warningCount > 1 ? "i" : ""} da recensire`}
           </div>
           <div className="text-muted-foreground">
             {overdue
-              ? "Per contattare nuovi lavoratori devi prima completare le recensioni dei turni conclusi."
-              : `Hai ${pendingCount} turn${pendingCount > 1 ? "i" : "o"} da recensire entro 3 giorni dalla fine del servizio.`}
+              ? "Per continuare a usare l'app devi chiudere i turni completati e lasciare la recensione ai lavoratori."
+              : `Scadenza recensione: ${formatDeadline(nearestDeadline)}.`}
           </div>
         </div>
       </div>

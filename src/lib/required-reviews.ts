@@ -44,7 +44,16 @@ export type ActionShift = {
   location_address: string | null;
   kind: ActionShiftKind;
   end_datetime: string | null;
+  /** Scadenza recensione: end_datetime + 3 giorni (ISO). */
+  review_deadline: string | null;
+  /** True quando la scadenza recensione è passata. */
+  is_overdue: boolean;
+  /** Millisecondi rimanenti fino alla scadenza (negativo se scaduta). */
+  ms_until_deadline: number | null;
 };
+
+/** Finestra di tolleranza prima del blocco: 3 giorni dalla fine turno. */
+export const REVIEW_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
 
 export function useRequiredReviews() {
   const { user, role } = useAuth();
@@ -179,6 +188,10 @@ export function useRequiredReviews() {
         s.announcement_id && appByPair.get(`${s.announcement_id}:${s.worker_id}`)
           ? appByPair.get(`${s.announcement_id}:${s.worker_id}`)!
           : null;
+      const deadlineMs =
+        endDateTime ? endDateTime.getTime() + REVIEW_GRACE_MS : null;
+      const isOverdue = deadlineMs != null && now.getTime() >= deadlineMs;
+      const msUntilDeadline = deadlineMs != null ? deadlineMs - now.getTime() : null;
       action.push({
         shift_id: s.id,
         announcement_id: s.announcement_id,
@@ -193,6 +206,9 @@ export function useRequiredReviews() {
         location_address: ann?.location_address ?? null,
         kind,
         end_datetime: endDateTime ? endDateTime.toISOString() : null,
+        review_deadline: deadlineMs != null ? new Date(deadlineMs).toISOString() : null,
+        is_overdue: isOverdue,
+        ms_until_deadline: msUntilDeadline,
       });
     }
 
@@ -245,18 +261,32 @@ export function useRequiredReviews() {
   const overdueCount = items.filter((i) => i.status === "overdue").length;
   const pendingCount = items.filter((i) => i.status === "pending").length;
 
-  // The new contact-block: ANY past-end shift not yet closed+reviewed blocks contact.
-  const isBlocked = actionShifts.length > 0;
-  const blockedCount = actionShifts.length;
+  // Blocco contatti: scatta SOLO quando almeno un turno ha superato la finestra
+  // di tolleranza di 3 giorni dalla fine effettiva del turno. Durante i 3 giorni
+  // il ristoratore vede un avviso ma può continuare a usare l'app.
+  const overdueShifts = actionShifts.filter((s) => s.is_overdue);
+  const warningShifts = actionShifts.filter((s) => !s.is_overdue);
+  const isBlocked = overdueShifts.length > 0;
+  const blockedCount = overdueShifts.length;
+  const warningCount = warningShifts.length;
+  const nearestDeadline = actionShifts.reduce<string | null>((acc, s) => {
+    if (!s.review_deadline) return acc;
+    if (!acc) return s.review_deadline;
+    return s.review_deadline < acc ? s.review_deadline : acc;
+  }, null);
 
   return {
     items,
     actionShifts,
+    overdueShifts,
+    warningShifts,
     loading,
     overdueCount,
     pendingCount,
     isBlocked,
     blockedCount,
+    warningCount,
+    nearestDeadline,
     refresh,
   };
 }

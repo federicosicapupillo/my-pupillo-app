@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, Calendar, Clock, MapPin, Star, User as UserIcon } from "lucide-react";
+import { AlertTriangle, Calendar, Clock, MapPin, Star, User as UserIcon, Timer } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,14 +12,11 @@ type Props = {
   shifts: ActionShift[];
 };
 
-const KIND_LABEL: Record<ActionShift["kind"], string> = {
-  to_close: "Da chiudere",
-  review_pending: "Recensione da inviare",
-};
-const KIND_CLS: Record<ActionShift["kind"], string> = {
-  to_close: "bg-amber-500/15 text-amber-700 border-amber-500/30",
-  review_pending: "bg-destructive/15 text-destructive border-destructive/30",
-};
+function daysLate(deadlineIso: string | null): number {
+  if (!deadlineIso) return 0;
+  const ms = Date.now() - new Date(deadlineIso).getTime();
+  return Math.max(0, Math.floor(ms / (24 * 60 * 60 * 1000)));
+}
 
 function formatDate(d: string) {
   try {
@@ -47,8 +44,11 @@ function formatTime(start: string | null, end: string | null) {
  */
 export function BlockedContactDialog({ open, onClose, shifts }: Props) {
   const navigate = useNavigate();
-  const count = shifts.length;
-  const firstShiftId = shifts[0]?.shift_id ?? null;
+  const overdue = shifts.filter((s) => s.is_overdue);
+  const hasOverdue = overdue.length > 0;
+  const list = hasOverdue ? overdue : shifts;
+  const count = list.length;
+  const firstShiftId = list[0]?.shift_id ?? null;
 
   const goToReview = () => {
     onClose();
@@ -61,27 +61,35 @@ export function BlockedContactDialog({ open, onClose, shifts }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !hasOverdue) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
-            Recensioni mancanti
+            {hasOverdue ? "Recensione obbligatoria" : "Recensioni da completare"}
           </DialogTitle>
           <DialogDescription>
-            Puoi continuare a chattare con i lavoratori, ma prima di assegnare nuovi turni devi chiudere i turni conclusi e lasciare le recensioni mancanti.
+            {hasOverdue
+              ? "Hai turni conclusi da più di 3 giorni senza recensione. Per continuare a usare l'app devi chiudere i turni completati e lasciare la recensione ai lavoratori."
+              : "Hai turni conclusi da chiudere e recensire. Hai 3 giorni di tempo dalla fine di ciascun turno."}
           </DialogDescription>
         </DialogHeader>
 
         {count > 0 && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
-            Hai {count} turn{count > 1 ? "i" : "o"} da chiudere prima di poter assegnare nuovi lavoratori.
+          <div className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+            hasOverdue
+              ? "border-destructive/30 bg-destructive/10 text-destructive"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-700"
+          }`}>
+            Hai {count} turn{count > 1 ? "i" : "o"} {hasOverdue ? "scaduti da recensire" : "da recensire"}.
           </div>
         )}
 
         <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-          {shifts.map((s) => (
-            <div key={s.shift_id} className="rounded-xl border bg-card p-3 flex gap-3">
+          {list.map((s) => {
+            const late = daysLate(s.review_deadline);
+            return (
+            <div key={s.shift_id} className={`rounded-xl border p-3 flex gap-3 ${s.is_overdue ? "border-destructive/40 bg-destructive/5" : "bg-card"}`}>
               <UserAvatar userId={s.worker_id} name={s.worker_name} className="h-10 w-10 shrink-0" />
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -89,8 +97,8 @@ export function BlockedContactDialog({ open, onClose, shifts }: Props) {
                     <UserIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     {s.worker_name ?? "Lavoratore"}
                   </div>
-                  <Badge variant="outline" className={`text-xs ${KIND_CLS[s.kind]}`}>
-                    {KIND_LABEL[s.kind]}
+                  <Badge variant="outline" className={`text-xs ${s.is_overdue ? "bg-destructive/15 text-destructive border-destructive/30" : "bg-amber-500/15 text-amber-700 border-amber-500/30"}`}>
+                    {s.is_overdue ? "Recensione mancante" : "Da recensire"}
                   </Badge>
                 </div>
                 {s.worker_role && (
@@ -109,18 +117,31 @@ export function BlockedContactDialog({ open, onClose, shifts }: Props) {
                     </span>
                   </div>
                 )}
+                {s.is_overdue && late > 0 && (
+                  <div className="text-xs font-medium text-destructive flex items-center gap-1">
+                    <Timer className="h-3 w-3" /> In ritardo di {late} giorn{late === 1 ? "o" : "i"}
+                  </div>
+                )}
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={onClose} className="sm:flex-1">
-            Continua a chattare
-          </Button>
+          {!hasOverdue && (
+            <Button variant="outline" onClick={onClose} className="sm:flex-1">
+              Continua a chattare
+            </Button>
+          )}
+          {hasOverdue && (
+            <Button variant="outline" onClick={() => { onClose(); navigate({ to: "/shifts" }); }} className="sm:flex-1">
+              Vai ai miei turni
+            </Button>
+          )}
           <Button onClick={goToReview} className="gap-1.5 sm:flex-1">
             <Star className="h-4 w-4" />
-            Chiudi turno e lascia recensione
+            {hasOverdue ? "Recensisci ora" : "Chiudi turno e lascia recensione"}
           </Button>
         </DialogFooter>
       </DialogContent>
