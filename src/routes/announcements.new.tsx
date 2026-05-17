@@ -271,6 +271,7 @@ function NewAnn() {
       job_contact_person_name: f.job_contact_person_name || null,
       job_contact_person_phone: f.job_contact_person_phone || null,
       job_contact_person_email: f.job_contact_person_email || null,
+      reused_from_announcement_id: reuse || null,
     } as any);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
