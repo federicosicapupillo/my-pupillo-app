@@ -108,6 +108,44 @@ const PLACEHOLDER_BY_CATEGORY: Record<Category, string> = {
 };
 type Ann = { id: string; service_date: string; service_time: string | null; location_address: string; location_lat: number | null; location_lng: number | null };
 
+type WorkerRel = {
+  workedWith: boolean;
+  reviewed: boolean;
+  contacted: boolean;
+  hasPending: boolean;
+  hasAccepted: boolean;
+  hasRejected: boolean;
+  hasOpenChat: boolean;
+  lastContactAt: number;
+  lastReviewAt: number;
+  latestResponseAt: number;
+  latestResponseStatus: "accepted" | "rejected" | null;
+};
+const emptyRel = (): WorkerRel => ({
+  workedWith: false,
+  reviewed: false,
+  contacted: false,
+  hasPending: false,
+  hasAccepted: false,
+  hasRejected: false,
+  hasOpenChat: false,
+  lastContactAt: 0,
+  lastReviewAt: 0,
+  latestResponseAt: 0,
+  latestResponseStatus: null,
+});
+
+type Tier = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+function tierOf(r: WorkerRel | undefined, rating: number | null | undefined): Tier {
+  if (!r) return (rating ?? 0) >= 4 ? 5 : 6;
+  if (r.workedWith && r.reviewed) return 0;
+  if (r.workedWith) return 1;
+  if (r.contacted && r.hasPending) return 2;
+  if (r.contacted && r.hasOpenChat) return 3;
+  if (r.contacted) return 4;
+  return (rating ?? 0) >= 4 ? 5 : 6;
+}
+
 function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371000;
   const toRad = (d: number) => (d * Math.PI) / 180;
