@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
+import { useRequiredReviews } from "@/lib/required-reviews";
+import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -47,6 +49,8 @@ function Page() {
   const [inviteFor, setInviteFor] = useState<Row | null>(null);
   const [openAnns, setOpenAnns] = useState<AnnLite[]>([]);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const { isBlocked, actionShifts } = useRequiredReviews();
+  const [blockOpen, setBlockOpen] = useState(false);
 
   const load = async () => {
     if (!user) return;
@@ -139,6 +143,7 @@ function Page() {
   };
 
   const recontact = async (r: Row) => {
+    if (isBlocked) { setBlockOpen(true); return; }
     if (r.last_application_id) {
       navigate({ to: "/messages/$id", params: { id: r.last_application_id } });
       return;
@@ -150,6 +155,7 @@ function Page() {
 
   const openInvite = async (r: Row) => {
     if (!user) return;
+    if (isBlocked) { setBlockOpen(true); return; }
     const { data } = await supabase.from("announcements")
       .select("id, service_date, service_time, location_address, status")
       .eq("restaurant_id", user.id)
