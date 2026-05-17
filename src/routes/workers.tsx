@@ -614,11 +614,11 @@ function WorkersPage() {
               size="sm"
               className="mt-4 w-full gap-1"
               onClick={() => invite(w.id)}
-              disabled={!selected || isBlocked}
-              title={isBlocked ? "Bloccato: completa le recensioni scadute" : (!selected ? "Seleziona prima un annuncio" : undefined)}
+              disabled={!selected}
+              title={isBlocked ? "Completa i turni precedenti prima di contattare nuovi lavoratori" : (!selected ? "Seleziona prima un annuncio" : undefined)}
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              {isBlocked ? `Bloccato (${overdueCount} recension${overdueCount > 1 ? "i" : "e"} scadut${overdueCount > 1 ? "e" : "a"})` : (
+              {isBlocked ? `Bloccato (${blockedCount} turn${blockedCount > 1 ? "i" : "o"} da completare)` : (
                 <>{selected ? "Messaggia" : "Seleziona prima un annuncio"}</>
               )}
             </Button>
