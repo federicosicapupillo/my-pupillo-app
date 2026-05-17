@@ -604,6 +604,33 @@ function NewAnn() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AlertDialog open={conflictOpen} onOpenChange={setConflictOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-destructive" />Possibile conflitto di orari</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                <p>Hai già {conflicts.length === 1 ? "un annuncio" : `${conflicts.length} annunci`} nello stesso giorno con orari che si sovrappongono a quelli precompilati ({f.service_time} · {f.duration_hours}h).</p>
+                <ul className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1.5">
+                  {conflicts.map((c) => (
+                    <li key={c.id} className="flex justify-between gap-3">
+                      <span className="truncate">{c.label}</span>
+                      <strong className="whitespace-nowrap">{c.start}–{c.end}</strong>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-muted-foreground text-xs">Verifica gli orari prima di procedere per evitare doppie prenotazioni dello stesso lavoratore.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Modifica orari</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConflictOpen(false); setConfirmOpen(true); }}>
+              Continua comunque
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
