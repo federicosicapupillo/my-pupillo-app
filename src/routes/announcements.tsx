@@ -554,8 +554,16 @@ function AnnouncementsPage() {
             );
           })()}
         </div>
+        {(() => {
+        const canSeePrecise = role === "restaurant" || (!!user && a.assigned_worker_id === user.id);
+        const zoneLabel = publicLocationLabel({ job_city: a.job_city });
+        return (
+        <>
         <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {canSeePrecise ? a.location_address : zoneLabel}
+          </div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
           <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {a.service_time?.slice(0,5) ?? "—"}</div>
           {role === "restaurant" && (
@@ -563,15 +571,50 @@ function AnnouncementsPage() {
           )}
         </div>
         <div className="mt-3">
-          <AnnouncementMapBlock
-            annId={a.id}
-            lat={a.location_lat}
-            lng={a.location_lng}
-            address={a.location_address}
-            open={!!openMaps[a.id]}
-            onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
-          />
+          {canSeePrecise ? (
+            <AnnouncementMapBlock
+              annId={a.id}
+              lat={a.location_lat}
+              lng={a.location_lng}
+              address={a.location_address}
+              open={!!openMaps[a.id]}
+              onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+            />
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Zona indicativa del turno</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+                  aria-expanded={!!openMaps[a.id]}
+                >
+                  {openMaps[a.id]
+                    ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>)
+                    : (<><MapPin className="h-3.5 w-3.5" />Vedi zona</>)}
+                </Button>
+              </div>
+              {openMaps[a.id] && (
+                <>
+                  {a.location_lat != null && a.location_lng != null ? (
+                    <ApproximateAreaMap lat={a.location_lat} lng={a.location_lng} height={200} radiusM={1200} />
+                  ) : (
+                    <div className="h-[120px] rounded-2xl border bg-muted/40 flex items-center justify-center text-xs text-muted-foreground px-3 text-center">
+                      Zona non disponibile sulla mappa.
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground italic">{PRECISE_ADDRESS_HINT}</p>
+                </>
+              )}
+            </div>
+          )}
         </div>
+        </>
+        );
+        })()}
         {role === "restaurant" && (
           <Button
             variant="outline"
