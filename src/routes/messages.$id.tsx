@@ -18,6 +18,11 @@ import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatTariff } from "@/lib/format";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
+import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock } from "lucide-react";
+import {
+  labelOf, labelsOf,
+  LICENSE_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
+} from "@/lib/announcement-requirements";
 import {
   AlertDialog,
   AlertDialogAction,
