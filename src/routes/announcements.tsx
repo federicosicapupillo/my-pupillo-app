@@ -323,8 +323,14 @@ function AnnouncementsPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {visible.map((a) => (
-            <div key={a.id} className="rounded-2xl border bg-card p-5">
+          {visible.map((a) => {
+            const effOuter = computeEffectiveStatus(a, now);
+            const isExpired = effOuter.kind === "expired" || effOuter.kind === "cancelled";
+            return (
+            <div
+              key={a.id}
+              className={`rounded-2xl border bg-card p-5 ${isExpired ? "opacity-70 border-red-200" : ""}`}
+            >
               {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (
                 <div className={`mb-3 rounded-xl border p-3 ${a.status === "completed" ? "bg-blue-50 border-blue-200" : "bg-green-50 border-green-200"}`}>
                   <div className="flex items-center gap-2 text-sm font-semibold">
@@ -506,7 +512,8 @@ function AnnouncementsPage() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </AppShell>
