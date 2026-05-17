@@ -164,6 +164,22 @@ function ShiftsPage() {
     setSubmittingReview(s.id);
     setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
     const tId = toast.loading("Invio recensione in corso…");
+    const logActivity = (action: "review_submit_success" | "review_submit_failed", metadata: Record<string, unknown>) => {
+      // Fire-and-forget; never block the UX on logging
+      supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action,
+        entity_type: "shift",
+        entity_id: s.id,
+        metadata: {
+          shift_id: s.id,
+          target_id: targetId,
+          role,
+          rating: submittedRating,
+          ...metadata,
+        },
+      } as never).then(() => {}, () => {});
+    };
     try {
       const { error } = await supabase.from("reviews").insert({
         author_id: user.id, target_id: targetId, shift_id: s.id, rating: submittedRating, comment: comment.trim() || null,
@@ -172,9 +188,11 @@ function ShiftsPage() {
         const msg = error.message || "Errore sconosciuto";
         toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
         setReviewError(prev => ({ ...prev, [s.id]: msg }));
+        logActivity("review_submit_failed", { reason: "db_error", error_message: msg, error_code: (error as any)?.code ?? null });
         return;
       }
       toast.success("Recensione inviata", { id: tId });
+      logActivity("review_submit_success", { has_comment: comment.trim().length > 0 });
       // Clear any prior error banner now that submission succeeded
       setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
       // Optimistic, immediate card update — no page reload needed
@@ -192,6 +210,7 @@ function ShiftsPage() {
       const msg = e?.message ?? "Errore di rete";
       toast.error(`Errore di rete: ${msg}`, { id: tId });
       setReviewError(prev => ({ ...prev, [s.id]: msg }));
+      logActivity("review_submit_failed", { reason: "network_error", error_message: msg });
     } finally {
       setSubmittingReview(null);
     }
