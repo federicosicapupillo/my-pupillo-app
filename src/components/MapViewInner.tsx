@@ -29,6 +29,25 @@ export type MapPoint = {
     contactPhone?: string | null;
     contactEmail?: string | null;
     coordSource?: "job" | "location" | "profile" | "service_area";
+    // worker-view announcement popup
+    workerView?: boolean;
+    confirmed?: boolean;
+    cancelled?: boolean;
+    venueType?: string | null;
+    zoneLabel?: string | null;
+    role?: string | null;
+    serviceDate?: string | null;
+    serviceTime?: string | null;
+    durationHours?: number | null;
+    tariffAmount?: number | null;
+    tariffType?: string | null;
+    generalDescription?: string | null;
+    requirements?: string[];
+    servicesAtVenue?: number;
+    announcementId?: string;
+    operationalNotes?: string | null;
+    fullAddress?: string | null;
+    restaurantName?: string | null;
   };
 };
 
@@ -104,7 +123,10 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
         )}
         {points.map((p) => (
           <Marker key={`${p.category}-${p.id}`} position={[p.lat, p.lng]} icon={makeIcon(p.category)}>
-            <Popup>
+            <Popup maxWidth={320} minWidth={260}>
+              {p.category === "announcement" && p.meta?.workerView ? (
+                <WorkerAnnouncementPopup p={p} />
+              ) : (
               <div style={{ minWidth: 180 }}>
                 <div style={{ fontWeight: 600, marginBottom: 2 }}>{p.title}</div>
                 {p.subtitle && <div style={{ fontSize: 12, color: "#555" }}>{p.subtitle}</div>}
@@ -150,10 +172,132 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
                   </a>
                 )}
               </div>
+              )}
             </Popup>
           </Marker>
         ))}
       </MapContainer>
+    </div>
+  );
+}
+
+function fmtDate(s?: string | null) {
+  if (!s) return null;
+  try { return new Date(s).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long" }); }
+  catch { return s; }
+}
+function fmtTime(s?: string | null, durationH?: number | null) {
+  if (!s) return null;
+  const hhmm = s.slice(0, 5);
+  if (!durationH) return hhmm;
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = h * 60 + m + Math.round(durationH * 60);
+  const eh = String(Math.floor(total / 60) % 24).padStart(2, "0");
+  const em = String(total % 60).padStart(2, "0");
+  return `${hhmm} - ${eh}:${em}`;
+}
+function fmtTariff(amount?: number | null, type?: string | null, hours?: number | null) {
+  if (amount == null) return null;
+  if (type === "hourly") {
+    const tot = hours ? ` (tot. circa €${(Number(amount) * Number(hours)).toFixed(0)})` : "";
+    return `€${Number(amount).toFixed(0)}/h${tot}`;
+  }
+  return `€${Number(amount).toFixed(0)}`;
+}
+
+function WorkerAnnouncementPopup({ p }: { p: MapPoint }) {
+  const m = p.meta || {};
+  const accent = COLORS.announcement;
+  const cancelled = m.cancelled;
+  const confirmed = m.confirmed;
+  const detailsHref = `/announcements/${m.announcementId || p.id}`;
+
+  // Stato 5: annullato → minimo
+  if (cancelled) {
+    return (
+      <div style={{ minWidth: 240 }}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>Servizio annullato</div>
+        <div style={{ fontSize: 12, color: "#555" }}>
+          {m.venueType || "Locale"}{m.zoneLabel ? ` · zona ${m.zoneLabel}` : ""}
+        </div>
+        {m.role && <div style={{ fontSize: 12, color: "#555", marginTop: 2 }}>{m.role}</div>}
+      </div>
+    );
+  }
+
+  // Stato 4: confermato da entrambi → dati completi
+  if (confirmed) {
+    return (
+      <div style={{ minWidth: 260 }}>
+        <div style={{ display: "inline-block", fontSize: 10, fontWeight: 600, color: "#065f46", background: "#d1fae5", padding: "2px 6px", borderRadius: 999, marginBottom: 6 }}>
+          ✓ Servizio confermato
+        </div>
+        <div style={{ fontWeight: 600, marginBottom: 2 }}>{m.restaurantName || p.title}</div>
+        {m.role && <div style={{ fontSize: 12, color: "#555" }}>{m.role}</div>}
+        <div style={{ fontSize: 12, color: "#333", marginTop: 6, lineHeight: 1.5 }}>
+          {m.fullAddress && <div>📍 {m.fullAddress}</div>}
+          {fmtDate(m.serviceDate) && <div>📅 {fmtDate(m.serviceDate)}</div>}
+          {fmtTime(m.serviceTime, m.durationHours) && <div>🕒 {fmtTime(m.serviceTime, m.durationHours)}{m.durationHours ? ` · ${m.durationHours}h` : ""}</div>}
+          {fmtTariff(m.tariffAmount, m.tariffType, m.durationHours) && <div>💶 {fmtTariff(m.tariffAmount, m.tariffType, m.durationHours)}</div>}
+          {m.contactName && <div style={{ marginTop: 4 }}><strong>Referente:</strong> {m.contactName}{m.contactRole ? ` (${m.contactRole})` : ""}</div>}
+          {m.contactPhone && <div>📞 <a href={`tel:${m.contactPhone}`} style={{ color: accent }}>{m.contactPhone}</a></div>}
+          {m.contactEmail && <div>✉️ <a href={`mailto:${m.contactEmail}`} style={{ color: accent }}>{m.contactEmail}</a></div>}
+          {m.operationalNotes && (
+            <div style={{ marginTop: 6, padding: 6, background: "#f5f5f5", borderRadius: 4, fontSize: 11 }}>
+              <strong>Note operative:</strong> {m.operationalNotes}
+            </div>
+          )}
+          {m.requirements && m.requirements.length > 0 && (
+            <div style={{ marginTop: 4 }}><strong>Requisiti:</strong> {m.requirements.join(" · ")}</div>
+          )}
+        </div>
+        <a href={detailsHref} style={{ display: "inline-block", marginTop: 8, color: accent, fontSize: 12, fontWeight: 600 }}>
+          Apri dettagli →
+        </a>
+      </div>
+    );
+  }
+
+  // Stati 1-3: prima della conferma reciproca → solo dati autorizzati
+  return (
+    <div style={{ minWidth: 260 }}>
+      <div style={{ fontWeight: 600, marginBottom: 2 }}>
+        {m.venueType || "Locale"}{m.zoneLabel ? ` — zona ${m.zoneLabel}` : ""}
+      </div>
+      {m.role && <div style={{ fontSize: 13, color: "#333", marginTop: 2 }}>Cerca {m.role}</div>}
+      <div style={{ fontSize: 12, color: "#444", marginTop: 6, lineHeight: 1.5 }}>
+        {fmtDate(m.serviceDate) && <div>📅 {fmtDate(m.serviceDate)}</div>}
+        {fmtTime(m.serviceTime, m.durationHours) && <div>🕒 {fmtTime(m.serviceTime, m.durationHours)}</div>}
+        {m.durationHours && <div>⏱ Durata stimata: {m.durationHours}h</div>}
+        {fmtTariff(m.tariffAmount, m.tariffType, m.durationHours) && (
+          <div>💶 Compenso previsto: {fmtTariff(m.tariffAmount, m.tariffType, m.durationHours)}</div>
+        )}
+        {m.distanceKm != null && (
+          <div>📍 Distanza indicativa: {m.distanceKm < 1 ? `${Math.round(m.distanceKm * 1000)} m` : `circa ${m.distanceKm.toFixed(1)} km`}</div>
+        )}
+        {m.servicesAtVenue != null && m.servicesAtVenue > 1 && (
+          <div>📋 {m.servicesAtVenue} servizi disponibili in questo locale</div>
+        )}
+        {m.generalDescription && (
+          <div style={{ marginTop: 4 }}>
+            <em>{m.generalDescription.length > 140 ? `${m.generalDescription.slice(0, 140)}…` : m.generalDescription}</em>
+          </div>
+        )}
+        {m.requirements && m.requirements.length > 0 && (
+          <div style={{ marginTop: 4 }}><strong>Requisiti:</strong> {m.requirements.join(" · ")}</div>
+        )}
+      </div>
+      <div style={{ marginTop: 8, padding: 6, background: "#fff7e6", border: "1px solid #fde68a", borderRadius: 4, fontSize: 11, color: "#92400e", lineHeight: 1.4 }}>
+        🔒 Per proteggere entrambe le parti, i dati completi del locale saranno visibili solo dopo la conferma reciproca del servizio.
+      </div>
+      <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+        <a href={detailsHref} style={{ flex: 1, textAlign: "center", padding: "6px 10px", border: `1px solid ${accent}`, color: accent, borderRadius: 6, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+          Apri dettagli
+        </a>
+        <a href={`${detailsHref}?apply=1`} style={{ flex: 1, textAlign: "center", padding: "6px 10px", background: accent, color: "#07060B", borderRadius: 6, fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
+          Candidati
+        </a>
+      </div>
     </div>
   );
 }
