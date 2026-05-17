@@ -472,7 +472,7 @@ function ShiftsPage() {
                   ) : null;
                 })()}
 
-                {(canRestaurantAct || canWorkerComplete) && (
+                {(canRestaurantAct || canWorkerComplete || acceptedAppMap[s.announcement_id || ""]) && (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {canWorkerComplete && (
                       <Button size="sm" onClick={() => updateStatus(s, "completed")} className="gap-1">
@@ -491,6 +491,13 @@ function ShiftsPage() {
                           <XCircle className="h-4 w-4" /> Annulla
                         </Button>
                       </>
+                    )}
+                    {acceptedAppMap[s.announcement_id || ""] && (
+                      <Button asChild size="sm" className="gap-1">
+                        <Link to="/messages/$id" params={{ id: acceptedAppMap[s.announcement_id || ""].id }}>
+                          <MessageSquare className="h-4 w-4" /> Apri chat
+                        </Link>
+                      </Button>
                     )}
                   </div>
                 )}
