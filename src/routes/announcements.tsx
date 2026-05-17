@@ -744,6 +744,21 @@ function AnnouncementDetailsDialog({
       license_requirement: form.license_requirement,
       notes: form.notes || null,
     };
+    // Detect operational changes that require notifying accepted workers
+    const arrEq = (a: any[] = [], b: any[] = []) =>
+      a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
+    const timeChanged =
+      (payload.service_time ?? "") !== (ann.service_time ?? "") ||
+      (payload.end_time ?? "") !== (ann.end_time ?? "");
+    const placeChanged = (payload.location_address ?? "") !== (ann.location_address ?? "");
+    const dressChanged =
+      !arrEq(payload.dress_code_items ?? [], ann.dress_code_items ?? []) ||
+      (payload.dress_code_notes ?? "") !== (ann.dress_code_notes ?? "");
+    const skillsChanged = !arrEq(payload.required_skills ?? [], ann.required_skills ?? []);
+    const notesChanged = (payload.notes ?? "") !== ((ann as any).notes ?? "");
+    const shouldNotifyWorkers =
+      timeChanged || placeChanged || dressChanged || skillsChanged || notesChanged;
+
     const { data, error } = await supabase
       .from("announcements")
       .update(payload)
@@ -756,6 +771,41 @@ function AnnouncementDetailsDialog({
     setEditing(false);
     setConfirmOpen(false);
     if (data) onUpdated(data as Ann);
+
+    // Fire-and-forget notification to accepted workers
+    if (shouldNotifyWorkers) {
+      void (async () => {
+        try {
+          const { data: apps } = await supabase
+            .from("applications")
+            .select("worker_id")
+            .eq("announcement_id", ann.id)
+            .eq("status", "accepted");
+          const workerIds = Array.from(new Set((apps ?? []).map((a: any) => a.worker_id).filter(Boolean)));
+          if (workerIds.length === 0) return;
+          const changed: string[] = [];
+          if (timeChanged) changed.push("orario");
+          if (placeChanged) changed.push("luogo");
+          if (dressChanged) changed.push("dress code");
+          if (skillsChanged) changed.push("mansioni");
+          if (notesChanged) changed.push("note operative");
+          const rows = workerIds.map((uid) => ({
+            user_id: uid,
+            title: "Dettagli turno aggiornati",
+            body: "Il ristoratore ha aggiornato alcuni dettagli del turno. Controlla il riepilogo aggiornato.",
+            link: `/shifts`,
+            metadata: {
+              kind: "announcement_updated",
+              announcement_id: ann.id,
+              changed_fields: changed,
+            },
+          }));
+          await supabase.from("notifications").insert(rows);
+        } catch (_) {
+          // silent
+        }
+      })();
+    }
   };
 
   const trySave = () => {
