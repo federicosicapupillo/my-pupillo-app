@@ -688,22 +688,20 @@ function AnnouncementDetailsDialog({
   onUpdated: (a: Ann) => void;
   onDuplicate: (a: Ann) => void;
 }) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [recreateOpen, setRecreateOpen] = useState(false);
+  const [recreating, setRecreating] = useState(false);
   const [form, setForm] = useState<any>(null);
 
   useEffect(() => {
     if (!ann) return;
     setEditing(false);
     setConfirmOpen(false);
+    setRecreateOpen(false);
     setForm({
-      professional_profile: ann.professional_profile ?? "",
-      service_time: ann.service_time?.slice(0, 5) ?? "",
-      end_time: ann.end_time?.slice(0, 5) ?? "",
-      location_address: ann.location_address ?? "",
-      tariff_amount: String(ann.tariff_amount ?? ""),
-      tariff_type: ann.tariff_type ?? "hourly",
       required_skills: [...(ann.required_skills ?? [])],
       dress_code_items: [...(ann.dress_code_items ?? [])],
       dress_code_notes: ann.dress_code_notes ?? "",
@@ -730,13 +728,6 @@ function AnnouncementDetailsDialog({
   const doSave = async () => {
     setSaving(true);
     const payload: any = {
-      professional_profile: form.professional_profile || null,
-      service_time: form.service_time || ann.service_time,
-      end_time: form.end_time || null,
-      location_address: form.location_address,
-      job_address: form.location_address,
-      tariff_amount: parseFloat(form.tariff_amount) || ann.tariff_amount,
-      tariff_type: form.tariff_type,
       required_skills: form.required_skills,
       dress_code_items: form.dress_code_items,
       dress_code_notes: form.dress_code_notes || null,
@@ -747,17 +738,12 @@ function AnnouncementDetailsDialog({
     // Detect operational changes that require notifying accepted workers
     const arrEq = (a: any[] = [], b: any[] = []) =>
       a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
-    const timeChanged =
-      (payload.service_time ?? "") !== (ann.service_time ?? "") ||
-      (payload.end_time ?? "") !== (ann.end_time ?? "");
-    const placeChanged = (payload.location_address ?? "") !== (ann.location_address ?? "");
     const dressChanged =
       !arrEq(payload.dress_code_items ?? [], ann.dress_code_items ?? []) ||
       (payload.dress_code_notes ?? "") !== (ann.dress_code_notes ?? "");
     const skillsChanged = !arrEq(payload.required_skills ?? [], ann.required_skills ?? []);
     const notesChanged = (payload.notes ?? "") !== ((ann as any).notes ?? "");
-    const shouldNotifyWorkers =
-      timeChanged || placeChanged || dressChanged || skillsChanged || notesChanged;
+    const shouldNotifyWorkers = dressChanged || skillsChanged || notesChanged;
 
     const { data, error } = await supabase
       .from("announcements")
@@ -784,8 +770,6 @@ function AnnouncementDetailsDialog({
           const workerIds = Array.from(new Set((apps ?? []).map((a: any) => a.worker_id).filter(Boolean)));
           if (workerIds.length === 0) return;
           const changed: string[] = [];
-          if (timeChanged) changed.push("orario");
-          if (placeChanged) changed.push("luogo");
           if (dressChanged) changed.push("dress code");
           if (skillsChanged) changed.push("mansioni");
           if (notesChanged) changed.push("note operative");
