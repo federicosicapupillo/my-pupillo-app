@@ -68,11 +68,17 @@ export function WorkerReputationCard({ workerId, profile, showTips = false, clas
         <div className="flex items-end gap-3">
           <div className={`text-4xl font-bold tabular-nums ${scoreColorClass(s.score)}`}>{s.score}</div>
           <div className="text-sm text-muted-foreground mb-1">/100</div>
-          {s.rating > 0 && (
+          {s.rating > 0 && s.reviewsCount >= 3 ? (
             <div className="ml-auto inline-flex items-center gap-1 text-sm">
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
               <span className="font-semibold">{s.rating.toFixed(1)}</span>
               <span className="text-muted-foreground">/5 · {s.reviewsCount} rec.</span>
+            </div>
+          ) : (
+            <div className="ml-auto text-xs text-muted-foreground">
+              {s.reviewsCount === 0
+                ? "Valutazione non ancora disponibile"
+                : `Valutazione in costruzione (${s.reviewsCount} rec.)`}
             </div>
           )}
         </div>
