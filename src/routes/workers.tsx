@@ -847,3 +847,65 @@ function WorkersPage() {
     </AppShell>
   );
 }
+
+function initialsOf(name: string | null | undefined): string {
+  if (!name) return "";
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function WorkersMapSection({
+  workers,
+  fallbackCenter,
+  onInvite,
+  inviteDisabled,
+  inviteLabel,
+}: {
+  workers: W[];
+  fallbackCenter: [number, number];
+  onInvite: (workerId: string) => void;
+  inviteDisabled: boolean;
+  inviteLabel: string;
+}) {
+  const located = workers.filter(
+    (w) => w.service_area_lat != null && w.service_area_lng != null,
+  );
+  const ids = located.map((w) => w.id);
+  const avatars = useAvatarUrls(ids);
+  const points: WorkerMapPoint[] = located.map((w) => ({
+    id: w.id,
+    lat: w.service_area_lat as number,
+    lng: w.service_area_lng as number,
+    name: w.full_name,
+    role: w.primary_role,
+    city: w.city ?? w.neighborhood ?? null,
+    rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
+    badge: w.badge,
+    avatarUrl: avatars[w.id] ?? null,
+    initials: initialsOf(w.full_name),
+    link: `/workers_/${w.id}`,
+  }));
+  const center: [number, number] =
+    points.length > 0 ? [points[0].lat, points[0].lng] : fallbackCenter;
+  return (
+    <div className="rounded-2xl border bg-card p-2">
+      <WorkersMap
+        points={points}
+        center={center}
+        height={480}
+        onInvite={onInvite}
+        inviteDisabled={inviteDisabled}
+        inviteLabel={inviteLabel}
+      />
+      <div className="p-3 text-xs text-muted-foreground">
+        {points.length === 0
+          ? "Nessun lavoratore con posizione disponibile per la mappa."
+          : `${points.length} lavorator${points.length === 1 ? "e" : "i"} sulla mappa. La zona è approssimativa: non vengono mostrati indirizzi privati.`}
+      </div>
+    </div>
+  );
+}
