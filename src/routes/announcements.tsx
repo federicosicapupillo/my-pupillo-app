@@ -1193,12 +1193,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
-      <div className="space-y-2">{children}</div>
-    </section>
-  );
-}
