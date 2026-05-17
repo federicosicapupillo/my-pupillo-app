@@ -991,12 +991,45 @@ function AnnouncementDetailsDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" />Conferma modifiche</DialogTitle>
               <DialogDescription>
-                Attenzione: questo annuncio ha già lavoratori candidati o confermati. Le modifiche verranno applicate al riepilogo del turno, ma la data non può essere cambiata.
+                Attenzione: questo annuncio ha già lavoratori candidati o confermati. Verranno aggiornati solo dress code, mansioni, lingue, requisiti e note operative. I dati principali (data, orario, ruolo, locale, indirizzo, compenso) non possono essere modificati.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={saving}>Annulla</Button>
               <Button onClick={doSave} disabled={saving}>{saving ? "Salvataggio…" : "Conferma e salva"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={recreateOpen} onOpenChange={setRecreateOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" />Annulla e ricrea annuncio</DialogTitle>
+              <DialogDescription>
+                Se modifichi data, orario, ruolo, locale, indirizzo o compenso, devi creare un nuovo annuncio. L'annuncio attuale verrà annullato e le candidature collegate resteranno nello storico. Vuoi continuare?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setRecreateOpen(false)} disabled={recreating}>Annulla</Button>
+              <Button
+                variant="destructive"
+                disabled={recreating}
+                onClick={async () => {
+                  setRecreating(true);
+                  const { error } = await supabase
+                    .from("announcements")
+                    .update({ status: "cancelled" })
+                    .eq("id", ann.id);
+                  setRecreating(false);
+                  if (error) { toast.error(error.message); return; }
+                  toast.success("Annuncio annullato. Compila i dati del nuovo annuncio.");
+                  setRecreateOpen(false);
+                  onOpenChange(false);
+                  navigate({ to: "/ristoratore/annunci/nuovo", search: { reuse: ann.id } as never });
+                }}
+              >
+                {recreating ? "Annullamento…" : "Conferma e crea nuovo annuncio"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
