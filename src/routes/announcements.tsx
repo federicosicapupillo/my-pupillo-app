@@ -430,7 +430,6 @@ function AnnouncementsPage() {
         key={a.id}
         className={`rounded-2xl border bg-card p-5 ${isExpired ? "opacity-70 border-red-200" : ""}`}
       >
-        {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (
         {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (() => {
           const info = assigned[a.id];
           const start = getShiftStartDate(a);
