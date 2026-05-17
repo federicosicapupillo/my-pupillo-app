@@ -118,6 +118,13 @@ function NewAnn() {
       if (!data) return;
       setF((prev) => ({
         ...prev,
+        service_date: (() => {
+          const d = data.service_date as string | null;
+          if (!d) return prev.service_date;
+          const today = new Date(); today.setHours(0,0,0,0);
+          const sd = new Date(`${d}T00:00:00`);
+          return !isNaN(sd.getTime()) && sd.getTime() >= today.getTime() ? d : prev.service_date;
+        })(),
         service_time: data.service_time?.slice(0, 5) ?? prev.service_time,
         duration_hours: String(data.duration_hours ?? prev.duration_hours),
         speed: data.speed ?? prev.speed,
