@@ -15,6 +15,7 @@ import { formatTariff } from "@/lib/format";
 import {
   ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
   XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check, Heart,
+  Flag, ThumbsUp, ThumbsDown, HelpCircle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
@@ -102,6 +103,24 @@ const CRITICAL_TAGS = [
 const RATING_LABELS: Record<number, string> = {
   1: "Insufficiente", 2: "Da migliorare", 3: "Buono", 4: "Molto buono", 5: "Eccellente",
 };
+
+const CRITERIA: { key: "punctuality" | "professionalism" | "competence" | "reliability" | "teamwork" | "communication" | "appearance"; label: string; hint: string }[] = [
+  { key: "punctuality", label: "Puntualità", hint: "Si è presentato all'orario concordato" },
+  { key: "professionalism", label: "Professionalità", hint: "Atteggiamento e comportamento sul lavoro" },
+  { key: "competence", label: "Competenza", hint: "Capacità tecniche nel ruolo svolto" },
+  { key: "reliability", label: "Affidabilità", hint: "Costanza e impegno durante il servizio" },
+  { key: "teamwork", label: "Lavoro in team", hint: "Collaborazione con il resto dello staff" },
+  { key: "communication", label: "Comunicazione", hint: "Chiarezza nello scambio di informazioni" },
+  { key: "appearance", label: "Cura dell'aspetto", hint: "Rispetto del dress code e ordine" },
+];
+
+const INCIDENT_KINDS: { key: string; label: string; desc: string }[] = [
+  { key: "no_show", label: "Non si è presentato", desc: "Il lavoratore non si è presentato al turno." },
+  { key: "late", label: "Ritardo grave", desc: "Ritardo significativo non comunicato." },
+  { key: "behavior", label: "Comportamento scorretto", desc: "Comportamento inappropriato verso staff o clienti." },
+  { key: "dress_code", label: "Dress code non rispettato", desc: "Aspetto o abbigliamento non conformi." },
+  { key: "other", label: "Altro", desc: "Altro problema rilevante." },
+];
 
 function ShiftDetailPage() {
   const { shiftId } = Route.useParams();
@@ -257,20 +276,28 @@ function ShiftDetailPage() {
     nav({ to: "/ristoratore/turni/$shiftId", params: { shiftId: shift.id }, search: { section: "recensione" } });
   };
 
-  const submitReview = async (rating: number, text: string, tags: string[]) => {
+  const submitFullReview = async (payload: {
+    criteria: Record<string, number>;
+    wouldRehire: "yes" | "maybe" | "no" | null;
+    text: string;
+    tags: string[];
+  }) => {
     if (!user || !shift) return;
-    if (rating < 1 || rating > 5) { toast.error("Seleziona una valutazione."); return; }
-    const trimmed = text.trim();
+    const vals = Object.values(payload.criteria);
+    if (vals.length < CRITERIA.length || vals.some((v) => !v)) {
+      toast.error("Valuta tutti i criteri."); return;
+    }
+    if (!payload.wouldRehire) { toast.error('Rispondi a "Lo richiameresti?"'); return; }
+    const trimmed = payload.text.trim();
     if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
     if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
-    // Anti-duplicato
+    const rating = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+
     const { data: dup } = await supabase.from("reviews")
-      .select("id, rating, comment, tags")
-      .eq("shift_id", shift.id)
-      .eq("author_id", user.id)
-      .eq("target_id", shift.worker_id)
-      .maybeSingle();
+      .select("id").eq("shift_id", shift.id).eq("author_id", user.id)
+      .eq("target_id", shift.worker_id).maybeSingle();
     if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
+
     const { data: created, error } = await supabase.from("reviews").insert({
       author_id: user.id,
       target_id: shift.worker_id,
@@ -279,14 +306,21 @@ function ShiftDetailPage() {
       application_id: appId,
       rating,
       comment: trimmed,
-      tags,
+      tags: payload.tags,
+      punctuality: payload.criteria.punctuality,
+      professionalism: payload.criteria.professionalism,
+      competence: payload.criteria.competence,
+      reliability: payload.criteria.reliability,
+      teamwork: payload.criteria.teamwork,
+      communication: payload.criteria.communication,
+      appearance: payload.criteria.appearance,
+      would_rehire: payload.wouldRehire,
     } as never).select("id, rating, comment, tags").single();
     if (error) {
       toast.error(error.message.includes("duplicate") || error.message.includes("unique") ? "Recensione già presente per questo turno." : error.message);
       await load();
       return;
     }
-    // Messaggio di sistema in chat (best effort)
     if (appId) {
       await supabase.from("messages").insert({
         application_id: appId,
@@ -299,6 +333,22 @@ function ShiftDetailPage() {
     toast.success("Recensione inviata");
     setExistingReview(created as any);
     await load();
+  };
+
+  const reportIncident = async (kind: string, description: string) => {
+    if (!user || !shift) return;
+    if (!kind) { toast.error("Seleziona il tipo di problema."); return; }
+    if (description.trim().length < 20) { toast.error("Descrivi il problema (min 20 caratteri)."); return; }
+    const { error } = await supabase.from("worker_incidents").insert({
+      worker_id: shift.worker_id,
+      restaurant_id: user.id,
+      application_id: appId,
+      shift_id: shift.id,
+      kind,
+      description: description.trim(),
+    } as never);
+    if (error) { toast.error(error.message ?? "Errore invio segnalazione"); return; }
+    toast.success("Segnalazione inviata. Sarà verificata dal team.");
   };
 
   if (loading) {
@@ -529,7 +579,8 @@ function ShiftDetailPage() {
               workerName={worker?.full_name ?? null}
               isOverdue={isOverdue}
               dueDate={requiredReview?.due_date ?? null}
-              onSubmit={submitReview}
+              onSubmit={submitFullReview}
+              onReportIncident={reportIncident}
             />
           </div>
         )}
@@ -608,17 +659,30 @@ function ReviewSection({
   isOverdue,
   dueDate,
   onSubmit,
+  onReportIncident,
 }: {
   existing: { id: string; rating: number; comment: string | null; tags: string[] | null } | null;
   workerName: string | null;
   isOverdue: boolean;
   dueDate: string | null;
-  onSubmit: (rating: number, text: string, tags: string[]) => Promise<void>;
+  onSubmit: (payload: {
+    criteria: Record<string, number>;
+    wouldRehire: "yes" | "maybe" | "no" | null;
+    text: string;
+    tags: string[];
+  }) => Promise<void>;
+  onReportIncident: (kind: string, description: string) => Promise<void>;
 }) {
-  const [rating, setRating] = useState(0);
+  const [criteria, setCriteria] = useState<Record<string, number>>({});
+  const [wouldRehire, setWouldRehire] = useState<"yes" | "maybe" | "no" | null>(null);
   const [text, setText] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportConfirmOpen, setReportConfirmOpen] = useState(false);
+  const [incidentKind, setIncidentKind] = useState("");
+  const [incidentDesc, setIncidentDesc] = useState("");
+  const [reporting, setReporting] = useState(false);
 
   if (existing) {
     return (
@@ -647,13 +711,31 @@ function ReviewSection({
   }
 
   const charCount = text.trim().length;
-  const canSubmit = rating > 0 && charCount >= 20 && charCount <= 500 && !submitting;
+  const allRated = CRITERIA.every((c) => criteria[c.key] > 0);
+  const canSubmit = allRated && !!wouldRehire && charCount >= 20 && charCount <= 500 && !submitting;
   const toggleTag = (t: string) => setTags((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
+  const setCriterion = (k: string, v: number) => setCriteria((p) => ({ ...p, [k]: v }));
+  const avg = allRated
+    ? Math.round((Object.values(criteria).reduce((a, b) => a + b, 0) / CRITERIA.length) * 10) / 10
+    : 0;
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    try { await onSubmit(rating, text, tags); }
+    try { await onSubmit({ criteria, wouldRehire, text, tags }); }
     finally { setSubmitting(false); }
+  };
+
+  const handleReport = async () => {
+    setReporting(true);
+    try {
+      await onReportIncident(incidentKind, incidentDesc);
+      setReportOpen(false);
+      setReportConfirmOpen(false);
+      setIncidentKind("");
+      setIncidentDesc("");
+    } finally {
+      setReporting(false);
+    }
   };
 
   return (
@@ -678,12 +760,59 @@ function ReviewSection({
           <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
           <h3 className="font-semibold text-base">Com'è andato il turno{workerName ? ` con ${workerName}` : ""}?</h3>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">Conferma la fine del turno e lascia una recensione al lavoratore.</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Valuta il lavoratore su 7 criteri. Le risposte alimentano il punteggio di reputazione.
+        </p>
       </div>
 
-      <div>
-        <label className="block text-xs font-medium mb-2">Valutazione *</label>
-        <StarPicker value={rating} onChange={setRating} />
+      {/* 7 criteri */}
+      <div className="rounded-lg border bg-card/50 p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium">Valutazione per criterio *</label>
+          {allRated && (
+            <span className="text-[11px] text-muted-foreground">
+              Media: <span className="font-semibold text-foreground">{avg.toFixed(1)}/5</span>
+            </span>
+          )}
+        </div>
+        <div className="grid gap-2">
+          {CRITERIA.map((c) => (
+            <div key={c.key} className="flex items-center justify-between gap-3 border-b last:border-0 pb-2 last:pb-0">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{c.label}</div>
+                <div className="text-[11px] text-muted-foreground">{c.hint}</div>
+              </div>
+              <CompactStars value={criteria[c.key] ?? 0} onChange={(v) => setCriterion(c.key, v)} ariaLabel={c.label} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Lo richiameresti? */}
+      <div className="rounded-lg border bg-card/50 p-3">
+        <label className="block text-sm font-medium mb-2">Lo richiameresti? *</label>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "yes" as const, label: "Sì", Icon: ThumbsUp, cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/40" },
+            { key: "maybe" as const, label: "Forse", Icon: HelpCircle, cls: "bg-amber-500/15 text-amber-700 border-amber-500/40" },
+            { key: "no" as const, label: "No", Icon: ThumbsDown, cls: "bg-destructive/15 text-destructive border-destructive/40" },
+          ].map((opt) => {
+            const active = wouldRehire === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setWouldRehire(opt.key)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
+                  active ? opt.cls : "bg-secondary border-transparent hover:bg-secondary/70"
+                }`}
+                aria-pressed={active}
+              >
+                <opt.Icon className="h-3.5 w-3.5" /> {opt.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div>
@@ -741,6 +870,131 @@ function ReviewSection({
         <Check className="h-4 w-4" />
         {submitting ? "Invio in corso…" : "Conferma fine turno e invia recensione"}
       </Button>
+
+      {/* Segnala un problema */}
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-destructive flex items-center gap-1.5">
+              <Flag className="h-4 w-4" /> Segnala un problema
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Per casi gravi (no-show, comportamenti scorretti). Le segnalazioni vengono verificate dal team prima di incidere sulla reputazione.
+            </p>
+          </div>
+          <Button type="button" size="sm" variant="outline" onClick={() => setReportOpen(true)}>
+            Segnala
+          </Button>
+        </div>
+      </div>
+
+      <AlertDialog open={reportOpen} onOpenChange={(o) => !reporting && setReportOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2"><Flag className="h-4 w-4 text-destructive" /> Segnala un problema</AlertDialogTitle>
+            <AlertDialogDescription>
+              La segnalazione sarà verificata dal team Pupillo prima di incidere sulla reputazione del lavoratore. Inserisci solo informazioni veritiere.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium mb-2">Tipo di problema *</label>
+              <div className="grid gap-2">
+                {INCIDENT_KINDS.map((k) => (
+                  <button
+                    key={k.key}
+                    type="button"
+                    onClick={() => setIncidentKind(k.key)}
+                    className={`text-left rounded-md border px-3 py-2 transition ${
+                      incidentKind === k.key ? "border-destructive bg-destructive/10" : "hover:bg-secondary/50"
+                    }`}
+                  >
+                    <div className="text-sm font-medium">{k.label}</div>
+                    <div className="text-[11px] text-muted-foreground">{k.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">Descrizione *</label>
+              <Textarea
+                value={incidentDesc}
+                onChange={(e) => setIncidentDesc(e.target.value)}
+                placeholder="Spiega cosa è successo (min 20 caratteri)."
+                rows={3}
+                maxLength={1000}
+              />
+              <div className="text-[11px] text-muted-foreground mt-1">{incidentDesc.trim().length}/1000</div>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reporting}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (!incidentKind || incidentDesc.trim().length < 20) {
+                  toast.error("Compila tipo e descrizione (min 20 caratteri).");
+                  return;
+                }
+                setReportConfirmOpen(true);
+              }}
+              disabled={reporting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Continua
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={reportConfirmOpen} onOpenChange={(o) => !reporting && setReportConfirmOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confermi l'invio della segnalazione?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La segnalazione sarà inviata al team per la verifica. Le segnalazioni false o ripetute possono comportare sanzioni sul tuo account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reporting}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleReport(); }}
+              disabled={reporting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {reporting ? "Invio…" : "Sì, invia segnalazione"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function CompactStars({ value, onChange, ariaLabel }: { value: number; onChange: (v: number) => void; ariaLabel: string }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="flex items-center gap-0.5 shrink-0" role="radiogroup" aria-label={ariaLabel}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const active = (hover || value) >= n;
+        return (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            onMouseEnter={() => setHover(n)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => onChange(n)}
+            className="p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            aria-label={`${n} stelle`}
+          >
+            <Star className={`h-5 w-5 transition ${active ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} strokeWidth={1.5} />
+          </button>
+        );
+      })}
     </div>
   );
 }
