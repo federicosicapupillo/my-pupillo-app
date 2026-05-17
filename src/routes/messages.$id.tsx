@@ -833,8 +833,12 @@ function Thread() {
                 const hasProposal = msgs.some((x) => x.template_id === PROPOSAL_TEMPLATE_ID);
                 const lastProposalRejected =
                   hasProposal && !hasAccepted && statuses.length > 0 && statuses.every((s) => s === "rejected");
-                const disabled = !hasAccepted;
-                const helper = !hasProposal
+                // Server-side check is authoritative. While loading, fall back to client heuristics.
+                const serverDisabled = serverAssign ? !serverAssign.canAssign : !hasAccepted;
+                const disabled = serverDisabled;
+                const helper = serverAssign?.reason
+                  ? serverAssign.reason
+                  : !hasProposal
                   ? "Invia una proposta di lavoro per poter assegnare il turno."
                   : !hasAccepted && lastProposalRejected
                     ? "Il lavoratore ha rifiutato la proposta."
