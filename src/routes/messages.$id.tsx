@@ -1052,6 +1052,7 @@ function Thread() {
           currentCredits={creditsAvailable}
           returnTo={`/messages/${id}`}
         />
+        <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
       </div>
   );
 }
