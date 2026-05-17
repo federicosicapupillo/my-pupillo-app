@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search, List, Map as MapIcon, RotateCcw, X } from "lucide-react";
+import { Search, List, Map as MapIcon, RotateCcw, X, MapPin } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
@@ -583,6 +583,15 @@ function WorkersPage() {
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                <span className="font-medium text-foreground">Città attuale:</span>{" "}
+                {w.city
+                  ? `${w.city}${w.neighborhood ? ` · ${w.neighborhood}` : ""}`
+                  : "Città non indicata"}
+              </span>
+            </div>
             {(() => {
               const langs: SpokenLanguage[] = normalizeSpokenLanguages(w.spoken_languages);
               const legacy = (langs.length === 0 ? (w.languages ?? []).map(l => ({ language: l })) : langs);
