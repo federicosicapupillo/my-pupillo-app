@@ -740,6 +740,7 @@ function WorkersPage() {
                   )}
                   {w.age && <span>· {w.age} anni</span>}
                 </div>
+                <div className="mt-1"><WorkerReputationBadge profile={w} /></div>
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
