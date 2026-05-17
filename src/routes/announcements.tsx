@@ -309,33 +309,49 @@ function AnnouncementsPage() {
         const ids = list.map(a => a.id);
         const { data: apps } = await supabase
           .from("applications")
-          .select("announcement_id, worker_id")
+          .select("id, announcement_id, worker_id, status, created_at, last_message_preview, last_message_at")
           .in("announcement_id", ids);
         const map: Record<string, number> = {};
-        const byAnn: Record<string, string[]> = {};
+        const byAnn: Record<string, any[]> = {};
         (apps ?? []).forEach((a: any) => {
           map[a.announcement_id] = (map[a.announcement_id] ?? 0) + 1;
-          (byAnn[a.announcement_id] ||= []).push(a.worker_id);
+          (byAnn[a.announcement_id] ||= []).push(a);
         });
         setCounts(map);
         const assignedAnns = list.filter(a => a.assigned_worker_id);
         const assignedWorkerIds = assignedAnns.map(a => a.assigned_worker_id as string);
         const workerIds = Array.from(new Set([...(apps ?? []).map((a: any) => a.worker_id), ...assignedWorkerIds]));
         if (workerIds.length) {
-          const { data: profs } = await supabase
-            .from("profiles")
-            .select("id, full_name, professional_profile, rating_avg, badge")
-            .in("id", workerIds);
+          const [{ data: profs }, { data: allRevs }] = await Promise.all([
+            supabase
+              .from("profiles")
+              .select("id, full_name, professional_profile, rating_avg, badge, avatar_url")
+              .in("id", workerIds),
+            supabase
+              .from("reviews")
+              .select("announcement_id, target_id, author_id")
+              .in("announcement_id", ids)
+              .eq("author_id", user.id),
+          ]);
           const profMap: Record<string, any> = {};
           (profs ?? []).forEach((p: any) => { profMap[p.id] = p; });
+          const reviewedSet = new Set<string>();
+          (allRevs ?? []).forEach((r: any) => { reviewedSet.add(`${r.announcement_id}::${r.target_id}`); });
           const candMap: Record<string, Candidate[]> = {};
-          Object.entries(byAnn).forEach(([annId, wids]) => {
-            candMap[annId] = wids.map((wid) => ({
-              worker_id: wid,
-              full_name: profMap[wid]?.full_name ?? null,
-              professional_profile: profMap[wid]?.professional_profile ?? null,
-              rating_avg: profMap[wid]?.rating_avg ?? null,
-              badge: profMap[wid]?.badge ?? null,
+          Object.entries(byAnn).forEach(([annId, rows]) => {
+            candMap[annId] = rows.map((row: any) => ({
+              worker_id: row.worker_id,
+              full_name: profMap[row.worker_id]?.full_name ?? null,
+              professional_profile: profMap[row.worker_id]?.professional_profile ?? null,
+              rating_avg: profMap[row.worker_id]?.rating_avg ?? null,
+              badge: profMap[row.worker_id]?.badge ?? null,
+              avatar_url: profMap[row.worker_id]?.avatar_url ?? null,
+              application_id: row.id ?? null,
+              app_status: row.status ?? null,
+              application_created_at: row.created_at ?? null,
+              last_message_preview: row.last_message_preview ?? null,
+              last_message_at: row.last_message_at ?? null,
+              reviewed: reviewedSet.has(`${annId}::${row.worker_id}`),
             }));
           });
           setCandidates(candMap);
