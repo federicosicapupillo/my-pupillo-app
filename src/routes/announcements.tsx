@@ -295,6 +295,8 @@ function AnnouncementsPage() {
   const [proposalTarget, setProposalTarget] = useState<{ ann: Ann; candidate: Candidate } | null>(null);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
+  const [closeTarget, setCloseTarget] = useState<Ann | null>(null);
+  const [closing, setClosing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
