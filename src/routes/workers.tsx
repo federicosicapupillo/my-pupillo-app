@@ -189,10 +189,6 @@ function WorkersPage() {
 
   const invite = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
-    if (isBlocked) {
-      setBlockOpen(true);
-      return;
-    }
     // If a conversation already exists for this restaurant + worker + announcement, just open it.
     const { data: existing } = await supabase
       .from("applications")
@@ -604,13 +600,16 @@ function WorkersPage() {
               className="mt-4 w-full gap-1"
               onClick={() => invite(w.id)}
               disabled={!selected}
-              title={isBlocked ? "Completa i turni precedenti prima di contattare nuovi lavoratori" : (!selected ? "Seleziona prima un annuncio" : undefined)}
+              title={!selected ? "Seleziona prima un annuncio" : undefined}
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              {isBlocked ? `Bloccato (${blockedCount} turn${blockedCount > 1 ? "i" : "o"} da completare)` : (
-                <>{selected ? "Messaggia" : "Seleziona prima un annuncio"}</>
-              )}
+              {selected ? "Chatta" : "Seleziona prima un annuncio"}
             </Button>
+            {isBlocked && (
+              <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
+                Hai {blockedCount} turn{blockedCount > 1 ? "i" : "o"} da recensire prima di poter assegnare nuovi turni.
+              </p>
+            )}
           </div>
           );
         })}
