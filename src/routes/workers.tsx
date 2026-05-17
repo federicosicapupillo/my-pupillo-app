@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search, List, Map as MapIcon, RotateCcw, X, MapPin } from "lucide-react";
+import { Search, List, Map as MapIcon, RotateCcw, X, MapPin, CheckCircle2, Clock, History, ThumbsUp, ThumbsDown, Gift } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
@@ -108,6 +108,44 @@ const PLACEHOLDER_BY_CATEGORY: Record<Category, string> = {
 };
 type Ann = { id: string; service_date: string; service_time: string | null; location_address: string; location_lat: number | null; location_lng: number | null };
 
+type WorkerRel = {
+  workedWith: boolean;
+  reviewed: boolean;
+  contacted: boolean;
+  hasPending: boolean;
+  hasAccepted: boolean;
+  hasRejected: boolean;
+  hasOpenChat: boolean;
+  lastContactAt: number;
+  lastReviewAt: number;
+  latestResponseAt: number;
+  latestResponseStatus: "accepted" | "rejected" | null;
+};
+const emptyRel = (): WorkerRel => ({
+  workedWith: false,
+  reviewed: false,
+  contacted: false,
+  hasPending: false,
+  hasAccepted: false,
+  hasRejected: false,
+  hasOpenChat: false,
+  lastContactAt: 0,
+  lastReviewAt: 0,
+  latestResponseAt: 0,
+  latestResponseStatus: null,
+});
+
+type Tier = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+function tierOf(r: WorkerRel | undefined, rating: number | null | undefined): Tier {
+  if (!r) return (rating ?? 0) >= 4 ? 5 : 6;
+  if (r.workedWith && r.reviewed) return 0;
+  if (r.workedWith) return 1;
+  if (r.contacted && r.hasPending) return 2;
+  if (r.contacted && r.hasOpenChat) return 3;
+  if (r.contacted) return 4;
+  return (rating ?? 0) >= 4 ? 5 : 6;
+}
+
 function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371000;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -133,6 +171,8 @@ function WorkersPage() {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
+  // Relazione ristoratore ↔ lavoratore (per ordinare e mostrare badge)
+  const [rel, setRel] = useState<Record<string, WorkerRel>>({});
 
   // Carica TUTTI i lavoratori attivi una sola volta. I filtri lavorano poi lato client.
   const loadWorkers = async () => {
@@ -184,6 +224,83 @@ function WorkersPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
+
+  // Carica le relazioni ristoratore ↔ lavoratori (turni, candidature, proposte, recensioni)
+  useEffect(() => {
+    if (role !== "restaurant" || !user) return;
+    let cancelled = false;
+    (async () => {
+      const [appsRes, shiftsRes, reviewsRes] = await Promise.all([
+        supabase
+          .from("applications")
+          .select("id, worker_id, status, last_message_at, created_at")
+          .eq("restaurant_id", user.id),
+        supabase
+          .from("shifts")
+          .select("worker_id, status, shift_date")
+          .eq("restaurant_id", user.id),
+        supabase
+          .from("reviews")
+          .select("target_id, created_at")
+          .eq("author_id", user.id),
+      ]);
+      const apps = (appsRes.data as Array<{ id: string; worker_id: string; status: string | null; last_message_at: string | null; created_at: string }>) ?? [];
+      const shifts = (shiftsRes.data as Array<{ worker_id: string; status: string | null; shift_date: string | null }>) ?? [];
+      const reviews = (reviewsRes.data as Array<{ target_id: string; created_at: string }>) ?? [];
+
+      // Ultima proposta + risposta per ogni candidatura
+      const appIds = apps.map(a => a.id);
+      let respByApp: Record<string, { status: "accepted" | "rejected"; created_at: string }> = {};
+      if (appIds.length) {
+        const { data: resp } = await supabase
+          .from("proposal_responses")
+          .select("application_id, status, created_at")
+          .in("application_id", appIds)
+          .order("created_at", { ascending: true });
+        for (const r of (resp ?? []) as Array<{ application_id: string; status: "accepted" | "rejected"; created_at: string }>) {
+          // tieni l'ultima (l'order è crescente, sovrascrivo)
+          respByApp[r.application_id] = { status: r.status, created_at: r.created_at };
+        }
+      }
+
+      const map: Record<string, WorkerRel> = {};
+      // Candidature
+      for (const a of apps) {
+        const r = map[a.worker_id] ?? emptyRel();
+        r.contacted = true;
+        const ts = a.last_message_at ?? a.created_at;
+        r.lastContactAt = Math.max(r.lastContactAt, ts ? new Date(ts).getTime() : 0);
+        if (a.last_message_at) r.hasOpenChat = true;
+        const resp = respByApp[a.id];
+        if (resp) {
+          if (resp.status === "accepted") r.hasAccepted = true;
+          if (resp.status === "rejected") r.hasRejected = true;
+          r.latestResponseAt = Math.max(r.latestResponseAt, new Date(resp.created_at).getTime());
+          r.latestResponseStatus = r.latestResponseAt === new Date(resp.created_at).getTime() ? resp.status : r.latestResponseStatus;
+        } else if (a.status === "pending") {
+          r.hasPending = true;
+        }
+        map[a.worker_id] = r;
+      }
+      // Turni completati
+      for (const s of shifts) {
+        const r = map[s.worker_id] ?? emptyRel();
+        if (s.status === "completed") r.workedWith = true;
+        if (s.shift_date) r.lastContactAt = Math.max(r.lastContactAt, new Date(s.shift_date).getTime());
+        r.contacted = true;
+        map[s.worker_id] = r;
+      }
+      // Recensioni lasciate
+      for (const rv of reviews) {
+        const r = map[rv.target_id] ?? emptyRel();
+        r.reviewed = true;
+        r.lastReviewAt = Math.max(r.lastReviewAt, new Date(rv.created_at).getTime());
+        map[rv.target_id] = r;
+      }
+      if (!cancelled) setRel(map);
+    })();
+    return () => { cancelled = true; };
+  }, [role, user?.id]);
 
   if (role !== "restaurant") return <AppShell><p>Solo i ristoratori.</p></AppShell>;
 
@@ -382,11 +499,22 @@ function WorkersPage() {
     return true;
   });
   const sorted = [...distFiltered].sort((a, b) => {
+    // Ordinamento personale per ristoratore: priorità a chi è già stato
+    // contattato / ha già lavorato con questo ristoratore. I filtri di
+    // ordinamento espliciti (subcategoria di "Tutto") vincono.
     if (category === "all") {
       if (subcategory === "Ultimi attivi") return (new Date(b.last_active_at ?? 0).getTime()) - (new Date(a.last_active_at ?? 0).getTime());
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
       if (subcategory === "Più affidabili") return (b.reliability_pct ?? 0) - (a.reliability_pct ?? 0);
     }
+    const ra = rel[a.id]; const rb = rel[b.id];
+    const ta = tierOf(ra, a.rating_avg); const tb = tierOf(rb, b.rating_avg);
+    if (ta !== tb) return ta - tb;
+    // dentro lo stesso gruppo: ultimo contatto più recente, poi rating, poi in zona
+    const la = ra?.lastContactAt ?? 0; const lb = rb?.lastContactAt ?? 0;
+    if (la !== lb) return lb - la;
+    const ar = a.rating_avg ?? 0; const br = b.rating_avg ?? 0;
+    if (ar !== br) return br - ar;
     return Number(inRange(b)) - Number(inRange(a));
   });
 
@@ -565,10 +693,33 @@ function WorkersPage() {
           )}
         </div>
       ) : (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {sorted.map((w) => {
-          const near = inRange(w);
-          return (
+      <div className="space-y-6">
+        {(() => {
+          const sectionOf = (w: W): "worked" | "contacted" | "other" => {
+            const t = tierOf(rel[w.id], w.rating_avg);
+            if (t <= 1) return "worked";
+            if (t <= 4) return "contacted";
+            return "other";
+          };
+          const groups: { key: "worked" | "contacted" | "other"; title: string; items: W[] }[] = [
+            { key: "worked", title: "Già lavorato con te", items: [] },
+            { key: "contacted", title: "Già contattati", items: [] },
+            { key: "other", title: "Altri lavoratori disponibili", items: [] },
+          ];
+          for (const w of sorted) groups.find(g => g.key === sectionOf(w))!.items.push(w);
+          return groups.filter(g => g.items.length > 0).map(g => (
+            <section key={g.key}>
+              <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-2">
+                {g.key === "worked" && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+                {g.key === "contacted" && <History className="h-4 w-4 text-primary" />}
+                {g.title}
+                <span className="text-xs font-normal text-muted-foreground">({g.items.length})</span>
+              </h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {g.items.map((w) => {
+                  const near = inRange(w);
+                  const r = rel[w.id];
+                  return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
               <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
@@ -578,6 +729,40 @@ function WorkersPage() {
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
+            {r && (r.workedWith || r.contacted) && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {r.workedWith && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium">
+                    <CheckCircle2 className="h-3 w-3" />Già lavorato con te
+                  </span>
+                )}
+                {r.workedWith && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px] font-medium">
+                    <Gift className="h-3 w-3" />Ricontatto gratuito
+                  </span>
+                )}
+                {!r.workedWith && r.contacted && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted text-foreground/80 px-2 py-0.5 text-[10px] font-medium">
+                    <History className="h-3 w-3" />Già contattato
+                  </span>
+                )}
+                {r.hasPending && !r.hasAccepted && !r.hasRejected && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium">
+                    <Clock className="h-3 w-3" />Richiesta in attesa
+                  </span>
+                )}
+                {r.latestResponseStatus === "rejected" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 text-destructive px-2 py-0.5 text-[10px] font-medium">
+                    <ThumbsDown className="h-3 w-3" />Ultima richiesta rifiutata
+                  </span>
+                )}
+                {r.hasAccepted && !r.workedWith && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium">
+                    <ThumbsUp className="h-3 w-3" />Ha accettato una proposta
+                  </span>
+                )}
+              </div>
+            )}
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -611,8 +796,12 @@ function WorkersPage() {
               </p>
             )}
           </div>
-          );
-        })}
+                  );
+                })}
+              </div>
+            </section>
+          ));
+        })()}
         {loaded && !loading && sorted.length === 0 && (
           <div className="col-span-full flex flex-col items-start gap-3 rounded-xl border border-dashed bg-muted/30 p-6">
             <p className="text-sm text-muted-foreground">
