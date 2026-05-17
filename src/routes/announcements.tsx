@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,6 +127,13 @@ type Candidate = {
   professional_profile: string | null;
   rating_avg: number | null;
   badge: string | null;
+  application_id: string | null;
+  app_status: string | null;
+  application_created_at: string | null;
+  last_message_preview: string | null;
+  last_message_at: string | null;
+  reviewed: boolean;
+  avatar_url: string | null;
 };
 
 type AssignedInfo = {
@@ -134,6 +141,55 @@ type AssignedInfo = {
   full_name: string | null;
   rating: number | null;
 };
+
+type ProposalStatusKind =
+  | "pending"
+  | "accepted"
+  | "confirmed"
+  | "rejected"
+  | "completed"
+  | "review_pending"
+  | "review_sent";
+
+const PROPOSAL_STATUS_LABEL: Record<ProposalStatusKind, string> = {
+  pending: "In attesa di risposta",
+  accepted: "Accettata",
+  confirmed: "Confermata",
+  rejected: "Rifiutata",
+  completed: "Turno completato",
+  review_pending: "Recensione da inviare",
+  review_sent: "Recensione inviata",
+};
+
+const PROPOSAL_STATUS_CLS: Record<ProposalStatusKind, string> = {
+  pending: "bg-amber-100 text-amber-800 border border-amber-200",
+  accepted: "bg-green-100 text-green-800 border border-green-200",
+  confirmed: "bg-emerald-100 text-emerald-800 border border-emerald-300",
+  rejected: "bg-red-100 text-red-800 border border-red-200",
+  completed: "bg-blue-100 text-blue-800 border border-blue-200",
+  review_pending: "bg-yellow-100 text-yellow-900 border border-yellow-300",
+  review_sent: "bg-indigo-100 text-indigo-800 border border-indigo-200",
+};
+
+function deriveProposalStatus(ann: Ann, c: Candidate): ProposalStatusKind {
+  const isAssigned = ann.assigned_worker_id === c.worker_id;
+  if (ann.status === "completed" && isAssigned) {
+    return c.reviewed ? "review_sent" : "review_pending";
+  }
+  if (ann.status === "completed") return "completed";
+  if (isAssigned) return "confirmed";
+  const s = c.app_status;
+  if (s === "accepted") return "accepted";
+  if (s === "rejected" || s === "not_interested") return "rejected";
+  return "pending";
+}
+
+function formatRelativeShort(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 function formatRange(a: Ann) {
   const startD = new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT");
