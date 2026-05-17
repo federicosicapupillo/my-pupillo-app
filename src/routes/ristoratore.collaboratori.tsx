@@ -154,7 +154,12 @@ function Page() {
       .eq("restaurant_id", user.id)
       .eq("status", "active")
       .order("service_date", { ascending: true });
-    setOpenAnns((data ?? []) as any);
+    const now = new Date();
+    const filtered = ((data ?? []) as any[]).filter((a) => {
+      const start = getShiftStartDate(a);
+      return start ? start.getTime() > now.getTime() : true;
+    });
+    setOpenAnns(filtered as any);
     setInviteFor(r);
   };
 
