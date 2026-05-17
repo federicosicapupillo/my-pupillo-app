@@ -11,7 +11,8 @@ import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, Messag
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
-import { useRequiredReviews } from "@/lib/required-reviews";
+import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -58,6 +59,7 @@ function ShiftsPage() {
   const [filter, setFilter] = useState<"all" | "upcoming" | "past" | "to-review">(
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "all"
   );
+  const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
   const [live, setLive] = useState(false);
   const [reviewMap, setReviewMap] = useState<Record<string, number>>({});
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
@@ -68,7 +70,7 @@ function ShiftsPage() {
   const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const { items: requiredReviews, refresh: refreshRequiredReviews } = useRequiredReviews();
+  const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
     requiredReviews.forEach((r) => { if (r.shift_id) m[r.shift_id] = { status: r.status, due_date: r.due_date }; });
