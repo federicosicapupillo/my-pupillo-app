@@ -263,20 +263,24 @@ function ShiftsPage() {
     setViewReviewData(null);
   };
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const filtered = useMemo(() => {
     if (filter === "upcoming") return [] as Shift[]; // pending applications rendered separately
-    if (filter === "past") return shifts.filter(s => s.status === "completed");
+    if (filter === "assigned") return shifts.filter(s => s.status === "scheduled" && s.shift_date >= today);
+    if (filter === "past") return shifts.filter(s => s.status === "completed" || (s.status === "scheduled" && s.shift_date < today));
     if (filter === "to-review") return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
     return shifts;
-  }, [shifts, filter, reqByShift]);
+  }, [shifts, filter, reqByShift, today]);
 
   const counts = useMemo(() => {
-    const past = shifts.filter(s => s.status === "completed").length;
+    const assigned = shifts.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
+    const past = shifts.filter(s => s.status === "completed" || (s.status === "scheduled" && s.shift_date < today)).length;
     const toReview = shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
     const pending = role === "restaurant" ? pendingApps.length : 0;
     const all = shifts.length + pending;
-    return { all, pending, past, toReview };
-  }, [shifts, pendingApps, reqByShift, role]);
+    return { all, pending, assigned, past, toReview };
+  }, [shifts, pendingApps, reqByShift, role, today]);
 
   const stats = useMemo(() => ({
     total: shifts.length,
