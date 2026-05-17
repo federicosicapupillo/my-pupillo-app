@@ -795,9 +795,40 @@ function Thread() {
                 <Button size="sm" className="gap-2" onClick={() => transition("interested")}><ThumbsUp className="h-4 w-4" />Sono interessato</Button>
                 <Button size="sm" variant="outline" className="gap-2" onClick={() => transition("not_interested")}><ThumbsDown className="h-4 w-4" />Non interessato</Button>
               </>)}
-              {role === "restaurant" && (
-                <Button size="sm" className="gap-2" onClick={() => transition("accepted")}><Check className="h-4 w-4" />Assegna</Button>
-              )}
+              {role === "restaurant" && (() => {
+                const statuses = Object.values(proposalStatuses);
+                const hasAccepted = statuses.includes("accepted");
+                const hasProposal = msgs.some((x) => x.template_id === PROPOSAL_TEMPLATE_ID);
+                const lastProposalRejected =
+                  hasProposal && !hasAccepted && statuses.length > 0 && statuses.every((s) => s === "rejected");
+                const disabled = !hasAccepted;
+                const helper = !hasProposal
+                  ? "Invia una proposta di lavoro per poter assegnare il turno."
+                  : !hasAccepted && lastProposalRejected
+                    ? "Il lavoratore ha rifiutato la proposta."
+                    : !hasAccepted
+                      ? "In attesa che il lavoratore accetti la proposta."
+                      : isBlocked
+                        ? "Prima di assegnare nuovi turni devi chiudere e recensire i turni conclusi."
+                        : null;
+                return (
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      disabled={disabled}
+                      onClick={() => transition("accepted")}
+                    >
+                      <Check className="h-4 w-4" />Assegna
+                    </Button>
+                    {helper && (
+                      <span className={`text-xs ${lastProposalRejected || isBlocked ? "text-destructive" : "text-muted-foreground"}`}>
+                        {helper}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               {role === "restaurant" && app.status === "counter_offer" && ann?.tariff_amount != null && (
                 <Button
                   size="sm"
