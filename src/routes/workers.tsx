@@ -769,6 +769,24 @@ function WorkersPage() {
                 )}
               </div>
             )}
+            {r?.workedWith && r.reviewed && r.lastReviewAt > 0 && (
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-muted/60 px-2 py-1 text-[11px] text-muted-foreground">
+                <span className="font-medium text-foreground">Tua ultima recensione:</span>
+                {r.lastReviewRating != null && (
+                  <span className="inline-flex items-center gap-0.5">
+                    {[1,2,3,4,5].map(i => (
+                      <Star
+                        key={i}
+                        className={`h-3 w-3 ${i <= Math.round(r.lastReviewRating!) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
+                      />
+                    ))}
+                    <span className="ml-1 tabular-nums font-medium text-foreground">{r.lastReviewRating.toFixed(1)}</span>
+                  </span>
+                )}
+                <span>·</span>
+                <span>{new Date(r.lastReviewAt).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" })}</span>
+              </div>
+            )}
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
