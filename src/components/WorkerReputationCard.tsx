@@ -78,9 +78,13 @@ export function WorkerReputationCard({ workerId, profile, showTips = false, clas
         </div>
       ) : (
         <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-sm">
-          <div className="font-medium">Profilo {s.level === "new_verified" ? "verificato" : "nuovo"}</div>
+          <div className="font-medium">
+            {s.level === "new_verified" ? "Nuovo verificato · Profilo completo" : "Nuovo profilo"}
+          </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Il Reputation Score verrà mostrato dopo i primi 3 servizi completati.
+            Reputazione in costruzione. {s.reviewsCount === 0
+              ? "Valutazione non ancora disponibile."
+              : `Reputation Score verrà mostrato dopo i primi 3 servizi completati.`}
           </p>
         </div>
       )}
