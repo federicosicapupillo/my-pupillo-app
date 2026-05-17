@@ -142,6 +142,8 @@ type AssignedInfo = {
   worker_id: string;
   full_name: string | null;
   rating: number | null;
+  shift_id: string | null;
+  shift_status: string | null;
 };
 
 type ProposalStatusKind =
