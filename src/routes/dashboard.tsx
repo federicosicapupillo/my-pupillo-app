@@ -10,6 +10,7 @@ import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +34,8 @@ type AssignedItem = {
   service_date: string;
   service_time: string;
   duration_hours: number | null;
+  end_time: string | null;
+  end_date: string | null;
   location_address: string;
   role_label: string | null;
   worker_id: string | null;
@@ -114,7 +117,7 @@ function DashboardInner() {
     // Anteprima annunci assegnati (max 8, ordinati per data servizio)
     const { data: assignedRows } = await supabase
       .from("announcements")
-      .select("id, service_date, service_time, duration_hours, location_address, assigned_worker_id, professional_profile")
+      .select("id, service_date, service_time, duration_hours, end_time, end_date, location_address, assigned_worker_id, professional_profile")
       .eq("restaurant_id", uid)
       .eq("status", "assigned")
       .order("service_date", { ascending: true })
@@ -165,6 +168,8 @@ function DashboardInner() {
         service_date: r.service_date,
         service_time: r.service_time,
         duration_hours: r.duration_hours,
+        end_time: r.end_time ?? null,
+        end_date: r.end_date ?? null,
         location_address: r.location_address,
         role_label: roleMap[r.id] ?? r.professional_profile ?? null,
         worker_id: r.assigned_worker_id,
@@ -183,6 +188,11 @@ function DashboardInner() {
     if (!closingItem || !user) return;
     if (!closingItem.worker_id) {
       toast.error("Lavoratore non collegato al turno.");
+      return;
+    }
+    const endDt = getShiftEndDate(closingItem);
+    if (endDt && Date.now() < endDt.getTime()) {
+      toast.error("Non puoi concludere questo turno prima della fine del servizio.");
       return;
     }
     setClosing(true);
