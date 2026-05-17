@@ -2,59 +2,305 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Calendar, MapPin, Euro, MessageSquare } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Euro,
+  MessageSquare,
+  Briefcase,
+  Store,
+  Clock,
+  Star,
+  ShieldCheck,
+  Info,
+} from "lucide-react";
 import { formatTariff } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
+import { venueTypeLabel } from "@/lib/venue-types";
 
 export const Route = createFileRoute("/jobs")({
-  head: () => ({ meta: [{ title: "Le mie offerte — Pupillo" }] }),
-  component: () => <RequireAuth><Jobs /></RequireAuth>,
+  head: () => ({ meta: [{ title: "Offerte ricevute — Pupillo" }] }),
+  component: () => (
+    <RequireAuth>
+      <Jobs />
+    </RequireAuth>
+  ),
 });
 
-type Row = {
-  id: string; status: string; created_at: string; restaurant_id: string;
-  announcement: { id: string; service_date: string; service_time: string; duration_hours: number; tariff_amount: number; tariff_type: string; speed: string; job_city: string | null; job_province: string | null; assigned_worker_id: string | null } | null;
-  restaurant: { full_name: string | null; business_name: string | null; city: string | null; neighborhood: string | null } | null;
+type Announcement = {
+  id: string;
+  service_date: string;
+  service_time: string;
+  end_time: string | null;
+  duration_hours: number;
+  tariff_amount: number;
+  tariff_type: string;
+  speed: string;
+  job_city: string | null;
+  job_province: string | null;
+  assigned_worker_id: string | null;
+  professional_profile: string | null;
+  notes: string | null;
+  required_skills: string[] | null;
+  dress_code_items: string[] | null;
+  dress_code_notes: string | null;
 };
+
+type RestaurantPublic = {
+  id: string;
+  full_name: string | null;
+  business_name: string | null;
+  city: string | null;
+  neighborhood: string | null;
+  venue_type: string | null;
+  venue_type_other: string | null;
+  // Sensitive — only revealed once the offer is mutually confirmed
+  phone_full: string | null;
+  email: string | null;
+  address: string | null;
+  street: string | null;
+  street_number: string | null;
+  contact_person_first_name: string | null;
+  contact_person_last_name: string | null;
+  contact_person_phone: string | null;
+};
+
+type ShiftLite = {
+  id: string;
+  announcement_id: string | null;
+  restaurant_id: string;
+  status: "scheduled" | "completed" | "no_show" | "cancelled";
+  shift_date: string;
+};
+
+type Row = {
+  id: string;
+  status: string;
+  created_at: string;
+  restaurant_id: string;
+  worker_response_at: string | null;
+  announcement: Announcement | null;
+  restaurant: RestaurantPublic | null;
+  shift: ShiftLite | null;
+  hasWorkerReview: boolean;
+  lastMessage: string | null;
+};
+
+type Bucket =
+  | "nuove"
+  | "da_rispondere"
+  | "accettate_da_me"
+  | "in_attesa_conferma"
+  | "confermate"
+  | "completate"
+  | "annullate"
+  | "da_recensire";
+
+type SortMode = "service_date" | "received" | "tariff" | "role" | "status";
+
+const SEEN_KEY = "pupillo.jobs.lastSeenAt";
+
+function isMutuallyConfirmed(r: Row): boolean {
+  return r.status === "accepted";
+}
+
+function isCompleted(r: Row): boolean {
+  return r.shift?.status === "completed";
+}
+
+function isCancelled(r: Row): boolean {
+  if (r.shift?.status === "cancelled") return true;
+  if (r.status === "not_interested" || r.status === "rejected" || r.status === "expired") return true;
+  return false;
+}
+
+/** Buckets the offer belongs to. An offer can match more than one (e.g. confermata + da_recensire). */
+function bucketsFor(r: Row, lastSeenAt: number): Bucket[] {
+  const out: Bucket[] = [];
+  if (isCompleted(r)) {
+    out.push("completate");
+    if (!r.hasWorkerReview) out.push("da_recensire");
+    return out;
+  }
+  if (isCancelled(r)) {
+    out.push("annullate");
+    return out;
+  }
+  if (isMutuallyConfirmed(r)) {
+    out.push("confermate");
+    return out;
+  }
+  if (r.status === "pending") {
+    out.push("da_rispondere");
+    if (new Date(r.created_at).getTime() > lastSeenAt) out.push("nuove");
+    return out;
+  }
+  if (r.status === "interested") {
+    out.push("accettate_da_me");
+    out.push("in_attesa_conferma");
+    return out;
+  }
+  if (r.status === "counter_offer") {
+    out.push("in_attesa_conferma");
+    return out;
+  }
+  return out;
+}
+
+function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
+  if (isCompleted(r)) {
+    if (!r.hasWorkerReview)
+      return { label: "Da recensire", cls: "bg-amber-100 text-amber-900 border-amber-200" };
+    return { label: "Completata", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
+  }
+  if (r.shift?.status === "cancelled")
+    return { label: "Annullata", cls: "bg-muted text-muted-foreground border-border" };
+  if (r.status === "accepted")
+    return { label: "Confermata da entrambi", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
+  if (r.status === "rejected")
+    return { label: "Rifiutata dal ristoratore", cls: "bg-muted text-muted-foreground border-border" };
+  if (r.status === "not_interested")
+    return { label: "Hai rifiutato", cls: "bg-muted text-muted-foreground border-border" };
+  if (r.status === "expired")
+    return { label: "Scaduta", cls: "bg-muted text-muted-foreground border-border" };
+  if (r.status === "counter_offer")
+    return { label: "In attesa conferma", cls: "bg-sky-100 text-sky-900 border-sky-200" };
+  if (r.status === "interested")
+    return { label: "Accettata da te", cls: "bg-sky-100 text-sky-900 border-sky-200" };
+  if (r.status === "pending")
+    return isNew
+      ? { label: "Nuova offerta", cls: "bg-primary/15 text-primary border-primary/30" }
+      : { label: "In attesa di risposta", cls: "bg-amber-100 text-amber-900 border-amber-200" };
+  return { label: r.status, cls: "bg-secondary text-foreground border-border" };
+}
+
+const TABS: { key: "tutte" | Bucket; label: string }[] = [
+  { key: "tutte", label: "Tutte" },
+  { key: "nuove", label: "Nuove" },
+  { key: "da_rispondere", label: "Da rispondere" },
+  { key: "accettate_da_me", label: "Accettate da me" },
+  { key: "in_attesa_conferma", label: "In attesa conferma" },
+  { key: "confermate", label: "Confermate" },
+  { key: "completate", label: "Completate" },
+  { key: "annullate", label: "Annullate" },
+  { key: "da_recensire", label: "Da recensire" },
+];
+
+function priorityFor(r: Row, isNew: boolean): number {
+  // Lower = shown first
+  if (isNew) return 0;
+  if (r.status === "pending") return 1;
+  if (r.status === "interested" || r.status === "counter_offer") return 3;
+  if (r.status === "accepted") return 4;
+  if (isCompleted(r) && !r.hasWorkerReview) return 5;
+  if (isCompleted(r)) return 6;
+  return 7; // cancelled/rejected/expired
+}
 
 function Jobs() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"tutte" | Bucket>("tutte");
+  const [sortMode, setSortMode] = useState<SortMode>("service_date");
+  const [lastSeenAt] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const raw = window.localStorage.getItem(SEEN_KEY);
+    return raw ? Number(raw) : 0;
+  });
 
   const load = async () => {
     if (!user) return;
-    const { data: apps } = await supabase.from("applications")
-      .select("id, status, created_at, restaurant_id, announcement_id")
-      .eq("worker_id", user.id).order("created_at", { ascending: false });
-    const annIds = (apps ?? []).map(a => a.announcement_id);
-    const restIds = (apps ?? []).map(a => a.restaurant_id);
-    const [{ data: anns }, { data: rests }] = await Promise.all([
-      annIds.length ? supabase.from("announcements").select("id, service_date, service_time, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id").in("id", annIds) : Promise.resolve({ data: [] }),
-      restIds.length ? supabase.from("profiles").select("id, full_name, business_name, city, neighborhood").in("id", restIds) : Promise.resolve({ data: [] }),
+    const { data: apps } = await supabase
+      .from("applications")
+      .select(
+        "id, status, created_at, restaurant_id, announcement_id, worker_response_at, last_message_preview",
+      )
+      .eq("worker_id", user.id)
+      .order("created_at", { ascending: false });
+
+    const annIds = (apps ?? []).map((a) => a.announcement_id).filter(Boolean);
+    const restIds = Array.from(new Set((apps ?? []).map((a) => a.restaurant_id)));
+    const [{ data: anns }, { data: rests }, { data: shifts }, { data: revs }] = await Promise.all([
+      annIds.length
+        ? supabase
+            .from("announcements")
+            .select(
+              "id, service_date, service_time, end_time, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id, professional_profile, notes, required_skills, dress_code_items, dress_code_notes",
+            )
+            .in("id", annIds)
+        : Promise.resolve({ data: [] as any[] }),
+      restIds.length
+        ? supabase
+            .from("profiles")
+            .select(
+              "id, full_name, business_name, city, neighborhood, venue_type, venue_type_other, phone_full, email, address, street, street_number, contact_person_first_name, contact_person_last_name, contact_person_phone",
+            )
+            .in("id", restIds)
+        : Promise.resolve({ data: [] as any[] }),
+      annIds.length
+        ? supabase
+            .from("shifts")
+            .select("id, announcement_id, restaurant_id, status, shift_date")
+            .eq("worker_id", user.id)
+            .in("announcement_id", annIds)
+        : Promise.resolve({ data: [] as any[] }),
+      supabase
+        .from("reviews")
+        .select("application_id")
+        .eq("author_id", user.id),
     ]);
     const annMap = new Map((anns ?? []).map((a: any) => [a.id, a]));
     const restMap = new Map((rests ?? []).map((r: any) => [r.id, r]));
-    setRows((apps ?? []).map((a: any) => ({
-      ...a,
-      announcement: annMap.get(a.announcement_id) ?? null,
-      restaurant: restMap.get(a.restaurant_id) ?? null,
-    })));
+    const shiftByAnn = new Map((shifts ?? []).map((s: any) => [s.announcement_id, s]));
+    const reviewedAppIds = new Set((revs ?? []).map((r: any) => r.application_id).filter(Boolean));
+
+    setRows(
+      (apps ?? []).map((a: any) => {
+        const ann = annMap.get(a.announcement_id) ?? null;
+        return {
+          id: a.id,
+          status: a.status,
+          created_at: a.created_at,
+          restaurant_id: a.restaurant_id,
+          worker_response_at: a.worker_response_at,
+          announcement: ann,
+          restaurant: restMap.get(a.restaurant_id) ?? null,
+          shift: ann ? (shiftByAnn.get(ann.id) as ShiftLite | undefined) ?? null : null,
+          hasWorkerReview: reviewedAppIds.has(a.id),
+          lastMessage: a.last_message_preview ?? null,
+        } as Row;
+      }),
+    );
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => {
+    load();
+    // Mark "now" as last seen on unmount so future visits compute "Nuove" correctly,
+    // but only after rows have loaded once.
+    return () => {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(SEEN_KEY, String(Date.now()));
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const respond = async (id: string, status: "interested" | "not_interested") => {
-    const { error } = await supabase.from("applications").update({
-      status, worker_response_at: new Date().toISOString(),
-    }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    const { error } = await supabase
+      .from("applications")
+      .update({ status, worker_response_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     if (status === "interested" && user) {
       const { data: existing } = await supabase
         .from("messages")
@@ -68,10 +314,11 @@ function Jobs() {
           application_id: id,
           sender_id: user.id,
           message_type: "auto_application",
-          body: "Ciao! Ho inviato la mia candidatura per il turno pubblicato.\n\nSono disponibile nell'orario richiesto e resto a disposizione per conferma o ulteriori informazioni. A presto!",
+          body:
+            "Ciao! Ho inviato la mia candidatura per il turno pubblicato.\n\nSono disponibile nell'orario richiesto e resto a disposizione per conferma o ulteriori informazioni. A presto!",
         });
       }
-      toast.success("Candidatura inviata correttamente");
+      toast.success("Offerta accettata");
       navigate({ to: "/messages/$id", params: { id } });
       return;
     }
@@ -79,43 +326,315 @@ function Jobs() {
     load();
   };
 
-  if (role !== "worker") return <AppShell><p className="text-muted-foreground">Sezione riservata ai lavoratori.</p></AppShell>;
+  // ---- counts & filtering ----
+  const counts = useMemo(() => {
+    const c: Record<Bucket | "tutte", number> = {
+      tutte: rows.length,
+      nuove: 0,
+      da_rispondere: 0,
+      accettate_da_me: 0,
+      in_attesa_conferma: 0,
+      confermate: 0,
+      completate: 0,
+      annullate: 0,
+      da_recensire: 0,
+    };
+    for (const r of rows) for (const b of bucketsFor(r, lastSeenAt)) c[b] += 1;
+    return c;
+  }, [rows, lastSeenAt]);
+
+  const filtered = useMemo(() => {
+    const list = tab === "tutte" ? rows.slice() : rows.filter((r) => bucketsFor(r, lastSeenAt).includes(tab));
+    list.sort((a, b) => {
+      if (sortMode === "service_date") {
+        return (a.announcement?.service_date ?? "9999").localeCompare(b.announcement?.service_date ?? "9999");
+      }
+      if (sortMode === "received") {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortMode === "tariff") {
+        return (b.announcement?.tariff_amount ?? 0) - (a.announcement?.tariff_amount ?? 0);
+      }
+      if (sortMode === "role") {
+        return (a.announcement?.professional_profile ?? "").localeCompare(
+          b.announcement?.professional_profile ?? "",
+        );
+      }
+      // status — group by workflow priority
+      const isNewA = a.status === "pending" && new Date(a.created_at).getTime() > lastSeenAt;
+      const isNewB = b.status === "pending" && new Date(b.created_at).getTime() > lastSeenAt;
+      return priorityFor(a, isNewA) - priorityFor(b, isNewB);
+    });
+    if (tab === "tutte") {
+      // Default "Tutte" view: workflow priority first, then service date
+      list.sort((a, b) => {
+        const isNewA = a.status === "pending" && new Date(a.created_at).getTime() > lastSeenAt;
+        const isNewB = b.status === "pending" && new Date(b.created_at).getTime() > lastSeenAt;
+        const p = priorityFor(a, isNewA) - priorityFor(b, isNewB);
+        if (p !== 0) return p;
+        return (a.announcement?.service_date ?? "9999").localeCompare(b.announcement?.service_date ?? "9999");
+      });
+    }
+    return list;
+  }, [rows, tab, sortMode, lastSeenAt]);
+
+  if (role !== "worker")
+    return (
+      <AppShell>
+        <p className="text-muted-foreground">Sezione riservata ai lavoratori.</p>
+      </AppShell>
+    );
+
+  const stats: { label: string; value: number }[] = [
+    { label: "Totale", value: counts.tutte },
+    { label: "Nuove", value: counts.nuove },
+    { label: "Da rispondere", value: counts.da_rispondere },
+    { label: "Accettate da me", value: counts.accettate_da_me },
+    { label: "In attesa conferma", value: counts.in_attesa_conferma },
+    { label: "Confermate", value: counts.confermate },
+    { label: "Annullate", value: counts.annullate },
+    { label: "Completate", value: counts.completate },
+    { label: "Da recensire", value: counts.da_recensire },
+  ];
 
   return (
     <AppShell>
-      <PageHeader title="Le mie offerte" subtitle="Offerte ricevute dai ristoratori" />
-      {loading ? <p className="text-muted-foreground">Caricamento…</p> : rows.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">Nessuna offerta ricevuta.</div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {rows.map(r => (
-            <div key={r.id} className="rounded-2xl border bg-card p-5">
-              <div className="flex items-start justify-between">
-                <div className="font-semibold">{r.restaurant?.business_name || r.restaurant?.full_name || "Ristoratore"}</div>
-                <span className="text-xs rounded-full bg-secondary px-2 py-1 capitalize">{r.status}</span>
-              </div>
-              {r.announcement && (
-                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(r.announcement.service_date).toLocaleDateString("it-IT")} · {r.announcement.service_time?.slice(0,5)} ({r.announcement.duration_hours}h)</div>
-                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{publicLocationLabel({
-                    job_city: r.announcement.job_city,
-                    city: r.restaurant?.city,
-                    neighborhood: r.restaurant?.neighborhood,
-                  })}</div>
-                  <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(r.announcement.tariff_amount, r.announcement.tariff_type)}</div>
-                </div>
-              )}
-              <div className="mt-4 flex gap-2">
-                {r.status === "pending" && (<>
-                  <Button size="sm" className="flex-1" onClick={() => respond(r.id, "interested")}>Sono interessato</Button>
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => respond(r.id, "not_interested")}>Rifiuta</Button>
-                </>)}
-                <Link to="/messages/$id" params={{ id: r.id }}><Button size="sm" variant="secondary" className="gap-2"><MessageSquare className="h-4 w-4" />Chat</Button></Link>
-              </div>
+      <PageHeader
+        title="Offerte ricevute"
+        subtitle="Gestisci qui le proposte di lavoro ricevute dai ristoratori e segui lo stato dei tuoi servizi."
+      />
+
+      {/* Dashboard riepilogo */}
+      <div className="mt-2 grid grid-cols-3 gap-2 md:grid-cols-5 lg:grid-cols-9">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-xl border bg-card px-3 py-2">
+            <div className="text-xs text-muted-foreground">{s.label}</div>
+            <div className="text-lg font-semibold tabular-nums">{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Privacy hint */}
+      <div className="mt-4 flex items-start gap-2 rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>
+          Per proteggere entrambe le parti, i dati completi del locale vengono mostrati solo dopo la conferma
+          reciproca del servizio.
+        </span>
+      </div>
+
+      {/* Filtri */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          const count = counts[t.key];
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={
+                "text-xs rounded-full px-3 py-1.5 border transition " +
+                (active
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card hover:bg-accent")
+              }
+            >
+              {t.label}
+              <span className="ml-1.5 opacity-70">({count})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Ordina per */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span>Ordina per:</span>
+        {(
+          [
+            ["service_date", "Data servizio"],
+            ["received", "Offerta più recente"],
+            ["tariff", "Compenso più alto"],
+            ["role", "Ruolo"],
+            ["status", "Stato"],
+          ] as [SortMode, string][]
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setSortMode(k)}
+            className={
+              "rounded-full border px-2.5 py-1 transition " +
+              (sortMode === k ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent")
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Lista */}
+      <div className="mt-5">
+        {loading ? (
+          <p className="text-muted-foreground">Caricamento…</p>
+        ) : rows.length === 0 ? (
+          <div className="rounded-2xl border bg-card p-12 text-center">
+            <div className="font-medium">Non hai ancora ricevuto offerte.</div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              Quando un ristoratore ti invierà una proposta di lavoro, la troverai qui.
             </div>
-          ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
+            Nessuna offerta in questa categoria.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {filtered.map((r) => (
+              <OfferCard key={r.id} r={r} lastSeenAt={lastSeenAt} onRespond={respond} />
+            ))}
+          </div>
+        )}
+      </div>
+    </AppShell>
+  );
+}
+
+function OfferCard({
+  r,
+  lastSeenAt,
+  onRespond,
+}: {
+  r: Row;
+  lastSeenAt: number;
+  onRespond: (id: string, status: "interested" | "not_interested") => void;
+}) {
+  const isNew = r.status === "pending" && new Date(r.created_at).getTime() > lastSeenAt;
+  const badge = statusBadge(r, isNew);
+  const confirmed = isMutuallyConfirmed(r) || isCompleted(r);
+  const venue = venueTypeLabel(r.restaurant?.venue_type, r.restaurant?.venue_type_other);
+  const zone = publicLocationLabel({
+    job_city: r.announcement?.job_city ?? null,
+    city: r.restaurant?.city ?? null,
+    neighborhood: r.restaurant?.neighborhood ?? null,
+  });
+  const role = r.announcement?.professional_profile || "Ruolo non specificato";
+  const dateStr = r.announcement?.service_date
+    ? new Date(r.announcement.service_date).toLocaleDateString("it-IT")
+    : "—";
+  const startTime = r.announcement?.service_time?.slice(0, 5);
+  const endTime = r.announcement?.end_time?.slice(0, 5);
+  const duration = r.announcement?.duration_hours;
+  const tariff = r.announcement
+    ? formatTariff(r.announcement.tariff_amount, r.announcement.tariff_type)
+    : null;
+  const receivedAt = new Date(r.created_at).toLocaleDateString("it-IT");
+
+  return (
+    <div className="rounded-2xl border bg-card p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          {/* Before mutual confirmation we hide the restaurant name and show only venue type */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Store className="h-4 w-4" />
+            <span className="truncate">{venue}</span>
+          </div>
+          <div className="mt-1 truncate font-semibold">
+            {confirmed
+              ? r.restaurant?.business_name || r.restaurant?.full_name || "Ristoratore"
+              : role}
+          </div>
+        </div>
+        <span className={`text-xs rounded-full px-2 py-1 border whitespace-nowrap ${badge.cls}`}>
+          {badge.label}
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Briefcase className="h-4 w-4" />
+          <span>{role}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4" />
+          <span>
+            {dateStr}
+            {startTime ? ` · ${startTime}` : ""}
+            {endTime ? `–${endTime}` : ""}
+            {duration ? ` (${duration}h)` : ""}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4" />
+          <span>
+            {confirmed && r.restaurant?.address
+              ? r.restaurant.address
+              : zone}
+          </span>
+        </div>
+        {tariff && (
+          <div className="flex items-center gap-2">
+            <Euro className="h-4 w-4" />
+            <span>{tariff}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          <span>Offerta ricevuta il {receivedAt}</span>
+        </div>
+      </div>
+
+      {r.lastMessage && (
+        <div className="mt-3 rounded-lg bg-muted/40 p-2 text-xs text-muted-foreground line-clamp-2">
+          <span className="font-medium text-foreground">Messaggio: </span>
+          {r.lastMessage}
         </div>
       )}
-    </AppShell>
+
+      {!confirmed && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg bg-muted/30 p-2 text-xs text-muted-foreground">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>I dati completi del locale saranno visibili dopo la conferma reciproca.</span>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {r.status === "pending" && (
+          <>
+            <Button size="sm" className="flex-1" onClick={() => onRespond(r.id, "interested")}>
+              Accetta offerta
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1"
+              onClick={() => onRespond(r.id, "not_interested")}
+            >
+              Rifiuta offerta
+            </Button>
+          </>
+        )}
+        {(r.status === "interested" || r.status === "counter_offer" || r.status === "accepted") && (
+          <Link to="/messages/$id" params={{ id: r.id }}>
+            <Button size="sm" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Scrivi al ristoratore
+            </Button>
+          </Link>
+        )}
+        {isCompleted(r) && !r.hasWorkerReview && (
+          <Link to="/messages/$id" params={{ id: r.id }}>
+            <Button size="sm" className="gap-2">
+              <Star className="h-4 w-4" />
+              Lascia recensione
+            </Button>
+          </Link>
+        )}
+        <Link to="/messages/$id" params={{ id: r.id }}>
+          <Button size="sm" variant="secondary" className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Apri dettagli
+          </Button>
+        </Link>
+      </div>
+    </div>
   );
 }
