@@ -16,6 +16,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
@@ -119,7 +120,8 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
-  const { isBlocked, overdueCount } = useRequiredReviews();
+  const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
+  const [blockOpen, setBlockOpen] = useState(false);
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -215,8 +217,7 @@ function WorkersPage() {
   const invite = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
     if (isBlocked) {
-      toast.error("Per contattare nuovi lavoratori devi prima completare le recensioni obbligatorie dei turni conclusi.");
-      nav({ to: "/shifts", search: { tab: "to-review" } as never });
+      setBlockOpen(true);
       return;
     }
     // If a conversation already exists for this restaurant + worker + announcement, just open it.
