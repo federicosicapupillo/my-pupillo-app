@@ -15,6 +15,7 @@ import { formatTariff } from "@/lib/format";
 import {
   ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
   XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check, Heart,
+  Flag, ThumbsUp, ThumbsDown, HelpCircle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
@@ -102,6 +103,24 @@ const CRITICAL_TAGS = [
 const RATING_LABELS: Record<number, string> = {
   1: "Insufficiente", 2: "Da migliorare", 3: "Buono", 4: "Molto buono", 5: "Eccellente",
 };
+
+const CRITERIA: { key: "punctuality" | "professionalism" | "competence" | "reliability" | "teamwork" | "communication" | "appearance"; label: string; hint: string }[] = [
+  { key: "punctuality", label: "Puntualità", hint: "Si è presentato all'orario concordato" },
+  { key: "professionalism", label: "Professionalità", hint: "Atteggiamento e comportamento sul lavoro" },
+  { key: "competence", label: "Competenza", hint: "Capacità tecniche nel ruolo svolto" },
+  { key: "reliability", label: "Affidabilità", hint: "Costanza e impegno durante il servizio" },
+  { key: "teamwork", label: "Lavoro in team", hint: "Collaborazione con il resto dello staff" },
+  { key: "communication", label: "Comunicazione", hint: "Chiarezza nello scambio di informazioni" },
+  { key: "appearance", label: "Cura dell'aspetto", hint: "Rispetto del dress code e ordine" },
+];
+
+const INCIDENT_KINDS: { key: string; label: string; desc: string }[] = [
+  { key: "no_show", label: "Non si è presentato", desc: "Il lavoratore non si è presentato al turno." },
+  { key: "late", label: "Ritardo grave", desc: "Ritardo significativo non comunicato." },
+  { key: "behavior", label: "Comportamento scorretto", desc: "Comportamento inappropriato verso staff o clienti." },
+  { key: "dress_code", label: "Dress code non rispettato", desc: "Aspetto o abbigliamento non conformi." },
+  { key: "other", label: "Altro", desc: "Altro problema rilevante." },
+];
 
 function ShiftDetailPage() {
   const { shiftId } = Route.useParams();
@@ -271,6 +290,31 @@ function ShiftDetailPage() {
       .eq("target_id", shift.worker_id)
       .maybeSingle();
     if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
+    return null;
+  };
+
+  const submitFullReview = async (payload: {
+    criteria: Record<string, number>;
+    wouldRehire: "yes" | "maybe" | "no" | null;
+    text: string;
+    tags: string[];
+  }) => {
+    if (!user || !shift) return;
+    const vals = Object.values(payload.criteria);
+    if (vals.length < CRITERIA.length || vals.some((v) => !v)) {
+      toast.error("Valuta tutti i criteri."); return;
+    }
+    if (!payload.wouldRehire) { toast.error('Rispondi a "Lo richiameresti?"'); return; }
+    const trimmed = payload.text.trim();
+    if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
+    if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
+    const rating = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+
+    const { data: dup } = await supabase.from("reviews")
+      .select("id").eq("shift_id", shift.id).eq("author_id", user.id)
+      .eq("target_id", shift.worker_id).maybeSingle();
+    if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
+
     const { data: created, error } = await supabase.from("reviews").insert({
       author_id: user.id,
       target_id: shift.worker_id,
@@ -279,14 +323,21 @@ function ShiftDetailPage() {
       application_id: appId,
       rating,
       comment: trimmed,
-      tags,
+      tags: payload.tags,
+      punctuality: payload.criteria.punctuality,
+      professionalism: payload.criteria.professionalism,
+      competence: payload.criteria.competence,
+      reliability: payload.criteria.reliability,
+      teamwork: payload.criteria.teamwork,
+      communication: payload.criteria.communication,
+      appearance: payload.criteria.appearance,
+      would_rehire: payload.wouldRehire,
     } as never).select("id, rating, comment, tags").single();
     if (error) {
       toast.error(error.message.includes("duplicate") || error.message.includes("unique") ? "Recensione già presente per questo turno." : error.message);
       await load();
       return;
     }
-    // Messaggio di sistema in chat (best effort)
     if (appId) {
       await supabase.from("messages").insert({
         application_id: appId,
@@ -299,6 +350,22 @@ function ShiftDetailPage() {
     toast.success("Recensione inviata");
     setExistingReview(created as any);
     await load();
+  };
+
+  const reportIncident = async (kind: string, description: string) => {
+    if (!user || !shift) return;
+    if (!kind) { toast.error("Seleziona il tipo di problema."); return; }
+    if (description.trim().length < 20) { toast.error("Descrivi il problema (min 20 caratteri)."); return; }
+    const { error } = await supabase.from("worker_incidents").insert({
+      worker_id: shift.worker_id,
+      restaurant_id: user.id,
+      application_id: appId,
+      shift_id: shift.id,
+      kind,
+      description: description.trim(),
+    } as never);
+    if (error) { toast.error(error.message ?? "Errore invio segnalazione"); return; }
+    toast.success("Segnalazione inviata. Sarà verificata dal team.");
   };
 
   if (loading) {
@@ -529,7 +596,8 @@ function ShiftDetailPage() {
               workerName={worker?.full_name ?? null}
               isOverdue={isOverdue}
               dueDate={requiredReview?.due_date ?? null}
-              onSubmit={submitReview}
+              onSubmit={submitFullReview}
+              onReportIncident={reportIncident}
             />
           </div>
         )}
