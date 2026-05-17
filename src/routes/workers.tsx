@@ -51,6 +51,12 @@ type W = {
   service_area_lat: number | null;
   service_area_lng: number | null;
   service_area_radius_m: number | null;
+  reputation_score?: number | null;
+  reputation_level?: string | null;
+  completed_shifts?: number | null;
+  punctuality_pct?: number | null;
+  rehire_restaurants_count?: number | null;
+  reviews_count?: number | null;
 };
 
 type Category =
