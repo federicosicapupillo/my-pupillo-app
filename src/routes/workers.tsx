@@ -125,62 +125,35 @@ function WorkersPage() {
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
+  // Filtri reattivi: ogni cambio aggiorna immediatamente la lista
   const [category, setCategory] = useState<Category>("all");
   const [subcategory, setSubcategory] = useState<string>("");
   const [qInput, setQInput] = useState("");
-  const [q, setQ] = useState("");
-  // Draft (form) state — committed only on "Cerca"
-  const [catDraft, setCatDraft] = useState<Category>("all");
-  const [subDraft, setSubDraft] = useState<string>("");
-  const [searching, setSearching] = useState(false);
   const [lang, setLang] = useState("");
-  const [langDraft, setLangDraft] = useState("");
-  const [hasSearched, setHasSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
 
-  const runSearch = async (overrides?: { category?: Category; subcategory?: string; text?: string; language?: string }) => {
-    const nextCategory = overrides?.category ?? catDraft;
-    const nextSubcategory = overrides?.subcategory ?? subDraft;
-    const nextText = (overrides?.text ?? qInput).trim();
-    const nextLanguage = overrides?.language ?? langDraft;
-    setSearching(true);
+  // Carica TUTTI i lavoratori attivi una sola volta. I filtri lavorano poi lato client.
+  const loadWorkers = async () => {
+    setLoading(true);
     try {
-      // Only restrict to workers with a primary_role when the user is filtering by role/skill,
-      // otherwise show every active worker so "Cerca" without filtri returns the full list.
-      let query = supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m")
         .eq("account_status", "active")
         .order("last_active_at", { ascending: false })
         .limit(1000);
-      if (nextCategory === "role" || nextCategory === "skill") {
-        query = query.not("primary_role", "is", null);
-      }
-      const { data, error } = await query;
       if (error) throw error;
-      const results = ((data as W[]) ?? []).filter((worker) => {
-        if (!matchesSubcategory(worker, nextCategory, nextSubcategory)) return false;
-        if (!matchesText(worker, nextText, nextCategory, nextSubcategory)) return false;
-        if (nextLanguage) {
-          const spoken = normalizeSpokenLanguages(worker.spoken_languages).map((item) => item.language.toLowerCase());
-          const legacy = (worker.languages ?? []).map((item) => item.toLowerCase());
-          if (![...spoken, ...legacy].some((item) => item.includes(nextLanguage.toLowerCase()))) return false;
-        }
-        return true;
-      });
-      setWorkers((results as W[]) ?? []);
-      setCategory(nextCategory);
-      setSubcategory(nextSubcategory);
-      setQ(nextText);
-      setLang(nextLanguage);
-      setHasSearched(true);
+      setWorkers((data as W[]) ?? []);
+      setLoaded(true);
     } catch (error) {
-      console.error("[workers] runSearch error", error);
-      toast.error(error instanceof Error ? error.message : "Errore durante la ricerca lavoratori");
+      console.error("[workers] load error", error);
+      toast.error(error instanceof Error ? error.message : "Errore durante il caricamento dei lavoratori");
       setWorkers([]);
-      setHasSearched(true);
+      setLoaded(true);
     } finally {
-      setSearching(false);
+      setLoading(false);
     }
   };
 
@@ -204,10 +177,10 @@ function WorkersPage() {
     })();
   }, [user]);
 
-  // Carica tutti i lavoratori di default all'apertura della pagina
+  // Carica tutti i lavoratori all'apertura della pagina
   useEffect(() => {
     if (role === "restaurant") {
-      void runSearch({ category: "all", subcategory: "", text: "", language: "" });
+      void loadWorkers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
@@ -365,19 +338,29 @@ function WorkersPage() {
     return allText.includes(t); // all + custom
   };
 
-  const filtered = workers;
+  const q = qInput.trim();
+  const hasActiveFilters = category !== "all" || !!subcategory || !!q || !!lang;
+  const filtered = workers.filter((worker) => {
+    if (!matchesSubcategory(worker, category, subcategory)) return false;
+    if (!matchesText(worker, q, category, subcategory)) return false;
+    if (lang) {
+      const spoken = normalizeSpokenLanguages(worker.spoken_languages).map((item) => item.language.toLowerCase());
+      const legacy = (worker.languages ?? []).map((item) => item.toLowerCase());
+      if (![...spoken, ...legacy].some((item) => item.includes(lang.toLowerCase()))) return false;
+    }
+    return true;
+  });
   const resetFilters = () => {
-    setCatDraft("all"); setSubDraft("");
-    setCategory("all"); setSubcategory("");
-    setQInput(""); setQ("");
-    setLang(""); setLangDraft("");
-    void runSearch({ category: "all", subcategory: "", text: "", language: "" });
+    setCategory("all");
+    setSubcategory("");
+    setQInput("");
+    setLang("");
   };
-  const onChangeCategory = (c: Category) => { setCatDraft(c); setSubDraft(""); };
-  const removeCategoryChip = () => { setCatDraft("all"); setSubDraft(""); void runSearch({ category: "all", subcategory: "" }); };
-  const removeSubChip = () => { setSubDraft(""); void runSearch({ subcategory: "" }); };
-  const removeQChip = () => { setQInput(""); void runSearch({ text: "" }); };
-  const removeLangChip = () => { setLangDraft(""); void runSearch({ language: "" }); };
+  const onChangeCategory = (c: Category) => { setCategory(c); setSubcategory(""); };
+  const removeCategoryChip = () => { setCategory("all"); setSubcategory(""); };
+  const removeSubChip = () => setSubcategory("");
+  const removeQChip = () => setQInput("");
+  const removeLangChip = () => setLang("");
 
 
   const selectedAnn = anns.find((a) => a.id === selected);
@@ -455,7 +438,7 @@ function WorkersPage() {
         </div>
         <div>
           <label className="text-sm font-medium">Lingua (filtro rapido)</label>
-          <Select value={langDraft || "__all"} onValueChange={(v) => setLangDraft(v === "__all" ? "" : v)}>
+          <Select value={lang || "__all"} onValueChange={(v) => setLang(v === "__all" ? "" : v)}>
             <SelectTrigger className="mt-1 h-9 w-full"><SelectValue placeholder="Tutte le lingue" /></SelectTrigger>
             <SelectContent className="z-[60] max-h-[60vh]">
               <SelectItem value="__all">Tutte le lingue</SelectItem>
@@ -471,7 +454,7 @@ function WorkersPage() {
       <div className="mb-4 rounded-2xl border bg-card p-3 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_15%,transparent)]">
         <label className="mb-2 block text-sm font-medium">Ricerca avanzata lavoratori</label>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
-          <Select value={catDraft} onValueChange={(v) => onChangeCategory(v as Category)}>
+          <Select value={category} onValueChange={(v) => onChangeCategory(v as Category)}>
             <SelectTrigger aria-label="Categoria di ricerca" className="h-9 lg:w-[180px]">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
@@ -481,13 +464,13 @@ function WorkersPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={subDraft || "__none"} onValueChange={(v) => setSubDraft(v === "__none" ? "" : v)}>
+          <Select value={subcategory || "__none"} onValueChange={(v) => setSubcategory(v === "__none" ? "" : v)}>
             <SelectTrigger aria-label="Sottocategoria" className="h-9 lg:w-[220px]">
               <SelectValue placeholder="— Sottocategoria —" />
             </SelectTrigger>
             <SelectContent className="z-[60] max-h-[60vh]">
               <SelectItem value="__none">— Sottocategoria —</SelectItem>
-              {SUBCATEGORIES[catDraft].map((s) => (
+              {SUBCATEGORIES[category].map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
             </SelectContent>
@@ -496,21 +479,17 @@ function WorkersPage() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-8"
-              placeholder={PLACEHOLDER_BY_CATEGORY[catDraft]}
+              placeholder={PLACEHOLDER_BY_CATEGORY[category]}
               value={qInput}
               onChange={(e) => setQInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") void runSearch(); }}
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => void runSearch()} disabled={searching} className="gap-1">
-              <Search className="h-4 w-4" />{searching ? "Sto cercando…" : "Cerca"}
-            </Button>
-            <Button variant="outline" onClick={resetFilters} className="gap-1"><RotateCcw className="h-4 w-4" />Reset</Button>
+            <Button variant="outline" onClick={resetFilters} disabled={!hasActiveFilters} className="gap-1"><RotateCcw className="h-4 w-4" />Rimuovi filtri</Button>
           </div>
         </div>
         {/* Active filter chips */}
-        {(category !== "all" || subcategory || q || lang) && (
+        {hasActiveFilters && (
           <div className="mt-3 flex flex-wrap gap-2">
             {category !== "all" && (
               <button onClick={removeCategoryChip} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs hover:bg-primary/20">
@@ -537,10 +516,10 @@ function WorkersPage() {
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {searching
-            ? "Ricerca in corso…"
+          {loading
+            ? "Caricamento lavoratori…"
             : (() => {
-                const n = hasSearched ? sorted.length : 0;
+                const n = loaded ? sorted.length : 0;
                 return `${n} ${n === 1 ? "lavoratore trovato" : "lavoratori trovati"}`;
               })()}
         </p>
@@ -626,12 +605,19 @@ function WorkersPage() {
           </div>
           );
         })}
-        {hasSearched && !searching && sorted.length === 0 && (
-          <p className="text-muted-foreground col-span-full">
-            {(category === "all" && !subcategory && !q && !lang)
-              ? "Nessun lavoratore disponibile al momento."
-              : "Nessun lavoratore trovato. Prova a modificare i filtri o la parola chiave."}
-          </p>
+        {loaded && !loading && sorted.length === 0 && (
+          <div className="col-span-full flex flex-col items-start gap-3 rounded-xl border border-dashed bg-muted/30 p-6">
+            <p className="text-sm text-muted-foreground">
+              {hasActiveFilters
+                ? "Nessun lavoratore trovato con questi filtri."
+                : "Nessun lavoratore disponibile al momento."}
+            </p>
+            {hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={resetFilters} className="gap-1">
+                <RotateCcw className="h-4 w-4" />Rimuovi filtri
+              </Button>
+            )}
+          </div>
         )}
       </div>
       )}
