@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "@tanstack/react-router";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
+import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
+import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
@@ -121,7 +123,7 @@ export const Route = createFileRoute("/announcements")({
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
 });
 
-type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null; is_long_shift?: boolean | null; long_shift_reason?: string | null; shift_duration_hours?: number | null; assigned_worker_id?: string | null; license_requirement?: string | null; language_requirements?: string[] | null; tattoos_allowed?: string | null; piercings_allowed?: string | null; beard_allowed?: string | null; required_skills?: string[] | null; dress_code_items?: string[] | null; dress_code_notes?: string | null; }
+type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null; is_long_shift?: boolean | null; long_shift_reason?: string | null; shift_duration_hours?: number | null; assigned_worker_id?: string | null; license_requirement?: string | null; language_requirements?: string[] | null; tattoos_allowed?: string | null; piercings_allowed?: string | null; beard_allowed?: string | null; required_skills?: string[] | null; dress_code_items?: string[] | null; dress_code_notes?: string | null; job_city?: string | null; }
 
 type Candidate = {
   worker_id: string;
