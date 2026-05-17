@@ -203,15 +203,22 @@ function AnnouncementsPage() {
                   {a.status === "completed" && (
                     <div className="mt-1 text-xs text-muted-foreground">
                       {assigned[a.id].rating != null ? (
-                        <span className="inline-flex items-center gap-1">
-                          La tua valutazione:
-                          <span className="inline-flex items-center text-amber-500">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star key={i} className={`h-3 w-3 ${i < (assigned[a.id].rating ?? 0) ? "fill-current" : ""}`} />
-                            ))}
-                          </span>
-                          <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
+                      <span className="inline-flex items-center gap-1">
+                        La tua valutazione:
+                        <span className="inline-flex items-center">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < (assigned[a.id].rating ?? 0)
+                                  ? "text-yellow-400 fill-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
                         </span>
+                        <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
+                      </span>
                       ) : (
                         <span className="italic">Valutazione non ancora inserita</span>
                       )}
