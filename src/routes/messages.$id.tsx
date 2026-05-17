@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
+import { BlockedContactDialog } from "@/components/BlockedContactDialog";
+import { useRequiredReviews } from "@/lib/required-reviews";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import { formatDateIT, formatTariff } from "@/lib/format";
@@ -251,6 +253,8 @@ function Thread() {
   const { id } = Route.useParams();
   const { user, role, profile } = useAuth();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
+  const { isBlocked, actionShifts } = useRequiredReviews();
+  const [blockOpen, setBlockOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [app, setApp] = useState<App | null>(null);
