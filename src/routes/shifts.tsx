@@ -175,6 +175,8 @@ function ShiftsPage() {
         return;
       }
       toast.success("Recensione inviata", { id: tId });
+      // Clear any prior error banner now that submission succeeded
+      setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
       // Optimistic, immediate card update — no page reload needed
       setReviewMap(prev => ({ ...prev, [s.id]: submittedRating }));
       // Immediately refresh shift row from DB so any server-side updates (status, etc.) reflect
