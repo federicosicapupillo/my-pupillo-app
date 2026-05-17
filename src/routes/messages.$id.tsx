@@ -976,6 +976,20 @@ function Thread() {
                         console.error("[proposal] response insert failed", respErr);
                       }
                     }
+                    // Notify the restaurant that the worker accepted the proposal.
+                    if (app?.restaurant_id) {
+                      try {
+                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (other?.name ?? "Il lavoratore");
+                        await supabase.from("notifications").insert({
+                          user_id: app.restaurant_id,
+                          title: "Proposta accettata",
+                          body: `${workerName} ha accettato la tua proposta di lavoro. Ora puoi assegnare il turno dalla chat.`,
+                          link: `/messages/${id}`,
+                        } as never);
+                      } catch (err) {
+                        console.error("[proposal] notify accept failed", err);
+                      }
+                    }
                     try {
                       // Keep the application transition for the FIRST accepted proposal so
                       // shift creation / notifications triggers still fire. Later proposals
@@ -1005,6 +1019,20 @@ function Thread() {
                         setProposalStatuses((prev) => ({ ...prev, [m.id]: "rejected" }));
                       } else if (!String(respErr.message ?? "").toLowerCase().includes("duplicate")) {
                         console.error("[proposal] response insert failed", respErr);
+                      }
+                    }
+                    // Notify the restaurant that the worker rejected the proposal.
+                    if (app?.restaurant_id) {
+                      try {
+                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (other?.name ?? "Il lavoratore");
+                        await supabase.from("notifications").insert({
+                          user_id: app.restaurant_id,
+                          title: "Proposta rifiutata",
+                          body: `${workerName} ha rifiutato la tua proposta di lavoro. Puoi proporgli un altro turno o contattare un altro lavoratore.`,
+                          link: `/messages/${id}`,
+                        } as never);
+                      } catch (err) {
+                        console.error("[proposal] notify reject failed", err);
                       }
                     }
                     try {
