@@ -276,23 +276,6 @@ function ShiftDetailPage() {
     nav({ to: "/ristoratore/turni/$shiftId", params: { shiftId: shift.id }, search: { section: "recensione" } });
   };
 
-  const submitReview = async (rating: number, text: string, tags: string[]) => {
-    if (!user || !shift) return;
-    if (rating < 1 || rating > 5) { toast.error("Seleziona una valutazione."); return; }
-    const trimmed = text.trim();
-    if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
-    if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
-    // Anti-duplicato
-    const { data: dup } = await supabase.from("reviews")
-      .select("id, rating, comment, tags")
-      .eq("shift_id", shift.id)
-      .eq("author_id", user.id)
-      .eq("target_id", shift.worker_id)
-      .maybeSingle();
-    if (dup) { toast.error("Hai già recensito questo turno."); await load(); return; }
-    return null;
-  };
-
   const submitFullReview = async (payload: {
     criteria: Record<string, number>;
     wouldRehire: "yes" | "maybe" | "no" | null;
