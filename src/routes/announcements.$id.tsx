@@ -288,15 +288,11 @@ function AnnouncementDetail() {
     if (!ann) return false;
     if (ann.status === "completed" || ann.status === "cancelled") return true;
     const now = Date.now();
-    const endDate = ann.end_date || ann.service_date;
-    const endTime = ann.end_time || ann.service_time || "23:59";
-    if (endDate) {
-      const end = new Date(`${endDate}T${(endTime.length === 5 ? endTime + ":00" : endTime)}`);
-      if (!isNaN(end.getTime()) && end.getTime() < now) return true;
-    }
-    if (ann.status !== "assigned" && ann.expires_at) {
-      const exp = new Date(ann.expires_at);
-      if (!isNaN(exp.getTime()) && exp.getTime() < now) return true;
+    const end = getShiftEndDate(ann as any);
+    if (end && end.getTime() < now) return true;
+    if (ann.status !== "assigned") {
+      const exp = getExpiresAtDate(ann as any);
+      if (exp && exp.getTime() < now) return true;
     }
     return false;
   }, [ann]);
