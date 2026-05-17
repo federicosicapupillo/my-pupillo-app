@@ -611,6 +611,25 @@ function Thread() {
   };
 
   const canChangeStatus = app ? TERMINAL.includes(app.status) === false : false;
+
+  // Server-side authority for the "Assegna" button.
+  // Re-fetches whenever proposals or per-proposal responses change.
+  useEffect(() => {
+    if (role !== "restaurant" || !app || !canChangeStatus) {
+      setServerAssign(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await canAssignShift({ data: { applicationId: id } });
+        if (!cancelled) setServerAssign({ canAssign: !!res.canAssign, reason: res.reason ?? null });
+      } catch {
+        if (!cancelled) setServerAssign({ canAssign: false, reason: "Verifica server non disponibile." });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [role, id, app?.status, canChangeStatus, msgs.length, JSON.stringify(proposalStatuses)]);
   const isConversationClosed = app?.status === "expired";
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
