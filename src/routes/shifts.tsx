@@ -56,7 +56,7 @@ function ShiftsPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "upcoming" | "past" | "to-review">(
+  const [filter, setFilter] = useState<"all" | "upcoming" | "assigned" | "past" | "to-review">(
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "all"
   );
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
@@ -64,6 +64,8 @@ function ShiftsPage() {
   const [reviewMap, setReviewMap] = useState<Record<string, number>>({});
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
+  const [announcementsMap, setAnnouncementsMap] = useState<Record<string, any>>({});
+  const [acceptedAppMap, setAcceptedAppMap] = useState<Record<string, { id: string; status: string }>>({});
   const [submittingReview, setSubmittingReview] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<Record<string, string>>({});
   const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
@@ -89,6 +91,20 @@ function ShiftsPage() {
     if (error) { toast.error("Errore nel caricamento turni"); return; }
     const list = (data ?? []) as Shift[];
     setShifts(list);
+    // Load announcement details and accepted applications for chat links
+    const annIds = list.map(s => s.announcement_id).filter(Boolean) as string[];
+    let annMap: Record<string, any> = {};
+    let accAppMap: Record<string, { id: string; status: string }> = {};
+    if (annIds.length) {
+      const [{ data: annData }, { data: accApps }] = await Promise.all([
+        supabase.from("announcements").select("id, service_date, service_time, end_time, location_address, tariff_amount, tariff_type, job_address, job_city, professional_profile, required_skills, dress_code_items, dress_code_notes, notes").in("id", annIds),
+        (supabase as any).from("applications").select("id, announcement_id, status").in("announcement_id", annIds).in("status", ["accepted", "confirmed", "assigned"]).eq(col, user.id)
+      ]);
+      (annData ?? []).forEach((a: any) => { annMap[a.id] = a; });
+      (accApps ?? []).forEach((a: any) => { accAppMap[a.announcement_id] = { id: a.id, status: a.status }; });
+    }
+    setAnnouncementsMap(annMap);
+    setAcceptedAppMap(accAppMap);
     // For restaurants, also load pending/in-flight applications (candidature in attesa)
     let pending: PendingApp[] = [];
     if (role === "restaurant") {
@@ -247,20 +263,38 @@ function ShiftsPage() {
     setViewReviewData(null);
   };
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const filtered = useMemo(() => {
     if (filter === "upcoming") return [] as Shift[]; // pending applications rendered separately
-    if (filter === "past") return shifts.filter(s => s.status === "completed");
+    if (filter === "assigned") return shifts.filter(s => s.status === "scheduled" && s.shift_date >= today);
+    if (filter === "past") return shifts.filter(s => s.status === "completed" || (s.status === "scheduled" && s.shift_date < today));
     if (filter === "to-review") return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
     return shifts;
-  }, [shifts, filter, reqByShift]);
+  }, [shifts, filter, reqByShift, today]);
 
   const counts = useMemo(() => {
-    const past = shifts.filter(s => s.status === "completed").length;
+    const assigned = shifts.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
+    const past = shifts.filter(s => s.status === "completed" || (s.status === "scheduled" && s.shift_date < today)).length;
     const toReview = shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
     const pending = role === "restaurant" ? pendingApps.length : 0;
     const all = shifts.length + pending;
-    return { all, pending, past, toReview };
-  }, [shifts, pendingApps, reqByShift, role]);
+    return { all, pending, assigned, past, toReview };
+  }, [shifts, pendingApps, reqByShift, role, today]);
+
+  const displayShifts = useMemo(() => {
+    const list = [...filtered];
+    if (filter === "assigned") {
+      list.sort((a, b) => {
+        const dateCmp = a.shift_date.localeCompare(b.shift_date);
+        if (dateCmp !== 0) return dateCmp;
+        const timeA = announcementsMap[a.announcement_id || ""]?.service_time || "00:00";
+        const timeB = announcementsMap[b.announcement_id || ""]?.service_time || "00:00";
+        return timeA.localeCompare(timeB);
+      });
+    }
+    return list;
+  }, [filtered, filter, announcementsMap]);
 
   const stats = useMemo(() => ({
     total: shifts.length,
@@ -283,10 +317,11 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["all", "upcoming", "past", "to-review"] as const).map(f => {
+        {(["all", "upcoming", "assigned", "past", "to-review"] as const).map(f => {
           const label =
             f === "all" ? `Tutti (${counts.all})`
-            : f === "upcoming" ? `In attesa conferma (${counts.pending})`
+            : f === "upcoming" ? `In attesa (${counts.pending})`
+            : f === "assigned" ? `Assegnati (${counts.assigned})`
             : f === "past" ? `Passati (${counts.past})`
             : `Da recensire (${counts.toReview})`;
           return (
@@ -380,14 +415,16 @@ function ShiftsPage() {
               })}
             </div>
           )}
-          {filtered.length === 0 && !(role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0) ? (
+          {displayShifts.length === 0 && !(role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0) ? (
         <div className="rounded-2xl border bg-card p-8 text-center">
           <CalendarClock className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">Nessun turno da mostrare.</p>
+          <p className="text-muted-foreground">
+            {filter === "assigned" ? "Non hai ancora turni assegnati." : "Nessun turno da mostrare."}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(s => {
+          {displayShifts.map(s => {
             const meta = statusMeta[s.status];
             const Icon = meta.icon;
             const otherId = role === "restaurant" ? s.worker_id : s.restaurant_id;
@@ -413,11 +450,29 @@ function ShiftsPage() {
                     </div>
                   </div>
                   <Badge variant="outline" className={`gap-1 ${meta.color}`}>
-                    <Icon className="h-3 w-3" />{meta.label}
+                    <Icon className="h-3 w-3" />
+                    {filter === "assigned" && s.status === "scheduled" ? (acceptedAppMap[s.announcement_id || ""]?.status === "confirmed" ? "Confermato" : "Assegnato") : meta.label}
                   </Badge>
                 </div>
+                {(() => {
+                  const ann = announcementsMap[s.announcement_id || ""];
+                  return ann ? (
+                    <div className="mt-2 text-sm text-muted-foreground space-y-0.5">
+                      {ann.professional_profile && <div className="capitalize">{ann.professional_profile}</div>}
+                      {ann.service_time && (
+                        <div>{ann.service_time.slice(0,5)}{ann.end_time && `–${ann.end_time.slice(0,5)}`}</div>
+                      )}
+                      {(ann.location_address || ann.job_address) && (
+                        <div className="truncate">{ann.location_address || `${ann.job_address}${ann.job_city ? `, ${ann.job_city}` : ""}`}</div>
+                      )}
+                      {ann.tariff_amount != null && (
+                        <div>€{Number(ann.tariff_amount).toFixed(2)} {ann.tariff_type === "hourly" ? "/ora" : "fisso"}</div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
 
-                {(canRestaurantAct || canWorkerComplete) && (
+                {(canRestaurantAct || canWorkerComplete || acceptedAppMap[s.announcement_id || ""]) && (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {canWorkerComplete && (
                       <Button size="sm" onClick={() => updateStatus(s, "completed")} className="gap-1">
@@ -436,6 +491,13 @@ function ShiftsPage() {
                           <XCircle className="h-4 w-4" /> Annulla
                         </Button>
                       </>
+                    )}
+                    {acceptedAppMap[s.announcement_id || ""] && (
+                      <Button asChild size="sm" className="gap-1">
+                        <Link to="/messages/$id" params={{ id: acceptedAppMap[s.announcement_id || ""].id }}>
+                          <MessageSquare className="h-4 w-4" /> Apri chat
+                        </Link>
+                      </Button>
                     )}
                   </div>
                 )}
