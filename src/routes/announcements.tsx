@@ -419,7 +419,7 @@ function AnnouncementsPage() {
           ))}
         </div>
       )}
-      {loading ? <p className="text-muted-foreground">Caricamento…</p> : visible.length === 0 ? (
+      {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center">
           <p className="text-muted-foreground">Nessun annuncio.</p>
           {role === "restaurant" && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
