@@ -216,6 +216,8 @@ function AnnouncementsPage() {
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
   const [assigned, setAssigned] = useState<Record<string, AssignedInfo>>({});
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
+  const [republishOpen, setRepublishOpen] = useState(false);
+  const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
