@@ -157,24 +157,26 @@ function computeEffectiveStatus(a: Ann, now: Date): { kind: EffectiveStatus; cou
 
   const end = getShiftEndDate(a);
   const start = getShiftStartDate(a);
-  const expiresAt = getExpiresAtDate(a);
 
-  // Past the shift's end time? expired/completed.
-  if (end && end.getTime() < now.getTime()) {
-    return { kind: a.status === "assigned" ? "completed" : "expired", countdown: null };
+  // Turno assegnato e già finito → completato.
+  if (a.status === "assigned" && end && end.getTime() < now.getTime()) {
+    return { kind: "completed", countdown: null };
   }
-  // Past the expires_at (publication deadline) without assignment?
-  if (a.status !== "assigned" && expiresAt && expiresAt.getTime() < now.getTime()) {
+  // Scadenza annuncio = inizio turno. Quando si raggiunge l'inizio, l'annuncio
+  // smette di essere modificabile/candidabile; se era assegnato resta "assegnato"
+  // finché il turno non finisce, altrimenti diventa "scaduto".
+  if (start && start.getTime() <= now.getTime()) {
+    if (a.status === "assigned") {
+      return { kind: "assigned", countdown: "Turno in corso" };
+    }
     return { kind: "expired", countdown: null };
   }
   if (a.status === "assigned") {
     return { kind: "assigned", countdown: start ? formatCountdown(start.getTime() - now.getTime(), "Turno") : null };
   }
 
-  // Active: countdown is whichever comes first between expires_at and shift start.
-  const targets = [expiresAt?.getTime(), start?.getTime()].filter((n): n is number => typeof n === "number" && n > now.getTime());
-  const target = targets.length ? Math.min(...targets) : null;
-  const ms = target ? target - now.getTime() : null;
+  // Active: countdown verso l'inizio del turno.
+  const ms = start ? start.getTime() - now.getTime() : null;
   const isSoon = ms != null && ms <= 24 * 60 * 60 * 1000;
   return { kind: isSoon ? "soon" : "active", countdown: ms != null ? formatCountdown(ms, "Scade") : null };
 }
