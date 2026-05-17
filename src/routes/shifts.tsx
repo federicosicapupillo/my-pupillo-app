@@ -70,6 +70,7 @@ function ShiftsPage() {
   const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [criteria, setCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
