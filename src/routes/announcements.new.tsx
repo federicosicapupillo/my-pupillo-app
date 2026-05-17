@@ -248,7 +248,7 @@ function NewAnn() {
         if (!ok) { setBusy(false); return; }
       }
     }
-    const { error } = await supabase.from("announcements").insert({
+    const { data: inserted, error } = await supabase.from("announcements").insert({
       restaurant_id: user.id,
       service_date: f.service_date,
       service_time: f.service_time,
@@ -285,9 +285,40 @@ function NewAnn() {
       job_contact_person_phone: f.job_contact_person_phone || null,
       job_contact_person_email: f.job_contact_person_email || null,
       reused_from_announcement_id: reuse || null,
-    } as any);
+    } as any).select("id").maybeSingle();
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      if (reuse) {
+        await supabase.from("activity_logs").insert({
+          user_id: user.id,
+          action: "republish_announcement",
+          entity_type: "announcement",
+          entity_id: reuse,
+          metadata: {
+            status: "failed",
+            error: error.message,
+            as_draft: asDraft,
+            source_announcement_id: reuse,
+          },
+        } as any);
+      }
+      toast.error(error.message);
+      return;
+    }
+    if (reuse) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: "republish_announcement",
+        entity_type: "announcement",
+        entity_id: inserted?.id ?? null,
+        metadata: {
+          status: "success",
+          as_draft: asDraft,
+          source_announcement_id: reuse,
+          new_announcement_id: inserted?.id ?? null,
+        },
+      } as any);
+    }
     if (asDraft) {
       toast.success("Bozza salvata", {
         description: "La trovi nella sezione \"Bozze\" dei tuoi annunci. Pubblicala quando vuoi renderla visibile.",
