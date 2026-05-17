@@ -1628,7 +1628,7 @@ function ProposalCard(props: {
                 : "bg-destructive/10 text-destructive border-destructive/30"
           }`}>
             {accepted ? <Check className="h-4 w-4" /> : expired ? <AlarmClock className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            {accepted ? (isWorker ? "Hai accettato questa proposta." : "Proposta accettata") :
+            {accepted ? (isWorker ? "Hai accettato la proposta. Attendi l'assegnazione definitiva da parte del ristoratore." : "Proposta accettata") :
               expired ? "Proposta scaduta" :
               (isWorker ? "Hai rifiutato questa proposta." : "Proposta rifiutata")}
           </div>
