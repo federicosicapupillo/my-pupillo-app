@@ -871,15 +871,26 @@ function WorkersMapSection({
   inviteDisabled: boolean;
   inviteLabel: string;
 }) {
-  const located = workers.filter(
-    (w) => w.service_area_lat != null && w.service_area_lng != null,
-  );
-  const ids = located.map((w) => w.id);
+  // Resolve a position for each worker:
+  // 1) service_area_lat/lng (precise approx area set by the worker)
+  // 2) city → static lookup (with deterministic jitter so markers don't stack)
+  // Workers without either are skipped (but don't block the others).
+  const located = workers
+    .map((w) => {
+      if (w.service_area_lat != null && w.service_area_lng != null) {
+        return { w, pos: [w.service_area_lat, w.service_area_lng] as [number, number] };
+      }
+      const base = lookupCityCoords(w.city);
+      if (base) return { w, pos: jitterCoords(base, w.id, 1.5) };
+      return null;
+    })
+    .filter((x): x is { w: W; pos: [number, number] } => x != null);
+  const ids = located.map(({ w }) => w.id);
   const avatars = useAvatarUrls(ids);
-  const points: WorkerMapPoint[] = located.map((w) => ({
+  const points: WorkerMapPoint[] = located.map(({ w, pos }) => ({
     id: w.id,
-    lat: w.service_area_lat as number,
-    lng: w.service_area_lng as number,
+    lat: pos[0],
+    lng: pos[1],
     name: w.full_name,
     role: w.primary_role,
     city: w.city ?? w.neighborhood ?? null,
@@ -889,10 +900,25 @@ function WorkersMapSection({
     initials: initialsOf(w.full_name),
     link: `/workers_/${w.id}`,
   }));
+  // Center on the average position of located workers so the map frames them.
   const center: [number, number] =
-    points.length > 0 ? [points[0].lat, points[0].lng] : fallbackCenter;
+    points.length > 0
+      ? [
+          points.reduce((s, p) => s + p.lat, 0) / points.length,
+          points.reduce((s, p) => s + p.lng, 0) / points.length,
+        ]
+      : fallbackCenter;
   return (
     <div className="rounded-2xl border bg-card p-2">
+      {points.length === 0 ? (
+        <div className="flex flex-col items-start gap-1 rounded-xl border border-dashed bg-muted/30 p-6">
+          <p className="text-sm font-medium">Nessun lavoratore visualizzabile sulla mappa.</p>
+          <p className="text-xs text-muted-foreground">
+            Alcuni lavoratori potrebbero non avere ancora indicato la città attuale.
+          </p>
+        </div>
+      ) : (
+      <>
       <WorkersMap
         points={points}
         center={center}
@@ -902,10 +928,10 @@ function WorkersMapSection({
         inviteLabel={inviteLabel}
       />
       <div className="p-3 text-xs text-muted-foreground">
-        {points.length === 0
-          ? "Nessun lavoratore con posizione disponibile per la mappa."
-          : `${points.length} lavorator${points.length === 1 ? "e" : "i"} sulla mappa. La zona è approssimativa: non vengono mostrati indirizzi privati.`}
+        {`${points.length} lavorator${points.length === 1 ? "e" : "i"} sulla mappa. La posizione è approssimativa per tutelare la privacy: non vengono mostrati indirizzi privati.`}
       </div>
+      </>
+      )}
     </div>
   );
 }
