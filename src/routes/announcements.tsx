@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "@tanstack/react-router";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
+import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
+import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
@@ -121,7 +123,7 @@ export const Route = createFileRoute("/announcements")({
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
 });
 
-type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null; is_long_shift?: boolean | null; long_shift_reason?: string | null; shift_duration_hours?: number | null; assigned_worker_id?: string | null; license_requirement?: string | null; language_requirements?: string[] | null; tattoos_allowed?: string | null; piercings_allowed?: string | null; beard_allowed?: string | null; required_skills?: string[] | null; dress_code_items?: string[] | null; dress_code_notes?: string | null; }
+type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null; is_long_shift?: boolean | null; long_shift_reason?: string | null; shift_duration_hours?: number | null; assigned_worker_id?: string | null; license_requirement?: string | null; language_requirements?: string[] | null; tattoos_allowed?: string | null; piercings_allowed?: string | null; beard_allowed?: string | null; required_skills?: string[] | null; dress_code_items?: string[] | null; dress_code_notes?: string | null; job_city?: string | null; }
 
 type Candidate = {
   worker_id: string;
@@ -552,8 +554,16 @@ function AnnouncementsPage() {
             );
           })()}
         </div>
+        {(() => {
+        const canSeePrecise = role === "restaurant" || (!!user && a.assigned_worker_id === user.id);
+        const zoneLabel = publicLocationLabel({ job_city: a.job_city });
+        return (
+        <>
         <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {canSeePrecise ? a.location_address : zoneLabel}
+          </div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
           <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {a.service_time?.slice(0,5) ?? "—"}</div>
           {role === "restaurant" && (
@@ -561,15 +571,50 @@ function AnnouncementsPage() {
           )}
         </div>
         <div className="mt-3">
-          <AnnouncementMapBlock
-            annId={a.id}
-            lat={a.location_lat}
-            lng={a.location_lng}
-            address={a.location_address}
-            open={!!openMaps[a.id]}
-            onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
-          />
+          {canSeePrecise ? (
+            <AnnouncementMapBlock
+              annId={a.id}
+              lat={a.location_lat}
+              lng={a.location_lng}
+              address={a.location_address}
+              open={!!openMaps[a.id]}
+              onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+            />
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Zona indicativa del turno</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+                  aria-expanded={!!openMaps[a.id]}
+                >
+                  {openMaps[a.id]
+                    ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>)
+                    : (<><MapPin className="h-3.5 w-3.5" />Vedi zona</>)}
+                </Button>
+              </div>
+              {openMaps[a.id] && (
+                <>
+                  {a.location_lat != null && a.location_lng != null ? (
+                    <ApproximateAreaMap lat={a.location_lat} lng={a.location_lng} height={200} radiusM={1200} />
+                  ) : (
+                    <div className="h-[120px] rounded-2xl border bg-muted/40 flex items-center justify-center text-xs text-muted-foreground px-3 text-center">
+                      Zona non disponibile sulla mappa.
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground italic">{PRECISE_ADDRESS_HINT}</p>
+                </>
+              )}
+            </div>
+          )}
         </div>
+        </>
+        );
+        })()}
         {role === "restaurant" && (
           <Button
             variant="outline"
