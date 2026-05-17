@@ -203,15 +203,22 @@ function AnnouncementsPage() {
                   {a.status === "completed" && (
                     <div className="mt-1 text-xs text-muted-foreground">
                       {assigned[a.id].rating != null ? (
-                        <span className="inline-flex items-center gap-1">
-                          La tua valutazione:
-                          <span className="inline-flex items-center text-amber-500">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star key={i} className={`h-3 w-3 ${i < (assigned[a.id].rating ?? 0) ? "fill-current" : ""}`} />
-                            ))}
-                          </span>
-                          <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
+                      <span className="inline-flex items-center gap-1">
+                        La tua valutazione:
+                        <span className="inline-flex items-center">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < (assigned[a.id].rating ?? 0)
+                                  ? "text-yellow-400 fill-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
                         </span>
+                        <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
+                      </span>
                       ) : (
                         <span className="italic">Valutazione non ancora inserita</span>
                       )}
@@ -325,9 +332,18 @@ function AnnouncementsPage() {
                               <span className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
                                 {c.professional_profile && <span>{c.professional_profile}</span>}
                                 {c.rating_avg != null && (
-                                  <span className="inline-flex items-center gap-0.5">
-                                    <Star className="h-3 w-3 fill-current" />
-                                    {Number(c.rating_avg).toFixed(1)}
+                                  <span className="inline-flex items-center gap-1">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-3 w-3 ${
+                                          i < Math.round(c.rating_avg ?? 0)
+                                            ? "text-yellow-400 fill-yellow-400"
+                                            : "text-gray-300"
+                                        }`}
+                                      />
+                                    ))}
+                                    <span className="text-foreground font-medium">{Number(c.rating_avg).toFixed(1)}</span>
                                   </span>
                                 )}
                                 {c.badge && <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px]">{c.badge}</span>}
