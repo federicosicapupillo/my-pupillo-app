@@ -305,9 +305,16 @@ function AnnouncementsPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const base = supabase.from("announcements").select("*").order("created_at", { ascending: false });
+      const base = supabase.from("announcements").select("*");
       const { data } = role === "restaurant" ? await base.eq("restaurant_id", user.id) : await base.eq("status", "active");
-      const list = (data as Ann[]) ?? [];
+      const list = ((data as Ann[]) ?? []).sort((a, b) => {
+        const sa = getShiftStartDate(a);
+        const sb = getShiftStartDate(b);
+        if (!sa && !sb) return 0;
+        if (!sa) return 1;
+        if (!sb) return -1;
+        return sa.getTime() - sb.getTime();
+      });
       setItems(list);
       if (role === "restaurant" && list.length) {
         const ids = list.map(a => a.id);
