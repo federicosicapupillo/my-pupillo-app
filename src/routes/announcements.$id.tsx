@@ -283,6 +283,24 @@ function AnnouncementDetail() {
     );
   }, [apps]);
 
+  // Effective expiry: DB status + time-based (shift end past or expires_at past).
+  const isAnnInactive = useMemo(() => {
+    if (!ann) return false;
+    if (ann.status === "completed" || ann.status === "cancelled") return true;
+    const now = Date.now();
+    const endDate = ann.end_date || ann.service_date;
+    const endTime = ann.end_time || ann.service_time || "23:59";
+    if (endDate) {
+      const end = new Date(`${endDate}T${(endTime.length === 5 ? endTime + ":00" : endTime)}`);
+      if (!isNaN(end.getTime()) && end.getTime() < now) return true;
+    }
+    if (ann.status !== "assigned" && ann.expires_at) {
+      const exp = new Date(ann.expires_at);
+      if (!isNaN(exp.getTime()) && exp.getTime() < now) return true;
+    }
+    return false;
+  }, [ann]);
+
   if (loading) return <AppShell><p className="text-muted-foreground">Caricamento…</p></AppShell>;
   if (!ann) return <AppShell><p className="text-muted-foreground">Annuncio non trovato.</p></AppShell>;
 
@@ -432,7 +450,7 @@ function AnnouncementDetail() {
                 const tariff = a.proposed_tariff ?? ann.tariff_amount;
                 const isAccepted = a.status === "accepted";
                 const isRejected = ["rejected","not_interested","expired"].includes(a.status);
-                const canAct = (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
+                const canAct = !isAnnInactive && (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
                 return (
                   <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -487,8 +505,14 @@ function AnnouncementDetail() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
-                      <Button size="sm" variant="outline" className="gap-1"
-                        onClick={() => nav({ to: "/messages/$id", params: { id: a.id } })}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        disabled={isAnnInactive}
+                        title={isAnnInactive ? "Annuncio scaduto o completato: messaggistica disabilitata" : undefined}
+                        onClick={() => { if (!isAnnInactive) nav({ to: "/messages/$id", params: { id: a.id } }); }}
+                      >
                         <MessageSquare className="h-3.5 w-3.5" />Messaggia
                       </Button>
                       {canAct && (

@@ -457,6 +457,11 @@ function AnnouncementsPage() {
                       <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)] z-50">
                         <DropdownMenuLabel>Candidati per questo annuncio</DropdownMenuLabel>
                         <DropdownMenuSeparator />
+                        {(effOuter.kind === "expired" || effOuter.kind === "completed" || effOuter.kind === "cancelled") && (
+                          <div className="px-2 pt-1 pb-2 text-[11px] text-muted-foreground italic">
+                            Annuncio {effOuter.kind === "completed" ? "completato" : effOuter.kind === "cancelled" ? "annullato" : "scaduto"}: messaggistica disabilitata.
+                          </div>
+                        )}
                         {(candidates[a.id]?.length ?? 0) === 0 ? (
                           <div className="px-2 py-3 text-xs text-muted-foreground">
                             Nessuna candidatura ricevuta per questo annuncio
@@ -464,13 +469,16 @@ function AnnouncementsPage() {
                         ) : (
                           candidates[a.id].map((c) => {
                             const isAssigned = a.assigned_worker_id === c.worker_id;
+                            const msgDisabled = effOuter.kind === "expired" || effOuter.kind === "completed" || effOuter.kind === "cancelled";
                             return (
                             <DropdownMenuItem
                               key={c.worker_id}
+                              disabled={msgDisabled}
                               onSelect={() => {
+                                if (msgDisabled) return;
                                 navigate({ to: "/messages", search: { with: c.worker_id } });
                               }}
-                              className={`flex flex-col items-start gap-0.5 cursor-pointer ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
+                              className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
                             >
                               <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
                                 {c.full_name || "Lavoratore"}
