@@ -63,6 +63,7 @@ function ShiftsPage() {
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [submittingReview, setSubmittingReview] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<Record<string, string>>({});
   const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
   const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
@@ -161,13 +162,16 @@ function ShiftsPage() {
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
     const submittedRating = rating;
     setSubmittingReview(s.id);
+    setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
     const tId = toast.loading("Invio recensione in corso…");
     try {
       const { error } = await supabase.from("reviews").insert({
         author_id: user.id, target_id: targetId, shift_id: s.id, rating: submittedRating, comment: comment.trim() || null,
       });
       if (error) {
-        toast.error(`Impossibile inviare la recensione: ${error.message}`, { id: tId });
+        const msg = error.message || "Errore sconosciuto";
+        toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
+        setReviewError(prev => ({ ...prev, [s.id]: msg }));
         return;
       }
       toast.success("Recensione inviata", { id: tId });
@@ -183,7 +187,9 @@ function ShiftsPage() {
       setRating(5);
       setComment("");
     } catch (e: any) {
-      toast.error(`Errore di rete: ${e?.message ?? "riprova"}`, { id: tId });
+      const msg = e?.message ?? "Errore di rete";
+      toast.error(`Errore di rete: ${msg}`, { id: tId });
+      setReviewError(prev => ({ ...prev, [s.id]: msg }));
     } finally {
       setSubmittingReview(null);
     }
@@ -398,16 +404,29 @@ function ShiftsPage() {
                           ))}
                         </div>
                         <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} disabled={submittingReview === s.id} />
+                        {reviewError[s.id] && (
+                          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-medium">Invio non riuscito</div>
+                              <div className="opacity-80">{reviewError[s.id]}</div>
+                            </div>
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" onClick={() => submitReview(s)} disabled={submittingReview === s.id} className="gap-1.5">
-                            {submittingReview === s.id ? (<><Loader2 className="h-4 w-4 animate-spin" /> Invio…</>) : "Invia recensione"}
+                            {submittingReview === s.id
+                              ? (<><Loader2 className="h-4 w-4 animate-spin" /> Invio…</>)
+                              : reviewError[s.id]
+                                ? "Riprova invio"
+                                : "Invia recensione"}
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setReviewOpen(null)} disabled={submittingReview === s.id}>Annulla</Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setReviewOpen(null); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>Annulla</Button>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); }} disabled={submittingReview === s.id}>
+                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
                           <Star className="h-4 w-4" /> Lascia recensione
                         </Button>
                         {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (
