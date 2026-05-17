@@ -693,10 +693,33 @@ function WorkersPage() {
           )}
         </div>
       ) : (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {sorted.map((w) => {
-          const near = inRange(w);
-          return (
+      <div className="space-y-6">
+        {(() => {
+          const sectionOf = (w: W): "worked" | "contacted" | "other" => {
+            const t = tierOf(rel[w.id], w.rating_avg);
+            if (t <= 1) return "worked";
+            if (t <= 4) return "contacted";
+            return "other";
+          };
+          const groups: { key: "worked" | "contacted" | "other"; title: string; items: W[] }[] = [
+            { key: "worked", title: "Già lavorato con te", items: [] },
+            { key: "contacted", title: "Già contattati", items: [] },
+            { key: "other", title: "Altri lavoratori disponibili", items: [] },
+          ];
+          for (const w of sorted) groups.find(g => g.key === sectionOf(w))!.items.push(w);
+          return groups.filter(g => g.items.length > 0).map(g => (
+            <section key={g.key}>
+              <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-2">
+                {g.key === "worked" && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+                {g.key === "contacted" && <History className="h-4 w-4 text-primary" />}
+                {g.title}
+                <span className="text-xs font-normal text-muted-foreground">({g.items.length})</span>
+              </h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {g.items.map((w) => {
+                  const near = inRange(w);
+                  const r = rel[w.id];
+                  return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
               <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
@@ -706,6 +729,40 @@ function WorkersPage() {
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
+            {r && (r.workedWith || r.contacted) && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {r.workedWith && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium">
+                    <CheckCircle2 className="h-3 w-3" />Già lavorato con te
+                  </span>
+                )}
+                {r.workedWith && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px] font-medium">
+                    <Gift className="h-3 w-3" />Ricontatto gratuito
+                  </span>
+                )}
+                {!r.workedWith && r.contacted && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted text-foreground/80 px-2 py-0.5 text-[10px] font-medium">
+                    <History className="h-3 w-3" />Già contattato
+                  </span>
+                )}
+                {r.hasPending && !r.hasAccepted && !r.hasRejected && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium">
+                    <Clock className="h-3 w-3" />Richiesta in attesa
+                  </span>
+                )}
+                {r.latestResponseStatus === "rejected" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 text-destructive px-2 py-0.5 text-[10px] font-medium">
+                    <ThumbsDown className="h-3 w-3" />Ultima richiesta rifiutata
+                  </span>
+                )}
+                {r.hasAccepted && !r.workedWith && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium">
+                    <ThumbsUp className="h-3 w-3" />Ha accettato una proposta
+                  </span>
+                )}
+              </div>
+            )}
             <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -739,8 +796,12 @@ function WorkersPage() {
               </p>
             )}
           </div>
-          );
-        })}
+                  );
+                })}
+              </div>
+            </section>
+          ));
+        })()}
         {loaded && !loading && sorted.length === 0 && (
           <div className="col-span-full flex flex-col items-start gap-3 rounded-xl border border-dashed bg-muted/30 p-6">
             <p className="text-sm text-muted-foreground">
