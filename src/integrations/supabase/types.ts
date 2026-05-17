@@ -83,6 +83,7 @@ export type Database = {
           professional_profile: string | null
           required_skills: string[] | null
           restaurant_id: string
+          reused_from_announcement_id: string | null
           service_date: string
           service_time: string
           shift_duration_hours: number | null
@@ -130,6 +131,7 @@ export type Database = {
           professional_profile?: string | null
           required_skills?: string[] | null
           restaurant_id: string
+          reused_from_announcement_id?: string | null
           service_date: string
           service_time: string
           shift_duration_hours?: number | null
@@ -177,6 +179,7 @@ export type Database = {
           professional_profile?: string | null
           required_skills?: string[] | null
           restaurant_id?: string
+          reused_from_announcement_id?: string | null
           service_date?: string
           service_time?: string
           shift_duration_hours?: number | null
