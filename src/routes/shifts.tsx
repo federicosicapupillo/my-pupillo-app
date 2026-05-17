@@ -185,8 +185,14 @@ function ShiftsPage() {
     };
     try {
       const { error } = await supabase.from("reviews").insert({
-        author_id: user.id, target_id: targetId, shift_id: s.id, rating: submittedRating, comment: comment.trim() || null,
-      });
+        author_id: user.id, target_id: targetId, shift_id: s.id,
+        rating: submittedRating, comment: comment.trim() || null,
+        punctuality: criteria.punctuality,
+        professionalism: criteria.professionalism,
+        competence: criteria.competence,
+        reliability: criteria.reliability,
+        teamwork: criteria.teamwork,
+      } as any);
       if (error) {
         const msg = error.message || "Errore sconosciuto";
         toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
