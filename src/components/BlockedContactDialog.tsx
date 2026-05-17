@@ -60,11 +60,6 @@ export function BlockedContactDialog({ open, onClose, shifts }: Props) {
     });
   };
 
-  const goToShifts = () => {
-    onClose();
-    navigate({ to: "/shifts" });
-  };
-
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
