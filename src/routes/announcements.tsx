@@ -17,6 +17,79 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
+import { geocodeAddress } from "@/lib/geocode";
+
+function AnnouncementMapBlock({
+  annId, lat, lng, address, open, onToggle,
+}: {
+  annId: string;
+  lat: number | null;
+  lng: number | null;
+  address: string | null | undefined;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const hasCoords = lat != null && lng != null;
+  const hasAddress = !!(address && address.trim().length > 0);
+  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoFailed, setGeoFailed] = useState(false);
+
+  useEffect(() => {
+    if (!open || hasCoords || !hasAddress || geo || geoLoading || geoFailed) return;
+    let cancelled = false;
+    setGeoLoading(true);
+    geocodeAddress(address as string).then((r) => {
+      if (cancelled) return;
+      if (r) setGeo(r); else setGeoFailed(true);
+      setGeoLoading(false);
+    }).catch(() => { if (!cancelled) { setGeoFailed(true); setGeoLoading(false); } });
+    return () => { cancelled = true; };
+  }, [open, hasCoords, hasAddress, address, geo, geoLoading, geoFailed]);
+
+  if (!hasCoords && !hasAddress) {
+    return <p className="text-xs text-muted-foreground italic">Indirizzo non disponibile</p>;
+  }
+
+  const effLat = hasCoords ? (lat as number) : geo?.lat;
+  const effLng = hasCoords ? (lng as number) : geo?.lng;
+
+  return (
+    <>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="gap-1"
+        onClick={onToggle}
+        aria-expanded={open}
+      >
+        {open ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
+      </Button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          {effLat != null && effLng != null ? (
+            <div className="overflow-hidden rounded-xl">
+              <AnnouncementMap key={annId} lat={effLat} lng={effLng} address={address ?? undefined} height={280} />
+            </div>
+          ) : geoLoading ? (
+            <div className="h-[120px] rounded-xl bg-muted animate-pulse" />
+          ) : (
+            <div className="rounded-xl border bg-muted/40 p-3 text-xs text-muted-foreground">
+              Mappa non disponibile{hasAddress ? ", ma indirizzo presente:" : "."}
+            </div>
+          )}
+          {hasAddress && (
+            <p className="text-xs text-foreground">
+              <MapPin className="inline h-3 w-3 mr-1 text-muted-foreground" />
+              {address}
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
 
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
@@ -54,18 +127,76 @@ function formatRange(a: Ann) {
   return `${startD} ${startT} → ${endD} ${endT}`;
 }
 
-function expiresLabel(iso: string) {
-  const ms = new Date(iso).getTime() - Date.now();
-  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
-  if (days < 0) return { text: "Scaduto", tone: "muted" as const };
-  if (days === 0) return { text: "Scade oggi", tone: "warn" as const };
-  if (days <= 2) return { text: `Scade tra ${days}g`, tone: "warn" as const };
-  return { text: `Scade tra ${days}g`, tone: "ok" as const };
+/** Compute the effective end datetime of a shift (using end_date/end_time, or
+ * service_date + duration). Returns null if not enough info. */
+function getShiftEndDate(a: Ann): Date | null {
+  if (!a.service_date) return null;
+  const endDate = a.end_date || a.service_date;
+  const endTime = a.end_time || a.service_time || "23:59";
+  const iso = `${endDate}T${endTime.length === 5 ? endTime + ":00" : endTime}`;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function getShiftStartDate(a: Ann): Date | null {
+  if (!a.service_date) return null;
+  const t = a.service_time || "00:00";
+  const d = new Date(`${a.service_date}T${t.length === 5 ? t + ":00" : t}`);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+type EffectiveStatus = "active" | "soon" | "expired" | "completed" | "assigned" | "draft" | "cancelled";
+
+/** Determine the displayed status combining DB status with time-based expiry. */
+function computeEffectiveStatus(a: Ann, now: Date): { kind: EffectiveStatus; countdown: string | null } {
+  if (a.status === "completed") return { kind: "completed", countdown: null };
+  if (a.status === "cancelled") return { kind: "cancelled", countdown: null };
+  if (a.status === "draft") return { kind: "draft", countdown: null };
+
+  const end = getShiftEndDate(a);
+  const start = getShiftStartDate(a);
+  const expiresAt = a.expires_at ? new Date(a.expires_at) : null;
+
+  // Past the shift's end time? expired/completed.
+  if (end && end.getTime() < now.getTime()) {
+    return { kind: a.status === "assigned" ? "completed" : "expired", countdown: null };
+  }
+  // Past the expires_at (publication deadline) without assignment?
+  if (a.status !== "assigned" && expiresAt && expiresAt.getTime() < now.getTime()) {
+    return { kind: "expired", countdown: null };
+  }
+  if (a.status === "assigned") {
+    return { kind: "assigned", countdown: start ? formatCountdown(start.getTime() - now.getTime(), "Turno") : null };
+  }
+
+  // Active: countdown is whichever comes first between expires_at and shift start.
+  const targets = [expiresAt?.getTime(), start?.getTime()].filter((n): n is number => typeof n === "number" && n > now.getTime());
+  const target = targets.length ? Math.min(...targets) : null;
+  const ms = target ? target - now.getTime() : null;
+  const isSoon = ms != null && ms <= 24 * 60 * 60 * 1000;
+  return { kind: isSoon ? "soon" : "active", countdown: ms != null ? formatCountdown(ms, "Scade") : null };
+}
+
+function formatCountdown(ms: number, prefix: "Scade" | "Turno"): string {
+  if (ms <= 0) return prefix === "Scade" ? "Scaduto" : "In corso";
+  const totalMin = Math.floor(ms / 60000);
+  const days = Math.floor(totalMin / (60 * 24));
+  const hours = Math.floor((totalMin % (60 * 24)) / 60);
+  const mins = totalMin % 60;
+  if (prefix === "Turno") {
+    if (days >= 1) return `Turno tra ${days} giorn${days === 1 ? "o" : "i"}`;
+    if (hours >= 1) return `Turno tra ${hours}h${mins ? ` ${mins}m` : ""}`;
+    return `Turno tra ${mins} min`;
+  }
+  if (days >= 1) return `Scade tra ${days} giorn${days === 1 ? "o" : "i"}${hours ? ` e ${hours}h` : ""}`;
+  if (hours >= 1) return `Scade tra ${hours} or${hours === 1 ? "a" : "e"}${mins ? ` e ${mins} min` : ""}`;
+  return `Scade tra ${mins} min`;
 }
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "In bozza",
   active: "Attivo",
+  soon: "In scadenza",
   assigned: "Assegnato",
   completed: "Completato",
   expired: "Scaduto",
@@ -75,9 +206,10 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_CLS: Record<string, string> = {
   draft: "bg-amber-100 text-amber-800",
   active: "bg-green-100 text-green-800",
+  soon: "bg-yellow-100 text-yellow-900 border border-yellow-300",
   assigned: "bg-blue-100 text-blue-800",
   completed: "bg-blue-100 text-blue-800",
-  expired: "bg-muted text-muted-foreground",
+  expired: "bg-red-100 text-red-800 border border-red-300",
   cancelled: "bg-red-100 text-red-800",
 };
 
@@ -94,6 +226,11 @@ function AnnouncementsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -186,8 +323,14 @@ function AnnouncementsPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {visible.map((a) => (
-            <div key={a.id} className="rounded-2xl border bg-card p-5">
+          {visible.map((a) => {
+            const effOuter = computeEffectiveStatus(a, now);
+            const isExpired = effOuter.kind === "expired" || effOuter.kind === "cancelled";
+            return (
+            <div
+              key={a.id}
+              className={`rounded-2xl border bg-card p-5 ${isExpired ? "opacity-70 border-red-200" : ""}`}
+            >
               {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (
                 <div className={`mb-3 rounded-xl border p-3 ${a.status === "completed" ? "bg-blue-50 border-blue-200" : "bg-green-50 border-green-200"}`}>
                   <div className="flex items-center gap-2 text-sm font-semibold">
@@ -235,9 +378,12 @@ function AnnouncementsPage() {
                     <span className="mt-1 inline-block text-[10px] uppercase font-semibold rounded-full bg-amber-500/20 text-amber-700 px-2 py-0.5">Turno lungo +8h</span>
                   )}
                 </div>
+                {(() => {
+                  const eff = computeEffectiveStatus(a, now);
+                  return (
                 <div className="flex flex-col items-end gap-1">
-                  <span className={`text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[a.status] ?? 'bg-muted text-muted-foreground'}`}>
-                    {STATUS_LABEL[a.status] ?? a.status}
+                  <span className={`text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[eff.kind] ?? 'bg-muted text-muted-foreground'}`}>
+                    {STATUS_LABEL[eff.kind] ?? eff.kind}
                   </span>
                   {role === "restaurant" && (
                     <span
@@ -248,11 +394,27 @@ function AnnouncementsPage() {
                       {counts[a.id] ?? 0} candidat{(counts[a.id] ?? 0) === 1 ? 'o' : 'i'}
                     </span>
                   )}
-                  {a.status === 'active' && (() => {
-                    const e = expiresLabel(a.expires_at);
-                    return <span className={`text-[10px] rounded-full px-2 py-0.5 ${e.tone === 'warn' ? 'bg-yellow-100 text-yellow-800' : e.tone === 'ok' ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground'}`}>{e.text}</span>;
-                  })()}
+                  {eff.countdown && (eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned") && (
+                    <span
+                      className={`text-[10px] rounded-full px-2 py-0.5 ${
+                        eff.kind === "soon"
+                          ? "bg-yellow-100 text-yellow-900"
+                          : eff.kind === "assigned"
+                          ? "bg-blue-50 text-blue-800"
+                          : "bg-secondary text-secondary-foreground"
+                      }`}
+                    >
+                      {eff.countdown}
+                    </span>
+                  )}
+                  {eff.kind === "expired" && (
+                    <span className="text-[10px] rounded-full px-2 py-0.5 bg-red-100 text-red-800 font-semibold">
+                      Annuncio scaduto
+                    </span>
+                  )}
                 </div>
+                  );
+                })()}
               </div>
               <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
@@ -263,37 +425,26 @@ function AnnouncementsPage() {
                 )}
               </div>
               <div className="mt-3">
-                {a.location_lat != null && a.location_lng != null ? (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-1"
-                      onClick={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
-                      aria-expanded={!!openMaps[a.id]}
-                    >
-                      {openMaps[a.id] ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
-                    </Button>
-                    {openMaps[a.id] && (
-                      <div className="mt-3 overflow-hidden rounded-xl">
-                        <AnnouncementMap
-                          key={a.id}
-                          lat={a.location_lat}
-                          lng={a.location_lng}
-                          address={a.location_address}
-                          height={280}
-                        />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">Mappa non disponibile: indirizzo incompleto</p>
-                )}
+                <AnnouncementMapBlock
+                  annId={a.id}
+                  lat={a.location_lat}
+                  lng={a.location_lng}
+                  address={a.location_address}
+                  open={!!openMaps[a.id]}
+                  onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+                />
               </div>
-              {role === "restaurant" && a.status !== "active" && (
-                <Link to="/ristoratore/annunci/nuovo" search={{ reuse: a.id } as never} className="mt-3 inline-flex"><Button variant="outline" size="sm" className="gap-2"><RotateCw className="h-3 w-3" />Riusa come nuovo</Button></Link>
-              )}
+              {role === "restaurant" && a.status !== "active" && (() => {
+                const eff = computeEffectiveStatus(a, now);
+                const label = eff.kind === "expired" ? "Ripubblica annuncio" : "Riusa come nuovo";
+                return (
+                  <Link to="/ristoratore/annunci/nuovo" search={{ reuse: a.id } as never} className="mt-3 inline-flex">
+                    <Button variant={eff.kind === "expired" ? "default" : "outline"} size="sm" className="gap-2">
+                      <RotateCw className="h-3 w-3" />{label}
+                    </Button>
+                  </Link>
+                );
+              })()}
               <div className="mt-3">
                 {role === "restaurant" ? (
                     <DropdownMenu>
@@ -361,7 +512,8 @@ function AnnouncementsPage() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </AppShell>
