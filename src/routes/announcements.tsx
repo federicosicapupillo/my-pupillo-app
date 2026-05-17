@@ -19,6 +19,7 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
+import { sendShiftProposal } from "@/lib/shift-proposal";
 import {
   Dialog,
   DialogContent,
@@ -231,6 +232,7 @@ function AnnouncementsPage() {
   const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsAnn, setDetailsAnn] = useState<Ann | null>(null);
+  const [proposalTarget, setProposalTarget] = useState<{ ann: Ann; candidate: Candidate } | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
@@ -512,7 +514,7 @@ function AnnouncementsPage() {
                               disabled={msgDisabled}
                               onSelect={() => {
                                 if (msgDisabled) return;
-                                navigate({ to: "/messages", search: { with: c.worker_id } });
+                                setProposalTarget({ ann: a, candidate: c });
                               }}
                               className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
                             >
@@ -576,6 +578,13 @@ function AnnouncementsPage() {
         statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
         onUpdated={handleAnnUpdated}
         onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
+      />
+      <ProposalConfirmDialog
+        target={proposalTarget}
+        venueName={(profile as any)?.business_name ?? (profile as any)?.full_name ?? null}
+        restaurantId={user?.id ?? null}
+        statusKind={proposalTarget ? computeEffectiveStatus(proposalTarget.ann, now).kind : "active"}
+        onClose={() => setProposalTarget(null)}
       />
     </AppShell>
   );
