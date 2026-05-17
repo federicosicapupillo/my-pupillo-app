@@ -16,6 +16,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
@@ -119,7 +120,8 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
-  const { isBlocked, overdueCount } = useRequiredReviews();
+  const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
+  const [blockOpen, setBlockOpen] = useState(false);
   const [workers, setWorkers] = useState<W[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -215,8 +217,7 @@ function WorkersPage() {
   const invite = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
     if (isBlocked) {
-      toast.error("Per contattare nuovi lavoratori devi prima completare le recensioni obbligatorie dei turni conclusi.");
-      nav({ to: "/shifts", search: { tab: "to-review" } as never });
+      setBlockOpen(true);
       return;
     }
     // If a conversation already exists for this restaurant + worker + announcement, just open it.
@@ -419,6 +420,7 @@ function WorkersPage() {
     <AppShell>
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
       <RequiredReviewsBanner />
+      <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
       <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-primary" />
@@ -613,11 +615,11 @@ function WorkersPage() {
               size="sm"
               className="mt-4 w-full gap-1"
               onClick={() => invite(w.id)}
-              disabled={!selected || isBlocked}
-              title={isBlocked ? "Bloccato: completa le recensioni scadute" : (!selected ? "Seleziona prima un annuncio" : undefined)}
+              disabled={!selected}
+              title={isBlocked ? "Completa i turni precedenti prima di contattare nuovi lavoratori" : (!selected ? "Seleziona prima un annuncio" : undefined)}
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              {isBlocked ? `Bloccato (${overdueCount} recension${overdueCount > 1 ? "i" : "e"} scadut${overdueCount > 1 ? "e" : "a"})` : (
+              {isBlocked ? `Bloccato (${blockedCount} turn${blockedCount > 1 ? "i" : "o"} da completare)` : (
                 <>{selected ? "Messaggia" : "Seleziona prima un annuncio"}</>
               )}
             </Button>

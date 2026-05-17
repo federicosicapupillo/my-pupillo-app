@@ -11,7 +11,8 @@ import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, Messag
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
-import { useRequiredReviews } from "@/lib/required-reviews";
+import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -58,6 +59,7 @@ function ShiftsPage() {
   const [filter, setFilter] = useState<"all" | "upcoming" | "past" | "to-review">(
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "all"
   );
+  const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
   const [live, setLive] = useState(false);
   const [reviewMap, setReviewMap] = useState<Record<string, number>>({});
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
@@ -68,7 +70,8 @@ function ShiftsPage() {
   const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const { items: requiredReviews, refresh: refreshRequiredReviews } = useRequiredReviews();
+  const [criteria, setCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+  const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
     requiredReviews.forEach((r) => { if (r.shift_id) m[r.shift_id] = { status: r.status, due_date: r.due_date }; });
@@ -160,7 +163,8 @@ function ShiftsPage() {
     if (!user) return;
     if (submittingReview) return;
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
-    const submittedRating = rating;
+    const avg = (criteria.punctuality + criteria.professionalism + criteria.competence + criteria.reliability + criteria.teamwork) / 5;
+    const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
     setSubmittingReview(s.id);
     setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
     const tId = toast.loading("Invio recensione in corso…");
@@ -182,8 +186,14 @@ function ShiftsPage() {
     };
     try {
       const { error } = await supabase.from("reviews").insert({
-        author_id: user.id, target_id: targetId, shift_id: s.id, rating: submittedRating, comment: comment.trim() || null,
-      });
+        author_id: user.id, target_id: targetId, shift_id: s.id,
+        rating: submittedRating, comment: comment.trim() || null,
+        punctuality: criteria.punctuality,
+        professionalism: criteria.professionalism,
+        competence: criteria.competence,
+        reliability: criteria.reliability,
+        teamwork: criteria.teamwork,
+      } as any);
       if (error) {
         const msg = error.message || "Errore sconosciuto";
         toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
@@ -288,6 +298,52 @@ function ShiftsPage() {
       </div>
 
       {role === "restaurant" && <RequiredReviewsBanner />}
+      {role === "restaurant" && actionShifts.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <h3 className="font-semibold text-sm">Azioni richieste ({actionShifts.length})</h3>
+          </div>
+          <div className="space-y-2">
+            {actionShifts.map((a: ActionShift) => {
+              const s = shifts.find(x => x.id === a.shift_id);
+              const closeAndReview = async () => {
+                if (s && s.status === "scheduled") {
+                  await updateStatus(s, "completed");
+                }
+                setFilter("to-review");
+                setReviewOpen(a.shift_id);
+                setRating(5);
+                setComment("");
+                setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+                setTimeout(() => {
+                  document.getElementById(`shift-${a.shift_id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 200);
+              };
+              return (
+                <div key={a.shift_id} className="rounded-xl border bg-card p-3 flex items-center gap-3 flex-wrap">
+                  <UserAvatar userId={a.worker_id} name={a.worker_name} className="h-9 w-9 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{a.worker_name ?? "Lavoratore"}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {a.worker_role && <span className="capitalize">{a.worker_role} · </span>}
+                      {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+                      {a.service_time && ` · ${a.service_time.slice(0,5)}`}
+                      {a.end_time && `–${a.end_time.slice(0,5)}`}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className={a.kind === "to_close" ? "bg-amber-500/15 text-amber-700 border-amber-500/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
+                    {a.kind === "to_close" ? "Da chiudere" : "Recensione da inviare"}
+                  </Badge>
+                  <Button size="sm" className="gap-1" onClick={closeAndReview}>
+                    <Star className="h-3.5 w-3.5" /> Chiudi e recensisci
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : (
         <>
@@ -417,13 +473,36 @@ function ShiftsPage() {
                       </div>
                     ) : reviewOpen === s.id ? (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-1">
-                          {[1,2,3,4,5].map(n => (
-                            <button key={n} type="button" onClick={() => setRating(n)} className="p-1 disabled:opacity-50" disabled={submittingReview === s.id}>
-                              <Star className={`h-6 w-6 transition ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
-                            </button>
-                          ))}
-                        </div>
+                        {role === "restaurant" ? (
+                          <div className="space-y-2">
+                            {([
+                              ["punctuality", "Puntualità"],
+                              ["professionalism", "Professionalità"],
+                              ["competence", "Competenza nel ruolo"],
+                              ["reliability", "Affidabilità"],
+                              ["teamwork", "Collaborazione con il team"],
+                            ] as const).map(([key, label]) => (
+                              <div key={key} className="flex items-center justify-between gap-3">
+                                <span className="text-sm">{label}</span>
+                                <div className="flex items-center gap-0.5">
+                                  {[1,2,3,4,5].map(n => (
+                                    <button key={n} type="button" onClick={() => setCriteria(c => ({ ...c, [key]: n }))} className="p-0.5 disabled:opacity-50" disabled={submittingReview === s.id}>
+                                      <Star className={`h-5 w-5 transition ${n <= (criteria as any)[key] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            {[1,2,3,4,5].map(n => (
+                              <button key={n} type="button" onClick={() => setRating(n)} className="p-1 disabled:opacity-50" disabled={submittingReview === s.id}>
+                                <Star className={`h-6 w-6 transition ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} disabled={submittingReview === s.id} />
                         {reviewError[s.id] && (
                           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
@@ -447,7 +526,7 @@ function ShiftsPage() {
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
+                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 }); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
                           <Star className="h-4 w-4" /> Lascia recensione
                         </Button>
                         {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (

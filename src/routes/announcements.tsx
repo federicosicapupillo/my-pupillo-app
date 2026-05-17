@@ -20,6 +20,8 @@ import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 import { sendShiftProposal } from "@/lib/shift-proposal";
+import { useRequiredReviews } from "@/lib/required-reviews";
+import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import {
   Dialog,
   DialogContent,
@@ -289,6 +291,8 @@ function AnnouncementsPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsAnn, setDetailsAnn] = useState<Ann | null>(null);
   const [proposalTarget, setProposalTarget] = useState<{ ann: Ann; candidate: Candidate } | null>(null);
+  const { isBlocked, actionShifts } = useRequiredReviews();
+  const [blockOpen, setBlockOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
@@ -654,6 +658,7 @@ function AnnouncementsPage() {
                               disabled={msgDisabled}
                               onSelect={() => {
                                 if (msgDisabled) return;
+                                if (isBlocked) { setBlockOpen(true); return; }
                                 setProposalTarget({ ann: a, candidate: c });
                               }}
                               className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
@@ -727,6 +732,7 @@ function AnnouncementsPage() {
         statusKind={proposalTarget ? computeEffectiveStatus(proposalTarget.ann, now).kind : "active"}
         onClose={() => setProposalTarget(null)}
       />
+      <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
     </AppShell>
   );
 }
