@@ -19,6 +19,7 @@ import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 import { Settings2 } from "lucide-react";
 import { provinceCode } from "@/lib/italian-locations";
 import { ReferralCard } from "@/components/ReferralCard";
+import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -254,6 +255,13 @@ function Profile() {
           </div>
         )}
       </div>
+
+      {role === "worker" && user?.id && (
+        <div className="mt-6 max-w-2xl">
+          <h2 className="font-semibold mb-2">La mia reputazione</h2>
+          <WorkerReputationCard workerId={user.id} profile={profile as any} showTips />
+        </div>
+      )}
 
       <div className="mt-6 max-w-2xl rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
         <h2 className="font-semibold flex items-center gap-2 text-destructive"><Trash2 className="h-4 w-4" />Cancella account</h2>

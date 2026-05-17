@@ -666,6 +666,7 @@ export type Database = {
           avg_professionalism: number
           avg_punctuality: number
           avg_reliability: number
+          avg_response_minutes: number | null
           avg_teamwork: number
           badge: Database["public"]["Enums"]["worker_badge"] | null
           birth_date: string | null
@@ -677,6 +678,7 @@ export type Database = {
           city_code: string | null
           company_tax_code: string | null
           completed_shifts: number | null
+          completion_pct: number
           contact_person_email: string | null
           contact_person_first_name: string | null
           contact_person_last_name: string | null
@@ -695,6 +697,7 @@ export type Database = {
           default_required_skills: string[] | null
           default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
+          distinct_restaurants_count: number
           email: string | null
           email_summary_sent_at: string | null
           email_summary_status: string | null
@@ -721,11 +724,13 @@ export type Database = {
           last_name: string | null
           last_review_at: string | null
           last_review_reminder_at: string | null
+          late_cancel_count: number
           latitude: number | null
           location_notes: string | null
           longitude: number | null
           nationality: string | null
           neighborhood: string | null
+          no_show_count: number
           no_shows: number | null
           opening_hours: string | null
           overdue_reviews_count: number
@@ -744,6 +749,7 @@ export type Database = {
           profile_completed: boolean | null
           province: string | null
           province_code: string | null
+          punctuality_pct: number
           rating_avg: number | null
           referral_code: string | null
           referral_credits_earned: number
@@ -752,8 +758,14 @@ export type Database = {
           registered_office_city: string | null
           registered_office_postal_code: string | null
           registered_office_province: string | null
+          rehire_restaurants_count: number
+          rehire_total_answers: number
+          rehire_yes_count: number
           reliability_pct: number | null
           representative_age: number | null
+          reputation_level: string
+          reputation_score: number
+          reputation_updated_at: string | null
           residence_address: string | null
           residence_city: string | null
           residence_postal_code: string | null
@@ -802,6 +814,7 @@ export type Database = {
           avg_professionalism?: number
           avg_punctuality?: number
           avg_reliability?: number
+          avg_response_minutes?: number | null
           avg_teamwork?: number
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
@@ -813,6 +826,7 @@ export type Database = {
           city_code?: string | null
           company_tax_code?: string | null
           completed_shifts?: number | null
+          completion_pct?: number
           contact_person_email?: string | null
           contact_person_first_name?: string | null
           contact_person_last_name?: string | null
@@ -831,6 +845,7 @@ export type Database = {
           default_required_skills?: string[] | null
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
+          distinct_restaurants_count?: number
           email?: string | null
           email_summary_sent_at?: string | null
           email_summary_status?: string | null
@@ -857,11 +872,13 @@ export type Database = {
           last_name?: string | null
           last_review_at?: string | null
           last_review_reminder_at?: string | null
+          late_cancel_count?: number
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
           nationality?: string | null
           neighborhood?: string | null
+          no_show_count?: number
           no_shows?: number | null
           opening_hours?: string | null
           overdue_reviews_count?: number
@@ -880,6 +897,7 @@ export type Database = {
           profile_completed?: boolean | null
           province?: string | null
           province_code?: string | null
+          punctuality_pct?: number
           rating_avg?: number | null
           referral_code?: string | null
           referral_credits_earned?: number
@@ -888,8 +906,14 @@ export type Database = {
           registered_office_city?: string | null
           registered_office_postal_code?: string | null
           registered_office_province?: string | null
+          rehire_restaurants_count?: number
+          rehire_total_answers?: number
+          rehire_yes_count?: number
           reliability_pct?: number | null
           representative_age?: number | null
+          reputation_level?: string
+          reputation_score?: number
+          reputation_updated_at?: string | null
           residence_address?: string | null
           residence_city?: string | null
           residence_postal_code?: string | null
@@ -938,6 +962,7 @@ export type Database = {
           avg_professionalism?: number
           avg_punctuality?: number
           avg_reliability?: number
+          avg_response_minutes?: number | null
           avg_teamwork?: number
           badge?: Database["public"]["Enums"]["worker_badge"] | null
           birth_date?: string | null
@@ -949,6 +974,7 @@ export type Database = {
           city_code?: string | null
           company_tax_code?: string | null
           completed_shifts?: number | null
+          completion_pct?: number
           contact_person_email?: string | null
           contact_person_first_name?: string | null
           contact_person_last_name?: string | null
@@ -967,6 +993,7 @@ export type Database = {
           default_required_skills?: string[] | null
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
+          distinct_restaurants_count?: number
           email?: string | null
           email_summary_sent_at?: string | null
           email_summary_status?: string | null
@@ -993,11 +1020,13 @@ export type Database = {
           last_name?: string | null
           last_review_at?: string | null
           last_review_reminder_at?: string | null
+          late_cancel_count?: number
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
           nationality?: string | null
           neighborhood?: string | null
+          no_show_count?: number
           no_shows?: number | null
           opening_hours?: string | null
           overdue_reviews_count?: number
@@ -1016,6 +1045,7 @@ export type Database = {
           profile_completed?: boolean | null
           province?: string | null
           province_code?: string | null
+          punctuality_pct?: number
           rating_avg?: number | null
           referral_code?: string | null
           referral_credits_earned?: number
@@ -1024,8 +1054,14 @@ export type Database = {
           registered_office_city?: string | null
           registered_office_postal_code?: string | null
           registered_office_province?: string | null
+          rehire_restaurants_count?: number
+          rehire_total_answers?: number
+          rehire_yes_count?: number
           reliability_pct?: number | null
           representative_age?: number | null
+          reputation_level?: string
+          reputation_score?: number
+          reputation_updated_at?: string | null
           residence_address?: string | null
           residence_city?: string | null
           residence_postal_code?: string | null
@@ -1197,66 +1233,84 @@ export type Database = {
       reviews: {
         Row: {
           announcement_id: string | null
+          appearance: number | null
           application_id: string | null
           author_id: string
           comment: string | null
+          communication: number | null
           competence: number | null
           created_at: string
           id: string
           is_visible_to_restaurants: boolean
           is_visible_to_worker: boolean
+          negative_tags: string[]
+          positive_tags: string[]
           professionalism: number | null
           punctuality: number | null
           rating: number
           reliability: number | null
           seen_by_worker_at: string | null
           shift_id: string | null
+          staff_collaboration: number | null
           tags: string[]
           target_id: string
           teamwork: number | null
           updated_at: string
+          would_rehire: string | null
         }
         Insert: {
           announcement_id?: string | null
+          appearance?: number | null
           application_id?: string | null
           author_id: string
           comment?: string | null
+          communication?: number | null
           competence?: number | null
           created_at?: string
           id?: string
           is_visible_to_restaurants?: boolean
           is_visible_to_worker?: boolean
+          negative_tags?: string[]
+          positive_tags?: string[]
           professionalism?: number | null
           punctuality?: number | null
           rating: number
           reliability?: number | null
           seen_by_worker_at?: string | null
           shift_id?: string | null
+          staff_collaboration?: number | null
           tags?: string[]
           target_id: string
           teamwork?: number | null
           updated_at?: string
+          would_rehire?: string | null
         }
         Update: {
           announcement_id?: string | null
+          appearance?: number | null
           application_id?: string | null
           author_id?: string
           comment?: string | null
+          communication?: number | null
           competence?: number | null
           created_at?: string
           id?: string
           is_visible_to_restaurants?: boolean
           is_visible_to_worker?: boolean
+          negative_tags?: string[]
+          positive_tags?: string[]
           professionalism?: number | null
           punctuality?: number | null
           rating?: number
           reliability?: number | null
           seen_by_worker_at?: string | null
           shift_id?: string | null
+          staff_collaboration?: number | null
           tags?: string[]
           target_id?: string
           teamwork?: number | null
           updated_at?: string
+          would_rehire?: string | null
         }
         Relationships: []
       }
@@ -1371,6 +1425,69 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_badges: {
+        Row: {
+          awarded_at: string
+          badge: string
+          id: string
+          worker_id: string
+        }
+        Insert: {
+          awarded_at?: string
+          badge: string
+          id?: string
+          worker_id: string
+        }
+        Update: {
+          awarded_at?: string
+          badge?: string
+          id?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      worker_incidents: {
+        Row: {
+          application_id: string | null
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          restaurant_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shift_id: string | null
+          status: string
+          worker_id: string
+        }
+        Insert: {
+          application_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          kind: string
+          restaurant_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shift_id?: string | null
+          status?: string
+          worker_id: string
+        }
+        Update: {
+          application_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          kind?: string
+          restaurant_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shift_id?: string | null
+          status?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1418,6 +1535,10 @@ export type Database = {
       normalize_vat: { Args: { _v: string }; Returns: string }
       recompute_review_block: {
         Args: { _restaurant_id: string }
+        Returns: undefined
+      }
+      recompute_worker_reputation: {
+        Args: { _worker: string }
         Returns: undefined
       }
       redeem_discount_code: {

@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Phone, Shield, Star, Users } from "lucide-react";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { UserAvatar } from "@/components/UserAvatar";
+import { WorkerReputationCard } from "@/components/WorkerReputationCard";
+import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 
 export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
@@ -41,6 +43,19 @@ type Worker = {
   phone: string | null;
   email: string | null;
   is_motorized: boolean | null;
+  reputation_score: number | null;
+  reputation_level: string | null;
+  punctuality_pct: number | null;
+  completion_pct: number | null;
+  no_show_count: number | null;
+  rehire_restaurants_count: number | null;
+  rehire_yes_count: number | null;
+  rehire_total_answers: number | null;
+  distinct_restaurants_count: number | null;
+  avatar_url: string | null;
+  phone_verified: boolean | null;
+  profile_completed: boolean | null;
+  id_document_path: string | null;
 };
 
 function initials(name: string | null) {
@@ -59,7 +74,7 @@ function WorkerDetailPage() {
     let cancelled = false;
     (async () => {
       const { data } = await supabase.from("profiles")
-        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,short_bio,age,phone,email,is_motorized")
+        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,short_bio,age,phone,email,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,id_document_path")
         .eq("id", id).maybeSingle();
       if (cancelled) return;
       setW((data as any) ?? null);
@@ -96,11 +111,9 @@ function WorkerDetailPage() {
           <UserAvatar userId={w.id} name={w.full_name} className="h-24 w-24 text-2xl mb-3" />
           <div className="font-semibold">{w.full_name || "—"}</div>
           {w.age != null && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
-          {w.badge && (
-            <Badge className="mt-2 bg-violet-500/15 text-violet-700 hover:bg-violet-500/20">
-              <Award className="h-3 w-3 mr-1" />{w.badge}
-            </Badge>
-          )}
+          <div className="mt-2">
+            <WorkerReputationBadge profile={w} />
+          </div>
           <div className="mt-4 grid grid-cols-3 gap-2 w-full text-xs">
             <Metric icon={Star} label="Rating" value={w.rating_avg ? `${Number(w.rating_avg).toFixed(1)}` : "—"} sub={w.reviews_count ? `${w.reviews_count} rec.` : undefined} />
             <Metric icon={Shield} label="Affidab." value={w.reliability_pct != null ? `${w.reliability_pct}%` : "—"} />
@@ -109,6 +122,8 @@ function WorkerDetailPage() {
         </div>
 
         <div className="space-y-4">
+          <WorkerReputationCard workerId={w.id} profile={w} />
+
           <Card title="Esperienza">
             <Row label="Anni di esperienza" value={w.experience_years != null ? `${w.experience_years}` : "—"} />
             <Row label="Livello" value={w.experience_level || "—"} />

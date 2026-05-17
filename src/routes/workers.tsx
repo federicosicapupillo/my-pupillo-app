@@ -19,6 +19,7 @@ import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
+import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
@@ -51,6 +52,12 @@ type W = {
   service_area_lat: number | null;
   service_area_lng: number | null;
   service_area_radius_m: number | null;
+  reputation_score?: number | null;
+  reputation_level?: string | null;
+  completed_shifts?: number | null;
+  punctuality_pct?: number | null;
+  rehire_restaurants_count?: number | null;
+  reviews_count?: number | null;
 };
 
 type Category =
@@ -184,7 +191,7 @@ function WorkersPage() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m")
+        .select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count")
         .eq("account_status", "active")
         .order("last_active_at", { ascending: false })
         .limit(1000);
@@ -734,6 +741,7 @@ function WorkersPage() {
                   )}
                   {w.age && <span>· {w.age} anni</span>}
                 </div>
+                <div className="mt-1"><WorkerReputationBadge profile={w} /></div>
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
