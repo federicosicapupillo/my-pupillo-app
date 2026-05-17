@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search, List, Map as MapIcon, RotateCcw, X, MapPin } from "lucide-react";
+import { Search, List, Map as MapIcon, RotateCcw, X, MapPin, CheckCircle2, Clock, History, ThumbsUp, ThumbsDown, Gift } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
@@ -133,6 +133,8 @@ function WorkersPage() {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
+  // Relazione ristoratore ↔ lavoratore (per ordinare e mostrare badge)
+  const [rel, setRel] = useState<Record<string, WorkerRel>>({});
 
   // Carica TUTTI i lavoratori attivi una sola volta. I filtri lavorano poi lato client.
   const loadWorkers = async () => {
@@ -184,6 +186,83 @@ function WorkersPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
+
+  // Carica le relazioni ristoratore ↔ lavoratori (turni, candidature, proposte, recensioni)
+  useEffect(() => {
+    if (role !== "restaurant" || !user) return;
+    let cancelled = false;
+    (async () => {
+      const [appsRes, shiftsRes, reviewsRes] = await Promise.all([
+        supabase
+          .from("applications")
+          .select("id, worker_id, status, last_message_at, created_at")
+          .eq("restaurant_id", user.id),
+        supabase
+          .from("shifts")
+          .select("worker_id, status, shift_date")
+          .eq("restaurant_id", user.id),
+        supabase
+          .from("reviews")
+          .select("target_id, created_at")
+          .eq("author_id", user.id),
+      ]);
+      const apps = (appsRes.data as Array<{ id: string; worker_id: string; status: string | null; last_message_at: string | null; created_at: string }>) ?? [];
+      const shifts = (shiftsRes.data as Array<{ worker_id: string; status: string | null; shift_date: string | null }>) ?? [];
+      const reviews = (reviewsRes.data as Array<{ target_id: string; created_at: string }>) ?? [];
+
+      // Ultima proposta + risposta per ogni candidatura
+      const appIds = apps.map(a => a.id);
+      let respByApp: Record<string, { status: "accepted" | "rejected"; created_at: string }> = {};
+      if (appIds.length) {
+        const { data: resp } = await supabase
+          .from("proposal_responses")
+          .select("application_id, status, created_at")
+          .in("application_id", appIds)
+          .order("created_at", { ascending: true });
+        for (const r of (resp ?? []) as Array<{ application_id: string; status: "accepted" | "rejected"; created_at: string }>) {
+          // tieni l'ultima (l'order è crescente, sovrascrivo)
+          respByApp[r.application_id] = { status: r.status, created_at: r.created_at };
+        }
+      }
+
+      const map: Record<string, WorkerRel> = {};
+      // Candidature
+      for (const a of apps) {
+        const r = map[a.worker_id] ?? emptyRel();
+        r.contacted = true;
+        const ts = a.last_message_at ?? a.created_at;
+        r.lastContactAt = Math.max(r.lastContactAt, ts ? new Date(ts).getTime() : 0);
+        if (a.last_message_at) r.hasOpenChat = true;
+        const resp = respByApp[a.id];
+        if (resp) {
+          if (resp.status === "accepted") r.hasAccepted = true;
+          if (resp.status === "rejected") r.hasRejected = true;
+          r.latestResponseAt = Math.max(r.latestResponseAt, new Date(resp.created_at).getTime());
+          r.latestResponseStatus = r.latestResponseAt === new Date(resp.created_at).getTime() ? resp.status : r.latestResponseStatus;
+        } else if (a.status === "pending") {
+          r.hasPending = true;
+        }
+        map[a.worker_id] = r;
+      }
+      // Turni completati
+      for (const s of shifts) {
+        const r = map[s.worker_id] ?? emptyRel();
+        if (s.status === "completed") r.workedWith = true;
+        if (s.shift_date) r.lastContactAt = Math.max(r.lastContactAt, new Date(s.shift_date).getTime());
+        r.contacted = true;
+        map[s.worker_id] = r;
+      }
+      // Recensioni lasciate
+      for (const rv of reviews) {
+        const r = map[rv.target_id] ?? emptyRel();
+        r.reviewed = true;
+        r.lastReviewAt = Math.max(r.lastReviewAt, new Date(rv.created_at).getTime());
+        map[rv.target_id] = r;
+      }
+      if (!cancelled) setRel(map);
+    })();
+    return () => { cancelled = true; };
+  }, [role, user?.id]);
 
   if (role !== "restaurant") return <AppShell><p>Solo i ristoratori.</p></AppShell>;
 
