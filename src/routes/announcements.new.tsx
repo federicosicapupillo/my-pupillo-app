@@ -41,6 +41,8 @@ function NewAnn() {
   const [busy, setBusy] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const [conflicts, setConflicts] = useState<Array<{ id: string; date: string; start: string; end: string; label: string }>>([]);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
   const [accessChoice, setAccessChoice] = useState<"" | "15" | "over15">("");
   const [accessReason, setAccessReason] = useState("");
@@ -287,10 +289,51 @@ function NewAnn() {
     }
     nav({ to: "/announcements" });
   };
-  const submit = (e: React.FormEvent) => {
+  const checkConflicts = async () => {
+    if (!user || !f.service_date || !f.service_time) return [] as typeof conflicts;
+    const durHours = parseFloat(f.duration_hours) || 0;
+    const [hh, mm] = f.service_time.split(":").map((x) => parseInt(x, 10));
+    const startMin = (hh || 0) * 60 + (mm || 0);
+    const endMin = startMin + Math.round(durHours * 60);
+    const { data } = await supabase
+      .from("announcements")
+      .select("id,service_date,service_time,duration_hours,status,professional_profile")
+      .eq("restaurant_id", user.id)
+      .eq("service_date", f.service_date)
+      .in("status", ["active", "assigned", "draft"]);
+    const found: typeof conflicts = [];
+    for (const a of data ?? []) {
+      if (reuse && a.id === reuse) continue;
+      const t = (a.service_time as string | null)?.slice(0, 5);
+      if (!t) continue;
+      const [ah, am] = t.split(":").map((x) => parseInt(x, 10));
+      const aStart = (ah || 0) * 60 + (am || 0);
+      const aEnd = aStart + Math.round((Number(a.duration_hours) || 0) * 60);
+      const overlaps = aStart < endMin && aEnd > startMin;
+      if (overlaps) {
+        const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+        found.push({
+          id: a.id,
+          date: a.service_date as string,
+          start: fmt(aStart),
+          end: fmt(aEnd),
+          label: (a.professional_profile as string | null) || "Annuncio",
+        });
+      }
+    }
+    return found;
+  };
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
     if (!coords) { toast.error("Posizione non valida"); return; }
+    const c = await checkConflicts();
+    if (c.length > 0) {
+      setConflicts(c);
+      setConflictOpen(true);
+      return;
+    }
     setConfirmOpen(true);
   };
 
@@ -558,6 +601,33 @@ function NewAnn() {
                 {busy ? "Pubblicazione…" : "Conferma e pubblica"}
               </AlertDialogAction>
             )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={conflictOpen} onOpenChange={setConflictOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-destructive" />Possibile conflitto di orari</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                <p>Hai già {conflicts.length === 1 ? "un annuncio" : `${conflicts.length} annunci`} nello stesso giorno con orari che si sovrappongono a quelli precompilati ({f.service_time} · {f.duration_hours}h).</p>
+                <ul className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1.5">
+                  {conflicts.map((c) => (
+                    <li key={c.id} className="flex justify-between gap-3">
+                      <span className="truncate">{c.label}</span>
+                      <strong className="whitespace-nowrap">{c.start}–{c.end}</strong>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-muted-foreground text-xs">Verifica gli orari prima di procedere per evitare doppie prenotazioni dello stesso lavoratore.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Modifica orari</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConflictOpen(false); setConfirmOpen(true); }}>
+              Continua comunque
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
