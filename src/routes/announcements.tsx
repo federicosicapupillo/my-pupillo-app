@@ -142,6 +142,8 @@ type AssignedInfo = {
   worker_id: string;
   full_name: string | null;
   rating: number | null;
+  shift_id: string | null;
+  shift_status: string | null;
 };
 
 type ProposalStatusKind =
@@ -293,6 +295,8 @@ function AnnouncementsPage() {
   const [proposalTarget, setProposalTarget] = useState<{ ann: Ann; candidate: Candidate } | null>(null);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
+  const [closeTarget, setCloseTarget] = useState<Ann | null>(null);
+  const [closing, setClosing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
@@ -368,20 +372,34 @@ function AnnouncementsPage() {
           setCandidates(candMap);
           if (assignedAnns.length) {
             const annIds = assignedAnns.map(a => a.id);
-            const { data: revs } = await supabase
-              .from("reviews")
-              .select("announcement_id, target_id, rating, author_id")
-              .in("announcement_id", annIds)
-              .eq("author_id", user.id);
+            const [{ data: revs }, { data: shiftRows }] = await Promise.all([
+              supabase
+                .from("reviews")
+                .select("announcement_id, target_id, rating, author_id")
+                .in("announcement_id", annIds)
+                .eq("author_id", user.id),
+              supabase
+                .from("shifts")
+                .select("id, announcement_id, worker_id, status")
+                .in("announcement_id", annIds)
+                .eq("restaurant_id", user.id),
+            ]);
             const revMap: Record<string, number> = {};
             (revs ?? []).forEach((r: any) => { revMap[r.announcement_id] = r.rating; });
+            const shiftMap: Record<string, { id: string; status: string }> = {};
+            (shiftRows ?? []).forEach((s: any) => {
+              shiftMap[`${s.announcement_id}::${s.worker_id}`] = { id: s.id, status: s.status };
+            });
             const aMap: Record<string, AssignedInfo> = {};
             assignedAnns.forEach((a) => {
               const wid = a.assigned_worker_id as string;
+              const sh = shiftMap[`${a.id}::${wid}`];
               aMap[a.id] = {
                 worker_id: wid,
                 full_name: profMap[wid]?.full_name ?? null,
                 rating: revMap[a.id] ?? null,
+                shift_id: sh?.id ?? null,
+                shift_status: sh?.status ?? null,
               };
             });
             setAssigned(aMap);
@@ -412,44 +430,81 @@ function AnnouncementsPage() {
         key={a.id}
         className={`rounded-2xl border bg-card p-5 ${isExpired ? "opacity-70 border-red-200" : ""}`}
       >
-        {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (
-          <div className={`mb-3 rounded-xl border p-3 ${a.status === "completed" ? "bg-blue-50 border-blue-200" : "bg-green-50 border-green-200"}`}>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <CheckCircle2 className={`h-4 w-4 ${a.status === "completed" ? "text-blue-600" : "text-green-600"}`} />
-              <span className={a.status === "completed" ? "text-blue-800" : "text-green-800"}>
-                {a.status === "completed" ? "Turno completato" : "Turno assegnato"}
-              </span>
-            </div>
-            <div className="mt-1 text-sm text-foreground">
-              {a.status === "completed" ? "Lavoratore: " : "Assegnato a: "}
-              <span className="font-medium">{assigned[a.id].full_name || "Lavoratore"}</span>
-            </div>
-            {a.status === "completed" && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {assigned[a.id].rating != null ? (
-                <span className="inline-flex items-center gap-1">
+        {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (() => {
+          const info = assigned[a.id];
+          const start = getShiftStartDate(a);
+          const end = getShiftEndDate(a);
+          const nowMs = now.getTime();
+          const hasReview = info.rating != null;
+          const isClosed = info.shift_status === "completed" || a.status === "completed";
+          const afterEnd = !!end && nowMs >= end.getTime();
+          const afterStart = !!start && nowMs >= start.getTime();
+          let stateLabel = "Turno assegnato";
+          let stateCls = "bg-green-50 border-green-200 text-green-800";
+          if (hasReview) {
+            stateLabel = "Turno chiuso — recensione inviata";
+            stateCls = "bg-indigo-50 border-indigo-200 text-indigo-800";
+          } else if (isClosed) {
+            stateLabel = "Turno chiuso — recensione da inviare";
+            stateCls = "bg-yellow-50 border-yellow-300 text-yellow-900";
+          } else if (afterEnd) {
+            stateLabel = "Turno concluso — da chiudere";
+            stateCls = "bg-amber-50 border-amber-200 text-amber-800";
+          } else if (afterStart) {
+            stateLabel = "Turno in corso";
+            stateCls = "bg-blue-50 border-blue-200 text-blue-800";
+          }
+          return (
+            <div className={`mb-3 rounded-xl border p-3 ${stateCls}`}>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>{stateLabel}</span>
+              </div>
+              <div className="mt-1 text-sm text-foreground">
+                Lavoratore: <span className="font-medium">{info.full_name || "Lavoratore"}</span>
+              </div>
+              {hasReview && (
+                <div className="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
                   La tua valutazione:
                   <span className="inline-flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className={`h-3 w-3 ${
-                          i < (assigned[a.id].rating ?? 0)
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-300"
-                        }`}
+                        className={`h-3 w-3 ${i < (info.rating ?? 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
                       />
                     ))}
                   </span>
-                  <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
-                </span>
-                ) : (
-                  <span className="italic">Valutazione non ancora inserita</span>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+                  <span className="text-foreground font-medium">{info.rating}/5</span>
+                </div>
+              )}
+              {!isClosed && !hasReview && (
+                <div className="mt-2">
+                  {afterEnd ? (
+                    <Button size="sm" className="gap-1" onClick={() => setCloseTarget(a)}>
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Chiudi turno
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      <Button size="sm" disabled className="gap-1 w-fit">
+                        <Lock className="h-3.5 w-3.5" /> Chiudi turno
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground italic">
+                        Potrai chiudere il turno dopo l'orario di fine servizio.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isClosed && !hasReview && info.shift_id && (
+                <div className="mt-2">
+                  <Button size="sm" className="gap-1" onClick={() => navigate({ to: "/shifts", search: { tab: "to-review", shift: info.shift_id } as never })}>
+                    <Star className="h-3.5 w-3.5" /> Lascia recensione
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />{formatRange(a)}</div>
@@ -766,6 +821,72 @@ function AnnouncementsPage() {
         onClose={() => setProposalTarget(null)}
       />
       <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
+      <Dialog open={!!closeTarget} onOpenChange={(v) => { if (!v) setCloseTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chiudi turno</DialogTitle>
+            <DialogDescription>Confermi che il turno è stato svolto?</DialogDescription>
+          </DialogHeader>
+          {closeTarget && (() => {
+            const info = assigned[closeTarget.id];
+            return (
+              <div className="space-y-1.5 text-sm">
+                <div><span className="text-muted-foreground">Ruolo:</span> <span className="font-medium">{closeTarget.professional_profile || "—"}</span></div>
+                <div><span className="text-muted-foreground">Data:</span> <span className="font-medium">{new Date(closeTarget.service_date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</span></div>
+                <div><span className="text-muted-foreground">Orario:</span> <span className="font-medium">{closeTarget.service_time?.slice(0,5)}{closeTarget.end_time ? `–${closeTarget.end_time.slice(0,5)}` : ""}</span></div>
+                {(profile as any)?.business_name && (
+                  <div><span className="text-muted-foreground">Locale:</span> <span className="font-medium">{(profile as any).business_name}</span></div>
+                )}
+                <div><span className="text-muted-foreground">Indirizzo:</span> <span className="font-medium">{closeTarget.location_address || "—"}</span></div>
+                <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{info?.full_name || "Lavoratore"}</span></div>
+                <div><span className="text-muted-foreground">Stato:</span> <span className="font-medium">Da chiudere</span></div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setCloseTarget(null)} disabled={closing}>Annulla</Button>
+            <Button
+              disabled={closing}
+              onClick={async () => {
+                if (!closeTarget) return;
+                const info = assigned[closeTarget.id];
+                if (!info?.shift_id) {
+                  toast.error("Turno non trovato. Riprova più tardi.");
+                  return;
+                }
+                setClosing(true);
+                try {
+                  const { error } = await supabase
+                    .from("shifts")
+                    .update({ status: "completed", completed_at: new Date().toISOString() } as never)
+                    .eq("id", info.shift_id);
+                  if (error) {
+                    toast.error(error.message);
+                    return;
+                  }
+                  await supabase
+                    .from("announcements")
+                    .update({ status: "completed" } as never)
+                    .eq("id", closeTarget.id);
+                  setAssigned((prev) => ({
+                    ...prev,
+                    [closeTarget.id]: { ...prev[closeTarget.id], shift_status: "completed" },
+                  }));
+                  setItems((prev) => prev.map((x) => x.id === closeTarget.id ? { ...x, status: "completed" } : x));
+                  toast.success("Turno chiuso. Ora lascia la recensione.");
+                  const shiftId = info.shift_id;
+                  setCloseTarget(null);
+                  navigate({ to: "/shifts", search: { tab: "to-review", shift: shiftId } as never });
+                } finally {
+                  setClosing(false);
+                }
+              }}
+            >
+              {closing ? "Salvataggio…" : "Conferma chiusura"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
