@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Search, List, Map as MapIcon, RotateCcw, X, MapPin, CheckCircle2, Clock, History, ThumbsUp, ThumbsDown, Gift, Star } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { CREDIT_COSTS } from "@/lib/pricing";
