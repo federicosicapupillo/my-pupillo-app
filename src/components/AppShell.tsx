@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     role === "restaurant" && { to: "/announcements", label: "I miei annunci", icon: Briefcase },
     role === "restaurant" && { to: "/workers", label: "Cerca lavoratori", icon: Search },
     role === "restaurant" && { to: "/ristoratore/collaboratori", label: "Collaboratori", icon: Users },
-    role === "worker" && { to: "/jobs", label: "I miei servizi", icon: Briefcase },
+    role === "worker" && { to: "/jobs", label: "Le mie offerte", icon: Briefcase },
     role === "worker" && { to: "/browse", label: "Trova offerte", icon: Compass },
     (role === "worker" || role === "restaurant") && { to: "/shifts", label: "I miei turni", icon: CalendarClock },
     (role === "worker" || role === "restaurant") && { to: "/mappa", label: "Mappa", icon: MapIcon },
