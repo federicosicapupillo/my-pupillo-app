@@ -1,11 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Euro, MessageSquare, Star, Eye, CheckCircle2, XCircle, Clock, AlertCircle, Inbox, Store } from "lucide-react";
+import { toast } from "sonner";
+import { Calendar, MapPin, Euro, MessageSquare } from "lucide-react";
 import { formatTariff } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
 
@@ -14,342 +15,107 @@ export const Route = createFileRoute("/jobs")({
   component: () => <RequireAuth><Jobs /></RequireAuth>,
 });
 
-type Ann = {
-  id: string;
-  service_date: string;
-  service_time: string;
-  end_time: string | null;
-  duration_hours: number;
-  tariff_amount: number;
-  tariff_type: string;
-  speed: string;
-  job_city: string | null;
-  job_province: string | null;
-  job_address: string | null;
-  location_address: string | null;
-  professional_profile: string | null;
-  assigned_worker_id: string | null;
-  status: string;
+type Row = {
+  id: string; status: string; created_at: string; restaurant_id: string;
+  announcement: { id: string; service_date: string; service_time: string; duration_hours: number; tariff_amount: number; tariff_type: string; speed: string; job_city: string | null; job_province: string | null; assigned_worker_id: string | null } | null;
+  restaurant: { full_name: string | null; business_name: string | null; city: string | null; neighborhood: string | null } | null;
 };
-type Restaurant = {
-  id: string;
-  full_name: string | null;
-  business_name: string | null;
-  city: string | null;
-  neighborhood: string | null;
-  avatar_url: string | null;
-};
-type Application = {
-  id: string;
-  status: string;
-  created_at: string;
-  restaurant_id: string;
-  announcement_id: string;
-  worker_response_at: string | null;
-  binding_offer: boolean | null;
-};
-type Shift = {
-  id: string;
-  announcement_id: string | null;
-  status: string;
-  shift_date: string;
-};
-
-type Category = "ricevute" | "in_attesa" | "confermate" | "completate" | "annullate" | "da_recensire";
-
-type Service = {
-  app: Application;
-  ann: Ann | null;
-  restaurant: Restaurant | null;
-  shift: Shift | null;
-  reviewed: boolean;
-  category: Category;
-};
-
-const CATEGORY_LABEL: Record<Category, string> = {
-  ricevute: "Offerta ricevuta",
-  in_attesa: "In attesa di conferma",
-  confermate: "Confermata",
-  completate: "Completata",
-  annullate: "Annullata",
-  da_recensire: "Da recensire",
-};
-
-const CATEGORY_CLS: Record<Category, string> = {
-  ricevute: "bg-indigo-100 text-indigo-800 border border-indigo-200",
-  in_attesa: "bg-amber-100 text-amber-800 border border-amber-200",
-  confermate: "bg-emerald-100 text-emerald-800 border border-emerald-200",
-  completate: "bg-blue-100 text-blue-800 border border-blue-200",
-  annullate: "bg-red-100 text-red-800 border border-red-200",
-  da_recensire: "bg-yellow-100 text-yellow-900 border border-yellow-300",
-};
-
-function deriveCategory(app: Application, ann: Ann | null, shift: Shift | null, reviewed: boolean): Category {
-  const cancelledApp = ["not_interested", "rejected", "expired"].includes(app.status);
-  if (cancelledApp || shift?.status === "cancelled" || ann?.status === "cancelled") return "annullate";
-  const isCompleted = shift?.status === "completed" || ann?.status === "completed";
-  if (isCompleted) return reviewed ? "completate" : "da_recensire";
-  if (app.status === "accepted") return "confermate";
-  if (app.binding_offer && app.status === "pending" && !app.worker_response_at) return "ricevute";
-  return "in_attesa";
-}
 
 function Jobs() {
   const { user, role } = useAuth();
-  const [services, setServices] = useState<Service[]>([]);
+  const navigate = useNavigate();
+  const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | Category>("all");
 
-  useEffect(() => {
+  const load = async () => {
     if (!user) return;
-    (async () => {
-      setLoading(true);
-      const { data: apps } = await supabase
-        .from("applications")
-        .select("id, status, created_at, restaurant_id, announcement_id, worker_response_at, binding_offer")
-        .eq("worker_id", user.id)
-        .order("created_at", { ascending: false });
-      const appList = (apps ?? []) as Application[];
-      const annIds = Array.from(new Set(appList.map((a) => a.announcement_id))).filter(Boolean);
-      const restIds = Array.from(new Set(appList.map((a) => a.restaurant_id))).filter(Boolean);
-      const [{ data: anns }, { data: rests }, { data: shifts }, { data: revs }] = await Promise.all([
-        annIds.length
-          ? supabase
-              .from("announcements")
-              .select(
-                "id, service_date, service_time, end_time, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, job_address, location_address, professional_profile, assigned_worker_id, status",
-              )
-              .in("id", annIds)
-          : Promise.resolve({ data: [] as any[] }),
-        restIds.length
-          ? supabase
-              .from("profiles")
-                .select("id, full_name, business_name, city, neighborhood, avatar_url")
-              .in("id", restIds)
-          : Promise.resolve({ data: [] as any[] }),
-        annIds.length
-          ? supabase
-              .from("shifts")
-              .select("id, announcement_id, status, shift_date")
-              .eq("worker_id", user.id)
-              .in("announcement_id", annIds)
-          : Promise.resolve({ data: [] as any[] }),
-        annIds.length
-          ? supabase
-              .from("reviews")
-              .select("announcement_id, target_id")
-              .eq("author_id", user.id)
-              .in("announcement_id", annIds)
-          : Promise.resolve({ data: [] as any[] }),
-      ]);
-      const annMap = new Map<string, Ann>((anns ?? []).map((a: any) => [a.id, a]));
-      const restMap = new Map<string, Restaurant>((rests ?? []).map((r: any) => [r.id, r]));
-      const shiftMap = new Map<string, Shift>();
-      (shifts ?? []).forEach((s: any) => {
-        if (s.announcement_id) shiftMap.set(s.announcement_id, s);
-      });
-      const reviewedSet = new Set<string>(
-        (revs ?? []).map((r: any) => `${r.announcement_id}::${r.target_id}`),
-      );
-      const list: Service[] = appList.map((app) => {
-        const ann = annMap.get(app.announcement_id) ?? null;
-        const restaurant = restMap.get(app.restaurant_id) ?? null;
-        const shift = shiftMap.get(app.announcement_id) ?? null;
-        const reviewed = reviewedSet.has(`${app.announcement_id}::${app.restaurant_id}`);
-        const category = deriveCategory(app, ann, shift, reviewed);
-        return { app, ann, restaurant, shift, reviewed, category };
-      });
-      setServices(list);
-      setLoading(false);
-    })();
-  }, [user]);
+    const { data: apps } = await supabase.from("applications")
+      .select("id, status, created_at, restaurant_id, announcement_id")
+      .eq("worker_id", user.id).order("created_at", { ascending: false });
+    const annIds = (apps ?? []).map(a => a.announcement_id);
+    const restIds = (apps ?? []).map(a => a.restaurant_id);
+    const [{ data: anns }, { data: rests }] = await Promise.all([
+      annIds.length ? supabase.from("announcements").select("id, service_date, service_time, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id").in("id", annIds) : Promise.resolve({ data: [] }),
+      restIds.length ? supabase.from("profiles").select("id, full_name, business_name, city, neighborhood").in("id", restIds) : Promise.resolve({ data: [] }),
+    ]);
+    const annMap = new Map((anns ?? []).map((a: any) => [a.id, a]));
+    const restMap = new Map((rests ?? []).map((r: any) => [r.id, r]));
+    setRows((apps ?? []).map((a: any) => ({
+      ...a,
+      announcement: annMap.get(a.announcement_id) ?? null,
+      restaurant: restMap.get(a.restaurant_id) ?? null,
+    })));
+    setLoading(false);
+  };
 
-  const counts = useMemo(() => {
-    const c = { all: services.length, ricevute: 0, in_attesa: 0, confermate: 0, completate: 0, annullate: 0, da_recensire: 0 };
-    services.forEach((s) => {
-      c[s.category] += 1;
-    });
-    c.completate = services.filter((s) => s.category === "completate" || s.category === "da_recensire").length;
-    return c;
-  }, [services]);
+  useEffect(() => { load(); }, [user]);
 
-  const filtered = useMemo(() => {
-    if (filter === "all") return services;
-    if (filter === "completate") return services.filter((s) => s.category === "completate" || s.category === "da_recensire");
-    return services.filter((s) => s.category === filter);
-  }, [services, filter]);
+  const respond = async (id: string, status: "interested" | "not_interested") => {
+    const { error } = await supabase.from("applications").update({
+      status, worker_response_at: new Date().toISOString(),
+    }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (status === "interested" && user) {
+      const { data: existing } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("application_id", id)
+        .eq("sender_id", user.id)
+        .eq("message_type", "auto_application")
+        .maybeSingle();
+      if (!existing) {
+        await supabase.from("messages").insert({
+          application_id: id,
+          sender_id: user.id,
+          message_type: "auto_application",
+          body: "Ciao! Ho inviato la mia candidatura per il turno pubblicato.\n\nSono disponibile nell'orario richiesto e resto a disposizione per conferma o ulteriori informazioni. A presto!",
+        });
+      }
+      toast.success("Candidatura inviata correttamente");
+      navigate({ to: "/messages/$id", params: { id } });
+      return;
+    }
+    toast.success("Offerta rifiutata");
+    load();
+  };
 
-  if (role !== "worker") {
-    return (
-      <AppShell>
-        <p className="text-muted-foreground">Sezione riservata ai lavoratori.</p>
-      </AppShell>
-    );
-  }
-
-  const tabs: { key: "all" | Category; label: string; count: number }[] = [
-    { key: "all", label: "Tutte", count: counts.all },
-    { key: "ricevute", label: "Ricevute", count: counts.ricevute },
-    { key: "in_attesa", label: "In attesa", count: counts.in_attesa },
-    { key: "confermate", label: "Confermate", count: counts.confermate },
-    { key: "completate", label: "Completate", count: counts.completate },
-    { key: "annullate", label: "Annullate", count: counts.annullate },
-    { key: "da_recensire", label: "Da recensire", count: counts.da_recensire },
-  ];
+  if (role !== "worker") return <AppShell><p className="text-muted-foreground">Sezione riservata ai lavoratori.</p></AppShell>;
 
   return (
     <AppShell>
-      <PageHeader
-        title="Le mie offerte"
-        subtitle="Gestisci qui tutte le offerte di lavoro ricevute, confermate, completate o annullate."
-      />
-
-      <div className="flex flex-wrap gap-2 mb-5">
-        {tabs.map((t) => (
-          <Button
-            key={t.key}
-            size="sm"
-            variant={filter === t.key ? "default" : "outline"}
-            className="rounded-full"
-            onClick={() => setFilter(t.key)}
-          >
-            {t.label} ({t.count})
-          </Button>
-        ))}
-      </div>
-
-      {loading ? (
-        <p className="text-muted-foreground">Caricamento…</p>
-      ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-12 text-center">
-          <Inbox className="h-10 w-10 mx-auto text-muted-foreground/60 mb-3" />
-          <p className="font-medium">Non hai ancora offerte disponibili.</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Quando un ristoratore ti invierà una proposta o quando ti candiderai a un servizio, la troverai qui.
-          </p>
-        </div>
+      <PageHeader title="Le mie offerte" subtitle="Offerte ricevute dai ristoratori" />
+      {loading ? <p className="text-muted-foreground">Caricamento…</p> : rows.length === 0 ? (
+        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">Nessuna offerta ricevuta.</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {filtered.map((s) => (
-            <ServiceCard key={s.app.id} svc={s} />
+          {rows.map(r => (
+            <div key={r.id} className="rounded-2xl border bg-card p-5">
+              <div className="flex items-start justify-between">
+                <div className="font-semibold">{r.restaurant?.business_name || r.restaurant?.full_name || "Ristoratore"}</div>
+                <span className="text-xs rounded-full bg-secondary px-2 py-1 capitalize">{r.status}</span>
+              </div>
+              {r.announcement && (
+                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(r.announcement.service_date).toLocaleDateString("it-IT")} · {r.announcement.service_time?.slice(0,5)} ({r.announcement.duration_hours}h)</div>
+                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{publicLocationLabel({
+                    job_city: r.announcement.job_city,
+                    city: r.restaurant?.city,
+                    neighborhood: r.restaurant?.neighborhood,
+                  })}</div>
+                  <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(r.announcement.tariff_amount, r.announcement.tariff_type)}</div>
+                </div>
+              )}
+              <div className="mt-4 flex gap-2">
+                {r.status === "pending" && (<>
+                  <Button size="sm" className="flex-1" onClick={() => respond(r.id, "interested")}>Sono interessato</Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => respond(r.id, "not_interested")}>Rifiuta</Button>
+                </>)}
+                <Link to="/messages/$id" params={{ id: r.id }}><Button size="sm" variant="secondary" className="gap-2"><MessageSquare className="h-4 w-4" />Chat</Button></Link>
+              </div>
+            </div>
           ))}
         </div>
       )}
     </AppShell>
-  );
-}
-
-function ServiceCard({ svc }: { svc: Service }) {
-  const { app, ann, restaurant, category, reviewed } = svc;
-  const restaurantName = restaurant?.business_name || restaurant?.full_name || "Ristoratore";
-  const address =
-    ann?.job_address ||
-    ann?.location_address ||
-    publicLocationLabel({
-      job_city: ann?.job_city ?? null,
-      city: restaurant?.city ?? null,
-      neighborhood: restaurant?.neighborhood ?? null,
-    });
-  const role = ann?.professional_profile;
-  const Icon =
-    category === "completate" ? CheckCircle2
-      : category === "annullate" ? XCircle
-      : category === "da_recensire" ? Star
-      : category === "confermate" ? CheckCircle2
-      : category === "ricevute" ? Inbox
-      : Clock;
-
-  return (
-    <div className="rounded-2xl border bg-card p-5 flex flex-col">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <div className="h-11 w-11 shrink-0 rounded-full overflow-hidden bg-muted flex items-center justify-center border">
-            {restaurant?.avatar_url ? (
-              <img src={restaurant.avatar_url} alt={restaurantName} className="h-full w-full object-cover" />
-            ) : (
-              <Store className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <div className="font-semibold truncate">{restaurantName}</div>
-            {role && <div className="text-sm text-muted-foreground capitalize truncate">{role}</div>}
-          </div>
-        </div>
-        <span className={`shrink-0 text-xs rounded-full px-2.5 py-1 inline-flex items-center gap-1 ${CATEGORY_CLS[category]}`}>
-          <Icon className="h-3.5 w-3.5" />
-          {CATEGORY_LABEL[category]}
-        </span>
-      </div>
-
-      {ann && (
-        <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 shrink-0" />
-            {new Date(ann.service_date).toLocaleDateString("it-IT")} · {ann.service_time?.slice(0, 5)}
-            {ann.end_time ? `–${ann.end_time.slice(0, 5)}` : ann.duration_hours ? ` (${ann.duration_hours}h)` : ""}
-          </div>
-          {address && (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0" />
-              <span className="truncate">{address}</span>
-            </div>
-          )}
-          {ann.tariff_amount != null && (
-            <div className="flex items-center gap-2">
-              <Euro className="h-4 w-4 shrink-0" />
-              {formatTariff(ann.tariff_amount, ann.tariff_type)}
-            </div>
-          )}
-        </div>
-      )}
-
-      {!ann && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-          <AlertCircle className="h-4 w-4" />
-          Dettagli annuncio non disponibili.
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {category === "ricevute" && (
-          <Link to="/messages/$id" params={{ id: app.id }}>
-            <Button size="sm" className="gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              Rispondi all'offerta
-            </Button>
-          </Link>
-        )}
-        <Link to="/messages/$id" params={{ id: app.id }}>
-          <Button size="sm" variant="secondary" className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Scrivi al ristoratore
-          </Button>
-        </Link>
-        {ann && (
-          <Link to="/announcements/$id" params={{ id: ann.id }}>
-            <Button size="sm" variant="outline" className="gap-2">
-              <Eye className="h-4 w-4" />
-              Apri dettagli
-            </Button>
-          </Link>
-        )}
-        {category === "da_recensire" && (
-          <Link to="/shifts" search={{ tab: "to-review" } as any}>
-            <Button size="sm" className="gap-2">
-              <Star className="h-4 w-4" />
-              Lascia recensione
-            </Button>
-          </Link>
-        )}
-        {category === "completate" && reviewed && (
-          <Link to="/shifts">
-            <Button size="sm" variant="outline" className="gap-2">
-              <Star className="h-4 w-4" />
-              Vedi recensione
-            </Button>
-          </Link>
-        )}
-      </div>
-    </div>
   );
 }
