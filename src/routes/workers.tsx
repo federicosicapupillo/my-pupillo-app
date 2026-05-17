@@ -680,9 +680,13 @@ function WorkersPage() {
         </div>
       )}
       {view === "map" ? (
-        <WorkersMapView
+        <WorkersMapSection
           workers={sorted}
-          selectedAnn={selectedAnn}
+          fallbackCenter={
+            selectedAnn?.location_lat != null && selectedAnn?.location_lng != null
+              ? [selectedAnn.location_lat as number, selectedAnn.location_lng as number]
+              : [41.9028, 12.4964]
+          }
           onInvite={invite}
           inviteDisabled={!selected}
           inviteLabel={selected ? "Messaggia" : "Seleziona annuncio"}
