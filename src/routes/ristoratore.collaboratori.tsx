@@ -13,6 +13,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { setLastAnnouncementId } from "@/lib/last-announcement";
+import { getShiftStartDate } from "@/lib/announcement-time";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
