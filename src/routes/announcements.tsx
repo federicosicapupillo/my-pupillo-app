@@ -19,6 +19,15 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { labelOf, labelsOf } from "@/lib/announcement-requirements";
 
 function AnnouncementMapBlock({
   annId, lat, lng, address, open, onToggle,
@@ -100,7 +109,7 @@ export const Route = createFileRoute("/announcements")({
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
 });
 
-type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null; is_long_shift?: boolean | null; long_shift_reason?: string | null; shift_duration_hours?: number | null; assigned_worker_id?: string | null };
+type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null; is_long_shift?: boolean | null; long_shift_reason?: string | null; shift_duration_hours?: number | null; assigned_worker_id?: string | null; license_requirement?: string | null; language_requirements?: string[] | null; tattoos_allowed?: string | null; piercings_allowed?: string | null; beard_allowed?: string | null; required_skills?: string[] | null; dress_code_items?: string[] | null; dress_code_notes?: string | null; }
 
 type Candidate = {
   worker_id: string;
@@ -207,6 +216,8 @@ function AnnouncementsPage() {
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
   const [assigned, setAssigned] = useState<Record<string, AssignedInfo>>({});
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
+  const [republishOpen, setRepublishOpen] = useState(false);
+  const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
@@ -422,11 +433,14 @@ function AnnouncementsPage() {
                 const eff = computeEffectiveStatus(a, now);
                 const label = eff.kind === "expired" ? "Ripubblica annuncio" : "Riusa come nuovo";
                 return (
-                  <Link to="/ristoratore/annunci/nuovo" search={{ reuse: a.id } as never} className="mt-3 inline-flex">
-                    <Button variant={eff.kind === "expired" ? "default" : "outline"} size="sm" className="gap-2">
-                      <RotateCw className="h-3 w-3" />{label}
-                    </Button>
-                  </Link>
+                  <Button
+                    variant={eff.kind === "expired" ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2 mt-3"
+                    onClick={() => { setRepublishAnn(a); setRepublishOpen(true); }}
+                  >
+                    <RotateCw className="h-3 w-3" />{label}
+                  </Button>
                 );
               })()}
               <div className="mt-3">
@@ -508,6 +522,108 @@ function AnnouncementsPage() {
           })}
         </div>
       )}
+
+      <RepublishDialog
+        open={republishOpen}
+        onOpenChange={setRepublishOpen}
+        ann={republishAnn}
+      />
     </AppShell>
+  );
+}
+
+function RepublishDialog({
+  open,
+  onOpenChange,
+  ann,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  ann: Ann | null;
+}) {
+  const navigate = useNavigate();
+  if (!ann) return null;
+
+  const startD = new Date(ann.service_date + "T00:00:00").toLocaleDateString("it-IT", {
+    weekday: "long", day: "2-digit", month: "long", year: "numeric",
+  });
+  const st = ann.service_time?.slice(0, 5) ?? "";
+  const endDate = ann.end_date;
+  const et = ann.end_time?.slice(0, 5) ?? "";
+  const dateRange = endDate && endDate !== ann.service_date
+    ? `${startD} ore ${st} → ${new Date(endDate + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "long" })} ore ${et}`
+    : `${startD} · ${st}${et ? `–${et}` : ""}`;
+
+  const speedLabel: Record<string, string> = {
+    normal: "Normale (7 giorni)",
+    fast: "Veloce (24 ore)",
+    flash: "Flash (immediato)",
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Ripubblica annuncio</DialogTitle>
+          <DialogDescription>
+            Verrà creato un nuovo annuncio precompilato con i dati qui sotto. Potrai modificarli prima di pubblicare.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <SummaryRow icon={Calendar} label="Data e ora" value={dateRange} />
+          <SummaryRow icon={Clock} label="Durata" value={`${ann.shift_duration_hours ?? ann.duration_hours} ore`} />
+          <SummaryRow icon={Euro} label="Tariffa" value={formatTariff(ann.tariff_amount, ann.tariff_type)} />
+          <SummaryRow icon={MapPin} label="Indirizzo" value={ann.location_address} />
+          {ann.professional_profile && (
+            <SummaryRow icon={Users} label="Ruolo richiesto" value={ann.professional_profile} />
+          )}
+          <SummaryRow icon={RotateCw} label="Velocità ricerca" value={speedLabel[ann.speed] ?? ann.speed} />
+          {ann.license_requirement && ann.license_requirement !== "nessuna" && (
+            <SummaryRow icon={CheckCircle2} label="Patente" value={labelOf(ann.license_requirement, [
+              { value: "b", label: "Patente B" },
+              { value: "c", label: "Patente C" },
+              { value: "d", label: "Patente D" },
+              { value: "nessuna", label: "Nessuna" },
+            ])} />
+          )}
+          {ann.language_requirements && ann.language_requirements.length > 0 && (
+            <SummaryRow icon={CheckCircle2} label="Lingue" value={labelsOf(ann.language_requirements, [
+              { value: "italiano", label: "Italiano" },
+              { value: "inglese", label: "Inglese" },
+              { value: "francese", label: "Francese" },
+              { value: "spagnolo", label: "Spagnolo" },
+              { value: "tedesco", label: "Tedesco" },
+              { value: "cinese", label: "Cinese" },
+              { value: "arabo", label: "Arabo" },
+              { value: "russo", label: "Russo" },
+              { value: "portoghese", label: "Portoghese" },
+            ]).join(", ")} />
+          )}
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Annulla</Button>
+          <Button
+            onClick={() => {
+              onOpenChange(false);
+              navigate({ to: "/ristoratore/annunci/nuovo", search: { reuse: ann.id } as never });
+            }}
+          >
+            Conferma e crea
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SummaryRow({ icon: Icon, label, value }: { icon: typeof Calendar; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="font-medium">{value}</div>
+      </div>
+    </div>
   );
 }
