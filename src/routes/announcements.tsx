@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,6 +127,13 @@ type Candidate = {
   professional_profile: string | null;
   rating_avg: number | null;
   badge: string | null;
+  application_id: string | null;
+  app_status: string | null;
+  application_created_at: string | null;
+  last_message_preview: string | null;
+  last_message_at: string | null;
+  reviewed: boolean;
+  avatar_url: string | null;
 };
 
 type AssignedInfo = {
@@ -134,6 +141,55 @@ type AssignedInfo = {
   full_name: string | null;
   rating: number | null;
 };
+
+type ProposalStatusKind =
+  | "pending"
+  | "accepted"
+  | "confirmed"
+  | "rejected"
+  | "completed"
+  | "review_pending"
+  | "review_sent";
+
+const PROPOSAL_STATUS_LABEL: Record<ProposalStatusKind, string> = {
+  pending: "In attesa di risposta",
+  accepted: "Accettata",
+  confirmed: "Confermata",
+  rejected: "Rifiutata",
+  completed: "Turno completato",
+  review_pending: "Recensione da inviare",
+  review_sent: "Recensione inviata",
+};
+
+const PROPOSAL_STATUS_CLS: Record<ProposalStatusKind, string> = {
+  pending: "bg-amber-100 text-amber-800 border border-amber-200",
+  accepted: "bg-green-100 text-green-800 border border-green-200",
+  confirmed: "bg-emerald-100 text-emerald-800 border border-emerald-300",
+  rejected: "bg-red-100 text-red-800 border border-red-200",
+  completed: "bg-blue-100 text-blue-800 border border-blue-200",
+  review_pending: "bg-yellow-100 text-yellow-900 border border-yellow-300",
+  review_sent: "bg-indigo-100 text-indigo-800 border border-indigo-200",
+};
+
+function deriveProposalStatus(ann: Ann, c: Candidate): ProposalStatusKind {
+  const isAssigned = ann.assigned_worker_id === c.worker_id;
+  if (ann.status === "completed" && isAssigned) {
+    return c.reviewed ? "review_sent" : "review_pending";
+  }
+  if (ann.status === "completed") return "completed";
+  if (isAssigned) return "confirmed";
+  const s = c.app_status;
+  if (s === "accepted") return "accepted";
+  if (s === "rejected" || s === "not_interested") return "rejected";
+  return "pending";
+}
+
+function formatRelativeShort(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 function formatRange(a: Ann) {
   const startD = new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT");
@@ -253,33 +309,49 @@ function AnnouncementsPage() {
         const ids = list.map(a => a.id);
         const { data: apps } = await supabase
           .from("applications")
-          .select("announcement_id, worker_id")
+          .select("id, announcement_id, worker_id, status, created_at, last_message_preview, last_message_at")
           .in("announcement_id", ids);
         const map: Record<string, number> = {};
-        const byAnn: Record<string, string[]> = {};
+        const byAnn: Record<string, any[]> = {};
         (apps ?? []).forEach((a: any) => {
           map[a.announcement_id] = (map[a.announcement_id] ?? 0) + 1;
-          (byAnn[a.announcement_id] ||= []).push(a.worker_id);
+          (byAnn[a.announcement_id] ||= []).push(a);
         });
         setCounts(map);
         const assignedAnns = list.filter(a => a.assigned_worker_id);
         const assignedWorkerIds = assignedAnns.map(a => a.assigned_worker_id as string);
         const workerIds = Array.from(new Set([...(apps ?? []).map((a: any) => a.worker_id), ...assignedWorkerIds]));
         if (workerIds.length) {
-          const { data: profs } = await supabase
-            .from("profiles")
-            .select("id, full_name, professional_profile, rating_avg, badge")
-            .in("id", workerIds);
+          const [{ data: profs }, { data: allRevs }] = await Promise.all([
+            supabase
+              .from("profiles")
+              .select("id, full_name, professional_profile, rating_avg, badge, avatar_url")
+              .in("id", workerIds),
+            supabase
+              .from("reviews")
+              .select("announcement_id, target_id, author_id")
+              .in("announcement_id", ids)
+              .eq("author_id", user.id),
+          ]);
           const profMap: Record<string, any> = {};
           (profs ?? []).forEach((p: any) => { profMap[p.id] = p; });
+          const reviewedSet = new Set<string>();
+          (allRevs ?? []).forEach((r: any) => { reviewedSet.add(`${r.announcement_id}::${r.target_id}`); });
           const candMap: Record<string, Candidate[]> = {};
-          Object.entries(byAnn).forEach(([annId, wids]) => {
-            candMap[annId] = wids.map((wid) => ({
-              worker_id: wid,
-              full_name: profMap[wid]?.full_name ?? null,
-              professional_profile: profMap[wid]?.professional_profile ?? null,
-              rating_avg: profMap[wid]?.rating_avg ?? null,
-              badge: profMap[wid]?.badge ?? null,
+          Object.entries(byAnn).forEach(([annId, rows]) => {
+            candMap[annId] = rows.map((row: any) => ({
+              worker_id: row.worker_id,
+              full_name: profMap[row.worker_id]?.full_name ?? null,
+              professional_profile: profMap[row.worker_id]?.professional_profile ?? null,
+              rating_avg: profMap[row.worker_id]?.rating_avg ?? null,
+              badge: profMap[row.worker_id]?.badge ?? null,
+              avatar_url: profMap[row.worker_id]?.avatar_url ?? null,
+              application_id: row.id ?? null,
+              app_status: row.status ?? null,
+              application_created_at: row.created_at ?? null,
+              last_message_preview: row.last_message_preview ?? null,
+              last_message_at: row.last_message_at ?? null,
+              reviewed: reviewedSet.has(`${annId}::${row.worker_id}`),
             }));
           });
           setCandidates(candMap);
@@ -477,6 +549,74 @@ function AnnouncementsPage() {
               })()}
               <div className="mt-3">
                 {role === "restaurant" ? (
+                  <>
+                    {(candidates[a.id]?.length ?? 0) > 0 && (
+                      <div className="mb-3 rounded-xl border bg-muted/30 p-3">
+                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          <Send className="h-3.5 w-3.5" />
+                          Richieste inviate ({candidates[a.id].length})
+                        </div>
+                        <ul className="space-y-2">
+                          {candidates[a.id].map((c) => {
+                            const ps = deriveProposalStatus(a, c);
+                            return (
+                              <li key={c.worker_id} className="rounded-lg border bg-card p-2.5">
+                                <div className="flex items-start gap-2.5">
+                                  {c.avatar_url ? (
+                                    <img src={c.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                                  ) : (
+                                    <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-secondary-foreground">
+                                      {(c.full_name || "?").slice(0, 1).toUpperCase()}
+                                    </div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-sm font-semibold text-foreground truncate">
+                                        {c.full_name || "Lavoratore"}
+                                      </span>
+                                      {c.rating_avg != null && (
+                                        <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+                                          <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                                          <span className="text-foreground font-medium">{Number(c.rating_avg).toFixed(1)}</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                      {c.professional_profile && <span>{c.professional_profile}</span>}
+                                      {c.application_created_at && (
+                                        <span title="Richiesta inviata">· {formatRelativeShort(c.application_created_at)}</span>
+                                      )}
+                                    </div>
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                      <span className={`text-[11px] rounded-full px-2 py-0.5 font-medium ${PROPOSAL_STATUS_CLS[ps]}`}>
+                                        {PROPOSAL_STATUS_LABEL[ps]}
+                                      </span>
+                                    </div>
+                                    {c.last_message_preview && (
+                                      <p className="mt-1.5 text-xs text-muted-foreground italic line-clamp-1">
+                                        “{c.last_message_preview}”
+                                      </p>
+                                    )}
+                                  </div>
+                                  {c.application_id && (
+                                    <Link
+                                      to="/messages/$id"
+                                      params={{ id: c.application_id }}
+                                      className="shrink-0"
+                                    >
+                                      <Button size="sm" variant="outline" className="gap-1 h-8">
+                                        <MessageSquare className="h-3.5 w-3.5" />
+                                        Apri chat
+                                      </Button>
+                                    </Link>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="default" className="gap-1">
@@ -551,6 +691,7 @@ function AnnouncementsPage() {
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </>
                 ) : (
                   <Link to="/announcements/$id" params={{ id: a.id }}>
                     <Button size="sm" variant="outline" className="gap-1">Apri dettagli</Button>
