@@ -91,6 +91,20 @@ function ShiftsPage() {
     if (error) { toast.error("Errore nel caricamento turni"); return; }
     const list = (data ?? []) as Shift[];
     setShifts(list);
+    // Load announcement details and accepted applications for chat links
+    const annIds = list.map(s => s.announcement_id).filter(Boolean) as string[];
+    let annMap: Record<string, any> = {};
+    let accAppMap: Record<string, { id: string; status: string }> = {};
+    if (annIds.length) {
+      const [{ data: annData }, { data: accApps }] = await Promise.all([
+        supabase.from("announcements").select("id, service_date, service_time, end_time, location_address, tariff_amount, tariff_type, job_address, job_city, professional_profile, required_skills, dress_code_items, dress_code_notes, notes").in("id", annIds),
+        (supabase as any).from("applications").select("id, announcement_id, status").in("announcement_id", annIds).in("status", ["accepted", "confirmed", "assigned"]).eq(col, user.id)
+      ]);
+      (annData ?? []).forEach((a: any) => { annMap[a.id] = a; });
+      (accApps ?? []).forEach((a: any) => { accAppMap[a.announcement_id] = { id: a.id, status: a.status }; });
+    }
+    setAnnouncementsMap(annMap);
+    setAcceptedAppMap(accAppMap);
     // For restaurants, also load pending/in-flight applications (candidature in attesa)
     let pending: PendingApp[] = [];
     if (role === "restaurant") {
