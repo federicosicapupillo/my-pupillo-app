@@ -385,7 +385,9 @@ function StatCard({ icon: Icon, label, value, highlight }: { icon: typeof Briefc
 function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () => void }) {
   const dateLabel = new Date(item.service_date).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" });
   const timeLabel = item.service_time ? item.service_time.slice(0, 5) : null;
+  // Compute end time label: prefer explicit end_time, otherwise derive from duration.
   const endTime = (() => {
+    if (item.end_time) return item.end_time.slice(0, 5);
     if (!timeLabel || !item.duration_hours) return null;
     const [h, m] = timeLabel.split(":").map(Number);
     const total = h * 60 + m + Math.round(item.duration_hours * 60);
@@ -394,16 +396,29 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
     return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
   })();
 
+  // Compute actual start/end datetimes (handles overnight shifts via shared helpers).
+  const startDt = getShiftStartDate(item);
+  const endDt = getShiftEndDate(item);
+  const now = Date.now();
+  const beforeStart = !!startDt && now < startDt.getTime();
+  const inProgress = !!startDt && !!endDt && now >= startDt.getTime() && now < endDt.getTime();
+  const afterEnd = !!endDt && now >= endDt.getTime();
+  const canClose = afterEnd;
+
   // Stato turno → label/colore
   const status = item.shift_status;
   let statusLabel = "Confermato";
   let statusClass = "bg-emerald-500/10 text-emerald-700 border-emerald-500/30";
   let StatusIcon = CheckCircle2;
-  if (status === "scheduled") { statusLabel = "Confermato"; }
+  if (status === "scheduled" || status === null) {
+    if (beforeStart) { statusLabel = "Turno assegnato"; }
+    else if (inProgress) { statusLabel = "Turno in corso"; statusClass = "bg-amber-500/10 text-amber-700 border-amber-500/30"; StatusIcon = Clock; }
+    else if (afterEnd) { statusLabel = "Turno concluso — da chiudere"; statusClass = "bg-orange-500/10 text-orange-700 border-orange-500/30"; StatusIcon = AlertTriangle; }
+    else { statusLabel = "Confermato"; }
+  }
   else if (status === "completed") { statusLabel = "Completato"; statusClass = "bg-blue-500/10 text-blue-700 border-blue-500/30"; StatusIcon = CheckCheck; }
   else if (status === "cancelled") { statusLabel = "Annullato"; statusClass = "bg-red-500/10 text-red-700 border-red-500/30"; StatusIcon = XCircle; }
   else if (status === "no_show") { statusLabel = "No-show"; statusClass = "bg-orange-500/10 text-orange-700 border-orange-500/30"; StatusIcon = AlertTriangle; }
-  else if (!status) { statusLabel = "In attesa"; statusClass = "bg-amber-500/10 text-amber-700 border-amber-500/30"; StatusIcon = Clock; }
 
   // Stato recensione
   const isOverdue = item.required_status === "overdue";
@@ -447,10 +462,21 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {status === "scheduled" || status === null ? (
           <>
-            <Button size="sm" onClick={onClose} className="gap-1" disabled={!item.worker_id}>
+            <Button
+              size="sm"
+              onClick={canClose ? onClose : undefined}
+              className="gap-1"
+              disabled={!item.worker_id || !canClose}
+              title={!canClose ? "Disponibile dopo la fine del turno" : undefined}
+            >
               <CheckCheck className="h-4 w-4" /> Concludi turno
             </Button>
-            <span className="text-[11px] text-muted-foreground">Dopo la chiusura potrai lasciare la recensione al lavoratore.</span>
+            <span className="text-[11px] text-muted-foreground">
+              {beforeStart && "Potrai concludere il turno dopo la fine del servizio."}
+              {inProgress && (endTime ? `Turno in corso. Potrai concluderlo alle ${endTime}.` : "Turno in corso. Potrai concluderlo dopo la fine.")}
+              {afterEnd && "Puoi chiudere il turno e lasciare la recensione."}
+              {!startDt && "Dopo la chiusura potrai lasciare la recensione al lavoratore."}
+            </span>
           </>
         ) : status === "completed" && !item.has_review ? (
           item.shift_id ? (
