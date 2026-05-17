@@ -18,6 +18,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
+import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 
 function AnnouncementMapBlock({
   annId, lat, lng, address, open, onToggle,
@@ -127,23 +128,6 @@ function formatRange(a: Ann) {
   return `${startD} ${startT} → ${endD} ${endT}`;
 }
 
-/** Compute the effective end datetime of a shift (using end_date/end_time, or
- * service_date + duration). Returns null if not enough info. */
-function getShiftEndDate(a: Ann): Date | null {
-  if (!a.service_date) return null;
-  const endDate = a.end_date || a.service_date;
-  const endTime = a.end_time || a.service_time || "23:59";
-  const iso = `${endDate}T${endTime.length === 5 ? endTime + ":00" : endTime}`;
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function getShiftStartDate(a: Ann): Date | null {
-  if (!a.service_date) return null;
-  const t = a.service_time || "00:00";
-  const d = new Date(`${a.service_date}T${t.length === 5 ? t + ":00" : t}`);
-  return isNaN(d.getTime()) ? null : d;
-}
 
 type EffectiveStatus = "active" | "soon" | "expired" | "completed" | "assigned" | "draft" | "cancelled";
 
@@ -155,7 +139,7 @@ function computeEffectiveStatus(a: Ann, now: Date): { kind: EffectiveStatus; cou
 
   const end = getShiftEndDate(a);
   const start = getShiftStartDate(a);
-  const expiresAt = a.expires_at ? new Date(a.expires_at) : null;
+  const expiresAt = getExpiresAtDate(a);
 
   // Past the shift's end time? expired/completed.
   if (end && end.getTime() < now.getTime()) {
