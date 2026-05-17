@@ -55,7 +55,28 @@ type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
 };
-type Ann = { id: string; service_date: string; service_time: string; end_time?: string | null; duration_hours?: number | null; location_address: string; tariff_amount: number; tariff_type: string; job_city?: string | null; restaurant_id?: string; notes?: string | null; professional_profile?: string | null };
+type Ann = {
+  id: string;
+  service_date: string;
+  service_time: string;
+  end_time?: string | null;
+  duration_hours?: number | null;
+  location_address: string;
+  tariff_amount: number;
+  tariff_type: string;
+  job_city?: string | null;
+  restaurant_id?: string;
+  notes?: string | null;
+  professional_profile?: string | null;
+  dress_code_items?: string[] | null;
+  dress_code_notes?: string | null;
+  required_skills?: string[] | null;
+  language_requirements?: string[] | null;
+  license_requirement?: string | null;
+  job_access_restrictions?: string | null;
+  job_additional_directions?: string | null;
+  job_location_notes?: string | null;
+};
 
 type Shift = {
   id: string;
