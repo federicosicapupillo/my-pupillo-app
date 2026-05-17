@@ -143,7 +143,6 @@ function Page() {
   };
 
   const recontact = async (r: Row) => {
-    if (isBlocked) { setBlockOpen(true); return; }
     if (r.last_application_id) {
       navigate({ to: "/messages/$id", params: { id: r.last_application_id } });
       return;
