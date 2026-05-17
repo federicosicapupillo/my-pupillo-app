@@ -392,7 +392,11 @@ function AnnouncementsPage() {
     })();
   }, [user, role]);
 
-  const visible = items.filter(a => statusFilter === "all" ? true : a.status === statusFilter);
+  const isPastKind = (kind: EffectiveStatus) => kind === "expired" || kind === "completed" || kind === "cancelled";
+
+  const filtered = items.filter(a => statusFilter === "all" ? true : a.status === statusFilter);
+  const upcoming = statusFilter === "all" ? filtered.filter(a => !isPastKind(computeEffectiveStatus(a, now).kind)) : filtered;
+  const past = statusFilter === "all" ? filtered.filter(a => isPastKind(computeEffectiveStatus(a, now).kind)) : [];
 
   const openDetails = (a: Ann) => { setDetailsAnn(a); setDetailsOpen(true); };
   const handleAnnUpdated = (updated: Ann) => {
