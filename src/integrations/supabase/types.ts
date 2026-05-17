@@ -57,7 +57,6 @@ export type Database = {
           end_time: string | null
           expires_at: string
           id: string
-          is_demo: boolean
           is_long_shift: boolean
           job_access_restrictions: string | null
           job_additional_directions: string | null
@@ -85,7 +84,6 @@ export type Database = {
           required_skills: string[] | null
           restaurant_id: string
           reused_from_announcement_id: string | null
-          seed_batch_id: string | null
           service_date: string
           service_time: string
           shift_duration_hours: number | null
@@ -107,7 +105,6 @@ export type Database = {
           end_time?: string | null
           expires_at?: string
           id?: string
-          is_demo?: boolean
           is_long_shift?: boolean
           job_access_restrictions?: string | null
           job_additional_directions?: string | null
@@ -135,7 +132,6 @@ export type Database = {
           required_skills?: string[] | null
           restaurant_id: string
           reused_from_announcement_id?: string | null
-          seed_batch_id?: string | null
           service_date: string
           service_time: string
           shift_duration_hours?: number | null
@@ -157,7 +153,6 @@ export type Database = {
           end_time?: string | null
           expires_at?: string
           id?: string
-          is_demo?: boolean
           is_long_shift?: boolean
           job_access_restrictions?: string | null
           job_additional_directions?: string | null
@@ -185,7 +180,6 @@ export type Database = {
           required_skills?: string[] | null
           restaurant_id?: string
           reused_from_announcement_id?: string | null
-          seed_batch_id?: string | null
           service_date?: string
           service_time?: string
           shift_duration_hours?: number | null
@@ -203,13 +197,11 @@ export type Database = {
           binding_offer: boolean | null
           created_at: string
           id: string
-          is_demo: boolean
           last_message_at: string | null
           last_message_preview: string | null
           proposed_tariff: number | null
           response_deadline: string
           restaurant_id: string
-          seed_batch_id: string | null
           status: Database["public"]["Enums"]["application_status"]
           updated_at: string
           worker_id: string
@@ -220,13 +212,11 @@ export type Database = {
           binding_offer?: boolean | null
           created_at?: string
           id?: string
-          is_demo?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
           proposed_tariff?: number | null
           response_deadline?: string
           restaurant_id: string
-          seed_batch_id?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
           worker_id: string
@@ -237,13 +227,11 @@ export type Database = {
           binding_offer?: boolean | null
           created_at?: string
           id?: string
-          is_demo?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
           proposed_tariff?: number | null
           response_deadline?: string
           restaurant_id?: string
-          seed_batch_id?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
           worker_id?: string
@@ -375,24 +363,18 @@ export type Database = {
           announcement_id: string
           created_at: string
           id: string
-          is_demo: boolean
-          seed_batch_id: string | null
           user_id: string
         }
         Insert: {
           announcement_id: string
           created_at?: string
           id?: string
-          is_demo?: boolean
-          seed_batch_id?: string | null
           user_id: string
         }
         Update: {
           announcement_id?: string
           created_at?: string
           id?: string
-          is_demo?: boolean
-          seed_batch_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -421,7 +403,6 @@ export type Database = {
           end_time: string
           hourly_rate: number
           id: string
-          is_demo: boolean
           is_long_shift: boolean
           language_requirements: string[]
           latitude: number | null
@@ -437,7 +418,6 @@ export type Database = {
           restaurant_name: string | null
           restaurant_profile_id: string
           role_required: string
-          seed_batch_id: string | null
           shift_date: string
           shift_duration_hours: number | null
           start_time: string
@@ -473,7 +453,6 @@ export type Database = {
           end_time: string
           hourly_rate: number
           id?: string
-          is_demo?: boolean
           is_long_shift?: boolean
           language_requirements?: string[]
           latitude?: number | null
@@ -489,7 +468,6 @@ export type Database = {
           restaurant_name?: string | null
           restaurant_profile_id: string
           role_required: string
-          seed_batch_id?: string | null
           shift_date: string
           shift_duration_hours?: number | null
           start_time: string
@@ -525,7 +503,6 @@ export type Database = {
           end_time?: string
           hourly_rate?: number
           id?: string
-          is_demo?: boolean
           is_long_shift?: boolean
           language_requirements?: string[]
           latitude?: number | null
@@ -541,7 +518,6 @@ export type Database = {
           restaurant_name?: string | null
           restaurant_profile_id?: string
           role_required?: string
-          seed_batch_id?: string | null
           shift_date?: string
           shift_duration_hours?: number | null
           start_time?: string
@@ -571,11 +547,9 @@ export type Database = {
           body: string
           created_at: string
           id: string
-          is_demo: boolean
           message_type: string
           read_at: string | null
           receiver_id: string | null
-          seed_batch_id: string | null
           sender_id: string
           template_id: string | null
         }
@@ -585,11 +559,9 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
-          is_demo?: boolean
           message_type?: string
           read_at?: string | null
           receiver_id?: string | null
-          seed_batch_id?: string | null
           sender_id: string
           template_id?: string | null
         }
@@ -599,11 +571,9 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
-          is_demo?: boolean
           message_type?: string
           read_at?: string | null
           receiver_id?: string | null
-          seed_batch_id?: string | null
           sender_id?: string
           template_id?: string | null
         }
@@ -614,12 +584,10 @@ export type Database = {
           body: string | null
           created_at: string
           id: string
-          is_demo: boolean
           link: string | null
           metadata: Json | null
           read: boolean | null
           read_at: string | null
-          seed_batch_id: string | null
           title: string
           user_id: string
         }
@@ -627,12 +595,10 @@ export type Database = {
           body?: string | null
           created_at?: string
           id?: string
-          is_demo?: boolean
           link?: string | null
           metadata?: Json | null
           read?: boolean | null
           read_at?: string | null
-          seed_batch_id?: string | null
           title: string
           user_id: string
         }
@@ -640,12 +606,10 @@ export type Database = {
           body?: string | null
           created_at?: string
           id?: string
-          is_demo?: boolean
           link?: string | null
           metadata?: Json | null
           read?: boolean | null
           read_at?: string | null
-          seed_batch_id?: string | null
           title?: string
           user_id?: string
         }
@@ -754,7 +718,6 @@ export type Database = {
           id_document_number: string | null
           id_document_path: string | null
           id_document_type: string | null
-          is_demo: boolean
           is_motorized: boolean | null
           languages: string[] | null
           last_active_at: string | null
@@ -812,7 +775,6 @@ export type Database = {
           reviews_count: number | null
           sdi_code: string | null
           secondary_roles: string[] | null
-          seed_batch_id: string | null
           selected_zones: string[]
           service_area_city: string | null
           service_area_district: string | null
@@ -904,7 +866,6 @@ export type Database = {
           id_document_number?: string | null
           id_document_path?: string | null
           id_document_type?: string | null
-          is_demo?: boolean
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
@@ -962,7 +923,6 @@ export type Database = {
           reviews_count?: number | null
           sdi_code?: string | null
           secondary_roles?: string[] | null
-          seed_batch_id?: string | null
           selected_zones?: string[]
           service_area_city?: string | null
           service_area_district?: string | null
@@ -1054,7 +1014,6 @@ export type Database = {
           id_document_number?: string | null
           id_document_path?: string | null
           id_document_type?: string | null
-          is_demo?: boolean
           is_motorized?: boolean | null
           languages?: string[] | null
           last_active_at?: string | null
@@ -1112,7 +1071,6 @@ export type Database = {
           reviews_count?: number | null
           sdi_code?: string | null
           secondary_roles?: string[] | null
-          seed_batch_id?: string | null
           selected_zones?: string[]
           service_area_city?: string | null
           service_area_district?: string | null
@@ -1255,25 +1213,19 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          is_demo: boolean
           restaurant_id: string
-          seed_batch_id: string | null
           worker_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          is_demo?: boolean
           restaurant_id: string
-          seed_batch_id?: string | null
           worker_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          is_demo?: boolean
           restaurant_id?: string
-          seed_batch_id?: string | null
           worker_id?: string
         }
         Relationships: []
@@ -1289,7 +1241,6 @@ export type Database = {
           competence: number | null
           created_at: string
           id: string
-          is_demo: boolean
           is_visible_to_restaurants: boolean
           is_visible_to_worker: boolean
           negative_tags: string[]
@@ -1298,7 +1249,6 @@ export type Database = {
           punctuality: number | null
           rating: number
           reliability: number | null
-          seed_batch_id: string | null
           seen_by_worker_at: string | null
           shift_id: string | null
           staff_collaboration: number | null
@@ -1318,7 +1268,6 @@ export type Database = {
           competence?: number | null
           created_at?: string
           id?: string
-          is_demo?: boolean
           is_visible_to_restaurants?: boolean
           is_visible_to_worker?: boolean
           negative_tags?: string[]
@@ -1327,7 +1276,6 @@ export type Database = {
           punctuality?: number | null
           rating: number
           reliability?: number | null
-          seed_batch_id?: string | null
           seen_by_worker_at?: string | null
           shift_id?: string | null
           staff_collaboration?: number | null
@@ -1347,7 +1295,6 @@ export type Database = {
           competence?: number | null
           created_at?: string
           id?: string
-          is_demo?: boolean
           is_visible_to_restaurants?: boolean
           is_visible_to_worker?: boolean
           negative_tags?: string[]
@@ -1356,7 +1303,6 @@ export type Database = {
           punctuality?: number | null
           rating?: number
           reliability?: number | null
-          seed_batch_id?: string | null
           seen_by_worker_at?: string | null
           shift_id?: string | null
           staff_collaboration?: number | null
@@ -1376,11 +1322,9 @@ export type Database = {
           created_at: string
           hours: number
           id: string
-          is_demo: boolean
           restaurant_id: string
           reviewed_at: string | null
           reviewed_by_restaurant_user_id: string | null
-          seed_batch_id: string | null
           shift_date: string
           status: Database["public"]["Enums"]["shift_status"]
           worker_id: string
@@ -1392,11 +1336,9 @@ export type Database = {
           created_at?: string
           hours?: number
           id?: string
-          is_demo?: boolean
           restaurant_id: string
           reviewed_at?: string | null
           reviewed_by_restaurant_user_id?: string | null
-          seed_batch_id?: string | null
           shift_date: string
           status?: Database["public"]["Enums"]["shift_status"]
           worker_id: string
@@ -1408,11 +1350,9 @@ export type Database = {
           created_at?: string
           hours?: number
           id?: string
-          is_demo?: boolean
           restaurant_id?: string
           reviewed_at?: string | null
           reviewed_by_restaurant_user_id?: string | null
-          seed_batch_id?: string | null
           shift_date?: string
           status?: Database["public"]["Enums"]["shift_status"]
           worker_id?: string
@@ -1490,24 +1430,18 @@ export type Database = {
           awarded_at: string
           badge: string
           id: string
-          is_demo: boolean
-          seed_batch_id: string | null
           worker_id: string
         }
         Insert: {
           awarded_at?: string
           badge: string
           id?: string
-          is_demo?: boolean
-          seed_batch_id?: string | null
           worker_id: string
         }
         Update: {
           awarded_at?: string
           badge?: string
           id?: string
-          is_demo?: boolean
-          seed_batch_id?: string | null
           worker_id?: string
         }
         Relationships: []
@@ -1518,12 +1452,10 @@ export type Database = {
           created_at: string
           description: string
           id: string
-          is_demo: boolean
           kind: string
           restaurant_id: string
           reviewed_at: string | null
           reviewed_by: string | null
-          seed_batch_id: string | null
           shift_id: string | null
           status: string
           worker_id: string
@@ -1533,12 +1465,10 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
-          is_demo?: boolean
           kind: string
           restaurant_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
-          seed_batch_id?: string | null
           shift_id?: string | null
           status?: string
           worker_id: string
@@ -1548,12 +1478,10 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
-          is_demo?: boolean
           kind?: string
           restaurant_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
-          seed_batch_id?: string | null
           shift_id?: string | null
           status?: string
           worker_id?: string
@@ -1627,13 +1555,6 @@ export type Database = {
         Returns: string
       }
       send_required_review_reminders: { Args: never; Returns: number }
-      unseed_demo: {
-        Args: { _batch: string }
-        Returns: {
-          rows_affected: number
-          step: string
-        }[]
-      }
       validate_discount_code: {
         Args: { _applies_to?: string; _code: string }
         Returns: Json

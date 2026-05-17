@@ -11,7 +11,6 @@ import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
-import { WorkerReputationDashboard } from "@/components/WorkerReputationDashboard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -300,10 +299,6 @@ function DashboardInner() {
       )}
 
       {role === "restaurant" && <FavoriteWorkersSection />}
-
-      {role === "worker" && user && profile && (
-        <WorkerReputationDashboard workerId={user.id} profile={profile as any} />
-      )}
 
       <AlertDialog open={!!closingItem} onOpenChange={(o) => !o && !closing && setClosingItem(null)}>
         <AlertDialogContent>
