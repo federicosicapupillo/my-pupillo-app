@@ -19,6 +19,7 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
+import { sendShiftProposal } from "@/lib/shift-proposal";
 import {
   Dialog,
   DialogContent,
@@ -231,6 +232,7 @@ function AnnouncementsPage() {
   const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsAnn, setDetailsAnn] = useState<Ann | null>(null);
+  const [proposalTarget, setProposalTarget] = useState<{ ann: Ann; candidate: Candidate } | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
@@ -512,7 +514,7 @@ function AnnouncementsPage() {
                               disabled={msgDisabled}
                               onSelect={() => {
                                 if (msgDisabled) return;
-                                navigate({ to: "/messages", search: { with: c.worker_id } });
+                                setProposalTarget({ ann: a, candidate: c });
                               }}
                               className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
                             >
@@ -576,6 +578,13 @@ function AnnouncementsPage() {
         statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
         onUpdated={handleAnnUpdated}
         onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
+      />
+      <ProposalConfirmDialog
+        target={proposalTarget}
+        venueName={(profile as any)?.business_name ?? (profile as any)?.full_name ?? null}
+        restaurantId={user?.id ?? null}
+        statusKind={proposalTarget ? computeEffectiveStatus(proposalTarget.ann, now).kind : "active"}
+        onClose={() => setProposalTarget(null)}
       />
     </AppShell>
   );
@@ -1040,11 +1049,147 @@ function AnnouncementDetailsDialog({
   );
 }
 
+function ProposalConfirmDialog({
+  target, venueName, restaurantId, statusKind, onClose,
+}: {
+  target: { ann: Ann; candidate: Candidate } | null;
+  venueName: string | null;
+  restaurantId: string | null;
+  statusKind: EffectiveStatus;
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  const [sending, setSending] = useState(false);
+
+  if (!target) return null;
+  const { ann, candidate } = target;
+
+  const dateLabel = new Date(ann.service_date + "T00:00:00").toLocaleDateString("it-IT", {
+    weekday: "long", day: "2-digit", month: "long", year: "numeric",
+  });
+  const timeLabel = `${ann.service_time?.slice(0,5) ?? "—"}${ann.end_time ? ` – ${ann.end_time.slice(0,5)}` : ""}`;
+  const dressLabels = labelsOf(ann.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
+  const skillLabels = labelsOf(ann.required_skills ?? [], SKILL_OPTIONS as any);
+
+  const handleSend = async () => {
+    if (!restaurantId) { toast.error("Sessione non valida"); return; }
+    setSending(true);
+    try {
+      const { data: existing } = await supabase
+        .from("applications")
+        .select("id")
+        .eq("announcement_id", ann.id)
+        .eq("worker_id", candidate.worker_id)
+        .maybeSingle();
+      let appId = (existing as any)?.id as string | undefined;
+      if (!appId) {
+        const { data: ins, error } = await supabase
+          .from("applications")
+          .insert({
+            announcement_id: ann.id,
+            worker_id: candidate.worker_id,
+            restaurant_id: restaurantId,
+            status: "pending",
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        appId = (ins as any).id as string;
+      }
+      await sendShiftProposal({
+        applicationId: appId!,
+        announcementId: ann.id,
+        restaurantId,
+        workerId: candidate.worker_id,
+      });
+      await supabase.from("notifications").insert({
+        user_id: candidate.worker_id,
+        title: "Nuova proposta di lavoro",
+        body: "Hai ricevuto una nuova proposta di turno. Apri la chat per vedere i dettagli.",
+        link: `/messages/${appId}`,
+        metadata: { kind: "shift_proposal", announcement_id: ann.id, application_id: appId } as any,
+      } as any);
+      toast.success("Proposta inviata correttamente.");
+      onClose();
+      navigate({ to: "/messages/$id", params: { id: appId! } });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Errore invio proposta");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!target} onOpenChange={(v) => { if (!v && !sending) onClose(); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Conferma invio proposta</DialogTitle>
+          <DialogDescription>
+            Stai per inviare una proposta di lavoro a <strong>{candidate.full_name || "questo lavoratore"}</strong>. Controlla il riepilogo del turno prima di procedere.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 text-sm">
+          <Section title="1. Dettagli turno">
+            <SummaryRow icon={Briefcase} label="Ruolo richiesto" value={ann.professional_profile || "—"} />
+            <SummaryRow icon={Calendar} label="Data turno" value={dateLabel} />
+            <SummaryRow icon={Clock} label="Orario" value={timeLabel} />
+            <SummaryRow icon={Users} label="Numero lavoratori richiesti" value="1" />
+          </Section>
+
+          <Section title="2. Luogo">
+            <SummaryRow icon={Briefcase} label="Nome locale" value={venueName || "—"} />
+            <SummaryRow icon={MapPin} label="Indirizzo" value={ann.location_address || "—"} />
+          </Section>
+
+          <Section title="3. Compenso">
+            <SummaryRow icon={Euro} label="Compenso" value={formatTariff(ann.tariff_amount, ann.tariff_type)} />
+          </Section>
+
+          <Section title="4. Dress code">
+            {dressLabels.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {dressLabels.map((l) => <span key={l} className="rounded-full bg-secondary px-2 py-0.5 text-xs">{l}</span>)}
+              </div>
+            ) : <p className="text-xs text-muted-foreground italic">Nessun dress code richiesto.</p>}
+            {ann.dress_code_notes && <p className="text-xs text-muted-foreground mt-2">{ann.dress_code_notes}</p>}
+          </Section>
+
+          <Section title="5. Mansioni richieste">
+            {skillLabels.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {skillLabels.map((l) => <span key={l} className="rounded-full bg-secondary px-2 py-0.5 text-xs">{l}</span>)}
+              </div>
+            ) : <p className="text-xs text-muted-foreground italic">Nessuna mansione specifica.</p>}
+          </Section>
+
+          <Section title="6. Note operative">
+            <p className="text-sm whitespace-pre-wrap">{(ann as any).notes || <span className="text-muted-foreground italic">Nessuna nota.</span>}</p>
+          </Section>
+
+          <Section title="7. Stato annuncio">
+            <span className={`inline-block text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[statusKind] ?? "bg-muted"}`}>
+              {STATUS_LABEL[statusKind] ?? statusKind}
+            </span>
+          </Section>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} disabled={sending}>Annulla</Button>
+          <Button onClick={handleSend} disabled={sending}>
+            {sending ? "Invio in corso…" : "Invia proposta"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+    <div className="space-y-2">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
       <div className="space-y-2">{children}</div>
-    </section>
+    </div>
   );
 }
