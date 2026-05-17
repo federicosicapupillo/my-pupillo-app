@@ -155,6 +155,17 @@ function NewAnn() {
       setLanguageReqs((data as any).language_requirements ?? []);
       setSkills((data as any).required_skills ?? []);
       setDressItems((data as any).dress_code_items ?? []);
+      // Ripristina la scelta "anticipo all'ingresso" dal testo salvato sull'annuncio originale
+      const restr = ((data as any).job_access_restrictions as string | null) ?? "";
+      if (restr) {
+        const m = restr.match(/Motivo:\s*(.+)$/i);
+        if (/oltre\s*15/i.test(restr) || m) {
+          setAccessChoice("over15");
+          if (m && m[1]) setAccessReason(m[1].trim());
+        } else if (/almeno\s*15/i.test(restr)) {
+          setAccessChoice("15");
+        }
+      }
       if (data.location_lat != null && data.location_lng != null) {
         setCoords({ lat: data.location_lat, lng: data.location_lng });
         setGeoState({ status: "ok", attempt: 0 });
