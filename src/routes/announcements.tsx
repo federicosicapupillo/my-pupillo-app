@@ -674,3 +674,312 @@ function SummaryRow({ icon: Icon, label, value }: { icon: typeof Calendar; label
     </div>
   );
 }
+
+function AnnouncementDetailsDialog({
+  open, onOpenChange, ann, candidatesCount, assignedCount, venueName, statusKind, onUpdated, onDuplicate,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  ann: Ann | null;
+  candidatesCount: number;
+  assignedCount: number;
+  venueName: string | null;
+  statusKind: EffectiveStatus;
+  onUpdated: (a: Ann) => void;
+  onDuplicate: (a: Ann) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [form, setForm] = useState<any>(null);
+
+  useEffect(() => {
+    if (!ann) return;
+    setEditing(false);
+    setConfirmOpen(false);
+    setForm({
+      professional_profile: ann.professional_profile ?? "",
+      service_time: ann.service_time?.slice(0, 5) ?? "",
+      end_time: ann.end_time?.slice(0, 5) ?? "",
+      location_address: ann.location_address ?? "",
+      tariff_amount: String(ann.tariff_amount ?? ""),
+      tariff_type: ann.tariff_type ?? "hourly",
+      required_skills: [...(ann.required_skills ?? [])],
+      dress_code_items: [...(ann.dress_code_items ?? [])],
+      dress_code_notes: ann.dress_code_notes ?? "",
+      language_requirements: [...(ann.language_requirements ?? [])],
+      license_requirement: ann.license_requirement ?? "nessuna",
+      notes: (ann as any).notes ?? "",
+    });
+  }, [ann?.id, open]);
+
+  if (!ann || !form) return null;
+
+  const dateLabel = new Date(ann.service_date + "T00:00:00").toLocaleDateString("it-IT", {
+    weekday: "long", day: "2-digit", month: "long", year: "numeric",
+  });
+  const hasInvolved = candidatesCount > 0 || assignedCount > 0;
+
+  const toggleArr = (key: "required_skills" | "dress_code_items" | "language_requirements", value: string) => {
+    setForm((f: any) => ({
+      ...f,
+      [key]: f[key].includes(value) ? f[key].filter((x: string) => x !== value) : [...f[key], value],
+    }));
+  };
+
+  const doSave = async () => {
+    setSaving(true);
+    const payload: any = {
+      professional_profile: form.professional_profile || null,
+      service_time: form.service_time || ann.service_time,
+      end_time: form.end_time || null,
+      location_address: form.location_address,
+      job_address: form.location_address,
+      tariff_amount: parseFloat(form.tariff_amount) || ann.tariff_amount,
+      tariff_type: form.tariff_type,
+      required_skills: form.required_skills,
+      dress_code_items: form.dress_code_items,
+      dress_code_notes: form.dress_code_notes || null,
+      language_requirements: form.language_requirements,
+      license_requirement: form.license_requirement,
+      notes: form.notes || null,
+    };
+    const { data, error } = await supabase
+      .from("announcements")
+      .update(payload)
+      .eq("id", ann.id)
+      .select("*")
+      .maybeSingle();
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Annuncio aggiornato correttamente.");
+    setEditing(false);
+    setConfirmOpen(false);
+    if (data) onUpdated(data as Ann);
+  };
+
+  const trySave = () => {
+    if (hasInvolved) { setConfirmOpen(true); return; }
+    void doSave();
+  };
+
+  const dressLabels = labelsOf(ann.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
+  const skillLabels = labelsOf(ann.required_skills ?? [], SKILL_OPTIONS as any);
+  const langLabels = labelsOf(ann.language_requirements ?? [], LANGUAGE_OPTIONS as any);
+  const licenseLabel = labelOf(ann.license_requirement, LICENSE_OPTIONS as any);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            {editing ? "Modifica annuncio" : "Riepilogo annuncio"}
+          </DialogTitle>
+          <DialogDescription>
+            {editing
+              ? "Modifica i dettagli del turno. La data non può essere modificata."
+              : "Tutti i dettagli del turno in un'unica vista."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {!editing ? (
+          <div className="space-y-5 text-sm">
+            <Section title="1. Dettagli turno">
+              <SummaryRow icon={Briefcase} label="Ruolo richiesto" value={ann.professional_profile || "—"} />
+              <SummaryRow icon={Calendar} label="Data del turno" value={dateLabel} />
+              <SummaryRow icon={Clock} label="Orario" value={`${ann.service_time?.slice(0,5) ?? "—"}${ann.end_time ? ` – ${ann.end_time.slice(0,5)}` : ""}`} />
+              <SummaryRow icon={Users} label="Numero lavoratori richiesti" value="1" />
+            </Section>
+
+            <Section title="2. Luogo">
+              <SummaryRow icon={Briefcase} label="Nome locale" value={venueName || "—"} />
+              <SummaryRow icon={MapPin} label="Indirizzo" value={ann.location_address || "—"} />
+              {(ann.location_lat != null && ann.location_lng != null) && (
+                <div className="overflow-hidden rounded-xl">
+                  <AnnouncementMap key={`det-${ann.id}`} lat={ann.location_lat} lng={ann.location_lng} address={ann.location_address ?? undefined} height={200} />
+                </div>
+              )}
+            </Section>
+
+            <Section title="3. Compenso">
+              <SummaryRow icon={Euro} label="Compenso" value={formatTariff(ann.tariff_amount, ann.tariff_type)} />
+            </Section>
+
+            <Section title="4. Mansioni richieste">
+              {skillLabels.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {skillLabels.map((l) => <span key={l} className="rounded-full bg-secondary px-2 py-0.5 text-xs">{l}</span>)}
+                </div>
+              ) : <p className="text-xs text-muted-foreground italic">Nessuna mansione specifica.</p>}
+            </Section>
+
+            <Section title="5. Dress code">
+              {dressLabels.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {dressLabels.map((l) => <span key={l} className="rounded-full bg-secondary px-2 py-0.5 text-xs">{l}</span>)}
+                </div>
+              ) : <p className="text-xs text-muted-foreground italic">Nessun dress code richiesto.</p>}
+              {ann.dress_code_notes && <p className="text-xs text-muted-foreground mt-2">{ann.dress_code_notes}</p>}
+            </Section>
+
+            <Section title="6. Requisiti">
+              <SummaryRow icon={UserCheck} label="Patente" value={licenseLabel} />
+              <SummaryRow icon={Languages} label="Lingue richieste" value={langLabels.length ? langLabels.join(", ") : "—"} />
+            </Section>
+
+            <Section title="7. Note operative">
+              <p className="text-sm whitespace-pre-wrap">{(ann as any).notes || <span className="text-muted-foreground italic">Nessuna nota.</span>}</p>
+            </Section>
+
+            <Section title="8. Stato annuncio">
+              <span className={`inline-block text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[statusKind] ?? "bg-muted"}`}>
+                {STATUS_LABEL[statusKind] ?? statusKind}
+              </span>
+            </Section>
+
+            <Section title="9. Candidati e confermati">
+              <div className="flex gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-1 text-xs font-medium">
+                  <Users className="h-3 w-3" /> {candidatesCount} candidat{candidatesCount === 1 ? "o" : "i"}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-800 px-2 py-1 text-xs font-medium">
+                  <CheckCircle2 className="h-3 w-3" /> {assignedCount} confermat{assignedCount === 1 ? "o" : "i"}
+                </span>
+              </div>
+            </Section>
+          </div>
+        ) : (
+          <div className="space-y-4 text-sm">
+            <div className="rounded-xl border bg-muted/40 p-3 space-y-1">
+              <div className="flex items-center gap-2 text-sm font-medium"><Calendar className="h-4 w-4" />{dateLabel}</div>
+              <p className="text-xs text-muted-foreground flex items-start gap-1"><AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />La data non può essere modificata. Per cambiare data, duplica l'annuncio.</p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div><Label>Ruolo richiesto</Label><Input value={form.professional_profile} onChange={(e) => setForm({ ...form, professional_profile: e.target.value })} /></div>
+              <div><Label>Nome locale</Label><Input value={venueName ?? ""} disabled /></div>
+              <div><Label>Orario inizio</Label><Input type="time" value={form.service_time} onChange={(e) => setForm({ ...form, service_time: e.target.value })} /></div>
+              <div><Label>Orario fine</Label><Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} /></div>
+              <div className="md:col-span-2"><Label>Indirizzo</Label><Input value={form.location_address} onChange={(e) => setForm({ ...form, location_address: e.target.value })} /></div>
+              <div>
+                <Label>Tipo tariffa</Label>
+                <Select value={form.tariff_type} onValueChange={(v) => setForm({ ...form, tariff_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hourly">Oraria</SelectItem>
+                    <SelectItem value="flat">A servizio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Compenso (€)</Label><Input type="number" min="0" step="0.5" value={form.tariff_amount} onChange={(e) => setForm({ ...form, tariff_amount: e.target.value })} /></div>
+              <div>
+                <Label>Numero lavoratori richiesti</Label>
+                <Input value="1" disabled />
+                <p className="text-[11px] text-muted-foreground mt-1">Un annuncio assegna un singolo lavoratore.</p>
+              </div>
+              <div>
+                <Label>Patente</Label>
+                <Select value={form.license_requirement} onValueChange={(v) => setForm({ ...form, license_requirement: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{LICENSE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Lingue richieste</Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {LANGUAGE_OPTIONS.map((o) => (
+                  <label key={o.value} className="flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs cursor-pointer">
+                    <Checkbox checked={form.language_requirements.includes(o.value)} onCheckedChange={() => toggleArr("language_requirements", o.value)} />
+                    {o.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Mansioni richieste</Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {SKILL_OPTIONS.map((o) => (
+                  <label key={o.value} className="flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs cursor-pointer">
+                    <Checkbox checked={form.required_skills.includes(o.value)} onCheckedChange={() => toggleArr("required_skills", o.value)} />
+                    {o.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Dress code</Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {DRESS_CODE_OPTIONS.map((o) => (
+                  <label key={o.value} className="flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs cursor-pointer">
+                    <Checkbox checked={form.dress_code_items.includes(o.value)} onCheckedChange={() => toggleArr("dress_code_items", o.value)} />
+                    {o.label}
+                  </label>
+                ))}
+              </div>
+              <Textarea className="mt-2" rows={2} placeholder="Note dress code" value={form.dress_code_notes} onChange={(e) => setForm({ ...form, dress_code_notes: e.target.value })} />
+            </div>
+
+            <div>
+              <Label>Note operative</Label>
+              <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
+
+            {hasInvolved && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>Questo annuncio ha già lavoratori candidati o confermati. Le modifiche aggiorneranno il riepilogo del turno e saranno visibili nelle chat collegate; candidature, conversazioni e recensioni esistenti restano invariate.</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 flex-col sm:flex-row">
+          {!editing ? (
+            <>
+              <Button variant="outline" className="gap-2" onClick={() => onDuplicate(ann)}>
+                <Copy className="h-4 w-4" /> Duplica annuncio
+              </Button>
+              <Button className="gap-2" onClick={() => setEditing(true)}>
+                <Pencil className="h-4 w-4" /> Modifica annuncio
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setEditing(false)} disabled={saving}>Annulla</Button>
+              <Button onClick={trySave} disabled={saving}>{saving ? "Salvataggio…" : "Salva modifiche"}</Button>
+            </>
+          )}
+        </DialogFooter>
+
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" />Conferma modifiche</DialogTitle>
+              <DialogDescription>
+                Attenzione: questo annuncio ha già lavoratori candidati o confermati. Le modifiche verranno applicate al riepilogo del turno, ma la data non può essere cambiata.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={saving}>Annulla</Button>
+              <Button onClick={doSave} disabled={saving}>{saving ? "Salvataggio…" : "Conferma e salva"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+      <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
