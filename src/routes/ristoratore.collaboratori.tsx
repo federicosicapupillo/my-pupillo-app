@@ -88,9 +88,9 @@ function Page() {
         .in("worker_id", workerIds)
         .order("created_at", { ascending: false }),
       supabase.from("reviews")
-        .select("reviewee_id, rating, comment, created_at")
-        .eq("reviewer_id", user.id)
-        .in("reviewee_id", workerIds)
+        .select("target_id, rating, comment, created_at")
+        .eq("author_id", user.id)
+        .in("target_id", workerIds)
         .order("created_at", { ascending: false }),
     ]);
 
@@ -99,7 +99,7 @@ function Page() {
     (apps ?? []).forEach((a: any) => { if (!lastApp.has(a.worker_id)) lastApp.set(a.worker_id, a.id); });
     const lastReview = new Map<string, { comment: string | null; rating: number | null }>();
     (reviews ?? []).forEach((rv: any) => {
-      if (!lastReview.has(rv.reviewee_id)) lastReview.set(rv.reviewee_id, { comment: rv.comment ?? null, rating: rv.rating ?? null });
+      if (!lastReview.has(rv.target_id)) lastReview.set(rv.target_id, { comment: rv.comment ?? null, rating: rv.rating ?? null });
     });
 
     const profMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
