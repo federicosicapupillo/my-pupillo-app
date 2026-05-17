@@ -19,6 +19,78 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 
+function AnnouncementMapBlock({
+  annId, lat, lng, address, open, onToggle,
+}: {
+  annId: string;
+  lat: number | null;
+  lng: number | null;
+  address: string | null | undefined;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const hasCoords = lat != null && lng != null;
+  const hasAddress = !!(address && address.trim().length > 0);
+  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoFailed, setGeoFailed] = useState(false);
+
+  useEffect(() => {
+    if (!open || hasCoords || !hasAddress || geo || geoLoading || geoFailed) return;
+    let cancelled = false;
+    setGeoLoading(true);
+    geocodeAddress(address as string).then((r) => {
+      if (cancelled) return;
+      if (r) setGeo(r); else setGeoFailed(true);
+      setGeoLoading(false);
+    }).catch(() => { if (!cancelled) { setGeoFailed(true); setGeoLoading(false); } });
+    return () => { cancelled = true; };
+  }, [open, hasCoords, hasAddress, address, geo, geoLoading, geoFailed]);
+
+  if (!hasCoords && !hasAddress) {
+    return <p className="text-xs text-muted-foreground italic">Indirizzo non disponibile</p>;
+  }
+
+  const effLat = hasCoords ? (lat as number) : geo?.lat;
+  const effLng = hasCoords ? (lng as number) : geo?.lng;
+
+  return (
+    <>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="gap-1"
+        onClick={onToggle}
+        aria-expanded={open}
+      >
+        {open ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
+      </Button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          {effLat != null && effLng != null ? (
+            <div className="overflow-hidden rounded-xl">
+              <AnnouncementMap key={annId} lat={effLat} lng={effLng} address={address ?? undefined} height={280} />
+            </div>
+          ) : geoLoading ? (
+            <div className="h-[120px] rounded-xl bg-muted animate-pulse" />
+          ) : (
+            <div className="rounded-xl border bg-muted/40 p-3 text-xs text-muted-foreground">
+              Mappa non disponibile{hasAddress ? ", ma indirizzo presente:" : "."}
+            </div>
+          )}
+          {hasAddress && (
+            <p className="text-xs text-foreground">
+              <MapPin className="inline h-3 w-3 mr-1 text-muted-foreground" />
+              {address}
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
