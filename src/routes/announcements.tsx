@@ -549,6 +549,74 @@ function AnnouncementsPage() {
               })()}
               <div className="mt-3">
                 {role === "restaurant" ? (
+                  <>
+                    {(candidates[a.id]?.length ?? 0) > 0 && (
+                      <div className="mb-3 rounded-xl border bg-muted/30 p-3">
+                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          <Send className="h-3.5 w-3.5" />
+                          Richieste inviate ({candidates[a.id].length})
+                        </div>
+                        <ul className="space-y-2">
+                          {candidates[a.id].map((c) => {
+                            const ps = deriveProposalStatus(a, c);
+                            return (
+                              <li key={c.worker_id} className="rounded-lg border bg-card p-2.5">
+                                <div className="flex items-start gap-2.5">
+                                  {c.avatar_url ? (
+                                    <img src={c.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                                  ) : (
+                                    <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-secondary-foreground">
+                                      {(c.full_name || "?").slice(0, 1).toUpperCase()}
+                                    </div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-sm font-semibold text-foreground truncate">
+                                        {c.full_name || "Lavoratore"}
+                                      </span>
+                                      {c.rating_avg != null && (
+                                        <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+                                          <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                                          <span className="text-foreground font-medium">{Number(c.rating_avg).toFixed(1)}</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                      {c.professional_profile && <span>{c.professional_profile}</span>}
+                                      {c.application_created_at && (
+                                        <span title="Richiesta inviata">· {formatRelativeShort(c.application_created_at)}</span>
+                                      )}
+                                    </div>
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                      <span className={`text-[11px] rounded-full px-2 py-0.5 font-medium ${PROPOSAL_STATUS_CLS[ps]}`}>
+                                        {PROPOSAL_STATUS_LABEL[ps]}
+                                      </span>
+                                    </div>
+                                    {c.last_message_preview && (
+                                      <p className="mt-1.5 text-xs text-muted-foreground italic line-clamp-1">
+                                        “{c.last_message_preview}”
+                                      </p>
+                                    )}
+                                  </div>
+                                  {c.application_id && (
+                                    <Link
+                                      to="/messages/$id"
+                                      params={{ id: c.application_id }}
+                                      className="shrink-0"
+                                    >
+                                      <Button size="sm" variant="outline" className="gap-1 h-8">
+                                        <MessageSquare className="h-3.5 w-3.5" />
+                                        Apri chat
+                                      </Button>
+                                    </Link>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="default" className="gap-1">
@@ -623,6 +691,7 @@ function AnnouncementsPage() {
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </>
                 ) : (
                   <Link to="/announcements/$id" params={{ id: a.id }}>
                     <Button size="sm" variant="outline" className="gap-1">Apri dettagli</Button>
