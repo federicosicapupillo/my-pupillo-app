@@ -15,6 +15,7 @@ import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
+import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatTariff } from "@/lib/format";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import {
@@ -273,6 +274,7 @@ function Thread() {
   const [sending, setSending] = useState(false);
   const [shift, setShift] = useState<Shift | null>(null);
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, "accepted" | "rejected">>({});
+  const [serverAssign, setServerAssign] = useState<{ canAssign: boolean; reason: string | null } | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -517,6 +519,17 @@ function Thread() {
     if (!app || !user) return;
     // Charge credits to the restaurant only on shift assignment confirmation.
     if (next === "accepted" && role === "restaurant" && app.status !== "accepted") {
+      // Server-side authority: verify the current proposal has been accepted by the worker.
+      try {
+        const check = await canAssignShift({ data: { applicationId: id } });
+        if (!check.canAssign) {
+          toast.error(check.reason ?? "Impossibile assegnare il turno in questo momento.");
+          return;
+        }
+      } catch (e: any) {
+        toast.error(e?.message ?? "Verifica server non riuscita.");
+        return;
+      }
       if (isBlocked) {
         setBlockOpen(true);
         return;
@@ -598,6 +611,25 @@ function Thread() {
   };
 
   const canChangeStatus = app ? TERMINAL.includes(app.status) === false : false;
+
+  // Server-side authority for the "Assegna" button.
+  // Re-fetches whenever proposals or per-proposal responses change.
+  useEffect(() => {
+    if (role !== "restaurant" || !app || !canChangeStatus) {
+      setServerAssign(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await canAssignShift({ data: { applicationId: id } });
+        if (!cancelled) setServerAssign({ canAssign: !!res.canAssign, reason: res.reason ?? null });
+      } catch {
+        if (!cancelled) setServerAssign({ canAssign: false, reason: "Verifica server non disponibile." });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [role, id, app?.status, canChangeStatus, msgs.length, JSON.stringify(proposalStatuses)]);
   const isConversationClosed = app?.status === "expired";
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
@@ -801,8 +833,12 @@ function Thread() {
                 const hasProposal = msgs.some((x) => x.template_id === PROPOSAL_TEMPLATE_ID);
                 const lastProposalRejected =
                   hasProposal && !hasAccepted && statuses.length > 0 && statuses.every((s) => s === "rejected");
-                const disabled = !hasAccepted;
-                const helper = !hasProposal
+                // Server-side check is authoritative. While loading, fall back to client heuristics.
+                const serverDisabled = serverAssign ? !serverAssign.canAssign : !hasAccepted;
+                const disabled = serverDisabled;
+                const helper = serverAssign?.reason
+                  ? serverAssign.reason
+                  : !hasProposal
                   ? "Invia una proposta di lavoro per poter assegnare il turno."
                   : !hasAccepted && lastProposalRejected
                     ? "Il lavoratore ha rifiutato la proposta."
