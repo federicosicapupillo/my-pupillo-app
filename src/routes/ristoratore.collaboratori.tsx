@@ -13,6 +13,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { setLastAnnouncementId } from "@/lib/last-announcement";
+import { getShiftStartDate } from "@/lib/announcement-time";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -154,7 +155,12 @@ function Page() {
       .eq("restaurant_id", user.id)
       .eq("status", "active")
       .order("service_date", { ascending: true });
-    setOpenAnns((data ?? []) as any);
+    const now = new Date();
+    const filtered = ((data ?? []) as any[]).filter((a) => {
+      const start = getShiftStartDate(a);
+      return start ? start.getTime() > now.getTime() : true;
+    });
+    setOpenAnns(filtered as any);
     setInviteFor(r);
   };
 

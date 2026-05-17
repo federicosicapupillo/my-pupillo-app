@@ -21,7 +21,7 @@ import { priceRangeLabel } from "@/lib/price-range";
 import { formatTariff } from "@/lib/format";
 import { UserAvatar } from "@/components/UserAvatar";
 import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
-import { getShiftEndDate, getExpiresAtDate } from "@/lib/announcement-time";
+import { getShiftEndDate, getShiftStartDate } from "@/lib/announcement-time";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -289,11 +289,13 @@ function AnnouncementDetail() {
     if (!ann) return false;
     if (ann.status === "completed" || ann.status === "cancelled") return true;
     const now = Date.now();
-    const end = getShiftEndDate(ann as any);
-    if (end && end.getTime() < now) return true;
-    if (ann.status !== "assigned") {
-      const exp = getExpiresAtDate(ann as any);
-      if (exp && exp.getTime() < now) return true;
+    // Scadenza annuncio = inizio turno. Dopo lo start non si accettano nuove candidature.
+    const start = getShiftStartDate(ann as any);
+    if (start && start.getTime() <= now) return true;
+    // Se è assegnato e il turno è finito, è di fatto chiuso.
+    if (ann.status === "assigned") {
+      const end = getShiftEndDate(ann as any);
+      if (end && end.getTime() < now) return true;
     }
     return false;
   }, [ann]);
@@ -337,7 +339,7 @@ function AnnouncementDetail() {
             ? ann.location_address
             : publicLocationLabel({ job_city: ann.job_city, city: restaurant?.city, neighborhood: restaurant?.neighborhood })}</div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />{formatTariff(jobRequest?.hourly_rate ?? ann.tariff_amount, ann.tariff_type)}</div>
-          <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.expires_at).toLocaleDateString("it-IT")}</div>
+          <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {(ann.service_time ?? "").slice(0,5)}</div>
           {jobRequest?.break_included != null && <div className="text-muted-foreground">Pausa prevista: <span className="font-medium text-foreground">{jobRequest.break_included ? "Sì" : "No"}</span></div>}
           {ann.languages && ann.languages.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">

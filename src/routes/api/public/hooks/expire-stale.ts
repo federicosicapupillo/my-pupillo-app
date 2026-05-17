@@ -12,17 +12,41 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
 
         const nowIso = new Date().toISOString()
 
-        // Expire announcements past expires_at that are still active/draft
-        const { data: expiredAnn, error: annErr } = await supabaseAdmin
+        // Scadenza annuncio = inizio turno (service_date + service_time, Europa/Roma).
+        // Selezioniamo i candidati e filtriamo lato JS confrontando l'inizio turno
+        // con "adesso" nel fuso operativo, così non dipendiamo dal valore legacy
+        // della colonna `expires_at`.
+        const { data: candidates, error: candErr } = await supabaseAdmin
           .from('announcements')
-          .update({ status: 'expired' })
-          .lt('expires_at', nowIso)
+          .select('id, restaurant_id, service_date, service_time, end_date, end_time, shift_duration_hours, duration_hours, expires_at')
           .in('status', ['active', 'draft'])
-          .select('id, restaurant_id')
 
-        if (annErr) {
-          console.error('expire announcements error', annErr)
-          return new Response(JSON.stringify({ error: annErr.message }), { status: 500 })
+        if (candErr) {
+          console.error('load announcement candidates error', candErr)
+          return new Response(JSON.stringify({ error: candErr.message }), { status: 500 })
+        }
+
+        const { getShiftStartDate } = await import('@/lib/announcement-time')
+        const now = new Date()
+        const toExpire = (candidates ?? []).filter((a: any) => {
+          const start = getShiftStartDate(a)
+          return start ? start.getTime() <= now.getTime() : false
+        })
+
+        let expiredAnn: { id: string; restaurant_id: string }[] = []
+        if (toExpire.length > 0) {
+          const ids = toExpire.map((a: any) => a.id)
+          const { data, error: annErr } = await supabaseAdmin
+            .from('announcements')
+            .update({ status: 'expired' })
+            .in('id', ids)
+            .in('status', ['active', 'draft'])
+            .select('id, restaurant_id')
+          if (annErr) {
+            console.error('expire announcements error', annErr)
+            return new Response(JSON.stringify({ error: annErr.message }), { status: 500 })
+          }
+          expiredAnn = (data ?? []) as any
         }
 
         // Expire applications past response_deadline still pending/counter_offer/interested
