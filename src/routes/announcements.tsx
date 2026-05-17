@@ -658,6 +658,7 @@ function AnnouncementsPage() {
                               disabled={msgDisabled}
                               onSelect={() => {
                                 if (msgDisabled) return;
+                                if (isBlocked) { setBlockOpen(true); return; }
                                 setProposalTarget({ ann: a, candidate: c });
                               }}
                               className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
