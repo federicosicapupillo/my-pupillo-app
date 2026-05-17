@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
+import { applyTheme, persistTheme, readUserTheme } from "@/lib/theme";
 
 type Role = "admin" | "restaurant" | "worker";
 type Profile = {
@@ -87,6 +88,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const r = roles?.[0]?.role as Role | undefined;
     setRole(r ?? null);
     setProfile((prof as Profile) ?? null);
+    // Apply per-user theme preference. Default restaurants to light.
+    const saved = readUserTheme(uid);
+    if (saved) {
+      applyTheme(saved);
+    } else if (r === "restaurant") {
+      applyTheme("light");
+      persistTheme("light", uid);
+    }
     setExtrasLoaded(true);
   };
 

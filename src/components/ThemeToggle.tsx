@@ -1,40 +1,24 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-type Theme = "dark" | "light";
-const STORAGE_KEY = "pupillo-theme";
-
-function applyTheme(t: Theme) {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  root.classList.toggle("light", t === "light");
-  root.classList.toggle("dark", t === "dark");
-}
-
-function readInitialTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === "light" || saved === "dark") return saved;
-  } catch {}
-  return "dark";
-}
+import { useAuth } from "@/lib/auth-context";
+import { applyTheme, persistTheme, readGlobalTheme, readUserTheme, type Theme } from "@/lib/theme";
 
 export function ThemeToggle({ className }: { className?: string }) {
+  const { user } = useAuth();
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const t = readInitialTheme();
+    const t = (user?.id && readUserTheme(user.id)) || readGlobalTheme();
     setTheme(t);
     applyTheme(t);
-  }, []);
+  }, [user?.id]);
 
   const toggle = () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     applyTheme(next);
-    try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+    persistTheme(next, user?.id ?? null);
   };
 
   const isDark = theme === "dark";
