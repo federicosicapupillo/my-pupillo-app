@@ -276,45 +276,47 @@ function MessagesLayout() {
               </Link>
             </div>
           )}
-          <div className="mb-3 flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setFilter("all")}
-              className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
-            >
-              Tutte ({threads.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilter("unread")}
-              className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "unread" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
-            >
-              Non lette ({totalUnread})
-            </button>
-          </div>
-          <div className="mb-4 flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setStatusFilter("all")}
-              className={`text-[11px] rounded-full px-2.5 py-1 border transition ${statusFilter === "all" ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent"}`}
-            >
-              Tutti gli stati
-            </button>
-            {Object.keys(STATUS_LABELS).map((s) => {
-              const count = statusCounts[s] ?? 0;
-              if (count === 0) return null;
-              const active = statusFilter === s;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatusFilter(s)}
-                  className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
-                >
-                  {STATUS_LABELS[s]} ({count})
-                </button>
-              );
-            })}
+          <div className="mb-4 flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFilter("all")}
+                className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
+              >
+                Tutte ({threads.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilter("unread")}
+                className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "unread" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
+              >
+                Non lette ({totalUnread})
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("all")}
+                className={`text-xs rounded-full px-3 py-1.5 border transition ${statusFilter === "all" ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent"}`}
+              >
+                Tutti gli stati
+              </button>
+              {Object.keys(STATUS_LABELS).map((s) => {
+                const count = statusCounts[s] ?? 0;
+                if (count === 0) return null;
+                const active = statusFilter === s;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStatusFilter(s)}
+                    className={`text-xs rounded-full px-3 py-1.5 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
+                  >
+                    {STATUS_LABELS[s]} ({count})
+                  </button>
+                );
+              })}
+            </div>
           </div>
           {loading ? (
             <p className="text-muted-foreground">Caricamento…</p>
