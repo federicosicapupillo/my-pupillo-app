@@ -63,6 +63,7 @@ function ShiftsPage() {
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [submittingReview, setSubmittingReview] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<Record<string, string>>({});
   const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
   const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
@@ -161,13 +162,16 @@ function ShiftsPage() {
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
     const submittedRating = rating;
     setSubmittingReview(s.id);
+    setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
     const tId = toast.loading("Invio recensione in corso…");
     try {
       const { error } = await supabase.from("reviews").insert({
         author_id: user.id, target_id: targetId, shift_id: s.id, rating: submittedRating, comment: comment.trim() || null,
       });
       if (error) {
-        toast.error(`Impossibile inviare la recensione: ${error.message}`, { id: tId });
+        const msg = error.message || "Errore sconosciuto";
+        toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
+        setReviewError(prev => ({ ...prev, [s.id]: msg }));
         return;
       }
       toast.success("Recensione inviata", { id: tId });
@@ -183,7 +187,9 @@ function ShiftsPage() {
       setRating(5);
       setComment("");
     } catch (e: any) {
-      toast.error(`Errore di rete: ${e?.message ?? "riprova"}`, { id: tId });
+      const msg = e?.message ?? "Errore di rete";
+      toast.error(`Errore di rete: ${msg}`, { id: tId });
+      setReviewError(prev => ({ ...prev, [s.id]: msg }));
     } finally {
       setSubmittingReview(null);
     }
