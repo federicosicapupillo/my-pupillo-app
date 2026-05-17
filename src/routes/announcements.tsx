@@ -370,20 +370,34 @@ function AnnouncementsPage() {
           setCandidates(candMap);
           if (assignedAnns.length) {
             const annIds = assignedAnns.map(a => a.id);
-            const { data: revs } = await supabase
-              .from("reviews")
-              .select("announcement_id, target_id, rating, author_id")
-              .in("announcement_id", annIds)
-              .eq("author_id", user.id);
+            const [{ data: revs }, { data: shiftRows }] = await Promise.all([
+              supabase
+                .from("reviews")
+                .select("announcement_id, target_id, rating, author_id")
+                .in("announcement_id", annIds)
+                .eq("author_id", user.id),
+              supabase
+                .from("shifts")
+                .select("id, announcement_id, worker_id, status")
+                .in("announcement_id", annIds)
+                .eq("restaurant_id", user.id),
+            ]);
             const revMap: Record<string, number> = {};
             (revs ?? []).forEach((r: any) => { revMap[r.announcement_id] = r.rating; });
+            const shiftMap: Record<string, { id: string; status: string }> = {};
+            (shiftRows ?? []).forEach((s: any) => {
+              shiftMap[`${s.announcement_id}::${s.worker_id}`] = { id: s.id, status: s.status };
+            });
             const aMap: Record<string, AssignedInfo> = {};
             assignedAnns.forEach((a) => {
               const wid = a.assigned_worker_id as string;
+              const sh = shiftMap[`${a.id}::${wid}`];
               aMap[a.id] = {
                 worker_id: wid,
                 full_name: profMap[wid]?.full_name ?? null,
                 rating: revMap[a.id] ?? null,
+                shift_id: sh?.id ?? null,
+                shift_status: sh?.status ?? null,
               };
             });
             setAssigned(aMap);
