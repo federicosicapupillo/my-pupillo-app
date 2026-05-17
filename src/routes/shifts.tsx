@@ -282,6 +282,20 @@ function ShiftsPage() {
     return { all, pending, assigned, past, toReview };
   }, [shifts, pendingApps, reqByShift, role, today]);
 
+  const displayShifts = useMemo(() => {
+    const list = [...filtered];
+    if (filter === "assigned") {
+      list.sort((a, b) => {
+        const dateCmp = a.shift_date.localeCompare(b.shift_date);
+        if (dateCmp !== 0) return dateCmp;
+        const timeA = announcementsMap[a.announcement_id]?.service_time || "00:00";
+        const timeB = announcementsMap[b.announcement_id]?.service_time || "00:00";
+        return timeA.localeCompare(timeB);
+      });
+    }
+    return list;
+  }, [filtered, filter, announcementsMap]);
+
   const stats = useMemo(() => ({
     total: shifts.length,
     completed: shifts.filter(s => s.status === "completed").length,
