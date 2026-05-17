@@ -885,33 +885,29 @@ function AnnouncementDetailsDialog({
           </div>
         ) : (
           <div className="space-y-4 text-sm">
-            <div className="rounded-xl border bg-muted/40 p-3 space-y-1">
-              <div className="flex items-center gap-2 text-sm font-medium"><Calendar className="h-4 w-4" />{dateLabel}</div>
-              <p className="text-xs text-muted-foreground flex items-start gap-1"><AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />La data non può essere modificata. Per cambiare data, duplica l'annuncio.</p>
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 space-y-2 text-amber-900">
+              <div className="flex items-center gap-2 text-sm font-semibold"><Lock className="h-4 w-4" />Dati principali bloccati</div>
+              <p className="text-xs">Questi dati non possono essere modificati dopo la pubblicazione dell'annuncio. Per cambiare data, orario, ruolo, locale, indirizzo o compenso devi eliminare questo annuncio e crearne uno nuovo.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2 border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
+                onClick={() => setRecreateOpen(true)}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Elimina annuncio e crea nuovo
+              </Button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 opacity-90">
+              <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Ruolo richiesto</Label><Input value={ann.professional_profile ?? ""} disabled /></div>
+              <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Nome locale</Label><Input value={venueName ?? ""} disabled /></div>
+              <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Data del turno</Label><Input value={dateLabel} disabled /></div>
+              <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Orario</Label><Input value={`${ann.service_time?.slice(0,5) ?? "—"}${ann.end_time ? ` – ${ann.end_time.slice(0,5)}` : ""}`} disabled /></div>
+              <div className="md:col-span-2"><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Indirizzo</Label><Input value={ann.location_address ?? ""} disabled /></div>
+              <div className="md:col-span-2"><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Compenso</Label><Input value={formatTariff(ann.tariff_amount, ann.tariff_type)} disabled /></div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div><Label>Ruolo richiesto</Label><Input value={form.professional_profile} onChange={(e) => setForm({ ...form, professional_profile: e.target.value })} /></div>
-              <div><Label>Nome locale</Label><Input value={venueName ?? ""} disabled /></div>
-              <div><Label>Orario inizio</Label><Input type="time" value={form.service_time} onChange={(e) => setForm({ ...form, service_time: e.target.value })} /></div>
-              <div><Label>Orario fine</Label><Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} /></div>
-              <div className="md:col-span-2"><Label>Indirizzo</Label><Input value={form.location_address} onChange={(e) => setForm({ ...form, location_address: e.target.value })} /></div>
-              <div>
-                <Label>Tipo tariffa</Label>
-                <Select value={form.tariff_type} onValueChange={(v) => setForm({ ...form, tariff_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hourly">Oraria</SelectItem>
-                    <SelectItem value="flat">A servizio</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>Compenso (€)</Label><Input type="number" min="0" step="0.5" value={form.tariff_amount} onChange={(e) => setForm({ ...form, tariff_amount: e.target.value })} /></div>
-              <div>
-                <Label>Numero lavoratori richiesti</Label>
-                <Input value="1" disabled />
-                <p className="text-[11px] text-muted-foreground mt-1">Un annuncio assegna un singolo lavoratore.</p>
-              </div>
               <div>
                 <Label>Patente</Label>
                 <Select value={form.license_requirement} onValueChange={(v) => setForm({ ...form, license_requirement: v })}>
@@ -966,7 +962,7 @@ function AnnouncementDetailsDialog({
             {hasInvolved && (
               <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>Questo annuncio ha già lavoratori candidati o confermati. Le modifiche aggiorneranno il riepilogo del turno e saranno visibili nelle chat collegate; candidature, conversazioni e recensioni esistenti restano invariate.</span>
+                <span>Questo annuncio ha già lavoratori candidati o confermati. Le modifiche a dress code, mansioni, lingue o note aggiorneranno il riepilogo del turno e saranno visibili nelle chat collegate; candidature, conversazioni e recensioni esistenti restano invariate.</span>
               </div>
             )}
           </div>
