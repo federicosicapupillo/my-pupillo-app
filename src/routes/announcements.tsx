@@ -19,6 +19,15 @@ import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { labelOf, labelsOf } from "@/lib/announcement-requirements";
 
 function AnnouncementMapBlock({
   annId, lat, lng, address, open, onToggle,
