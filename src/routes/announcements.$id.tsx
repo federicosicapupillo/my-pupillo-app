@@ -21,6 +21,7 @@ import { priceRangeLabel } from "@/lib/price-range";
 import { formatTariff } from "@/lib/format";
 import { UserAvatar } from "@/components/UserAvatar";
 import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
+import { getShiftEndDate, getExpiresAtDate } from "@/lib/announcement-time";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
