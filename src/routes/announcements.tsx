@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -688,22 +688,20 @@ function AnnouncementDetailsDialog({
   onUpdated: (a: Ann) => void;
   onDuplicate: (a: Ann) => void;
 }) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [recreateOpen, setRecreateOpen] = useState(false);
+  const [recreating, setRecreating] = useState(false);
   const [form, setForm] = useState<any>(null);
 
   useEffect(() => {
     if (!ann) return;
     setEditing(false);
     setConfirmOpen(false);
+    setRecreateOpen(false);
     setForm({
-      professional_profile: ann.professional_profile ?? "",
-      service_time: ann.service_time?.slice(0, 5) ?? "",
-      end_time: ann.end_time?.slice(0, 5) ?? "",
-      location_address: ann.location_address ?? "",
-      tariff_amount: String(ann.tariff_amount ?? ""),
-      tariff_type: ann.tariff_type ?? "hourly",
       required_skills: [...(ann.required_skills ?? [])],
       dress_code_items: [...(ann.dress_code_items ?? [])],
       dress_code_notes: ann.dress_code_notes ?? "",
@@ -730,13 +728,6 @@ function AnnouncementDetailsDialog({
   const doSave = async () => {
     setSaving(true);
     const payload: any = {
-      professional_profile: form.professional_profile || null,
-      service_time: form.service_time || ann.service_time,
-      end_time: form.end_time || null,
-      location_address: form.location_address,
-      job_address: form.location_address,
-      tariff_amount: parseFloat(form.tariff_amount) || ann.tariff_amount,
-      tariff_type: form.tariff_type,
       required_skills: form.required_skills,
       dress_code_items: form.dress_code_items,
       dress_code_notes: form.dress_code_notes || null,
@@ -747,17 +738,12 @@ function AnnouncementDetailsDialog({
     // Detect operational changes that require notifying accepted workers
     const arrEq = (a: any[] = [], b: any[] = []) =>
       a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
-    const timeChanged =
-      (payload.service_time ?? "") !== (ann.service_time ?? "") ||
-      (payload.end_time ?? "") !== (ann.end_time ?? "");
-    const placeChanged = (payload.location_address ?? "") !== (ann.location_address ?? "");
     const dressChanged =
       !arrEq(payload.dress_code_items ?? [], ann.dress_code_items ?? []) ||
       (payload.dress_code_notes ?? "") !== (ann.dress_code_notes ?? "");
     const skillsChanged = !arrEq(payload.required_skills ?? [], ann.required_skills ?? []);
     const notesChanged = (payload.notes ?? "") !== ((ann as any).notes ?? "");
-    const shouldNotifyWorkers =
-      timeChanged || placeChanged || dressChanged || skillsChanged || notesChanged;
+    const shouldNotifyWorkers = dressChanged || skillsChanged || notesChanged;
 
     const { data, error } = await supabase
       .from("announcements")
@@ -784,8 +770,6 @@ function AnnouncementDetailsDialog({
           const workerIds = Array.from(new Set((apps ?? []).map((a: any) => a.worker_id).filter(Boolean)));
           if (workerIds.length === 0) return;
           const changed: string[] = [];
-          if (timeChanged) changed.push("orario");
-          if (placeChanged) changed.push("luogo");
           if (dressChanged) changed.push("dress code");
           if (skillsChanged) changed.push("mansioni");
           if (notesChanged) changed.push("note operative");
@@ -901,33 +885,29 @@ function AnnouncementDetailsDialog({
           </div>
         ) : (
           <div className="space-y-4 text-sm">
-            <div className="rounded-xl border bg-muted/40 p-3 space-y-1">
-              <div className="flex items-center gap-2 text-sm font-medium"><Calendar className="h-4 w-4" />{dateLabel}</div>
-              <p className="text-xs text-muted-foreground flex items-start gap-1"><AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />La data non può essere modificata. Per cambiare data, duplica l'annuncio.</p>
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 space-y-2 text-amber-900">
+              <div className="flex items-center gap-2 text-sm font-semibold"><Lock className="h-4 w-4" />Dati principali bloccati</div>
+              <p className="text-xs">Questi dati non possono essere modificati dopo la pubblicazione dell'annuncio. Per cambiare data, orario, ruolo, locale, indirizzo o compenso devi eliminare questo annuncio e crearne uno nuovo.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2 border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
+                onClick={() => setRecreateOpen(true)}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Elimina annuncio e crea nuovo
+              </Button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 opacity-90">
+              <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Ruolo richiesto</Label><Input value={ann.professional_profile ?? ""} disabled /></div>
+              <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Nome locale</Label><Input value={venueName ?? ""} disabled /></div>
+              <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Data del turno</Label><Input value={dateLabel} disabled /></div>
+              <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Orario</Label><Input value={`${ann.service_time?.slice(0,5) ?? "—"}${ann.end_time ? ` – ${ann.end_time.slice(0,5)}` : ""}`} disabled /></div>
+              <div className="md:col-span-2"><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Indirizzo</Label><Input value={ann.location_address ?? ""} disabled /></div>
+              <div className="md:col-span-2"><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Compenso</Label><Input value={formatTariff(ann.tariff_amount, ann.tariff_type)} disabled /></div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div><Label>Ruolo richiesto</Label><Input value={form.professional_profile} onChange={(e) => setForm({ ...form, professional_profile: e.target.value })} /></div>
-              <div><Label>Nome locale</Label><Input value={venueName ?? ""} disabled /></div>
-              <div><Label>Orario inizio</Label><Input type="time" value={form.service_time} onChange={(e) => setForm({ ...form, service_time: e.target.value })} /></div>
-              <div><Label>Orario fine</Label><Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} /></div>
-              <div className="md:col-span-2"><Label>Indirizzo</Label><Input value={form.location_address} onChange={(e) => setForm({ ...form, location_address: e.target.value })} /></div>
-              <div>
-                <Label>Tipo tariffa</Label>
-                <Select value={form.tariff_type} onValueChange={(v) => setForm({ ...form, tariff_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hourly">Oraria</SelectItem>
-                    <SelectItem value="flat">A servizio</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>Compenso (€)</Label><Input type="number" min="0" step="0.5" value={form.tariff_amount} onChange={(e) => setForm({ ...form, tariff_amount: e.target.value })} /></div>
-              <div>
-                <Label>Numero lavoratori richiesti</Label>
-                <Input value="1" disabled />
-                <p className="text-[11px] text-muted-foreground mt-1">Un annuncio assegna un singolo lavoratore.</p>
-              </div>
               <div>
                 <Label>Patente</Label>
                 <Select value={form.license_requirement} onValueChange={(v) => setForm({ ...form, license_requirement: v })}>
@@ -982,7 +962,7 @@ function AnnouncementDetailsDialog({
             {hasInvolved && (
               <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>Questo annuncio ha già lavoratori candidati o confermati. Le modifiche aggiorneranno il riepilogo del turno e saranno visibili nelle chat collegate; candidature, conversazioni e recensioni esistenti restano invariate.</span>
+                <span>Questo annuncio ha già lavoratori candidati o confermati. Le modifiche a dress code, mansioni, lingue o note aggiorneranno il riepilogo del turno e saranno visibili nelle chat collegate; candidature, conversazioni e recensioni esistenti restano invariate.</span>
               </div>
             )}
           </div>
@@ -1011,12 +991,45 @@ function AnnouncementDetailsDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" />Conferma modifiche</DialogTitle>
               <DialogDescription>
-                Attenzione: questo annuncio ha già lavoratori candidati o confermati. Le modifiche verranno applicate al riepilogo del turno, ma la data non può essere cambiata.
+                Attenzione: questo annuncio ha già lavoratori candidati o confermati. Verranno aggiornati solo dress code, mansioni, lingue, requisiti e note operative. I dati principali (data, orario, ruolo, locale, indirizzo, compenso) non possono essere modificati.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={saving}>Annulla</Button>
               <Button onClick={doSave} disabled={saving}>{saving ? "Salvataggio…" : "Conferma e salva"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={recreateOpen} onOpenChange={setRecreateOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" />Annulla e ricrea annuncio</DialogTitle>
+              <DialogDescription>
+                Se modifichi data, orario, ruolo, locale, indirizzo o compenso, devi creare un nuovo annuncio. L'annuncio attuale verrà annullato e le candidature collegate resteranno nello storico. Vuoi continuare?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setRecreateOpen(false)} disabled={recreating}>Annulla</Button>
+              <Button
+                variant="destructive"
+                disabled={recreating}
+                onClick={async () => {
+                  setRecreating(true);
+                  const { error } = await supabase
+                    .from("announcements")
+                    .update({ status: "cancelled" })
+                    .eq("id", ann.id);
+                  setRecreating(false);
+                  if (error) { toast.error(error.message); return; }
+                  toast.success("Annuncio annullato. Compila i dati del nuovo annuncio.");
+                  setRecreateOpen(false);
+                  onOpenChange(false);
+                  navigate({ to: "/ristoratore/annunci/nuovo", search: { reuse: ann.id } as never });
+                }}
+              >
+                {recreating ? "Annullamento…" : "Conferma e crea nuovo annuncio"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
