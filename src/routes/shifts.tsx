@@ -63,7 +63,8 @@ function ShiftsPage() {
   const [live, setLive] = useState(false);
   const [reviewMap, setReviewMap] = useState<Record<string, number>>({});
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
-  const [reviewOpen, setReviewOpen] = useState<string | null>(null);
+  const [announcementsMap, setAnnouncementsMap] = useState<Record<string, any>>({});
+  const [acceptedAppMap, setAcceptedAppMap] = useState<Record<string, { id: string; status: string }>>({});
   const [submittingReview, setSubmittingReview] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<Record<string, string>>({});
   const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
