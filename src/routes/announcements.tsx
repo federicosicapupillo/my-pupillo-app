@@ -821,6 +821,72 @@ function AnnouncementsPage() {
         onClose={() => setProposalTarget(null)}
       />
       <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
+      <Dialog open={!!closeTarget} onOpenChange={(v) => { if (!v) setCloseTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chiudi turno</DialogTitle>
+            <DialogDescription>Confermi che il turno è stato svolto?</DialogDescription>
+          </DialogHeader>
+          {closeTarget && (() => {
+            const info = assigned[closeTarget.id];
+            return (
+              <div className="space-y-1.5 text-sm">
+                <div><span className="text-muted-foreground">Ruolo:</span> <span className="font-medium">{closeTarget.professional_profile || "—"}</span></div>
+                <div><span className="text-muted-foreground">Data:</span> <span className="font-medium">{new Date(closeTarget.service_date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</span></div>
+                <div><span className="text-muted-foreground">Orario:</span> <span className="font-medium">{closeTarget.service_time?.slice(0,5)}{closeTarget.end_time ? `–${closeTarget.end_time.slice(0,5)}` : ""}</span></div>
+                {(profile as any)?.business_name && (
+                  <div><span className="text-muted-foreground">Locale:</span> <span className="font-medium">{(profile as any).business_name}</span></div>
+                )}
+                <div><span className="text-muted-foreground">Indirizzo:</span> <span className="font-medium">{closeTarget.location_address || "—"}</span></div>
+                <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{info?.full_name || "Lavoratore"}</span></div>
+                <div><span className="text-muted-foreground">Stato:</span> <span className="font-medium">Da chiudere</span></div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setCloseTarget(null)} disabled={closing}>Annulla</Button>
+            <Button
+              disabled={closing}
+              onClick={async () => {
+                if (!closeTarget) return;
+                const info = assigned[closeTarget.id];
+                if (!info?.shift_id) {
+                  toast.error("Turno non trovato. Riprova più tardi.");
+                  return;
+                }
+                setClosing(true);
+                try {
+                  const { error } = await supabase
+                    .from("shifts")
+                    .update({ status: "completed", completed_at: new Date().toISOString() } as never)
+                    .eq("id", info.shift_id);
+                  if (error) {
+                    toast.error(error.message);
+                    return;
+                  }
+                  await supabase
+                    .from("announcements")
+                    .update({ status: "completed" } as never)
+                    .eq("id", closeTarget.id);
+                  setAssigned((prev) => ({
+                    ...prev,
+                    [closeTarget.id]: { ...prev[closeTarget.id], shift_status: "completed" },
+                  }));
+                  setItems((prev) => prev.map((x) => x.id === closeTarget.id ? { ...x, status: "completed" } : x));
+                  toast.success("Turno chiuso. Ora lascia la recensione.");
+                  const shiftId = info.shift_id;
+                  setCloseTarget(null);
+                  navigate({ to: "/shifts", search: { tab: "to-review", shift: shiftId } as never });
+                } finally {
+                  setClosing(false);
+                }
+              }}
+            >
+              {closing ? "Salvataggio…" : "Conferma chiusura"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
