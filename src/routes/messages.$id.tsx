@@ -323,7 +323,7 @@ function Thread() {
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
           supabase.from("profiles").select("full_name, business_name, city, neighborhood").eq("id", otherId).maybeSingle(),
-          supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id, notes, professional_profile").eq("id", a.announcement_id).maybeSingle(),
+          supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({
           name: p?.business_name || p?.full_name || "Utente",
