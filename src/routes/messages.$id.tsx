@@ -366,6 +366,11 @@ function Thread() {
         (p) => setApp(p.new as App))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs", filter: `entity_id=eq.${id}` },
         (p) => setEvents(prev => [...prev, p.new as LogEvent]))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_responses", filter: `application_id=eq.${id}` },
+        (p) => {
+          const r = p.new as { message_id: string; status: "accepted" | "rejected" };
+          setProposalStatuses(prev => prev[r.message_id] === r.status ? prev : { ...prev, [r.message_id]: r.status });
+        })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [id, user]);
