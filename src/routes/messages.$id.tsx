@@ -1483,12 +1483,13 @@ function ProposalCard(props: {
   ann: Ann | null;
   venueName: string | null;
   displayAddress: string | null;
+  canSeePreciseInfo: boolean;
   isWorker: boolean;
   status: string;
   onAccept: () => Promise<void>;
   onReject: () => Promise<void>;
 }) {
-  const { ann, venueName, displayAddress, isWorker, status, onAccept, onReject } = props;
+  const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
   const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
   // The proposal expires at the end of the shift (or, lacking end_time,
   // at service_time + duration). After that it cannot be accepted/refused.
