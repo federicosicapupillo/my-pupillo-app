@@ -71,16 +71,16 @@ export function BlockedContactDialog({ open, onClose, shifts }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
-            Completa i turni precedenti
+            Recensioni mancanti
           </DialogTitle>
           <DialogDescription>
-            Prima di contattare nuovi lavoratori devi chiudere i turni conclusi e lasciare una recensione ai collaboratori che hanno lavorato con te.
+            Puoi continuare a chattare con i lavoratori, ma prima di assegnare nuovi turni devi chiudere i turni conclusi e lasciare le recensioni mancanti.
           </DialogDescription>
         </DialogHeader>
 
         {count > 0 && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
-            Hai {count} turn{count > 1 ? "i" : "o"} da chiudere prima di poter contattare nuovi lavoratori.
+            Hai {count} turn{count > 1 ? "i" : "o"} da chiudere prima di poter assegnare nuovi lavoratori.
           </div>
         )}
 
@@ -120,8 +120,8 @@ export function BlockedContactDialog({ open, onClose, shifts }: Props) {
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={goToShifts} className="sm:flex-1">
-            Vai ai miei turni
+          <Button variant="outline" onClick={onClose} className="sm:flex-1">
+            Continua a chattare
           </Button>
           <Button onClick={goToReview} className="gap-1.5 sm:flex-1">
             <Star className="h-4 w-4" />
