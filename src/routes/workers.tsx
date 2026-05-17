@@ -9,7 +9,8 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Search, List, Map as MapIcon, RotateCcw, X, MapPin, CheckCircle2, Clock, History, ThumbsUp, ThumbsDown, Gift, Star } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AnnouncementMap } from "@/components/AnnouncementMap";
+import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
+import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { CREDIT_COSTS } from "@/lib/pricing";
 import { Coins, AlertCircle, MessageSquare } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -678,26 +679,17 @@ function WorkersPage() {
         </div>
       )}
       {view === "map" ? (
-        <div className="rounded-2xl border bg-card p-2">
-          {selectedAnn?.location_lat != null && selectedAnn?.location_lng != null ? (
-            <>
-              <AnnouncementMap
-                lat={selectedAnn.location_lat}
-                lng={selectedAnn.location_lng}
-                address={selectedAnn.location_address}
-                height={420}
-                selectedId={selectedAnn.id}
-                onSelect={(id) => { setSelected(id); setLastAnnouncementId(user?.id, id); }}
-                markers={anns
-                  .filter((a) => a.location_lat != null && a.location_lng != null)
-                  .map((a) => ({ id: a.id, lat: a.location_lat as number, lng: a.location_lng as number, address: a.location_address }))}
-              />
-              <div className="p-3 text-xs text-muted-foreground">Posizione dell'annuncio selezionato. I lavoratori "in zona" sono evidenziati nella vista lista.</div>
-            </>
-          ) : (
-            <div className="p-12 text-center text-muted-foreground">Seleziona un annuncio per vederne la posizione sulla mappa.</div>
-          )}
-        </div>
+        <WorkersMapSection
+          workers={sorted}
+          fallbackCenter={
+            selectedAnn?.location_lat != null && selectedAnn?.location_lng != null
+              ? [selectedAnn.location_lat as number, selectedAnn.location_lng as number]
+              : [41.9028, 12.4964]
+          }
+          onInvite={invite}
+          inviteDisabled={!selected}
+          inviteLabel={selected ? "Messaggia" : "Seleziona annuncio"}
+        />
       ) : (
       <div className="space-y-6">
         {(() => {
@@ -731,7 +723,16 @@ function WorkersPage() {
               <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
               <div>
                 <div className="font-semibold">{w.full_name || "Lavoratore"}</div>
-                {w.age && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  {w.primary_role && <span className="capitalize">{w.primary_role}</span>}
+                  {w.rating_avg != null && Number(w.rating_avg) > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-amber-600">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="tabular-nums font-medium">{Number(w.rating_avg).toFixed(1)}</span>
+                    </span>
+                  )}
+                  {w.age && <span>· {w.age} anni</span>}
+                </div>
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
@@ -843,5 +844,67 @@ function WorkersPage() {
       </div>
       )}
     </AppShell>
+  );
+}
+
+function initialsOf(name: string | null | undefined): string {
+  if (!name) return "";
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function WorkersMapSection({
+  workers,
+  fallbackCenter,
+  onInvite,
+  inviteDisabled,
+  inviteLabel,
+}: {
+  workers: W[];
+  fallbackCenter: [number, number];
+  onInvite: (workerId: string) => void;
+  inviteDisabled: boolean;
+  inviteLabel: string;
+}) {
+  const located = workers.filter(
+    (w) => w.service_area_lat != null && w.service_area_lng != null,
+  );
+  const ids = located.map((w) => w.id);
+  const avatars = useAvatarUrls(ids);
+  const points: WorkerMapPoint[] = located.map((w) => ({
+    id: w.id,
+    lat: w.service_area_lat as number,
+    lng: w.service_area_lng as number,
+    name: w.full_name,
+    role: w.primary_role,
+    city: w.city ?? w.neighborhood ?? null,
+    rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
+    badge: w.badge,
+    avatarUrl: avatars[w.id] ?? null,
+    initials: initialsOf(w.full_name),
+    link: `/workers_/${w.id}`,
+  }));
+  const center: [number, number] =
+    points.length > 0 ? [points[0].lat, points[0].lng] : fallbackCenter;
+  return (
+    <div className="rounded-2xl border bg-card p-2">
+      <WorkersMap
+        points={points}
+        center={center}
+        height={480}
+        onInvite={onInvite}
+        inviteDisabled={inviteDisabled}
+        inviteLabel={inviteLabel}
+      />
+      <div className="p-3 text-xs text-muted-foreground">
+        {points.length === 0
+          ? "Nessun lavoratore con posizione disponibile per la mappa."
+          : `${points.length} lavorator${points.length === 1 ? "e" : "i"} sulla mappa. La zona è approssimativa: non vengono mostrati indirizzi privati.`}
+      </div>
+    </div>
   );
 }
