@@ -732,6 +732,7 @@ function AnnouncementsPage() {
         statusKind={proposalTarget ? computeEffectiveStatus(proposalTarget.ann, now).kind : "active"}
         onClose={() => setProposalTarget(null)}
       />
+      <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
     </AppShell>
   );
 }
