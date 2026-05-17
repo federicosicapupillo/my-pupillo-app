@@ -724,7 +724,16 @@ function WorkersPage() {
               <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
               <div>
                 <div className="font-semibold">{w.full_name || "Lavoratore"}</div>
-                {w.age && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  {w.primary_role && <span className="capitalize">{w.primary_role}</span>}
+                  {w.rating_avg != null && Number(w.rating_avg) > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-amber-600">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="tabular-nums font-medium">{Number(w.rating_avg).toFixed(1)}</span>
+                    </span>
+                  )}
+                  {w.age && <span>· {w.age} anni</span>}
+                </div>
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
