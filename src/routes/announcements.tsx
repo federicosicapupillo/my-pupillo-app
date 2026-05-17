@@ -305,9 +305,16 @@ function AnnouncementsPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const base = supabase.from("announcements").select("*").order("created_at", { ascending: false });
+      const base = supabase.from("announcements").select("*");
       const { data } = role === "restaurant" ? await base.eq("restaurant_id", user.id) : await base.eq("status", "active");
-      const list = (data as Ann[]) ?? [];
+      const list = ((data as Ann[]) ?? []).sort((a, b) => {
+        const sa = getShiftStartDate(a);
+        const sb = getShiftStartDate(b);
+        if (!sa && !sb) return 0;
+        if (!sa) return 1;
+        if (!sb) return -1;
+        return sa.getTime() - sb.getTime();
+      });
       setItems(list);
       if (role === "restaurant" && list.length) {
         const ids = list.map(a => a.id);
@@ -385,12 +392,308 @@ function AnnouncementsPage() {
     })();
   }, [user, role]);
 
-  const visible = items.filter(a => statusFilter === "all" ? true : a.status === statusFilter);
+  const isPastKind = (kind: EffectiveStatus) => kind === "expired" || kind === "completed" || kind === "cancelled";
+
+  const filtered = items.filter(a => statusFilter === "all" ? true : a.status === statusFilter);
+  const upcoming = statusFilter === "all" ? filtered.filter(a => !isPastKind(computeEffectiveStatus(a, now).kind)) : filtered;
+  const past = statusFilter === "all" ? filtered.filter(a => isPastKind(computeEffectiveStatus(a, now).kind)) : [];
 
   const openDetails = (a: Ann) => { setDetailsAnn(a); setDetailsOpen(true); };
   const handleAnnUpdated = (updated: Ann) => {
     setItems((prev) => prev.map((x) => x.id === updated.id ? { ...x, ...updated } : x));
     setDetailsAnn((prev) => prev && prev.id === updated.id ? { ...prev, ...updated } : prev);
+  };
+
+  const renderCard = (a: Ann) => {
+    const effOuter = computeEffectiveStatus(a, now);
+    const isExpired = effOuter.kind === "expired" || effOuter.kind === "cancelled";
+    return (
+      <div
+        key={a.id}
+        className={`rounded-2xl border bg-card p-5 ${isExpired ? "opacity-70 border-red-200" : ""}`}
+      >
+        {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (
+          <div className={`mb-3 rounded-xl border p-3 ${a.status === "completed" ? "bg-blue-50 border-blue-200" : "bg-green-50 border-green-200"}`}>
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <CheckCircle2 className={`h-4 w-4 ${a.status === "completed" ? "text-blue-600" : "text-green-600"}`} />
+              <span className={a.status === "completed" ? "text-blue-800" : "text-green-800"}>
+                {a.status === "completed" ? "Turno completato" : "Turno assegnato"}
+              </span>
+            </div>
+            <div className="mt-1 text-sm text-foreground">
+              {a.status === "completed" ? "Lavoratore: " : "Assegnato a: "}
+              <span className="font-medium">{assigned[a.id].full_name || "Lavoratore"}</span>
+            </div>
+            {a.status === "completed" && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                {assigned[a.id].rating != null ? (
+                <span className="inline-flex items-center gap-1">
+                  La tua valutazione:
+                  <span className="inline-flex items-center">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-3 w-3 ${
+                          i < (assigned[a.id].rating ?? 0)
+                            ? "text-yellow-400 fill-yellow-400"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </span>
+                  <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
+                </span>
+                ) : (
+                  <span className="italic">Valutazione non ancora inserita</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />{formatRange(a)}</div>
+            <h3 className="mt-2 text-lg font-bold text-foreground">{a.professional_profile?.trim() || "Ruolo non specificato"}</h3>
+            <p className="text-xs text-muted-foreground">Durata: {a.shift_duration_hours ?? a.duration_hours}h{a.end_date && a.end_date !== a.service_date ? " · Turno notturno" : ""}</p>
+            {(a.is_long_shift || (a.shift_duration_hours ?? a.duration_hours) > 8) && (
+              <span className="mt-1 inline-block text-[10px] uppercase font-semibold rounded-full bg-amber-500/20 text-amber-700 px-2 py-0.5">Turno lungo +8h</span>
+            )}
+          </div>
+          {(() => {
+            const eff = computeEffectiveStatus(a, now);
+            return (
+          <div className="flex flex-col items-end gap-1">
+            <span className={`text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[eff.kind] ?? 'bg-muted text-muted-foreground'}`}>
+              {STATUS_LABEL[eff.kind] ?? eff.kind}
+            </span>
+            {role === "restaurant" && (
+              <span
+                className={`inline-flex items-center gap-1 text-[11px] rounded-full px-2 py-0.5 font-medium ${(counts[a.id] ?? 0) > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+                title={`${counts[a.id] ?? 0} candidatur${(counts[a.id] ?? 0) === 1 ? 'a' : 'e'}`}
+              >
+                <Users className="h-3 w-3" />
+                {counts[a.id] ?? 0} candidat{(counts[a.id] ?? 0) === 1 ? 'o' : 'i'}
+              </span>
+            )}
+            {eff.countdown && (eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned") && (
+              <span
+                className={`text-[10px] rounded-full px-2 py-0.5 ${
+                  eff.kind === "soon"
+                    ? "bg-yellow-100 text-yellow-900"
+                    : eff.kind === "assigned"
+                    ? "bg-blue-50 text-blue-800"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
+              >
+                {eff.countdown}
+              </span>
+            )}
+            {eff.kind === "expired" && (
+              <span className="text-[10px] rounded-full px-2 py-0.5 bg-red-100 text-red-800 font-semibold">
+                Annuncio scaduto
+              </span>
+            )}
+          </div>
+            );
+          })()}
+        </div>
+        <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
+          <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
+          <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {a.service_time?.slice(0,5) ?? "—"}</div>
+          {role === "restaurant" && (
+            <div className="flex items-center gap-2"><Users className="h-4 w-4" />{counts[a.id] ?? 0} candidatur{(counts[a.id] ?? 0) === 1 ? "a" : "e"}</div>
+          )}
+        </div>
+        <div className="mt-3">
+          <AnnouncementMapBlock
+            annId={a.id}
+            lat={a.location_lat}
+            lng={a.location_lng}
+            address={a.location_address}
+            open={!!openMaps[a.id]}
+            onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+          />
+        </div>
+        {role === "restaurant" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 mt-3"
+            onClick={() => openDetails(a)}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Vedi riepilogo annuncio
+          </Button>
+        )}
+        {role === "restaurant" && a.status !== "active" && (() => {
+          const eff = computeEffectiveStatus(a, now);
+          const label = eff.kind === "expired" ? "Ripubblica annuncio" : "Riusa come nuovo";
+          return (
+            <Button
+              variant={eff.kind === "expired" ? "default" : "outline"}
+              size="sm"
+              className="gap-2 mt-3"
+              onClick={() => { setRepublishAnn(a); setRepublishOpen(true); }}
+            >
+              <RotateCw className="h-3 w-3" />{label}
+            </Button>
+          );
+        })()}
+        <div className="mt-3">
+          {role === "restaurant" ? (
+            <>
+              {(candidates[a.id]?.length ?? 0) > 0 && (
+                <div className="mb-3 rounded-xl border bg-muted/30 p-3">
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <Send className="h-3.5 w-3.5" />
+                    Richieste inviate ({candidates[a.id].length})
+                  </div>
+                  <ul className="space-y-2">
+                    {candidates[a.id].map((c) => {
+                      const ps = deriveProposalStatus(a, c);
+                      return (
+                        <li key={c.worker_id} className="rounded-lg border bg-card p-2.5">
+                          <div className="flex items-start gap-2.5">
+                            {c.avatar_url ? (
+                              <img src={c.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                            ) : (
+                              <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-secondary-foreground">
+                                {(c.full_name || "?").slice(0, 1).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground truncate">
+                                  {c.full_name || "Lavoratore"}
+                                </span>
+                                {c.rating_avg != null && (
+                                  <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+                                    <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                                    <span className="text-foreground font-medium">{Number(c.rating_avg).toFixed(1)}</span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                                {c.professional_profile && <span>{c.professional_profile}</span>}
+                                {c.application_created_at && (
+                                  <span title="Richiesta inviata">· {formatRelativeShort(c.application_created_at)}</span>
+                                )}
+                              </div>
+                              <div className="mt-1.5 flex items-center gap-2">
+                                <span className={`text-[11px] rounded-full px-2 py-0.5 font-medium ${PROPOSAL_STATUS_CLS[ps]}`}>
+                                  {PROPOSAL_STATUS_LABEL[ps]}
+                                </span>
+                              </div>
+                              {c.last_message_preview && (
+                                <p className="mt-1.5 text-xs text-muted-foreground italic line-clamp-1">
+                                  “{c.last_message_preview}”
+                                </p>
+                              )}
+                            </div>
+                            {c.application_id && (
+                              <Link
+                                to="/messages/$id"
+                                params={{ id: c.application_id }}
+                                className="shrink-0"
+                              >
+                                <Button size="sm" variant="outline" className="gap-1 h-8">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                  Apri chat
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="default" className="gap-1">
+                    <Users className="h-3.5 w-3.5" />
+                    Vedi candidature{counts[a.id] ? ` (${counts[a.id]})` : ""}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)] z-50">
+                  <DropdownMenuItem
+                    onSelect={(e) => { e.preventDefault(); openDetails(a); }}
+                    className="cursor-pointer gap-2 text-primary font-medium"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Vedi riepilogo annuncio
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Candidati per questo annuncio</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {(effOuter.kind === "expired" || effOuter.kind === "completed" || effOuter.kind === "cancelled") && (
+                    <div className="px-2 pt-1 pb-2 text-[11px] text-muted-foreground italic">
+                      Annuncio {effOuter.kind === "completed" ? "completato" : effOuter.kind === "cancelled" ? "annullato" : "scaduto"}: messaggistica disabilitata.
+                    </div>
+                  )}
+                  {(candidates[a.id]?.length ?? 0) === 0 ? (
+                    <div className="px-2 py-3 text-xs text-muted-foreground">
+                      Nessuna candidatura ricevuta per questo annuncio
+                    </div>
+                  ) : (
+                    candidates[a.id].map((c) => {
+                      const isAssigned = a.assigned_worker_id === c.worker_id;
+                      const msgDisabled = effOuter.kind === "expired" || effOuter.kind === "completed" || effOuter.kind === "cancelled";
+                      return (
+                      <DropdownMenuItem
+                        key={c.worker_id}
+                        disabled={msgDisabled}
+                        onSelect={() => {
+                          if (msgDisabled) return;
+                          if (isBlocked) { setBlockOpen(true); return; }
+                          setProposalTarget({ ann: a, candidate: c });
+                        }}
+                        className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
+                      >
+                        <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          {c.full_name || "Lavoratore"}
+                          {isAssigned && (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 text-green-800 px-1.5 py-0.5 text-[10px] font-medium">
+                              Assegnato
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                          {c.professional_profile && <span>{c.professional_profile}</span>}
+                          {c.rating_avg != null && (
+                            <span className="inline-flex items-center gap-1">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${
+                                    i < Math.round(c.rating_avg ?? 0)
+                                      ? "text-yellow-400 fill-yellow-400"
+                                      : "text-gray-300"
+                                  }`}
+                                />
+                              ))}
+                              <span className="text-foreground font-medium">{Number(c.rating_avg).toFixed(1)}</span>
+                            </span>
+                          )}
+                          {c.badge && <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px]">{c.badge}</span>}
+                        </span>
+                      </DropdownMenuItem>
+                      );
+                    })
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Link to="/announcements/$id" params={{ id: a.id }}>
+              <Button size="sm" variant="outline" className="gap-1">Apri dettagli</Button>
+            </Link>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -408,304 +711,34 @@ function AnnouncementsPage() {
           ))}
         </div>
       )}
-      {loading ? <p className="text-muted-foreground">Caricamento…</p> : visible.length === 0 ? (
+      {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center">
           <p className="text-muted-foreground">Nessun annuncio.</p>
           {role === "restaurant" && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {visible.map((a) => {
-            const effOuter = computeEffectiveStatus(a, now);
-            const isExpired = effOuter.kind === "expired" || effOuter.kind === "cancelled";
-            return (
-            <div
-              key={a.id}
-              className={`rounded-2xl border bg-card p-5 ${isExpired ? "opacity-70 border-red-200" : ""}`}
-            >
-              {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (
-                <div className={`mb-3 rounded-xl border p-3 ${a.status === "completed" ? "bg-blue-50 border-blue-200" : "bg-green-50 border-green-200"}`}>
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <CheckCircle2 className={`h-4 w-4 ${a.status === "completed" ? "text-blue-600" : "text-green-600"}`} />
-                    <span className={a.status === "completed" ? "text-blue-800" : "text-green-800"}>
-                      {a.status === "completed" ? "Turno completato" : "Turno assegnato"}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-sm text-foreground">
-                    {a.status === "completed" ? "Lavoratore: " : "Assegnato a: "}
-                    <span className="font-medium">{assigned[a.id].full_name || "Lavoratore"}</span>
-                  </div>
-                  {a.status === "completed" && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {assigned[a.id].rating != null ? (
-                      <span className="inline-flex items-center gap-1">
-                        La tua valutazione:
-                        <span className="inline-flex items-center">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3 w-3 ${
-                                i < (assigned[a.id].rating ?? 0)
-                                  ? "text-yellow-400 fill-yellow-400"
-                                  : "text-gray-300"
-                              }`}
-                            />
-                          ))}
-                        </span>
-                        <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
-                      </span>
-                      ) : (
-                        <span className="italic">Valutazione non ancora inserita</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />{formatRange(a)}</div>
-                  <h3 className="mt-2 text-lg font-bold text-foreground">{a.professional_profile?.trim() || "Ruolo non specificato"}</h3>
-                  <p className="text-xs text-muted-foreground">Durata: {a.shift_duration_hours ?? a.duration_hours}h{a.end_date && a.end_date !== a.service_date ? " · Turno notturno" : ""}</p>
-                  {(a.is_long_shift || (a.shift_duration_hours ?? a.duration_hours) > 8) && (
-                    <span className="mt-1 inline-block text-[10px] uppercase font-semibold rounded-full bg-amber-500/20 text-amber-700 px-2 py-0.5">Turno lungo +8h</span>
-                  )}
-                </div>
-                {(() => {
-                  const eff = computeEffectiveStatus(a, now);
-                  return (
-                <div className="flex flex-col items-end gap-1">
-                  <span className={`text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[eff.kind] ?? 'bg-muted text-muted-foreground'}`}>
-                    {STATUS_LABEL[eff.kind] ?? eff.kind}
-                  </span>
-                  {role === "restaurant" && (
-                    <span
-                      className={`inline-flex items-center gap-1 text-[11px] rounded-full px-2 py-0.5 font-medium ${(counts[a.id] ?? 0) > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
-                      title={`${counts[a.id] ?? 0} candidatur${(counts[a.id] ?? 0) === 1 ? 'a' : 'e'}`}
-                    >
-                      <Users className="h-3 w-3" />
-                      {counts[a.id] ?? 0} candidat{(counts[a.id] ?? 0) === 1 ? 'o' : 'i'}
-                    </span>
-                  )}
-                  {eff.countdown && (eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned") && (
-                    <span
-                      className={`text-[10px] rounded-full px-2 py-0.5 ${
-                        eff.kind === "soon"
-                          ? "bg-yellow-100 text-yellow-900"
-                          : eff.kind === "assigned"
-                          ? "bg-blue-50 text-blue-800"
-                          : "bg-secondary text-secondary-foreground"
-                      }`}
-                    >
-                      {eff.countdown}
-                    </span>
-                  )}
-                  {eff.kind === "expired" && (
-                    <span className="text-[10px] rounded-full px-2 py-0.5 bg-red-100 text-red-800 font-semibold">
-                      Annuncio scaduto
-                    </span>
-                  )}
-                </div>
-                  );
-                })()}
-              </div>
-              <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{a.location_address}</div>
-                <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
-                <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {a.service_time?.slice(0,5) ?? "—"}</div>
-                {role === "restaurant" && (
-                  <div className="flex items-center gap-2"><Users className="h-4 w-4" />{counts[a.id] ?? 0} candidatur{(counts[a.id] ?? 0) === 1 ? "a" : "e"}</div>
-                )}
-              </div>
-              <div className="mt-3">
-                <AnnouncementMapBlock
-                  annId={a.id}
-                  lat={a.location_lat}
-                  lng={a.location_lng}
-                  address={a.location_address}
-                  open={!!openMaps[a.id]}
-                  onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
-                />
-              </div>
-              {role === "restaurant" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 mt-3"
-                  onClick={() => openDetails(a)}
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  Vedi riepilogo annuncio
-                </Button>
-              )}
-              {role === "restaurant" && a.status !== "active" && (() => {
-                const eff = computeEffectiveStatus(a, now);
-                const label = eff.kind === "expired" ? "Ripubblica annuncio" : "Riusa come nuovo";
-                return (
-                  <Button
-                    variant={eff.kind === "expired" ? "default" : "outline"}
-                    size="sm"
-                    className="gap-2 mt-3"
-                    onClick={() => { setRepublishAnn(a); setRepublishOpen(true); }}
-                  >
-                    <RotateCw className="h-3 w-3" />{label}
-                  </Button>
-                );
-              })()}
-              <div className="mt-3">
-                {role === "restaurant" ? (
-                  <>
-                    {(candidates[a.id]?.length ?? 0) > 0 && (
-                      <div className="mb-3 rounded-xl border bg-muted/30 p-3">
-                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          <Send className="h-3.5 w-3.5" />
-                          Richieste inviate ({candidates[a.id].length})
-                        </div>
-                        <ul className="space-y-2">
-                          {candidates[a.id].map((c) => {
-                            const ps = deriveProposalStatus(a, c);
-                            return (
-                              <li key={c.worker_id} className="rounded-lg border bg-card p-2.5">
-                                <div className="flex items-start gap-2.5">
-                                  {c.avatar_url ? (
-                                    <img src={c.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
-                                  ) : (
-                                    <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-secondary-foreground">
-                                      {(c.full_name || "?").slice(0, 1).toUpperCase()}
-                                    </div>
-                                  )}
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="text-sm font-semibold text-foreground truncate">
-                                        {c.full_name || "Lavoratore"}
-                                      </span>
-                                      {c.rating_avg != null && (
-                                        <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
-                                          <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                                          <span className="text-foreground font-medium">{Number(c.rating_avg).toFixed(1)}</span>
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                                      {c.professional_profile && <span>{c.professional_profile}</span>}
-                                      {c.application_created_at && (
-                                        <span title="Richiesta inviata">· {formatRelativeShort(c.application_created_at)}</span>
-                                      )}
-                                    </div>
-                                    <div className="mt-1.5 flex items-center gap-2">
-                                      <span className={`text-[11px] rounded-full px-2 py-0.5 font-medium ${PROPOSAL_STATUS_CLS[ps]}`}>
-                                        {PROPOSAL_STATUS_LABEL[ps]}
-                                      </span>
-                                    </div>
-                                    {c.last_message_preview && (
-                                      <p className="mt-1.5 text-xs text-muted-foreground italic line-clamp-1">
-                                        “{c.last_message_preview}”
-                                      </p>
-                                    )}
-                                  </div>
-                                  {c.application_id && (
-                                    <Link
-                                      to="/messages/$id"
-                                      params={{ id: c.application_id }}
-                                      className="shrink-0"
-                                    >
-                                      <Button size="sm" variant="outline" className="gap-1 h-8">
-                                        <MessageSquare className="h-3.5 w-3.5" />
-                                        Apri chat
-                                      </Button>
-                                    </Link>
-                                  )}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="default" className="gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          Vedi candidature{counts[a.id] ? ` (${counts[a.id]})` : ""}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)] z-50">
-                        <DropdownMenuItem
-                          onSelect={(e) => { e.preventDefault(); openDetails(a); }}
-                          className="cursor-pointer gap-2 text-primary font-medium"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          Vedi riepilogo annuncio
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Candidati per questo annuncio</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {(effOuter.kind === "expired" || effOuter.kind === "completed" || effOuter.kind === "cancelled") && (
-                          <div className="px-2 pt-1 pb-2 text-[11px] text-muted-foreground italic">
-                            Annuncio {effOuter.kind === "completed" ? "completato" : effOuter.kind === "cancelled" ? "annullato" : "scaduto"}: messaggistica disabilitata.
-                          </div>
-                        )}
-                        {(candidates[a.id]?.length ?? 0) === 0 ? (
-                          <div className="px-2 py-3 text-xs text-muted-foreground">
-                            Nessuna candidatura ricevuta per questo annuncio
-                          </div>
-                        ) : (
-                          candidates[a.id].map((c) => {
-                            const isAssigned = a.assigned_worker_id === c.worker_id;
-                            const msgDisabled = effOuter.kind === "expired" || effOuter.kind === "completed" || effOuter.kind === "cancelled";
-                            return (
-                            <DropdownMenuItem
-                              key={c.worker_id}
-                              disabled={msgDisabled}
-                              onSelect={() => {
-                                if (msgDisabled) return;
-                                if (isBlocked) { setBlockOpen(true); return; }
-                                setProposalTarget({ ann: a, candidate: c });
-                              }}
-                              className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
-                            >
-                              <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                                {c.full_name || "Lavoratore"}
-                                {isAssigned && (
-                                  <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 text-green-800 px-1.5 py-0.5 text-[10px] font-medium">
-                                    ✅ Assegnato
-                                  </span>
-                                )}
-                              </span>
-                              <span className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                                {c.professional_profile && <span>{c.professional_profile}</span>}
-                                {c.rating_avg != null && (
-                                  <span className="inline-flex items-center gap-1">
-                                    {Array.from({ length: 5 }).map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-3 w-3 ${
-                                          i < Math.round(c.rating_avg ?? 0)
-                                            ? "text-yellow-400 fill-yellow-400"
-                                            : "text-gray-300"
-                                        }`}
-                                      />
-                                    ))}
-                                    <span className="text-foreground font-medium">{Number(c.rating_avg).toFixed(1)}</span>
-                                  </span>
-                                )}
-                                {c.badge && <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px]">{c.badge}</span>}
-                              </span>
-                            </DropdownMenuItem>
-                            );
-                          })
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
-                ) : (
-                  <Link to="/announcements/$id" params={{ id: a.id }}>
-                    <Button size="sm" variant="outline" className="gap-1">Apri dettagli</Button>
-                  </Link>
-                )}
+        <div className="space-y-6">
+          {statusFilter === "all" && upcoming.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">Annunci attivi / in arrivo</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {upcoming.map((a) => renderCard(a))}
               </div>
             </div>
-            );
-          })}
+          )}
+          {statusFilter === "all" && past.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Annunci scaduti / completati</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {past.map((a) => renderCard(a))}
+              </div>
+            </div>
+          )}
+          {statusFilter !== "all" && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {upcoming.map((a) => renderCard(a))}
+            </div>
+          )}
         </div>
       )}
 
