@@ -67,7 +67,7 @@ function ShiftsPage() {
   const [viewReviewData, setViewReviewData] = useState<{ rating: number; comment: string | null } | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const { items: requiredReviews } = useRequiredReviews();
+  const { items: requiredReviews, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
     requiredReviews.forEach((r) => { if (r.shift_id) m[r.shift_id] = { status: r.status, due_date: r.due_date }; });
@@ -173,6 +173,12 @@ function ShiftsPage() {
       toast.success("Recensione inviata", { id: tId });
       // Optimistic, immediate card update — no page reload needed
       setReviewMap(prev => ({ ...prev, [s.id]: submittedRating }));
+      // Immediately refresh shift row from DB so any server-side updates (status, etc.) reflect
+      supabase.from("shifts").select("*").eq("id", s.id).maybeSingle().then(({ data }) => {
+        if (data) setShifts(prev => prev.map(x => x.id === s.id ? (data as Shift) : x));
+      });
+      // Refresh required-reviews list so "Da recensire" badge/counter updates instantly
+      refreshRequiredReviews();
       setReviewOpen(null);
       setRating(5);
       setComment("");
