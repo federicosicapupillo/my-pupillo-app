@@ -104,7 +104,7 @@ const PLACEHOLDER_BY_CATEGORY: Record<Category, string> = {
   availability: "Aggiungi nome o ruolo",
   custom: "Scrivi qualsiasi parola chiave",
 };
-type Ann = { id: string; service_date: string; location_address: string; location_lat: number | null; location_lng: number | null };
+type Ann = { id: string; service_date: string; service_time: string | null; location_address: string; location_lat: number | null; location_lng: number | null };
 
 function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371000;
@@ -184,8 +184,12 @@ function WorkersPage() {
   useEffect(() => {
     (async () => {
       if (user) {
-        const { data } = await supabase.from("announcements").select("id, service_date, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
-        const list = (data as Ann[]) ?? [];
+        const { data } = await supabase.from("announcements").select("id, service_date, service_time, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
+        const now = new Date();
+        const list = ((data as Ann[]) ?? []).filter((a) => {
+          const start = getShiftStartDate(a as any);
+          return start ? start.getTime() > now.getTime() : true;
+        });
         setAnns(list);
         if (list.length) {
           const saved = getLastAnnouncementId(user.id);
