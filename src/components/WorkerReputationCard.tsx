@@ -77,15 +77,31 @@ export function WorkerReputationCard({ workerId, profile, showTips = false, clas
           )}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-sm">
+        <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-sm space-y-2">
           <div className="font-medium">
             {s.level === "new_verified" ? "Nuovo verificato · Profilo completo" : "Nuovo profilo"}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Reputazione in costruzione. {s.reviewsCount === 0
-              ? "Valutazione non ancora disponibile."
-              : `Reputation Score verrà mostrato dopo i primi 3 servizi completati.`}
+          <p className="text-xs text-muted-foreground">
+            Reputazione in costruzione — il Reputation Score viene mostrato dopo almeno{" "}
+            <strong>3 servizi completati</strong>.
           </p>
+          <div className="flex flex-wrap gap-1.5 text-[11px]">
+            <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+              Servizi completati: <strong className="tabular-nums">{s.completedShifts}</strong>
+            </span>
+            {s.reviewsCount > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+                Recensioni: <strong className="tabular-nums">{s.reviewsCount}</strong>
+                {s.rating > 0 && (
+                  <span className="text-muted-foreground">· media {s.rating.toFixed(1)}/5</span>
+                )}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-muted-foreground">
+                Valutazione non ancora disponibile
+              </span>
+            )}
+          </div>
         </div>
       )}
 
