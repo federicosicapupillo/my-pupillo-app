@@ -37,8 +37,14 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
         result[row.id] = null;
         continue;
       }
-      // Reject legacy/public URLs and any absolute/external reference.
-      if (/^(https?:|data:|blob:|\/\/)/i.test(stored)) {
+      // Legacy/seed data may store a full http(s) URL (e.g. seed avatars).
+      // Pass these through directly so the avatar still renders.
+      if (/^https?:\/\//i.test(stored)) {
+        result[row.id] = stored;
+        continue;
+      }
+      // Reject other absolute/external schemes (data:, blob:, protocol-relative).
+      if (/^(data:|blob:|\/\/)/i.test(stored)) {
         result[row.id] = null;
         continue;
       }
