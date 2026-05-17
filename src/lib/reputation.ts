@@ -105,12 +105,13 @@ export function summarizeReputation(p: WorkerReputationInput): ReputationSummary
   const isNew = completed < 3;
   const rehireTotal = Number(p.rehire_total_answers ?? 0);
   const rehireYes = Number(p.rehire_yes_count ?? 0);
+  const isNewLevel = level === "new" || level === "new_verified";
   return {
     level,
     levelLabel: LEVEL_LABELS[level],
     score: Math.max(0, Math.min(100, Number(p.reputation_score ?? 0))),
-    showScore: !isNew,
-    isNew,
+    showScore: !isNew && !isNewLevel,
+    isNew: isNew || isNewLevel,
     rehirePct: rehireTotal > 0 ? Math.round((rehireYes * 100) / rehireTotal) : null,
     punctualityPct: Math.max(0, Math.min(100, Number(p.punctuality_pct ?? 0))),
     completionPct: Math.max(0, Math.min(100, Number(p.completion_pct ?? 0))),
