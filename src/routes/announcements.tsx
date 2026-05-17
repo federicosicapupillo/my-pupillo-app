@@ -431,43 +431,81 @@ function AnnouncementsPage() {
         className={`rounded-2xl border bg-card p-5 ${isExpired ? "opacity-70 border-red-200" : ""}`}
       >
         {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (
-          <div className={`mb-3 rounded-xl border p-3 ${a.status === "completed" ? "bg-blue-50 border-blue-200" : "bg-green-50 border-green-200"}`}>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <CheckCircle2 className={`h-4 w-4 ${a.status === "completed" ? "text-blue-600" : "text-green-600"}`} />
-              <span className={a.status === "completed" ? "text-blue-800" : "text-green-800"}>
-                {a.status === "completed" ? "Turno completato" : "Turno assegnato"}
-              </span>
-            </div>
-            <div className="mt-1 text-sm text-foreground">
-              {a.status === "completed" ? "Lavoratore: " : "Assegnato a: "}
-              <span className="font-medium">{assigned[a.id].full_name || "Lavoratore"}</span>
-            </div>
-            {a.status === "completed" && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {assigned[a.id].rating != null ? (
-                <span className="inline-flex items-center gap-1">
+        {role === "restaurant" && (a.status === "assigned" || a.status === "completed") && assigned[a.id] && (() => {
+          const info = assigned[a.id];
+          const start = getShiftStartDate(a);
+          const end = getShiftEndDate(a);
+          const nowMs = now.getTime();
+          const hasReview = info.rating != null;
+          const isClosed = info.shift_status === "completed" || a.status === "completed";
+          const afterEnd = !!end && nowMs >= end.getTime();
+          const afterStart = !!start && nowMs >= start.getTime();
+          let stateLabel = "Turno assegnato";
+          let stateCls = "bg-green-50 border-green-200 text-green-800";
+          if (hasReview) {
+            stateLabel = "Turno chiuso — recensione inviata";
+            stateCls = "bg-indigo-50 border-indigo-200 text-indigo-800";
+          } else if (isClosed) {
+            stateLabel = "Turno chiuso — recensione da inviare";
+            stateCls = "bg-yellow-50 border-yellow-300 text-yellow-900";
+          } else if (afterEnd) {
+            stateLabel = "Turno concluso — da chiudere";
+            stateCls = "bg-amber-50 border-amber-200 text-amber-800";
+          } else if (afterStart) {
+            stateLabel = "Turno in corso";
+            stateCls = "bg-blue-50 border-blue-200 text-blue-800";
+          }
+          return (
+            <div className={`mb-3 rounded-xl border p-3 ${stateCls}`}>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>{stateLabel}</span>
+              </div>
+              <div className="mt-1 text-sm text-foreground">
+                Lavoratore: <span className="font-medium">{info.full_name || "Lavoratore"}</span>
+              </div>
+              {hasReview && (
+                <div className="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
                   La tua valutazione:
                   <span className="inline-flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className={`h-3 w-3 ${
-                          i < (assigned[a.id].rating ?? 0)
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-300"
-                        }`}
+                        className={`h-3 w-3 ${i < (info.rating ?? 0) ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
                       />
                     ))}
                   </span>
-                  <span className="text-foreground font-medium">{assigned[a.id].rating}/5</span>
-                </span>
-                ) : (
-                  <span className="italic">Valutazione non ancora inserita</span>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+                  <span className="text-foreground font-medium">{info.rating}/5</span>
+                </div>
+              )}
+              {!isClosed && !hasReview && (
+                <div className="mt-2">
+                  {afterEnd ? (
+                    <Button size="sm" className="gap-1" onClick={() => setCloseTarget(a)}>
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Chiudi turno
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      <Button size="sm" disabled className="gap-1 w-fit">
+                        <Lock className="h-3.5 w-3.5" /> Chiudi turno
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground italic">
+                        Potrai chiudere il turno dopo l'orario di fine servizio.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isClosed && !hasReview && info.shift_id && (
+                <div className="mt-2">
+                  <Button size="sm" className="gap-1" onClick={() => navigate({ to: "/shifts", search: { tab: "to-review", shift: info.shift_id } as never })}>
+                    <Star className="h-3.5 w-3.5" /> Lascia recensione
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />{formatRange(a)}</div>
