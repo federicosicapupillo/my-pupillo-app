@@ -15,6 +15,7 @@ import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
+import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatTariff } from "@/lib/format";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import {
@@ -517,6 +518,17 @@ function Thread() {
     if (!app || !user) return;
     // Charge credits to the restaurant only on shift assignment confirmation.
     if (next === "accepted" && role === "restaurant" && app.status !== "accepted") {
+      // Server-side authority: verify the current proposal has been accepted by the worker.
+      try {
+        const check = await canAssignShift({ data: { applicationId: id } });
+        if (!check.canAssign) {
+          toast.error(check.reason ?? "Impossibile assegnare il turno in questo momento.");
+          return;
+        }
+      } catch (e: any) {
+        toast.error(e?.message ?? "Verifica server non riuscita.");
+        return;
+      }
       if (isBlocked) {
         setBlockOpen(true);
         return;
