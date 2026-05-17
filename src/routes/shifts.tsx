@@ -415,14 +415,16 @@ function ShiftsPage() {
               })}
             </div>
           )}
-          {filtered.length === 0 && !(role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0) ? (
+          {displayShifts.length === 0 && !(role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0) ? (
         <div className="rounded-2xl border bg-card p-8 text-center">
           <CalendarClock className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">Nessun turno da mostrare.</p>
+          <p className="text-muted-foreground">
+            {filter === "assigned" ? "Non hai ancora turni assegnati." : "Nessun turno da mostrare."}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(s => {
+          {displayShifts.map(s => {
             const meta = statusMeta[s.status];
             const Icon = meta.icon;
             const otherId = role === "restaurant" ? s.worker_id : s.restaurant_id;
