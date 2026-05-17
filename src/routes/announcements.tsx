@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2 } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Shirt, Briefcase, Languages, ListChecks, StickyNote, UserCheck, Copy } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { labelOf, labelsOf } from "@/lib/announcement-requirements";
+import {
+  labelOf, labelsOf,
+  LICENSE_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
+} from "@/lib/announcement-requirements";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 function AnnouncementMapBlock({
   annId, lat, lng, address, open, onToggle,
@@ -207,7 +216,7 @@ const STATUS_CLS: Record<string, string> = {
 };
 
 function AnnouncementsPage() {
-  const { user, role } = useAuth();
+  const { user, role, profile } = useAuth();
   const navigate = useNavigate();
   const { status: initialStatus } = Route.useSearch();
   const [items, setItems] = useState<Ann[]>([]);
@@ -218,6 +227,8 @@ function AnnouncementsPage() {
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
   const [republishOpen, setRepublishOpen] = useState(false);
   const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsAnn, setDetailsAnn] = useState<Ann | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
     (initialStatus as any) || "all"
   );
@@ -295,6 +306,12 @@ function AnnouncementsPage() {
   }, [user, role]);
 
   const visible = items.filter(a => statusFilter === "all" ? true : a.status === statusFilter);
+
+  const openDetails = (a: Ann) => { setDetailsAnn(a); setDetailsOpen(true); };
+  const handleAnnUpdated = (updated: Ann) => {
+    setItems((prev) => prev.map((x) => x.id === updated.id ? { ...x, ...updated } : x));
+    setDetailsAnn((prev) => prev && prev.id === updated.id ? { ...prev, ...updated } : prev);
+  };
 
   return (
     <AppShell>
@@ -429,6 +446,17 @@ function AnnouncementsPage() {
                   onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
                 />
               </div>
+              {role === "restaurant" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 mt-3"
+                  onClick={() => openDetails(a)}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Vedi riepilogo annuncio
+                </Button>
+              )}
               {role === "restaurant" && a.status !== "active" && (() => {
                 const eff = computeEffectiveStatus(a, now);
                 const label = eff.kind === "expired" ? "Ripubblica annuncio" : "Riusa come nuovo";
@@ -453,6 +481,14 @@ function AnnouncementsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)] z-50">
+                        <DropdownMenuItem
+                          onSelect={(e) => { e.preventDefault(); openDetails(a); }}
+                          className="cursor-pointer gap-2 text-primary font-medium"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          Vedi riepilogo annuncio
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuLabel>Candidati per questo annuncio</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {(effOuter.kind === "expired" || effOuter.kind === "completed" || effOuter.kind === "cancelled") && (
@@ -527,6 +563,17 @@ function AnnouncementsPage() {
         open={republishOpen}
         onOpenChange={setRepublishOpen}
         ann={republishAnn}
+      />
+      <AnnouncementDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        ann={detailsAnn}
+        candidatesCount={detailsAnn ? (counts[detailsAnn.id] ?? 0) : 0}
+        assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
+        venueName={(profile as any)?.business_name ?? null}
+        statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
+        onUpdated={handleAnnUpdated}
+        onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
       />
     </AppShell>
   );
