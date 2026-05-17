@@ -517,6 +517,10 @@ function Thread() {
     if (!app || !user) return;
     // Charge credits to the restaurant only on shift assignment confirmation.
     if (next === "accepted" && role === "restaurant" && app.status !== "accepted") {
+      if (isBlocked) {
+        setBlockOpen(true);
+        return;
+      }
       // Pre-check credits to show a premium dialog instead of a generic toast.
       const { data: prof } = await supabase
         .from("profiles")
