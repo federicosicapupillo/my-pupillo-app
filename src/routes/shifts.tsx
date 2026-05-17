@@ -334,14 +334,22 @@ function ShiftsPage() {
 
       {role === "restaurant" && <RequiredReviewsBanner />}
       {role === "restaurant" && actionShifts.length > 0 && (
-        <div className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+        <div className={`mb-4 rounded-2xl border p-4 ${actionShifts.some((a) => a.is_overdue) ? "border-destructive/30 bg-destructive/5" : "border-amber-400/40 bg-amber-50 dark:bg-amber-500/10"}`}>
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-            <h3 className="font-semibold text-sm">Azioni richieste ({actionShifts.length})</h3>
+            <AlertTriangle className={`h-4 w-4 ${actionShifts.some((a) => a.is_overdue) ? "text-destructive" : "text-amber-600"}`} />
+            <h3 className="font-semibold text-sm">Recensioni da completare ({actionShifts.length})</h3>
           </div>
           <div className="space-y-2">
             {actionShifts.map((a: ActionShift) => {
               const s = shifts.find(x => x.id === a.shift_id);
+              const overdue = a.is_overdue;
+              const ms = a.ms_until_deadline ?? 0;
+              const absH = Math.max(0, Math.floor(Math.abs(ms) / 3_600_000));
+              const days = Math.floor(absH / 24);
+              const hours = absH % 24;
+              const remainingLabel = overdue
+                ? `Scaduta da ${days > 0 ? `${days}g` : ""}${days > 0 && hours > 0 ? " " : ""}${days === 0 || hours > 0 ? `${hours}h` : ""}`.trim() || "Scaduta"
+                : `${days > 0 ? `${days}g` : ""}${days > 0 && hours > 0 ? " " : ""}${days === 0 || hours > 0 ? `${hours}h` : ""}`.trim() + " rimanenti";
               const closeAndReview = async () => {
                 if (s && s.status === "scheduled") {
                   await updateStatus(s, "completed");
@@ -356,7 +364,7 @@ function ShiftsPage() {
                 }, 200);
               };
               return (
-                <div key={a.shift_id} className="rounded-xl border bg-card p-3 flex items-center gap-3 flex-wrap">
+                <div key={a.shift_id} className={`rounded-xl border p-3 flex items-center gap-3 flex-wrap ${overdue ? "border-destructive/40 bg-card" : "bg-card"}`}>
                   <UserAvatar userId={a.worker_id} name={a.worker_name} className="h-9 w-9 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{a.worker_name ?? "Lavoratore"}</div>
@@ -366,12 +374,19 @@ function ShiftsPage() {
                       {a.service_time && ` · ${a.service_time.slice(0,5)}`}
                       {a.end_time && `–${a.end_time.slice(0,5)}`}
                     </div>
+                    {a.review_deadline && (
+                      <div className={`text-[11px] mt-0.5 ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                        {overdue ? "Scadenza superata · " : "Scadenza recensione: "}
+                        {new Date(a.review_deadline).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+                        {" "}{new Date(a.review_deadline).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    )}
                   </div>
-                  <Badge variant="outline" className={a.kind === "to_close" ? "bg-amber-500/15 text-amber-700 border-amber-500/30" : "bg-destructive/15 text-destructive border-destructive/30"}>
-                    {a.kind === "to_close" ? "Da chiudere" : "Recensione da inviare"}
+                  <Badge variant="outline" className={overdue ? "bg-destructive/15 text-destructive border-destructive/30" : "bg-amber-500/15 text-amber-700 border-amber-500/30"}>
+                    {overdue ? `Scaduta · ${remainingLabel.replace("Scaduta da ", "")}` : remainingLabel}
                   </Badge>
-                  <Button size="sm" className="gap-1" onClick={closeAndReview}>
-                    <Star className="h-3.5 w-3.5" /> Chiudi e recensisci
+                  <Button size="sm" className="gap-1" variant={overdue ? "destructive" : "default"} onClick={closeAndReview}>
+                    <Star className="h-3.5 w-3.5" /> {overdue ? "Recensisci ora" : "Chiudi e recensisci"}
                   </Button>
                 </div>
               );
