@@ -85,6 +85,15 @@ type Ann = {
   job_contact_person_email: string | null;
   status: string | null;
   restaurant_id: string;
+  service_date?: string | null;
+  service_time?: string | null;
+  duration_hours?: number | null;
+  tariff_amount?: number | null;
+  tariff_type?: string | null;
+  notes?: string | null;
+  required_skills?: string[] | null;
+  dress_code_items?: string[] | null;
+  language_requirements?: string[] | null;
 };
 
 function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
@@ -95,14 +104,17 @@ function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
 }
 
 function MapPage() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const isRestaurant = role === "restaurant";
+  const isWorker = role === "worker";
   const isDev = typeof import.meta !== "undefined" && (import.meta as any).env?.DEV === true;
   const debugEnabled = role === "admin" || isDev;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [annCounts, setAnnCounts] = useState<Record<string, number>>({});
+  // applicationStatus per announcement_id, solo per il lavoratore loggato
+  const [appStatusByAnn, setAppStatusByAnn] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   // search & filters
@@ -166,7 +178,7 @@ function MapPage() {
           .eq("role", "worker")
           .limit(2000),
         supabase.from("announcements")
-          .select("id, professional_profile, location_address, location_lat, location_lng, job_latitude, job_longitude, job_address, job_contact_person_name, job_contact_person_phone, job_contact_person_email, status, restaurant_id")
+          .select("id, professional_profile, location_address, location_lat, location_lng, job_latitude, job_longitude, job_address, job_contact_person_name, job_contact_person_phone, job_contact_person_email, status, restaurant_id, service_date, service_time, duration_hours, tariff_amount, tariff_type, notes, required_skills, dress_code_items, language_requirements")
           .eq("status", "active")
           .limit(1000),
       ]);
@@ -177,9 +189,21 @@ function MapPage() {
       const counts: Record<string, number> = {};
       (a || []).forEach((x: any) => { counts[x.restaurant_id] = (counts[x.restaurant_id] || 0) + 1; });
       setAnnCounts(counts);
+      // Carica lo stato delle candidature del lavoratore loggato per la privacy del popup
+      if (user && isWorker) {
+        const { data: apps } = await supabase
+          .from("applications")
+          .select("announcement_id, status")
+          .eq("worker_id", user.id);
+        const m: Record<string, string> = {};
+        (apps || []).forEach((x: any) => { m[x.announcement_id] = x.status; });
+        setAppStatusByAnn(m);
+      } else {
+        setAppStatusByAnn({});
+      }
       setLoading(false);
     })();
-  }, []);
+  }, [user?.id, isWorker]);
 
   const cities = useMemo(() => Array.from(new Set(restaurants.map(r => r.city).filter(Boolean))) as string[], [restaurants]);
   const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
@@ -341,7 +365,7 @@ function MapPage() {
         ];
         const picked = candidates.find(([la, ln]) => la != null && ln != null);
         if (!picked) { stats.missing++; return; }
-        const [lat, lng, source] = picked as [number, number, "job" | "location" | "profile" | "service_area"];
+        const [rawLat, rawLng, source] = picked as [number, number, "job" | "location" | "profile" | "service_area"];
         stats[source]++;
         byId[a.id] = source;
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
@@ -349,37 +373,76 @@ function MapPage() {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
         }
         const refPoint = searchCenter || me;
-        const distance = refPoint ? distKm(refPoint.lat, refPoint.lng, lat, lng) : null;
+        const distance = refPoint ? distKm(refPoint.lat, refPoint.lng, rawLat, rawLng) : null;
         const contactName = a.job_contact_person_name
           || [rest?.contact_person_first_name, rest?.contact_person_last_name].filter(Boolean).join(" ").trim()
           || null;
         const contactPhone = a.job_contact_person_phone || rest?.contact_person_phone || null;
         const contactEmail = a.job_contact_person_email || rest?.contact_person_email || null;
         const contactRole = rest?.contact_person_role || null;
+
+        // Privacy lavoratore: posizione approssimata e dati ridotti finché non c'è conferma reciproca
+        const appStatus = appStatusByAnn[a.id];
+        const confirmed = appStatus === "accepted";
+        const cancelled = appStatus === "rejected" || a.status === "cancelled" || a.status === "expired";
+        const usePrivacy = isWorker && !confirmed;
+        const [lat, lng] = usePrivacy ? jitterCoords([rawLat, rawLng], a.id, 0.8) : [rawLat, rawLng];
+
+        const zoneLabel = [rest?.neighborhood, rest?.city].filter(Boolean).join(" · ")
+          || rest?.city
+          || a.location_address?.split(",").slice(-2).join(",").trim()
+          || null;
+        const venueLabel = rest?.venue_type || "Locale";
+        const requirements = [
+          ...(a.required_skills || []),
+          ...(a.language_requirements?.map(l => `Lingua: ${l}`) || []),
+          ...(a.dress_code_items?.length ? [`Dress code: ${a.dress_code_items.join(", ")}`] : []),
+        ];
+
         pts.push({
           id: a.id,
           lat,
           lng,
           category: "announcement",
-          title: a.professional_profile || "Annuncio",
-          subtitle: role === "worker"
-            ? ([rest?.neighborhood, rest?.city].filter(Boolean).join(" · ") || undefined)
+          title: usePrivacy
+            ? `${venueLabel}${zoneLabel ? ` — zona ${zoneLabel}` : ""}`
+            : (rest?.business_name || rest?.full_name || a.professional_profile || "Annuncio"),
+          subtitle: usePrivacy
+            ? (a.professional_profile ? `Cerca ${a.professional_profile}` : "Servizio disponibile")
             : (a.job_address || a.location_address || undefined),
-          status: a.status,
+          status: cancelled ? "cancelled" : a.status,
           link: `/announcements/${a.id}`,
           meta: {
             distanceKm: distance,
-            contactName,
-            contactPhone,
-            contactEmail,
-            contactRole,
+            contactName: usePrivacy ? null : contactName,
+            contactPhone: usePrivacy ? null : contactPhone,
+            contactEmail: usePrivacy ? null : contactEmail,
+            contactRole: usePrivacy ? null : contactRole,
             coordSource: debugEnabled ? source : undefined,
+            workerView: isWorker,
+            confirmed,
+            cancelled,
+            venueType: rest?.venue_type ?? null,
+            zoneLabel,
+            role: a.professional_profile ?? null,
+            serviceDate: a.service_date ?? null,
+            serviceTime: a.service_time ?? null,
+            durationHours: a.duration_hours ?? null,
+            tariffAmount: a.tariff_amount ?? null,
+            tariffType: a.tariff_type ?? null,
+            generalDescription: a.notes ?? null,
+            requirements,
+            servicesAtVenue: annCounts[a.restaurant_id] || 0,
+            announcementId: a.id,
+            operationalNotes: usePrivacy ? null : (a.notes ?? null),
+            fullAddress: usePrivacy ? null : (a.job_address || a.location_address || null),
+            restaurantName: usePrivacy ? null : (rest?.business_name || rest?.full_name || null),
           } as any,
         });
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, annCounts]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
