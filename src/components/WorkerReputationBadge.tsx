@@ -5,12 +5,59 @@ import {
   scoreColorClass,
   type WorkerReputationInput,
 } from "@/lib/reputation";
+import type { ReputationSummary } from "@/lib/reputation";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+/**
+ * Tooltip body for the reputation badge. Exported so it can be tested in
+ * isolation without rendering the Radix Portal (which is hidden by default).
+ */
+export function ReputationBadgeTooltipContent({ s }: { s: ReputationSummary }) {
+  const hasEnoughReviews = s.reviewsCount >= 3;
+  return (
+    <div className="space-y-1.5 text-[11px] leading-snug">
+      <div className="font-semibold text-xs">Reputation Score</div>
+      {s.showScore ? (
+        <p>
+          Punteggio da 0 a 100 calcolato su servizi completati, puntualità,
+          recensioni e ricontatti dei ristoratori.
+        </p>
+      ) : (
+        <p>
+          Profilo nuovo: il punteggio viene mostrato dopo almeno{" "}
+          <strong>3 servizi completati</strong>. Per ora la reputazione è in costruzione.
+        </p>
+      )}
+      <div className="pt-1 border-t border-border/60 grid grid-cols-2 gap-x-2 gap-y-0.5">
+        <span className="text-muted-foreground">Servizi completati</span>
+        <span className="tabular-nums text-right">{s.completedShifts}</span>
+        <span className="text-muted-foreground">Recensioni</span>
+        <span className="tabular-nums text-right">{s.reviewsCount}</span>
+        {s.rating > 0 && hasEnoughReviews ? (
+          <>
+            <span className="text-muted-foreground">Valutazione media</span>
+            <span className="tabular-nums text-right">{s.rating.toFixed(1)}/5</span>
+          </>
+        ) : (
+          <>
+            <span className="text-muted-foreground">Valutazione media</span>
+            <span className="text-right text-muted-foreground">
+              {s.reviewsCount === 0 ? "non disponibile" : "in costruzione"}
+            </span>
+          </>
+        )}
+      </div>
+      <div className="pt-1 text-[10px] text-muted-foreground">
+        Livelli: Nuovo → Nuovo verificato → Basic → Pro → Elite
+      </div>
+    </div>
+  );
+}
 
 /**
  * Compact reputation chip for worker cards in lists / map popups.
@@ -50,42 +97,7 @@ export function WorkerReputationBadge({
           </span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-[260px] bg-popover text-popover-foreground border shadow-md p-3">
-          <div className="space-y-1.5 text-[11px] leading-snug">
-            <div className="font-semibold text-xs">Reputation Score</div>
-            {s.showScore ? (
-              <p>
-                Punteggio da 0 a 100 calcolato su servizi completati, puntualità,
-                recensioni e ricontatti dei ristoratori.
-              </p>
-            ) : (
-              <p>
-                Profilo nuovo: il punteggio viene mostrato dopo almeno{" "}
-                <strong>3 servizi completati</strong>. Per ora la reputazione è in costruzione.
-              </p>
-            )}
-            <div className="pt-1 border-t border-border/60 grid grid-cols-2 gap-x-2 gap-y-0.5">
-              <span className="text-muted-foreground">Servizi completati</span>
-              <span className="tabular-nums text-right">{s.completedShifts}</span>
-              <span className="text-muted-foreground">Recensioni</span>
-              <span className="tabular-nums text-right">{s.reviewsCount}</span>
-              {s.rating > 0 && hasEnoughReviews ? (
-                <>
-                  <span className="text-muted-foreground">Valutazione media</span>
-                  <span className="tabular-nums text-right">{s.rating.toFixed(1)}/5</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-muted-foreground">Valutazione media</span>
-                  <span className="text-right text-muted-foreground">
-                    {s.reviewsCount === 0 ? "non disponibile" : "in costruzione"}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="pt-1 text-[10px] text-muted-foreground">
-              Livelli: Nuovo → Nuovo verificato → Basic → Pro → Elite
-            </div>
-          </div>
+          <ReputationBadgeTooltipContent s={s} />
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
