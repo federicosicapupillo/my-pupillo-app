@@ -15,6 +15,9 @@ import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
 import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
+import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
+import { useAvatarUrls } from "@/hooks/use-avatar-urls";
+import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
@@ -238,6 +241,46 @@ function MapPage() {
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
+  // Worker points for the avatar-based map (used for restaurant view).
+  // Position fallback: service_area_lat/lng → city lookup (with jitter).
+  const locatedWorkers = useMemo(() => {
+    let withCoords = 0, withCity = 0, skipped = 0;
+    const arr = filteredWorkers.map((w) => {
+      if (w.service_area_lat != null && w.service_area_lng != null) {
+        withCoords++;
+        return { w, pos: [w.service_area_lat, w.service_area_lng] as [number, number] };
+      }
+      const base = lookupCityCoords(w.city) || lookupCityCoords(w.neighborhood);
+      if (base) { withCity++; return { w, pos: jitterCoords(base, w.id, 1.5) }; }
+      skipped++;
+      return null;
+    }).filter((x): x is { w: Worker; pos: [number, number] } => x != null);
+    if (typeof window !== "undefined") {
+      console.debug("[mappa] workers totali:", filteredWorkers.length, "con coordinate:", withCoords, "con città/zona:", withCity, "saltati:", skipped, "marker:", arr.length);
+    }
+    return arr;
+  }, [filteredWorkers]);
+
+  const workerAvatarIds = useMemo(() => locatedWorkers.map(({ w }) => w.id), [locatedWorkers]);
+  const workerAvatars = useAvatarUrls(workerAvatarIds);
+
+  const workerMapPoints: WorkerMapPoint[] = useMemo(
+    () => locatedWorkers.map(({ w, pos }) => ({
+      id: w.id,
+      lat: pos[0],
+      lng: pos[1],
+      name: w.full_name,
+      role: w.primary_role,
+      city: w.city ?? w.neighborhood ?? null,
+      rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
+      badge: w.badge,
+      avatarUrl: workerAvatars[w.id] ?? null,
+      initials: mapInitials(w.full_name),
+      link: `/workers_/${w.id}`,
+    })),
+    [locatedWorkers, workerAvatars],
+  );
+
   const { points, coordSourceStats, coordSourceById } = useMemo(() => {
     const pts: MapPoint[] = [];
     const stats: Record<string, number> = { job: 0, location: 0, profile: 0, service_area: 0, missing: 0 };
@@ -372,6 +415,11 @@ function MapPage() {
   const center: [number, number] = searchCenter
     ? [searchCenter.lat, searchCenter.lng]
     : me ? [me.lat, me.lng]
+    : isRestaurant && workerMapPoints.length > 0
+      ? [
+          workerMapPoints.reduce((s, p) => s + p.lat, 0) / workerMapPoints.length,
+          workerMapPoints.reduce((s, p) => s + p.lng, 0) / workerMapPoints.length,
+        ]
     : points[0] ? [points[0].lat, points[0].lng]
     : [42.5, 12.5];
 
@@ -661,6 +709,23 @@ function MapPage() {
         <div ref={mapBoxRef} className="order-1 lg:order-2">
           {loading ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground" style={{ minHeight: 500 }}>Caricamento mappa…</div>
+          ) : isRestaurant ? (
+            workerMapPoints.length === 0 ? (
+              <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground" style={{ minHeight: 500 }}>
+                Nessun lavoratore visualizzabile sulla mappa.
+              </div>
+            ) : (
+              <>
+                <WorkersMap
+                  points={workerMapPoints}
+                  center={center}
+                  height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
+                />
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {workerMapPoints.length} lavorator{workerMapPoints.length === 1 ? "e" : "i"} sulla mappa · posizione approssimativa per tutela privacy · OpenStreetMap
+                </div>
+              </>
+            )
           ) : points.length === 0 ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground" style={{ minHeight: 500 }}>
               Nessun risultato sulla mappa. Modifica filtri o ricerca.
@@ -677,9 +742,11 @@ function MapPage() {
               />
             </Suspense>
           )}
+          {!isRestaurant && (
           <div className="mt-2 text-xs text-muted-foreground">
             {points.length} marker · {filteredRestaurants.length} ristoratori · {filteredWorkers.length} lavoratori{ref && radiusKm !== "any" ? ` entro ${radiusKm} km` : ""} · OpenStreetMap
           </div>
+          )}
         </div>
       </div>
     </AppShell>
@@ -688,6 +755,11 @@ function MapPage() {
 
 function Dot({ color }: { color: string }) {
   return <span style={{ background: color, width: 10, height: 10, borderRadius: 9999, display: "inline-block" }} />;
+}
+
+function mapInitials(name: string | null | undefined): string {
+  if (!name) return "?";
+  return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
