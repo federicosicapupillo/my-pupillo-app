@@ -356,10 +356,20 @@ function Page() {
             return (
               <div
                 key={r.worker_id}
-                className="group relative rounded-3xl border bg-card p-5 flex flex-col gap-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                role="link"
+                tabIndex={0}
+                onClick={() => navigate({ to: "/workers_/$id", params: { id: r.worker_id } })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    navigate({ to: "/workers_/$id", params: { id: r.worker_id } });
+                  }
+                }}
+                className="group relative rounded-3xl border bg-card p-5 flex flex-col gap-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/30 transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                aria-label={`Apri profilo di ${r.full_name ?? "lavoratore"}`}
               >
                 <button
-                  onClick={() => toggleFav(r)}
+                  onClick={(e) => { e.stopPropagation(); toggleFav(r); }}
                   className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-muted transition-colors"
                   aria-label="Preferito"
                 >
@@ -440,19 +450,19 @@ function Page() {
                 )}
 
                 {/* Actions */}
-                <div className="flex flex-col gap-2 mt-auto">
+                <div className="flex flex-col gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
                   <Button
                     size="sm"
                     className="w-full gap-1.5 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm"
-                    onClick={() => recontact(r)}
+                    onClick={(e) => { e.stopPropagation(); recontact(r); }}
                   >
                     <MessageSquare className="h-4 w-4" /> Ricontatta gratis
                   </Button>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" className="flex-1 gap-1" onClick={() => openInvite(r)}>
+                    <Button size="sm" variant="secondary" className="flex-1 gap-1" onClick={(e) => { e.stopPropagation(); openInvite(r); }}>
                       <Send className="h-3.5 w-3.5" /> Invita
                     </Button>
-                    <Link to="/workers_/$id" params={{ id: r.worker_id }} className="flex-1">
+                    <Link to="/workers_/$id" params={{ id: r.worker_id }} className="flex-1" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant="outline" className="w-full gap-1">
                         Profilo <ArrowRight className="h-3.5 w-3.5" />
                       </Button>
