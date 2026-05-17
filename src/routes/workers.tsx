@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Search, List, Map as MapIcon, RotateCcw, X, MapPin, CheckCircle2, Clock, History, ThumbsUp, ThumbsDown, Gift } from "lucide-react";
+import { Search, List, Map as MapIcon, RotateCcw, X, MapPin, CheckCircle2, Clock, History, ThumbsUp, ThumbsDown, Gift, Star } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { CREDIT_COSTS } from "@/lib/pricing";
@@ -118,6 +118,7 @@ type WorkerRel = {
   hasOpenChat: boolean;
   lastContactAt: number;
   lastReviewAt: number;
+  lastReviewRating: number | null;
   latestResponseAt: number;
   latestResponseStatus: "accepted" | "rejected" | null;
 };
@@ -131,6 +132,7 @@ const emptyRel = (): WorkerRel => ({
   hasOpenChat: false,
   lastContactAt: 0,
   lastReviewAt: 0,
+  lastReviewRating: null,
   latestResponseAt: 0,
   latestResponseStatus: null,
 });
@@ -241,12 +243,12 @@ function WorkersPage() {
           .eq("restaurant_id", user.id),
         supabase
           .from("reviews")
-          .select("target_id, created_at")
+          .select("target_id, created_at, rating")
           .eq("author_id", user.id),
       ]);
       const apps = (appsRes.data as Array<{ id: string; worker_id: string; status: string | null; last_message_at: string | null; created_at: string }>) ?? [];
       const shifts = (shiftsRes.data as Array<{ worker_id: string; status: string | null; shift_date: string | null }>) ?? [];
-      const reviews = (reviewsRes.data as Array<{ target_id: string; created_at: string }>) ?? [];
+      const reviews = (reviewsRes.data as Array<{ target_id: string; created_at: string; rating: number | null }>) ?? [];
 
       // Ultima proposta + risposta per ogni candidatura
       const appIds = apps.map(a => a.id);
@@ -294,7 +296,11 @@ function WorkersPage() {
       for (const rv of reviews) {
         const r = map[rv.target_id] ?? emptyRel();
         r.reviewed = true;
-        r.lastReviewAt = Math.max(r.lastReviewAt, new Date(rv.created_at).getTime());
+        const ts = new Date(rv.created_at).getTime();
+        if (ts >= r.lastReviewAt) {
+          r.lastReviewAt = ts;
+          r.lastReviewRating = rv.rating ?? null;
+        }
         map[rv.target_id] = r;
       }
       if (!cancelled) setRel(map);
