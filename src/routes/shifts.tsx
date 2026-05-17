@@ -317,10 +317,11 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["all", "upcoming", "past", "to-review"] as const).map(f => {
+        {(["all", "upcoming", "assigned", "past", "to-review"] as const).map(f => {
           const label =
             f === "all" ? `Tutti (${counts.all})`
-            : f === "upcoming" ? `In attesa conferma (${counts.pending})`
+            : f === "upcoming" ? `In attesa (${counts.pending})`
+            : f === "assigned" ? `Assegnati (${counts.assigned})`
             : f === "past" ? `Passati (${counts.past})`
             : `Da recensire (${counts.toReview})`;
           return (
