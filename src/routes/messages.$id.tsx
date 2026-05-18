@@ -1895,15 +1895,11 @@ function Thread() {
                       ) : (
                         <p className="text-sm text-muted-foreground italic">Nessun commento</p>
                       )}
-                      {r.positive_tags && r.positive_tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {r.positive_tags.map((t, i) => (
-                            <span key={i} className="text-[10px] rounded-full bg-secondary text-secondary-foreground px-2 py-0.5">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <ReviewLabelsDisplay
+                        positive={r.positive_tags}
+                        negative={r.negative_tags}
+                        className="mt-2"
+                      />
                     </div>
                   );
                 })
