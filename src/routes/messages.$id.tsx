@@ -12,7 +12,12 @@ import { ArrowLeft, Check, CheckCheck, X, Euro, ThumbsUp, ThumbsDown, Send, Hand
 import { MessageSquare } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { publicLocationLabel, canSeePreciseAddress, maskPartnerNameForWorker } from "@/lib/public-location";
+import {
+  publicLocationLabel,
+  canSeePreciseAddress,
+  getDisplayPartnerName,
+  WORKED_TOGETHER_SHIFT_STATUSES,
+} from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
@@ -336,6 +341,8 @@ function Thread() {
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null; profile_completed: boolean; phone_verified: boolean } | null>(null);
+  const [otherIdentity, setOtherIdentity] = useState<{ businessName: string | null; fullName: string | null; firstName: string | null } | null>(null);
+  const [hasWorkedTogether, setHasWorkedTogether] = useState(false);
   const [workerRep, setWorkerRep] = useState<WorkerReputationInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
