@@ -591,6 +591,7 @@ function Admin() {
 
         {/* BACKUP */}
         <TabsContent value="backups" className="space-y-6">
+          <AdminBackupSystemSection />
           <AdminBackupsSection />
         </TabsContent>
       </Tabs>
