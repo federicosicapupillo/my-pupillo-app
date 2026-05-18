@@ -85,7 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.from("user_roles").select("role").eq("user_id", uid),
       supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
     ]);
-    const r = roles?.[0]?.role as Role | undefined;
+    const allRoles = (roles ?? []).map((x: { role: Role }) => x.role);
+    const r: Role | undefined =
+      allRoles.includes("admin") ? "admin"
+      : allRoles.includes("restaurant") ? "restaurant"
+      : allRoles.includes("worker") ? "worker"
+      : undefined;
     setRole(r ?? null);
     setProfile((prof as Profile) ?? null);
     // Apply per-user theme preference. Default restaurants to light.
