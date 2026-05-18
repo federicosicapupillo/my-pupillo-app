@@ -455,6 +455,9 @@ function ShiftsPage() {
                 setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
                 setDialogComment("");
                 setDialogError(null);
+                setDialogPositive([]);
+                setDialogNegative([]);
+                setDialogWouldRehire(null);
                 setReviewDialog(a);
               };
               return (
