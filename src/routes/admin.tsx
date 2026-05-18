@@ -226,7 +226,7 @@ function Admin() {
   });
 
   async function updateAccountStatus(id: string, newStatus: string, kind: "worker" | "restaurant") {
-    const { error } = await supabase.from("profiles").update({ account_status: newStatus }).eq("id", id);
+    const { error } = await supabase.from("profiles").update({ account_status: newStatus as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(newStatus === "suspended" ? "Account sospeso" : newStatus === "active" ? "Account riattivato" : "Stato aggiornato");
     if (kind === "worker") setWorkers(ws => ws.map(w => w.id === id ? { ...w, account_status: newStatus } : w));
@@ -234,7 +234,7 @@ function Admin() {
   }
 
   async function updateAnnouncementStatus(id: string, newStatus: string) {
-    const { error } = await supabase.from("announcements").update({ status: newStatus }).eq("id", id);
+    const { error } = await supabase.from("announcements").update({ status: newStatus as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Stato annuncio aggiornato");
     setAnnouncements(list => list.map(a => a.id === id ? { ...a, status: newStatus } : a));
