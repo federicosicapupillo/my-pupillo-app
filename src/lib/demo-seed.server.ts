@@ -168,7 +168,7 @@ async function seedRestaurants(batchId: string, count: number, report: ResetRepo
         full_name: fullName,
         business_name: businessName,
         vat_number: mockVatNumber(),
-        vat_status: "verified",
+        vat_status: "valid",
         vat_company_name: businessName,
         vat_verified_at: new Date().toISOString(),
         company_tax_code: mockTaxCode(i),
