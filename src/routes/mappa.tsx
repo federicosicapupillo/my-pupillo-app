@@ -645,17 +645,19 @@ function MapPage() {
             Solo con richieste attive
           </label>
           <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
-            {!isRestaurant && (
+            {!isRestaurant && !isWorker && (
               <label className="flex items-center gap-2"><Checkbox checked={showR} onCheckedChange={v=>setShowR(!!v)} /><Dot color="#4f46e5" /> Ristoratori</label>
             )}
-            <label className="flex items-center gap-2"><Checkbox checked={showW} onCheckedChange={v=>setShowW(!!v)} /><Dot color="#22c55e" /> Lavoratori</label>
+            {!isWorker && (
+              <label className="flex items-center gap-2"><Checkbox checked={showW} onCheckedChange={v=>setShowW(!!v)} /><Dot color="#22c55e" /> Lavoratori</label>
+            )}
             <label className="flex items-center gap-2"><Checkbox checked={showA} onCheckedChange={v=>setShowA(!!v)} /><Dot color="#06b6d4" /> Richieste</label>
           </div>
         </div>
       </div>
 
       {/* WORKER FILTERS */}
-      {showW && (
+      {showW && !isWorker && (
         <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
           <Select value={wRole} onValueChange={setWRole}>
             <SelectTrigger><SelectValue placeholder="Ruolo lavoratore" /></SelectTrigger>
