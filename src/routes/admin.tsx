@@ -510,6 +510,11 @@ function Admin() {
           </div>
           <AdminRequiredReviewsSection />
         </TabsContent>
+
+        {/* BACKUP */}
+        <TabsContent value="backups" className="space-y-6">
+          <AdminBackupsSection />
+        </TabsContent>
       </Tabs>
     </AppShell>
   );
