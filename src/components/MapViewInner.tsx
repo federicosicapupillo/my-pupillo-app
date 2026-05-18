@@ -180,6 +180,32 @@ function ClosePopupOnPointsChange({ signature }: { signature: string }) {
   return null;
 }
 
+// Mantiene la preview aperta quando il puntatore entra nel popup DOM,
+// e ne pianifica la chiusura quando ne esce. Usa listener nativi su
+// `.leaflet-popup` agganciati ad ogni `popupopen`.
+function PopupHoverKeepAlive({ onEnter, onLeave }: { onEnter: () => void; onLeave: () => void }) {
+  const map = useMap();
+  useEffect(() => {
+    const onOpen = (e: any) => {
+      const el: HTMLElement | undefined = e.popup?.getElement?.();
+      if (!el) return;
+      const enter = () => onEnter();
+      const leave = () => onLeave();
+      el.addEventListener("mouseenter", enter);
+      el.addEventListener("mouseleave", leave);
+      const onClose = () => {
+        el.removeEventListener("mouseenter", enter);
+        el.removeEventListener("mouseleave", leave);
+        map.off("popupclose", onClose);
+      };
+      map.on("popupclose", onClose);
+    };
+    map.on("popupopen", onOpen);
+    return () => { map.off("popupopen", onOpen); };
+  }, [map, onEnter, onLeave]);
+  return null;
+}
+
 export default function MapViewInner({ points, height, center, focusZoom, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; focusZoom?: number; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
   // Firma stabile della lista di punti: cambia quando filtri/categoria
   // modificano l'insieme visualizzato → triggera la chiusura della preview.
@@ -187,44 +213,98 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
     () => `${points.length}:${points.map((p) => `${p.category}-${p.id}`).join("|")}`,
     [points]
   );
-  // Desktop con mouse: hover apre la preview, mouseout la chiude con un
-  // piccolo delay (così l'utente può spostarsi sopra il popup senza che
-  // sparisca). Su touch (mobile/tablet): tap toglie/mette la preview.
+  // Desktop con mouse: hover apre la preview con un breve open-delay,
+  // mouseout la chiude con un piccolo close-delay (così l'utente può
+  // spostarsi sul popup senza flicker). Mouseenter sul popup annulla la
+  // chiusura; mouseleave dal popup la riprogramma.
+  // Su touch (mobile/tablet): tap toggle, tap fuori chiude (delegato a
+  // closePopupOnClick di Leaflet).
   const hasHover = typeof window !== "undefined"
     && typeof window.matchMedia === "function"
     && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  // Timer condivisi: open ed close, gestiti con ref per evitare re-render.
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeMarkerRef = useRef<any>(null);
+  const CLOSE_DELAY = 220;
+  const OPEN_DELAY = 60;
   const cancelClose = () => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
   };
+  const cancelOpen = () => {
+    if (openTimerRef.current) {
+      clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
+    }
+  };
+  const scheduleClose = (marker: any) => {
+    cancelClose();
+    closeTimerRef.current = setTimeout(() => {
+      try { marker?.closePopup?.(); } catch { /* noop */ }
+      if (activeMarkerRef.current === marker) activeMarkerRef.current = null;
+    }, CLOSE_DELAY);
+  };
   const markerHandlers = useMemo(() => {
     if (hasHover) {
       return {
-        mouseover: (e: any) => { cancelClose(); e.target.openPopup(); },
-        mouseout: (e: any) => {
+        mouseover: (e: any) => {
           cancelClose();
-          closeTimerRef.current = setTimeout(() => {
-            e.target.closePopup();
-          }, 250);
+          // Se sto già hoverando lo stesso marker non riapro nulla.
+          if (activeMarkerRef.current === e.target) return;
+          cancelOpen();
+          openTimerRef.current = setTimeout(() => {
+            // Chiudi il precedente per garantire UNA sola preview aperta.
+            const prev = activeMarkerRef.current;
+            if (prev && prev !== e.target) {
+              try { prev.closePopup(); } catch { /* noop */ }
+            }
+            activeMarkerRef.current = e.target;
+            e.target.openPopup();
+          }, OPEN_DELAY);
         },
-        // Click chiude il popup se aperto, altrimenti lo apre — utile per
-        // chi usa il mouse ma vuole "pinnare" la preview con un click.
-        click: (e: any) => { cancelClose(); e.target.openPopup(); },
+        mouseout: (e: any) => {
+          // Se l'apertura era solo "in programma", annullala subito.
+          cancelOpen();
+          scheduleClose(e.target);
+        },
+        // Click "pinna" la preview: annulla qualsiasi timer di chiusura.
+        click: (e: any) => {
+          cancelOpen();
+          cancelClose();
+          activeMarkerRef.current = e.target;
+          e.target.openPopup();
+        },
       };
     }
-    // Touch: tap apre, tap fuori chiude (closePopupOnClick di Leaflet).
+    // Touch: tap apre (toggle se già aperto). Il tap fuori chiude via
+    // closePopupOnClick di Leaflet.
     return {
-      click: (e: any) => e.target.openPopup(),
+      click: (e: any) => {
+        const popup = e.target.getPopup?.();
+        const isOpen = popup && (popup as any).isOpen?.();
+        if (isOpen) {
+          e.target.closePopup();
+          activeMarkerRef.current = null;
+        } else {
+          // Chiudi un'eventuale altra preview aperta su altro marker.
+          const prev = activeMarkerRef.current;
+          if (prev && prev !== e.target) {
+            try { prev.closePopup(); } catch { /* noop */ }
+          }
+          activeMarkerRef.current = e.target;
+          e.target.openPopup();
+        }
+      },
     };
   }, [hasHover]);
-  // Mantieni il popup aperto se l'utente sposta il puntatore dentro al popup.
-  const popupHandlers = hasHover
-    ? { mouseover: cancelClose, mouseout: (e: any) => { closeTimerRef.current = setTimeout(() => e.target._source?.closePopup(), 250); } }
-    : undefined;
-  useEffect(() => () => cancelClose(), []);
+  // Hover sul popup DOM: tieni viva la preview finché il puntatore è dentro.
+  // Lo facciamo via listener nativi sull'elemento del popup (più affidabile
+  // di eventHandlers di react-leaflet su <Popup>) all'evento `popupopen`.
+  // È implementato all'interno di PopupHoverKeepAlive sotto.
+  useEffect(() => () => { cancelClose(); cancelOpen(); }, []);
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_50px_-25px_rgba(0,0,0,0.7)]" style={{ height }}>
       <MapContainer
@@ -236,6 +316,15 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
       >
         <Recenter center={center} zoom={focusZoom} />
         <PopupA11y />
+        {hasHover && (
+          <PopupHoverKeepAlive
+            onEnter={cancelClose}
+            onLeave={() => {
+              const m = activeMarkerRef.current;
+              if (m) scheduleClose(m);
+            }}
+          />
+        )}
         <ClosePopupOnPointsChange signature={pointsSignature} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -267,7 +356,7 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
             icon={makeIcon(p.category)}
             eventHandlers={markerHandlers}
           >
-            <Popup maxWidth={320} minWidth={260} autoClose closeOnClick eventHandlers={popupHandlers as any}>
+            <Popup maxWidth={320} minWidth={260} autoClose closeOnClick>
               {p.category === "announcement" && p.meta?.workerView ? (
                 <WorkerAnnouncementPopup p={p} />
               ) : (
