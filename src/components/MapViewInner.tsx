@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 export type MapCategory = "restaurant" | "worker" | "announcement";
 
@@ -95,22 +95,53 @@ function Recenter({ center, zoom }: { center: [number, number]; zoom?: number })
 }
 
 export default function MapViewInner({ points, height, center, focusZoom, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; focusZoom?: number; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
-  // Su desktop con mouse: hover per aprire la preview.
-  // Su touch (mobile/tablet): comportamento default = tap.
+  // Desktop con mouse: hover apre la preview, mouseout la chiude con un
+  // piccolo delay (così l'utente può spostarsi sopra il popup senza che
+  // sparisca). Su touch (mobile/tablet): tap toglie/mette la preview.
   const hasHover = typeof window !== "undefined"
     && typeof window.matchMedia === "function"
     && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-  const hoverHandlers = hasHover
-    ? {
-        mouseover: (e: any) => e.target.openPopup(),
-        // Non chiudo su mouseout: l'utente può spostare il puntatore sul popup
-        // per leggerlo o cliccare i pulsanti. Aprire un altro marker o
-        // cliccare la mappa chiude comunque il popup (default Leaflet).
-      }
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+  const markerHandlers = useMemo(() => {
+    if (hasHover) {
+      return {
+        mouseover: (e: any) => { cancelClose(); e.target.openPopup(); },
+        mouseout: (e: any) => {
+          cancelClose();
+          closeTimerRef.current = setTimeout(() => {
+            e.target.closePopup();
+          }, 250);
+        },
+        // Click chiude il popup se aperto, altrimenti lo apre — utile per
+        // chi usa il mouse ma vuole "pinnare" la preview con un click.
+        click: (e: any) => { cancelClose(); e.target.openPopup(); },
+      };
+    }
+    // Touch: tap apre, tap fuori chiude (closePopupOnClick di Leaflet).
+    return {
+      click: (e: any) => e.target.openPopup(),
+    };
+  }, [hasHover]);
+  // Mantieni il popup aperto se l'utente sposta il puntatore dentro al popup.
+  const popupHandlers = hasHover
+    ? { mouseover: cancelClose, mouseout: (e: any) => { closeTimerRef.current = setTimeout(() => e.target._source?.closePopup(), 250); } }
     : undefined;
+  useEffect(() => () => cancelClose(), []);
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_50px_-25px_rgba(0,0,0,0.7)]" style={{ height }}>
-      <MapContainer center={center} zoom={6} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
+      <MapContainer
+        center={center}
+        zoom={6}
+        scrollWheelZoom
+        closePopupOnClick
+        style={{ height: "100%", width: "100%" }}
+      >
         <Recenter center={center} zoom={focusZoom} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -140,9 +171,9 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
             key={`${p.category}-${p.id}`}
             position={[p.lat, p.lng]}
             icon={makeIcon(p.category)}
-            eventHandlers={hoverHandlers}
+            eventHandlers={markerHandlers}
           >
-            <Popup maxWidth={320} minWidth={260}>
+            <Popup maxWidth={320} minWidth={260} autoClose closeOnClick eventHandlers={popupHandlers as any}>
               {p.category === "announcement" && p.meta?.workerView ? (
                 <WorkerAnnouncementPopup p={p} />
               ) : (
