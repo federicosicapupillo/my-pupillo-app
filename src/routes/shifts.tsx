@@ -15,6 +15,7 @@ import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
 import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehirePicker";
+import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
