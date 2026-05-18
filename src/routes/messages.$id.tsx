@@ -1032,13 +1032,20 @@ function Thread() {
           <div className="mb-4 space-y-2">
             <div className="flex flex-wrap gap-2">
               {role === "worker" && app.status === "pending" && (<>
-                <Button size="sm" className="gap-2" onClick={() => transition("interested")}><ThumbsUp className="h-4 w-4" />Sono interessato</Button>
-                <Button size="sm" variant="outline" className="gap-2" onClick={() => transition("not_interested")}><ThumbsDown className="h-4 w-4" />Non interessato</Button>
+                <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => transition("interested")}>
+                  <ThumbsUp className="h-4 w-4" />
+                  {transitioning === "interested" ? "Invio in corso…" : "Sono interessato"}
+                </Button>
+                <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("not_interested")}>
+                  <ThumbsDown className="h-4 w-4" />
+                  {transitioning === "not_interested" ? "Invio in corso…" : "Non interessato"}
+                </Button>
                 {(!shift || (shift.status !== "scheduled" && shift.status !== "completed")) && (
                   <Button
                     size="sm"
                     variant="ghost"
                     className="gap-2 text-muted-foreground hover:text-destructive"
+                    disabled={transitioning !== null || cancelling}
                     onClick={() => setCancelConfirmOpen(true)}
                   >
                     <Ban className="h-4 w-4" />Annulla candidatura
@@ -1070,10 +1077,11 @@ function Thread() {
                     <Button
                       size="sm"
                       className="gap-2"
-                      disabled={disabled}
+                      disabled={disabled || transitioning !== null}
                       onClick={() => transition("accepted")}
                     >
-                      <Check className="h-4 w-4" />Assegna
+                      <Check className="h-4 w-4" />
+                      {transitioning === "accepted" ? "Assegnazione in corso…" : "Assegna"}
                     </Button>
                     {helper && (
                       <span className={`text-xs ${lastProposalRejected || isBlocked ? "text-destructive" : "text-muted-foreground"}`}>
@@ -1109,7 +1117,10 @@ function Thread() {
                   <Euro className="h-4 w-4" />Proponi tariffa originale
                 </Button>
               )}
-              <Button size="sm" variant="outline" className="gap-2" onClick={() => transition("rejected")}><X className="h-4 w-4" />Rifiuta</Button>
+              <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("rejected")}>
+                <X className="h-4 w-4" />
+                {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
+              </Button>
             </div>
             {role === "restaurant" && app.status === "counter_offer" && app.proposed_tariff != null && ann && (
               <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 shadow-[0_0_24px_-8px_hsl(var(--primary)/0.5)]">
