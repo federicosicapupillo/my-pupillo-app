@@ -291,7 +291,7 @@ function Thread() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
-  const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null } | null>(null);
+  const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null; profile_completed: boolean; phone_verified: boolean } | null>(null);
   const [workerRep, setWorkerRep] = useState<WorkerReputationInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -338,6 +338,8 @@ function Thread() {
           name: p?.business_name || p?.full_name || "Utente",
           city: (p as any)?.city ?? null,
           neighborhood: (p as any)?.neighborhood ?? null,
+          profile_completed: !!(p as any)?.profile_completed,
+          phone_verified: !!(p as any)?.phone_verified,
         });
         setWorkerRep((p as WorkerReputationInput | null) ?? null);
         setAnn(an as Ann | null);
