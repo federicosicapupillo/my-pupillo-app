@@ -89,11 +89,11 @@ export async function navigateFromNotificationLink(
     if (parts.length === 1 && parts[0] === "announcements") {
       return navigate({ to: "/announcements" });
     }
-    // /workers_/<id> (worker public profile)
-    if (parts.length === 2 && parts[0] === "workers_") {
+    // /workers/<id> or /workers_/<id> (worker public profile)
+    if (parts.length === 2 && (parts[0] === "workers" || parts[0] === "workers_")) {
       const id = seg(1);
       if (!isValidId(id)) return fallback();
-      return navigate({ to: "/workers_/$id", params: { id } });
+      return navigate({ to: "/workers/$id", params: { id } });
     }
     // Flat safe destinations
     const FLAT_SAFE: Record<string, () => void> = {
