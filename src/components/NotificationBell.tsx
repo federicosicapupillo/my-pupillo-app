@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
+import { navigateFromNotificationLink } from "@/lib/notification-link";
 
 type Notif = { id: string; title: string; body: string | null; link: string | null; read: boolean | null; created_at: string };
 
@@ -47,7 +48,9 @@ export function NotificationBell() {
         // In-app toast
         toast.message(n.title, {
           description: n.body || undefined,
-          action: n.link ? { label: "Apri", onClick: () => nav({ to: n.link as never }) } : undefined,
+          action: n.link
+            ? { label: "Apri", onClick: () => { void navigateFromNotificationLink(nav, n.link); } }
+            : undefined,
         });
         // Browser push if granted and tab not focused
         if (canUseBrowserPush() && Notification.permission === "granted" && document.visibilityState !== "visible") {
@@ -55,7 +58,7 @@ export function NotificationBell() {
             const browserNotif = new Notification(n.title, { body: n.body || "", tag: n.id });
             browserNotif.onclick = () => {
               window.focus();
-              if (n.link) nav({ to: n.link as never });
+              if (n.link) void navigateFromNotificationLink(nav, n.link);
             };
           } catch { /* noop */ }
         }
@@ -86,7 +89,8 @@ export function NotificationBell() {
         toast.error("Impossibile segnare come letta");
       }
     }
-    if (n.link) nav({ to: n.link as never });
+    if (n.link) await navigateFromNotificationLink(nav, n.link);
+    else nav({ to: "/messages" });
   };
 
   const markAll = async () => {

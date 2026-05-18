@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useMemo, useState } from "react";
@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Bell, BellRing, Inbox, ExternalLink, CheckCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { navigateFromNotificationLink } from "@/lib/notification-link";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({ meta: [{ title: "Notifiche — Pupillo" }] }),
@@ -139,7 +140,7 @@ function NotificationsPage() {
   };
 
   const goToLink = (n: Notif) => {
-    if (n.link) navigate({ to: n.link as never });
+    void navigateFromNotificationLink(navigate, n.link);
   };
 
   const markAllRead = async () => {
@@ -298,9 +299,13 @@ function NotificationsPage() {
                 </Button>
               </div>
               {opened.link && (
-                <Link to={opened.link as never} className="block text-xs text-primary hover:underline pt-2">
+                <button
+                  type="button"
+                  onClick={() => goToLink(opened)}
+                  className="block text-left text-xs text-primary hover:underline pt-2 break-all"
+                >
                   {opened.link}
-                </Link>
+                </button>
               )}
             </div>
           )}
