@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2 } from "lucide-react";
+import { MessageSquare } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
@@ -343,6 +346,16 @@ function Thread() {
   const [workerReviews, setWorkerReviews] = useState<WorkerReview[]>([]);
   const [reviewRoles, setReviewRoles] = useState<Record<string, string | null>>({});
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const REJECT_REASONS = [
+    "Profilo non in linea con la richiesta",
+    "Esperienza non sufficiente",
+    "Posizione già coperta",
+    "Disponibilità non compatibile",
+    "Preferiamo un altro candidato",
+    "Altro motivo",
+  ] as const;
+  const [rejectReason, setRejectReason] = useState<string>(REJECT_REASONS[0]);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -727,6 +740,50 @@ function Thread() {
     } finally {
       setTransitioning(null);
     }
+  };
+
+  const submitReject = async () => {
+    if (!app || !user || role !== "restaurant") return;
+    if (transitioning) return;
+    const reason = rejectReason;
+    try {
+      const createdAt = new Date().toISOString();
+      const body = [
+        "Grazie per la tua candidatura.",
+        "",
+        "Per questo turno il ristoratore ha scelto di procedere diversamente.",
+        "",
+        `Motivazione: ${reason}`,
+        "",
+        "Continua a candidarti: nuove richieste vengono pubblicate ogni giorno.",
+      ].join("\n");
+      const { data: msg } = await supabase.from("messages").insert({
+        application_id: app.id,
+        sender_id: user.id,
+        receiver_id: app.worker_id,
+        body,
+        created_at: createdAt,
+        read_at: null,
+        template_id: "reject_with_reason",
+        message_type: "template",
+        action_type: "reject_application",
+      } as never).select("*").single();
+      if (msg) pushMessage(msg as Msg);
+      await supabase.from("applications").update({
+        last_message_preview: "Candidatura rifiutata",
+        last_message_at: createdAt,
+      } as never).eq("id", app.id);
+      await supabase.from("notifications").insert({
+        user_id: app.worker_id,
+        title: "Candidatura non selezionata",
+        body: `Motivazione: ${reason}`,
+        link: `/messages/${app.id}`,
+      } as never);
+    } catch (e) {
+      console.error("[reject] auto message failed", e);
+    }
+    setRejectOpen(false);
+    await transition("rejected");
   };
 
   const cancelApplication = async () => {
@@ -1200,20 +1257,29 @@ function Thread() {
                 </div>
               )}
 
-              <div className="mt-4 flex flex-col-reverse sm:flex-row gap-2 sm:items-center sm:justify-end">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 text-muted-foreground hover:text-destructive"
-                  onClick={() => transition("rejected")}
+                  variant="outline"
+                  className="gap-2 w-full"
+                  onClick={() => {
+                    document.getElementById("chat-composer")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                  disabled={transitioning !== null}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Chatta
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="gap-2 w-full"
+                  onClick={() => setRejectOpen(true)}
                   disabled={transitioning !== null}
                 >
                   {transitioning === "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                   {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
                 </Button>
                 <Button
-                  size="lg"
-                  className="gap-2 shadow-md"
+                  className="gap-2 w-full bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
                   onClick={() => transition("accepted")}
                   disabled={transitioning !== null}
                 >
@@ -1600,6 +1666,7 @@ function Thread() {
             </button>
           );
         })()}
+        <div id="chat-composer">
         <TemplatePicker
           role={role === "restaurant" ? "restaurant" : "worker"}
           category={tplCategory}
@@ -1621,6 +1688,7 @@ function Thread() {
           addressOverride={displayAddress}
           disabled={isConversationClosed}
         />
+        </div>
 
         {role === "restaurant" && tplCategory === "post_shift" && app && (
           <ReviewBlock
@@ -1640,6 +1708,36 @@ function Thread() {
           returnTo={`/messages/${id}`}
         />
         <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
+        <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Rifiuta candidatura</AlertDialogTitle>
+              <AlertDialogDescription>
+                Seleziona una motivazione. Il lavoratore riceverà un messaggio automatico professionale e neutro.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-2">
+              <RadioGroup value={rejectReason} onValueChange={setRejectReason} className="space-y-2">
+                {REJECT_REASONS.map((r) => (
+                  <div key={r} className="flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-muted/40">
+                    <RadioGroupItem id={`rr-${r}`} value={r} />
+                    <Label htmlFor={`rr-${r}`} className="cursor-pointer text-sm font-normal">{r}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={transitioning === "rejected"}>Annulla</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); void submitReject(); }}
+                disabled={transitioning === "rejected"}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {transitioning === "rejected" ? "Rifiuto in corso…" : "Conferma rifiuto"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
