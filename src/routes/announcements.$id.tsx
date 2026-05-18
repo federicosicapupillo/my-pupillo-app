@@ -414,7 +414,7 @@ function AnnouncementDetail() {
           </div>
         )}
 
-        {restaurant && (
+        {restaurant && canSeeAddress && (
           <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
             <div className="flex items-center justify-between mb-1">
               <div className="font-medium text-base flex items-center gap-2"><Building2 className="h-4 w-4" />{restaurantName}</div>
@@ -447,6 +447,33 @@ function AnnouncementDetail() {
             )}
           </div>
         )}
+        {restaurant && !canSeeAddress && isWorker && (
+          <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
+            <div className="font-medium text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />{publicVenueName}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="gap-1"><Shield className="h-3 w-3" />Locale verificato</Badge>
+              <Badge variant="outline">Nome visibile dopo conferma</Badge>
+            </div>
+            {restaurant.venue_type && (
+              <div className="text-xs text-muted-foreground">
+                Tipologia locale: {venueTypeLabel(restaurant.venue_type, restaurant.venue_type_other)}
+                {restaurant.price_range ? ` · Fascia di prezzo: ${priceRangeLabel(restaurant.price_range)}` : ""}
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              {publicLocationLabel({ job_city: ann.job_city, city: restaurant.city, neighborhood: restaurant.neighborhood })}
+            </div>
+            {restaurant.rating_avg != null && Number(restaurant.rating_avg) > 0 && (
+              <div className="flex items-center gap-2"><Star className="h-4 w-4 text-amber-500" />{Number(restaurant.rating_avg).toFixed(1)} ({restaurant.reviews_count ?? 0} recensioni)</div>
+            )}
+            <p className="text-xs text-muted-foreground pt-2 border-t">
+              Per tutelare la privacy del locale, nome esatto, indirizzo preciso, telefono ed email del referente saranno visibili dopo la conferma del turno.
+            </p>
+          </div>
+        )}
         </div>
 
         {isOwner && (
@@ -466,6 +493,35 @@ function AnnouncementDetail() {
               <div><div className="text-lg font-semibold text-emerald-600">{counts.pending}</div><div className="text-muted-foreground">Aperte</div></div>
               <div><div className="text-lg font-semibold text-blue-600">{counts.accepted}</div><div className="text-muted-foreground">Acc.</div></div>
             </div>
+          </div>
+        )}
+        {isWorker && (
+          <div className="rounded-2xl border bg-card p-5 space-y-3">
+            <div className="text-sm font-medium">Azioni</div>
+            {myApp ? (
+              <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+                <div className="font-medium text-foreground">Candidatura inviata</div>
+                <div className="text-muted-foreground">
+                  Stato: {APP_STATUS_LABEL[myApp.status] ?? myApp.status}
+                </div>
+                <Link to="/messages/$id" params={{ id: myApp.id }}>
+                  <Button size="sm" variant="secondary" className="w-full gap-2 mt-2">
+                    <MessageSquare className="h-4 w-4" />Vai alla chat
+                  </Button>
+                </Link>
+              </div>
+            ) : isAnnInactive ? (
+              <Button disabled className="w-full">Candidature chiuse</Button>
+            ) : (
+              <>
+                <Button className="w-full gap-2" disabled={applying} onClick={applyAsWorker}>
+                  <CheckCircle2 className="h-4 w-4" />Candidati
+                </Button>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Confermando dichiari di aver letto requisiti, dress code e note del turno.
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>
