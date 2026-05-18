@@ -63,6 +63,35 @@ function formatWhen(iso: string | null) {
     : d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
 }
 
+function formatRoleLabel(raw: string | null | undefined): string {
+  const s = (raw ?? "").trim();
+  if (!s) return "";
+  const spaced = s.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function formatServiceDate(date: string | null | undefined): string {
+  if (!date) return "";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+}
+
+function formatHHMM(t: string | null | undefined): string {
+  if (!t) return "";
+  const m = String(t).match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return "";
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
+function formatServiceTime(start: string | null | undefined, end: string | null | undefined): string {
+  const s = formatHHMM(start);
+  const e = formatHHMM(end);
+  if (s && e) return `${s} - ${e}`;
+  if (s) return `dalle ${s}`;
+  return "";
+}
+
 function MessagesLayout() {
   const { user, role, loading: authLoading } = useAuth();
   const { with: withUser } = Route.useSearch();
