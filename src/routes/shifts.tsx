@@ -15,6 +15,7 @@ import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
 import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehirePicker";
+import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -630,7 +631,8 @@ function ShiftsPage() {
                       );
                     })()}
                     {reviewMap[s.id] != null ? (
-                      <div className="flex flex-wrap items-center gap-3">
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-3">
                         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-sm font-semibold text-emerald-700 shadow-[0_0_12px_-2px_rgba(16,185,129,0.35)] dark:text-emerald-400 dark:bg-emerald-500/10">
                           <CheckCircle2 className="h-4 w-4" />
                           <span>Recensione inviata</span>
@@ -644,6 +646,15 @@ function ShiftsPage() {
                         <Button size="sm" variant="outline" className="gap-1 ml-auto" onClick={() => openViewReview(s.id)}>
                           <Eye className="h-4 w-4" /> Vedi recensione
                         </Button>
+                        </div>
+                        {role === "restaurant" && (
+                          <SaveToFavoritesPrompt
+                            restaurantId={s.restaurant_id}
+                            workerId={s.worker_id}
+                            workerName={profiles[s.worker_id]?.full_name ?? null}
+                            applicationId={s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null}
+                          />
+                        )}
                       </div>
                     ) : reviewOpen === s.id ? (
                       <div className="space-y-3">

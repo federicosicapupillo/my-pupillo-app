@@ -20,6 +20,7 @@ import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreC
 import { shouldShowNewApplicationCard } from "@/lib/application-card";
 import { Award } from "lucide-react";
 import { ReviewLabelsPicker, ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
+import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { WouldRehirePicker, WouldRehireBadge } from "@/components/WouldRehirePicker";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
@@ -1749,6 +1750,16 @@ function Thread() {
             </button>
           );
         })()}
+        {role === "restaurant" && app && existingReview && (
+          <div className="mt-3">
+            <SaveToFavoritesPrompt
+              restaurantId={app.restaurant_id}
+              workerId={app.worker_id}
+              workerName={other?.name ?? null}
+              applicationId={app.id}
+            />
+          </div>
+        )}
         <div id="chat-composer">
         <TemplatePicker
           role={role === "restaurant" ? "restaurant" : "worker"}
