@@ -69,6 +69,10 @@ export const canAssignShift = createServerFn({ method: "POST" })
       role: "restaurant",
       applicationStatus: app.status,
       latestProposalStatus,
+      // The application row itself represents the worker's candidature on the
+      // published announcement. When there is no explicit shift_proposal, this
+      // worker-initiated candidature counts as the implicit proposal.
+      workerApplied: true,
     });
     return { canAssign: btn.enabled, reason: btn.reason, ...base, latestProposalStatus };
   });
