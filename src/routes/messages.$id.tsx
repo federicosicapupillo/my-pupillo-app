@@ -934,15 +934,20 @@ function Thread() {
     comment: string;
     positiveLabels: string[];
     negativeLabels: string[];
+    wouldRehire: "yes" | "maybe" | "no" | null;
   }) => {
     if (!user || !app) return;
     if (role !== "restaurant") {
       toast.error("Solo il ristoratore può lasciare una recensione.");
       return;
     }
-    const { general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels } = payload;
+    const { general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels, wouldRehire } = payload;
     if (!general || !reliability || !punctuality || !professionalism || !serviceQuality) {
       toast.error("Completa tutte le valutazioni prima di inviare la recensione.");
+      return;
+    }
+    if (!wouldRehire) {
+      toast.error("Indica se richiameresti questo lavoratore.");
       return;
     }
     const trimmed = comment.trim();
@@ -991,6 +996,7 @@ function Thread() {
       announcement_id: app.announcement_id,
       is_visible_to_restaurants: true,
       is_visible_to_worker: true,
+      would_rehire: wouldRehire,
     } as never).select("*").single();
     if (error) {
       if (String(error.message).toLowerCase().includes("uniq_reviews_shift_author") || (error as any).code === "23505") {
