@@ -139,7 +139,6 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
         center={center}
         zoom={6}
         scrollWheelZoom
-        tap
         closePopupOnClick
         style={{ height: "100%", width: "100%" }}
       >
