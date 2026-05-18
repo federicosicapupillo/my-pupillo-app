@@ -97,6 +97,8 @@ type Bucket =
   | "in_attesa_conferma"
   | "confermate"
   | "completate"
+  | "rifiutate"
+  | "scadute"
   | "annullate"
   | "da_recensire";
 
@@ -132,7 +134,9 @@ function bucketsFor(r: Row, lastSeenAt: number): Bucket[] {
     return out;
   }
   if (isCancelled(r)) {
-    out.push("annullate");
+    if (r.status === "expired") out.push("scadute");
+    else if (r.status === "rejected" || r.status === "not_interested") out.push("rifiutate");
+    else out.push("annullate");
     return out;
   }
   if (isMutuallyConfirmed(r)) {
@@ -189,12 +193,14 @@ const TABS: { key: "tutte" | Bucket; label: string }[] = [
   { key: "tutte", label: "Tutte" },
   { key: "nuove", label: "Nuove" },
   { key: "da_rispondere", label: "Da rispondere" },
-  { key: "accettate_da_me", label: "Accettate da me" },
-  { key: "in_attesa_conferma", label: "In attesa conferma" },
+  { key: "accettate_da_me", label: "Accettate" },
+  { key: "in_attesa_conferma", label: "In attesa" },
   { key: "confermate", label: "Confermate" },
   { key: "completate", label: "Completate" },
-  { key: "annullate", label: "Annullate" },
   { key: "da_recensire", label: "Da recensire" },
+  { key: "rifiutate", label: "Rifiutate" },
+  { key: "scadute", label: "Scadute" },
+  { key: "annullate", label: "Annullate" },
 ];
 
 function priorityFor(r: Row, isNew: boolean): number {
