@@ -412,6 +412,12 @@ function MapPage() {
         const appStatus = appStatusByAnn[a.id];
         const confirmed = appStatus === "accepted";
         const cancelled = appStatus === "rejected" || a.status === "cancelled" || a.status === "expired";
+        const isKnownRestaurant = knownRestaurantIds.has(a.restaurant_id);
+        // Il nome del locale può apparire se: confermato per questo annuncio
+        // oppure il lavoratore ha già lavorato in passato con il ristorante.
+        const canSeeRestaurantName = !isWorker || confirmed || isKnownRestaurant;
+        // L'indirizzo completo e i contatti restano nascosti finché il
+        // servizio non viene accettato per QUESTO annuncio.
         const usePrivacy = isWorker && !confirmed;
         const [lat, lng] = usePrivacy ? jitterCoords([rawLat, rawLng], a.id, 0.8) : [rawLat, rawLng];
 
@@ -431,9 +437,9 @@ function MapPage() {
           lat,
           lng,
           category: "announcement",
-          title: usePrivacy
-            ? `${venueLabel}${zoneLabel ? ` — zona ${zoneLabel}` : ""}`
-            : (rest?.business_name || rest?.full_name || a.professional_profile || "Annuncio"),
+          title: canSeeRestaurantName
+            ? (rest?.business_name || rest?.full_name || a.professional_profile || "Annuncio")
+            : `${venueLabel}${zoneLabel ? ` — zona ${zoneLabel}` : ""}`,
           subtitle: usePrivacy
             ? (a.professional_profile ? `Cerca ${a.professional_profile}` : "Servizio disponibile")
             : (a.job_address || a.location_address || undefined),
@@ -463,13 +469,14 @@ function MapPage() {
             announcementId: a.id,
             operationalNotes: usePrivacy ? null : (a.notes ?? null),
             fullAddress: usePrivacy ? null : (a.job_address || a.location_address || null),
-            restaurantName: usePrivacy ? null : (rest?.business_name || rest?.full_name || null),
+            restaurantName: canSeeRestaurantName ? (rest?.business_name || rest?.full_name || null) : null,
+            knownRestaurant: isKnownRestaurant,
           } as any,
         });
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, annCounts]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
