@@ -599,13 +599,27 @@ function Thread() {
       await supabase.from("announcements").update({ status: "assigned", assigned_worker_id: app.worker_id }).eq("id", app.announcement_id);
     }
     await logEvent(next, { by_role: role ?? undefined });
-    const labels: Record<string, string> = {
-      interested: "Interesse confermato",
-      not_interested: "Offerta rifiutata",
-      accepted: "Lavoratore assegnato!",
-      rejected: "Candidatura chiusa",
+    const isRestaurant = role === "restaurant";
+    const toastByStatus: Record<string, { title: string; description: string }> = {
+      interested: {
+        title: "Interesse confermato",
+        description: "Stato candidatura: Interessato.",
+      },
+      not_interested: {
+        title: "Offerta rifiutata",
+        description: "Stato candidatura: Non interessato.",
+      },
+      accepted: {
+        title: isRestaurant ? "Candidatura accettata" : "Turno assegnato",
+        description: "Stato candidatura: Accettata.",
+      },
+      rejected: {
+        title: "Candidatura rifiutata",
+        description: "Stato candidatura: Rifiutata.",
+      },
     };
-    toast.success(labels[next]);
+    const t = toastByStatus[next];
+    toast.success(t.title, { description: t.description });
     setApp({ ...app, ...patch } as App);
   };
 
