@@ -1750,6 +1750,16 @@ function Thread() {
             </button>
           );
         })()}
+        {role === "restaurant" && app && existingReview && (
+          <div className="mt-3">
+            <SaveToFavoritesPrompt
+              restaurantId={app.restaurant_id}
+              workerId={app.worker_id}
+              workerName={other?.name ?? null}
+              applicationId={app.id}
+            />
+          </div>
+        )}
         <div id="chat-composer">
         <TemplatePicker
           role={role === "restaurant" ? "restaurant" : "worker"}
