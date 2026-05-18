@@ -282,7 +282,7 @@ function Profile() {
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Turni completati</div>
-              <div className="text-lg font-semibold">{profile?.completed_shifts ?? 0}</div>
+              <div className="text-lg font-semibold">{(profile as any)?.completed_shifts ?? 0}</div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Affidabilità</div>
