@@ -40,7 +40,7 @@ function formatDate(iso: string) {
   }
 }
 
-export function WorkerMyReviews({ workerId }: { workerId: string }) {
+export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?: number }) {
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [authors, setAuthors] = useState<Record<string, AuthorInfo>>({});
@@ -52,12 +52,14 @@ export function WorkerMyReviews({ workerId }: { workerId: string }) {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
+      let q = supabase
         .from("reviews")
         .select("id,rating,comment,created_at,shift_id,application_id,author_id,positive_tags,is_visible_to_worker")
         .eq("target_id", workerId)
         .eq("is_visible_to_worker", true)
         .order("created_at", { ascending: false });
+      if (limit && limit > 0) q = q.limit(limit) as typeof q;
+      const { data } = await q;
       if (cancelled) return;
       const rows = (data ?? []) as ReviewRow[];
       setReviews(rows);
@@ -103,7 +105,7 @@ export function WorkerMyReviews({ workerId }: { workerId: string }) {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [workerId]);
+  }, [workerId, limit]);
 
   if (loading) {
     return (
