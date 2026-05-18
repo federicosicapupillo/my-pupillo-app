@@ -171,13 +171,14 @@ function PopupA11y() {
 // Chiude la preview aperta quando la lista dei punti cambia (filtri,
 // categoria, ricerca, ecc.). Senza questo, un popup ancorato a un marker
 // rimosso può restare "orfano" sulla mappa.
-function ClosePopupOnPointsChange({ signature }: { signature: string }) {
+function ClosePopupOnPointsChange({ signature, onChange }: { signature: string; onChange?: () => void }) {
   const map = useMap();
   const firstRef = useRef(true);
   useEffect(() => {
     if (firstRef.current) { firstRef.current = false; return; }
+    onChange?.();
     map.closePopup();
-  }, [signature, map]);
+  }, [signature, map, onChange]);
   return null;
 }
 
