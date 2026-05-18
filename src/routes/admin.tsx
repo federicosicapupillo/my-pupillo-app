@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { RequireAuth } from "@/components/RequireAuth";
+import { RequireRole } from "@/components/RequireRole";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Pupillo" }] }),
-  component: () => <RequireAuth><Admin /></RequireAuth>,
+  component: () => <RequireRole allow={["admin"]}><Admin /></RequireRole>,
 });
 
 type WorkerRow = { id: string; full_name: string | null; email: string | null; badge: string | null; completed_shifts: number | null; profile_completed: boolean | null; reputation_level: string | null };
