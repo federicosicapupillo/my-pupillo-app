@@ -18,10 +18,16 @@ import { shouldShowNewApplicationCard } from "@/lib/application-card";
 import { Award } from "lucide-react";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
+import {
+  CONFIRMATION_TEMPLATE_ID,
+  CONFIRMATION_ACTION,
+  CONFIRMATION_EMPTY_LABELS,
+  buildConfirmationBody,
+} from "@/lib/shift-confirmation";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatTariff } from "@/lib/format";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
-import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock } from "lucide-react";
+import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock, Phone, User as UserIcon, Navigation, ExternalLink } from "lucide-react";
 import {
   labelOf, labelsOf,
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
@@ -79,6 +85,9 @@ type Ann = {
   job_access_restrictions?: string | null;
   job_additional_directions?: string | null;
   job_location_notes?: string | null;
+  job_address?: string | null;
+  job_contact_person_name?: string | null;
+  job_contact_person_phone?: string | null;
 };
 
 type Shift = {
