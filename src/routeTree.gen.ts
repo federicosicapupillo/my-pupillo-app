@@ -37,6 +37,7 @@ import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
 import { Route as MessagesIdRouteImport } from './routes/messages.$id'
 import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
 import { Route as AnnouncementsIdRouteImport } from './routes/announcements.$id'
+import { Route as AdminResetTestDbRouteImport } from './routes/admin.reset-test-db'
 import { Route as AdminBackendRouteImport } from './routes/admin.backend'
 import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
 import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
@@ -184,6 +185,11 @@ const AnnouncementsIdRoute = AnnouncementsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AnnouncementsRoute,
 } as any)
+const AdminResetTestDbRoute = AdminResetTestDbRouteImport.update({
+  id: '/reset-test-db',
+  path: '/reset-test-db',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminBackendRoute = AdminBackendRouteImport.update({
   id: '/backend',
   path: '/backend',
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/admin/backend': typeof AdminBackendRoute
+  '/admin/reset-test-db': typeof AdminResetTestDbRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/admin/backend': typeof AdminBackendRoute
+  '/admin/reset-test-db': typeof AdminResetTestDbRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -307,6 +315,7 @@ export interface FileRoutesById {
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/admin/backend': typeof AdminBackendRoute
+  '/admin/reset-test-db': typeof AdminResetTestDbRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -344,6 +353,7 @@ export interface FileRouteTypes {
     | '/verify-phone'
     | '/workers'
     | '/admin/backend'
+    | '/admin/reset-test-db'
     | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
@@ -379,6 +389,7 @@ export interface FileRouteTypes {
     | '/verify-phone'
     | '/workers'
     | '/admin/backend'
+    | '/admin/reset-test-db'
     | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
@@ -414,6 +425,7 @@ export interface FileRouteTypes {
     | '/verify-phone'
     | '/workers'
     | '/admin/backend'
+    | '/admin/reset-test-db'
     | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
@@ -656,6 +668,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnnouncementsIdRouteImport
       parentRoute: typeof AnnouncementsRoute
     }
+    '/admin/reset-test-db': {
+      id: '/admin/reset-test-db'
+      path: '/reset-test-db'
+      fullPath: '/admin/reset-test-db'
+      preLoaderRoute: typeof AdminResetTestDbRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/backend': {
       id: '/admin/backend'
       path: '/backend'
@@ -696,10 +715,12 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminBackendRoute: typeof AdminBackendRoute
+  AdminResetTestDbRoute: typeof AdminResetTestDbRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminBackendRoute: AdminBackendRoute,
+  AdminResetTestDbRoute: AdminResetTestDbRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
