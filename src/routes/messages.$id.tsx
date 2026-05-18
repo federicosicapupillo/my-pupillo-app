@@ -890,7 +890,15 @@ function Thread() {
           const s = summarizeReputation(workerRep);
           const hasEnoughReviews = s.reviewsCount >= 3;
           const reliability = Math.max(0, Math.min(100, s.completionPct || 0));
-          const microSummary = s.isNew
+          // Privacy gating: mostra dati identità/reputazione completi solo se
+          // il lavoratore ha completato il profilo. Telefono verificato è un
+          // requisito ulteriore per considerare la reputazione "pubblica".
+          const identityVisible = !!other?.profile_completed;
+          const reputationVisible = identityVisible && !!other?.phone_verified;
+          const displayName = identityVisible ? (other?.name ?? "Lavoratore") : "Profilo in verifica";
+          const microSummary = !reputationVisible
+            ? "Alcuni dati del lavoratore non sono ancora pubblici: identità e reputazione visibili solo dopo la verifica."
+            : s.isNew
             ? "Nuovo profilo: reputazione non ancora disponibile."
             : s.showScore && s.score >= 80
               ? "Lavoratore con ottima reputazione e alta affidabilità nei turni completati."
@@ -907,9 +915,14 @@ function Thread() {
               </div>
 
               <div className="flex items-start gap-4">
-                <UserAvatar userId={otherId} name={other?.name} className="h-14 w-14 shrink-0" />
+                <UserAvatar userId={identityVisible ? otherId : null} name={identityVisible ? other?.name : undefined} className="h-14 w-14 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-base truncate">{other?.name ?? "Lavoratore"}</div>
+                  <div className="font-semibold text-base truncate flex items-center gap-2">
+                    <span className={identityVisible ? "" : "italic text-muted-foreground"}>{displayName}</span>
+                    {!identityVisible && (
+                      <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">Privacy</span>
+                    )}
+                  </div>
                   {ann?.professional_profile && (
                     <div className="text-sm text-muted-foreground truncate">
                       Ruolo: <span className="text-foreground font-medium">{ann.professional_profile}</span>
@@ -924,6 +937,7 @@ function Thread() {
                 </div>
               </div>
 
+              {reputationVisible ? (
               <div className="mt-4 rounded-xl bg-muted/40 border p-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
                 <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium ${levelChipClass(s.level)}`}>
                   <Award className="h-3 w-3" />{s.levelLabel}
@@ -957,6 +971,12 @@ function Thread() {
                   <span className="text-destructive">No-show: <span className="tabular-nums font-medium">{s.noShow}</span></span>
                 )}
               </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground flex items-center gap-2">
+                  <Award className="h-3.5 w-3.5 opacity-60" />
+                  Reputazione non ancora pubblica · dati oscurati in attesa di verifica del profilo.
+                </div>
+              )}
 
               <p className="mt-3 text-sm text-muted-foreground">{microSummary}</p>
 
