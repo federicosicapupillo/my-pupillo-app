@@ -180,6 +180,32 @@ function ClosePopupOnPointsChange({ signature }: { signature: string }) {
   return null;
 }
 
+// Mantiene la preview aperta quando il puntatore entra nel popup DOM,
+// e ne pianifica la chiusura quando ne esce. Usa listener nativi su
+// `.leaflet-popup` agganciati ad ogni `popupopen`.
+function PopupHoverKeepAlive({ onEnter, onLeave }: { onEnter: () => void; onLeave: () => void }) {
+  const map = useMap();
+  useEffect(() => {
+    const onOpen = (e: any) => {
+      const el: HTMLElement | undefined = e.popup?.getElement?.();
+      if (!el) return;
+      const enter = () => onEnter();
+      const leave = () => onLeave();
+      el.addEventListener("mouseenter", enter);
+      el.addEventListener("mouseleave", leave);
+      const onClose = () => {
+        el.removeEventListener("mouseenter", enter);
+        el.removeEventListener("mouseleave", leave);
+        map.off("popupclose", onClose);
+      };
+      map.on("popupclose", onClose);
+    };
+    map.on("popupopen", onOpen);
+    return () => { map.off("popupopen", onOpen); };
+  }, [map, onEnter, onLeave]);
+  return null;
+}
+
 export default function MapViewInner({ points, height, center, focusZoom, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; focusZoom?: number; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
   // Firma stabile della lista di punti: cambia quando filtri/categoria
   // modificano l'insieme visualizzato → triggera la chiusura della preview.
