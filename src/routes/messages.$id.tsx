@@ -552,7 +552,11 @@ function Thread() {
     if (lastId === prevLastIdRef.current) return;
     const isFirstLoad = prevLastIdRef.current === null;
     prevLastIdRef.current = lastId;
-    if (isFirstLoad) return;
+    if (isFirstLoad) {
+      // Jump to bottom on first render of the thread (no smooth scroll).
+      endRef.current?.scrollIntoView({ block: "end" });
+      return;
+    }
     const mine = last && user && last.sender_id === user.id;
     if (nearBottomRef.current || mine) {
       endRef.current?.scrollIntoView({ behavior: "smooth" });
