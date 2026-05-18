@@ -13,6 +13,8 @@ import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
+import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreColorClass } from "@/lib/reputation";
+import { Award } from "lucide-react";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
@@ -287,6 +289,7 @@ function Thread() {
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null } | null>(null);
+  const [workerRep, setWorkerRep] = useState<WorkerReputationInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [otherId, setOtherId] = useState<string | null>(null);
@@ -322,7 +325,7 @@ function Thread() {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
-          supabase.from("profiles").select("full_name, business_name, city, neighborhood").eq("id", otherId).maybeSingle(),
+          supabase.from("profiles").select("full_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, id_document_path").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({
@@ -330,6 +333,7 @@ function Thread() {
           city: (p as any)?.city ?? null,
           neighborhood: (p as any)?.neighborhood ?? null,
         });
+        setWorkerRep((p as WorkerReputationInput | null) ?? null);
         setAnn(an as Ann | null);
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
