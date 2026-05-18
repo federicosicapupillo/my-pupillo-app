@@ -24,6 +24,7 @@ import { Route as MappaRouteImport } from './routes/mappa'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -115,6 +116,11 @@ const ForbiddenRoute = ForbiddenRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComeFunzionaRoute = ComeFunzionaRouteImport.update({
+  id: '/come-funziona',
+  path: '/come-funziona',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrowseRoute = BrowseRouteImport.update({
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -318,6 +327,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/billing'
     | '/browse'
+    | '/come-funziona'
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
@@ -352,6 +362,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/billing'
     | '/browse'
+    | '/come-funziona'
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/billing'
     | '/browse'
+    | '/come-funziona'
     | '/dashboard'
     | '/forbidden'
     | '/jobs'
@@ -421,6 +433,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BillingRoute: typeof BillingRoute
   BrowseRoute: typeof BrowseRoute
+  ComeFunzionaRoute: typeof ComeFunzionaRoute
   DashboardRoute: typeof DashboardRoute
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
@@ -550,6 +563,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/come-funziona': {
+      id: '/come-funziona'
+      path: '/come-funziona'
+      fullPath: '/come-funziona'
+      preLoaderRoute: typeof ComeFunzionaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/browse': {
@@ -717,6 +737,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BillingRoute: BillingRoute,
   BrowseRoute: BrowseRoute,
+  ComeFunzionaRoute: ComeFunzionaRoute,
   DashboardRoute: DashboardRoute,
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
