@@ -985,7 +985,50 @@ function Thread() {
 
         {app && shouldShowNewApplicationCard({ role: role as any, status: app.status as any, hasWorkerReputation: !!workerRep }) && workerRep && (() => {
           const s = summarizeReputation(workerRep);
-          const hasEnoughReviews = s.reviewsCount >= 3;
+          // ============================================================
+          // FONTE DATI VERIFICATA: usiamo le recensioni reali caricate
+          // dalla tabella `reviews` (filtrate per shift_id non nullo e
+          // visibili ai ristoratori) come fonte di verità per rating e
+          // numero recensioni. I campi cache su `profiles` (rating_avg,
+          // reviews_count, completed_shifts) possono essere stantii o
+          // contenere dati demo: non vanno mai mostrati da soli.
+          // ============================================================
+          const verifiedReviewsCount = workerReviews.length;
+          const verifiedRating = verifiedReviewsCount > 0
+            ? workerReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / verifiedReviewsCount
+            : 0;
+          const verifiedDistinctShiftsFromReviews = new Set(
+            workerReviews.map(r => r.shift_id).filter(Boolean) as string[],
+          ).size;
+          // Turni completati: mostriamo il valore di profilo SOLO se è
+          // coerente con il numero di recensioni verificate (≥ shift unici
+          // dalle recensioni). Altrimenti usiamo i turni unici dalle
+          // recensioni come minimo verificabile.
+          const profileShifts = Number(s.completedShifts || 0);
+          const verifiedCompletedShifts = profileShifts >= verifiedDistinctShiftsFromReviews
+            ? profileShifts
+            : verifiedDistinctShiftsFromReviews;
+          // Mostra i turni solo se abbiamo almeno una prova reale (una
+          // recensione collegata a un turno) oppure il dato profilo
+          // coincide con quanto verificabile. In assenza di recensioni
+          // reali NON mostriamo il numero turni: non è verificabile.
+          const showCompletedShifts = verifiedDistinctShiftsFromReviews > 0;
+          // Diagnostica: se i contatori cache divergono dai dati reali,
+          // logghiamo in console (silenzioso per l'utente) e ignoriamo il
+          // valore cache nella UI.
+          if (typeof window !== "undefined") {
+            if (s.reviewsCount !== verifiedReviewsCount) {
+              console.warn(
+                `[application-card] reviews_count cache (${s.reviewsCount}) ≠ recensioni reali (${verifiedReviewsCount}) per worker ${app.worker_id}. Uso dati reali.`,
+              );
+            }
+            if (profileShifts > 0 && profileShifts < verifiedDistinctShiftsFromReviews) {
+              console.warn(
+                `[application-card] completed_shifts cache (${profileShifts}) < turni unici da recensioni (${verifiedDistinctShiftsFromReviews}) per worker ${app.worker_id}.`,
+              );
+            }
+          }
+          const hasEnoughReviews = verifiedReviewsCount >= 3;
           const reliability = Math.max(0, Math.min(100, s.completionPct || 0));
           // Privacy gating: mostra dati identità/reputazione completi solo se
           // il lavoratore ha completato il profilo. Telefono verificato è un
@@ -993,22 +1036,24 @@ function Thread() {
           const identityVisible = !!other?.profile_completed;
           const reputationVisible = identityVisible && !!other?.phone_verified;
           const displayName = identityVisible ? (other?.name ?? "Lavoratore") : "Profilo in verifica";
-          // Reputazione "in costruzione" SOLO se il lavoratore non ha né
-          // recensioni né turni completati. Se ha recensioni reali non
-          // mostriamo mai il messaggio "Nuovo profilo": sarebbe in
-          // contraddizione con la valutazione mostrata sopra.
-          const hasAnyReputationSignal = s.reviewsCount > 0 || s.completedShifts > 0;
+          // Messaggio: basato esclusivamente su dati reali verificati.
           const microSummary = !reputationVisible
             ? "Alcuni dati del lavoratore non sono ancora pubblici: identità e reputazione visibili solo dopo la verifica."
-            : !hasAnyReputationSignal
-              ? "Questo lavoratore non ha ancora recensioni. Puoi comunque valutare il profilo, le competenze e le informazioni disponibili."
-              : s.showScore && s.score >= 80
-                ? "Lavoratore con ottima reputazione e alta affidabilità nei turni completati."
-                : s.showScore && s.score >= 60
-                  ? "Lavoratore con buona reputazione, affidabilità nella media."
-                  : s.reviewsCount > 0
-                    ? `Profilo con ${s.reviewsCount} ${s.reviewsCount === 1 ? "recensione" : "recensioni"}: valuta media e commenti per decidere.`
-                    : "Reputazione ancora in costruzione: pochi dati disponibili.";
+            : verifiedReviewsCount === 0 && !showCompletedShifts
+              ? "Questo lavoratore non ha ancora recensioni verificate. Puoi comunque valutare profilo, competenze e disponibilità."
+              : verifiedReviewsCount === 0 && showCompletedShifts
+                ? "Questo lavoratore ha turni completati, ma non ha ancora recensioni verificate."
+                : `Profilo con ${verifiedReviewsCount} ${verifiedReviewsCount === 1 ? "recensione verificata" : "recensioni verificate"}. Valuta media e commenti disponibili.`;
+          // Livello reputazione coerente: se non ci sono dati reali,
+          // non promuoviamo oltre "Nuovo" / "Nuovo verificato".
+          const hasRealReputation = verifiedReviewsCount > 0 || showCompletedShifts;
+          const displayLevel = hasRealReputation
+            ? s.level
+            : (other?.phone_verified ? "new_verified" : "new");
+          const displayLevelLabel = hasRealReputation
+            ? s.levelLabel
+            : (other?.phone_verified ? "Nuovo verificato" : "Nuovo");
+          const showScore = hasRealReputation && s.showScore;
           return (
             <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card p-5 mb-4 shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.35)]">
               <div className="flex items-center gap-2 mb-4">
@@ -1043,36 +1088,36 @@ function Thread() {
 
               {reputationVisible ? (
               <div className="mt-4 rounded-xl bg-muted/40 border p-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium ${levelChipClass(s.level)}`}>
-                  <Award className="h-3 w-3" />{s.levelLabel}
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium ${levelChipClass(displayLevel as any)}`}>
+                  <Award className="h-3 w-3" />{displayLevelLabel}
                 </span>
-                {s.showScore && (
+                {showScore && (
                   <span className="inline-flex items-center gap-1 font-medium">
                     <span className="text-muted-foreground">Score</span>
                     <span className={`tabular-nums font-semibold ${scoreColorClass(s.score)}`}>{s.score}/100</span>
                   </span>
                 )}
-                {hasEnoughReviews && s.rating > 0 ? (
+                {hasEnoughReviews && verifiedRating > 0 ? (
                   <span className="inline-flex items-center gap-1 font-medium">
                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span className="tabular-nums">{s.rating.toFixed(1)}</span>
-                    <span className="text-muted-foreground">· {s.reviewsCount} recensioni</span>
+                    <span className="tabular-nums">{verifiedRating.toFixed(1)}</span>
+                    <span className="text-muted-foreground">· {verifiedReviewsCount} recensioni</span>
                   </span>
-                ) : s.reviewsCount > 0 && s.rating > 0 ? (
+                ) : verifiedReviewsCount > 0 && verifiedRating > 0 ? (
                   <span className="inline-flex items-center gap-1 font-medium">
                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span className="tabular-nums">{s.rating.toFixed(1)}</span>
-                    <span className="text-muted-foreground">· {s.reviewsCount} {s.reviewsCount === 1 ? "recensione" : "recensioni"}</span>
+                    <span className="tabular-nums">{verifiedRating.toFixed(1)}</span>
+                    <span className="text-muted-foreground">· {verifiedReviewsCount} {verifiedReviewsCount === 1 ? "recensione" : "recensioni"}</span>
                   </span>
-                ) : s.reviewsCount > 0 ? (
-                  <span className="text-muted-foreground">Recensioni: <span className="font-medium text-foreground tabular-nums">{s.reviewsCount}</span></span>
+                ) : verifiedReviewsCount > 0 ? (
+                  <span className="text-muted-foreground">Recensioni: <span className="font-medium text-foreground tabular-nums">{verifiedReviewsCount}</span></span>
                 ) : null}
-                {s.completedShifts > 0 && (
+                {showCompletedShifts && verifiedCompletedShifts > 0 && (
                   <span className="text-muted-foreground">
-                    Turni: <span className="font-medium text-foreground tabular-nums">{s.completedShifts}</span>
+                    Turni: <span className="font-medium text-foreground tabular-nums">{verifiedCompletedShifts}</span>
                   </span>
                 )}
-                {s.completedShifts > 0 && reliability > 0 && (
+                {showCompletedShifts && verifiedCompletedShifts > 0 && reliability > 0 && (
                   <span className="text-muted-foreground">
                     Affidabilità: <span className="font-medium text-foreground tabular-nums">{reliability}%</span>
                   </span>
@@ -1109,21 +1154,21 @@ function Thread() {
                   </div>
                   {workerReviews.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Questo lavoratore non ha ancora recensioni. Puoi comunque valutare il profilo, le competenze e le informazioni disponibili.
+                      Questo lavoratore non ha ancora recensioni verificate. Puoi comunque valutare profilo, competenze e disponibilità.
                     </p>
                   ) : (
                     <>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-2">
-                        {s.rating > 0 ? (
+                        {verifiedRating > 0 ? (
                           <span className="inline-flex items-center gap-1">
                             <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                            <span className="font-semibold tabular-nums">{s.rating.toFixed(1)}</span>
-                            <span className="text-muted-foreground">· {s.reviewsCount} {s.reviewsCount === 1 ? "recensione" : "recensioni"}</span>
+                            <span className="font-semibold tabular-nums">{verifiedRating.toFixed(1)}</span>
+                            <span className="text-muted-foreground">· {verifiedReviewsCount} {verifiedReviewsCount === 1 ? "recensione" : "recensioni"}</span>
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">{s.reviewsCount} {s.reviewsCount === 1 ? "recensione" : "recensioni"}</span>
+                          <span className="text-muted-foreground">{verifiedReviewsCount} {verifiedReviewsCount === 1 ? "recensione" : "recensioni"}</span>
                         )}
-                        {s.completedShifts > 0 && reliability > 0 && (
+                        {showCompletedShifts && verifiedCompletedShifts > 0 && reliability > 0 && (
                           <span className="text-muted-foreground">
                             Affidabilità: <span className="font-medium text-foreground tabular-nums">{reliability}%</span>
                           </span>
