@@ -29,7 +29,7 @@ import {
   labelOf,
   labelsOf,
 } from "@/lib/announcement-requirements";
-import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity, isValidCapForDistrict } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCity, isValidCapForDistrict, isValidDistrictForCity, zonesForCity } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { DateField } from "@/components/DateField";
@@ -398,6 +398,10 @@ function NewRestaurantJobRequest() {
     }
     if (!f.district || !f.district.trim()) {
       toast.error("Seleziona la zona/quartiere del locale.");
+      return false;
+    }
+    if (f.city && zonesForCity(f.city).length > 0 && !isValidDistrictForCity(f.city, f.district)) {
+      toast.error("Seleziona una zona/quartiere valida.");
       return false;
     }
     if (f.province && f.city && f.postal_code && !isValidCapForDistrict(f.province, f.city, f.district, f.postal_code)) {

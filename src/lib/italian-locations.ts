@@ -431,6 +431,47 @@ export const CITY_ZONES: Record<string, string[]> = {
   ],
 };
 
+// Aggiunte: Napoli e altre città principali con elenco zone/quartieri.
+CITY_ZONES["Napoli"] = [
+  "Centro Storico", "Chiaia", "Vomero", "Posillipo", "Fuorigrotta",
+  "Mergellina", "Arenella", "San Ferdinando", "Quartieri Spagnoli",
+  "Porto", "Soccavo", "Bagnoli", "Vicaria", "Stella", "San Carlo all'Arena",
+  "Pianura", "Ponticelli", "Barra", "San Giovanni a Teduccio", "Secondigliano",
+  "Scampia", "Miano", "Piscinola", "Chiaiano",
+];
+CITY_ZONES["Genova"] = [
+  "Centro Storico", "Carignano", "Castelletto", "Albaro", "Foce",
+  "San Fruttuoso", "Marassi", "Sampierdarena", "Sestri Ponente",
+  "Pegli", "Voltri", "Nervi", "Quarto", "Quinto", "Boccadasse", "Sturla",
+];
+CITY_ZONES["Palermo"] = [
+  "Centro Storico", "Kalsa", "Albergheria", "Vucciria", "Politeama",
+  "Libertà", "Notarbartolo", "Mondello", "Sferracavallo", "Brancaccio",
+  "Zen", "Borgo Vecchio", "Noce", "Cruillas",
+];
+CITY_ZONES["Bari"] = [
+  "Bari Vecchia", "Murat", "Madonnella", "Libertà", "Picone",
+  "Carrassi", "Poggiofranco", "San Pasquale", "Japigia", "Santo Spirito",
+  "Palese", "San Paolo", "Carbonara", "Ceglie del Campo",
+];
+CITY_ZONES["Verona"] = [
+  "Centro Storico", "Veronetta", "Borgo Trento", "Borgo Roma",
+  "Borgo Milano", "Borgo Venezia", "San Zeno", "Cittadella",
+  "San Michele Extra", "Golosine", "Quinzano",
+];
+CITY_ZONES["Catania"] = [
+  "Centro", "Borgo", "Picanello", "San Berillo", "Civita",
+  "Ognina", "San Giovanni Galermo", "Librino", "Nesima", "Barriera",
+];
+CITY_ZONES["Venezia"] = [
+  "San Marco", "Castello", "Cannaregio", "Dorsoduro", "San Polo",
+  "Santa Croce", "Giudecca", "Lido", "Mestre Centro", "Marghera", "Murano", "Burano",
+];
+CITY_ZONES["Padova"] = [
+  "Centro", "Portello", "Arcella", "Stanga", "Forcellini",
+  "Bassanello", "Brusegana", "Mortise", "Sacro Cuore",
+];
+
 export function zonesForCity(city?: string | null): string[] {
   if (!city) return [];
   const key = Object.keys(CITY_ZONES).find((k) => k.toLowerCase() === city.toLowerCase());
