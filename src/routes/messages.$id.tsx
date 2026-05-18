@@ -993,15 +993,22 @@ function Thread() {
           const identityVisible = !!other?.profile_completed;
           const reputationVisible = identityVisible && !!other?.phone_verified;
           const displayName = identityVisible ? (other?.name ?? "Lavoratore") : "Profilo in verifica";
+          // Reputazione "in costruzione" SOLO se il lavoratore non ha né
+          // recensioni né turni completati. Se ha recensioni reali non
+          // mostriamo mai il messaggio "Nuovo profilo": sarebbe in
+          // contraddizione con la valutazione mostrata sopra.
+          const hasAnyReputationSignal = s.reviewsCount > 0 || s.completedShifts > 0;
           const microSummary = !reputationVisible
             ? "Alcuni dati del lavoratore non sono ancora pubblici: identità e reputazione visibili solo dopo la verifica."
-            : s.isNew
-            ? "Nuovo profilo: reputazione non ancora disponibile."
-            : s.showScore && s.score >= 80
-              ? "Lavoratore con ottima reputazione e alta affidabilità nei turni completati."
-              : s.showScore && s.score >= 60
-                ? "Lavoratore con buona reputazione, affidabilità nella media."
-                : "Reputazione ancora in costruzione: pochi dati disponibili.";
+            : !hasAnyReputationSignal
+              ? "Questo lavoratore non ha ancora recensioni. Puoi comunque valutare il profilo, le competenze e le informazioni disponibili."
+              : s.showScore && s.score >= 80
+                ? "Lavoratore con ottima reputazione e alta affidabilità nei turni completati."
+                : s.showScore && s.score >= 60
+                  ? "Lavoratore con buona reputazione, affidabilità nella media."
+                  : s.reviewsCount > 0
+                    ? `Profilo con ${s.reviewsCount} ${s.reviewsCount === 1 ? "recensione" : "recensioni"}: valuta media e commenti per decidere.`
+                    : "Reputazione ancora in costruzione: pochi dati disponibili.";
           return (
             <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card p-5 mb-4 shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.35)]">
               <div className="flex items-center gap-2 mb-4">
@@ -1051,20 +1058,26 @@ function Thread() {
                     <span className="tabular-nums">{s.rating.toFixed(1)}</span>
                     <span className="text-muted-foreground">· {s.reviewsCount} recensioni</span>
                   </span>
-                ) : (
-                  <span className="text-muted-foreground">Recensioni: {s.reviewsCount}</span>
-                )}
-                {!s.isNew && (
+                ) : s.reviewsCount > 0 && s.rating > 0 ? (
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    <span className="tabular-nums">{s.rating.toFixed(1)}</span>
+                    <span className="text-muted-foreground">· {s.reviewsCount} {s.reviewsCount === 1 ? "recensione" : "recensioni"}</span>
+                  </span>
+                ) : s.reviewsCount > 0 ? (
+                  <span className="text-muted-foreground">Recensioni: <span className="font-medium text-foreground tabular-nums">{s.reviewsCount}</span></span>
+                ) : null}
+                {s.completedShifts > 0 && (
                   <span className="text-muted-foreground">
                     Turni: <span className="font-medium text-foreground tabular-nums">{s.completedShifts}</span>
                   </span>
                 )}
-                {!s.isNew && reliability > 0 && (
+                {s.completedShifts > 0 && reliability > 0 && (
                   <span className="text-muted-foreground">
                     Affidabilità: <span className="font-medium text-foreground tabular-nums">{reliability}%</span>
                   </span>
                 )}
-                {!s.isNew && s.noShow > 0 && (
+                {s.noShow > 0 && (
                   <span className="text-destructive">No-show: <span className="tabular-nums font-medium">{s.noShow}</span></span>
                 )}
               </div>
@@ -1101,12 +1114,16 @@ function Thread() {
                   ) : (
                     <>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-2">
-                        <span className="inline-flex items-center gap-1">
-                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                          <span className="font-semibold tabular-nums">{s.rating > 0 ? s.rating.toFixed(1) : "—"}</span>
-                          <span className="text-muted-foreground">· {s.reviewsCount} recensioni</span>
-                        </span>
-                        {!s.isNew && reliability > 0 && (
+                        {s.rating > 0 ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                            <span className="font-semibold tabular-nums">{s.rating.toFixed(1)}</span>
+                            <span className="text-muted-foreground">· {s.reviewsCount} {s.reviewsCount === 1 ? "recensione" : "recensioni"}</span>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">{s.reviewsCount} {s.reviewsCount === 1 ? "recensione" : "recensioni"}</span>
+                        )}
+                        {s.completedShifts > 0 && reliability > 0 && (
                           <span className="text-muted-foreground">
                             Affidabilità: <span className="font-medium text-foreground tabular-nums">{reliability}%</span>
                           </span>
