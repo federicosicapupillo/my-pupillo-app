@@ -387,13 +387,8 @@ function Jobs() {
 
   const stats: { label: string; value: number }[] = [
     { label: "Totale", value: counts.tutte },
-    { label: "Nuove", value: counts.nuove },
     { label: "Da rispondere", value: counts.da_rispondere },
-    { label: "Accettate da me", value: counts.accettate_da_me },
-    { label: "In attesa conferma", value: counts.in_attesa_conferma },
     { label: "Confermate", value: counts.confermate },
-    { label: "Annullate", value: counts.annullate },
-    { label: "Completate", value: counts.completate },
     { label: "Da recensire", value: counts.da_recensire },
   ];
 
@@ -404,18 +399,25 @@ function Jobs() {
         subtitle="Gestisci qui le proposte di lavoro ricevute dai ristoratori e segui lo stato dei tuoi servizi."
       />
 
-      {/* Dashboard riepilogo */}
-      <div className="mt-2 grid grid-cols-3 gap-2 md:grid-cols-5 lg:grid-cols-9">
+      {/* Riepilogo numerico — KPI chiari in alto */}
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-xl border bg-card px-3 py-2">
-            <div className="text-xs text-muted-foreground">{s.label}</div>
-            <div className="text-lg font-semibold tabular-nums">{s.value}</div>
+          <div
+            key={s.label}
+            className="rounded-2xl border bg-card px-4 py-3 shadow-sm transition hover:shadow-md"
+          >
+            <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              {s.label}
+            </div>
+            <div className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+              {s.value}
+            </div>
           </div>
         ))}
       </div>
 
       {/* Privacy hint */}
-      <div className="mt-4 flex items-start gap-2 rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
+      <div className="mt-5 flex items-start gap-2 rounded-2xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
           Per proteggere entrambe le parti, i dati completi del locale vengono mostrati solo dopo la conferma
@@ -423,32 +425,41 @@ function Jobs() {
         </span>
       </div>
 
-      {/* Filtri */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {TABS.map((t) => {
-          const active = tab === t.key;
-          const count = counts[t.key];
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={
-                "text-xs rounded-full px-3 py-1.5 border transition " +
-                (active
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card hover:bg-accent")
-              }
-            >
-              {t.label}
-              <span className="ml-1.5 opacity-70">({count})</span>
-            </button>
-          );
-        })}
+      {/* Filtri — pill scrollabili orizzontalmente su mobile */}
+      <div className="mt-5 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 whitespace-nowrap pb-1">
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            const count = counts[t.key];
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={
+                  "shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition " +
+                  (active
+                    ? "border-foreground bg-foreground text-background shadow-sm"
+                    : "border-border bg-card text-foreground hover:bg-accent")
+                }
+              >
+                {t.label}
+                <span
+                  className={
+                    "ml-2 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums " +
+                    (active ? "bg-background/20 text-background" : "bg-muted text-muted-foreground")
+                  }
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Ordina per */}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span>Ordina per:</span>
+        <span className="font-medium">Ordina per:</span>
         {(
           [
             ["service_date", "Data servizio"],
@@ -462,8 +473,10 @@ function Jobs() {
             key={k}
             onClick={() => setSortMode(k)}
             className={
-              "rounded-full border px-2.5 py-1 transition " +
-              (sortMode === k ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent")
+              "rounded-full border px-3 py-1 transition " +
+              (sortMode === k
+                ? "border-foreground bg-foreground text-background"
+                : "border-border bg-card hover:bg-accent")
             }
           >
             {label}
@@ -472,14 +485,25 @@ function Jobs() {
       </div>
 
       {/* Lista */}
-      <div className="mt-5">
+      <div className="mt-6">
         {loading ? (
-          <p className="text-muted-foreground">Caricamento…</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-56 animate-pulse rounded-2xl border bg-card"
+              />
+            ))}
+          </div>
         ) : rows.length === 0 ? (
-          <div className="rounded-2xl border bg-card p-12 text-center">
-            <div className="font-medium">Non hai ancora ricevuto offerte.</div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              Quando un ristoratore ti invierà una proposta di lavoro, la troverai qui.
+          <div className="rounded-3xl border bg-card p-12 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+              <Briefcase className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="mt-4 text-lg font-semibold">Non hai ancora ricevuto offerte</div>
+            <div className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              Quando un ristoratore ti invierà una proposta di lavoro, la troverai qui con tutti i
+              dettagli del turno.
             </div>
           </div>
         ) : filtered.length === 0 ? (
@@ -487,7 +511,7 @@ function Jobs() {
             Nessuna offerta in questa categoria.
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((r) => (
               <OfferCard key={r.id} r={r} lastSeenAt={lastSeenAt} onRespond={respond} />
             ))}
@@ -529,111 +553,117 @@ function OfferCard({
   const receivedAt = new Date(r.created_at).toLocaleDateString("it-IT");
 
   return (
-    <div className="rounded-2xl border bg-card p-5">
+    <div className="group flex flex-col rounded-2xl border bg-card p-5 shadow-sm transition hover:shadow-md">
+      {/* Header: stato in alto, ruolo grande, contesto locale piccolo */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {/* Before mutual confirmation we hide the restaurant name and show only venue type */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Store className="h-4 w-4" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Store className="h-3.5 w-3.5" />
             <span className="truncate">{venue}</span>
           </div>
-          <div className="mt-1 truncate font-semibold">
-            {confirmed
-              ? r.restaurant?.business_name || r.restaurant?.full_name || "Ristoratore"
-              : role}
-          </div>
+          <h3 className="mt-1.5 truncate text-lg font-semibold leading-tight text-foreground">
+            {role}
+          </h3>
+          {confirmed && (
+            <div className="mt-0.5 truncate text-sm text-muted-foreground">
+              {r.restaurant?.business_name || r.restaurant?.full_name || "Ristoratore"}
+            </div>
+          )}
         </div>
-        <span className={`text-xs rounded-full px-2 py-1 border whitespace-nowrap ${badge.cls}`}>
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${badge.cls}`}
+        >
           {badge.label}
         </span>
       </div>
 
-      <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <Briefcase className="h-4 w-4" />
-          <span>{role}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          <span>
+      {/* Info chiave: data/orario + luogo + compenso, in evidenza */}
+      <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl bg-muted/30 p-3 text-sm sm:grid-cols-2">
+        <div className="flex items-center gap-2 text-foreground">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">
             {dateStr}
             {startTime ? ` · ${startTime}` : ""}
             {endTime ? `–${endTime}` : ""}
-            {duration ? ` (${duration}h)` : ""}
           </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4" />
-          <span>
-            {confirmed && r.restaurant?.address
-              ? r.restaurant.address
-              : zone}
-          </span>
+          {duration ? (
+            <span className="text-xs text-muted-foreground">({duration}h)</span>
+          ) : null}
         </div>
         {tariff && (
-          <div className="flex items-center gap-2">
-            <Euro className="h-4 w-4" />
-            <span>{tariff}</span>
+          <div className="flex items-center gap-2 text-foreground">
+            <Euro className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{tariff}</span>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          <span>Offerta ricevuta il {receivedAt}</span>
+        <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
+          <MapPin className="h-4 w-4" />
+          <span className="truncate">
+            {confirmed && r.restaurant?.address ? r.restaurant.address : zone}
+          </span>
         </div>
       </div>
 
+      {/* Info secondarie meno invasive */}
+      <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Clock className="h-3.5 w-3.5" />
+        <span>Ricevuta il {receivedAt}</span>
+      </div>
+
       {r.lastMessage && (
-        <div className="mt-3 rounded-lg bg-muted/40 p-2 text-xs text-muted-foreground line-clamp-2">
+        <div className="mt-3 rounded-lg border border-border/60 bg-background/60 p-2.5 text-xs text-muted-foreground line-clamp-2">
           <span className="font-medium text-foreground">Messaggio: </span>
           {r.lastMessage}
         </div>
       )}
 
       {!confirmed && (
-        <div className="mt-3 flex items-start gap-2 rounded-lg bg-muted/30 p-2 text-xs text-muted-foreground">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>I dati completi del locale saranno visibili dopo la conferma reciproca.</span>
+        <div className="mt-3 flex items-start gap-1.5 text-[11px] text-muted-foreground">
+          <Info className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>Dati completi del locale visibili dopo la conferma reciproca.</span>
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {r.status === "pending" && (
-          <>
-            <Button size="sm" className="flex-1" onClick={() => onRespond(r.id, "interested")}>
-              Accetta offerta
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex-1"
-              onClick={() => onRespond(r.id, "not_interested")}
-            >
-              Rifiuta offerta
-            </Button>
-          </>
-        )}
-        {(r.status === "interested" || r.status === "counter_offer" || r.status === "accepted") && (
-          <Link to="/messages/$id" params={{ id: r.id }}>
-            <Button size="sm" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Scrivi al ristoratore
+      {/* Azioni: spinte in fondo per allineare card di altezze diverse */}
+      <div className="mt-auto pt-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {r.status === "pending" && (
+            <>
+              <Button size="sm" className="flex-1" onClick={() => onRespond(r.id, "interested")}>
+                Accetta offerta
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={() => onRespond(r.id, "not_interested")}
+              >
+                Rifiuta
+              </Button>
+            </>
+          )}
+          {(r.status === "interested" || r.status === "counter_offer" || r.status === "accepted") && (
+            <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
+              <Button size="sm" className="w-full gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Scrivi al ristoratore
+              </Button>
+            </Link>
+          )}
+          {isCompleted(r) && !r.hasWorkerReview && (
+            <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
+              <Button size="sm" className="w-full gap-2">
+                <Star className="h-4 w-4" />
+                Lascia recensione
+              </Button>
+            </Link>
+          )}
+          <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
+            <Button size="sm" variant="secondary" className="w-full gap-2">
+              Apri dettagli
             </Button>
           </Link>
-        )}
-        {isCompleted(r) && !r.hasWorkerReview && (
-          <Link to="/messages/$id" params={{ id: r.id }}>
-            <Button size="sm" className="gap-2">
-              <Star className="h-4 w-4" />
-              Lascia recensione
-            </Button>
-          </Link>
-        )}
-        <Link to="/messages/$id" params={{ id: r.id }}>
-          <Button size="sm" variant="secondary" className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Apri dettagli
-          </Button>
-        </Link>
+        </div>
       </div>
     </div>
   );
