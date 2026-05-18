@@ -49,6 +49,11 @@ export type MapPoint = {
     fullAddress?: string | null;
     restaurantName?: string | null;
     knownRestaurant?: boolean;
+    // Reputazione/livello richiesto per candidarsi (opzionali)
+    requiredBadge?: string | null;
+    requiredLevel?: string | null;
+    minRating?: number | null;
+    minCompletedShifts?: number | null;
   };
 };
 
@@ -255,6 +260,64 @@ function fmtTariff(amount?: number | null, type?: string | null, hours?: number 
   return `€${Number(amount).toFixed(0)}`;
 }
 
+// Sezione "ordinata" con titolo + chips e fallback se mancano dati.
+function ChipSection({
+  title,
+  items,
+  emptyLabel,
+  tone = "neutral",
+}: {
+  title: string;
+  items: (string | null | undefined)[];
+  emptyLabel: string;
+  tone?: "neutral" | "accent";
+}) {
+  const clean = (items || []).filter((x): x is string => !!x && x.trim().length > 0);
+  const bg = tone === "accent" ? "#ecfeff" : "#f3f4f6";
+  const fg = tone === "accent" ? "#0e7490" : "#374151";
+  const border = tone === "accent" ? "#a5f3fc" : "#e5e7eb";
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 4 }}>
+        {title}
+      </div>
+      {clean.length === 0 ? (
+        <div style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>{emptyLabel}</div>
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          {clean.map((t, i) => (
+            <span
+              key={`${t}-${i}`}
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: fg,
+                background: bg,
+                border: `1px solid ${border}`,
+                padding: "2px 6px",
+                borderRadius: 999,
+                lineHeight: 1.4,
+              }}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function reputationItems(m: MapPoint["meta"]): string[] {
+  if (!m) return [];
+  const out: string[] = [];
+  if (m.requiredBadge) out.push(`🏅 ${m.requiredBadge}`);
+  if (m.requiredLevel) out.push(`Livello: ${m.requiredLevel}`);
+  if (m.minRating != null) out.push(`⭐ min ${Number(m.minRating).toFixed(1)}`);
+  if (m.minCompletedShifts != null) out.push(`Min ${m.minCompletedShifts} turni`);
+  return out;
+}
+
 function WorkerAnnouncementPopup({ p }: { p: MapPoint }) {
   const m = p.meta || {};
   const accent = COLORS.announcement;
@@ -297,10 +360,18 @@ function WorkerAnnouncementPopup({ p }: { p: MapPoint }) {
               <strong>Note operative:</strong> {m.operationalNotes}
             </div>
           )}
-          {m.requirements && m.requirements.length > 0 && (
-            <div style={{ marginTop: 4 }}><strong>Requisiti:</strong> {m.requirements.join(" · ")}</div>
-          )}
         </div>
+        <ChipSection
+          title="Reputazione richiesta"
+          items={reputationItems(m)}
+          emptyLabel="Aperto a tutti i livelli reputazionali"
+          tone="accent"
+        />
+        <ChipSection
+          title="Requisiti"
+          items={m.requirements || []}
+          emptyLabel="Nessun requisito specifico indicato"
+        />
         <a href={detailsHref} style={{ display: "inline-block", marginTop: 8, color: accent, fontSize: 12, fontWeight: 600 }}>
           Apri dettagli →
         </a>
@@ -354,10 +425,18 @@ function WorkerAnnouncementPopup({ p }: { p: MapPoint }) {
             <em>{m.generalDescription.length > 140 ? `${m.generalDescription.slice(0, 140)}…` : m.generalDescription}</em>
           </div>
         )}
-        {m.requirements && m.requirements.length > 0 && (
-          <div style={{ marginTop: 4 }}><strong>Requisiti:</strong> {m.requirements.join(" · ")}</div>
-        )}
       </div>
+      <ChipSection
+        title="Reputazione richiesta"
+        items={reputationItems(m)}
+        emptyLabel="Aperto a tutti i livelli reputazionali"
+        tone="accent"
+      />
+      <ChipSection
+        title="Requisiti"
+        items={m.requirements || []}
+        emptyLabel="Nessun requisito specifico indicato"
+      />
       {!showRealName && (
         <div style={{ marginTop: 8, padding: 6, background: "#fff7e6", border: "1px solid #fde68a", borderRadius: 4, fontSize: 11, color: "#92400e", lineHeight: 1.4 }}>
           🔒 Indirizzo e contatti visibili dopo la conferma del servizio.
