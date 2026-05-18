@@ -689,7 +689,7 @@ function Thread() {
         }, 50);
         return;
       }
-      const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null, displayAddress);
+      const body = renderTemplate(selectedTpl.text, ann, displayOtherName ?? null, displayAddress);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
       const { data, error } = await supabase.from("messages").insert({
@@ -826,6 +826,9 @@ function Thread() {
     // lavoratore una "Conferma turno" con tutti i dettagli operativi in chiaro.
     if (next === "accepted" && role === "restaurant") {
       try {
+        // After acceptance the worker is allowed to see the real venue name;
+        // by this point the application status is "accepted" so privacy is
+        // already unlocked client-side too.
         const venueName = profile?.business_name || profile?.full_name || null;
         const body = buildConfirmationBody(ann, venueName);
         const createdAt = new Date().toISOString();
@@ -1283,7 +1286,7 @@ function Thread() {
           // requisito ulteriore per considerare la reputazione "pubblica".
           const identityVisible = !!other?.profile_completed;
           const reputationVisible = identityVisible && !!other?.phone_verified;
-          const displayName = identityVisible ? (other?.name ?? "Lavoratore") : "Profilo in verifica";
+          const displayName = identityVisible ? (displayOtherName ?? "Lavoratore") : "Profilo in verifica";
           // Messaggio: basato esclusivamente su dati reali verificati.
           const microSummary = !reputationVisible
             ? "Alcuni dati del lavoratore non sono ancora pubblici: identità e reputazione visibili solo dopo la verifica."
@@ -1312,7 +1315,7 @@ function Thread() {
               </div>
 
               <div className="flex items-start gap-4">
-                <UserAvatar userId={identityVisible ? otherId : null} name={identityVisible ? other?.name : undefined} className="h-14 w-14 shrink-0" />
+                <UserAvatar userId={identityVisible ? otherId : null} name={identityVisible ? displayOtherName : undefined} className="h-14 w-14 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-base truncate flex items-center gap-2">
                     <span className={identityVisible ? "" : "italic text-muted-foreground"}>{displayName}</span>
@@ -1774,7 +1777,7 @@ function Thread() {
                   key={m.id}
                   message={m}
                   ann={ann}
-                  venueName={role === "worker" ? displayOtherName : (other?.name ?? null)}
+                  venueName={role === "worker" ? displayOtherName : displayOtherName}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
@@ -1796,7 +1799,7 @@ function Thread() {
                     // Notify the restaurant that the worker accepted the proposal.
                     if (app?.restaurant_id) {
                       try {
-                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (other?.name ?? "Il lavoratore");
+                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (displayOtherName ?? "Il lavoratore");
                         await supabase.from("notifications").insert({
                           user_id: app.restaurant_id,
                           title: "Proposta accettata",
@@ -1841,7 +1844,7 @@ function Thread() {
                     // Notify the restaurant that the worker rejected the proposal.
                     if (app?.restaurant_id) {
                       try {
-                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (other?.name ?? "Il lavoratore");
+                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (displayOtherName ?? "Il lavoratore");
                         await supabase.from("notifications").insert({
                           user_id: app.restaurant_id,
                           title: "Proposta rifiutata",
