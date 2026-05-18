@@ -64,6 +64,13 @@ export type AssignButtonInput = {
   latestProposalStatus: ProposalState | null;
   /** Restaurant blocked because of pending mandatory reviews. */
   isBlocked?: boolean;
+  /**
+   * True when an application (worker candidature) exists for this conversation.
+   * A worker candidature counts as an implicit proposal: the worker has already
+   * shown interest in the published announcement, so the restaurant can
+   * accept directly without sending a separate proposal.
+   */
+  workerApplied?: boolean;
 };
 
 export type AssignButtonState = {
@@ -90,6 +97,18 @@ export function computeAssignButtonState(input: AssignButtonInput): AssignButton
   }
 
   if (input.latestProposalStatus == null) {
+    // Case 1 — worker candidature: the application itself is the proposal.
+    // Restaurant can accept directly (subject to the review-blocker guard).
+    if (input.workerApplied) {
+      if (input.isBlocked) {
+        return {
+          enabled: false,
+          reason: "Prima di assegnare nuovi turni devi chiudere e recensire i turni conclusi.",
+        };
+      }
+      return { enabled: true, reason: null };
+    }
+    // Case 2 — no candidature and no proposal: restaurant must send a proposal first.
     return { enabled: false, reason: "Invia una proposta di lavoro per poter assegnare il turno." };
   }
 
