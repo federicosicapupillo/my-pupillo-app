@@ -14,6 +14,7 @@ import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialo
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreColorClass } from "@/lib/reputation";
+import { shouldShowNewApplicationCard } from "@/lib/application-card";
 import { Award } from "lucide-react";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
@@ -886,7 +887,7 @@ function Thread() {
           </div>
         </div>
 
-        {role === "restaurant" && app && app.status === "pending" && workerRep && (() => {
+        {app && shouldShowNewApplicationCard({ role: role as any, status: app.status as any, hasWorkerReputation: !!workerRep }) && workerRep && (() => {
           const s = summarizeReputation(workerRep);
           const hasEnoughReviews = s.reviewsCount >= 3;
           const reliability = Math.max(0, Math.min(100, s.completionPct || 0));
