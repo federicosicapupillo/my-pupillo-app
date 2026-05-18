@@ -12,7 +12,12 @@ import { ArrowLeft, Check, CheckCheck, X, Euro, ThumbsUp, ThumbsDown, Send, Hand
 import { MessageSquare } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { publicLocationLabel, canSeePreciseAddress, maskPartnerNameForWorker } from "@/lib/public-location";
+import {
+  publicLocationLabel,
+  canSeePreciseAddress,
+  getDisplayPartnerName,
+  WORKED_TOGETHER_SHIFT_STATUSES,
+} from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
@@ -336,6 +341,8 @@ function Thread() {
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null; profile_completed: boolean; phone_verified: boolean } | null>(null);
+  const [otherIdentity, setOtherIdentity] = useState<{ businessName: string | null; fullName: string | null; firstName: string | null } | null>(null);
+  const [hasWorkedTogether, setHasWorkedTogether] = useState(false);
   const [workerRep, setWorkerRep] = useState<WorkerReputationInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -399,7 +406,7 @@ function Thread() {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
-          supabase.from("profiles").select("full_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, id_document_path").eq("id", otherId).maybeSingle(),
+          supabase.from("profiles").select("full_name, first_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, id_document_path").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address, job_contact_person_name, job_contact_person_phone").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({
@@ -409,6 +416,24 @@ function Thread() {
           profile_completed: !!(p as any)?.profile_completed,
           phone_verified: !!(p as any)?.phone_verified,
         });
+        setOtherIdentity({
+          businessName: (p as any)?.business_name ?? null,
+          fullName: (p as any)?.full_name ?? null,
+          firstName: (p as any)?.first_name ?? null,
+        });
+        // Privacy gate: detect any past confirmed shift between the two parties.
+        try {
+          const { data: priorShifts } = await supabase
+            .from("shifts")
+            .select("id")
+            .eq("worker_id", a.worker_id)
+            .eq("restaurant_id", a.restaurant_id)
+            .in("status", [...WORKED_TOGETHER_SHIFT_STATUSES])
+            .limit(1);
+          setHasWorkedTogether(((priorShifts ?? []) as any[]).length > 0);
+        } catch {
+          setHasWorkedTogether(false);
+        }
         setWorkerRep((p as WorkerReputationInput | null) ?? null);
         setAnn(an as Ann | null);
         // Carica recensioni del lavoratore per il ristoratore (privacy: solo
@@ -664,7 +689,7 @@ function Thread() {
         }, 50);
         return;
       }
-      const body = renderTemplate(selectedTpl.text, ann, other?.name ?? null, displayAddress);
+      const body = renderTemplate(selectedTpl.text, ann, displayOtherName ?? null, displayAddress);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
       const { data, error } = await supabase.from("messages").insert({
@@ -801,6 +826,9 @@ function Thread() {
     // lavoratore una "Conferma turno" con tutti i dettagli operativi in chiaro.
     if (next === "accepted" && role === "restaurant") {
       try {
+        // After acceptance the worker is allowed to see the real venue name;
+        // by this point the application status is "accepted" so privacy is
+        // already unlocked client-side too.
         const venueName = profile?.business_name || profile?.full_name || null;
         const body = buildConfirmationBody(ann, venueName);
         const createdAt = new Date().toISOString();
@@ -1129,6 +1157,19 @@ function Thread() {
     toast.success("Turno completato e recensione inviata al lavoratore.");
   };
 
+  // Centralized privacy-aware display name for the "other" party (used in
+  // chat header, proposal/confirmation cards, automatic messages, etc.).
+  const displayOtherName = useMemo(() => getDisplayPartnerName({
+    viewerRole: role,
+    appStatus: app?.status,
+    hasWorkedTogether,
+    partner: {
+      businessName: otherIdentity?.businessName ?? null,
+      fullName: otherIdentity?.fullName ?? other?.name ?? null,
+      firstName: otherIdentity?.firstName ?? null,
+    },
+  }), [role, app?.status, hasWorkedTogether, otherIdentity, other?.name]);
+
   if (loading) {
     return <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">Caricamento chat…</div>;
   }
@@ -1159,7 +1200,7 @@ function Thread() {
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <UserAvatar userId={otherId} name={maskPartnerNameForWorker(other?.name, role, app?.status)} className="h-12 w-12 shrink-0" />
+            <UserAvatar userId={otherId} name={displayOtherName} className="h-12 w-12 shrink-0" />
             <div className="min-w-0 flex-1">
             {otherId ? (
               <Link
@@ -1168,10 +1209,10 @@ function Thread() {
                 className="font-semibold text-primary hover:underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 title="Vedi tutte le conversazioni con questa persona"
               >
-                {maskPartnerNameForWorker(other?.name, role, app?.status)}
+                {displayOtherName}
               </Link>
             ) : (
-              <div className="font-semibold">{maskPartnerNameForWorker(other?.name, role, app?.status)}</div>
+              <div className="font-semibold">{displayOtherName}</div>
             )}
             {ann && (
               <div className="mt-1 text-xs text-muted-foreground">
@@ -1245,7 +1286,7 @@ function Thread() {
           // requisito ulteriore per considerare la reputazione "pubblica".
           const identityVisible = !!other?.profile_completed;
           const reputationVisible = identityVisible && !!other?.phone_verified;
-          const displayName = identityVisible ? (other?.name ?? "Lavoratore") : "Profilo in verifica";
+          const displayName = identityVisible ? (displayOtherName ?? "Lavoratore") : "Profilo in verifica";
           // Messaggio: basato esclusivamente su dati reali verificati.
           const microSummary = !reputationVisible
             ? "Alcuni dati del lavoratore non sono ancora pubblici: identità e reputazione visibili solo dopo la verifica."
@@ -1274,7 +1315,7 @@ function Thread() {
               </div>
 
               <div className="flex items-start gap-4">
-                <UserAvatar userId={identityVisible ? otherId : null} name={identityVisible ? other?.name : undefined} className="h-14 w-14 shrink-0" />
+                <UserAvatar userId={identityVisible ? otherId : null} name={identityVisible ? displayOtherName : undefined} className="h-14 w-14 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-base truncate flex items-center gap-2">
                     <span className={identityVisible ? "" : "italic text-muted-foreground"}>{displayName}</span>
@@ -1680,7 +1721,7 @@ function Thread() {
             }
             if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
               const venueName = role === "worker"
-                ? maskPartnerNameForWorker(other?.name, role, app?.status)
+                ? displayOtherName
                 : (profile?.business_name || profile?.full_name || null);
               const hasAcknowledged = msgs.some(
                 mm => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
@@ -1736,7 +1777,7 @@ function Thread() {
                   key={m.id}
                   message={m}
                   ann={ann}
-                  venueName={role === "worker" ? maskPartnerNameForWorker(other?.name, role, app?.status) : (other?.name ?? null)}
+                  venueName={role === "worker" ? displayOtherName : displayOtherName}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
@@ -1758,7 +1799,7 @@ function Thread() {
                     // Notify the restaurant that the worker accepted the proposal.
                     if (app?.restaurant_id) {
                       try {
-                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (other?.name ?? "Il lavoratore");
+                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (displayOtherName ?? "Il lavoratore");
                         await supabase.from("notifications").insert({
                           user_id: app.restaurant_id,
                           title: "Proposta accettata",
@@ -1803,7 +1844,7 @@ function Thread() {
                     // Notify the restaurant that the worker rejected the proposal.
                     if (app?.restaurant_id) {
                       try {
-                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (other?.name ?? "Il lavoratore");
+                        const workerName = role === "worker" ? (profile?.full_name ?? "Il lavoratore") : (displayOtherName ?? "Il lavoratore");
                         await supabase.from("notifications").insert({
                           user_id: app.restaurant_id,
                           title: "Proposta rifiutata",

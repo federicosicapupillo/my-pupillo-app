@@ -12,7 +12,12 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { otherColumnForRole, groupThreadsByOther } from "@/lib/messages-grouping";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
-import { maskPartnerNameForWorker, isApplicationConfirmed, PUBLIC_VENUE_NAME } from "@/lib/public-location";
+import {
+  isApplicationConfirmed,
+  PUBLIC_VENUE_NAME,
+  getDisplayPartnerName,
+  WORKED_TOGETHER_SHIFT_STATUSES,
+} from "@/lib/public-location";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -34,6 +39,7 @@ type Thread = {
   unread: number;
   annRole: string | null;
   annDate: string | null;
+  hasWorkedTogether: boolean;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -138,9 +144,9 @@ function MessagesLayout() {
     const others = list.map((a) => a[otherCol]).filter(Boolean);
     const ids = list.map((a) => a.id);
     const annIds = Array.from(new Set(list.map((a) => a.announcement_id).filter(Boolean))) as string[];
-    const [{ data: profs }, { data: msgs }, { data: anns }] = await Promise.all([
+    const [{ data: profs }, { data: msgs }, { data: anns }, { data: priorShifts }] = await Promise.all([
       others.length
-        ? supabase.from("profiles").select("id, full_name, business_name").in("id", others)
+        ? supabase.from("profiles").select("id, full_name, first_name, business_name").in("id", others)
         : Promise.resolve({ data: [] as any[] }),
       ids.length
         ? supabase
@@ -152,9 +158,24 @@ function MessagesLayout() {
       annIds.length
         ? supabase.from("announcements").select("id, professional_profile, service_date").in("id", annIds)
         : Promise.resolve({ data: [] as any[] }),
+      // "Have I worked with them?" — any shift row (other than cancelled/no_show)
+      // between me and any of these partners proves a confirmed past relationship.
+      others.length
+        ? supabase
+            .from("shifts")
+            .select("worker_id, restaurant_id, status")
+            .eq(col, user.id)
+            .in(otherCol, others)
+            .in("status", [...WORKED_TOGETHER_SHIFT_STATUSES])
+        : Promise.resolve({ data: [] as any[] }),
     ]);
     const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
     const amap = new Map((anns ?? []).map((a: any) => [a.id, a]));
+    const workedSet = new Set<string>();
+    for (const s of (priorShifts ?? []) as any[]) {
+      const partner = role === "restaurant" ? s.worker_id : s.restaurant_id;
+      if (partner) workedSet.add(partner);
+    }
     const lastByApp = new Map<string, any>();
     const unreadByApp = new Map<string, number>();
     for (const m of (msgs ?? []) as any[]) {
@@ -167,8 +188,18 @@ function MessagesLayout() {
       const p = pmap.get(a[otherCol]);
       const last = lastByApp.get(a.id);
       const ann = amap.get(a.announcement_id);
-      const rawName = p?.business_name || p?.full_name || "Utente";
-      const displayName = maskPartnerNameForWorker(rawName, role, a.status);
+      const otherIdVal = a[otherCol] as string | null;
+      const hasWorkedTogether = !!otherIdVal && workedSet.has(otherIdVal);
+      const displayName = getDisplayPartnerName({
+        viewerRole: role,
+        appStatus: a.status,
+        hasWorkedTogether,
+        partner: {
+          businessName: p?.business_name ?? null,
+          fullName: p?.full_name ?? null,
+          firstName: p?.first_name ?? null,
+        },
+      });
       return {
         id: a.id,
         status: a.status,
@@ -181,6 +212,7 @@ function MessagesLayout() {
         unread: unreadByApp.get(a.id) ?? 0,
         annRole: ann?.professional_profile ?? null,
         annDate: ann?.service_date ?? null,
+        hasWorkedTogether,
       };
     });
     next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
@@ -468,12 +500,13 @@ function MessagesLayout() {
                 const latestStatus = last?.status ?? null;
                 const expanded = expandedGroups.has(g.id);
                 const latestId = last?.id ?? null;
-                const confirmedItem = role === "worker"
-                  ? g.items.find((t) => isApplicationConfirmed(t.status))
-                  : null;
-                const groupDisplayName = role === "worker"
-                  ? (confirmedItem ? confirmedItem.other.name : PUBLIC_VENUE_NAME)
-                  : g.name;
+                // Reveal real names only when at least one item in the group
+                // is already confirmed/assigned OR the parties have worked
+                // together in the past. Otherwise keep the privacy-safe label.
+                const revealItem = g.items.find(
+                  (t) => isApplicationConfirmed(t.status) || t.hasWorkedTogether,
+                );
+                const groupDisplayName = revealItem ? revealItem.other.name : (role === "worker" ? PUBLIC_VENUE_NAME : g.name);
                 return (
                   <div
                     key={g.id}
