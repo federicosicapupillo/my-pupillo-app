@@ -2048,18 +2048,9 @@ const RATING_LABELS: Record<number, string> = {
 function ReviewBlock(props: {
   id?: string;
   existing: Review | null;
-  workerName: string | null;
-  shift: Shift | null;
-  forceOpen: boolean;
-  onSubmit: (rating: number, text: string, tags: string[]) => Promise<void>;
 }) {
-  const { id, existing, workerName, shift, forceOpen, onSubmit } = props;
-  const [rating, setRating] = useState(0);
-  const [text, setText] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-
-  if (existing) {
+  const { id, existing } = props;
+  if (!existing) return null;
     return (
       <div id={id} className="mt-4 rounded-2xl border bg-card p-4 space-y-2">
         <div className="flex items-center gap-2">
@@ -2083,122 +2074,120 @@ function ReviewBlock(props: {
         <p className="text-xs text-muted-foreground">Hai già recensito questo turno. Non è possibile modificarla.</p>
       </div>
     );
-  }
+}
 
-  const charCount = text.trim().length;
-  const canSubmit = rating > 0 && charCount >= 20 && charCount <= 500 && !submitting;
+function ReviewDialog(props: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  workerName: string | null;
+  workerRole: string | null;
+  shiftDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  venue: string | null;
+  shiftStatus: string | null;
+  onSubmit: (payload: {
+    general: number;
+    reliability: number;
+    punctuality: number;
+    professionalism: number;
+    serviceQuality: number;
+    comment: string;
+  }) => Promise<void>;
+}) {
+  const { open, onOpenChange, workerName, workerRole, shiftDate, startTime, endTime, venue, shiftStatus, onSubmit } = props;
+  const [general, setGeneral] = useState(0);
+  const [reliability, setReliability] = useState(0);
+  const [punctuality, setPunctuality] = useState(0);
+  const [professionalism, setProfessionalism] = useState(0);
+  const [serviceQuality, setServiceQuality] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mandatory review state derived from shift.completed_at (3-day deadline)
-  const completedAtIso = (shift as any)?.completed_at as string | null | undefined;
-  const dueMs = completedAtIso ? new Date(completedAtIso).getTime() + 3 * 24 * 60 * 60 * 1000 : null;
-  const overdue = dueMs != null && Date.now() > dueMs;
-  const showMandatoryNotice = !!shift && (shift.status === "completed");
+  useEffect(() => {
+    if (!open) {
+      setGeneral(0); setReliability(0); setPunctuality(0);
+      setProfessionalism(0); setServiceQuality(0); setComment(""); setError(null);
+    }
+  }, [open]);
 
-  const toggleTag = (t: string) => {
-    setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
-  };
+  const allRated = general > 0 && reliability > 0 && punctuality > 0 && professionalism > 0 && serviceQuality > 0;
 
   const handleSubmit = async () => {
+    if (!allRated) {
+      setError("Completa tutte le valutazioni prima di inviare la recensione.");
+      return;
+    }
+    setError(null);
     setSubmitting(true);
-    try { await onSubmit(rating, text, tags); }
-    finally { setSubmitting(false); }
+    try {
+      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, comment });
+    } finally { setSubmitting(false); }
   };
 
+  const dateStr = shiftDate ? new Date(shiftDate).toLocaleDateString("it-IT") : "—";
+  const timeStr = [startTime?.slice(0,5), endTime?.slice(0,5)].filter(Boolean).join(" – ") || "—";
+
   return (
-    <div id={id} className={`mt-4 rounded-2xl border bg-card p-4 space-y-4 ${forceOpen ? "ring-2 ring-primary/40" : ""}`}>
-      {showMandatoryNotice && (
-        <div className={`rounded-lg border p-3 text-sm ${
-          overdue
-            ? "border-destructive/40 bg-destructive/10 text-destructive"
-            : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
-        }`}>
-          <div className="font-semibold">{overdue ? "Recensione scaduta" : "Recensione obbligatoria"}</div>
-          <div className="text-xs mt-0.5">
-            {overdue
-              ? "Questa recensione è scaduta. Completarla riattiverà il contatto con nuovi lavoratori."
-              : `Per chiudere correttamente il turno devi lasciare una valutazione al lavoratore${
-                  dueMs ? ` entro il ${new Date(dueMs).toLocaleDateString("it-IT")}` : " entro 3 giorni"
-                }.`}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Chiudi turno e recensisci</DialogTitle>
+          <DialogDescription>Valuta il lavoratore per il servizio appena concluso.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-xl border bg-secondary/30 p-3 text-sm space-y-1">
+            <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{workerName ?? "—"}</span></div>
+            {workerRole && <div><span className="text-muted-foreground">Ruolo:</span> {workerRole}</div>}
+            <div><span className="text-muted-foreground">Data:</span> {dateStr}</div>
+            <div><span className="text-muted-foreground">Orario:</span> {timeStr}</div>
+            {venue && <div><span className="text-muted-foreground">Locale:</span> {venue}</div>}
+            <div><span className="text-muted-foreground">Stato:</span> {shiftStatus ?? "in chiusura"}</div>
           </div>
-        </div>
-      )}
-      <div>
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-          <h3 className="font-semibold text-base">Com'è andato il turno{workerName ? ` con ${workerName}` : ""}?</h3>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          Conferma la fine del turno e lascia una recensione al lavoratore.
-        </p>
-      </div>
 
-      <div>
-        <label className="block text-xs font-medium mb-2">Valutazione *</label>
-        <StarPicker value={rating} onChange={setRating} />
-      </div>
+          <CriterionRow label="Valutazione generale *" value={general} onChange={setGeneral} />
+          <CriterionRow label="Affidabilità *" value={reliability} onChange={setReliability} />
+          <CriterionRow label="Puntualità *" value={punctuality} onChange={setPunctuality} />
+          <CriterionRow label="Professionalità *" value={professionalism} onChange={setProfessionalism} />
+          <CriterionRow label="Qualità del servizio *" value={serviceQuality} onChange={setServiceQuality} />
 
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-medium">Recensione *</label>
-          <span className={`text-[11px] ${charCount > 500 ? "text-destructive" : "text-muted-foreground"}`}>
-            {charCount}/500
-          </span>
-        </div>
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Scrivi una recensione chiara e utile. Esempio: puntuale, professionale, ha rispettato il dress code e ha lavorato bene con il team."
-          rows={4}
-          maxLength={500}
-        />
-        {charCount > 0 && charCount < 20 && (
-          <p className="text-[11px] text-destructive mt-1">Minimo 20 caratteri ({20 - charCount} mancanti).</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium mb-2">Tag rapidi (opzionali)</label>
-        <div className="space-y-2">
           <div>
-            <div className="text-[11px] text-muted-foreground mb-1">Positivi</div>
-            <div className="flex flex-wrap gap-1.5">
-              {POSITIVE_TAGS.map(t => {
-                const active = tags.includes(t);
-                return (
-                  <button key={t} type="button" onClick={() => toggleTag(t)}
-                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
+            <label className="block text-xs font-medium mb-1">Commento (opzionale)</label>
+            <Textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Scrivi un commento sul servizio svolto, se vuoi."
+              rows={3}
+              maxLength={500}
+            />
           </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground mb-1">Critici</div>
-            <div className="flex flex-wrap gap-1.5">
-              {CRITICAL_TAGS.map(t => {
-                const active = tags.includes(t);
-                return (
-                  <button key={t} type="button" onClick={() => toggleTag(t)}
-                    className={`text-[11px] rounded-full px-2.5 py-1 border transition ${active ? "bg-destructive/20 border-destructive text-destructive" : "bg-secondary border-transparent hover:bg-secondary/70"}`}>
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <Button type="button" onClick={handleSubmit} disabled={!canSubmit} className="w-full gap-2">
-        <Check className="h-4 w-4" />
-        {submitting ? "Invio in corso…" : "Conferma fine turno e invia recensione"}
-      </Button>
-      {shift?.status === "cancelled" && (
-        <p className="text-[11px] text-destructive text-center">
-          Il turno risulta annullato: usa il flusso di segnalazione invece della recensione standard.
-        </p>
-      )}
+          {error && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+              {error}
+            </div>
+          )}
+        </div>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            Annulla
+          </Button>
+          <Button type="button" onClick={handleSubmit} disabled={submitting} className="gap-2">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            Invia recensione e chiudi turno
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CriterionRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="text-sm font-medium">{label}</div>
+      <StarPicker value={value} onChange={onChange} />
     </div>
   );
 }
