@@ -374,6 +374,36 @@ function Thread() {
         });
         setWorkerRep((p as WorkerReputationInput | null) ?? null);
         setAnn(an as Ann | null);
+        // Carica recensioni del lavoratore per il ristoratore (privacy: solo
+        // recensioni verificate, collegate a turni reali, visibili ai ristoratori).
+        const workerTargetId = a.worker_id;
+        if (workerTargetId && user?.id === a.restaurant_id) {
+          const { data: revs } = await supabase
+            .from("reviews")
+            .select("id, rating, comment, created_at, shift_id, announcement_id, positive_tags, would_rehire")
+            .eq("target_id", workerTargetId)
+            .eq("is_visible_to_restaurants", true)
+            .not("shift_id", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(50);
+          const list = (revs as WorkerReview[]) ?? [];
+          setWorkerReviews(list);
+          const annIds = Array.from(new Set(list.map(r => r.announcement_id).filter(Boolean))) as string[];
+          if (annIds.length) {
+            const { data: anns } = await supabase
+              .from("announcements")
+              .select("id, professional_profile")
+              .in("id", annIds);
+            const map: Record<string, string | null> = {};
+            (anns ?? []).forEach((row: any) => { map[row.id] = row.professional_profile ?? null; });
+            setReviewRoles(map);
+          } else {
+            setReviewRoles({});
+          }
+        } else {
+          setWorkerReviews([]);
+          setReviewRoles({});
+        }
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
       setMsgs((m as Msg[]) ?? []);
