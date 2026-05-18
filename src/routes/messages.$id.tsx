@@ -139,6 +139,7 @@ type WorkerReview = {
   shift_id: string | null;
   announcement_id: string | null;
   positive_tags: string[] | null;
+  negative_tags: string[] | null;
   would_rehire: string | null;
 };
 
