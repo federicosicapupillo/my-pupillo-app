@@ -97,6 +97,8 @@ type Bucket =
   | "in_attesa_conferma"
   | "confermate"
   | "completate"
+  | "rifiutate"
+  | "scadute"
   | "annullate"
   | "da_recensire";
 
@@ -132,7 +134,9 @@ function bucketsFor(r: Row, lastSeenAt: number): Bucket[] {
     return out;
   }
   if (isCancelled(r)) {
-    out.push("annullate");
+    if (r.status === "expired") out.push("scadute");
+    else if (r.status === "rejected" || r.status === "not_interested") out.push("rifiutate");
+    else out.push("annullate");
     return out;
   }
   if (isMutuallyConfirmed(r)) {
@@ -169,9 +173,15 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   if (r.status === "accepted")
     return { label: "Confermata da entrambi", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
   if (r.status === "rejected")
-    return { label: "Rifiutata dal ristoratore", cls: "bg-muted text-muted-foreground border-border" };
+    return {
+      label: "Rifiutata dal ristoratore",
+      cls: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
+    };
   if (r.status === "not_interested")
-    return { label: "Hai rifiutato", cls: "bg-muted text-muted-foreground border-border" };
+    return {
+      label: "Hai rifiutato",
+      cls: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
+    };
   if (r.status === "expired")
     return { label: "Scaduta", cls: "bg-muted text-muted-foreground border-border" };
   if (r.status === "counter_offer")
@@ -189,12 +199,14 @@ const TABS: { key: "tutte" | Bucket; label: string }[] = [
   { key: "tutte", label: "Tutte" },
   { key: "nuove", label: "Nuove" },
   { key: "da_rispondere", label: "Da rispondere" },
-  { key: "accettate_da_me", label: "Accettate da me" },
-  { key: "in_attesa_conferma", label: "In attesa conferma" },
+  { key: "accettate_da_me", label: "Accettate" },
+  { key: "in_attesa_conferma", label: "In attesa" },
   { key: "confermate", label: "Confermate" },
   { key: "completate", label: "Completate" },
-  { key: "annullate", label: "Annullate" },
   { key: "da_recensire", label: "Da recensire" },
+  { key: "rifiutate", label: "Rifiutate" },
+  { key: "scadute", label: "Scadute" },
+  { key: "annullate", label: "Annullate" },
 ];
 
 function priorityFor(r: Row, isNew: boolean): number {
@@ -343,6 +355,8 @@ function Jobs() {
       in_attesa_conferma: 0,
       confermate: 0,
       completate: 0,
+      rifiutate: 0,
+      scadute: 0,
       annullate: 0,
       da_recensire: 0,
     };
@@ -392,34 +406,64 @@ function Jobs() {
       </AppShell>
     );
 
-  const stats: { label: string; value: number }[] = [
-    { label: "Totale", value: counts.tutte },
-    { label: "Da rispondere", value: counts.da_rispondere },
-    { label: "Confermate", value: counts.confermate },
-    { label: "Da recensire", value: counts.da_recensire },
+  const stats: { label: string; value: number; tone: string; tab: "tutte" | Bucket }[] = [
+    {
+      label: "Nuove",
+      value: counts.nuove,
+      tone: "bg-primary/10 text-primary border-primary/30",
+      tab: "nuove",
+    },
+    {
+      label: "In attesa",
+      value: counts.da_rispondere + counts.in_attesa_conferma,
+      tone: "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
+      tab: "da_rispondere",
+    },
+    {
+      label: "Accettate",
+      value: counts.confermate + counts.accettate_da_me,
+      tone: "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+      tab: "confermate",
+    },
+    {
+      label: "Rifiutate",
+      value: counts.rifiutate,
+      tone: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
+      tab: "rifiutate",
+    },
+    {
+      label: "Scadute",
+      value: counts.scadute,
+      tone: "bg-muted text-muted-foreground border-border",
+      tab: "scadute",
+    },
   ];
 
   return (
     <AppShell>
       <PageHeader
         title="Offerte ricevute"
-        subtitle="Gestisci qui le proposte di lavoro ricevute dai ristoratori e segui lo stato dei tuoi servizi."
+        subtitle="Qui trovi le proposte di lavoro ricevute dai ristoratori."
       />
 
       {/* Riepilogo numerico — KPI chiari in alto */}
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map((s) => (
-          <div
+          <button
             key={s.label}
-            className="rounded-2xl border bg-card px-4 py-3 shadow-sm transition hover:shadow-md"
+            type="button"
+            onClick={() => setTab(s.tab)}
+            className={
+              "rounded-2xl border px-4 py-3 text-left shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring " +
+              (tab === s.tab ? "ring-2 ring-foreground/40 " : "") +
+              s.tone
+            }
           >
-            <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="text-[11px] font-semibold uppercase tracking-wide opacity-80">
               {s.label}
             </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-              {s.value}
-            </div>
-          </div>
+            <div className="mt-1 text-2xl font-bold tabular-nums">{s.value}</div>
+          </button>
         ))}
       </div>
 
