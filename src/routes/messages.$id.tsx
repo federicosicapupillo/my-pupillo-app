@@ -971,6 +971,16 @@ function Thread() {
               {role === "worker" && app.status === "pending" && (<>
                 <Button size="sm" className="gap-2" onClick={() => transition("interested")}><ThumbsUp className="h-4 w-4" />Sono interessato</Button>
                 <Button size="sm" variant="outline" className="gap-2" onClick={() => transition("not_interested")}><ThumbsDown className="h-4 w-4" />Non interessato</Button>
+                {(!shift || (shift.status !== "scheduled" && shift.status !== "completed")) && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-2 text-muted-foreground hover:text-destructive"
+                    onClick={() => setCancelConfirmOpen(true)}
+                  >
+                    <Ban className="h-4 w-4" />Annulla candidatura
+                  </Button>
+                )}
               </>)}
               {role === "restaurant" && (() => {
                 const statuses = Object.values(proposalStatuses);
