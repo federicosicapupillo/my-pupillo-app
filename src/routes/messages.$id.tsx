@@ -1491,7 +1491,7 @@ function Thread() {
             }
             if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
               const venueName = role === "worker"
-                ? (other?.name ?? null)
+                ? maskPartnerNameForWorker(other?.name, role, app?.status)
                 : (profile?.business_name || profile?.full_name || null);
               return (
                 <ConfirmationCard
@@ -1515,7 +1515,7 @@ function Thread() {
                   key={m.id}
                   message={m}
                   ann={ann}
-                  venueName={other?.name ?? null}
+                  venueName={role === "worker" ? maskPartnerNameForWorker(other?.name, role, app?.status) : (other?.name ?? null)}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
