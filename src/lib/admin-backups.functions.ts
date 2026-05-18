@@ -25,7 +25,7 @@ export type AdminBackupFile = {
 
 export const listAdminBackups = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<AdminBackupFile[]> => {
+  .handler(async ({ context }): Promise<{ files: AdminBackupFile[]; sha256: string | null }> => {
     const { supabase, userId } = context;
     // Verify the caller has admin role via RLS-safe RPC
     const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
@@ -60,5 +60,17 @@ export const listAdminBackups = createServerFn({ method: "GET" })
         expiresInSeconds,
       });
     }
-    return out;
+
+    // Fetch the SHA256 checksum content so the UI can show it prominently.
+    let sha256: string | null = null;
+    const { data: shaBlob } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .download(`${PREFIX}/pupillo-full-backup-2026-05-18.zip.sha256`);
+    if (shaBlob) {
+      const text = await shaBlob.text();
+      const match = text.trim().match(/[a-fA-F0-9]{64}/);
+      sha256 = match ? match[0].toLowerCase() : text.trim();
+    }
+
+    return { files: out, sha256 };
   });
