@@ -300,6 +300,8 @@ function Thread() {
   const [counterValue, setCounterValue] = useState("");
   const [counterConfirmOpen, setCounterConfirmOpen] = useState(false);
   const [sendingCounter, setSendingCounter] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
@@ -775,7 +777,17 @@ function Thread() {
       <div className="max-w-3xl mx-auto lg:mx-0">
         <div className="flex items-center justify-between mb-4">
           <Link to="/messages" className="lg:hidden"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Indietro</Button></Link>
-          {app && <span className="text-xs rounded-full bg-secondary px-2 py-1 capitalize">{app.status}</span>}
+          {app && (
+            <span
+              className={`text-xs rounded-full px-2 py-1 capitalize ${
+                app.status === "cancelled"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                  : "bg-secondary"
+              }`}
+            >
+              {app.status === "cancelled" ? "Annullata" : app.status}
+            </span>
+          )}
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
