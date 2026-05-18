@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle, Info } from "lucide-react";
+import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
@@ -152,12 +153,13 @@ function MapPage() {
   }, [isRestaurant]);
 
   // For worker accounts: never display other workers on the map and never
-  // show standalone restaurant markers (the announcement marker is the
-  // restaurant). Only the active announcements remain visible.
+  // show other workers. I marker dei ristoranti restano visibili (con
+  // privacy applicata sul nome) così il lavoratore può vedere tutti i
+  // locali in piattaforma, oltre alle richieste attive.
   useEffect(() => {
     if (isWorker) {
       setShowW(false);
-      setShowR(false);
+      setShowR(true);
       setShowA(true);
       setView("restaurants");
     }
@@ -341,14 +343,25 @@ function MapPage() {
         const lat = r.service_area_lat ?? r.latitude;
         const lng = r.service_area_lng ?? r.longitude;
         if (lat == null || lng == null) return;
+        const known = !isWorker || knownRestaurantIds.has(r.id);
+        const hasActive = (annCounts[r.id] || 0) > 0;
+        const maskedTitle = pickMaskedRestaurantLabel(r.id, hasActive);
+        const zone = [r.neighborhood, r.city].filter(Boolean).join(", ") || r.city || "Zona non specificata";
+        const maskedSubtitle = [
+          r.venue_type,
+          `Zona: ${zone}`,
+          hasActive ? `${annCounts[r.id]} richiest${annCounts[r.id] === 1 ? "a attiva" : "e attive"}` : "Nessuna richiesta attiva",
+        ].filter(Boolean).join(" · ");
         pts.push({
           id: r.id,
-          lat,
-          lng,
+          lat: known ? lat : jitterCoords([lat, lng], r.id, 1.2)[0],
+          lng: known ? lng : jitterCoords([lat, lng], r.id, 1.2)[1],
           category: "restaurant",
-          title: r.business_name || r.full_name || "Locale",
-          subtitle: [r.venue_type, r.price_range ? `Fascia: ${priceRangeLabel(r.price_range)}` : null, [r.neighborhood, r.city].filter(Boolean).join(", "), `${annCounts[r.id] || 0} annunci attivi`].filter(Boolean).join(" · "),
-          city: [r.neighborhood, r.city].filter(Boolean).join(", ") || r.city,
+          title: known ? (r.business_name || r.full_name || "Locale") : maskedTitle,
+          subtitle: known
+            ? [r.venue_type, r.price_range ? `Fascia: ${priceRangeLabel(r.price_range)}` : null, zone, `${annCounts[r.id] || 0} annunci attivi`].filter(Boolean).join(" · ")
+            : maskedSubtitle,
+          city: zone,
           status: r.account_status,
         });
       });
