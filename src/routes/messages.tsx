@@ -166,7 +166,7 @@ function MessagesLayout() {
             .select("worker_id, restaurant_id, status")
             .eq(col, user.id)
             .in(otherCol, others)
-            .in("status", WORKED_TOGETHER_SHIFT_STATUSES as unknown as string[])
+            .in("status", [...WORKED_TOGETHER_SHIFT_STATUSES])
         : Promise.resolve({ data: [] as any[] }),
     ]);
     const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
