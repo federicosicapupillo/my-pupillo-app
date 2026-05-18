@@ -39,3 +39,32 @@ export function canSeePreciseAddress(ctx: AddressVisibilityCtx): boolean {
 
 export const PRECISE_ADDRESS_HINT =
   "L'indirizzo esatto sarà visibile dopo la conferma del turno.";
+
+/** Generic placeholder shown to workers before a restaurant relationship is
+ *  confirmed. Keeps the chat usable without leaking the venue identity. */
+export const PUBLIC_VENUE_NAME = "Ristorante partner";
+
+const CONFIRMED_APP_STATUSES = new Set([
+  "accepted",
+  "confirmed",
+  "assigned",
+]);
+
+/** True if `status` represents a confirmed/accepted worker relationship. */
+export function isApplicationConfirmed(status: string | null | undefined): boolean {
+  return !!status && CONFIRMED_APP_STATUSES.has(status);
+}
+
+/**
+ * Mask the restaurant's real name in worker-facing chat UI until the
+ * application is confirmed. Restaurants always see the worker's real name.
+ */
+export function maskPartnerNameForWorker(
+  name: string | null | undefined,
+  viewerRole: string | null | undefined,
+  appStatus: string | null | undefined,
+): string {
+  if (viewerRole !== "worker") return name ?? "Utente";
+  if (isApplicationConfirmed(appStatus)) return name ?? PUBLIC_VENUE_NAME;
+  return PUBLIC_VENUE_NAME;
+}

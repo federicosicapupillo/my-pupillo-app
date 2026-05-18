@@ -12,6 +12,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { otherColumnForRole, groupThreadsByOther } from "@/lib/messages-grouping";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
+import { maskPartnerNameForWorker, isApplicationConfirmed, PUBLIC_VENUE_NAME } from "@/lib/public-location";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -132,13 +133,15 @@ function MessagesLayout() {
       const p = pmap.get(a[otherCol]);
       const last = lastByApp.get(a.id);
       const ann = amap.get(a.announcement_id);
+      const rawName = p?.business_name || p?.full_name || "Utente";
+      const displayName = maskPartnerNameForWorker(rawName, role, a.status);
       return {
         id: a.id,
         status: a.status,
         announcementId: a.announcement_id,
         restaurantId: a.restaurant_id,
         workerId: a.worker_id,
-        other: { id: a[otherCol], name: p?.business_name || p?.full_name || "Utente" },
+        other: { id: a[otherCol], name: displayName },
         lastBody: a.last_message_preview ?? last?.body ?? null,
         lastAt: a.last_message_at ?? last?.created_at ?? null,
         unread: unreadByApp.get(a.id) ?? 0,
@@ -410,6 +413,12 @@ function MessagesLayout() {
                 const latestStatus = last?.status ?? null;
                 const expanded = expandedGroups.has(g.id);
                 const latestId = last?.id ?? null;
+                const confirmedItem = role === "worker"
+                  ? g.items.find((t) => isApplicationConfirmed(t.status))
+                  : null;
+                const groupDisplayName = role === "worker"
+                  ? (confirmedItem ? confirmedItem.other.name : PUBLIC_VENUE_NAME)
+                  : g.name;
                 return (
                   <div
                     key={g.id}
@@ -436,7 +445,7 @@ function MessagesLayout() {
                       <div className="flex items-baseline justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className={`truncate ${g.unread > 0 ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>
-                            {g.name}
+                            {groupDisplayName}
                           </div>
                           {g.unread > 0 && (
                             <span

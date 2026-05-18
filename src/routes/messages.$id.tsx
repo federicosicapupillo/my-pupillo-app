@@ -12,7 +12,7 @@ import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, 
 import { MessageSquare } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
+import { publicLocationLabel, canSeePreciseAddress, maskPartnerNameForWorker } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
@@ -1006,7 +1006,7 @@ function Thread() {
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <UserAvatar userId={otherId} name={other?.name} className="h-12 w-12 shrink-0" />
+            <UserAvatar userId={otherId} name={maskPartnerNameForWorker(other?.name, role, app?.status)} className="h-12 w-12 shrink-0" />
             <div className="min-w-0 flex-1">
             {otherId ? (
               <Link
@@ -1015,10 +1015,10 @@ function Thread() {
                 className="font-semibold text-primary hover:underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 title="Vedi tutte le conversazioni con questa persona"
               >
-                {other?.name ?? "—"}
+                {maskPartnerNameForWorker(other?.name, role, app?.status)}
               </Link>
             ) : (
-              <div className="font-semibold">{other?.name ?? "—"}</div>
+              <div className="font-semibold">{maskPartnerNameForWorker(other?.name, role, app?.status)}</div>
             )}
             {ann && (
               <div className="mt-1 text-xs text-muted-foreground">
@@ -1491,7 +1491,7 @@ function Thread() {
             }
             if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
               const venueName = role === "worker"
-                ? (other?.name ?? null)
+                ? maskPartnerNameForWorker(other?.name, role, app?.status)
                 : (profile?.business_name || profile?.full_name || null);
               return (
                 <ConfirmationCard
@@ -1515,7 +1515,7 @@ function Thread() {
                   key={m.id}
                   message={m}
                   ann={ann}
-                  venueName={other?.name ?? null}
+                  venueName={role === "worker" ? maskPartnerNameForWorker(other?.name, role, app?.status) : (other?.name ?? null)}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
