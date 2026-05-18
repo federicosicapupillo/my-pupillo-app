@@ -1296,6 +1296,11 @@ function Thread() {
                             ) : (
                               <p className="text-xs text-muted-foreground italic">Nessun commento</p>
                             )}
+                            <ReviewLabelsDisplay
+                              positive={r.positive_tags}
+                              negative={r.negative_tags}
+                              className="mt-1.5"
+                            />
                           </li>
                         ))}
                       </ul>
