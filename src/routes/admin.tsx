@@ -293,26 +293,40 @@ function Admin() {
           <div className="rounded-2xl border bg-card p-5">
             <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
               <div className="font-medium">Lavoratori registrati ({workersFiltered.length})</div>
-              <Input placeholder="Cerca nome o email" value={workerSearch} onChange={(e)=>setWorkerSearch(e.target.value)} className="h-9 w-64" />
+              <div className="flex flex-wrap gap-2">
+                <select value={workerStatusFilter} onChange={(e)=>setWorkerStatusFilter(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="all">Tutti gli stati</option>
+                  {ACCOUNT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <Input placeholder="Cerca nome o email" value={workerSearch} onChange={(e)=>setWorkerSearch(e.target.value)} className="h-9 w-64" />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-muted-foreground">
-                  <tr><th className="py-2 pr-3">Nome</th><th className="pr-3">Email</th><th className="pr-3">Stato profilo</th><th className="pr-3">Badge</th><th className="pr-3">Reputazione</th><th className="pr-3">Turni</th><th>Azioni</th></tr>
+                  <tr><th className="py-2 pr-3">Nome</th><th className="pr-3">Email</th><th className="pr-3">Account</th><th className="pr-3">Profilo</th><th className="pr-3">Badge</th><th className="pr-3">Reputazione</th><th className="pr-3">Turni</th><th>Azioni</th></tr>
                 </thead>
                 <tbody>
                   {workersFiltered.slice(0, 200).map(w => (
                     <tr key={w.id} className="border-t">
                       <td className="py-2 pr-3">{w.full_name ?? "—"}</td>
                       <td className="pr-3">{w.email ?? "—"}</td>
+                      <td className="pr-3">{accountStatusBadge(w.account_status)}</td>
                       <td className="pr-3">{w.profile_completed ? <span className="text-emerald-600 text-xs">Completo</span> : <span className="text-amber-600 text-xs">Incompleto</span>}</td>
                       <td className="pr-3 capitalize">{w.badge ?? "—"}</td>
                       <td className="pr-3 capitalize">{w.reputation_level ?? "—"}</td>
                       <td className="pr-3">{w.completed_shifts ?? 0}</td>
-                      <td><Link to="/workers/$id" params={{ id: w.id }}><Button size="sm" variant="outline">Profilo</Button></Link></td>
+                      <td>
+                        <div className="flex gap-1">
+                          <Link to="/workers/$id" params={{ id: w.id }}><Button size="sm" variant="outline">Profilo</Button></Link>
+                          {(w.account_status ?? "active") !== "suspended"
+                            ? <Button size="sm" variant="outline" onClick={() => updateAccountStatus(w.id, "suspended", "worker")}>Sospendi</Button>
+                            : <Button size="sm" onClick={() => updateAccountStatus(w.id, "active", "worker")}>Riattiva</Button>}
+                        </div>
+                      </td>
                     </tr>
                   ))}
-                  {workersFiltered.length === 0 && <tr><td colSpan={7} className="py-4 text-center text-muted-foreground">Nessun lavoratore</td></tr>}
+                  {workersFiltered.length === 0 && <tr><td colSpan={8} className="py-4 text-center text-muted-foreground">Nessun lavoratore</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -324,12 +338,18 @@ function Admin() {
           <div className="rounded-2xl border bg-card p-5">
             <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
               <div className="font-medium">Ristoratori registrati ({restsFiltered.length})</div>
-              <Input placeholder="Cerca nome, email o città" value={restSearch} onChange={(e)=>setRestSearch(e.target.value)} className="h-9 w-64" />
+              <div className="flex flex-wrap gap-2">
+                <select value={restStatusFilter} onChange={(e)=>setRestStatusFilter(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="all">Tutti gli stati</option>
+                  {ACCOUNT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <Input placeholder="Cerca nome, email o città" value={restSearch} onChange={(e)=>setRestSearch(e.target.value)} className="h-9 w-64" />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-muted-foreground">
-                  <tr><th className="py-2 pr-3">Attività</th><th className="pr-3">Email</th><th className="pr-3">Città</th><th className="pr-3">Annunci</th><th className="pr-3">Crediti</th><th>Azioni</th></tr>
+                  <tr><th className="py-2 pr-3">Attività</th><th className="pr-3">Email</th><th className="pr-3">Città</th><th className="pr-3">Account</th><th className="pr-3">Annunci</th><th className="pr-3">Crediti</th><th>Azioni</th></tr>
                 </thead>
                 <tbody>
                   {restsFiltered.slice(0, 200).map(r => (
@@ -337,12 +357,20 @@ function Admin() {
                       <td className="py-2 pr-3">{r.business_name ?? r.full_name ?? "—"}</td>
                       <td className="pr-3">{r.email ?? "—"}</td>
                       <td className="pr-3">{r.city ?? "—"}</td>
+                      <td className="pr-3">{accountStatusBadge(r.account_status)}</td>
                       <td className="pr-3">{r.ann_count}</td>
                       <td className="pr-3">{r.credits ?? 0}</td>
-                      <td><Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm" variant="outline">Profilo</Button></Link></td>
+                      <td>
+                        <div className="flex gap-1">
+                          <Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm" variant="outline">Profilo</Button></Link>
+                          {(r.account_status ?? "active") !== "suspended"
+                            ? <Button size="sm" variant="outline" onClick={() => updateAccountStatus(r.id, "suspended", "restaurant")}>Sospendi</Button>
+                            : <Button size="sm" onClick={() => updateAccountStatus(r.id, "active", "restaurant")}>Riattiva</Button>}
+                        </div>
+                      </td>
                     </tr>
                   ))}
-                  {restsFiltered.length === 0 && <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>}
+                  {restsFiltered.length === 0 && <tr><td colSpan={7} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -438,7 +466,13 @@ function Admin() {
           <div className="rounded-2xl border bg-card p-5">
             <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
               <div className="font-medium">Annunci ({annsFiltered.length})</div>
-              <Input placeholder="Cerca ristoratore, ruolo o stato" value={annSearch} onChange={(e)=>setAnnSearch(e.target.value)} className="h-9 w-64" />
+              <div className="flex flex-wrap gap-2">
+                <select value={annStatusFilter} onChange={(e)=>setAnnStatusFilter(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="all">Tutti gli stati</option>
+                  {ANNOUNCEMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <Input placeholder="Cerca ristoratore o ruolo" value={annSearch} onChange={(e)=>setAnnSearch(e.target.value)} className="h-9 w-64" />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -451,9 +485,27 @@ function Admin() {
                       <td className="py-2 pr-3">{a.restaurant_name}</td>
                       <td className="pr-3 capitalize">{a.professional_profile ?? "—"}</td>
                       <td className="pr-3">{a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT") : "—"}</td>
-                      <td className="pr-3 capitalize">{a.status ?? "—"}</td>
+                      <td className="pr-3">
+                        <select
+                          value={a.status ?? ""}
+                          onChange={(e) => updateAnnouncementStatus(a.id, e.target.value)}
+                          className="h-8 rounded-md border bg-background px-2 text-xs capitalize"
+                        >
+                          {ANNOUNCEMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </td>
                       <td className="pr-3">{a.apps_count}</td>
-                      <td><Link to="/announcements/$id" params={{ id: a.id }}><Button size="sm" variant="outline">Apri</Button></Link></td>
+                      <td>
+                        <div className="flex gap-1">
+                          <Link to="/announcements/$id" params={{ id: a.id }}><Button size="sm" variant="outline">Apri</Button></Link>
+                          {a.status === "active" && (
+                            <Button size="sm" onClick={() => updateAnnouncementStatus(a.id, "assigned")}>Approva</Button>
+                          )}
+                          {a.status !== "cancelled" && a.status !== "completed" && (
+                            <Button size="sm" variant="outline" onClick={() => updateAnnouncementStatus(a.id, "cancelled")}>Annulla</Button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {annsFiltered.length === 0 && <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">Nessun annuncio</td></tr>}
