@@ -73,6 +73,11 @@ function ShiftsPage() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [criteria, setCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+  const [reviewDialog, setReviewDialog] = useState<ActionShift | null>(null);
+  const [dialogCriteria, setDialogCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+  const [dialogComment, setDialogComment] = useState("");
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
@@ -351,17 +356,14 @@ function ShiftsPage() {
                 ? `Scaduta da ${days > 0 ? `${days}g` : ""}${days > 0 && hours > 0 ? " " : ""}${days === 0 || hours > 0 ? `${hours}h` : ""}`.trim() || "Scaduta"
                 : `${days > 0 ? `${days}g` : ""}${days > 0 && hours > 0 ? " " : ""}${days === 0 || hours > 0 ? `${hours}h` : ""}`.trim() + " rimanenti";
               const closeAndReview = async () => {
-                if (s && s.status === "scheduled") {
-                  await updateStatus(s, "completed");
+                if (!a.worker_id) {
+                  toast.error("Impossibile aprire la recensione. Turno o lavoratore non trovato.");
+                  return;
                 }
-                setFilter("to-review");
-                setReviewOpen(a.shift_id);
-                setRating(5);
-                setComment("");
-                setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
-                setTimeout(() => {
-                  document.getElementById(`shift-${a.shift_id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }, 200);
+                setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+                setDialogComment("");
+                setDialogError(null);
+                setReviewDialog(a);
               };
               return (
                 <div key={a.shift_id} className={`rounded-xl border p-3 flex items-center gap-3 flex-wrap ${overdue ? "border-destructive/40 bg-card" : "bg-card"}`}>
