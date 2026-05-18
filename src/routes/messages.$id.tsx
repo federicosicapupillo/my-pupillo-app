@@ -1077,6 +1077,67 @@ function Thread() {
 
               <p className="mt-3 text-sm text-muted-foreground">{microSummary}</p>
 
+              {reputationVisible && (
+                <div className="mt-4 rounded-xl border bg-card/60 p-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Recensioni lavoratore
+                    </div>
+                    {workerReviews.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setReviewsOpen(true)}
+                      >
+                        Vedi tutte ({workerReviews.length})
+                      </Button>
+                    )}
+                  </div>
+                  {workerReviews.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Questo lavoratore non ha ancora recensioni. Puoi comunque valutare il profilo, le competenze e le informazioni disponibili.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-2">
+                        <span className="inline-flex items-center gap-1">
+                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                          <span className="font-semibold tabular-nums">{s.rating > 0 ? s.rating.toFixed(1) : "—"}</span>
+                          <span className="text-muted-foreground">· {s.reviewsCount} recensioni</span>
+                        </span>
+                        {!s.isNew && reliability > 0 && (
+                          <span className="text-muted-foreground">
+                            Affidabilità: <span className="font-medium text-foreground tabular-nums">{reliability}%</span>
+                          </span>
+                        )}
+                      </div>
+                      <ul className="space-y-2">
+                        {workerReviews.slice(0, 2).map((r) => (
+                          <li key={r.id} className="rounded-lg bg-muted/40 p-2.5">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <div className="inline-flex items-center gap-0.5">
+                                {[1,2,3,4,5].map(n => (
+                                  <Star key={n} className={`h-3 w-3 ${n <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                                ))}
+                              </div>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(r.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                              </span>
+                            </div>
+                            {r.comment ? (
+                              <p className="text-xs text-foreground/90 line-clamp-2">"{r.comment}"</p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground italic">Nessun commento</p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+
               <div className="mt-4 flex flex-col-reverse sm:flex-row gap-2 sm:items-center sm:justify-end">
                 <Button
                   variant="ghost"
