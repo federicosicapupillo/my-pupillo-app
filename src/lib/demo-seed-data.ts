@@ -96,3 +96,9 @@ export function mockIdNumber(): string {
   const r = (s: string, n: number) => Array.from({ length: n }, () => s[(Math.random() * s.length) | 0]).join("");
   return r(L, 2) + r(N, 5) + r(L, 2);
 }
+
+// Mock Italian VAT number (11 digits).
+export function mockVatNumber(): string {
+  const N = "0123456789";
+  return Array.from({ length: 11 }, () => N[(Math.random() * 10) | 0]).join("");
+}
