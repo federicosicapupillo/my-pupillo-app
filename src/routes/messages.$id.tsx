@@ -964,15 +964,19 @@ function Thread() {
                   size="sm"
                   className="gap-2 text-muted-foreground hover:text-destructive"
                   onClick={() => transition("rejected")}
+                  disabled={transitioning !== null}
                 >
-                  <X className="h-4 w-4" />Rifiuta
+                  <X className="h-4 w-4" />
+                  {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
                 </Button>
                 <Button
                   size="lg"
                   className="gap-2 shadow-md"
                   onClick={() => transition("accepted")}
+                  disabled={transitioning !== null}
                 >
-                  <Check className="h-4 w-4" />Accetta candidatura
+                  <Check className="h-4 w-4" />
+                  {transitioning === "accepted" ? "Accettazione in corso…" : "Accetta candidatura"}
                 </Button>
               </div>
             </div>
