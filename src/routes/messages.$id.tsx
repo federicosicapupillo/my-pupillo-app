@@ -887,7 +887,7 @@ function Thread() {
           </div>
         </div>
 
-        {role === "restaurant" && app && app.status === "pending" && workerRep && (() => {
+        {app && shouldShowNewApplicationCard({ role: role as any, status: app.status as any, hasWorkerReputation: !!workerRep }) && workerRep && (() => {
           const s = summarizeReputation(workerRep);
           const hasEnoughReviews = s.reviewsCount >= 3;
           const reliability = Math.max(0, Math.min(100, s.completionPct || 0));
