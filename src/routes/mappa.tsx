@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle, Info } from "lucide-react";
+import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle, Info, MapPinOff, Settings2 } from "lucide-react";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
@@ -912,8 +912,56 @@ function MapPage() {
               </>
             )
           ) : points.length === 0 ? (
-            <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground" style={{ minHeight: 500 }}>
-              Nessun risultato sulla mappa. Modifica filtri o ricerca.
+            <div
+              className="rounded-2xl border bg-card p-10 text-center flex flex-col items-center justify-center gap-4"
+              style={{ minHeight: 500 }}
+            >
+              <div className="rounded-full bg-muted p-4">
+                <MapPinOff className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div className="space-y-1 max-w-md">
+                <h3 className="text-lg font-semibold text-foreground">
+                  Nessuna opportunità nella zona selezionata
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {city !== "any" || (ref && radiusKm !== "any")
+                    ? <>Al momento non ci sono richieste attive o annunci disponibili{city !== "any" ? <> a <strong>{city}</strong></> : null}{ref && radiusKm !== "any" ? <> entro <strong>{radiusKm} km</strong> da te</> : null}.</>
+                    : "Al momento non ci sono richieste attive o annunci disponibili con i filtri impostati."}
+                  <br />
+                  Prova ad ampliare il raggio di ricerca o cambia città.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setCity("any"); setProvince("any"); setDistrict(""); }}
+                  disabled={city === "any" && province === "any" && !district}
+                >
+                  <MapPin className="h-4 w-4 mr-1.5" />
+                  Cambia città
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRadiusKm(radiusKm === "any" ? "50" : "any")}
+                >
+                  <Locate className="h-4 w-4 mr-1.5" />
+                  {radiusKm === "any" ? "Imposta raggio 50 km" : "Rimuovi limite di raggio"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setQuery(""); setCity("any"); setProvince("any"); setDistrict("");
+                    setVenue("any"); setPlanF("any"); setStatusF("any");
+                    setWithRequests(false); setRadiusKm("any");
+                  }}
+                >
+                  <Settings2 className="h-4 w-4 mr-1.5" />
+                  Reimposta tutti i filtri
+                </Button>
+              </div>
             </div>
           ) : (
             <Suspense fallback={<div className="rounded-xl bg-muted animate-pulse" style={{ height: 600 }} />}>
