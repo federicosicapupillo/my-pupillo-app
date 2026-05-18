@@ -609,6 +609,44 @@ function Thread() {
     setApp({ ...app, ...patch } as App);
   };
 
+  const cancelApplication = async () => {
+    if (!app || !user || role !== "worker" || cancelling) return;
+    if (app.status !== "pending") {
+      toast.error("La candidatura non può più essere annullata.");
+      return;
+    }
+    if (shift && (shift.status === "scheduled" || shift.status === "completed")) {
+      toast.error("Il turno è già confermato: non puoi più annullare la candidatura.");
+      return;
+    }
+    setCancelling(true);
+    try {
+      const { error } = await supabase
+        .from("applications")
+        .update({ status: "cancelled" as never, worker_response_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) { toast.error(error.message); return; }
+      try { await insertSystemMessage("Il lavoratore ha annullato la candidatura per il turno.", "withdraw_application"); } catch (e) { console.error(e); }
+      if (app.restaurant_id) {
+        try {
+          const workerName = profile?.full_name ?? "Un lavoratore";
+          await supabase.from("notifications").insert({
+            user_id: app.restaurant_id,
+            title: "Candidatura annullata",
+            body: `${workerName} ha annullato la candidatura per il turno.`,
+            link: `/messages/${id}`,
+          } as never);
+        } catch (e) { console.error("[cancel] notify failed", e); }
+      }
+      await logEvent("cancelled", { by_role: "worker" });
+      setApp({ ...app, status: "cancelled" } as App);
+      setCancelConfirmOpen(false);
+      toast.success("Candidatura annullata.");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const sendCounter = async () => {
     if (sendingCounter) return;
     const v = parseFloat(counterValue);
