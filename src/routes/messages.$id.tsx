@@ -931,13 +931,15 @@ function Thread() {
     professionalism: number;
     serviceQuality: number;
     comment: string;
+    positiveLabels: string[];
+    negativeLabels: string[];
   }) => {
     if (!user || !app) return;
     if (role !== "restaurant") {
       toast.error("Solo il ristoratore può lasciare una recensione.");
       return;
     }
-    const { general, reliability, punctuality, professionalism, serviceQuality, comment } = payload;
+    const { general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels } = payload;
     if (!general || !reliability || !punctuality || !professionalism || !serviceQuality) {
       toast.error("Completa tutte le valutazioni prima di inviare la recensione.");
       return;
@@ -977,6 +979,8 @@ function Thread() {
       rating: general,
       comment: trimmed ? trimmed : null,
       tags: [],
+      positive_tags: positiveLabels,
+      negative_tags: negativeLabels,
       punctuality,
       professionalism,
       competence: serviceQuality,
