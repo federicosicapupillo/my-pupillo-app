@@ -115,6 +115,10 @@ function MapPage() {
   const [annCounts, setAnnCounts] = useState<Record<string, number>>({});
   // applicationStatus per announcement_id, solo per il lavoratore loggato
   const [appStatusByAnn, setAppStatusByAnn] = useState<Record<string, string>>({});
+  // Ristoranti con cui il lavoratore loggato ha già lavorato (almeno un turno
+  // o una candidatura accettata). Per questi il nome del locale è visibile
+  // anche prima di una nuova conferma.
+  const [knownRestaurantIds, setKnownRestaurantIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   // search & filters
@@ -146,6 +150,18 @@ function MapPage() {
       setView("workers");
     }
   }, [isRestaurant]);
+
+  // For worker accounts: never display other workers on the map and never
+  // show standalone restaurant markers (the announcement marker is the
+  // restaurant). Only the active announcements remain visible.
+  useEffect(() => {
+    if (isWorker) {
+      setShowW(false);
+      setShowR(false);
+      setShowA(true);
+      setView("restaurants");
+    }
+  }, [isWorker]);
 
   // location
   const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
@@ -198,8 +214,19 @@ function MapPage() {
         const m: Record<string, string> = {};
         (apps || []).forEach((x: any) => { m[x.announcement_id] = x.status; });
         setAppStatusByAnn(m);
+
+        // Ristoranti "conosciuti": turni effettuati oppure candidature accettate.
+        const [{ data: myShifts }, { data: acceptedApps }] = await Promise.all([
+          supabase.from("shifts").select("restaurant_id").eq("worker_id", user.id),
+          supabase.from("applications").select("restaurant_id").eq("worker_id", user.id).eq("status", "accepted"),
+        ]);
+        const known = new Set<string>();
+        (myShifts || []).forEach((x: any) => x.restaurant_id && known.add(x.restaurant_id));
+        (acceptedApps || []).forEach((x: any) => x.restaurant_id && known.add(x.restaurant_id));
+        setKnownRestaurantIds(known);
       } else {
         setAppStatusByAnn({});
+        setKnownRestaurantIds(new Set());
       }
       setLoading(false);
     })();
