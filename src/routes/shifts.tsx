@@ -666,6 +666,14 @@ function ShiftsPage() {
                           </div>
                         )}
                         <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} disabled={submittingReview === s.id} />
+                        {role === "restaurant" && (
+                          <ReviewLabelsPicker
+                            positive={positiveLabels}
+                            negative={negativeLabels}
+                            onChange={({ positive, negative }) => { setPositiveLabels(positive); setNegativeLabels(negative); }}
+                            disabled={submittingReview === s.id}
+                          />
+                        )}
                         {reviewError[s.id] && (
                           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -688,7 +696,7 @@ function ShiftsPage() {
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 }); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
+                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 }); setPositiveLabels([]); setNegativeLabels([]); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
                           <Star className="h-4 w-4" /> Lascia recensione
                         </Button>
                         {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (
@@ -779,6 +787,12 @@ function ShiftsPage() {
                 value={dialogComment}
                 onChange={e => setDialogComment(e.target.value)}
                 rows={3}
+                disabled={dialogSubmitting}
+              />
+              <ReviewLabelsPicker
+                positive={dialogPositive}
+                negative={dialogNegative}
+                onChange={({ positive, negative }) => { setDialogPositive(positive); setDialogNegative(negative); }}
                 disabled={dialogSubmitting}
               />
               {dialogError && (
