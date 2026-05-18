@@ -71,7 +71,7 @@ export async function previewReset(whitelist: DemoWhitelist): Promise<PreviewRep
   ];
   const willDelete: Record<string, number> = {};
   for (const t of tables) {
-    const { count } = await supabaseAdmin.from(t).select("*", { count: "exact", head: true }).eq("is_demo", true);
+    const { count } = await (supabaseAdmin.from as any)(t).select("*", { count: "exact", head: true }).eq("is_demo", true);
     willDelete[t] = count ?? 0;
   }
 
@@ -316,7 +316,7 @@ async function seedAnnouncementsApplicationsShiftsReviews(
     for (let i = 0; i < uniqueCandidates.length; i++) {
       const wid = uniqueCandidates[i];
       const willAccept = isPast && i === 0;
-      const status = willAccept ? "accepted" : (isPast ? "rejected" : pick(["pending", "interested", "pending"]));
+      const status = (willAccept ? "accepted" : (isPast ? "rejected" : pick(["pending", "interested", "pending"]))) as any;
       const { data: appData, error } = await supabaseAdmin
         .from("applications")
         .insert({
@@ -401,9 +401,8 @@ async function retagTriggerArtifacts(batchId: string, demoUserIds: string[], rep
   if (demoUserIds.length === 0) return;
 
   const tag = async (table: string, idColumn: string) => {
-    const { error, count } = await supabaseAdmin
-      .from(table)
-      .update({ is_demo: true, seed_batch_id: batchId } as any, { count: "exact" })
+    const { error, count } = await (supabaseAdmin.from as any)(table)
+      .update({ is_demo: true, seed_batch_id: batchId }, { count: "exact" })
       .in(idColumn, demoUserIds)
       .eq("is_demo", false);
     if (error) report.errors.push(`retag ${table}: ${error.message}`);
@@ -462,7 +461,7 @@ export async function resetAndReseedDemo(
 
   // Phase 6: transparency — count records NOT in demo set, must stay untouched.
   for (const t of ["profiles", "announcements", "applications", "shifts", "reviews"]) {
-    const { count } = await supabaseAdmin.from(t).select("*", { count: "exact", head: true }).eq("is_demo", false);
+    const { count } = await (supabaseAdmin.from as any)(t).select("*", { count: "exact", head: true }).eq("is_demo", false);
     report.preservedNonDemo.push({ table: t, count: count ?? 0 });
   }
 
