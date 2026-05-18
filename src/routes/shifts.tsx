@@ -810,6 +810,7 @@ function ShiftsPage() {
                 onChange={({ positive, negative }) => { setDialogPositive(positive); setDialogNegative(negative); }}
                 disabled={dialogSubmitting}
               />
+              <WouldRehirePicker value={dialogWouldRehire} onChange={setDialogWouldRehire} disabled={dialogSubmitting} />
               {dialogError && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
