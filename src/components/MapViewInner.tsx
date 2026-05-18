@@ -99,6 +99,74 @@ function Recenter({ center, zoom }: { center: [number, number]; zoom?: number })
   return null;
 }
 
+// Chiusura popup con ESC + focus management accessibile.
+// - All'apertura del popup salva l'elemento attivo precedente e sposta il
+//   focus sul primo elemento interattivo dentro al popup, marcandolo con
+//   role="dialog" e aria-modal per gli screen reader.
+// - Su ESC chiude tutti i popup e ripristina il focus all'elemento di
+//   partenza (di solito il marker).
+function PopupA11y() {
+  const map = useMap();
+  useEffect(() => {
+    const prevFocusRef: { el: HTMLElement | null } = { el: null };
+
+    const onPopupOpen = (e: any) => {
+      const popupEl: HTMLElement | undefined = e.popup?.getElement?.();
+      if (!popupEl) return;
+      // Marca il popup come dialog per AT.
+      popupEl.setAttribute("role", "dialog");
+      popupEl.setAttribute("aria-modal", "false");
+      popupEl.setAttribute("aria-label", "Anteprima annuncio");
+      const content = popupEl.querySelector<HTMLElement>(".leaflet-popup-content");
+      if (content) {
+        content.setAttribute("tabindex", "-1");
+      }
+      // Salva il focus precedente.
+      prevFocusRef.el = (document.activeElement as HTMLElement) || null;
+      // Sposta il focus sul primo elemento interattivo (o sul contenuto).
+      requestAnimationFrame(() => {
+        const focusable = popupEl.querySelector<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        (focusable || content || popupEl).focus({ preventScroll: true });
+      });
+    };
+
+    const onPopupClose = () => {
+      // Ripristina il focus all'elemento precedente se ancora nel DOM.
+      const prev = prevFocusRef.el;
+      prevFocusRef.el = null;
+      if (prev && document.body.contains(prev)) {
+        try { prev.focus({ preventScroll: true }); } catch { /* noop */ }
+      }
+    };
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return;
+      // Chiudi solo se c'è un popup aperto sulla mappa.
+      const open = document.querySelector(".leaflet-popup");
+      if (!open) return;
+      ev.stopPropagation();
+      map.closePopup();
+    };
+
+    map.on("popupopen", onPopupOpen);
+    map.on("popupclose", onPopupClose);
+    const container = map.getContainer();
+    container.addEventListener("keydown", onKeyDown);
+    // Anche a livello document per intercettare ESC quando il focus è
+    // dentro al popup (che è figlio del map container).
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      map.off("popupopen", onPopupOpen);
+      map.off("popupclose", onPopupClose);
+      container.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [map]);
+  return null;
+}
+
 export default function MapViewInner({ points, height, center, focusZoom, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; focusZoom?: number; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
   // Desktop con mouse: hover apre la preview, mouseout la chiude con un
   // piccolo delay (così l'utente può spostarsi sopra il popup senza che
@@ -148,6 +216,7 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
         style={{ height: "100%", width: "100%" }}
       >
         <Recenter center={center} zoom={focusZoom} />
+        <PopupA11y />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
