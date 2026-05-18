@@ -1250,6 +1250,24 @@ function Thread() {
               );
             }
             if (m.template_id === PROPOSAL_TEMPLATE_ID) {
+              // handled below
+            }
+            if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
+              const venueName = role === "worker"
+                ? (other?.name ?? null)
+                : (profile?.business_name || profile?.full_name || null);
+              return (
+                <ConfirmationCard
+                  key={m.id}
+                  ann={ann}
+                  venueName={venueName}
+                  applicationId={id}
+                  announcementId={app?.announcement_id ?? null}
+                  isWorker={role === "worker"}
+                />
+              );
+            }
+            if (m.template_id === PROPOSAL_TEMPLATE_ID) {
               const ownStatus = proposalStatuses[m.id];
               const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
               // Per-proposal status is authoritative. Legacy proposals (no recorded
