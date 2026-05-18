@@ -2100,6 +2100,7 @@ function ReviewDialog(props: {
     comment: string;
     positiveLabels: string[];
     negativeLabels: string[];
+    wouldRehire: "yes" | "maybe" | "no" | null;
   }) => Promise<void>;
 }) {
   const { open, onOpenChange, workerName, workerRole, shiftDate, startTime, endTime, venue, shiftStatus, onSubmit } = props;
@@ -2111,6 +2112,7 @@ function ReviewDialog(props: {
   const [comment, setComment] = useState("");
   const [positiveLabels, setPositiveLabels] = useState<string[]>([]);
   const [negativeLabels, setNegativeLabels] = useState<string[]>([]);
+  const [wouldRehire, setWouldRehire] = useState<"yes" | "maybe" | "no" | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -2118,7 +2120,7 @@ function ReviewDialog(props: {
     if (!open) {
       setGeneral(0); setReliability(0); setPunctuality(0);
       setProfessionalism(0); setServiceQuality(0); setComment(""); setError(null);
-      setPositiveLabels([]); setNegativeLabels([]);
+      setPositiveLabels([]); setNegativeLabels([]); setWouldRehire(null);
     }
   }, [open]);
 
@@ -2129,10 +2131,14 @@ function ReviewDialog(props: {
       setError("Completa tutte le valutazioni prima di inviare la recensione.");
       return;
     }
+    if (!wouldRehire) {
+      setError("Indica se richiameresti questo lavoratore.");
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
-      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels });
+      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels, wouldRehire });
     } finally { setSubmitting(false); }
   };
 
@@ -2179,6 +2185,8 @@ function ReviewDialog(props: {
             onChange={({ positive, negative }) => { setPositiveLabels(positive); setNegativeLabels(negative); }}
             disabled={submitting}
           />
+
+          <WouldRehirePicker value={wouldRehire} onChange={setWouldRehire} disabled={submitting} />
 
           {error && (
             <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
