@@ -1154,6 +1154,19 @@ function Thread() {
     toast.success("Turno completato e recensione inviata al lavoratore.");
   };
 
+  // Centralized privacy-aware display name for the "other" party (used in
+  // chat header, proposal/confirmation cards, automatic messages, etc.).
+  const displayOtherName = useMemo(() => getDisplayPartnerName({
+    viewerRole: role,
+    appStatus: app?.status,
+    hasWorkedTogether,
+    partner: {
+      businessName: otherIdentity?.businessName ?? null,
+      fullName: otherIdentity?.fullName ?? other?.name ?? null,
+      firstName: otherIdentity?.firstName ?? null,
+    },
+  }), [role, app?.status, hasWorkedTogether, otherIdentity, other?.name]);
+
   if (loading) {
     return <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">Caricamento chat…</div>;
   }
