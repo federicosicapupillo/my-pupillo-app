@@ -42,6 +42,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -110,6 +117,17 @@ type Review = {
   author_id: string;
   target_id: string;
   shift_id: string | null;
+};
+
+type WorkerReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  shift_id: string | null;
+  announcement_id: string | null;
+  positive_tags: string[] | null;
+  would_rehire: string | null;
 };
 
 const POSITIVE_TAGS = [
