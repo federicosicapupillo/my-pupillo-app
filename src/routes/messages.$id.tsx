@@ -161,7 +161,8 @@ type TemplateAction =
   | "complete_shift"
   | "withdraw_application"
   | "confirm_arrival"
-  | "report_issue";
+  | "report_issue"
+  | "instructions_acknowledged";
 
 type MsgTemplate = {
   key: string;
@@ -1493,6 +1494,9 @@ function Thread() {
               const venueName = role === "worker"
                 ? maskPartnerNameForWorker(other?.name, role, app?.status)
                 : (profile?.business_name || profile?.full_name || null);
+              const hasAcknowledged = msgs.some(
+                mm => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
+              );
               return (
                 <ConfirmationCard
                   key={m.id}
@@ -1501,6 +1505,35 @@ function Thread() {
                   applicationId={id}
                   announcementId={app?.announcement_id ?? null}
                   isWorker={role === "worker"}
+                  acknowledged={hasAcknowledged}
+                  onAcknowledge={async () => {
+                    if (!user || !app) return;
+                    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+                    if (!receiverId) return;
+                    const body = "Ho letto e confermo la presa visione di tutte le istruzioni del turno.";
+                    const createdAt = new Date().toISOString();
+                    const { data, error } = await supabase.from("messages").insert({
+                      application_id: app.id,
+                      sender_id: user.id,
+                      receiver_id: receiverId,
+                      body,
+                      created_at: createdAt,
+                      read_at: null,
+                      template_id: null,
+                      message_type: "template",
+                      action_type: "instructions_acknowledged",
+                    } as never).select("*").single();
+                    if (error) {
+                      toast.error("Impossibile registrare la presa visione.");
+                      return;
+                    }
+                    if (data) pushMessage(data as Msg);
+                    await supabase.from("applications").update({
+                      last_message_preview: body,
+                      last_message_at: createdAt,
+                    } as never).eq("id", app.id);
+                    toast.success("Presa visione confermata");
+                  }}
                 />
               );
             }
@@ -2324,8 +2357,11 @@ function ConfirmationCard(props: {
   applicationId: string;
   announcementId: string | null;
   isWorker: boolean;
+  acknowledged?: boolean;
+  onAcknowledge?: () => Promise<void> | void;
 }) {
-  const { ann, venueName, applicationId, announcementId, isWorker } = props;
+  const { ann, venueName, applicationId, isWorker, acknowledged = false, onAcknowledge } = props;
+  const [ackBusy, setAckBusy] = useState(false);
   const clean = (v: unknown): string => {
     if (v == null) return "";
     const s = String(v).trim();
@@ -2349,6 +2385,20 @@ function ConfirmationCard(props: {
     ? formatTariff(ann.tariff_amount, ann.tariff_type ?? null)
     : null;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+
+  // Hide the acknowledge button after the shift end date has passed
+  const shiftEnded = (() => {
+    if (!ann?.service_date) return false;
+    const d = new Date(ann.service_date);
+    if (ann.end_time) {
+      const [h, m] = ann.end_time.split(":").map(Number);
+      d.setHours(h || 0, m || 0, 0, 0);
+    } else {
+      d.setHours(23, 59, 59, 999);
+    }
+    return d.getTime() < Date.now();
+  })();
+  const showAckButton = isWorker && !shiftEnded;
 
   return (
     <div className="flex justify-center my-2">
@@ -2409,34 +2459,68 @@ function ConfirmationCard(props: {
         <div className="mx-4 mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
           Ti consigliamo di arrivare almeno 10 minuti prima dell'orario di ingresso.
         </div>
-        <div className="px-4 py-3 border-t bg-secondary/20 flex flex-wrap gap-2">
-          {announcementId && (
-            <Button asChild size="sm" variant="outline" className="gap-2 flex-1 min-w-[140px]">
-              <Link to="/announcements/$id" params={{ id: announcementId }}>
-                <ExternalLink className="h-3.5 w-3.5" />
-                Apri dettagli turno
-              </Link>
-            </Button>
-          )}
-          <Button asChild size="sm" variant="outline" className="gap-2 flex-1 min-w-[140px]">
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
-              <Navigation className="h-3.5 w-3.5" />
-              Indicazioni
-            </a>
-          </Button>
-          {isWorker && (
+        {acknowledged && (
+          <div className="mx-4 mb-3 flex items-center justify-center gap-2 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+            <BadgeCheck className="h-5 w-5" />
+            Presa visione confermata
+          </div>
+        )}
+        <div className="px-4 py-4 border-t bg-secondary/20 flex flex-col gap-3">
+          {showAckButton && (
             <Button
-              size="sm"
-              variant="outline"
-              className="gap-2 flex-1 min-w-[140px]"
-              onClick={() => {
-                document.getElementById(`thread-template-picker-${applicationId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+              size="lg"
+              disabled={acknowledged || ackBusy}
+              className="w-full h-12 text-base font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
+              onClick={async () => {
+                if (acknowledged || ackBusy || !onAcknowledge) return;
+                setAckBusy(true);
+                try { await onAcknowledge(); } finally { setAckBusy(false); }
               }}
             >
-              <Send className="h-3.5 w-3.5" />
-              Scrivi al ristoratore
+              {acknowledged ? (
+                <>
+                  <BadgeCheck className="h-5 w-5" />
+                  Presa visione confermata
+                </>
+              ) : ackBusy ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Registrazione…
+                </>
+              ) : (
+                <>
+                  <Check className="h-5 w-5" />
+                  Confermo di aver letto le istruzioni
+                </>
+              )}
             </Button>
           )}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="flex-1 h-11 text-sm font-semibold gap-2 border-2 border-primary/60 text-primary hover:bg-primary/10"
+            >
+              <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                <Navigation className="h-4 w-4" />
+                Indicazioni
+              </a>
+            </Button>
+            {isWorker && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="flex-1 h-11 text-sm font-semibold gap-2 border-2 border-primary/60 text-primary hover:bg-primary/10"
+                onClick={() => {
+                  document.getElementById(`thread-template-picker-${applicationId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              >
+                <Send className="h-4 w-4" />
+                Scrivi al ristoratore
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
