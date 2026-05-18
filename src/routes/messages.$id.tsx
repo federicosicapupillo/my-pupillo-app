@@ -1197,7 +1197,7 @@ function Thread() {
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <UserAvatar userId={otherId} name={maskPartnerNameForWorker(other?.name, role, app?.status)} className="h-12 w-12 shrink-0" />
+            <UserAvatar userId={otherId} name={displayOtherName} className="h-12 w-12 shrink-0" />
             <div className="min-w-0 flex-1">
             {otherId ? (
               <Link
@@ -1206,10 +1206,10 @@ function Thread() {
                 className="font-semibold text-primary hover:underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 title="Vedi tutte le conversazioni con questa persona"
               >
-                {maskPartnerNameForWorker(other?.name, role, app?.status)}
+                {displayOtherName}
               </Link>
             ) : (
-              <div className="font-semibold">{maskPartnerNameForWorker(other?.name, role, app?.status)}</div>
+              <div className="font-semibold">{displayOtherName}</div>
             )}
             {ann && (
               <div className="mt-1 text-xs text-muted-foreground">
@@ -1718,7 +1718,7 @@ function Thread() {
             }
             if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
               const venueName = role === "worker"
-                ? maskPartnerNameForWorker(other?.name, role, app?.status)
+                ? displayOtherName
                 : (profile?.business_name || profile?.full_name || null);
               const hasAcknowledged = msgs.some(
                 mm => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
@@ -1774,7 +1774,7 @@ function Thread() {
                   key={m.id}
                   message={m}
                   ann={ann}
-                  venueName={role === "worker" ? maskPartnerNameForWorker(other?.name, role, app?.status) : (other?.name ?? null)}
+                  venueName={role === "worker" ? displayOtherName : (other?.name ?? null)}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
