@@ -394,6 +394,40 @@ html.light .card {
   box-shadow: 0 1px 2px oklch(0 0 0 / 4%), 0 8px 24px -16px oklch(0.21 0.04 265 / 14%);
 }
 
+/* ----------------------------------------------------------------------
+ * Light-mode legibility for hardcoded lime / neon green
+ * Neon lime (#D8FF36) is unreadable on white; remap to a deep green and
+ * darken text/borders so badges and CTAs keep AA contrast.
+ * ---------------------------------------------------------------------- */
+@layer utilities {
+  /* Lime / yellow text on white -> deep green */
+  html.light .text-lime-300, html.light .text-lime-400, html.light .text-lime-500,
+  html.light .text-yellow-300, html.light .text-yellow-400 {
+    color: oklch(0.55 0.17 145) !important; /* ~#15803D */
+  }
+
+  /* Bright lime backgrounds -> readable green with white text */
+  html.light .bg-lime-300, html.light .bg-lime-400, html.light .bg-lime-500 {
+    background-color: oklch(0.62 0.17 145) !important; /* ~#16A34A */
+    color: oklch(0.99 0 0) !important;
+  }
+
+  /* Soft lime tints used as chips/badges -> pale green */
+  html.light .bg-lime-50, html.light .bg-lime-100, html.light .bg-lime-200 {
+    background-color: oklch(0.96 0.05 145) !important; /* ~#DCFCE7 */
+    color: oklch(0.40 0.13 145) !important;
+  }
+
+  /* Lime borders -> visible green */
+  html.light .border-lime-300, html.light .border-lime-400, html.light .border-lime-500 {
+    border-color: oklch(0.62 0.17 145) !important;
+  }
+
+  /* Primary chip text on white should always read */
+  html.light .text-primary { color: oklch(0.55 0.17 145) !important; }
+  html.light .border-primary { border-color: oklch(0.62 0.17 145) !important; }
+}
+
 /* Light-mode popover/dropdown — solid white, dark text (no light-on-light) */
 html.light [data-slot="popover-content"],
 html.light [data-slot="dropdown-menu-content"],
