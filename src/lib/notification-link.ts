@@ -12,10 +12,32 @@ function isValidId(v: string | undefined | null): v is string {
   return true;
 }
 
+type UserRole = "worker" | "restaurant" | "admin" | null;
+
+async function getCurrentRole(): Promise<UserRole> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+    const roles = (data ?? []).map((r: { role: string }) => r.role);
+    if (roles.includes("admin")) return "admin";
+    if (roles.includes("restaurant")) return "restaurant";
+    if (roles.includes("worker")) return "worker";
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Navigate safely from a notification link.
  * - Maps known patterns to typed TanStack routes.
- * - Resolves `/reviews/<id>` to the chat or shift the review belongs to.
+ * - Resolves `/reviews/<id>` to the dedicated review popup route.
+ * - Blocks workers from being sent to restaurant-only routes
+ *   (e.g. `/ristoratore/turni/<id>`) and falls back to a safe page.
  * - Falls back to `/messages` for unknown / invalid links so the user never
  *   lands on a 404 from an internal notification.
  */
@@ -23,6 +45,13 @@ export async function navigateFromNotificationLink(
   navigate: Navigate,
   link: string | null | undefined,
 ): Promise<void> {
+  // Resolve role once; used for safe fallbacks and access checks.
+  const role = await getCurrentRole();
+  const safeHome = () => {
+    if (role === "restaurant") return navigate({ to: "/dashboard" });
+    if (role === "worker") return navigate({ to: "/jobs" });
+    return navigate({ to: "/messages" });
+  };
   const fallback = () => navigate({ to: "/messages" });
 
   if (!isValidId(link)) return fallback();
@@ -47,10 +76,15 @@ export async function navigateFromNotificationLink(
       if (!isValidId(id)) return fallback();
       return navigate({ to: "/messages/$id", params: { id } });
     }
-    // /reviews/<reviewId> — no dedicated route; resolve to chat or shift.
+    // /reviews/<reviewId> — dedicated popup route for the worker.
+    // For restaurants we resolve to the related chat/shift instead.
     if (parts.length === 2 && parts[0] === "reviews") {
       const reviewId = seg(1);
       if (!isValidId(reviewId)) return fallback();
+      if (role !== "restaurant") {
+        // worker (or unknown) → open the review popup route
+        return navigate({ to: "/reviews/$id", params: { id: reviewId } });
+      }
       try {
         const { data } = await supabase
           .from("reviews")
@@ -74,10 +108,15 @@ export async function navigateFromNotificationLink(
     if (parts.length === 1 && parts[0] === "shifts") {
       return navigate({ to: "/shifts" });
     }
-    // /ristoratore/turni/<shiftId>
+    // /ristoratore/turni/<shiftId> — restaurant-only route.
+    // Workers must never be sent here (would render "Permesso negato").
     if (parts.length === 3 && parts[0] === "ristoratore" && parts[1] === "turni") {
       const shiftId = seg(2);
       if (!isValidId(shiftId)) return fallback();
+      if (role === "worker") {
+        // Safe worker-side fallback: their shifts list.
+        return navigate({ to: "/shifts" });
+      }
       return navigate({ to: "/ristoratore/turni/$shiftId", params: { shiftId } });
     }
     // /announcements/<id>
@@ -112,7 +151,7 @@ export async function navigateFromNotificationLink(
   } catch {
     /* fall through */
   }
-  // Unknown link → safe fallback
+  // Unknown link → safe role-aware fallback
   void search; void hash; void UUID_RE; // reserved for future use
-  return fallback();
+  return safeHome();
 }
