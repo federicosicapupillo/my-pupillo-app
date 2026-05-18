@@ -742,11 +742,51 @@ function Thread() {
     }
   };
 
-  const cancelApplication = async () => {
-    void 0;
-    return _cancelApplicationOrig();
+  const submitReject = async () => {
+    if (!app || !user || role !== "restaurant") return;
+    if (transitioning) return;
+    const reason = rejectReason;
+    try {
+      const createdAt = new Date().toISOString();
+      const body = [
+        "Grazie per la tua candidatura.",
+        "",
+        "Per questo turno il ristoratore ha scelto di procedere diversamente.",
+        "",
+        `Motivazione: ${reason}`,
+        "",
+        "Continua a candidarti: nuove richieste vengono pubblicate ogni giorno.",
+      ].join("\n");
+      const { data: msg } = await supabase.from("messages").insert({
+        application_id: app.id,
+        sender_id: user.id,
+        receiver_id: app.worker_id,
+        body,
+        created_at: createdAt,
+        read_at: null,
+        template_id: "reject_with_reason",
+        message_type: "template",
+        action_type: "reject_application",
+      } as never).select("*").single();
+      if (msg) pushMessage(msg as Msg);
+      await supabase.from("applications").update({
+        last_message_preview: "Candidatura rifiutata",
+        last_message_at: createdAt,
+      } as never).eq("id", app.id);
+      await supabase.from("notifications").insert({
+        user_id: app.worker_id,
+        title: "Candidatura non selezionata",
+        body: `Motivazione: ${reason}`,
+        link: `/messages/${app.id}`,
+      } as never);
+    } catch (e) {
+      console.error("[reject] auto message failed", e);
+    }
+    setRejectOpen(false);
+    await transition("rejected");
   };
-  const _cancelApplicationOrig = async () => {
+
+  const cancelApplication = async () => {
     if (!app || !user || role !== "worker" || cancelling) return;
     if (app.status !== "pending") {
       toast.error("La candidatura non può più essere annullata.");
