@@ -413,6 +413,12 @@ function MessagesLayout() {
                 const latestStatus = last?.status ?? null;
                 const expanded = expandedGroups.has(g.id);
                 const latestId = last?.id ?? null;
+                const confirmedItem = role === "worker"
+                  ? g.items.find((t) => isApplicationConfirmed(t.status))
+                  : null;
+                const groupDisplayName = role === "worker"
+                  ? (confirmedItem ? confirmedItem.other.name : PUBLIC_VENUE_NAME)
+                  : g.name;
                 return (
                   <div
                     key={g.id}
@@ -439,7 +445,7 @@ function MessagesLayout() {
                       <div className="flex items-baseline justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className={`truncate ${g.unread > 0 ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>
-                            {g.name}
+                            {groupDisplayName}
                           </div>
                           {g.unread > 0 && (
                             <span
