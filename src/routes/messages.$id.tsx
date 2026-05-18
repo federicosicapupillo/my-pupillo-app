@@ -12,7 +12,7 @@ import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, 
 import { MessageSquare } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
+import { publicLocationLabel, canSeePreciseAddress, maskPartnerNameForWorker } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
