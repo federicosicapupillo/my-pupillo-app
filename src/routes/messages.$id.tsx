@@ -404,7 +404,7 @@ function Thread() {
         if (workerTargetId && user?.id === a.restaurant_id) {
           const { data: revs } = await supabase
             .from("reviews")
-            .select("id, rating, comment, created_at, shift_id, announcement_id, positive_tags, would_rehire")
+            .select("id, rating, comment, created_at, shift_id, announcement_id, positive_tags, negative_tags, would_rehire")
             .eq("target_id", workerTargetId)
             .eq("is_visible_to_restaurants", true)
             .not("shift_id", "is", null)
