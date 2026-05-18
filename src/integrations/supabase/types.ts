@@ -1657,6 +1657,7 @@ export type Database = {
         | "accepted"
         | "rejected"
         | "expired"
+        | "cancelled"
       credit_tx_kind: "purchase" | "grant" | "consume" | "refund" | "plan_bonus"
       discount_applies_to: "credits" | "premium" | "all"
       discount_type: "percentage" | "fixed_amount" | "free_credits"
@@ -1824,6 +1825,7 @@ export const Constants = {
         "accepted",
         "rejected",
         "expired",
+        "cancelled",
       ],
       credit_tx_kind: ["purchase", "grant", "consume", "refund", "plan_bonus"],
       discount_applies_to: ["credits", "premium", "all"],
