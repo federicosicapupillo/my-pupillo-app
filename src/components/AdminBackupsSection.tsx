@@ -35,6 +35,7 @@ export function AdminBackupsSection() {
 
   const files = data?.files ?? [];
   const sha256 = data?.sha256 ?? null;
+  const shaFile = files.find((f) => f.key === "sha256") ?? null;
   const [copied, setCopied] = useState(false);
 
   // Verification state
@@ -191,6 +192,24 @@ export function AdminBackupsSection() {
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               {copied ? "Copiato" : "Copia"}
             </Button>
+            {shaFile && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadAndVerify(shaFile)}
+                disabled={autoVerifyingKey === shaFile.key}
+                className="gap-2 shrink-0"
+                title="Scarica il file .sha256 per verificare in locale"
+              >
+                {autoVerifyingKey === shaFile.key ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                .sha256
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             Verifica l'integrità dopo il download:{" "}
