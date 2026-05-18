@@ -114,7 +114,12 @@ function isCompleted(r: Row): boolean {
 
 function isCancelled(r: Row): boolean {
   if (r.shift?.status === "cancelled") return true;
-  if (r.status === "not_interested" || r.status === "rejected" || r.status === "expired") return true;
+  if (
+    r.status === "not_interested" ||
+    r.status === "rejected" ||
+    r.status === "expired" ||
+    r.status === "cancelled"
+  ) return true;
   return false;
 }
 
@@ -159,6 +164,8 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   }
   if (r.shift?.status === "cancelled")
     return { label: "Annullata", cls: "bg-muted text-muted-foreground border-border" };
+  if (r.status === "cancelled")
+    return { label: "Annullata", cls: "bg-amber-100 text-amber-900 border-amber-200" };
   if (r.status === "accepted")
     return { label: "Confermata da entrambi", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
   if (r.status === "rejected")

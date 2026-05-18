@@ -214,7 +214,7 @@ type LogEvent = {
   metadata: { tariff?: number; note?: string; by_role?: string } | null;
 };
 
-const TERMINAL = ["accepted", "rejected", "expired"];
+const TERMINAL = ["accepted", "rejected", "expired", "cancelled"];
 
 type TimelineEvent = { at: string; label: string; note?: string; tone: "neutral" | "success" | "error" };
 
@@ -226,6 +226,7 @@ const ACTION_LABELS: Record<string, { label: string; tone: TimelineEvent["tone"]
   accepted: { label: "Lavoratore assegnato", tone: "success" },
   rejected: { label: "Candidatura rifiutata", tone: "error" },
   expired: { label: "Offerta scaduta", tone: "error" },
+  cancelled: { label: "Candidatura annullata dal lavoratore", tone: "error" },
 };
 
 function formatTs(iso: string) {
@@ -262,6 +263,7 @@ function buildTimeline(status?: string): Step[] {
   const isAccepted = s === "accepted";
   const isInterested = s === "interested";
   const isExpired = s === "expired";
+  const isCancelled = s === "cancelled";
 
   const mark = (cond: boolean, isCurrent: boolean): StepState =>
     cond ? "done" : isCurrent ? "current" : "todo";
@@ -272,9 +274,10 @@ function buildTimeline(status?: string): Step[] {
       state: isReject ? "error" : mark(isInterested || isCounter || isAccepted, s === "pending") },
     { key: "counter", label: "Controfferta", icon: Handshake,
       state: isCounter ? "current" : (isAccepted ? "done" : "todo") },
-    { key: "outcome", label: isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
-      icon: isReject || isExpired ? Ban : Check,
-      state: isAccepted ? "done" : (isReject || isExpired) ? "error" : "todo" },
+    { key: "outcome",
+      label: isCancelled ? "Annullata" : isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
+      icon: isReject || isExpired || isCancelled ? Ban : Check,
+      state: isAccepted ? "done" : (isReject || isExpired || isCancelled) ? "error" : "todo" },
   ];
 }
 
@@ -297,6 +300,8 @@ function Thread() {
   const [counterValue, setCounterValue] = useState("");
   const [counterConfirmOpen, setCounterConfirmOpen] = useState(false);
   const [sendingCounter, setSendingCounter] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
@@ -604,6 +609,44 @@ function Thread() {
     setApp({ ...app, ...patch } as App);
   };
 
+  const cancelApplication = async () => {
+    if (!app || !user || role !== "worker" || cancelling) return;
+    if (app.status !== "pending") {
+      toast.error("La candidatura non può più essere annullata.");
+      return;
+    }
+    if (shift && (shift.status === "scheduled" || shift.status === "completed")) {
+      toast.error("Il turno è già confermato: non puoi più annullare la candidatura.");
+      return;
+    }
+    setCancelling(true);
+    try {
+      const { error } = await supabase
+        .from("applications")
+        .update({ status: "cancelled" as never, worker_response_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) { toast.error(error.message); return; }
+      try { await insertSystemMessage("Il lavoratore ha annullato la candidatura per il turno.", "withdraw_application"); } catch (e) { console.error(e); }
+      if (app.restaurant_id) {
+        try {
+          const workerName = profile?.full_name ?? "Un lavoratore";
+          await supabase.from("notifications").insert({
+            user_id: app.restaurant_id,
+            title: "Candidatura annullata",
+            body: `${workerName} ha annullato la candidatura per il turno.`,
+            link: `/messages/${id}`,
+          } as never);
+        } catch (e) { console.error("[cancel] notify failed", e); }
+      }
+      await logEvent("cancelled", { by_role: "worker" });
+      setApp({ ...app, status: "cancelled" } as App);
+      setCancelConfirmOpen(false);
+      toast.success("Candidatura annullata.");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const sendCounter = async () => {
     if (sendingCounter) return;
     const v = parseFloat(counterValue);
@@ -772,7 +815,17 @@ function Thread() {
       <div className="max-w-3xl mx-auto lg:mx-0">
         <div className="flex items-center justify-between mb-4">
           <Link to="/messages" className="lg:hidden"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Indietro</Button></Link>
-          {app && <span className="text-xs rounded-full bg-secondary px-2 py-1 capitalize">{app.status}</span>}
+          {app && (
+            <span
+              className={`text-xs rounded-full px-2 py-1 capitalize ${
+                app.status === "cancelled"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                  : "bg-secondary"
+              }`}
+            >
+              {app.status === "cancelled" ? "Annullata" : app.status}
+            </span>
+          )}
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -956,6 +1009,16 @@ function Thread() {
               {role === "worker" && app.status === "pending" && (<>
                 <Button size="sm" className="gap-2" onClick={() => transition("interested")}><ThumbsUp className="h-4 w-4" />Sono interessato</Button>
                 <Button size="sm" variant="outline" className="gap-2" onClick={() => transition("not_interested")}><ThumbsDown className="h-4 w-4" />Non interessato</Button>
+                {(!shift || (shift.status !== "scheduled" && shift.status !== "completed")) && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-2 text-muted-foreground hover:text-destructive"
+                    onClick={() => setCancelConfirmOpen(true)}
+                  >
+                    <Ban className="h-4 w-4" />Annulla candidatura
+                  </Button>
+                )}
               </>)}
               {role === "restaurant" && (() => {
                 const statuses = Object.values(proposalStatuses);
@@ -1059,16 +1122,21 @@ function Thread() {
             if (isSystem) {
               const isAccept = m.action_type === "accept_application";
               const isReject = m.action_type === "reject_application";
+              const isCancel = m.action_type === "withdraw_application";
               const tone = isAccept
                 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
                 : isReject
                   ? "bg-destructive/10 text-destructive border-destructive/30"
-                  : "bg-muted text-muted-foreground border";
+                  : isCancel
+                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                    : "bg-muted text-muted-foreground border";
               const label = isAccept
                 ? "Proposta accettata"
                 : isReject
                   ? "Proposta rifiutata"
-                  : m.body.replace(/^⚙️ Sistema:\s*/, "").replace(/^⚙️ /, "");
+                  : isCancel
+                    ? "Candidatura annullata dal lavoratore"
+                    : m.body.replace(/^⚙️ Sistema:\s*/, "").replace(/^⚙️ /, "");
               return (
                 <div key={m.id} className="flex justify-center">
                   <div className={`rounded-full px-3 py-1 text-xs font-medium border ${tone}`}>
@@ -1279,6 +1347,26 @@ function Thread() {
           returnTo={`/messages/${id}`}
         />
         <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
+        <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Vuoi annullare la candidatura?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se annulli questa candidatura, il ristoratore verrà avvisato e non potrà più accettarti per questo turno.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={cancelling}>Torna indietro</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); void cancelApplication(); }}
+                disabled={cancelling}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {cancelling ? "Annullamento…" : "Conferma annullamento"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
   );
 }
