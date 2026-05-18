@@ -268,6 +268,78 @@ function ShiftsPage() {
     setViewReviewData(null);
   };
 
+  const submitDialogReview = async () => {
+    if (!user || !reviewDialog) return;
+    const a = reviewDialog;
+    if (!a.worker_id || !a.shift_id) {
+      setDialogError("Turno o lavoratore non trovato.");
+      return;
+    }
+    const c = dialogCriteria;
+    const avg = (c.punctuality + c.professionalism + c.competence + c.reliability + c.teamwork) / 5;
+    const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
+    if (!submittedRating || submittedRating < 1) {
+      setDialogError("Seleziona una valutazione");
+      return;
+    }
+    setDialogSubmitting(true);
+    setDialogError(null);
+    const tId = toast.loading("Invio recensione in corso…");
+    try {
+      // 1. Ensure shift is marked completed
+      const localShift = shifts.find(x => x.id === a.shift_id);
+      if (localShift && localShift.status === "scheduled") {
+        const { error: upErr } = await supabase.from("shifts").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", a.shift_id);
+        if (upErr) {
+          toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
+          setDialogError(upErr.message);
+          setDialogSubmitting(false);
+          return;
+        }
+      }
+      // 2. Insert review
+      const { error } = await supabase.from("reviews").insert({
+        author_id: user.id,
+        target_id: a.worker_id,
+        shift_id: a.shift_id,
+        announcement_id: a.announcement_id,
+        application_id: a.application_id,
+        rating: submittedRating,
+        comment: dialogComment.trim() || null,
+        punctuality: c.punctuality,
+        professionalism: c.professionalism,
+        competence: c.competence,
+        reliability: c.reliability,
+        teamwork: c.teamwork,
+      } as any);
+      if (error) {
+        toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
+        setDialogError(error.message);
+        setDialogSubmitting(false);
+        return;
+      }
+      // 3. Notification to worker (best-effort)
+      const notifLink = a.application_id ? `/messages/${a.application_id}` : "/profile";
+      supabase.from("notifications").insert({
+        user_id: a.worker_id,
+        title: "Hai ricevuto una nuova recensione",
+        body: "Hai ricevuto una nuova recensione dal ristoratore.",
+        link: notifLink,
+      } as any).then(() => {}, () => {});
+      toast.success("Recensione inviata", { id: tId });
+      // 4. Optimistic local updates
+      setReviewMap(prev => ({ ...prev, [a.shift_id]: submittedRating }));
+      setShifts(prev => prev.map(x => x.id === a.shift_id ? { ...x, status: "completed" as const } : x));
+      refreshRequiredReviews();
+      setReviewDialog(null);
+    } catch (e: any) {
+      toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
+      setDialogError(e?.message ?? "Errore di rete");
+    } finally {
+      setDialogSubmitting(false);
+    }
+  };
+
   const today = new Date().toISOString().slice(0, 10);
 
   const filtered = useMemo(() => {
