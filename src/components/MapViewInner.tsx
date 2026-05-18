@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useRef } from "react";
+import { SinglePreviewController, computePointsSignature } from "@/lib/map-preview";
 
 export type MapCategory = "restaurant" | "worker" | "announcement";
 
@@ -209,10 +210,7 @@ function PopupHoverKeepAlive({ onEnter, onLeave }: { onEnter: () => void; onLeav
 export default function MapViewInner({ points, height, center, focusZoom, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; focusZoom?: number; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
   // Firma stabile della lista di punti: cambia quando filtri/categoria
   // modificano l'insieme visualizzato → triggera la chiusura della preview.
-  const pointsSignature = useMemo(
-    () => `${points.length}:${points.map((p) => `${p.category}-${p.id}`).join("|")}`,
-    [points]
-  );
+  const pointsSignature = useMemo(() => computePointsSignature(points), [points]);
   // Desktop con mouse: hover apre la preview con un breve open-delay,
   // mouseout la chiude con un piccolo close-delay (così l'utente può
   // spostarsi sul popup senza flicker). Mouseenter sul popup annulla la
@@ -222,89 +220,24 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
   const hasHover = typeof window !== "undefined"
     && typeof window.matchMedia === "function"
     && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-  // Timer condivisi: open ed close, gestiti con ref per evitare re-render.
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const activeMarkerRef = useRef<any>(null);
-  const CLOSE_DELAY = 220;
-  const OPEN_DELAY = 60;
-  const cancelClose = () => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-  };
-  const cancelOpen = () => {
-    if (openTimerRef.current) {
-      clearTimeout(openTimerRef.current);
-      openTimerRef.current = null;
-    }
-  };
-  const scheduleClose = (marker: any) => {
-    cancelClose();
-    closeTimerRef.current = setTimeout(() => {
-      try { marker?.closePopup?.(); } catch { /* noop */ }
-      if (activeMarkerRef.current === marker) activeMarkerRef.current = null;
-    }, CLOSE_DELAY);
-  };
+  const controllerRef = useRef<SinglePreviewController | null>(null);
+  if (controllerRef.current == null) {
+    controllerRef.current = new SinglePreviewController({ openDelay: 60, closeDelay: 220 });
+  }
+  const controller = controllerRef.current;
   const markerHandlers = useMemo(() => {
     if (hasHover) {
       return {
-        mouseover: (e: any) => {
-          cancelClose();
-          // Se sto già hoverando lo stesso marker non riapro nulla.
-          if (activeMarkerRef.current === e.target) return;
-          cancelOpen();
-          openTimerRef.current = setTimeout(() => {
-            // Chiudi il precedente per garantire UNA sola preview aperta.
-            const prev = activeMarkerRef.current;
-            if (prev && prev !== e.target) {
-              try { prev.closePopup(); } catch { /* noop */ }
-            }
-            activeMarkerRef.current = e.target;
-            e.target.openPopup();
-          }, OPEN_DELAY);
-        },
-        mouseout: (e: any) => {
-          // Se l'apertura era solo "in programma", annullala subito.
-          cancelOpen();
-          scheduleClose(e.target);
-        },
-        // Click "pinna" la preview: annulla qualsiasi timer di chiusura.
-        click: (e: any) => {
-          cancelOpen();
-          cancelClose();
-          activeMarkerRef.current = e.target;
-          e.target.openPopup();
-        },
+        mouseover: (e: any) => controller.hoverEnter(e.target),
+        mouseout: (e: any) => controller.hoverLeave(e.target),
+        click: (e: any) => controller.pin(e.target),
       };
     }
-    // Touch: tap apre (toggle se già aperto). Il tap fuori chiude via
-    // closePopupOnClick di Leaflet.
     return {
-      click: (e: any) => {
-        const popup = e.target.getPopup?.();
-        const isOpen = popup && (popup as any).isOpen?.();
-        if (isOpen) {
-          e.target.closePopup();
-          activeMarkerRef.current = null;
-        } else {
-          // Chiudi un'eventuale altra preview aperta su altro marker.
-          const prev = activeMarkerRef.current;
-          if (prev && prev !== e.target) {
-            try { prev.closePopup(); } catch { /* noop */ }
-          }
-          activeMarkerRef.current = e.target;
-          e.target.openPopup();
-        }
-      },
+      click: (e: any) => controller.tap(e.target),
     };
-  }, [hasHover]);
-  // Hover sul popup DOM: tieni viva la preview finché il puntatore è dentro.
-  // Lo facciamo via listener nativi sull'elemento del popup (più affidabile
-  // di eventHandlers di react-leaflet su <Popup>) all'evento `popupopen`.
-  // È implementato all'interno di PopupHoverKeepAlive sotto.
-  useEffect(() => () => { cancelClose(); cancelOpen(); }, []);
+  }, [hasHover, controller]);
+  useEffect(() => () => controller.dispose(), [controller]);
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_50px_-25px_rgba(0,0,0,0.7)]" style={{ height }}>
       <MapContainer
@@ -318,14 +251,14 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
         <PopupA11y />
         {hasHover && (
           <PopupHoverKeepAlive
-            onEnter={cancelClose}
-            onLeave={() => {
-              const m = activeMarkerRef.current;
-              if (m) scheduleClose(m);
-            }}
+            onEnter={() => controller.popupEnter()}
+            onLeave={() => controller.popupLeave()}
           />
         )}
-        <ClosePopupOnPointsChange signature={pointsSignature} />
+        <ClosePopupOnPointsChange
+          signature={pointsSignature}
+          onChange={() => controller.pointsChanged()}
+        />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
