@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle, Info } from "lucide-react";
+import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
@@ -103,6 +104,27 @@ function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
+const MASKED_LABELS = [
+  "Ristorante partner",
+  "Locale verificato",
+  "Ristorante in zona",
+  "Nome visibile dopo conferma",
+];
+
+function pickMaskedRestaurantLabel(seed: string, hasActive: boolean): string {
+  if (!hasActive) return "Locale verificato";
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return MASKED_LABELS[h % MASKED_LABELS.length];
+}
+
+function maskedZoneLabel(r: { neighborhood?: string | null; city?: string | null }): string {
+  const zone = [r.neighborhood, r.city].filter(Boolean).join(" · ");
+  if (zone) return zone;
+  if (r.city) return r.city;
+  return "Zona non specificata";
+}
+
 function MapPage() {
   const { user, role } = useAuth();
   const isRestaurant = role === "restaurant";
@@ -152,12 +174,13 @@ function MapPage() {
   }, [isRestaurant]);
 
   // For worker accounts: never display other workers on the map and never
-  // show standalone restaurant markers (the announcement marker is the
-  // restaurant). Only the active announcements remain visible.
+  // show other workers. I marker dei ristoranti restano visibili (con
+  // privacy applicata sul nome) così il lavoratore può vedere tutti i
+  // locali in piattaforma, oltre alle richieste attive.
   useEffect(() => {
     if (isWorker) {
       setShowW(false);
-      setShowR(false);
+      setShowR(true);
       setShowA(true);
       setView("restaurants");
     }
@@ -341,14 +364,25 @@ function MapPage() {
         const lat = r.service_area_lat ?? r.latitude;
         const lng = r.service_area_lng ?? r.longitude;
         if (lat == null || lng == null) return;
+        const known = !isWorker || knownRestaurantIds.has(r.id);
+        const hasActive = (annCounts[r.id] || 0) > 0;
+        const maskedTitle = pickMaskedRestaurantLabel(r.id, hasActive);
+        const zone = [r.neighborhood, r.city].filter(Boolean).join(", ") || r.city || "Zona non specificata";
+        const maskedSubtitle = [
+          r.venue_type,
+          `Zona: ${zone}`,
+          hasActive ? `${annCounts[r.id]} richiest${annCounts[r.id] === 1 ? "a attiva" : "e attive"}` : "Nessuna richiesta attiva",
+        ].filter(Boolean).join(" · ");
         pts.push({
           id: r.id,
-          lat,
-          lng,
+          lat: known ? lat : jitterCoords([lat, lng], r.id, 1.2)[0],
+          lng: known ? lng : jitterCoords([lat, lng], r.id, 1.2)[1],
           category: "restaurant",
-          title: r.business_name || r.full_name || "Locale",
-          subtitle: [r.venue_type, r.price_range ? `Fascia: ${priceRangeLabel(r.price_range)}` : null, [r.neighborhood, r.city].filter(Boolean).join(", "), `${annCounts[r.id] || 0} annunci attivi`].filter(Boolean).join(" · "),
-          city: [r.neighborhood, r.city].filter(Boolean).join(", ") || r.city,
+          title: known ? (r.business_name || r.full_name || "Locale") : maskedTitle,
+          subtitle: known
+            ? [r.venue_type, r.price_range ? `Fascia: ${priceRangeLabel(r.price_range)}` : null, zone, `${annCounts[r.id] || 0} annunci attivi`].filter(Boolean).join(" · ")
+            : maskedSubtitle,
+          city: zone,
           status: r.account_status,
         });
       });
@@ -765,26 +799,51 @@ function MapPage() {
               {filteredRestaurants.map(r => {
                 const d = ref && r.service_area_lat != null && r.service_area_lng != null
                   ? distKm(ref.lat, ref.lng, r.service_area_lat, r.service_area_lng) : null;
+                const known = !isWorker || knownRestaurantIds.has(r.id);
+                const activeCount = annCounts[r.id] || 0;
+                const hasActive = activeCount > 0;
+                const displayName = known
+                  ? (r.business_name || r.full_name || "Locale")
+                  : pickMaskedRestaurantLabel(r.id, hasActive);
+                const displayLocation = known
+                  ? ([r.address, r.neighborhood, r.city].filter(Boolean).join(", ") || "Indirizzo non disponibile")
+                  : `Zona ${maskedZoneLabel(r)}`;
                 return (
                   <li key={r.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="font-semibold truncate">{r.business_name || r.full_name || "Locale"}</div>
+                        <div className="font-semibold truncate flex items-center gap-1.5">
+                          {!known && <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                          <span className="truncate">{displayName}</span>
+                        </div>
                         <div className="text-xs text-muted-foreground capitalize">{r.venue_type || "—"}</div>
                         {r.price_range && <div className="text-xs text-muted-foreground">Fascia: {priceRangeLabel(r.price_range)}</div>}
                       </div>
                       {d != null && <span className="text-xs rounded-full bg-secondary px-2 py-0.5 whitespace-nowrap">{d.toFixed(1)} km</span>}
                     </div>
                     <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{[r.address, r.neighborhood, r.city].filter(Boolean).join(", ") || "Indirizzo non disponibile"}</div>
+                      <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{displayLocation}</div>
                       <div className="flex items-center gap-3">
-                        <span className="inline-flex items-center gap-1"><Briefcase className="h-3 w-3" />{annCounts[r.id] || 0} richieste</span>
-                        <span className="inline-flex items-center gap-1"><Coins className="h-3 w-3" />{r.credits ?? 0}</span>
+                        <span className="inline-flex items-center gap-1"><Briefcase className="h-3 w-3" />{activeCount} {activeCount === 1 ? "richiesta" : "richieste"}</span>
+                        {!isWorker && <span className="inline-flex items-center gap-1"><Coins className="h-3 w-3" />{r.credits ?? 0}</span>}
                         {r.rating_avg ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{Number(r.rating_avg).toFixed(1)}</span> : null}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{r.plan || "free"}</span>
-                        <span className={`rounded-full px-2 py-0.5 capitalize ${r.account_status === "active" ? "bg-emerald-500/15 text-emerald-700" : "bg-muted"}`}>{r.account_status || "—"}</span>
+                        {!isWorker && <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{r.plan || "free"}</span>}
+                        {isWorker ? (
+                          hasActive ? (
+                            <span className="rounded-full bg-emerald-500/15 text-emerald-700 px-2 py-0.5">Attivo</span>
+                          ) : (
+                            <span className="rounded-full bg-muted px-2 py-0.5">Nessuna richiesta attiva</span>
+                          )
+                        ) : (
+                          <span className={`rounded-full px-2 py-0.5 capitalize ${r.account_status === "active" ? "bg-emerald-500/15 text-emerald-700" : "bg-muted"}`}>{r.account_status || "—"}</span>
+                        )}
+                        {!known && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 inline-flex items-center gap-1">
+                            <Lock className="h-3 w-3" /> Nome visibile dopo conferma
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2">
@@ -792,10 +851,16 @@ function MapPage() {
                         const lat = r.service_area_lat ?? r.latitude;
                         const lng = r.service_area_lng ?? r.longitude;
                         if (lat != null && lng != null) {
-                          focusOnMap(lat, lng, r.business_name || undefined);
+                          focusOnMap(lat, lng, known ? (r.business_name || undefined) : displayName);
                         }
                       }}>Mostra sulla mappa</Button>
-                      <Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm">Vedi dettaglio</Button></Link>
+                      {known ? (
+                        <Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm">Vedi dettaglio</Button></Link>
+                      ) : (
+                        hasActive ? (
+                          <Button size="sm" variant="secondary" onClick={() => focusOnMap(r.service_area_lat ?? r.latitude ?? 0, r.service_area_lng ?? r.longitude ?? 0)}>Vedi richieste</Button>
+                        ) : null
+                      )}
                     </div>
                   </li>
                 );
