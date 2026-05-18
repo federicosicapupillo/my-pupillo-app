@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -73,9 +74,13 @@ function ShiftsPage() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [criteria, setCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+  const [positiveLabels, setPositiveLabels] = useState<string[]>([]);
+  const [negativeLabels, setNegativeLabels] = useState<string[]>([]);
   const [reviewDialog, setReviewDialog] = useState<ActionShift | null>(null);
   const [dialogCriteria, setDialogCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
   const [dialogComment, setDialogComment] = useState("");
+  const [dialogPositive, setDialogPositive] = useState<string[]>([]);
+  const [dialogNegative, setDialogNegative] = useState<string[]>([]);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
@@ -214,6 +219,8 @@ function ShiftsPage() {
         competence: criteria.competence,
         reliability: criteria.reliability,
         teamwork: criteria.teamwork,
+        positive_tags: positiveLabels,
+        negative_tags: negativeLabels,
       } as any);
       if (error) {
         const msg = error.message || "Errore sconosciuto";
@@ -237,6 +244,8 @@ function ShiftsPage() {
       setReviewOpen(null);
       setRating(5);
       setComment("");
+      setPositiveLabels([]);
+      setNegativeLabels([]);
     } catch (e: any) {
       const msg = e?.message ?? "Errore di rete";
       toast.error(`Errore di rete: ${msg}`, { id: tId });
@@ -311,6 +320,8 @@ function ShiftsPage() {
         competence: c.competence,
         reliability: c.reliability,
         teamwork: c.teamwork,
+        positive_tags: dialogPositive,
+        negative_tags: dialogNegative,
       } as any);
       if (error) {
         toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
