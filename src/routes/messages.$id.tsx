@@ -1598,6 +1598,70 @@ function Thread() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <Sheet open={reviewsOpen} onOpenChange={setReviewsOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Recensioni del lavoratore</SheetTitle>
+              <SheetDescription>
+                Solo recensioni verificate collegate a turni completati. I nomi dei locali precedenti sono oscurati per privacy.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-4 space-y-3">
+              {workerReviews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Questo lavoratore non ha ancora recensioni. Puoi comunque valutare il profilo, le competenze e le informazioni disponibili.
+                </p>
+              ) : (
+                workerReviews.map((r) => {
+                  const roleLabel = r.announcement_id ? reviewRoles[r.announcement_id] : null;
+                  return (
+                    <div key={r.id} className="rounded-xl border bg-card p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="inline-flex items-center gap-0.5">
+                          {[1,2,3,4,5].map(n => (
+                            <Star key={n} className={`h-4 w-4 ${n <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                          ))}
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">
+                          {new Date(r.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mb-1.5 text-[11px]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                          <Lock className="h-3 w-3" /> Locale verificato
+                        </span>
+                        {roleLabel && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
+                            <Briefcase className="h-3 w-3" /> {roleLabel}
+                          </span>
+                        )}
+                        {r.would_rehire === "yes" && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-medium">
+                            <BadgeCheck className="h-3 w-3" /> Lo riassumerebbe
+                          </span>
+                        )}
+                      </div>
+                      {r.comment ? (
+                        <p className="text-sm text-foreground/90 whitespace-pre-line">"{r.comment}"</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">Nessun commento</p>
+                      )}
+                      {r.positive_tags && r.positive_tags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {r.positive_tags.map((t, i) => (
+                            <span key={i} className="text-[10px] rounded-full bg-secondary text-secondary-foreground px-2 py-0.5">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
   );
 }
