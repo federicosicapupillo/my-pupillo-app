@@ -104,6 +104,27 @@ function distKm(aLat: number, aLng: number, bLat: number, bLng: number) {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
+const MASKED_LABELS = [
+  "Ristorante partner",
+  "Locale verificato",
+  "Ristorante in zona",
+  "Nome visibile dopo conferma",
+];
+
+function pickMaskedRestaurantLabel(seed: string, hasActive: boolean): string {
+  if (!hasActive) return "Locale verificato";
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return MASKED_LABELS[h % MASKED_LABELS.length];
+}
+
+function maskedZoneLabel(r: { neighborhood?: string | null; city?: string | null }): string {
+  const zone = [r.neighborhood, r.city].filter(Boolean).join(" · ");
+  if (zone) return zone;
+  if (r.city) return r.city;
+  return "Zona non specificata";
+}
+
 function MapPage() {
   const { user, role } = useAuth();
   const isRestaurant = role === "restaurant";
