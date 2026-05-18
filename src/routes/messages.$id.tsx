@@ -2357,8 +2357,11 @@ function ConfirmationCard(props: {
   applicationId: string;
   announcementId: string | null;
   isWorker: boolean;
+  acknowledged?: boolean;
+  onAcknowledge?: () => Promise<void> | void;
 }) {
-  const { ann, venueName, applicationId, announcementId, isWorker } = props;
+  const { ann, venueName, applicationId, isWorker, acknowledged = false, onAcknowledge } = props;
+  const [ackBusy, setAckBusy] = useState(false);
   const clean = (v: unknown): string => {
     if (v == null) return "";
     const s = String(v).trim();
@@ -2382,6 +2385,20 @@ function ConfirmationCard(props: {
     ? formatTariff(ann.tariff_amount, ann.tariff_type ?? null)
     : null;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+
+  // Hide the acknowledge button after the shift end date has passed
+  const shiftEnded = (() => {
+    if (!ann?.service_date) return false;
+    const d = new Date(ann.service_date);
+    if (ann.end_time) {
+      const [h, m] = ann.end_time.split(":").map(Number);
+      d.setHours(h || 0, m || 0, 0, 0);
+    } else {
+      d.setHours(23, 59, 59, 999);
+    }
+    return d.getTime() < Date.now();
+  })();
+  const showAckButton = isWorker && !shiftEnded;
 
   return (
     <div className="flex justify-center my-2">
@@ -2442,34 +2459,68 @@ function ConfirmationCard(props: {
         <div className="mx-4 mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
           Ti consigliamo di arrivare almeno 10 minuti prima dell'orario di ingresso.
         </div>
-        <div className="px-4 py-3 border-t bg-secondary/20 flex flex-wrap gap-2">
-          {announcementId && (
-            <Button asChild size="sm" variant="outline" className="gap-2 flex-1 min-w-[140px]">
-              <Link to="/announcements/$id" params={{ id: announcementId }}>
-                <ExternalLink className="h-3.5 w-3.5" />
-                Apri dettagli turno
-              </Link>
-            </Button>
-          )}
-          <Button asChild size="sm" variant="outline" className="gap-2 flex-1 min-w-[140px]">
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
-              <Navigation className="h-3.5 w-3.5" />
-              Indicazioni
-            </a>
-          </Button>
-          {isWorker && (
+        {acknowledged && (
+          <div className="mx-4 mb-3 flex items-center justify-center gap-2 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+            <BadgeCheck className="h-5 w-5" />
+            Presa visione confermata
+          </div>
+        )}
+        <div className="px-4 py-4 border-t bg-secondary/20 flex flex-col gap-3">
+          {showAckButton && (
             <Button
-              size="sm"
-              variant="outline"
-              className="gap-2 flex-1 min-w-[140px]"
-              onClick={() => {
-                document.getElementById(`thread-template-picker-${applicationId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+              size="lg"
+              disabled={acknowledged || ackBusy}
+              className="w-full h-12 text-base font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
+              onClick={async () => {
+                if (acknowledged || ackBusy || !onAcknowledge) return;
+                setAckBusy(true);
+                try { await onAcknowledge(); } finally { setAckBusy(false); }
               }}
             >
-              <Send className="h-3.5 w-3.5" />
-              Scrivi al ristoratore
+              {acknowledged ? (
+                <>
+                  <BadgeCheck className="h-5 w-5" />
+                  Presa visione confermata
+                </>
+              ) : ackBusy ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Registrazione…
+                </>
+              ) : (
+                <>
+                  <Check className="h-5 w-5" />
+                  Confermo di aver letto le istruzioni
+                </>
+              )}
             </Button>
           )}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="flex-1 h-11 text-sm font-semibold gap-2 border-2 border-primary/60 text-primary hover:bg-primary/10"
+            >
+              <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                <Navigation className="h-4 w-4" />
+                Indicazioni
+              </a>
+            </Button>
+            {isWorker && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="flex-1 h-11 text-sm font-semibold gap-2 border-2 border-primary/60 text-primary hover:bg-primary/10"
+                onClick={() => {
+                  document.getElementById(`thread-template-picker-${applicationId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              >
+                <Send className="h-4 w-4" />
+                Scrivi al ristoratore
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
