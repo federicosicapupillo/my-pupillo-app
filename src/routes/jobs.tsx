@@ -349,6 +349,8 @@ function Jobs() {
       in_attesa_conferma: 0,
       confermate: 0,
       completate: 0,
+      rifiutate: 0,
+      scadute: 0,
       annullate: 0,
       da_recensire: 0,
     };
