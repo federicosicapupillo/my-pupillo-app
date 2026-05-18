@@ -14,6 +14,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
+import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehirePicker";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -76,11 +77,13 @@ function ShiftsPage() {
   const [criteria, setCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
   const [positiveLabels, setPositiveLabels] = useState<string[]>([]);
   const [negativeLabels, setNegativeLabels] = useState<string[]>([]);
+  const [wouldRehire, setWouldRehire] = useState<WouldRehireValue>(null);
   const [reviewDialog, setReviewDialog] = useState<ActionShift | null>(null);
   const [dialogCriteria, setDialogCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
   const [dialogComment, setDialogComment] = useState("");
   const [dialogPositive, setDialogPositive] = useState<string[]>([]);
   const [dialogNegative, setDialogNegative] = useState<string[]>([]);
+  const [dialogWouldRehire, setDialogWouldRehire] = useState<WouldRehireValue>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
@@ -189,6 +192,11 @@ function ShiftsPage() {
     if (!user) return;
     if (submittingReview) return;
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
+    if (role === "restaurant" && !wouldRehire) {
+      setReviewError(prev => ({ ...prev, [s.id]: "Indica se richiameresti questo lavoratore." }));
+      toast.error("Indica se richiameresti questo lavoratore.");
+      return;
+    }
     const avg = (criteria.punctuality + criteria.professionalism + criteria.competence + criteria.reliability + criteria.teamwork) / 5;
     const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
     setSubmittingReview(s.id);
@@ -221,6 +229,7 @@ function ShiftsPage() {
         teamwork: criteria.teamwork,
         positive_tags: positiveLabels,
         negative_tags: negativeLabels,
+        ...(role === "restaurant" ? { would_rehire: wouldRehire } : {}),
       } as any);
       if (error) {
         const msg = error.message || "Errore sconosciuto";
@@ -246,6 +255,7 @@ function ShiftsPage() {
       setComment("");
       setPositiveLabels([]);
       setNegativeLabels([]);
+      setWouldRehire(null);
     } catch (e: any) {
       const msg = e?.message ?? "Errore di rete";
       toast.error(`Errore di rete: ${msg}`, { id: tId });
@@ -282,6 +292,10 @@ function ShiftsPage() {
     const a = reviewDialog;
     if (!a.worker_id || !a.shift_id) {
       setDialogError("Turno o lavoratore non trovato.");
+      return;
+    }
+    if (!dialogWouldRehire) {
+      setDialogError("Indica se richiameresti questo lavoratore.");
       return;
     }
     const c = dialogCriteria;
@@ -322,6 +336,7 @@ function ShiftsPage() {
         teamwork: c.teamwork,
         positive_tags: dialogPositive,
         negative_tags: dialogNegative,
+        would_rehire: dialogWouldRehire,
       } as any);
       if (error) {
         toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
@@ -440,6 +455,9 @@ function ShiftsPage() {
                 setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
                 setDialogComment("");
                 setDialogError(null);
+                setDialogPositive([]);
+                setDialogNegative([]);
+                setDialogWouldRehire(null);
                 setReviewDialog(a);
               };
               return (
@@ -668,6 +686,9 @@ function ShiftsPage() {
                             disabled={submittingReview === s.id}
                           />
                         )}
+                        {role === "restaurant" && (
+                          <WouldRehirePicker value={wouldRehire} onChange={setWouldRehire} disabled={submittingReview === s.id} />
+                        )}
                         {reviewError[s.id] && (
                           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -690,7 +711,7 @@ function ShiftsPage() {
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 }); setPositiveLabels([]); setNegativeLabels([]); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
+                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 }); setPositiveLabels([]); setNegativeLabels([]); setWouldRehire(null); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
                           <Star className="h-4 w-4" /> Lascia recensione
                         </Button>
                         {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (
@@ -789,6 +810,7 @@ function ShiftsPage() {
                 onChange={({ positive, negative }) => { setDialogPositive(positive); setDialogNegative(negative); }}
                 disabled={dialogSubmitting}
               />
+              <WouldRehirePicker value={dialogWouldRehire} onChange={setDialogWouldRehire} disabled={dialogSubmitting} />
               {dialogError && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />

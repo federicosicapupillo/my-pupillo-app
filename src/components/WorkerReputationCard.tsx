@@ -118,7 +118,7 @@ export function WorkerReputationCard({ workerId, profile, showTips = false, clas
         <Metric
           icon={Users}
           label="Lo richiamerebbe"
-          value={s.rehirePct != null ? `${s.rehirePct}%` : "—"}
+          value={s.rehirePct != null ? `${s.rehirePct}%` : "Non ancora calcolabile"}
         />
       </div>
 
