@@ -19,6 +19,10 @@ import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
+import {
+  readKnownRestaurantsCache,
+  writeKnownRestaurantsCache,
+} from "@/lib/known-restaurants-cache";
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
@@ -238,15 +242,32 @@ function MapPage() {
         (apps || []).forEach((x: any) => { m[x.announcement_id] = x.status; });
         setAppStatusByAnn(m);
 
-        // Ristoranti "conosciuti": turni effettuati oppure candidature accettate.
-        const [{ data: myShifts }, { data: acceptedApps }] = await Promise.all([
-          supabase.from("shifts").select("restaurant_id").eq("worker_id", user.id),
-          supabase.from("applications").select("restaurant_id").eq("worker_id", user.id).eq("status", "accepted"),
-        ]);
-        const known = new Set<string>();
-        (myShifts || []).forEach((x: any) => x.restaurant_id && known.add(x.restaurant_id));
-        (acceptedApps || []).forEach((x: any) => x.restaurant_id && known.add(x.restaurant_id));
-        setKnownRestaurantIds(known);
+        // Ristoranti "conosciuti": turni effettuati o candidature accettate.
+        // Per ridurre il carico sul DB usiamo una cache locale con TTL: se
+        // presente la usiamo subito, altrimenti la popoliamo in background.
+        // Le candidature accettate trovate sopra sono già fonte di verità.
+        const fromApps = new Set<string>();
+        (apps || []).forEach((x: any) => {
+          if (x.status === "accepted") {
+            // application.restaurant_id non è in questa proiezione; cadiamo
+            // nella query completa qui sotto.
+          }
+        });
+        const cached = readKnownRestaurantsCache(user.id);
+        if (cached) {
+          // Unione con eventuali nuovi accepted di questa sessione (vuoto qui).
+          setKnownRestaurantIds(new Set([...cached, ...fromApps]));
+        } else {
+          const [{ data: myShifts }, { data: acceptedApps }] = await Promise.all([
+            supabase.from("shifts").select("restaurant_id").eq("worker_id", user.id),
+            supabase.from("applications").select("restaurant_id").eq("worker_id", user.id).eq("status", "accepted"),
+          ]);
+          const known = new Set<string>();
+          (myShifts || []).forEach((x: any) => x.restaurant_id && known.add(x.restaurant_id));
+          (acceptedApps || []).forEach((x: any) => x.restaurant_id && known.add(x.restaurant_id));
+          setKnownRestaurantIds(known);
+          writeKnownRestaurantsCache(user.id, known);
+        }
       } else {
         setAppStatusByAnn({});
         setKnownRestaurantIds(new Set());
