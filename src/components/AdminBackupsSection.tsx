@@ -43,6 +43,7 @@ export function AdminBackupsSection() {
   const [computing, setComputing] = useState(false);
   const [pickedName, setPickedName] = useState<string | null>(null);
   const [pickedSize, setPickedSize] = useState<number>(0);
+  const [autoVerifyingKey, setAutoVerifyingKey] = useState<string | null>(null);
 
   const normalizedExpected = (expectedInput || sha256 || "").trim().toLowerCase().replace(/[^a-f0-9]/g, "");
   const expectedValid = /^[a-f0-9]{64}$/.test(normalizedExpected);
@@ -77,6 +78,66 @@ export function AdminBackupsSection() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Impossibile copiare negli appunti");
+    }
+  };
+
+  const handleDownloadAndVerify = async (file: AdminBackupFile) => {
+    const isFull = file.key === "full";
+    const expected = isFull ? sha256 : null;
+    setAutoVerifyingKey(file.key);
+    const toastId = toast.loading(
+      expected ? `Scarico e verifico ${file.name}…` : `Scarico ${file.name}…`,
+    );
+    try {
+      const res = await fetch(file.signedUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = await res.arrayBuffer();
+
+      let verifiedOk: boolean | null = null;
+      if (expected) {
+        const digest = await crypto.subtle.digest("SHA-256", buf);
+        const hex = Array.from(new Uint8Array(digest))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        verifiedOk = hex.toLowerCase() === expected.toLowerCase();
+        if (isFull) {
+          setComputed(hex);
+          setPickedName(file.name);
+          setPickedSize(buf.byteLength);
+        }
+        if (!verifiedOk) {
+          toast.error(
+            "Checksum SHA256 non corrispondente: il file scaricato potrebbe essere corrotto. Non salvato.",
+            { id: toastId },
+          );
+          return;
+        }
+      }
+
+      const blob = new Blob([buf], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      if (verifiedOk) {
+        toast.success(`Download completato e integrità SHA256 verificata: ${file.name}`, {
+          id: toastId,
+        });
+      } else {
+        toast.success(`Download completato: ${file.name}`, { id: toastId });
+      }
+    } catch (e) {
+      toast.error(
+        `Errore durante il download: ${e instanceof Error ? e.message : "sconosciuto"}`,
+        { id: toastId },
+      );
+    } finally {
+      setAutoVerifyingKey(null);
     }
   };
 
@@ -250,15 +311,22 @@ export function AdminBackupsSection() {
                   </div>
                 </div>
                 <Button
-                  asChild
                   size="sm"
                   variant={isPrimary ? "default" : "outline"}
                   className="gap-2"
+                  onClick={() => handleDownloadAndVerify(f)}
+                  disabled={autoVerifyingKey === f.key}
                 >
-                  <a href={f.signedUrl} download={f.name} rel="noopener noreferrer">
+                  {autoVerifyingKey === f.key ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
                     <Download className="h-4 w-4" />
-                    Scarica
-                  </a>
+                  )}
+                  {autoVerifyingKey === f.key
+                    ? isPrimary
+                      ? "Verifico…"
+                      : "Scarico…"
+                    : "Scarica"}
                 </Button>
               </li>
             );
