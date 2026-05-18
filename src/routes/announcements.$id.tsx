@@ -233,6 +233,41 @@ function AnnouncementDetail() {
     userId: user?.id ?? null,
   });
   const restaurantName = restaurant?.business_name || restaurant?.full_name || "Ristoratore";
+  const isWorker = !!user && !isOwner;
+  const publicVenueName = "Ristorante partner";
+  const displayedRestaurantName = canSeeAddress ? restaurantName : publicVenueName;
+
+  const totaleStimato = useMemo(() => {
+    if (!ann) return null;
+    const amt = Number(ann.tariff_amount);
+    if (!Number.isFinite(amt) || amt <= 0) return null;
+    if (ann.tariff_type !== "hourly") return amt;
+    const hours = Number(ann.shift_duration_hours ?? ann.duration_hours);
+    if (!Number.isFinite(hours) || hours <= 0) return null;
+    return Math.round(amt * hours * 100) / 100;
+  }, [ann]);
+
+  const [applying, setApplying] = useState(false);
+  const applyAsWorker = async () => {
+    if (!user || !ann) return;
+    setApplying(true);
+    const { data: app, error } = await supabase.from("applications").insert({
+      announcement_id: ann.id,
+      worker_id: user.id,
+      restaurant_id: ann.restaurant_id,
+    }).select("id").single();
+    setApplying(false);
+    if (error) { toast.error(error.message); return; }
+    if (app?.id) {
+      await supabase.from("notifications").insert({
+        user_id: ann.restaurant_id,
+        title: "Nuova candidatura ricevuta",
+        body: "Un lavoratore si è candidato per uno dei tuoi turni.",
+        link: `/messages/${app.id}`,
+      });
+    }
+    toast.success("Candidatura inviata!");
+  };
 
   const accept = async (app: App) => {
     setBusyId(app.id);
@@ -340,6 +375,12 @@ function AnnouncementDetail() {
             ? ann.location_address
             : publicLocationLabel({ job_city: ann.job_city, city: restaurant?.city, neighborhood: restaurant?.neighborhood })}</div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />{formatTariff(jobRequest?.hourly_rate ?? ann.tariff_amount, ann.tariff_type)}</div>
+          {totaleStimato != null && ann.tariff_type === "hourly" && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Euro className="h-4 w-4" />
+              <span>Totale stimato: <span className="font-medium text-foreground">€ {totaleStimato}</span></span>
+            </div>
+          )}
           <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {(ann.service_time ?? "").slice(0,5)}</div>
           {jobRequest?.break_included != null && <div className="text-muted-foreground">Pausa prevista: <span className="font-medium text-foreground">{jobRequest.break_included ? "Sì" : "No"}</span></div>}
           {ann.languages && ann.languages.length > 0 && (
