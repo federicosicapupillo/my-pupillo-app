@@ -347,7 +347,7 @@ function AnnouncementDetail() {
 
       <PageHeader
         title={jobRequest?.role_required || ann.professional_profile || jobRequest?.title || `Servizio ${ann.speed} · ${ann.duration_hours}h`}
-        subtitle={jobRequest?.restaurant_name || restaurantName}
+        subtitle={canSeeAddress ? (jobRequest?.restaurant_name || restaurantName) : `${publicVenueName} · Locale verificato · Nome visibile dopo conferma`}
         action={
           <span className={`text-xs rounded-full px-3 py-1 ${STATUS_CLS[ann.status] ?? "bg-muted text-muted-foreground"}`}>
             {STATUS_LABEL[ann.status] ?? ann.status}
