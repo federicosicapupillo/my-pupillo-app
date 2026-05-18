@@ -28,7 +28,7 @@ export type BackupLogRow = {
   file_url: string | null;
   github_commit_url: string | null;
   error_message: string | null;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
 };
 
 async function assertAdmin(supabase: any, userId: string) {
