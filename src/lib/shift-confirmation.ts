@@ -41,30 +41,47 @@ export function buildConfirmationBody(
   venueName: string | null,
 ): string {
   const lines: string[] = [
-    "Candidatura accettata",
+    "Candidatura confermata!",
     "",
-    "Il ristoratore ha confermato la tua presenza per questo turno.",
+    "Sei stato confermato per questo turno.",
+    "",
+    "Dettagli del servizio:",
     "",
   ];
   lines.push(`Locale: ${clean(venueName) || "Locale da confermare"}`);
+  const addr = clean(ann?.location_address) || clean(ann?.job_address) || clean(ann?.job_city);
+  if (addr) lines.push(`Indirizzo: ${addr}`);
+  const role = clean(ann?.professional_profile);
+  if (role) lines.push(`Ruolo: ${role}`);
   if (ann?.service_date) lines.push(`Data: ${formatDateIT(ann.service_date)}`);
   if (ann?.service_time) {
     const end = ann.end_time ? ` - ${ann.end_time.slice(0, 5)}` : "";
     lines.push(`Orario: ${ann.service_time.slice(0, 5)}${end}`);
   }
-  const role = clean(ann?.professional_profile);
-  if (role) lines.push(`Ruolo: ${role}`);
-  const addr = clean(ann?.location_address) || clean(ann?.job_address) || clean(ann?.job_city);
-  if (addr) lines.push(`Indirizzo: ${addr}`);
-  const ref = clean(ann?.job_contact_person_name);
-  if (ref) lines.push(`Referente: ${ref}`);
-  const phone = clean(ann?.job_contact_person_phone);
-  if (phone) lines.push(`Telefono referente: ${phone}`);
   const amt = ann?.tariff_amount == null ? null : Number(ann.tariff_amount);
   if (amt != null && Number.isFinite(amt) && amt > 0) {
     lines.push(`Compenso: ${formatTariff(ann?.tariff_amount ?? null, ann?.tariff_type ?? null)}`);
   }
-  lines.push("", "Ti consigliamo di arrivare almeno 10 minuti prima dell'orario di ingresso.");
+  const ref = clean(ann?.job_contact_person_name);
+  if (ref) {
+    const phone = clean(ann?.job_contact_person_phone);
+    lines.push(`Referente: ${ref}${phone ? ` (${phone})` : ""}`);
+  }
+  const dressItems = (ann?.dress_code_items ?? []).map(clean).filter(Boolean);
+  const dressNotes = clean(ann?.dress_code_notes);
+  const dress = [dressItems.join(", "), dressNotes].filter(Boolean).join(" — ");
+  if (dress) lines.push(`Dress code: ${dress}`);
+  const ops = clean(ann?.notes) || clean(ann?.job_additional_directions) || clean(ann?.job_location_notes);
+  if (ops) lines.push(`Indicazioni operative: ${ops}`);
+  lines.push(
+    "",
+    "Note importanti:",
+    "- Presentati con puntualità.",
+    "- Porta eventuali documenti richiesti.",
+    "- In caso di problemi, scrivi subito in chat.",
+    "",
+    "A presto.",
+  );
   return lines.join("\n");
 }
 
