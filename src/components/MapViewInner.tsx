@@ -48,6 +48,7 @@ export type MapPoint = {
     operationalNotes?: string | null;
     fullAddress?: string | null;
     restaurantName?: string | null;
+    knownRestaurant?: boolean;
   };
 };
 
@@ -94,6 +95,19 @@ function Recenter({ center, zoom }: { center: [number, number]; zoom?: number })
 }
 
 export default function MapViewInner({ points, height, center, focusZoom, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; focusZoom?: number; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
+  // Su desktop con mouse: hover per aprire la preview.
+  // Su touch (mobile/tablet): comportamento default = tap.
+  const hasHover = typeof window !== "undefined"
+    && typeof window.matchMedia === "function"
+    && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const hoverHandlers = hasHover
+    ? {
+        mouseover: (e: any) => e.target.openPopup(),
+        // Non chiudo su mouseout: l'utente può spostare il puntatore sul popup
+        // per leggerlo o cliccare i pulsanti. Aprire un altro marker o
+        // cliccare la mappa chiude comunque il popup (default Leaflet).
+      }
+    : undefined;
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_50px_-25px_rgba(0,0,0,0.7)]" style={{ height }}>
       <MapContainer center={center} zoom={6} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
@@ -122,7 +136,12 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
           </>
         )}
         {points.map((p) => (
-          <Marker key={`${p.category}-${p.id}`} position={[p.lat, p.lng]} icon={makeIcon(p.category)}>
+          <Marker
+            key={`${p.category}-${p.id}`}
+            position={[p.lat, p.lng]}
+            icon={makeIcon(p.category)}
+            eventHandlers={hoverHandlers}
+          >
             <Popup maxWidth={320} minWidth={260}>
               {p.category === "announcement" && p.meta?.workerView ? (
                 <WorkerAnnouncementPopup p={p} />
