@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { applyTheme, persistTheme, readUserTheme } from "@/lib/theme";
+import { clearKnownRestaurantsCache } from "@/lib/known-restaurants-cache";
 
 type Role = "admin" | "restaurant" | "worker";
 type Profile = {
@@ -130,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    clearKnownRestaurantsCache();
     await supabase.auth.signOut();
     if (typeof window !== "undefined") {
       // Hard redirect to public Home, replacing history so back button
