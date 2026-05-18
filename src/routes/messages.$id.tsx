@@ -1084,16 +1084,21 @@ function Thread() {
             if (isSystem) {
               const isAccept = m.action_type === "accept_application";
               const isReject = m.action_type === "reject_application";
+              const isCancel = m.action_type === "withdraw_application";
               const tone = isAccept
                 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
                 : isReject
                   ? "bg-destructive/10 text-destructive border-destructive/30"
-                  : "bg-muted text-muted-foreground border";
+                  : isCancel
+                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                    : "bg-muted text-muted-foreground border";
               const label = isAccept
                 ? "Proposta accettata"
                 : isReject
                   ? "Proposta rifiutata"
-                  : m.body.replace(/^⚙️ Sistema:\s*/, "").replace(/^⚙️ /, "");
+                  : isCancel
+                    ? "Candidatura annullata dal lavoratore"
+                    : m.body.replace(/^⚙️ Sistema:\s*/, "").replace(/^⚙️ /, "");
               return (
                 <div key={m.id} className="flex justify-center">
                   <div className={`rounded-full px-3 py-1 text-xs font-medium border ${tone}`}>
