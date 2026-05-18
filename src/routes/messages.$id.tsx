@@ -614,6 +614,40 @@ function Thread() {
     if (next === "accepted" && app.announcement_id) {
       await supabase.from("announcements").update({ status: "assigned", assigned_worker_id: app.worker_id }).eq("id", app.announcement_id);
     }
+    // Quando il ristoratore accetta la candidatura, invia automaticamente al
+    // lavoratore una "Conferma turno" con tutti i dettagli operativi in chiaro.
+    if (next === "accepted" && role === "restaurant") {
+      try {
+        const venueName = profile?.business_name || profile?.full_name || null;
+        const body = buildConfirmationBody(ann, venueName);
+        const createdAt = new Date().toISOString();
+        const receiverId = app.worker_id;
+        const { data: confMsg } = await supabase.from("messages").insert({
+          application_id: app.id,
+          sender_id: user.id,
+          receiver_id: receiverId,
+          body,
+          created_at: createdAt,
+          read_at: null,
+          template_id: CONFIRMATION_TEMPLATE_ID,
+          message_type: "template",
+          action_type: CONFIRMATION_ACTION,
+        } as never).select("*").single();
+        if (confMsg) pushMessage(confMsg as Msg);
+        await supabase.from("applications").update({
+          last_message_preview: "Candidatura accettata · dettagli del turno inviati",
+          last_message_at: createdAt,
+        } as never).eq("id", app.id);
+        await supabase.from("notifications").insert({
+          user_id: receiverId,
+          title: "Candidatura accettata",
+          body: `Il ristoratore ha confermato la tua presenza per il turno${ann?.service_date ? ` del ${formatDateIT(ann.service_date)}` : ""}.`,
+          link: `/messages/${app.id}`,
+        } as never);
+      } catch (e) {
+        console.error("[accept] confirmation message failed", e);
+      }
+    }
     await logEvent(next, { by_role: role ?? undefined });
     const isRestaurant = role === "restaurant";
     const toastByStatus: Record<string, { title: string; description: string }> = {
@@ -627,7 +661,9 @@ function Thread() {
       },
       accepted: {
         title: isRestaurant ? "Candidatura accettata" : "Turno assegnato",
-        description: "Stato candidatura: Accettata.",
+        description: isRestaurant
+          ? "Il lavoratore ha ricevuto i dettagli del turno."
+          : "Stato candidatura: Accettata.",
       },
       rejected: {
         title: "Candidatura rifiutata",
