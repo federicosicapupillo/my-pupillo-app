@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2 } from "lucide-react";
+import { MessageSquare } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
@@ -343,6 +346,16 @@ function Thread() {
   const [workerReviews, setWorkerReviews] = useState<WorkerReview[]>([]);
   const [reviewRoles, setReviewRoles] = useState<Record<string, string | null>>({});
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const REJECT_REASONS = [
+    "Profilo non in linea con la richiesta",
+    "Esperienza non sufficiente",
+    "Posizione già coperta",
+    "Disponibilità non compatibile",
+    "Preferiamo un altro candidato",
+    "Altro motivo",
+  ] as const;
+  const [rejectReason, setRejectReason] = useState<string>(REJECT_REASONS[0]);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
