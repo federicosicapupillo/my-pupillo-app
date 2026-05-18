@@ -302,6 +302,7 @@ function Thread() {
   const [sendingCounter, setSendingCounter] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [transitioning, setTransitioning] = useState<null | "interested" | "not_interested" | "accepted" | "rejected">(null);
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
@@ -557,6 +558,9 @@ function Thread() {
     extra?: Record<string, unknown>,
   ) => {
     if (!app || !user) return;
+    if (transitioning) return;
+    setTransitioning(next);
+    try {
     // Charge credits to the restaurant only on shift assignment confirmation.
     if (next === "accepted" && role === "restaurant" && app.status !== "accepted") {
       // Server-side authority: verify the current proposal has been accepted by the worker.
@@ -621,6 +625,9 @@ function Thread() {
     const t = toastByStatus[next];
     toast.success(t.title, { description: t.description });
     setApp({ ...app, ...patch } as App);
+    } finally {
+      setTransitioning(null);
+    }
   };
 
   const cancelApplication = async () => {
