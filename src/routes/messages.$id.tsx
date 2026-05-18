@@ -214,7 +214,7 @@ type LogEvent = {
   metadata: { tariff?: number; note?: string; by_role?: string } | null;
 };
 
-const TERMINAL = ["accepted", "rejected", "expired"];
+const TERMINAL = ["accepted", "rejected", "expired", "cancelled"];
 
 type TimelineEvent = { at: string; label: string; note?: string; tone: "neutral" | "success" | "error" };
 
@@ -226,6 +226,7 @@ const ACTION_LABELS: Record<string, { label: string; tone: TimelineEvent["tone"]
   accepted: { label: "Lavoratore assegnato", tone: "success" },
   rejected: { label: "Candidatura rifiutata", tone: "error" },
   expired: { label: "Offerta scaduta", tone: "error" },
+  cancelled: { label: "Candidatura annullata dal lavoratore", tone: "error" },
 };
 
 function formatTs(iso: string) {
@@ -262,6 +263,7 @@ function buildTimeline(status?: string): Step[] {
   const isAccepted = s === "accepted";
   const isInterested = s === "interested";
   const isExpired = s === "expired";
+  const isCancelled = s === "cancelled";
 
   const mark = (cond: boolean, isCurrent: boolean): StepState =>
     cond ? "done" : isCurrent ? "current" : "todo";
@@ -272,9 +274,10 @@ function buildTimeline(status?: string): Step[] {
       state: isReject ? "error" : mark(isInterested || isCounter || isAccepted, s === "pending") },
     { key: "counter", label: "Controfferta", icon: Handshake,
       state: isCounter ? "current" : (isAccepted ? "done" : "todo") },
-    { key: "outcome", label: isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
-      icon: isReject || isExpired ? Ban : Check,
-      state: isAccepted ? "done" : (isReject || isExpired) ? "error" : "todo" },
+    { key: "outcome",
+      label: isCancelled ? "Annullata" : isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
+      icon: isReject || isExpired || isCancelled ? Ban : Check,
+      state: isAccepted ? "done" : (isReject || isExpired || isCancelled) ? "error" : "todo" },
   ];
 }
 
