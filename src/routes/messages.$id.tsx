@@ -1213,20 +1213,29 @@ function Thread() {
                 </div>
               )}
 
-              <div className="mt-4 flex flex-col-reverse sm:flex-row gap-2 sm:items-center sm:justify-end">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 text-muted-foreground hover:text-destructive"
-                  onClick={() => transition("rejected")}
+                  variant="outline"
+                  className="gap-2 w-full"
+                  onClick={() => {
+                    document.getElementById("chat-composer")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                  disabled={transitioning !== null}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Chatta
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="gap-2 w-full"
+                  onClick={() => setRejectOpen(true)}
                   disabled={transitioning !== null}
                 >
                   {transitioning === "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                   {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
                 </Button>
                 <Button
-                  size="lg"
-                  className="gap-2 shadow-md"
+                  className="gap-2 w-full bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
                   onClick={() => transition("accepted")}
                   disabled={transitioning !== null}
                 >
