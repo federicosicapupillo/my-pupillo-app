@@ -990,7 +990,6 @@ function Thread() {
 
   return (
       <div className="max-w-3xl mx-auto lg:mx-0">
-        {(() => null)()}
         <div className="flex items-center justify-between mb-4">
           <Link to="/messages" className="lg:hidden"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Indietro</Button></Link>
           {app && (
