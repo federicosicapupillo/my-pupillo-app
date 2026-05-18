@@ -14,6 +14,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
+import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehirePicker";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -76,11 +77,13 @@ function ShiftsPage() {
   const [criteria, setCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
   const [positiveLabels, setPositiveLabels] = useState<string[]>([]);
   const [negativeLabels, setNegativeLabels] = useState<string[]>([]);
+  const [wouldRehire, setWouldRehire] = useState<WouldRehireValue>(null);
   const [reviewDialog, setReviewDialog] = useState<ActionShift | null>(null);
   const [dialogCriteria, setDialogCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
   const [dialogComment, setDialogComment] = useState("");
   const [dialogPositive, setDialogPositive] = useState<string[]>([]);
   const [dialogNegative, setDialogNegative] = useState<string[]>([]);
+  const [dialogWouldRehire, setDialogWouldRehire] = useState<WouldRehireValue>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
