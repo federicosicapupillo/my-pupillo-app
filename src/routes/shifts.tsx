@@ -73,6 +73,11 @@ function ShiftsPage() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [criteria, setCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+  const [reviewDialog, setReviewDialog] = useState<ActionShift | null>(null);
+  const [dialogCriteria, setDialogCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+  const [dialogComment, setDialogComment] = useState("");
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
@@ -263,6 +268,78 @@ function ShiftsPage() {
     setViewReviewData(null);
   };
 
+  const submitDialogReview = async () => {
+    if (!user || !reviewDialog) return;
+    const a = reviewDialog;
+    if (!a.worker_id || !a.shift_id) {
+      setDialogError("Turno o lavoratore non trovato.");
+      return;
+    }
+    const c = dialogCriteria;
+    const avg = (c.punctuality + c.professionalism + c.competence + c.reliability + c.teamwork) / 5;
+    const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
+    if (!submittedRating || submittedRating < 1) {
+      setDialogError("Seleziona una valutazione");
+      return;
+    }
+    setDialogSubmitting(true);
+    setDialogError(null);
+    const tId = toast.loading("Invio recensione in corso…");
+    try {
+      // 1. Ensure shift is marked completed
+      const localShift = shifts.find(x => x.id === a.shift_id);
+      if (localShift && localShift.status === "scheduled") {
+        const { error: upErr } = await supabase.from("shifts").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", a.shift_id);
+        if (upErr) {
+          toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
+          setDialogError(upErr.message);
+          setDialogSubmitting(false);
+          return;
+        }
+      }
+      // 2. Insert review
+      const { error } = await supabase.from("reviews").insert({
+        author_id: user.id,
+        target_id: a.worker_id,
+        shift_id: a.shift_id,
+        announcement_id: a.announcement_id,
+        application_id: a.application_id,
+        rating: submittedRating,
+        comment: dialogComment.trim() || null,
+        punctuality: c.punctuality,
+        professionalism: c.professionalism,
+        competence: c.competence,
+        reliability: c.reliability,
+        teamwork: c.teamwork,
+      } as any);
+      if (error) {
+        toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
+        setDialogError(error.message);
+        setDialogSubmitting(false);
+        return;
+      }
+      // 3. Notification to worker (best-effort)
+      const notifLink = a.application_id ? `/messages/${a.application_id}` : "/profile";
+      supabase.from("notifications").insert({
+        user_id: a.worker_id,
+        title: "Hai ricevuto una nuova recensione",
+        body: "Hai ricevuto una nuova recensione dal ristoratore.",
+        link: notifLink,
+      } as any).then(() => {}, () => {});
+      toast.success("Recensione inviata", { id: tId });
+      // 4. Optimistic local updates
+      setReviewMap(prev => ({ ...prev, [a.shift_id]: submittedRating }));
+      setShifts(prev => prev.map(x => x.id === a.shift_id ? { ...x, status: "completed" as const } : x));
+      refreshRequiredReviews();
+      setReviewDialog(null);
+    } catch (e: any) {
+      toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
+      setDialogError(e?.message ?? "Errore di rete");
+    } finally {
+      setDialogSubmitting(false);
+    }
+  };
+
   const today = new Date().toISOString().slice(0, 10);
 
   const filtered = useMemo(() => {
@@ -351,17 +428,14 @@ function ShiftsPage() {
                 ? `Scaduta da ${days > 0 ? `${days}g` : ""}${days > 0 && hours > 0 ? " " : ""}${days === 0 || hours > 0 ? `${hours}h` : ""}`.trim() || "Scaduta"
                 : `${days > 0 ? `${days}g` : ""}${days > 0 && hours > 0 ? " " : ""}${days === 0 || hours > 0 ? `${hours}h` : ""}`.trim() + " rimanenti";
               const closeAndReview = async () => {
-                if (s && s.status === "scheduled") {
-                  await updateStatus(s, "completed");
+                if (!a.worker_id) {
+                  toast.error("Impossibile aprire la recensione. Turno o lavoratore non trovato.");
+                  return;
                 }
-                setFilter("to-review");
-                setReviewOpen(a.shift_id);
-                setRating(5);
-                setComment("");
-                setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
-                setTimeout(() => {
-                  document.getElementById(`shift-${a.shift_id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }, 200);
+                setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+                setDialogComment("");
+                setDialogError(null);
+                setReviewDialog(a);
               };
               return (
                 <div key={a.shift_id} className={`rounded-xl border p-3 flex items-center gap-3 flex-wrap ${overdue ? "border-destructive/40 bg-card" : "bg-card"}`}>
@@ -638,6 +712,76 @@ function ShiftsPage() {
               ) : (
                 <p className="text-sm text-muted-foreground italic">Nessun commento</p>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!reviewDialog} onOpenChange={(open) => { if (!open && !dialogSubmitting) setReviewDialog(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Recensisci il lavoratore</DialogTitle>
+          </DialogHeader>
+          {reviewDialog && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3">
+                <UserAvatar userId={reviewDialog.worker_id} name={reviewDialog.worker_name} className="h-12 w-12" />
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{reviewDialog.worker_name ?? "Lavoratore"}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {reviewDialog.worker_role && <span className="capitalize">{reviewDialog.worker_role} · </span>}
+                    {new Date(reviewDialog.service_date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                    {reviewDialog.service_time && ` · ${reviewDialog.service_time.slice(0,5)}`}
+                    {reviewDialog.end_time && `–${reviewDialog.end_time.slice(0,5)}`}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {([
+                  ["punctuality", "Puntualità"],
+                  ["professionalism", "Professionalità"],
+                  ["competence", "Qualità del servizio"],
+                  ["reliability", "Affidabilità"],
+                  ["teamwork", "Collaborazione con il team"],
+                ] as const).map(([key, label]) => (
+                  <div key={key} className="flex items-center justify-between gap-3">
+                    <span className="text-sm">{label}</span>
+                    <div className="flex items-center gap-0.5">
+                      {[1,2,3,4,5].map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setDialogCriteria(c => ({ ...c, [key]: n }))}
+                          className="p-0.5 disabled:opacity-50"
+                          disabled={dialogSubmitting}
+                          aria-label={`${label} ${n} stelle`}
+                        >
+                          <Star className={`h-5 w-5 transition ${n <= (dialogCriteria as any)[key] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Textarea
+                placeholder="Commento (opzionale)"
+                value={dialogComment}
+                onChange={e => setDialogComment(e.target.value)}
+                rows={3}
+                disabled={dialogSubmitting}
+              />
+              {dialogError && (
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="flex-1">{dialogError}</div>
+                </div>
+              )}
+              <div className="flex flex-wrap justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={() => setReviewDialog(null)} disabled={dialogSubmitting}>Annulla</Button>
+                <Button onClick={submitDialogReview} disabled={dialogSubmitting} className="gap-1.5">
+                  {dialogSubmitting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Invio…</>) : (<><Star className="h-4 w-4" /> Invia recensione</>)}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
