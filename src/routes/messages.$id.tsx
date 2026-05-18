@@ -1984,3 +1984,128 @@ function ProposalRow({ icon: Icon, label, value }: { icon: typeof Send; label: s
     </div>
   );
 }
+
+function ConfirmationCard(props: {
+  ann: Ann | null;
+  venueName: string | null;
+  applicationId: string;
+  announcementId: string | null;
+  isWorker: boolean;
+}) {
+  const { ann, venueName, applicationId, announcementId, isWorker } = props;
+  const clean = (v: unknown): string => {
+    if (v == null) return "";
+    const s = String(v).trim();
+    if (!s || s.toLowerCase() === "undefined" || s.toLowerCase() === "null") return "";
+    return s;
+  };
+  const role = clean(ann?.professional_profile) || "Ruolo non specificato";
+  const venue = clean(venueName) || "Locale da confermare";
+  const fullAddress = clean(ann?.location_address) || clean(ann?.job_address) || clean(ann?.job_city) || "Indirizzo non disponibile";
+  const start = ann?.service_time ? ann.service_time.slice(0, 5) : null;
+  const end = ann?.end_time ? ann.end_time.slice(0, 5) : null;
+  const skills = labelsOf(ann?.required_skills ?? [], SKILL_OPTIONS as any);
+  const dressItems = labelsOf(ann?.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
+  const dressNotes = clean(ann?.dress_code_notes);
+  const dressValue = [dressItems.join(", "), dressNotes].filter(Boolean).join(" — ");
+  const contactName = clean(ann?.job_contact_person_name);
+  const contactPhone = clean(ann?.job_contact_person_phone);
+  const directions = clean(ann?.job_additional_directions) || clean(ann?.job_location_notes);
+  const notes = clean(ann?.notes);
+  const tariff = ann?.tariff_amount != null && Number.isFinite(Number(ann.tariff_amount)) && Number(ann.tariff_amount) > 0
+    ? formatTariff(ann.tariff_amount, ann.tariff_type ?? null)
+    : null;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+
+  return (
+    <div className="flex justify-center my-2">
+      <div className="w-full max-w-md rounded-2xl border-2 border-emerald-500/40 bg-card shadow-[0_8px_30px_-12px_rgb(16_185_129/0.45)] overflow-hidden">
+        <div className="bg-emerald-500/10 px-4 py-3 border-b border-emerald-500/30">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase tracking-wide">
+              <Check className="h-3 w-3" />Confermato
+            </span>
+            <h4 className="font-bold text-sm">Candidatura accettata</h4>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {isWorker
+              ? "Il ristoratore ha confermato la tua presenza per questo turno."
+              : "Hai confermato il lavoratore. Riceverà tutti i dettagli del turno."}
+          </p>
+        </div>
+        <dl className="px-4 py-3 space-y-2 text-sm">
+          <ProposalRow icon={Building2} label="Locale" value={venue} />
+          <ProposalRow icon={Briefcase} label="Ruolo" value={role} />
+          {ann?.service_date && (
+            <ProposalRow icon={Calendar} label="Data" value={formatDateIT(ann.service_date)} />
+          )}
+          <ProposalRow
+            icon={Clock}
+            label="Orario"
+            value={start ? `${start}${end ? ` - ${end}` : ""}` : CONFIRMATION_EMPTY_LABELS.endTime}
+          />
+          <ProposalRow icon={MapPin} label="Indirizzo" value={fullAddress} />
+          <ProposalRow
+            icon={UserIcon}
+            label="Referente"
+            value={contactName || CONFIRMATION_EMPTY_LABELS.contactPerson}
+          />
+          {contactPhone && (
+            <ProposalRow icon={Phone} label="Telefono" value={contactPhone} />
+          )}
+          <ProposalRow
+            icon={Shirt}
+            label="Dress code"
+            value={dressValue || CONFIRMATION_EMPTY_LABELS.dressCode}
+          />
+          {skills.length > 0 && (
+            <ProposalRow icon={ListChecks} label="Mansioni" value={skills.join(", ")} />
+          )}
+          {tariff && <ProposalRow icon={Euro} label="Compenso" value={tariff} />}
+          <ProposalRow
+            icon={Info}
+            label="Istruzioni per l'arrivo"
+            value={directions || CONFIRMATION_EMPTY_LABELS.directions}
+          />
+          <ProposalRow
+            icon={StickyNote}
+            label="Note operative"
+            value={notes || CONFIRMATION_EMPTY_LABELS.notes}
+          />
+        </dl>
+        <div className="mx-4 mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+          Ti consigliamo di arrivare almeno 10 minuti prima dell'orario di ingresso.
+        </div>
+        <div className="px-4 py-3 border-t bg-secondary/20 flex flex-wrap gap-2">
+          {announcementId && (
+            <Button asChild size="sm" variant="outline" className="gap-2 flex-1 min-w-[140px]">
+              <Link to="/announcements/$id" params={{ id: announcementId }}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                Apri dettagli turno
+              </Link>
+            </Button>
+          )}
+          <Button asChild size="sm" variant="outline" className="gap-2 flex-1 min-w-[140px]">
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
+              <Navigation className="h-3.5 w-3.5" />
+              Indicazioni
+            </a>
+          </Button>
+          {isWorker && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2 flex-1 min-w-[140px]"
+              onClick={() => {
+                document.getElementById(`thread-template-picker-${applicationId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            >
+              <Send className="h-3.5 w-3.5" />
+              Scrivi al ristoratore
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
