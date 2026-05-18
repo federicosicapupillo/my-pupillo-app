@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw, Database, Users, HardDrive, Code as CodeIcon, FileArchive, Copy, Check, ShieldCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Download, RefreshCw, Database, Users, HardDrive, Code as CodeIcon, FileArchive, Copy, Check, ShieldCheck, FileCheck2, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { listAdminBackups, type AdminBackupFile } from "@/lib/admin-backups.functions";
 
@@ -35,6 +36,37 @@ export function AdminBackupsSection() {
   const files = data?.files ?? [];
   const sha256 = data?.sha256 ?? null;
   const [copied, setCopied] = useState(false);
+
+  // Verification state
+  const [expectedInput, setExpectedInput] = useState("");
+  const [computed, setComputed] = useState<string | null>(null);
+  const [computing, setComputing] = useState(false);
+  const [pickedName, setPickedName] = useState<string | null>(null);
+  const [pickedSize, setPickedSize] = useState<number>(0);
+
+  const normalizedExpected = (expectedInput || sha256 || "").trim().toLowerCase().replace(/[^a-f0-9]/g, "");
+  const expectedValid = /^[a-f0-9]{64}$/.test(normalizedExpected);
+  const match = computed && expectedValid ? computed === normalizedExpected : null;
+
+  const handleFile = async (file: File | undefined | null) => {
+    if (!file) return;
+    setComputed(null);
+    setPickedName(file.name);
+    setPickedSize(file.size);
+    setComputing(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", buf);
+      const hex = Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      setComputed(hex);
+    } catch {
+      toast.error("Errore durante il calcolo dello SHA256");
+    } finally {
+      setComputing(false);
+    }
+  };
 
   const handleCopy = async () => {
     if (!sha256) return;
@@ -103,6 +135,98 @@ export function AdminBackupsSection() {
             Verifica l'integrità dopo il download:{" "}
             <code className="font-mono">shasum -a 256 pupillo-full-backup-2026-05-18.zip</code>
           </p>
+        </div>
+      )}
+
+      {sha256 && (
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <FileCheck2 className="h-4 w-4 text-primary" />
+            Verifica integrità del file scaricato
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Seleziona lo ZIP scaricato: il browser calcola lo SHA256 localmente e lo
+            confronta con il checksum atteso. Niente viene inviato al server.
+          </p>
+
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+            <label className="text-xs font-medium text-muted-foreground">
+              Checksum atteso (precompilato, modificabile)
+            </label>
+            <span />
+            <Input
+              value={expectedInput || sha256}
+              onChange={(e) => setExpectedInput(e.target.value)}
+              placeholder="64 caratteri esadecimali"
+              className="font-mono text-xs"
+              maxLength={200}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpectedInput("")}
+              className="text-xs"
+            >
+              Ripristina
+            </Button>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              File ZIP scaricato
+            </label>
+            <Input
+              type="file"
+              accept=".zip,application/zip"
+              onChange={(e) => handleFile(e.target.files?.[0])}
+              className="mt-1"
+            />
+            {pickedName && (
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {pickedName} · {formatBytes(pickedSize)}
+              </p>
+            )}
+          </div>
+
+          {computing && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Calcolo SHA256 in corso…
+            </div>
+          )}
+
+          {computed && (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">
+                Checksum calcolato dal file
+              </div>
+              <code className="block break-all rounded-md bg-muted px-3 py-2 font-mono text-xs">
+                {computed}
+              </code>
+
+              {!expectedValid && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  Il checksum atteso non è un valore SHA256 valido (servono 64 caratteri esadecimali).
+                </div>
+              )}
+
+              {expectedValid && match === true && (
+                <div className="flex items-start gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                  <Check className="h-4 w-4 mt-0.5 shrink-0" />
+                  Integrità verificata: i checksum corrispondono.
+                </div>
+              )}
+
+              {expectedValid && match === false && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  Mismatch: il file scaricato non corrisponde al checksum atteso. Riscarica il backup.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
