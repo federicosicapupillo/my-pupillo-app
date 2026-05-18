@@ -1888,11 +1888,7 @@ function Thread() {
                             <Briefcase className="h-3 w-3" /> {roleLabel}
                           </span>
                         )}
-                        {r.would_rehire === "yes" && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-medium">
-                            <BadgeCheck className="h-3 w-3" /> Lo riassumerebbe
-                          </span>
-                        )}
+                        <WouldRehireBadge value={r.would_rehire as ("yes" | "maybe" | "no" | null)} />
                       </div>
                       {r.comment ? (
                         <p className="text-sm text-foreground/90 whitespace-pre-line">"{r.comment}"</p>
