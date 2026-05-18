@@ -743,6 +743,10 @@ function Thread() {
   };
 
   const cancelApplication = async () => {
+    void 0;
+    return _cancelApplicationOrig();
+  };
+  const _cancelApplicationOrig = async () => {
     if (!app || !user || role !== "worker" || cancelling) return;
     if (app.status !== "pending") {
       toast.error("La candidatura non può più essere annullata.");
