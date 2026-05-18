@@ -990,6 +990,7 @@ function Thread() {
 
   return (
       <div className="max-w-3xl mx-auto lg:mx-0">
+        {(() => null)()}
         <div className="flex items-center justify-between mb-4">
           <Link to="/messages" className="lg:hidden"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Indietro</Button></Link>
           {app && (
@@ -1006,7 +1007,7 @@ function Thread() {
         </div>
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <UserAvatar userId={otherId} name={other?.name} className="h-12 w-12 shrink-0" />
+            <UserAvatar userId={otherId} name={maskPartnerNameForWorker(other?.name, role, app?.status)} className="h-12 w-12 shrink-0" />
             <div className="min-w-0 flex-1">
             {otherId ? (
               <Link
@@ -1015,10 +1016,10 @@ function Thread() {
                 className="font-semibold text-primary hover:underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 title="Vedi tutte le conversazioni con questa persona"
               >
-                {other?.name ?? "—"}
+                {maskPartnerNameForWorker(other?.name, role, app?.status)}
               </Link>
             ) : (
-              <div className="font-semibold">{other?.name ?? "—"}</div>
+              <div className="font-semibold">{maskPartnerNameForWorker(other?.name, role, app?.status)}</div>
             )}
             {ann && (
               <div className="mt-1 text-xs text-muted-foreground">
