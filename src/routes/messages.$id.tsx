@@ -19,6 +19,7 @@ import { useRequiredReviews } from "@/lib/required-reviews";
 import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreColorClass } from "@/lib/reputation";
 import { shouldShowNewApplicationCard } from "@/lib/application-card";
 import { Award } from "lucide-react";
+import { ReviewLabelsPicker, ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import {
@@ -138,6 +139,7 @@ type WorkerReview = {
   shift_id: string | null;
   announcement_id: string | null;
   positive_tags: string[] | null;
+  negative_tags: string[] | null;
   would_rehire: string | null;
 };
 
@@ -402,7 +404,7 @@ function Thread() {
         if (workerTargetId && user?.id === a.restaurant_id) {
           const { data: revs } = await supabase
             .from("reviews")
-            .select("id, rating, comment, created_at, shift_id, announcement_id, positive_tags, would_rehire")
+            .select("id, rating, comment, created_at, shift_id, announcement_id, positive_tags, negative_tags, would_rehire")
             .eq("target_id", workerTargetId)
             .eq("is_visible_to_restaurants", true)
             .not("shift_id", "is", null)
@@ -930,13 +932,15 @@ function Thread() {
     professionalism: number;
     serviceQuality: number;
     comment: string;
+    positiveLabels: string[];
+    negativeLabels: string[];
   }) => {
     if (!user || !app) return;
     if (role !== "restaurant") {
       toast.error("Solo il ristoratore può lasciare una recensione.");
       return;
     }
-    const { general, reliability, punctuality, professionalism, serviceQuality, comment } = payload;
+    const { general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels } = payload;
     if (!general || !reliability || !punctuality || !professionalism || !serviceQuality) {
       toast.error("Completa tutte le valutazioni prima di inviare la recensione.");
       return;
@@ -976,6 +980,8 @@ function Thread() {
       rating: general,
       comment: trimmed ? trimmed : null,
       tags: [],
+      positive_tags: positiveLabels,
+      negative_tags: negativeLabels,
       punctuality,
       professionalism,
       competence: serviceQuality,
@@ -1290,6 +1296,11 @@ function Thread() {
                             ) : (
                               <p className="text-xs text-muted-foreground italic">Nessun commento</p>
                             )}
+                            <ReviewLabelsDisplay
+                              positive={r.positive_tags}
+                              negative={r.negative_tags}
+                              className="mt-1.5"
+                            />
                           </li>
                         ))}
                       </ul>
@@ -1889,15 +1900,11 @@ function Thread() {
                       ) : (
                         <p className="text-sm text-muted-foreground italic">Nessun commento</p>
                       )}
-                      {r.positive_tags && r.positive_tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {r.positive_tags.map((t, i) => (
-                            <span key={i} className="text-[10px] rounded-full bg-secondary text-secondary-foreground px-2 py-0.5">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <ReviewLabelsDisplay
+                        positive={r.positive_tags}
+                        negative={r.negative_tags}
+                        className="mt-2"
+                      />
                     </div>
                   );
                 })
@@ -2093,6 +2100,8 @@ function ReviewDialog(props: {
     professionalism: number;
     serviceQuality: number;
     comment: string;
+    positiveLabels: string[];
+    negativeLabels: string[];
   }) => Promise<void>;
 }) {
   const { open, onOpenChange, workerName, workerRole, shiftDate, startTime, endTime, venue, shiftStatus, onSubmit } = props;
@@ -2102,6 +2111,8 @@ function ReviewDialog(props: {
   const [professionalism, setProfessionalism] = useState(0);
   const [serviceQuality, setServiceQuality] = useState(0);
   const [comment, setComment] = useState("");
+  const [positiveLabels, setPositiveLabels] = useState<string[]>([]);
+  const [negativeLabels, setNegativeLabels] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -2109,6 +2120,7 @@ function ReviewDialog(props: {
     if (!open) {
       setGeneral(0); setReliability(0); setPunctuality(0);
       setProfessionalism(0); setServiceQuality(0); setComment(""); setError(null);
+      setPositiveLabels([]); setNegativeLabels([]);
     }
   }, [open]);
 
@@ -2122,7 +2134,7 @@ function ReviewDialog(props: {
     setError(null);
     setSubmitting(true);
     try {
-      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, comment });
+      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels });
     } finally { setSubmitting(false); }
   };
 
@@ -2162,6 +2174,13 @@ function ReviewDialog(props: {
               maxLength={500}
             />
           </div>
+
+          <ReviewLabelsPicker
+            positive={positiveLabels}
+            negative={negativeLabels}
+            onChange={({ positive, negative }) => { setPositiveLabels(positive); setNegativeLabels(negative); }}
+            disabled={submitting}
+          />
 
           {error && (
             <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
