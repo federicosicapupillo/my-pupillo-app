@@ -42,6 +42,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -110,6 +117,17 @@ type Review = {
   author_id: string;
   target_id: string;
   shift_id: string | null;
+};
+
+type WorkerReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  shift_id: string | null;
+  announcement_id: string | null;
+  positive_tags: string[] | null;
+  would_rehire: string | null;
 };
 
 const POSITIVE_TAGS = [
@@ -322,6 +340,9 @@ function Thread() {
   const [serverAssign, setServerAssign] = useState<{ canAssign: boolean; reason: string | null } | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [workerReviews, setWorkerReviews] = useState<WorkerReview[]>([]);
+  const [reviewRoles, setReviewRoles] = useState<Record<string, string | null>>({});
+  const [reviewsOpen, setReviewsOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -353,6 +374,36 @@ function Thread() {
         });
         setWorkerRep((p as WorkerReputationInput | null) ?? null);
         setAnn(an as Ann | null);
+        // Carica recensioni del lavoratore per il ristoratore (privacy: solo
+        // recensioni verificate, collegate a turni reali, visibili ai ristoratori).
+        const workerTargetId = a.worker_id;
+        if (workerTargetId && user?.id === a.restaurant_id) {
+          const { data: revs } = await supabase
+            .from("reviews")
+            .select("id, rating, comment, created_at, shift_id, announcement_id, positive_tags, would_rehire")
+            .eq("target_id", workerTargetId)
+            .eq("is_visible_to_restaurants", true)
+            .not("shift_id", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(50);
+          const list = (revs as WorkerReview[]) ?? [];
+          setWorkerReviews(list);
+          const annIds = Array.from(new Set(list.map(r => r.announcement_id).filter(Boolean))) as string[];
+          if (annIds.length) {
+            const { data: anns } = await supabase
+              .from("announcements")
+              .select("id, professional_profile")
+              .in("id", annIds);
+            const map: Record<string, string | null> = {};
+            (anns ?? []).forEach((row: any) => { map[row.id] = row.professional_profile ?? null; });
+            setReviewRoles(map);
+          } else {
+            setReviewRoles({});
+          }
+        } else {
+          setWorkerReviews([]);
+          setReviewRoles({});
+        }
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
       setMsgs((m as Msg[]) ?? []);
@@ -1026,6 +1077,67 @@ function Thread() {
 
               <p className="mt-3 text-sm text-muted-foreground">{microSummary}</p>
 
+              {reputationVisible && (
+                <div className="mt-4 rounded-xl border bg-card/60 p-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Recensioni lavoratore
+                    </div>
+                    {workerReviews.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setReviewsOpen(true)}
+                      >
+                        Vedi tutte ({workerReviews.length})
+                      </Button>
+                    )}
+                  </div>
+                  {workerReviews.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Questo lavoratore non ha ancora recensioni. Puoi comunque valutare il profilo, le competenze e le informazioni disponibili.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-2">
+                        <span className="inline-flex items-center gap-1">
+                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                          <span className="font-semibold tabular-nums">{s.rating > 0 ? s.rating.toFixed(1) : "—"}</span>
+                          <span className="text-muted-foreground">· {s.reviewsCount} recensioni</span>
+                        </span>
+                        {!s.isNew && reliability > 0 && (
+                          <span className="text-muted-foreground">
+                            Affidabilità: <span className="font-medium text-foreground tabular-nums">{reliability}%</span>
+                          </span>
+                        )}
+                      </div>
+                      <ul className="space-y-2">
+                        {workerReviews.slice(0, 2).map((r) => (
+                          <li key={r.id} className="rounded-lg bg-muted/40 p-2.5">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <div className="inline-flex items-center gap-0.5">
+                                {[1,2,3,4,5].map(n => (
+                                  <Star key={n} className={`h-3 w-3 ${n <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                                ))}
+                              </div>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(r.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                              </span>
+                            </div>
+                            {r.comment ? (
+                              <p className="text-xs text-foreground/90 line-clamp-2">"{r.comment}"</p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground italic">Nessun commento</p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+
               <div className="mt-4 flex flex-col-reverse sm:flex-row gap-2 sm:items-center sm:justify-end">
                 <Button
                   variant="ghost"
@@ -1486,6 +1598,70 @@ function Thread() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <Sheet open={reviewsOpen} onOpenChange={setReviewsOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Recensioni del lavoratore</SheetTitle>
+              <SheetDescription>
+                Solo recensioni verificate collegate a turni completati. I nomi dei locali precedenti sono oscurati per privacy.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-4 space-y-3">
+              {workerReviews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Questo lavoratore non ha ancora recensioni. Puoi comunque valutare il profilo, le competenze e le informazioni disponibili.
+                </p>
+              ) : (
+                workerReviews.map((r) => {
+                  const roleLabel = r.announcement_id ? reviewRoles[r.announcement_id] : null;
+                  return (
+                    <div key={r.id} className="rounded-xl border bg-card p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="inline-flex items-center gap-0.5">
+                          {[1,2,3,4,5].map(n => (
+                            <Star key={n} className={`h-4 w-4 ${n <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                          ))}
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">
+                          {new Date(r.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mb-1.5 text-[11px]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                          <Lock className="h-3 w-3" /> Locale verificato
+                        </span>
+                        {roleLabel && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
+                            <Briefcase className="h-3 w-3" /> {roleLabel}
+                          </span>
+                        )}
+                        {r.would_rehire === "yes" && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-medium">
+                            <BadgeCheck className="h-3 w-3" /> Lo riassumerebbe
+                          </span>
+                        )}
+                      </div>
+                      {r.comment ? (
+                        <p className="text-sm text-foreground/90 whitespace-pre-line">"{r.comment}"</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">Nessun commento</p>
+                      )}
+                      {r.positive_tags && r.positive_tags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {r.positive_tags.map((t, i) => (
+                            <span key={i} className="text-[10px] rounded-full bg-secondary text-secondary-foreground px-2 py-0.5">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
   );
 }
