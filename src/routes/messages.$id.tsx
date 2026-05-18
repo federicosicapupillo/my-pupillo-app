@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2 } from "lucide-react";
 import { MessageSquare } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -1743,7 +1743,17 @@ function Thread() {
                 {m.sender_id === app?.worker_id && m.sender_id !== user?.id && (
                   <UserAvatar userId={app?.worker_id} name={other?.name} className="h-8 w-8 shrink-0" />
                 )}
-                <div className={`rounded-2xl px-4 py-2 max-w-[75%] text-sm ${m.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.body}</div>
+                <div className={`flex flex-col gap-0.5 max-w-[75%] ${m.sender_id === user?.id ? "items-end" : "items-start"}`}>
+                  <div className={`rounded-2xl px-4 py-2 text-sm ${m.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.body}</div>
+                  {m.sender_id === user?.id && (
+                    <div className="flex items-center gap-1 px-1 text-[10px] text-muted-foreground" aria-label={m.read_at ? "Letto" : "Inviato"} title={m.read_at ? `Letto ${new Date(m.read_at).toLocaleString("it-IT", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}` : "Inviato"}>
+                      {m.read_at
+                        ? <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
+                        : <Check className="h-3.5 w-3.5" />}
+                      <span>{m.read_at ? "Letto" : "Inviato"}</span>
+                    </div>
+                  )}
+                </div>
                 {m.sender_id === app?.worker_id && m.sender_id === user?.id && (
                   <UserAvatar userId={app?.worker_id} name={undefined} className="h-8 w-8 shrink-0" />
                 )}
