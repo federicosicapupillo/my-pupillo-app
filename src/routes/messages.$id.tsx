@@ -1249,9 +1249,6 @@ function Thread() {
                 </div>
               );
             }
-            if (m.template_id === PROPOSAL_TEMPLATE_ID) {
-              // handled below
-            }
             if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
               const venueName = role === "worker"
                 ? (other?.name ?? null)
