@@ -17,6 +17,7 @@ export const Route = createFileRoute("/billing")({
   validateSearch: (search: Record<string, unknown>) => ({
     returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
     action: typeof search.action === "string" ? search.action : undefined,
+    session_id: typeof search.session_id === "string" ? search.session_id : undefined,
   }),
   component: () => <RequireAuth><Billing /></RequireAuth>,
 });
@@ -24,14 +25,15 @@ export const Route = createFileRoute("/billing")({
 type Tx = { id: string; created_at: string; delta: number; balance_after: number; reason: string | null };
 
 function Billing() {
-  const { profile, user, role } = useAuth();
+  const { profile, user, role, refresh } = useAuth();
   const navigate = useNavigate();
-  const { returnTo, action } = useSearch({ from: "/billing" });
+  const { returnTo, action, session_id } = useSearch({ from: "/billing" });
   const [tx, setTx] = useState<Tx[]>([]);
   const [checkoutKey, setCheckoutKey] = useState<string | null>(null);
   const [discountInput, setDiscountInput] = useState("");
   const [discount, setDiscount] = useState<{ code: string; type: string; value: number; applies_to: string } | null>(null);
   const [discountBusy, setDiscountBusy] = useState(false);
+  const [syncingPayment, setSyncingPayment] = useState(false);
 
   const applyDiscount = async () => {
     const code = discountInput.trim().toUpperCase();
@@ -60,6 +62,79 @@ function Billing() {
       setTx((data as Tx[]) ?? []);
     })();
   }, [user]);
+
+  // Quando si torna dal checkout Stripe (session_id presente in URL),
+  // forziamo il refetch del profilo finché il webhook non ha accreditato
+  // i crediti, così la top bar e le card crediti si aggiornano subito.
+  useEffect(() => {
+    if (!user || !session_id) return;
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 20; // ~40s
+    const startCredits = profile?.credits ?? 0;
+    const startPlan = profile?.plan ?? "free";
+    setSyncingPayment(true);
+
+    const stripParam = () => {
+      navigate({
+        to: "/billing",
+        search: (prev: any) => ({ ...prev, session_id: undefined }),
+        replace: true,
+      });
+    };
+
+    const loadTx = async () => {
+      const { data } = await supabase
+        .from("credit_transactions")
+        .select("id, created_at, delta, balance_after, reason")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (!cancelled) setTx((data as Tx[]) ?? []);
+    };
+
+    (async () => {
+      while (!cancelled && attempts < maxAttempts) {
+        attempts++;
+        await new Promise((r) => setTimeout(r, 2000));
+        if (cancelled) return;
+        // Refetch profilo + transazioni
+        const [{ data: prof }, { data: txRow }] = await Promise.all([
+          supabase.from("profiles").select("credits, plan").eq("id", user.id).maybeSingle(),
+          supabase
+            .from("credit_transactions")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("reference_id", session_id)
+            .maybeSingle(),
+        ]);
+        const newCredits = (prof as any)?.credits ?? startCredits;
+        const newPlan = (prof as any)?.plan ?? startPlan;
+        const creditsUpdated = newCredits > startCredits || !!txRow;
+        const planUpdated = newPlan !== startPlan && newPlan !== "free";
+        if (creditsUpdated || planUpdated) {
+          await refresh();
+          await loadTx();
+          if (!cancelled) {
+            toast.success(planUpdated ? "Piano attivato" : "Ricarica completata");
+            setSyncingPayment(false);
+            stripParam();
+          }
+          return;
+        }
+      }
+      if (!cancelled) {
+        setSyncingPayment(false);
+        toast.message("Pagamento in verifica", {
+          description: "Il saldo verrà aggiornato a breve.",
+        });
+        stripParam();
+      }
+    })();
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, session_id]);
 
   if (role && role !== "restaurant") {
     return <AppShell><p className="text-muted-foreground">Sezione riservata ai ristoratori.</p></AppShell>;
@@ -95,7 +170,7 @@ function Billing() {
             customerEmail={user?.email ?? undefined}
             userId={user?.id}
             discountCode={discountAppliesToCheckout ? discount!.code : undefined}
-            returnUrl={typeof window !== "undefined" ? `${window.location.origin}/billing` : undefined}
+            returnUrl={typeof window !== "undefined" ? `${window.location.origin}/billing?session_id={CHECKOUT_SESSION_ID}` : undefined}
           />
         </div>
       </AppShell>
@@ -105,6 +180,12 @@ function Billing() {
   return (
     <AppShell>
       <PageHeader title="Crediti e piano" subtitle="Gestisci il saldo crediti e il piano del tuo locale" />
+
+      {syncingPayment && (
+        <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
+          Verifica pagamento in corso… il saldo crediti si aggiornerà tra pochi secondi.
+        </div>
+      )}
 
       {returnTo && action === "confirm-worker" && (
         <div className={`mb-6 rounded-2xl border p-5 ${credits >= CREDITS_PER_HIRE ? "border-emerald-500/40 bg-emerald-500/5" : "border-primary/30 bg-primary/5"}`}>
