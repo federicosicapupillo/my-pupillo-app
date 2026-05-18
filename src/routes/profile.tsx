@@ -20,6 +20,8 @@ import { Settings2 } from "lucide-react";
 import { provinceCode } from "@/lib/italian-locations";
 import { ReferralCard } from "@/components/ReferralCard";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
+import { WorkerMyReviews } from "@/components/WorkerMyReviews";
+import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -260,6 +262,34 @@ function Profile() {
         <div className="mt-6 max-w-2xl">
           <h2 className="font-semibold mb-2">La mia reputazione</h2>
           <WorkerReputationCard workerId={user.id} profile={profile as any} showTips />
+        </div>
+      )}
+
+      {role === "worker" && user?.id && (
+        <div className="mt-6 max-w-2xl">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold flex items-center gap-2"><Star className="h-4 w-4 text-yellow-500" />Le mie recensioni</h2>
+            <WorkerReputationBadge profile={profile as any} />
+          </div>
+          <div className="rounded-2xl border bg-card p-4 mb-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div>
+              <div className="text-xs text-muted-foreground">Valutazione</div>
+              <div className="text-lg font-semibold">{Number(profile?.rating_avg ?? 0).toFixed(1)} / 5</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Recensioni</div>
+              <div className="text-lg font-semibold">{profile?.reviews_count ?? 0}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Turni completati</div>
+              <div className="text-lg font-semibold">{profile?.completed_shifts ?? 0}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Affidabilità</div>
+              <div className="text-lg font-semibold">{(profile as any)?.completion_pct ?? profile?.reliability_pct ?? 100}%</div>
+            </div>
+          </div>
+          <WorkerMyReviews workerId={user.id} />
         </div>
       )}
 
