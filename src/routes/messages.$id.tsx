@@ -370,6 +370,11 @@ function Thread() {
   ] as const;
   const [rejectReason, setRejectReason] = useState<string>(REJECT_REASONS[0]);
   const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const nearBottomRef = useRef(true);
+  const prevLenRef = useRef(0);
+  const [newCount, setNewCount] = useState(0);
+  const [refetchSeq, setRefetchSeq] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -486,7 +491,19 @@ function Thread() {
     })();
     const ch = supabase.channel(`thread-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `application_id=eq.${id}` },
-        (p) => setMsgs(prev => prev.some(m => m.id === (p.new as Msg).id) ? prev : [...prev, p.new as Msg]))
+        (p) => {
+          const m = p.new as Msg;
+          setMsgs(prev => prev.some(x => x.id === m.id) ? prev : [...prev, m]);
+          // Auto-mark as read if I'm the recipient and the chat is open
+          if (user && m.sender_id !== user.id && !m.read_at) {
+            supabase.from("messages").update({ read_at: new Date().toISOString() }).eq("id", m.id).then(() => {});
+          }
+        })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `application_id=eq.${id}` },
+        (p) => {
+          const m = p.new as Msg;
+          setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, ...m } : x));
+        })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `id=eq.${id}` },
         (p) => setApp(p.new as App))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs", filter: `entity_id=eq.${id}` },
@@ -496,11 +513,30 @@ function Thread() {
           const r = p.new as { message_id: string; status: "accepted" | "rejected" };
           setProposalStatuses(prev => prev[r.message_id] === r.status ? prev : { ...prev, [r.message_id]: r.status });
         })
-      .subscribe();
+      .subscribe((status) => {
+        // On disconnect / error, trigger a refetch when the channel comes back.
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          setTimeout(() => setRefetchSeq((s) => s + 1), 1500);
+        }
+      });
     return () => { supabase.removeChannel(ch); };
-  }, [id, user]);
+  }, [id, user, refetchSeq]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+  // Smart auto-scroll: only stick to bottom if the user is already near it,
+  // or if the new message is from the current user. Otherwise show a badge.
+  useEffect(() => {
+    const grew = msgs.length > prevLenRef.current;
+    const last = msgs[msgs.length - 1];
+    prevLenRef.current = msgs.length;
+    if (!grew) return;
+    const mine = last && user && last.sender_id === user.id;
+    if (nearBottomRef.current || mine) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+      setNewCount(0);
+    } else {
+      setNewCount((n) => n + 1);
+    }
+  }, [msgs, user]);
 
   const pushMessage = (message: Msg) => {
     setMsgs(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
@@ -1511,7 +1547,17 @@ function Thread() {
           </div>
         )}
 
-        <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
+        <div className="relative">
+        <div
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+            nearBottomRef.current = dist < 80;
+            if (nearBottomRef.current && newCount > 0) setNewCount(0);
+          }}
+          className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2"
+        >
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
@@ -1705,6 +1751,19 @@ function Thread() {
             );
           })}
           <div ref={endRef} />
+        </div>
+        {newCount > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              endRef.current?.scrollIntoView({ behavior: "smooth" });
+              setNewCount(0);
+            }}
+            className="absolute left-1/2 -translate-x-1/2 bottom-3 z-10 rounded-full bg-primary text-primary-foreground text-xs px-3 py-1 shadow"
+          >
+            {newCount === 1 ? "1 nuovo messaggio" : `${newCount} nuovi messaggi`} ↓
+          </button>
+        )}
         </div>
         {role === "restaurant" && app && shift && (() => {
           const reviewed = !!existingReview;
