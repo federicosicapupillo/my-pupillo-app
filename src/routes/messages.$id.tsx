@@ -923,17 +923,29 @@ function Thread() {
     });
   };
 
-  const submitReview = async (rating: number, text: string, tags: string[]) => {
+  const submitReview = async (payload: {
+    general: number;
+    reliability: number;
+    punctuality: number;
+    professionalism: number;
+    serviceQuality: number;
+    comment: string;
+  }) => {
     if (!user || !app) return;
     if (role !== "restaurant") {
       toast.error("Solo il ristoratore può lasciare una recensione.");
       return;
     }
-    if (!rating) { toast.error("Seleziona una valutazione."); return; }
-    const trimmed = text.trim();
-    if (!trimmed) { toast.error("Scrivi una recensione prima di confermare il turno."); return; }
-    if (trimmed.length < 20) { toast.error("La recensione deve contenere almeno 20 caratteri."); return; }
-    if (trimmed.length > 500) { toast.error("La recensione può contenere al massimo 500 caratteri."); return; }
+    const { general, reliability, punctuality, professionalism, serviceQuality, comment } = payload;
+    if (!general || !reliability || !punctuality || !professionalism || !serviceQuality) {
+      toast.error("Completa tutte le valutazioni prima di inviare la recensione.");
+      return;
+    }
+    const trimmed = comment.trim();
+    if (trimmed.length > 500) {
+      toast.error("Il commento può contenere al massimo 500 caratteri.");
+      return;
+    }
 
     // Crea il turno se non esiste (caso in cui non sia mai stato confermato)
     let shiftId = shift?.id ?? null;
@@ -950,15 +962,25 @@ function Thread() {
       if (createErr) { toast.error("Impossibile creare il turno: " + createErr.message); return; }
       shiftId = (created as any).id;
       setShift(created as Shift);
+    } else if (shiftId && shift && shift.status !== "completed") {
+      await supabase.from("shifts").update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      } as never).eq("id", shiftId);
     }
 
     const { data, error } = await supabase.from("reviews").insert({
       author_id: user.id,
       target_id: app.worker_id,
       shift_id: shiftId,
-      rating,
-      comment: trimmed,
-      tags,
+      rating: general,
+      comment: trimmed ? trimmed : null,
+      tags: [],
+      punctuality,
+      professionalism,
+      competence: serviceQuality,
+      reliability,
+      teamwork: serviceQuality,
       application_id: app.id,
       announcement_id: app.announcement_id,
       is_visible_to_restaurants: true,
@@ -975,7 +997,17 @@ function Thread() {
     setExistingReview(data as Review);
     // Messaggio di sistema in chat
     try {
-      await insertSystemMessage(`il turno è stato completato e il lavoratore ha ricevuto una recensione. Valutazione: ${rating} ${rating === 1 ? "stella" : "stelle"}.`, "complete_shift");
+      await insertSystemMessage(`Turno chiuso. Il ristoratore ha inviato la recensione del servizio.`, "complete_shift");
+    } catch (e) { /* non bloccante */ }
+    // Notifica al lavoratore
+    try {
+      await supabase.from("notifications").insert({
+        user_id: app.worker_id,
+        title: "Hai ricevuto una nuova recensione",
+        body: "Hai ricevuto una nuova recensione per un turno completato.",
+        link: `/messages/${app.id}`,
+        metadata: { type: "review_received", shift_id: shiftId, application_id: app.id } as never,
+      } as never);
     } catch (e) { /* non bloccante */ }
     // Marca l'annuncio come completato
     if (app.announcement_id) {
