@@ -192,6 +192,11 @@ function ShiftsPage() {
     if (!user) return;
     if (submittingReview) return;
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
+    if (role === "restaurant" && !wouldRehire) {
+      setReviewError(prev => ({ ...prev, [s.id]: "Indica se richiameresti questo lavoratore." }));
+      toast.error("Indica se richiameresti questo lavoratore.");
+      return;
+    }
     const avg = (criteria.punctuality + criteria.professionalism + criteria.competence + criteria.reliability + criteria.teamwork) / 5;
     const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
     setSubmittingReview(s.id);
@@ -224,6 +229,7 @@ function ShiftsPage() {
         teamwork: criteria.teamwork,
         positive_tags: positiveLabels,
         negative_tags: negativeLabels,
+        ...(role === "restaurant" ? { would_rehire: wouldRehire } : {}),
       } as any);
       if (error) {
         const msg = error.message || "Errore sconosciuto";
@@ -249,6 +255,7 @@ function ShiftsPage() {
       setComment("");
       setPositiveLabels([]);
       setNegativeLabels([]);
+      setWouldRehire(null);
     } catch (e: any) {
       const msg = e?.message ?? "Errore di rete";
       toast.error(`Errore di rete: ${msg}`, { id: tId });
