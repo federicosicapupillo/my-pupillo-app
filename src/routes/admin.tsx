@@ -605,6 +605,14 @@ function statusBadge(s: string | null | undefined, vat: string | null | undefine
   return <span className="text-xs text-muted-foreground">Non verificata</span>;
 }
 
+function accountStatusBadge(s: string | null | undefined) {
+  const v = s ?? "active";
+  if (v === "active") return <span className="text-xs text-emerald-600 font-medium">Attivo</span>;
+  if (v === "pending") return <span className="text-xs text-amber-600">In attesa</span>;
+  if (v === "suspended") return <span className="text-xs text-destructive font-medium">Sospeso</span>;
+  return <span className="text-xs text-muted-foreground capitalize">{v}</span>;
+}
+
 function defaultsCell(r: any) {
   if (!hasSavedDefaults(r)) return <span className="text-xs text-muted-foreground">—</span>;
   const when = r.default_settings_updated_at
