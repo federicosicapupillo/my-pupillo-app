@@ -278,11 +278,32 @@ function WorkerAnnouncementPopup({ p }: { p: MapPoint }) {
   }
 
   // Stati 1-3: prima della conferma reciproca → solo dati autorizzati
+  const showRealName = !!m.restaurantName; // true quando knownRestaurant
   return (
     <div style={{ minWidth: 260 }}>
-      <div style={{ fontWeight: 600, marginBottom: 2 }}>
-        {m.venueType || "Locale"}{m.zoneLabel ? ` — zona ${m.zoneLabel}` : ""}
-      </div>
+      {showRealName ? (
+        <>
+          <div style={{ display: "inline-block", fontSize: 10, fontWeight: 600, color: "#065f46", background: "#d1fae5", padding: "2px 6px", borderRadius: 999, marginBottom: 6 }}>
+            ✓ Hai già lavorato qui
+          </div>
+          <div style={{ fontWeight: 600, marginBottom: 2 }}>{m.restaurantName}</div>
+          {(m.venueType || m.zoneLabel) && (
+            <div style={{ fontSize: 12, color: "#555" }}>
+              {m.venueType || "Locale"}{m.zoneLabel ? ` · ${m.zoneLabel}` : ""}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div style={{ display: "inline-block", fontSize: 10, fontWeight: 600, color: "#1e3a8a", background: "#dbeafe", padding: "2px 6px", borderRadius: 999, marginBottom: 6 }}>
+            🔒 Locale verificato
+          </div>
+          <div style={{ fontWeight: 600, marginBottom: 2 }}>
+            {m.venueType || "Ristorante partner"}{m.zoneLabel ? ` — zona ${m.zoneLabel}` : ""}
+          </div>
+          <div style={{ fontSize: 11, color: "#777" }}>Nome visibile dopo la conferma</div>
+        </>
+      )}
       {m.role && <div style={{ fontSize: 13, color: "#333", marginTop: 2 }}>Cerca {m.role}</div>}
       <div style={{ fontSize: 12, color: "#444", marginTop: 6, lineHeight: 1.5 }}>
         {fmtDate(m.serviceDate) && <div>📅 {fmtDate(m.serviceDate)}</div>}
@@ -306,12 +327,14 @@ function WorkerAnnouncementPopup({ p }: { p: MapPoint }) {
           <div style={{ marginTop: 4 }}><strong>Requisiti:</strong> {m.requirements.join(" · ")}</div>
         )}
       </div>
-      <div style={{ marginTop: 8, padding: 6, background: "#fff7e6", border: "1px solid #fde68a", borderRadius: 4, fontSize: 11, color: "#92400e", lineHeight: 1.4 }}>
-        🔒 Per proteggere entrambe le parti, i dati completi del locale saranno visibili solo dopo la conferma reciproca del servizio.
-      </div>
+      {!showRealName && (
+        <div style={{ marginTop: 8, padding: 6, background: "#fff7e6", border: "1px solid #fde68a", borderRadius: 4, fontSize: 11, color: "#92400e", lineHeight: 1.4 }}>
+          🔒 Indirizzo e contatti visibili dopo la conferma del servizio.
+        </div>
+      )}
       <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
         <a href={detailsHref} style={{ flex: 1, textAlign: "center", padding: "6px 10px", border: `1px solid ${accent}`, color: accent, borderRadius: 6, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
-          Apri dettagli
+          Apri annuncio
         </a>
         <a href={`${detailsHref}?apply=1`} style={{ flex: 1, textAlign: "center", padding: "6px 10px", background: accent, color: "#07060B", borderRadius: 6, fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
           Candidati
