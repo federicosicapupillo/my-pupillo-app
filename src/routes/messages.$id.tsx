@@ -2098,6 +2098,8 @@ function ReviewDialog(props: {
     professionalism: number;
     serviceQuality: number;
     comment: string;
+    positiveLabels: string[];
+    negativeLabels: string[];
   }) => Promise<void>;
 }) {
   const { open, onOpenChange, workerName, workerRole, shiftDate, startTime, endTime, venue, shiftStatus, onSubmit } = props;
@@ -2107,6 +2109,8 @@ function ReviewDialog(props: {
   const [professionalism, setProfessionalism] = useState(0);
   const [serviceQuality, setServiceQuality] = useState(0);
   const [comment, setComment] = useState("");
+  const [positiveLabels, setPositiveLabels] = useState<string[]>([]);
+  const [negativeLabels, setNegativeLabels] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -2114,6 +2118,7 @@ function ReviewDialog(props: {
     if (!open) {
       setGeneral(0); setReliability(0); setPunctuality(0);
       setProfessionalism(0); setServiceQuality(0); setComment(""); setError(null);
+      setPositiveLabels([]); setNegativeLabels([]);
     }
   }, [open]);
 
@@ -2127,7 +2132,7 @@ function ReviewDialog(props: {
     setError(null);
     setSubmitting(true);
     try {
-      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, comment });
+      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels });
     } finally { setSubmitting(false); }
   };
 
@@ -2167,6 +2172,13 @@ function ReviewDialog(props: {
               maxLength={500}
             />
           </div>
+
+          <ReviewLabelsPicker
+            positive={positiveLabels}
+            negative={negativeLabels}
+            onChange={({ positive, negative }) => { setPositiveLabels(positive); setNegativeLabels(negative); }}
+            disabled={submitting}
+          />
 
           {error && (
             <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
