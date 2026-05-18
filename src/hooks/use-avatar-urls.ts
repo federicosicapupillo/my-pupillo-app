@@ -72,9 +72,21 @@ export function useAvatarUrls(userIds: Array<string | null | undefined>) {
           for (const [id, url] of Object.entries(res.urls)) {
             cache.set(id, { url, name: names[id] ?? null, at: now });
           }
+          // Ensure every requested id has an entry (avoid infinite refetch loop
+          // if the response omits an id for any reason).
+          for (const id of toFetch) {
+            if (!cache.has(id)) cache.set(id, { url: null, name: null, at: now });
+          }
           schedulePersist();
         })
-        .catch(() => {})
+        .catch(() => {
+          // Cache a short-lived null so we don't refetch on every render when
+          // the server fn fails. The TTL ensures we'll retry later.
+          const now = Date.now();
+          for (const id of toFetch) {
+            if (!cache.has(id)) cache.set(id, { url: null, name: null, at: now });
+          }
+        })
         .finally(() => {
           for (const id of toFetch) inflight.delete(id);
         });
