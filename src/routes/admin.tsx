@@ -22,9 +22,12 @@ export const Route = createFileRoute("/admin")({
   component: () => <RequireRole allow={["admin"]}><Admin /></RequireRole>,
 });
 
-type WorkerRow = { id: string; full_name: string | null; email: string | null; badge: string | null; completed_shifts: number | null; profile_completed: boolean | null; reputation_level: string | null };
-type RestaurantRow = { id: string; business_name: string | null; full_name: string | null; email: string | null; city: string | null; credits: number | null; ann_count: number };
+type WorkerRow = { id: string; full_name: string | null; email: string | null; badge: string | null; completed_shifts: number | null; profile_completed: boolean | null; reputation_level: string | null; account_status: string | null };
+type RestaurantRow = { id: string; business_name: string | null; full_name: string | null; email: string | null; city: string | null; credits: number | null; ann_count: number; account_status: string | null };
 type AnnouncementRow = { id: string; restaurant_name: string | null; professional_profile: string | null; service_date: string | null; status: string | null; apps_count: number };
+
+const ANNOUNCEMENT_STATUSES = ["draft","active","assigned","completed","cancelled","expired"] as const;
+const ACCOUNT_STATUSES = ["active","pending","suspended"] as const;
 type CreditTx = { id: string; user_id: string; delta: number; balance_after: number; reason: string | null; created_at: string; user_name: string | null };
 type ReviewRow = { id: string; rating: number; comment: string | null; created_at: string; target_id: string; author_id: string; target_name: string | null; author_name: string | null };
 
@@ -52,6 +55,9 @@ function Admin() {
   const [restSearch, setRestSearch] = useState("");
   const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
   const [annSearch, setAnnSearch] = useState("");
+  const [annStatusFilter, setAnnStatusFilter] = useState<string>("all");
+  const [workerStatusFilter, setWorkerStatusFilter] = useState<string>("all");
+  const [restStatusFilter, setRestStatusFilter] = useState<string>("all");
   const [creditTx, setCreditTx] = useState<CreditTx[]>([]);
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
 
@@ -92,7 +98,7 @@ function Admin() {
       if (workerIds.length) {
         const { data: wrows } = await supabase
           .from("profiles")
-          .select("id,full_name,email,badge,completed_shifts,profile_completed,reputation_level")
+          .select("id,full_name,email,badge,completed_shifts,profile_completed,reputation_level,account_status")
           .in("id", workerIds)
           .order("completed_shifts", { ascending: false })
           .limit(500);
@@ -104,7 +110,7 @@ function Admin() {
       if (restaurantIds.length) {
         const { data: rrows } = await supabase
           .from("profiles")
-          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,province,province_code,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes,email,credits")
+          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,province,province_code,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes,email,credits,account_status")
           .in("id", restaurantIds)
           .order("vat_verified_at", { ascending: false });
         setVatList(rrows ?? []);
@@ -134,6 +140,7 @@ function Admin() {
           id: r.id, business_name: r.business_name, full_name: r.full_name,
           email: r.email, city: r.city, credits: r.credits,
           ann_count: annCount[r.id] ?? 0,
+          account_status: r.account_status ?? null,
         })));
       }
 
@@ -200,20 +207,38 @@ function Admin() {
   if (role !== "admin") return <AppShell><p className="text-muted-foreground">Accesso riservato agli amministratori.</p></AppShell>;
 
   const workersFiltered = workers.filter(w => {
+    if (workerStatusFilter !== "all" && (w.account_status ?? "active") !== workerStatusFilter) return false;
     if (!workerSearch.trim()) return true;
     const q = workerSearch.trim().toLowerCase();
     return (w.full_name ?? "").toLowerCase().includes(q) || (w.email ?? "").toLowerCase().includes(q);
   });
   const restsFiltered = restaurants.filter(r => {
+    if (restStatusFilter !== "all" && (r.account_status ?? "active") !== restStatusFilter) return false;
     if (!restSearch.trim()) return true;
     const q = restSearch.trim().toLowerCase();
     return (r.business_name ?? "").toLowerCase().includes(q) || (r.full_name ?? "").toLowerCase().includes(q) || (r.email ?? "").toLowerCase().includes(q) || (r.city ?? "").toLowerCase().includes(q);
   });
   const annsFiltered = announcements.filter(a => {
+    if (annStatusFilter !== "all" && a.status !== annStatusFilter) return false;
     if (!annSearch.trim()) return true;
     const q = annSearch.trim().toLowerCase();
     return (a.restaurant_name ?? "").toLowerCase().includes(q) || (a.professional_profile ?? "").toLowerCase().includes(q) || (a.status ?? "").toLowerCase().includes(q);
   });
+
+  async function updateAccountStatus(id: string, newStatus: string, kind: "worker" | "restaurant") {
+    const { error } = await supabase.from("profiles").update({ account_status: newStatus }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(newStatus === "suspended" ? "Account sospeso" : newStatus === "active" ? "Account riattivato" : "Stato aggiornato");
+    if (kind === "worker") setWorkers(ws => ws.map(w => w.id === id ? { ...w, account_status: newStatus } : w));
+    else setRestaurants(rs => rs.map(r => r.id === id ? { ...r, account_status: newStatus } : r));
+  }
+
+  async function updateAnnouncementStatus(id: string, newStatus: string) {
+    const { error } = await supabase.from("announcements").update({ status: newStatus }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Stato annuncio aggiornato");
+    setAnnouncements(list => list.map(a => a.id === id ? { ...a, status: newStatus } : a));
+  }
 
   return (
     <AppShell>
