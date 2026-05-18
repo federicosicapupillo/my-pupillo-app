@@ -716,6 +716,76 @@ function ShiftsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!reviewDialog} onOpenChange={(open) => { if (!open && !dialogSubmitting) setReviewDialog(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Recensisci il lavoratore</DialogTitle>
+          </DialogHeader>
+          {reviewDialog && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3">
+                <UserAvatar userId={reviewDialog.worker_id} name={reviewDialog.worker_name} className="h-12 w-12" />
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{reviewDialog.worker_name ?? "Lavoratore"}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {reviewDialog.worker_role && <span className="capitalize">{reviewDialog.worker_role} · </span>}
+                    {new Date(reviewDialog.service_date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                    {reviewDialog.service_time && ` · ${reviewDialog.service_time.slice(0,5)}`}
+                    {reviewDialog.end_time && `–${reviewDialog.end_time.slice(0,5)}`}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {([
+                  ["punctuality", "Puntualità"],
+                  ["professionalism", "Professionalità"],
+                  ["competence", "Qualità del servizio"],
+                  ["reliability", "Affidabilità"],
+                  ["teamwork", "Collaborazione con il team"],
+                ] as const).map(([key, label]) => (
+                  <div key={key} className="flex items-center justify-between gap-3">
+                    <span className="text-sm">{label}</span>
+                    <div className="flex items-center gap-0.5">
+                      {[1,2,3,4,5].map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setDialogCriteria(c => ({ ...c, [key]: n }))}
+                          className="p-0.5 disabled:opacity-50"
+                          disabled={dialogSubmitting}
+                          aria-label={`${label} ${n} stelle`}
+                        >
+                          <Star className={`h-5 w-5 transition ${n <= (dialogCriteria as any)[key] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Textarea
+                placeholder="Commento (opzionale)"
+                value={dialogComment}
+                onChange={e => setDialogComment(e.target.value)}
+                rows={3}
+                disabled={dialogSubmitting}
+              />
+              {dialogError && (
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="flex-1">{dialogError}</div>
+                </div>
+              )}
+              <div className="flex flex-wrap justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={() => setReviewDialog(null)} disabled={dialogSubmitting}>Annulla</Button>
+                <Button onClick={submitDialogReview} disabled={dialogSubmitting} className="gap-1.5">
+                  {dialogSubmitting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Invio…</>) : (<><Star className="h-4 w-4" /> Invia recensione</>)}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
