@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw, Database, Users, HardDrive, Code as CodeIcon, FileArchive } from "lucide-react";
+import { Download, RefreshCw, Database, Users, HardDrive, Code as CodeIcon, FileArchive, Copy, Check, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import { listAdminBackups, type AdminBackupFile } from "@/lib/admin-backups.functions";
 
 function formatBytes(n: number): string {
@@ -29,6 +31,22 @@ export function AdminBackupsSection() {
     staleTime: 1000 * 60 * 20,
     refetchOnWindowFocus: false,
   });
+
+  const files = data?.files ?? [];
+  const sha256 = data?.sha256 ?? null;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!sha256) return;
+    try {
+      await navigator.clipboard.writeText(sha256);
+      setCopied(true);
+      toast.success("Checksum SHA256 copiato negli appunti");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Impossibile copiare negli appunti");
+    }
+  };
 
   return (
     <div className="rounded-2xl border bg-card p-5 space-y-4">
@@ -60,9 +78,37 @@ export function AdminBackupsSection() {
 
       {isLoading && <p className="text-sm text-muted-foreground">Carico…</p>}
 
-      {data && data.length > 0 && (
+      {sha256 && (
+        <div className="rounded-xl border bg-muted/40 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Checksum SHA256 del backup completo
+          </div>
+          <div className="flex items-stretch gap-2">
+            <code className="flex-1 break-all rounded-md bg-background border px-3 py-2 font-mono text-xs leading-relaxed">
+              {sha256}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopy}
+              className="gap-2 shrink-0"
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? "Copiato" : "Copia"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Verifica l'integrità dopo il download:{" "}
+            <code className="font-mono">shasum -a 256 pupillo-full-backup-2026-05-18.zip</code>
+          </p>
+        </div>
+      )}
+
+      {files.length > 0 && (
         <ul className="divide-y">
-          {data.map((f: AdminBackupFile) => {
+          {files.map((f: AdminBackupFile) => {
             const Icon = ICONS[f.key] ?? FileArchive;
             const isPrimary = f.key === "full";
             return (
@@ -96,7 +142,7 @@ export function AdminBackupsSection() {
         </ul>
       )}
 
-      {data && data.length === 0 && (
+      {data && files.length === 0 && (
         <p className="text-sm text-muted-foreground">Nessun file di backup disponibile.</p>
       )}
     </div>
