@@ -14,6 +14,7 @@ import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
 import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 import { AdminRequiredReviewsSection } from "@/components/AdminRequiredReviewsSection";
+import { AdminBackupsSection } from "@/components/AdminBackupsSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/admin")({
@@ -230,6 +231,7 @@ function Admin() {
           <TabsTrigger value="announcements">Annunci</TabsTrigger>
           <TabsTrigger value="credits">Crediti</TabsTrigger>
           <TabsTrigger value="reviews">Recensioni</TabsTrigger>
+          <TabsTrigger value="backups">Backup</TabsTrigger>
         </TabsList>
 
         {/* PANORAMICA */}
@@ -507,6 +509,11 @@ function Admin() {
             </div>
           </div>
           <AdminRequiredReviewsSection />
+        </TabsContent>
+
+        {/* BACKUP */}
+        <TabsContent value="backups" className="space-y-6">
+          <AdminBackupsSection />
         </TabsContent>
       </Tabs>
     </AppShell>
