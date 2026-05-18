@@ -1752,6 +1752,19 @@ function Thread() {
           })}
           <div ref={endRef} />
         </div>
+        {newCount > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              endRef.current?.scrollIntoView({ behavior: "smooth" });
+              setNewCount(0);
+            }}
+            className="absolute left-1/2 -translate-x-1/2 bottom-3 z-10 rounded-full bg-primary text-primary-foreground text-xs px-3 py-1 shadow"
+          >
+            {newCount === 1 ? "1 nuovo messaggio" : `${newCount} nuovi messaggi`} ↓
+          </button>
+        )}
+        </div>
         {role === "restaurant" && app && shift && (() => {
           const reviewed = !!existingReview;
           const completed = shift.status === "completed";
