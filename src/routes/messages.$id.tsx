@@ -1767,9 +1767,19 @@ function Thread() {
           <ReviewBlock
             id="review-block"
             existing={existingReview}
+          />
+        )}
+        {role === "restaurant" && app && (
+          <ReviewDialog
+            open={reviewOpen && !existingReview}
+            onOpenChange={(v) => setReviewOpen(v)}
             workerName={other?.name ?? null}
-            shift={shift}
-            forceOpen={reviewOpen}
+            workerRole={ann?.professional_profile ?? null}
+            shiftDate={ann?.service_date ?? shift?.shift_date ?? null}
+            startTime={ann?.service_time ?? null}
+            endTime={ann?.end_time ?? null}
+            venue={displayAddress}
+            shiftStatus={shift?.status ?? null}
             onSubmit={submitReview}
           />
         )}
