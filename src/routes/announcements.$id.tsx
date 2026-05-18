@@ -233,6 +233,41 @@ function AnnouncementDetail() {
     userId: user?.id ?? null,
   });
   const restaurantName = restaurant?.business_name || restaurant?.full_name || "Ristoratore";
+  const isWorker = !!user && !isOwner;
+  const publicVenueName = "Ristorante partner";
+  const displayedRestaurantName = canSeeAddress ? restaurantName : publicVenueName;
+
+  const totaleStimato = useMemo(() => {
+    if (!ann) return null;
+    const amt = Number(ann.tariff_amount);
+    if (!Number.isFinite(amt) || amt <= 0) return null;
+    if (ann.tariff_type !== "hourly") return amt;
+    const hours = Number(ann.shift_duration_hours ?? ann.duration_hours);
+    if (!Number.isFinite(hours) || hours <= 0) return null;
+    return Math.round(amt * hours * 100) / 100;
+  }, [ann]);
+
+  const [applying, setApplying] = useState(false);
+  const applyAsWorker = async () => {
+    if (!user || !ann) return;
+    setApplying(true);
+    const { data: app, error } = await supabase.from("applications").insert({
+      announcement_id: ann.id,
+      worker_id: user.id,
+      restaurant_id: ann.restaurant_id,
+    }).select("id").single();
+    setApplying(false);
+    if (error) { toast.error(error.message); return; }
+    if (app?.id) {
+      await supabase.from("notifications").insert({
+        user_id: ann.restaurant_id,
+        title: "Nuova candidatura ricevuta",
+        body: "Un lavoratore si è candidato per uno dei tuoi turni.",
+        link: `/messages/${app.id}`,
+      });
+    }
+    toast.success("Candidatura inviata!");
+  };
 
   const accept = async (app: App) => {
     setBusyId(app.id);
@@ -312,7 +347,7 @@ function AnnouncementDetail() {
 
       <PageHeader
         title={jobRequest?.role_required || ann.professional_profile || jobRequest?.title || `Servizio ${ann.speed} · ${ann.duration_hours}h`}
-        subtitle={jobRequest?.restaurant_name || restaurantName}
+        subtitle={canSeeAddress ? (jobRequest?.restaurant_name || restaurantName) : `${publicVenueName} · Locale verificato · Nome visibile dopo conferma`}
         action={
           <span className={`text-xs rounded-full px-3 py-1 ${STATUS_CLS[ann.status] ?? "bg-muted text-muted-foreground"}`}>
             {STATUS_LABEL[ann.status] ?? ann.status}
@@ -340,6 +375,12 @@ function AnnouncementDetail() {
             ? ann.location_address
             : publicLocationLabel({ job_city: ann.job_city, city: restaurant?.city, neighborhood: restaurant?.neighborhood })}</div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" />{formatTariff(jobRequest?.hourly_rate ?? ann.tariff_amount, ann.tariff_type)}</div>
+          {totaleStimato != null && ann.tariff_type === "hourly" && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Euro className="h-4 w-4" />
+              <span>Totale stimato: <span className="font-medium text-foreground">€ {totaleStimato}</span></span>
+            </div>
+          )}
           <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />Scade il {new Date(ann.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {(ann.service_time ?? "").slice(0,5)}</div>
           {jobRequest?.break_included != null && <div className="text-muted-foreground">Pausa prevista: <span className="font-medium text-foreground">{jobRequest.break_included ? "Sì" : "No"}</span></div>}
           {ann.languages && ann.languages.length > 0 && (
@@ -373,7 +414,7 @@ function AnnouncementDetail() {
           </div>
         )}
 
-        {restaurant && (
+        {restaurant && canSeeAddress && (
           <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
             <div className="flex items-center justify-between mb-1">
               <div className="font-medium text-base flex items-center gap-2"><Building2 className="h-4 w-4" />{restaurantName}</div>
@@ -406,6 +447,33 @@ function AnnouncementDetail() {
             )}
           </div>
         )}
+        {restaurant && !canSeeAddress && isWorker && (
+          <div className="rounded-2xl border bg-card p-5 space-y-2 text-sm">
+            <div className="font-medium text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />{publicVenueName}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="gap-1"><Shield className="h-3 w-3" />Locale verificato</Badge>
+              <Badge variant="outline">Nome visibile dopo conferma</Badge>
+            </div>
+            {restaurant.venue_type && (
+              <div className="text-xs text-muted-foreground">
+                Tipologia locale: {venueTypeLabel(restaurant.venue_type, restaurant.venue_type_other)}
+                {restaurant.price_range ? ` · Fascia di prezzo: ${priceRangeLabel(restaurant.price_range)}` : ""}
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              {publicLocationLabel({ job_city: ann.job_city, city: restaurant.city, neighborhood: restaurant.neighborhood })}
+            </div>
+            {restaurant.rating_avg != null && Number(restaurant.rating_avg) > 0 && (
+              <div className="flex items-center gap-2"><Star className="h-4 w-4 text-amber-500" />{Number(restaurant.rating_avg).toFixed(1)} ({restaurant.reviews_count ?? 0} recensioni)</div>
+            )}
+            <p className="text-xs text-muted-foreground pt-2 border-t">
+              Per tutelare la privacy del locale, nome esatto, indirizzo preciso, telefono ed email del referente saranno visibili dopo la conferma del turno.
+            </p>
+          </div>
+        )}
         </div>
 
         {isOwner && (
@@ -425,6 +493,35 @@ function AnnouncementDetail() {
               <div><div className="text-lg font-semibold text-emerald-600">{counts.pending}</div><div className="text-muted-foreground">Aperte</div></div>
               <div><div className="text-lg font-semibold text-blue-600">{counts.accepted}</div><div className="text-muted-foreground">Acc.</div></div>
             </div>
+          </div>
+        )}
+        {isWorker && (
+          <div className="rounded-2xl border bg-card p-5 space-y-3">
+            <div className="text-sm font-medium">Azioni</div>
+            {myApp ? (
+              <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+                <div className="font-medium text-foreground">Candidatura inviata</div>
+                <div className="text-muted-foreground">
+                  Stato: {APP_STATUS_LABEL[myApp.status] ?? myApp.status}
+                </div>
+                <Link to="/messages/$id" params={{ id: myApp.id }}>
+                  <Button size="sm" variant="secondary" className="w-full gap-2 mt-2">
+                    <MessageSquare className="h-4 w-4" />Vai alla chat
+                  </Button>
+                </Link>
+              </div>
+            ) : isAnnInactive ? (
+              <Button disabled className="w-full">Candidature chiuse</Button>
+            ) : (
+              <>
+                <Button className="w-full gap-2" disabled={applying} onClick={applyAsWorker}>
+                  <CheckCircle2 className="h-4 w-4" />Candidati
+                </Button>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Confermando dichiari di aver letto requisiti, dress code e note del turno.
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>
