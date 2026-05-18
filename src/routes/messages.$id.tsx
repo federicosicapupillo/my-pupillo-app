@@ -1547,7 +1547,17 @@ function Thread() {
           </div>
         )}
 
-        <div className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2">
+        <div className="relative">
+        <div
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+            nearBottomRef.current = dist < 80;
+            if (nearBottomRef.current && newCount > 0) setNewCount(0);
+          }}
+          className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2"
+        >
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
