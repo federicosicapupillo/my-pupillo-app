@@ -15,6 +15,7 @@ import { hasSavedDefaults } from "@/lib/restaurant-defaults";
 import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 import { AdminRequiredReviewsSection } from "@/components/AdminRequiredReviewsSection";
 import { AdminBackupsSection } from "@/components/AdminBackupsSection";
+import { AdminBackupSystemSection } from "@/components/AdminBackupSystemSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/admin")({
@@ -590,6 +591,7 @@ function Admin() {
 
         {/* BACKUP */}
         <TabsContent value="backups" className="space-y-6">
+          <AdminBackupSystemSection />
           <AdminBackupsSection />
         </TabsContent>
       </Tabs>

@@ -251,6 +251,57 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          database_backup_status: string | null
+          error_message: string | null
+          file_url: string | null
+          github_backup_status: string | null
+          github_commit_url: string | null
+          id: string
+          metadata: Json
+          started_at: string | null
+          status: string
+          storage_backup_status: string | null
+          triggered_by: string | null
+          type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          database_backup_status?: string | null
+          error_message?: string | null
+          file_url?: string | null
+          github_backup_status?: string | null
+          github_commit_url?: string | null
+          id?: string
+          metadata?: Json
+          started_at?: string | null
+          status?: string
+          storage_backup_status?: string | null
+          triggered_by?: string | null
+          type?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          database_backup_status?: string | null
+          error_message?: string | null
+          file_url?: string | null
+          github_backup_status?: string | null
+          github_commit_url?: string | null
+          id?: string
+          metadata?: Json
+          started_at?: string | null
+          status?: string
+          storage_backup_status?: string | null
+          triggered_by?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           balance_after: number
