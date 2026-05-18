@@ -1666,6 +1666,7 @@ function Thread() {
             </button>
           );
         })()}
+        <div id="chat-composer">
         <TemplatePicker
           role={role === "restaurant" ? "restaurant" : "worker"}
           category={tplCategory}
@@ -1687,6 +1688,7 @@ function Thread() {
           addressOverride={displayAddress}
           disabled={isConversationClosed}
         />
+        </div>
 
         {role === "restaurant" && tplCategory === "post_shift" && app && (
           <ReviewBlock
@@ -1706,6 +1708,36 @@ function Thread() {
           returnTo={`/messages/${id}`}
         />
         <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
+        <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Rifiuta candidatura</AlertDialogTitle>
+              <AlertDialogDescription>
+                Seleziona una motivazione. Il lavoratore riceverà un messaggio automatico professionale e neutro.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-2">
+              <RadioGroup value={rejectReason} onValueChange={setRejectReason} className="space-y-2">
+                {REJECT_REASONS.map((r) => (
+                  <div key={r} className="flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-muted/40">
+                    <RadioGroupItem id={`rr-${r}`} value={r} />
+                    <Label htmlFor={`rr-${r}`} className="cursor-pointer text-sm font-normal">{r}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={transitioning === "rejected"}>Annulla</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); void submitReject(); }}
+                disabled={transitioning === "rejected"}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {transitioning === "rejected" ? "Rifiuto in corso…" : "Conferma rifiuto"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
