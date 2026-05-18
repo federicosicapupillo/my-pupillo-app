@@ -12,6 +12,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { otherColumnForRole, groupThreadsByOther } from "@/lib/messages-grouping";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
+import { maskPartnerNameForWorker, isApplicationConfirmed, PUBLIC_VENUE_NAME } from "@/lib/public-location";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messaggi — Pupillo" }] }),
@@ -132,13 +133,15 @@ function MessagesLayout() {
       const p = pmap.get(a[otherCol]);
       const last = lastByApp.get(a.id);
       const ann = amap.get(a.announcement_id);
+      const rawName = p?.business_name || p?.full_name || "Utente";
+      const displayName = maskPartnerNameForWorker(rawName, role, a.status);
       return {
         id: a.id,
         status: a.status,
         announcementId: a.announcement_id,
         restaurantId: a.restaurant_id,
         workerId: a.worker_id,
-        other: { id: a[otherCol], name: p?.business_name || p?.full_name || "Utente" },
+        other: { id: a[otherCol], name: displayName },
         lastBody: a.last_message_preview ?? last?.body ?? null,
         lastAt: a.last_message_at ?? last?.created_at ?? null,
         unread: unreadByApp.get(a.id) ?? 0,
