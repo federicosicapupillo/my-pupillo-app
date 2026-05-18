@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
+import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2 } from "lucide-react";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
@@ -989,7 +989,7 @@ function Thread() {
                   onClick={() => transition("rejected")}
                   disabled={transitioning !== null}
                 >
-                  <X className="h-4 w-4" />
+                  {transitioning === "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                   {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
                 </Button>
                 <Button
@@ -998,7 +998,7 @@ function Thread() {
                   onClick={() => transition("accepted")}
                   disabled={transitioning !== null}
                 >
-                  <Check className="h-4 w-4" />
+                  {transitioning === "accepted" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   {transitioning === "accepted" ? "Accettazione in corso…" : "Accetta candidatura"}
                 </Button>
               </div>
@@ -1056,11 +1056,11 @@ function Thread() {
             <div className="flex flex-wrap gap-2">
               {role === "worker" && app.status === "pending" && (<>
                 <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => transition("interested")}>
-                  <ThumbsUp className="h-4 w-4" />
+                  {transitioning === "interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
                   {transitioning === "interested" ? "Invio in corso…" : "Sono interessato"}
                 </Button>
                 <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("not_interested")}>
-                  <ThumbsDown className="h-4 w-4" />
+                  {transitioning === "not_interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsDown className="h-4 w-4" />}
                   {transitioning === "not_interested" ? "Invio in corso…" : "Non interessato"}
                 </Button>
                 {(!shift || (shift.status !== "scheduled" && shift.status !== "completed")) && (
