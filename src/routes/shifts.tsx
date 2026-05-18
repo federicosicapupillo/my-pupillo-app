@@ -294,6 +294,10 @@ function ShiftsPage() {
       setDialogError("Turno o lavoratore non trovato.");
       return;
     }
+    if (!dialogWouldRehire) {
+      setDialogError("Indica se richiameresti questo lavoratore.");
+      return;
+    }
     const c = dialogCriteria;
     const avg = (c.punctuality + c.professionalism + c.competence + c.reliability + c.teamwork) / 5;
     const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
@@ -332,6 +336,7 @@ function ShiftsPage() {
         teamwork: c.teamwork,
         positive_tags: dialogPositive,
         negative_tags: dialogNegative,
+        would_rehire: dialogWouldRehire,
       } as any);
       if (error) {
         toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
