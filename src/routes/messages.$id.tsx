@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star } from "lucide-react";
+import { ArrowLeft, Check, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2 } from "lucide-react";
 import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
