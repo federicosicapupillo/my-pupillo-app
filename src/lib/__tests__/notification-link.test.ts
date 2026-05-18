@@ -4,19 +4,33 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // `reviews` lookup per-test via `reviewLookup`.
 let reviewLookup: { application_id?: string | null; shift_id?: string | null } | null = null;
 let reviewLookupShouldThrow = false;
+let currentUserRole: "worker" | "restaurant" | "admin" | null = null;
 
 vi.mock("@/integrations/supabase/client", () => {
   return {
     supabase: {
-      from: (_table: string) => ({
-        select: () => ({
-          eq: () => ({
-            maybeSingle: async () => {
-              if (reviewLookupShouldThrow) throw new Error("db down");
-              return { data: reviewLookup, error: null };
-            },
-          }),
-        }),
+      auth: {
+        getUser: async () => ({ data: { user: currentUserRole ? { id: "user-1" } : null } }),
+      },
+      from: (table: string) => ({
+        select: () => {
+          if (table === "user_roles") {
+            return {
+              eq: async () => ({
+                data: currentUserRole ? [{ role: currentUserRole }] : [],
+                error: null,
+              }),
+            };
+          }
+          return {
+            eq: () => ({
+              maybeSingle: async () => {
+                if (reviewLookupShouldThrow) throw new Error("db down");
+                return { data: reviewLookup, error: null };
+              },
+            }),
+          };
+        },
       }),
     },
   };
@@ -32,6 +46,7 @@ const VALID_ROUTES = new Set<string>([
   "/messages/$id",
   "/shifts",
   "/ristoratore/turni/$shiftId",
+  "/reviews/$id",
   "/announcements",
   "/announcements/$id",
   "/workers",
@@ -61,6 +76,7 @@ describe("navigateFromNotificationLink", () => {
   beforeEach(() => {
     reviewLookup = null;
     reviewLookupShouldThrow = false;
+    currentUserRole = null;
   });
 
   it("routes /messages to the inbox", async () => {
@@ -81,13 +97,21 @@ describe("navigateFromNotificationLink", () => {
     expect(nav.calls[0]).toEqual({ to: "/shifts" });
   });
 
-  it("routes /ristoratore/turni/<id> to the shift detail", async () => {
+  it("routes /ristoratore/turni/<id> to the shift detail for restaurants", async () => {
+    currentUserRole = "restaurant";
     const nav = makeNavigate();
     await navigateFromNotificationLink(nav as any, `/ristoratore/turni/${UUID_A}`);
     expect(nav.calls[0]).toEqual({
       to: "/ristoratore/turni/$shiftId",
       params: { shiftId: UUID_A },
     });
+  });
+
+  it("never sends a worker to the restaurant-only shift detail", async () => {
+    currentUserRole = "worker";
+    const nav = makeNavigate();
+    await navigateFromNotificationLink(nav as any, `/ristoratore/turni/${UUID_A}`);
+    expect(nav.calls[0]).toEqual({ to: "/shifts" });
   });
 
   it("routes /announcements/<id> to the announcement detail", async () => {
@@ -128,14 +152,29 @@ describe("navigateFromNotificationLink", () => {
   });
 
   describe("/reviews/<id> resolution", () => {
-    it("resolves to the related chat when the review has an application_id", async () => {
+    it("opens the dedicated review popup for workers", async () => {
+      currentUserRole = "worker";
+      const nav = makeNavigate();
+      await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
+      expect(nav.calls[0]).toEqual({ to: "/reviews/$id", params: { id: UUID_B } });
+    });
+
+    it("opens the dedicated review popup when role is unknown", async () => {
+      const nav = makeNavigate();
+      await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
+      expect(nav.calls[0]).toEqual({ to: "/reviews/$id", params: { id: UUID_B } });
+    });
+
+    it("resolves to the related chat for restaurants when review has an application_id", async () => {
+      currentUserRole = "restaurant";
       reviewLookup = { application_id: UUID_A, shift_id: null };
       const nav = makeNavigate();
       await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
       expect(nav.calls[0]).toEqual({ to: "/messages/$id", params: { id: UUID_A } });
     });
 
-    it("falls back to the shift detail when only shift_id is present", async () => {
+    it("falls back to the shift detail for restaurants when only shift_id is present", async () => {
+      currentUserRole = "restaurant";
       reviewLookup = { application_id: null, shift_id: UUID_A };
       const nav = makeNavigate();
       await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
@@ -145,14 +184,16 @@ describe("navigateFromNotificationLink", () => {
       });
     });
 
-    it("falls back to /shifts when the review row has neither id", async () => {
+    it("falls back to /shifts for restaurants when the review row has neither id", async () => {
+      currentUserRole = "restaurant";
       reviewLookup = { application_id: null, shift_id: null };
       const nav = makeNavigate();
       await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
       expect(nav.calls[0]).toEqual({ to: "/shifts" });
     });
 
-    it("falls back to /shifts when the review lookup throws", async () => {
+    it("falls back to /shifts for restaurants when the review lookup throws", async () => {
+      currentUserRole = "restaurant";
       reviewLookupShouldThrow = true;
       const nav = makeNavigate();
       await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
