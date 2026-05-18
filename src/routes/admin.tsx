@@ -22,9 +22,12 @@ export const Route = createFileRoute("/admin")({
   component: () => <RequireRole allow={["admin"]}><Admin /></RequireRole>,
 });
 
-type WorkerRow = { id: string; full_name: string | null; email: string | null; badge: string | null; completed_shifts: number | null; profile_completed: boolean | null; reputation_level: string | null };
-type RestaurantRow = { id: string; business_name: string | null; full_name: string | null; email: string | null; city: string | null; credits: number | null; ann_count: number };
+type WorkerRow = { id: string; full_name: string | null; email: string | null; badge: string | null; completed_shifts: number | null; profile_completed: boolean | null; reputation_level: string | null; account_status: string | null };
+type RestaurantRow = { id: string; business_name: string | null; full_name: string | null; email: string | null; city: string | null; credits: number | null; ann_count: number; account_status: string | null };
 type AnnouncementRow = { id: string; restaurant_name: string | null; professional_profile: string | null; service_date: string | null; status: string | null; apps_count: number };
+
+const ANNOUNCEMENT_STATUSES = ["draft","active","assigned","completed","cancelled","expired"] as const;
+const ACCOUNT_STATUSES = ["active","pending","suspended"] as const;
 type CreditTx = { id: string; user_id: string; delta: number; balance_after: number; reason: string | null; created_at: string; user_name: string | null };
 type ReviewRow = { id: string; rating: number; comment: string | null; created_at: string; target_id: string; author_id: string; target_name: string | null; author_name: string | null };
 
@@ -52,6 +55,9 @@ function Admin() {
   const [restSearch, setRestSearch] = useState("");
   const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
   const [annSearch, setAnnSearch] = useState("");
+  const [annStatusFilter, setAnnStatusFilter] = useState<string>("all");
+  const [workerStatusFilter, setWorkerStatusFilter] = useState<string>("all");
+  const [restStatusFilter, setRestStatusFilter] = useState<string>("all");
   const [creditTx, setCreditTx] = useState<CreditTx[]>([]);
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
 
@@ -92,7 +98,7 @@ function Admin() {
       if (workerIds.length) {
         const { data: wrows } = await supabase
           .from("profiles")
-          .select("id,full_name,email,badge,completed_shifts,profile_completed,reputation_level")
+          .select("id,full_name,email,badge,completed_shifts,profile_completed,reputation_level,account_status")
           .in("id", workerIds)
           .order("completed_shifts", { ascending: false })
           .limit(500);
@@ -104,7 +110,7 @@ function Admin() {
       if (restaurantIds.length) {
         const { data: rrows } = await supabase
           .from("profiles")
-          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,province,province_code,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes,email,credits")
+          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,province,province_code,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes,email,credits,account_status")
           .in("id", restaurantIds)
           .order("vat_verified_at", { ascending: false });
         setVatList(rrows ?? []);
@@ -134,6 +140,7 @@ function Admin() {
           id: r.id, business_name: r.business_name, full_name: r.full_name,
           email: r.email, city: r.city, credits: r.credits,
           ann_count: annCount[r.id] ?? 0,
+          account_status: r.account_status ?? null,
         })));
       }
 
@@ -200,20 +207,38 @@ function Admin() {
   if (role !== "admin") return <AppShell><p className="text-muted-foreground">Accesso riservato agli amministratori.</p></AppShell>;
 
   const workersFiltered = workers.filter(w => {
+    if (workerStatusFilter !== "all" && (w.account_status ?? "active") !== workerStatusFilter) return false;
     if (!workerSearch.trim()) return true;
     const q = workerSearch.trim().toLowerCase();
     return (w.full_name ?? "").toLowerCase().includes(q) || (w.email ?? "").toLowerCase().includes(q);
   });
   const restsFiltered = restaurants.filter(r => {
+    if (restStatusFilter !== "all" && (r.account_status ?? "active") !== restStatusFilter) return false;
     if (!restSearch.trim()) return true;
     const q = restSearch.trim().toLowerCase();
     return (r.business_name ?? "").toLowerCase().includes(q) || (r.full_name ?? "").toLowerCase().includes(q) || (r.email ?? "").toLowerCase().includes(q) || (r.city ?? "").toLowerCase().includes(q);
   });
   const annsFiltered = announcements.filter(a => {
+    if (annStatusFilter !== "all" && a.status !== annStatusFilter) return false;
     if (!annSearch.trim()) return true;
     const q = annSearch.trim().toLowerCase();
     return (a.restaurant_name ?? "").toLowerCase().includes(q) || (a.professional_profile ?? "").toLowerCase().includes(q) || (a.status ?? "").toLowerCase().includes(q);
   });
+
+  async function updateAccountStatus(id: string, newStatus: string, kind: "worker" | "restaurant") {
+    const { error } = await supabase.from("profiles").update({ account_status: newStatus as any }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(newStatus === "suspended" ? "Account sospeso" : newStatus === "active" ? "Account riattivato" : "Stato aggiornato");
+    if (kind === "worker") setWorkers(ws => ws.map(w => w.id === id ? { ...w, account_status: newStatus } : w));
+    else setRestaurants(rs => rs.map(r => r.id === id ? { ...r, account_status: newStatus } : r));
+  }
+
+  async function updateAnnouncementStatus(id: string, newStatus: string) {
+    const { error } = await supabase.from("announcements").update({ status: newStatus as any }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Stato annuncio aggiornato");
+    setAnnouncements(list => list.map(a => a.id === id ? { ...a, status: newStatus } : a));
+  }
 
   return (
     <AppShell>
@@ -268,26 +293,40 @@ function Admin() {
           <div className="rounded-2xl border bg-card p-5">
             <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
               <div className="font-medium">Lavoratori registrati ({workersFiltered.length})</div>
-              <Input placeholder="Cerca nome o email" value={workerSearch} onChange={(e)=>setWorkerSearch(e.target.value)} className="h-9 w-64" />
+              <div className="flex flex-wrap gap-2">
+                <select value={workerStatusFilter} onChange={(e)=>setWorkerStatusFilter(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="all">Tutti gli stati</option>
+                  {ACCOUNT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <Input placeholder="Cerca nome o email" value={workerSearch} onChange={(e)=>setWorkerSearch(e.target.value)} className="h-9 w-64" />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-muted-foreground">
-                  <tr><th className="py-2 pr-3">Nome</th><th className="pr-3">Email</th><th className="pr-3">Stato profilo</th><th className="pr-3">Badge</th><th className="pr-3">Reputazione</th><th className="pr-3">Turni</th><th>Azioni</th></tr>
+                  <tr><th className="py-2 pr-3">Nome</th><th className="pr-3">Email</th><th className="pr-3">Account</th><th className="pr-3">Profilo</th><th className="pr-3">Badge</th><th className="pr-3">Reputazione</th><th className="pr-3">Turni</th><th>Azioni</th></tr>
                 </thead>
                 <tbody>
                   {workersFiltered.slice(0, 200).map(w => (
                     <tr key={w.id} className="border-t">
                       <td className="py-2 pr-3">{w.full_name ?? "—"}</td>
                       <td className="pr-3">{w.email ?? "—"}</td>
+                      <td className="pr-3">{accountStatusBadge(w.account_status)}</td>
                       <td className="pr-3">{w.profile_completed ? <span className="text-emerald-600 text-xs">Completo</span> : <span className="text-amber-600 text-xs">Incompleto</span>}</td>
                       <td className="pr-3 capitalize">{w.badge ?? "—"}</td>
                       <td className="pr-3 capitalize">{w.reputation_level ?? "—"}</td>
                       <td className="pr-3">{w.completed_shifts ?? 0}</td>
-                      <td><Link to="/workers/$id" params={{ id: w.id }}><Button size="sm" variant="outline">Profilo</Button></Link></td>
+                      <td>
+                        <div className="flex gap-1">
+                          <Link to="/workers/$id" params={{ id: w.id }}><Button size="sm" variant="outline">Profilo</Button></Link>
+                          {(w.account_status ?? "active") !== "suspended"
+                            ? <Button size="sm" variant="outline" onClick={() => updateAccountStatus(w.id, "suspended", "worker")}>Sospendi</Button>
+                            : <Button size="sm" onClick={() => updateAccountStatus(w.id, "active", "worker")}>Riattiva</Button>}
+                        </div>
+                      </td>
                     </tr>
                   ))}
-                  {workersFiltered.length === 0 && <tr><td colSpan={7} className="py-4 text-center text-muted-foreground">Nessun lavoratore</td></tr>}
+                  {workersFiltered.length === 0 && <tr><td colSpan={8} className="py-4 text-center text-muted-foreground">Nessun lavoratore</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -299,12 +338,18 @@ function Admin() {
           <div className="rounded-2xl border bg-card p-5">
             <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
               <div className="font-medium">Ristoratori registrati ({restsFiltered.length})</div>
-              <Input placeholder="Cerca nome, email o città" value={restSearch} onChange={(e)=>setRestSearch(e.target.value)} className="h-9 w-64" />
+              <div className="flex flex-wrap gap-2">
+                <select value={restStatusFilter} onChange={(e)=>setRestStatusFilter(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="all">Tutti gli stati</option>
+                  {ACCOUNT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <Input placeholder="Cerca nome, email o città" value={restSearch} onChange={(e)=>setRestSearch(e.target.value)} className="h-9 w-64" />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-muted-foreground">
-                  <tr><th className="py-2 pr-3">Attività</th><th className="pr-3">Email</th><th className="pr-3">Città</th><th className="pr-3">Annunci</th><th className="pr-3">Crediti</th><th>Azioni</th></tr>
+                  <tr><th className="py-2 pr-3">Attività</th><th className="pr-3">Email</th><th className="pr-3">Città</th><th className="pr-3">Account</th><th className="pr-3">Annunci</th><th className="pr-3">Crediti</th><th>Azioni</th></tr>
                 </thead>
                 <tbody>
                   {restsFiltered.slice(0, 200).map(r => (
@@ -312,12 +357,20 @@ function Admin() {
                       <td className="py-2 pr-3">{r.business_name ?? r.full_name ?? "—"}</td>
                       <td className="pr-3">{r.email ?? "—"}</td>
                       <td className="pr-3">{r.city ?? "—"}</td>
+                      <td className="pr-3">{accountStatusBadge(r.account_status)}</td>
                       <td className="pr-3">{r.ann_count}</td>
                       <td className="pr-3">{r.credits ?? 0}</td>
-                      <td><Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm" variant="outline">Profilo</Button></Link></td>
+                      <td>
+                        <div className="flex gap-1">
+                          <Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm" variant="outline">Profilo</Button></Link>
+                          {(r.account_status ?? "active") !== "suspended"
+                            ? <Button size="sm" variant="outline" onClick={() => updateAccountStatus(r.id, "suspended", "restaurant")}>Sospendi</Button>
+                            : <Button size="sm" onClick={() => updateAccountStatus(r.id, "active", "restaurant")}>Riattiva</Button>}
+                        </div>
+                      </td>
                     </tr>
                   ))}
-                  {restsFiltered.length === 0 && <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>}
+                  {restsFiltered.length === 0 && <tr><td colSpan={7} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -413,7 +466,13 @@ function Admin() {
           <div className="rounded-2xl border bg-card p-5">
             <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
               <div className="font-medium">Annunci ({annsFiltered.length})</div>
-              <Input placeholder="Cerca ristoratore, ruolo o stato" value={annSearch} onChange={(e)=>setAnnSearch(e.target.value)} className="h-9 w-64" />
+              <div className="flex flex-wrap gap-2">
+                <select value={annStatusFilter} onChange={(e)=>setAnnStatusFilter(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="all">Tutti gli stati</option>
+                  {ANNOUNCEMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <Input placeholder="Cerca ristoratore o ruolo" value={annSearch} onChange={(e)=>setAnnSearch(e.target.value)} className="h-9 w-64" />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -426,9 +485,27 @@ function Admin() {
                       <td className="py-2 pr-3">{a.restaurant_name}</td>
                       <td className="pr-3 capitalize">{a.professional_profile ?? "—"}</td>
                       <td className="pr-3">{a.service_date ? new Date(a.service_date).toLocaleDateString("it-IT") : "—"}</td>
-                      <td className="pr-3 capitalize">{a.status ?? "—"}</td>
+                      <td className="pr-3">
+                        <select
+                          value={a.status ?? ""}
+                          onChange={(e) => updateAnnouncementStatus(a.id, e.target.value)}
+                          className="h-8 rounded-md border bg-background px-2 text-xs capitalize"
+                        >
+                          {ANNOUNCEMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </td>
                       <td className="pr-3">{a.apps_count}</td>
-                      <td><Link to="/announcements/$id" params={{ id: a.id }}><Button size="sm" variant="outline">Apri</Button></Link></td>
+                      <td>
+                        <div className="flex gap-1">
+                          <Link to="/announcements/$id" params={{ id: a.id }}><Button size="sm" variant="outline">Apri</Button></Link>
+                          {a.status === "active" && (
+                            <Button size="sm" onClick={() => updateAnnouncementStatus(a.id, "assigned")}>Approva</Button>
+                          )}
+                          {a.status !== "cancelled" && a.status !== "completed" && (
+                            <Button size="sm" variant="outline" onClick={() => updateAnnouncementStatus(a.id, "cancelled")}>Annulla</Button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {annsFiltered.length === 0 && <tr><td colSpan={6} className="py-4 text-center text-muted-foreground">Nessun annuncio</td></tr>}
@@ -526,6 +603,14 @@ function statusBadge(s: string | null | undefined, vat: string | null | undefine
   if (s === "pending") return <span className="text-xs text-amber-600">In attesa</span>;
   if (s === "invalid") return <span className="text-xs text-destructive">Non verificata</span>;
   return <span className="text-xs text-muted-foreground">Non verificata</span>;
+}
+
+function accountStatusBadge(s: string | null | undefined) {
+  const v = s ?? "active";
+  if (v === "active") return <span className="text-xs text-emerald-600 font-medium">Attivo</span>;
+  if (v === "pending") return <span className="text-xs text-amber-600">In attesa</span>;
+  if (v === "suspended") return <span className="text-xs text-destructive font-medium">Sospeso</span>;
+  return <span className="text-xs text-muted-foreground capitalize">{v}</span>;
 }
 
 function defaultsCell(r: any) {
