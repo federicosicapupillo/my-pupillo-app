@@ -1621,9 +1621,30 @@ function Thread() {
             const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
             nearBottomRef.current = dist < 80;
             if (nearBottomRef.current && newCount > 0) setNewCount(0);
+            // Load older messages when the user reaches the top.
+            if (el.scrollTop < 80 && hasMore && !loadingMore) {
+              loadOlder();
+            }
           }}
           className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2"
         >
+          {hasMore && (
+            <div className="flex justify-center pb-2">
+              <button
+                type="button"
+                onClick={loadOlder}
+                disabled={loadingMore}
+                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline disabled:opacity-60"
+              >
+                {loadingMore ? "Caricamento…" : "Carica messaggi precedenti"}
+              </button>
+            </div>
+          )}
+          {!hasMore && msgs.length > 0 && (
+            <div className="flex justify-center pb-2">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Inizio della conversazione</span>
+            </div>
+          )}
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
