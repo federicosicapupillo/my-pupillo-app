@@ -13,6 +13,8 @@ import { publicLocationLabel, canSeePreciseAddress } from "@/lib/public-location
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
+import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreColorClass } from "@/lib/reputation";
+import { Award } from "lucide-react";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
@@ -287,6 +289,7 @@ function Thread() {
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null } | null>(null);
+  const [workerRep, setWorkerRep] = useState<WorkerReputationInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [otherId, setOtherId] = useState<string | null>(null);
@@ -322,7 +325,7 @@ function Thread() {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
-          supabase.from("profiles").select("full_name, business_name, city, neighborhood").eq("id", otherId).maybeSingle(),
+          supabase.from("profiles").select("full_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, id_document_path").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({
@@ -330,6 +333,7 @@ function Thread() {
           city: (p as any)?.city ?? null,
           neighborhood: (p as any)?.neighborhood ?? null,
         });
+        setWorkerRep((p as WorkerReputationInput | null) ?? null);
         setAnn(an as Ann | null);
       }
       const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
@@ -805,6 +809,101 @@ function Thread() {
             </div>
           </div>
         </div>
+
+        {role === "restaurant" && app && app.status === "pending" && workerRep && (() => {
+          const s = summarizeReputation(workerRep);
+          const hasEnoughReviews = s.reviewsCount >= 3;
+          const reliability = Math.max(0, Math.min(100, s.completionPct || 0));
+          const microSummary = s.isNew
+            ? "Nuovo profilo: reputazione non ancora disponibile."
+            : s.showScore && s.score >= 80
+              ? "Lavoratore con ottima reputazione e alta affidabilità nei turni completati."
+              : s.showScore && s.score >= 60
+                ? "Lavoratore con buona reputazione, affidabilità nella media."
+                : "Reputazione ancora in costruzione: pochi dati disponibili.";
+          return (
+            <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card p-5 mb-4 shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.35)]">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[11px] px-2.5 py-1 font-semibold uppercase tracking-wide">
+                  <Sparkles className="h-3 w-3" />Nuova candidatura
+                </span>
+                <span className="text-xs text-muted-foreground">Decidi se procedere</span>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <UserAvatar userId={otherId} name={other?.name} className="h-14 w-14 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-base truncate">{other?.name ?? "Lavoratore"}</div>
+                  {ann?.professional_profile && (
+                    <div className="text-sm text-muted-foreground truncate">
+                      Ruolo: <span className="text-foreground font-medium">{ann.professional_profile}</span>
+                    </div>
+                  )}
+                  {ann && (
+                    <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(ann.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</span>
+                      {ann.service_time && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{ann.service_time.slice(0, 5)}</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-xl bg-muted/40 border p-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium ${levelChipClass(s.level)}`}>
+                  <Award className="h-3 w-3" />{s.levelLabel}
+                </span>
+                {s.showScore && (
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    <span className="text-muted-foreground">Score</span>
+                    <span className={`tabular-nums font-semibold ${scoreColorClass(s.score)}`}>{s.score}/100</span>
+                  </span>
+                )}
+                {hasEnoughReviews && s.rating > 0 ? (
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    <span className="tabular-nums">{s.rating.toFixed(1)}</span>
+                    <span className="text-muted-foreground">· {s.reviewsCount} recensioni</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">Recensioni: {s.reviewsCount}</span>
+                )}
+                {!s.isNew && (
+                  <span className="text-muted-foreground">
+                    Turni: <span className="font-medium text-foreground tabular-nums">{s.completedShifts}</span>
+                  </span>
+                )}
+                {!s.isNew && reliability > 0 && (
+                  <span className="text-muted-foreground">
+                    Affidabilità: <span className="font-medium text-foreground tabular-nums">{reliability}%</span>
+                  </span>
+                )}
+                {!s.isNew && s.noShow > 0 && (
+                  <span className="text-destructive">No-show: <span className="tabular-nums font-medium">{s.noShow}</span></span>
+                )}
+              </div>
+
+              <p className="mt-3 text-sm text-muted-foreground">{microSummary}</p>
+
+              <div className="mt-4 flex flex-col-reverse sm:flex-row gap-2 sm:items-center sm:justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-muted-foreground hover:text-destructive"
+                  onClick={() => transition("rejected")}
+                >
+                  <X className="h-4 w-4" />Rifiuta
+                </Button>
+                <Button
+                  size="lg"
+                  className="gap-2 shadow-md"
+                  onClick={() => transition("accepted")}
+                >
+                  <Check className="h-4 w-4" />Accetta candidatura
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
 
         {app && (
           <div className="rounded-2xl border bg-card p-4 mb-4">
