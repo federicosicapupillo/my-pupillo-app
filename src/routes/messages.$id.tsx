@@ -1494,6 +1494,9 @@ function Thread() {
               const venueName = role === "worker"
                 ? maskPartnerNameForWorker(other?.name, role, app?.status)
                 : (profile?.business_name || profile?.full_name || null);
+              const hasAcknowledged = msgs.some(
+                mm => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
+              );
               return (
                 <ConfirmationCard
                   key={m.id}
@@ -1502,6 +1505,35 @@ function Thread() {
                   applicationId={id}
                   announcementId={app?.announcement_id ?? null}
                   isWorker={role === "worker"}
+                  acknowledged={hasAcknowledged}
+                  onAcknowledge={async () => {
+                    if (!user || !app) return;
+                    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+                    if (!receiverId) return;
+                    const body = "Ho letto e confermo la presa visione di tutte le istruzioni del turno.";
+                    const createdAt = new Date().toISOString();
+                    const { data, error } = await supabase.from("messages").insert({
+                      application_id: app.id,
+                      sender_id: user.id,
+                      receiver_id: receiverId,
+                      body,
+                      created_at: createdAt,
+                      read_at: null,
+                      template_id: null,
+                      message_type: "template",
+                      action_type: "instructions_acknowledged",
+                    } as never).select("*").single();
+                    if (error) {
+                      toast.error("Impossibile registrare la presa visione.");
+                      return;
+                    }
+                    if (data) pushMessage(data as Msg);
+                    await supabase.from("applications").update({
+                      last_message_preview: body,
+                      last_message_at: createdAt,
+                    } as never).eq("id", app.id);
+                    toast.success("Presa visione confermata");
+                  }}
                 />
               );
             }
