@@ -115,6 +115,10 @@ function MapPage() {
   const [annCounts, setAnnCounts] = useState<Record<string, number>>({});
   // applicationStatus per announcement_id, solo per il lavoratore loggato
   const [appStatusByAnn, setAppStatusByAnn] = useState<Record<string, string>>({});
+  // Ristoranti con cui il lavoratore loggato ha già lavorato (almeno un turno
+  // o una candidatura accettata). Per questi il nome del locale è visibile
+  // anche prima di una nuova conferma.
+  const [knownRestaurantIds, setKnownRestaurantIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   // search & filters
@@ -146,6 +150,18 @@ function MapPage() {
       setView("workers");
     }
   }, [isRestaurant]);
+
+  // For worker accounts: never display other workers on the map and never
+  // show standalone restaurant markers (the announcement marker is the
+  // restaurant). Only the active announcements remain visible.
+  useEffect(() => {
+    if (isWorker) {
+      setShowW(false);
+      setShowR(false);
+      setShowA(true);
+      setView("restaurants");
+    }
+  }, [isWorker]);
 
   // location
   const [me, setMe] = useState<{ lat: number; lng: number } | null>(null);
@@ -198,8 +214,19 @@ function MapPage() {
         const m: Record<string, string> = {};
         (apps || []).forEach((x: any) => { m[x.announcement_id] = x.status; });
         setAppStatusByAnn(m);
+
+        // Ristoranti "conosciuti": turni effettuati oppure candidature accettate.
+        const [{ data: myShifts }, { data: acceptedApps }] = await Promise.all([
+          supabase.from("shifts").select("restaurant_id").eq("worker_id", user.id),
+          supabase.from("applications").select("restaurant_id").eq("worker_id", user.id).eq("status", "accepted"),
+        ]);
+        const known = new Set<string>();
+        (myShifts || []).forEach((x: any) => x.restaurant_id && known.add(x.restaurant_id));
+        (acceptedApps || []).forEach((x: any) => x.restaurant_id && known.add(x.restaurant_id));
+        setKnownRestaurantIds(known);
       } else {
         setAppStatusByAnn({});
+        setKnownRestaurantIds(new Set());
       }
       setLoading(false);
     })();
@@ -385,6 +412,12 @@ function MapPage() {
         const appStatus = appStatusByAnn[a.id];
         const confirmed = appStatus === "accepted";
         const cancelled = appStatus === "rejected" || a.status === "cancelled" || a.status === "expired";
+        const isKnownRestaurant = knownRestaurantIds.has(a.restaurant_id);
+        // Il nome del locale può apparire se: confermato per questo annuncio
+        // oppure il lavoratore ha già lavorato in passato con il ristorante.
+        const canSeeRestaurantName = !isWorker || confirmed || isKnownRestaurant;
+        // L'indirizzo completo e i contatti restano nascosti finché il
+        // servizio non viene accettato per QUESTO annuncio.
         const usePrivacy = isWorker && !confirmed;
         const [lat, lng] = usePrivacy ? jitterCoords([rawLat, rawLng], a.id, 0.8) : [rawLat, rawLng];
 
@@ -404,9 +437,9 @@ function MapPage() {
           lat,
           lng,
           category: "announcement",
-          title: usePrivacy
-            ? `${venueLabel}${zoneLabel ? ` — zona ${zoneLabel}` : ""}`
-            : (rest?.business_name || rest?.full_name || a.professional_profile || "Annuncio"),
+          title: canSeeRestaurantName
+            ? (rest?.business_name || rest?.full_name || a.professional_profile || "Annuncio")
+            : `${venueLabel}${zoneLabel ? ` — zona ${zoneLabel}` : ""}`,
           subtitle: usePrivacy
             ? (a.professional_profile ? `Cerca ${a.professional_profile}` : "Servizio disponibile")
             : (a.job_address || a.location_address || undefined),
@@ -436,13 +469,14 @@ function MapPage() {
             announcementId: a.id,
             operationalNotes: usePrivacy ? null : (a.notes ?? null),
             fullAddress: usePrivacy ? null : (a.job_address || a.location_address || null),
-            restaurantName: usePrivacy ? null : (rest?.business_name || rest?.full_name || null),
+            restaurantName: canSeeRestaurantName ? (rest?.business_name || rest?.full_name || null) : null,
+            knownRestaurant: isKnownRestaurant,
           } as any,
         });
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, annCounts]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
@@ -611,17 +645,19 @@ function MapPage() {
             Solo con richieste attive
           </label>
           <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
-            {!isRestaurant && (
+            {!isRestaurant && !isWorker && (
               <label className="flex items-center gap-2"><Checkbox checked={showR} onCheckedChange={v=>setShowR(!!v)} /><Dot color="#4f46e5" /> Ristoratori</label>
             )}
-            <label className="flex items-center gap-2"><Checkbox checked={showW} onCheckedChange={v=>setShowW(!!v)} /><Dot color="#22c55e" /> Lavoratori</label>
+            {!isWorker && (
+              <label className="flex items-center gap-2"><Checkbox checked={showW} onCheckedChange={v=>setShowW(!!v)} /><Dot color="#22c55e" /> Lavoratori</label>
+            )}
             <label className="flex items-center gap-2"><Checkbox checked={showA} onCheckedChange={v=>setShowA(!!v)} /><Dot color="#06b6d4" /> Richieste</label>
           </div>
         </div>
       </div>
 
       {/* WORKER FILTERS */}
-      {showW && (
+      {showW && !isWorker && (
         <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
           <Select value={wRole} onValueChange={setWRole}>
             <SelectTrigger><SelectValue placeholder="Ruolo lavoratore" /></SelectTrigger>
