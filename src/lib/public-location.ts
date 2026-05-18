@@ -76,10 +76,7 @@ export function maskPartnerNameForWorker(
  */
 export const WORKED_TOGETHER_SHIFT_STATUSES = [
   "scheduled",
-  "confirmed",
-  "assigned",
   "completed",
-  "closed",
 ] as const;
 
 /** Extract the first token of a full name (e.g. "Marco Lombardi" → "Marco"). */
