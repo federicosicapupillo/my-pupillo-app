@@ -1044,7 +1044,7 @@ function Thread() {
                   disabled={transitioning !== null}
                 >
                   {transitioning === "accepted" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  {transitioning === "accepted" ? "Accettazione in corso…" : "Accetta candidatura"}
+                  {transitioning === "accepted" ? "Conferma in corso…" : "Accetta candidatura"}
                 </Button>
               </div>
             </div>
