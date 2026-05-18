@@ -500,12 +500,13 @@ function MessagesLayout() {
                 const latestStatus = last?.status ?? null;
                 const expanded = expandedGroups.has(g.id);
                 const latestId = last?.id ?? null;
-                const confirmedItem = role === "worker"
-                  ? g.items.find((t) => isApplicationConfirmed(t.status))
-                  : null;
-                const groupDisplayName = role === "worker"
-                  ? (confirmedItem ? confirmedItem.other.name : PUBLIC_VENUE_NAME)
-                  : g.name;
+                // Reveal real names only when at least one item in the group
+                // is already confirmed/assigned OR the parties have worked
+                // together in the past. Otherwise keep the privacy-safe label.
+                const revealItem = g.items.find(
+                  (t) => isApplicationConfirmed(t.status) || t.hasWorkedTogether,
+                );
+                const groupDisplayName = revealItem ? revealItem.other.name : (role === "worker" ? PUBLIC_VENUE_NAME : g.name);
                 return (
                   <div
                     key={g.id}
