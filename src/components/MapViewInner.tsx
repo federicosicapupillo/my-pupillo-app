@@ -167,7 +167,26 @@ function PopupA11y() {
   return null;
 }
 
+// Chiude la preview aperta quando la lista dei punti cambia (filtri,
+// categoria, ricerca, ecc.). Senza questo, un popup ancorato a un marker
+// rimosso può restare "orfano" sulla mappa.
+function ClosePopupOnPointsChange({ signature }: { signature: string }) {
+  const map = useMap();
+  const firstRef = useRef(true);
+  useEffect(() => {
+    if (firstRef.current) { firstRef.current = false; return; }
+    map.closePopup();
+  }, [signature, map]);
+  return null;
+}
+
 export default function MapViewInner({ points, height, center, focusZoom, me, radiusKm }: { points: MapPoint[]; height: number; center: [number, number]; focusZoom?: number; me?: { lat: number; lng: number } | null; radiusKm?: number | null }) {
+  // Firma stabile della lista di punti: cambia quando filtri/categoria
+  // modificano l'insieme visualizzato → triggera la chiusura della preview.
+  const pointsSignature = useMemo(
+    () => `${points.length}:${points.map((p) => `${p.category}-${p.id}`).join("|")}`,
+    [points]
+  );
   // Desktop con mouse: hover apre la preview, mouseout la chiude con un
   // piccolo delay (così l'utente può spostarsi sopra il popup senza che
   // sparisca). Su touch (mobile/tablet): tap toglie/mette la preview.
@@ -217,6 +236,7 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
       >
         <Recenter center={center} zoom={focusZoom} />
         <PopupA11y />
+        <ClosePopupOnPointsChange signature={pointsSignature} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
