@@ -173,9 +173,15 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   if (r.status === "accepted")
     return { label: "Confermata da entrambi", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
   if (r.status === "rejected")
-    return { label: "Rifiutata dal ristoratore", cls: "bg-muted text-muted-foreground border-border" };
+    return {
+      label: "Rifiutata dal ristoratore",
+      cls: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
+    };
   if (r.status === "not_interested")
-    return { label: "Hai rifiutato", cls: "bg-muted text-muted-foreground border-border" };
+    return {
+      label: "Hai rifiutato",
+      cls: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
+    };
   if (r.status === "expired")
     return { label: "Scaduta", cls: "bg-muted text-muted-foreground border-border" };
   if (r.status === "counter_offer")
