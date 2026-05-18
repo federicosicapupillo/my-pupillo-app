@@ -19,6 +19,7 @@ import { useRequiredReviews } from "@/lib/required-reviews";
 import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreColorClass } from "@/lib/reputation";
 import { shouldShowNewApplicationCard } from "@/lib/application-card";
 import { Award } from "lucide-react";
+import { ReviewLabelsPicker, ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import {
