@@ -161,7 +161,8 @@ type TemplateAction =
   | "complete_shift"
   | "withdraw_application"
   | "confirm_arrival"
-  | "report_issue";
+  | "report_issue"
+  | "instructions_acknowledged";
 
 type MsgTemplate = {
   key: string;
