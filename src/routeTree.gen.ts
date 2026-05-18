@@ -36,6 +36,7 @@ import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
 import { Route as MessagesIdRouteImport } from './routes/messages.$id'
 import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
 import { Route as AnnouncementsIdRouteImport } from './routes/announcements.$id'
+import { Route as AdminBackendRouteImport } from './routes/admin.backend'
 import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
 import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -177,6 +178,11 @@ const AnnouncementsIdRoute = AnnouncementsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AnnouncementsRoute,
 } as any)
+const AdminBackendRoute = AdminBackendRouteImport.update({
+  id: '/backend',
+  path: '/backend',
+  getParentRoute: () => AdminRoute,
+} as any)
 const RistoratoreTurniShiftIdRoute = RistoratoreTurniShiftIdRouteImport.update({
   id: '/ristoratore/turni/$shiftId',
   path: '/ristoratore/turni/$shiftId',
@@ -202,7 +208,7 @@ const ApiPublicHooksExpireStaleRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
+  '/admin/backend': typeof AdminBackendRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -235,7 +242,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
+  '/admin/backend': typeof AdminBackendRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -269,7 +277,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
   '/billing': typeof BillingRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
+  '/admin/backend': typeof AdminBackendRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
   '/announcements/new': typeof AnnouncementsNewRoute
   '/messages/$id': typeof MessagesIdRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-phone'
     | '/workers'
+    | '/admin/backend'
     | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-phone'
     | '/workers'
+    | '/admin/backend'
     | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-phone'
     | '/workers'
+    | '/admin/backend'
     | '/announcements/$id'
     | '/announcements/new'
     | '/messages/$id'
@@ -404,7 +416,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AnnouncementsRoute: typeof AnnouncementsRouteWithChildren
   AuthRoute: typeof AuthRoute
   BillingRoute: typeof BillingRoute
@@ -624,6 +636,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnnouncementsIdRouteImport
       parentRoute: typeof AnnouncementsRoute
     }
+    '/admin/backend': {
+      id: '/admin/backend'
+      path: '/backend'
+      fullPath: '/admin/backend'
+      preLoaderRoute: typeof AdminBackendRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/ristoratore/turni/$shiftId': {
       id: '/ristoratore/turni/$shiftId'
       path: '/ristoratore/turni/$shiftId'
@@ -655,6 +674,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminBackendRoute: typeof AdminBackendRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminBackendRoute: AdminBackendRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface AnnouncementsRouteChildren {
   AnnouncementsIdRoute: typeof AnnouncementsIdRoute
   AnnouncementsNewRoute: typeof AnnouncementsNewRoute
@@ -683,7 +712,7 @@ const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   AnnouncementsRoute: AnnouncementsRouteWithChildren,
   AuthRoute: AuthRoute,
   BillingRoute: BillingRoute,
@@ -714,13 +743,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
