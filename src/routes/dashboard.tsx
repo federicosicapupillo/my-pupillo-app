@@ -10,6 +10,8 @@ import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { WorkerReputationCard } from "@/components/WorkerReputationCard";
+import { WorkerMyReviews } from "@/components/WorkerMyReviews";
 import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
 import {
   AlertDialog,
@@ -299,6 +301,43 @@ function DashboardInner() {
       )}
 
       {role === "restaurant" && <FavoriteWorkersSection />}
+
+      {role === "worker" && user && profile && (
+        <div className="mt-6 space-y-6">
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-primary" />
+                <h2 className="font-semibold">La mia reputazione</h2>
+              </div>
+              <Link to="/profile">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  Apri profilo <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
+            <WorkerReputationCard workerId={user.id} profile={profile as never} showTips />
+            <p className="mt-2 text-xs text-muted-foreground italic">
+              Più turni completi con buone recensioni, più aumenta la tua visibilità verso i ristoratori.
+            </p>
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <h2 className="font-semibold">Le mie recensioni</h2>
+              </div>
+              <Link to="/profile">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  Vedi tutte le recensioni <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
+            <WorkerMyReviews workerId={user.id} limit={3} />
+          </section>
+        </div>
+      )}
 
       <AlertDialog open={!!closingItem} onOpenChange={(o) => !o && !closing && setClosingItem(null)}>
         <AlertDialogContent>
