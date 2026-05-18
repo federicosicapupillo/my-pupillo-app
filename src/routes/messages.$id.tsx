@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -372,9 +372,15 @@ function Thread() {
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
-  const prevLenRef = useRef(0);
+  const prevLastIdRef = useRef<string | null>(null);
   const [newCount, setNewCount] = useState(0);
   const [refetchSeq, setRefetchSeq] = useState(0);
+  // Paginated history (load older on scroll-up)
+  const PAGE_SIZE = 30;
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const oldestRef = useRef<string | null>(null); // ISO created_at of oldest loaded msg
+  const pendingPrependHeightRef = useRef<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -436,8 +442,22 @@ function Thread() {
           setReviewRoles({});
         }
       }
-      const { data: m } = await supabase.from("messages").select("*").eq("application_id", id).order("created_at");
-      setMsgs((m as Msg[]) ?? []);
+      // Load only the most recent PAGE_SIZE messages; older ones are paged in on scroll-up.
+      const { data: mDesc } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("application_id", id)
+        .order("created_at", { ascending: false })
+        .limit(PAGE_SIZE + 1);
+      const descRows = (mDesc as Msg[]) ?? [];
+      const more = descRows.length > PAGE_SIZE;
+      const page = (more ? descRows.slice(0, PAGE_SIZE) : descRows).slice().reverse();
+      setMsgs(page);
+      setHasMore(more);
+      oldestRef.current = page[0]?.created_at ?? null;
+      // Reset bottom-stick anchor on (re)load.
+      prevLastIdRef.current = page[page.length - 1]?.id ?? null;
+      const m = page;
       // Per-proposal responses (decoupled from app.status so each
       // proposal card has its own accepted/rejected state).
       const proposalIds = ((m as Msg[]) ?? [])
@@ -522,13 +542,21 @@ function Thread() {
     return () => { supabase.removeChannel(ch); };
   }, [id, user, refetchSeq]);
 
-  // Smart auto-scroll: only stick to bottom if the user is already near it,
-  // or if the new message is from the current user. Otherwise show a badge.
+  // Smart auto-scroll: only react when the LAST message changes (i.e. a
+  // new message was appended at the bottom). When older messages are
+  // prepended via pagination, the last message id stays the same and we
+  // skip the bottom-stick logic entirely.
   useEffect(() => {
-    const grew = msgs.length > prevLenRef.current;
     const last = msgs[msgs.length - 1];
-    prevLenRef.current = msgs.length;
-    if (!grew) return;
+    const lastId = last?.id ?? null;
+    if (lastId === prevLastIdRef.current) return;
+    const isFirstLoad = prevLastIdRef.current === null;
+    prevLastIdRef.current = lastId;
+    if (isFirstLoad) {
+      // Jump to bottom on first render of the thread (no smooth scroll).
+      endRef.current?.scrollIntoView({ block: "end" });
+      return;
+    }
     const mine = last && user && last.sender_id === user.id;
     if (nearBottomRef.current || mine) {
       endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -537,6 +565,48 @@ function Thread() {
       setNewCount((n) => n + 1);
     }
   }, [msgs, user]);
+
+  // Preserve scroll position after prepending older messages.
+  useLayoutEffect(() => {
+    const pending = pendingPrependHeightRef.current;
+    const el = scrollRef.current;
+    if (pending == null || !el) return;
+    el.scrollTop = el.scrollHeight - pending;
+    pendingPrependHeightRef.current = null;
+  }, [msgs]);
+
+  const loadOlder = async () => {
+    if (loadingMore || !hasMore || !oldestRef.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    setLoadingMore(true);
+    // Capture distance from the top so we can restore the same anchor after prepend.
+    pendingPrependHeightRef.current = el.scrollHeight - el.scrollTop;
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("application_id", id)
+      .lt("created_at", oldestRef.current)
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE + 1);
+    const descRows = (data as Msg[]) ?? [];
+    const more = descRows.length > PAGE_SIZE;
+    const older = (more ? descRows.slice(0, PAGE_SIZE) : descRows).slice().reverse();
+    if (older.length === 0) {
+      setHasMore(false);
+      pendingPrependHeightRef.current = null;
+    } else {
+      setMsgs((prev) => {
+        const have = new Set(prev.map((x) => x.id));
+        const fresh = older.filter((x) => !have.has(x.id));
+        if (fresh.length === 0) return prev;
+        return [...fresh, ...prev];
+      });
+      setHasMore(more);
+      oldestRef.current = older[0]?.created_at ?? oldestRef.current;
+    }
+    setLoadingMore(false);
+  };
 
   const pushMessage = (message: Msg) => {
     setMsgs(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
@@ -1555,9 +1625,30 @@ function Thread() {
             const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
             nearBottomRef.current = dist < 80;
             if (nearBottomRef.current && newCount > 0) setNewCount(0);
+            // Load older messages when the user reaches the top.
+            if (el.scrollTop < 80 && hasMore && !loadingMore) {
+              loadOlder();
+            }
           }}
           className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2"
         >
+          {hasMore && (
+            <div className="flex justify-center pb-2">
+              <button
+                type="button"
+                onClick={loadOlder}
+                disabled={loadingMore}
+                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline disabled:opacity-60"
+              >
+                {loadingMore ? "Caricamento…" : "Carica messaggi precedenti"}
+              </button>
+            </div>
+          )}
+          {!hasMore && msgs.length > 0 && (
+            <div className="flex justify-center pb-2">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Inizio della conversazione</span>
+            </div>
+          )}
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
