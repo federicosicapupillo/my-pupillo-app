@@ -329,14 +329,8 @@ function ShiftsPage() {
         setDialogSubmitting(false);
         return;
       }
-      // 3. Notification to worker (best-effort)
-      const notifLink = a.application_id ? `/messages/${a.application_id}` : "/profile";
-      supabase.from("notifications").insert({
-        user_id: a.worker_id,
-        title: "Hai ricevuto una nuova recensione",
-        body: "Hai ricevuto una nuova recensione dal ristoratore.",
-        link: notifLink,
-      } as any).then(() => {}, () => {});
+      // 3. La notifica al lavoratore viene creata UNA SOLA VOLTA dal trigger DB
+      // `handle_new_review` (anti-duplicato lato server).
       toast.success("Recensione inviata", { id: tId });
       // 4. Optimistic local updates
       setReviewMap(prev => ({ ...prev, [a.shift_id]: submittedRating }));

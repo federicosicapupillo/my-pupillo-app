@@ -1005,16 +1005,8 @@ function Thread() {
     try {
       await insertSystemMessage(`Turno chiuso. Il ristoratore ha inviato la recensione del servizio.`, "complete_shift");
     } catch (e) { /* non bloccante */ }
-    // Notifica al lavoratore
-    try {
-      await supabase.from("notifications").insert({
-        user_id: app.worker_id,
-        title: "Hai ricevuto una nuova recensione",
-        body: "Hai ricevuto una nuova recensione per un turno completato.",
-        link: `/messages/${app.id}`,
-        metadata: { type: "review_received", shift_id: shiftId, application_id: app.id } as never,
-      } as never);
-    } catch (e) { /* non bloccante */ }
+    // Nota: la notifica "Hai ricevuto una recensione" viene creata
+    // automaticamente dal trigger DB `handle_new_review` per evitare duplicati.
     // Marca l'annuncio come completato
     if (app.announcement_id) {
       await supabase.from("announcements").update({ status: "completed" } as never).eq("id", app.announcement_id);
