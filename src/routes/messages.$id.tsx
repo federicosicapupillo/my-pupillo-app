@@ -588,6 +588,49 @@ function Thread() {
     return () => { supabase.removeChannel(ch); };
   }, [id, user, refetchSeq]);
 
+  // Admin debug: fetch proposal_responses + related notifications for each
+  // proposal message so admins can see where the flow breaks.
+  useEffect(() => {
+    if (role !== "admin") { setProposalDebug({}); return; }
+    const proposalMsgs = msgs.filter((m) => m.template_id === PROPOSAL_TEMPLATE_ID);
+    if (proposalMsgs.length === 0) { setProposalDebug({}); return; }
+    let cancelled = false;
+    (async () => {
+      const msgIds = proposalMsgs.map((m) => m.id);
+      const [respRes, notifRes] = await Promise.all([
+        supabase
+          .from("proposal_responses")
+          .select("id, message_id, status, created_at")
+          .in("message_id", msgIds),
+        supabase
+          .from("notifications")
+          .select("id, user_id, title, read, created_at, link")
+          .eq("link", `/messages/${id}`)
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
+      if (cancelled) return;
+      const respByMsg: Record<string, { id: string; status: string; created_at: string }> = {};
+      (respRes.data ?? []).forEach((r: any) => { respByMsg[r.message_id] = r; });
+      const notifs = (notifRes.data ?? []) as any[];
+      const out: Record<string, ProposalDebugInfo> = {};
+      for (const m of proposalMsgs) {
+        const r = respByMsg[m.id];
+        // Match notifications created within +/- 10 minutes of the message
+        const msgT = new Date(m.created_at).getTime();
+        const related = notifs.filter((n) => Math.abs(new Date(n.created_at).getTime() - msgT) < 10 * 60_000);
+        out[m.id] = {
+          responseId: r?.id ?? null,
+          responseStatus: r?.status ?? null,
+          responseAt: r?.created_at ?? null,
+          notifications: related.map((n) => ({ id: n.id, user_id: n.user_id, title: n.title, read: n.read, created_at: n.created_at })),
+        };
+      }
+      setProposalDebug(out);
+    })();
+    return () => { cancelled = true; };
+  }, [role, id, msgs, proposalStatuses]);
+
   // Smart auto-scroll: only react when the LAST message changes (i.e. a
   // new message was appended at the bottom). When older messages are
   // prepended via pagination, the last message id stays the same and we
