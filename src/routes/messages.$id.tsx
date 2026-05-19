@@ -37,6 +37,7 @@ import {
 } from "@/lib/shift-confirmation";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatTariff } from "@/lib/format";
+import { getShiftEndDate } from "@/lib/announcement-time";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock, Phone, User as UserIcon, Navigation, ExternalLink } from "lucide-react";
 import {
