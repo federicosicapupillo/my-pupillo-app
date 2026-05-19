@@ -118,7 +118,32 @@ const PLACEHOLDER_BY_CATEGORY: Record<Category, string> = {
   availability: "Aggiungi nome o ruolo",
   custom: "Scrivi qualsiasi parola chiave",
 };
-type Ann = { id: string; service_date: string; service_time: string | null; location_address: string; location_lat: number | null; location_lng: number | null };
+type Ann = {
+  id: string;
+  service_date: string;
+  service_time: string | null;
+  end_time: string | null;
+  location_address: string;
+  location_lat: number | null;
+  location_lng: number | null;
+  professional_profile: string | null;
+  tariff_amount: number | string | null;
+  tariff_type: string | null;
+  duration_hours: number | string | null;
+  shift_duration_hours: number | string | null;
+  job_city: string | null;
+  job_province: string | null;
+  job_postal_code: string | null;
+  dress_code_items: string[] | null;
+  dress_code_notes: string | null;
+  required_skills: string[] | null;
+  language_requirements: string[] | null;
+  license_requirement: string | null;
+  notes: string | null;
+  job_location_notes: string | null;
+  job_additional_directions: string | null;
+  job_contact_person_name: string | null;
+};
 
 type WorkerRel = {
   workedWith: boolean;
