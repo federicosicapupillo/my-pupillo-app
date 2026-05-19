@@ -146,6 +146,9 @@ function MapPage() {
   // o una candidatura accettata). Per questi il nome del locale è visibile
   // anche prima di una nuova conferma.
   const [knownRestaurantIds, setKnownRestaurantIds] = useState<Set<string>>(new Set());
+  // Worker_ids con cui il ristoratore loggato ha una candidatura accettata o
+  // un turno confermato: per questi mostriamo nome e cognome completi.
+  const [knownWorkerIds, setKnownWorkerIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   // search & filters
