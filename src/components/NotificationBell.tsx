@@ -44,7 +44,9 @@ export function NotificationBell() {
       .channel(`notif-${user.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
         const n = p.new as Notif;
-        setItems(prev => [n, ...prev]);
+        setItems(prev => prev.some(i => i.id === n.id) ? prev : [n, ...prev]);
+        // Skip toast/push if it's a duplicate event for an already-known notification.
+        // setItems above only no-ops on dedupe; check separately to avoid double toasts.
         // In-app toast
         toast.message(n.title, {
           description: n.body || undefined,
@@ -65,7 +67,15 @@ export function NotificationBell() {
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
         const n = p.new as Notif;
-        setItems(prev => prev.map(i => i.id === n.id ? { ...i, ...n } : i));
+        setItems(prev => {
+          const idx = prev.findIndex(i => i.id === n.id);
+          if (idx === -1) return prev;
+          const cur = prev[idx];
+          if (cur.read === n.read && cur.title === n.title && cur.body === n.body && cur.link === n.link) return prev;
+          const next = prev.slice();
+          next[idx] = { ...cur, ...n };
+          return next;
+        });
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
         const old = p.old as Notif;
