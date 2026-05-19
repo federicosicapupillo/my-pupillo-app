@@ -369,6 +369,14 @@ function Thread() {
   const [sending, setSending] = useState(false);
   const [shift, setShift] = useState<Shift | null>(null);
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, "accepted" | "rejected">>({});
+  type ProposalDebugInfo = {
+    responseId: string | null;
+    responseStatus: string | null;
+    responseAt: string | null;
+    notifications: { id: string; user_id: string; title: string; read: boolean | null; created_at: string }[];
+  };
+  const [proposalDebug, setProposalDebug] = useState<Record<string, ProposalDebugInfo>>({});
+  const [debugOpen, setDebugOpen] = useState(true);
   const [serverAssign, setServerAssign] = useState<{ canAssign: boolean; reason: string | null } | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -579,6 +587,49 @@ function Thread() {
       });
     return () => { supabase.removeChannel(ch); };
   }, [id, user, refetchSeq]);
+
+  // Admin debug: fetch proposal_responses + related notifications for each
+  // proposal message so admins can see where the flow breaks.
+  useEffect(() => {
+    if (role !== "admin") { setProposalDebug({}); return; }
+    const proposalMsgs = msgs.filter((m) => m.template_id === PROPOSAL_TEMPLATE_ID);
+    if (proposalMsgs.length === 0) { setProposalDebug({}); return; }
+    let cancelled = false;
+    (async () => {
+      const msgIds = proposalMsgs.map((m) => m.id);
+      const [respRes, notifRes] = await Promise.all([
+        supabase
+          .from("proposal_responses")
+          .select("id, message_id, status, created_at")
+          .in("message_id", msgIds),
+        supabase
+          .from("notifications")
+          .select("id, user_id, title, read, created_at, link")
+          .eq("link", `/messages/${id}`)
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
+      if (cancelled) return;
+      const respByMsg: Record<string, { id: string; status: string; created_at: string }> = {};
+      (respRes.data ?? []).forEach((r: any) => { respByMsg[r.message_id] = r; });
+      const notifs = (notifRes.data ?? []) as any[];
+      const out: Record<string, ProposalDebugInfo> = {};
+      for (const m of proposalMsgs) {
+        const r = respByMsg[m.id];
+        // Match notifications created within +/- 10 minutes of the message
+        const msgT = new Date(m.created_at).getTime();
+        const related = notifs.filter((n) => Math.abs(new Date(n.created_at).getTime() - msgT) < 10 * 60_000);
+        out[m.id] = {
+          responseId: r?.id ?? null,
+          responseStatus: r?.status ?? null,
+          responseAt: r?.created_at ?? null,
+          notifications: related.map((n) => ({ id: n.id, user_id: n.user_id, title: n.title, read: n.read, created_at: n.created_at })),
+        };
+      }
+      setProposalDebug(out);
+    })();
+    return () => { cancelled = true; };
+  }, [role, id, msgs, proposalStatuses]);
 
   // Smart auto-scroll: only react when the LAST message changes (i.e. a
   // new message was appended at the bottom). When older messages are
@@ -1843,8 +1894,8 @@ function Thread() {
               // response anywhere) fall back to the application status once.
               const effectiveStatus = ownStatus ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
               return (
+                <div key={m.id} className="flex flex-col gap-2">
                 <ProposalCard
-                  key={m.id}
                   message={m}
                   ann={ann}
                   venueName={role === "worker" ? displayOtherName : displayOtherName}
@@ -1943,6 +1994,17 @@ function Thread() {
                     }
                   }}
                 />
+                {role === "admin" && (
+                  <ProposalDebugPanel
+                    conversationId={id}
+                    messageId={m.id}
+                    info={proposalDebug[m.id]}
+                    effectiveStatus={effectiveStatus}
+                    open={debugOpen}
+                    onToggle={() => setDebugOpen((v) => !v)}
+                  />
+                )}
+                </div>
               );
             }
             return (
@@ -2522,6 +2584,88 @@ function CriterionRow({ label, value, onChange }: { label: string; value: number
     <div className="flex items-center justify-between gap-3">
       <div className="text-sm font-medium">{label}</div>
       <StarPicker value={value} onChange={onChange} />
+    </div>
+  );
+}
+
+function ProposalDebugPanel({ conversationId, messageId, info, effectiveStatus, open, onToggle }: {
+  conversationId: string;
+  messageId: string;
+  info: { responseId: string | null; responseStatus: string | null; responseAt: string | null; notifications: { id: string; user_id: string; title: string; read: boolean | null; created_at: string }[] } | undefined;
+  effectiveStatus: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copiato");
+    } catch {
+      toast.error("Copia non riuscita");
+    }
+  };
+  const notifCount = info?.notifications.length ?? 0;
+  const unreadCount = (info?.notifications ?? []).filter((n) => !n.read).length;
+  return (
+    <div className="rounded-lg border border-dashed border-amber-400/60 bg-amber-50/60 dark:bg-amber-950/20 text-[11px] font-mono text-foreground/80 overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-1.5 bg-amber-100/60 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition"
+      >
+        <span className="font-semibold tracking-wide">DEBUG · proposta</span>
+        <span className="text-[10px] opacity-70">
+          stato: {effectiveStatus} · notif: {notifCount} ({unreadCount} non lette) · {open ? "−" : "+"}
+        </span>
+      </button>
+      {open && (
+        <div className="px-3 py-2 space-y-1 break-all">
+          <div className="flex items-start gap-2">
+            <span className="opacity-60 shrink-0">conversation_id:</span>
+            <button type="button" onClick={() => copy(conversationId)} className="underline-offset-2 hover:underline text-left">{conversationId}</button>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="opacity-60 shrink-0">message_id:</span>
+            <button type="button" onClick={() => copy(messageId)} className="underline-offset-2 hover:underline text-left">{messageId}</button>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="opacity-60 shrink-0">proposal_id:</span>
+            {info?.responseId ? (
+              <button type="button" onClick={() => copy(info.responseId!)} className="underline-offset-2 hover:underline text-left">
+                {info.responseId} <span className="opacity-60">({info.responseStatus})</span>
+              </button>
+            ) : (
+              <span className="opacity-60">— nessuna risposta registrata</span>
+            )}
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="opacity-60 shrink-0">response_at:</span>
+            <span>{info?.responseAt ? new Date(info.responseAt).toLocaleString("it-IT") : "—"}</span>
+          </div>
+          <div>
+            <div className="opacity-60">notifications ({notifCount}):</div>
+            {notifCount === 0 ? (
+              <div className="pl-2 opacity-60">— nessuna notifica trovata per questa conversazione</div>
+            ) : (
+              <ul className="pl-2 space-y-0.5">
+                {info!.notifications.map((n) => (
+                  <li key={n.id} className="flex items-start gap-1">
+                    <span className={n.read ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
+                      {n.read ? "✓ letta" : "● non letta"}
+                    </span>
+                    <span className="opacity-80">·</span>
+                    <span className="opacity-80">{n.title}</span>
+                    <span className="opacity-60">·</span>
+                    <span className="opacity-60">user: {n.user_id.slice(0, 8)}…</span>
+                    <span className="opacity-60">·</span>
+                    <span className="opacity-60">{new Date(n.created_at).toLocaleString("it-IT")}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
