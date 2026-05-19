@@ -1625,6 +1625,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      announcement_effective_end: {
+        Args: { p_announcement_id: string }
+        Returns: string
+      }
       award_referral_credits: {
         Args: { _referred_user_id: string }
         Returns: undefined
