@@ -1881,6 +1881,7 @@ function Thread() {
                   announcementId={app?.announcement_id ?? null}
                   isWorker={role === "worker"}
                   acknowledged={hasAcknowledged}
+                  arrivalAdvanceMinutes={restaurantArrivalAdvance}
                   onAcknowledge={async () => {
                     if (!user || !app) return;
                     const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
