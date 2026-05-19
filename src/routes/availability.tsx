@@ -262,6 +262,15 @@ function AvailabilityPage() {
       if (!d.flexible && d.slots.length === 0) {
         return `Indica almeno una fascia oraria o un orario di disponibilità per ${DAY_LABELS[i]}.`;
       }
+      for (const s of d.slots) {
+        if (s.time_slot === "last_minute") continue;
+        if (!s.start_time || !s.end_time) {
+          return `Completa orario di inizio e fine per ${DAY_LABELS[i]}.`;
+        }
+        if (!isValidTimeRange(s.start_time, s.end_time)) {
+          return `Orario di inizio e fine non possono coincidere (${DAY_LABELS[i]}).`;
+        }
+      }
     }
     return null;
   };
