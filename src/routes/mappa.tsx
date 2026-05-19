@@ -1035,6 +1035,11 @@ function MapPage() {
           )}
         </div>
       </div>
+      <WorkerProfilePreviewDialog
+        workerId={previewWorkerId}
+        open={previewWorkerId !== null}
+        onOpenChange={(o) => { if (!o) setPreviewWorkerId(null); }}
+      />
     </AppShell>
   );
 }
