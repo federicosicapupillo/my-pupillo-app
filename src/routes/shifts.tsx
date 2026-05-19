@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
+import { getShiftEndDate } from "@/lib/announcement-time";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
 import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehirePicker";
@@ -310,6 +311,22 @@ function ShiftsPage() {
     setDialogError(null);
     const tId = toast.loading("Invio recensione in corso…");
     try {
+      // Guard: il turno può essere chiuso solo dopo la fine effettiva.
+      const endRef = getShiftEndDate({
+        service_date: a.service_date,
+        service_time: a.service_time ?? null,
+        end_time: a.end_time ?? null,
+      });
+      if (endRef && Date.now() < endRef.getTime()) {
+        const hhmm = a.end_time ? a.end_time.slice(0, 5) : null;
+        const msg = hhmm
+          ? `Il turno non è ancora concluso. Potrai chiuderlo dopo le ${hhmm}.`
+          : "Il turno non è ancora concluso. Potrai chiuderlo dopo l'orario di fine.";
+        toast.error(msg, { id: tId });
+        setDialogError(msg);
+        setDialogSubmitting(false);
+        return;
+      }
       // 1. Ensure shift is marked completed
       const localShift = shifts.find(x => x.id === a.shift_id);
       if (localShift && localShift.status === "scheduled") {
