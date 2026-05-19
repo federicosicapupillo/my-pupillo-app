@@ -20,6 +20,7 @@ export type WorkerMapPoint = {
 
 function avatarIcon(p: WorkerMapPoint) {
   const size = 44;
+  const fallback = (p.initials || (p.name ? p.name.slice(0, 2) : "?")).toUpperCase().slice(0, 2);
   const inner = `
     <div style="
       width:${size}px;height:${size}px;border-radius:50%;
@@ -30,8 +31,8 @@ function avatarIcon(p: WorkerMapPoint) {
     ">
       ${
         p.avatarUrl
-          ? `<img src="${p.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-          : `<span>${(p.initials || "?").slice(0, 2)}</span>`
+          ? `<img src="${p.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';this.parentNode.innerHTML='<span>${fallback}</span>';" />`
+          : `<span>${fallback}</span>`
       }
     </div>
     ${
@@ -118,7 +119,14 @@ export default function WorkersMapInner({
                     }}
                   >
                     {p.avatarUrl ? (
-                      <img src={p.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img
+                        src={p.avatarUrl}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
                     ) : (
                       <span>{(p.initials || "?").slice(0, 2)}</span>
                     )}
