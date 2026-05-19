@@ -341,6 +341,14 @@ function AvailabilityPage() {
       toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
       return;
     }
+    if (
+      newExc.is_available &&
+      newExc.time_slot === "personalizzata" &&
+      !isValidTimeRange(newExc.start_time, newExc.end_time)
+    ) {
+      toast.error("L'orario di inizio e fine non possono coincidere.");
+      return;
+    }
     const start = newExc.time_slot === "personalizzata" ? (newExc.start_time || null) : null;
     const end = newExc.time_slot === "personalizzata" ? (newExc.end_time || null) : null;
     const payload = {
