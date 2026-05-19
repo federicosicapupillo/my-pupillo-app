@@ -8,6 +8,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
+import { createDebouncedReload } from "@/lib/inbox-realtime";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 
 
