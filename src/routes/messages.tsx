@@ -11,6 +11,7 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { otherColumnForRole, groupThreadsByOther } from "@/lib/messages-grouping";
+import { mergeThreadUpdate, previewChanged, createDebouncedReload } from "@/lib/inbox-realtime";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import {
   isApplicationConfirmed,
@@ -241,11 +242,8 @@ function MessagesLayout() {
     // Debounced reload so a burst of related events (application INSERT +
     // message INSERT + application UPDATE for last_message_preview, which
     // all fire when a new proposal is sent) collapses into one refresh.
-    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
-    const scheduleReload = () => {
-      if (reloadTimer) clearTimeout(reloadTimer);
-      reloadTimer = setTimeout(() => { reloadTimer = null; load(); }, 120);
-    };
+    const reloader = createDebouncedReload(() => { load(); }, 120);
+    const scheduleReload = () => reloader.schedule();
     const ch = supabase
       .channel(`inbox-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "applications", filter: `${col}=eq.${user.id}` }, (payload) => {
@@ -255,12 +253,10 @@ function MessagesLayout() {
         // have in the list yet (e.g. restaurant just sent the first proposal).
         // UPDATE with a changed last_message_preview / last_message_at means
         // the preview & ordering must refresh, not only the status field.
-        const previewChanged =
+        const previewDidChange =
           payload.eventType === "UPDATE" &&
-          payload.old &&
-          ((payload.old as any).last_message_at !== row.last_message_at ||
-            (payload.old as any).last_message_preview !== row.last_message_preview);
-        if (payload.eventType === "INSERT" || previewChanged) {
+          previewChanged(payload.old as any, row);
+        if (payload.eventType === "INSERT" || previewDidChange) {
           scheduleReload();
         }
         setThreads((prev) => {
@@ -268,16 +264,7 @@ function MessagesLayout() {
           if (prevStatus && row.status && prevStatus !== row.status && STATUS_LABELS[row.status]) {
             toast.message(`Stato aggiornato: ${STATUS_LABELS[row.status]}`);
           }
-          return prev.map((t) =>
-            t.id === row.id
-              ? {
-                  ...t,
-                  status: row.status ?? t.status,
-                  lastBody: row.last_message_preview ?? t.lastBody,
-                  lastAt: row.last_message_at ?? t.lastAt,
-                }
-              : t,
-          );
+          return mergeThreadUpdate(prev as any, row) as typeof prev;
         });
       })
       // Any message activity in conversations the current user participates in
@@ -288,7 +275,7 @@ function MessagesLayout() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_responses" }, () => { scheduleReload(); })
       .subscribe();
     return () => {
-      if (reloadTimer) clearTimeout(reloadTimer);
+      reloader.cancel();
       supabase.removeChannel(ch);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
