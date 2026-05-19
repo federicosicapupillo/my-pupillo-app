@@ -967,6 +967,163 @@ function initialsOf(name: string | null | undefined): string {
     .join("");
 }
 
+function ProposalConfirmDialog({
+  worker,
+  announcement,
+  defaults,
+  rel,
+  sending,
+  onCancel,
+  onConfirm,
+}: {
+  worker: W | null;
+  announcement: Ann | null;
+  defaults: { contact_name: string | null; arrival_minutes: number | null; arrival_reason: string | null };
+  rel: WorkerRel | undefined;
+  sending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const open = !!worker;
+  if (!worker) {
+    return (
+      <Dialog open={false} onOpenChange={(v) => { if (!v) onCancel(); }}>
+        <DialogContent />
+      </Dialog>
+    );
+  }
+  // Privacy: prima dell'assegnazione mostra solo il nome (no cognome), salvo
+  // aver già lavorato insieme.
+  const workedTogether = !!rel?.workedWith;
+  const displayWorkerName = workedTogether
+    ? (worker.full_name || firstNameOf(worker.full_name) || "Lavoratore")
+    : (firstNameOf(worker.full_name) || "Lavoratore");
+  const ann = announcement;
+  const role = ann?.professional_profile?.trim() || "Da definire";
+  const start = ann?.service_time ? ann.service_time.slice(0, 5) : null;
+  const end = ann?.end_time ? ann.end_time.slice(0, 5) : null;
+  const durationRaw = ann?.shift_duration_hours ?? ann?.duration_hours ?? null;
+  const duration = durationRaw != null ? Number(durationRaw) : null;
+  const tariff = ann?.tariff_amount != null ? Number(ann.tariff_amount) : null;
+  const isHourly = ann?.tariff_type === "hourly";
+  const totalEstimate = isHourly && tariff != null && Number.isFinite(tariff) && duration != null && Number.isFinite(duration)
+    ? tariff * duration
+    : null;
+  const city = ann?.job_city?.trim() || null;
+  const zone = null; // zona dedotta da district del ristoratore — non disponibile in ann
+  const dress = (ann?.dress_code_items ?? []).filter(Boolean);
+  const dressNotes = ann?.dress_code_notes?.trim() || "";
+  const skills = (ann?.required_skills ?? []).filter(Boolean);
+  const langs = (ann?.language_requirements ?? []).filter(Boolean);
+  const license = ann?.license_requirement?.trim() || "";
+  const opNotesParts = [ann?.notes, ann?.job_location_notes, ann?.job_additional_directions]
+    .map((s) => (s ?? "").trim()).filter(Boolean);
+  const arrivalMin = defaults.arrival_minutes ?? 15;
+  const contactName = ann?.job_contact_person_name?.trim() || defaults.contact_name || "";
+  // Anteprima del messaggio inviato in chat (privacy: locale = "Ristorante partner")
+  const lines: string[] = [];
+  lines.push(`Ciao ${displayWorkerName}, ti proponiamo un turno come ${role}.`);
+  lines.push("");
+  lines.push("Dettagli turno:");
+  if (ann?.service_date) lines.push(`Data: ${formatDateIT(ann.service_date)}`);
+  if (start) lines.push(`Orario: ${start}${end ? " - " + end : ""}`);
+  if (duration != null) lines.push(`Durata: ${duration}h`);
+  if (city) lines.push(`Zona: ${city}`);
+  if (tariff != null) lines.push(`Compenso: ${formatTariff(tariff, ann?.tariff_type ?? null)}`);
+  if (totalEstimate != null) lines.push(`Totale stimato: € ${totalEstimate.toFixed(2)}`);
+  if (dress.length || dressNotes) {
+    lines.push("");
+    lines.push(`Dress code: ${[dress.join(", "), dressNotes].filter(Boolean).join(" — ")}`);
+  }
+  lines.push("");
+  lines.push(`Presentarsi: ${arrivalMin} minuti prima dell'ingresso.`);
+  lines.push("");
+  lines.push("Vuoi accettare questa proposta?");
+  const previewMessage = lines.join("\n");
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !sending) onCancel(); }}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Invia proposta di lavoro</DialogTitle>
+          <DialogDescription>
+            Controlla il riepilogo prima di inviare la proposta al lavoratore.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 text-sm">
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+            <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{displayWorkerName}</span></div>
+            <div><span className="text-muted-foreground">Ruolo:</span> <span className="font-medium">{role}</span></div>
+            {ann?.service_date && <div><span className="text-muted-foreground">Data:</span> {formatDateIT(ann.service_date)}</div>}
+            {start && <div><span className="text-muted-foreground">Orario:</span> {start}{end ? ` - ${end}` : ""}</div>}
+            {duration != null && <div><span className="text-muted-foreground">Durata:</span> {duration}h</div>}
+            {city && <div><span className="text-muted-foreground">Città:</span> {city}{ann?.job_province ? ` (${ann.job_province})` : ""}</div>}
+            {tariff != null && <div><span className="text-muted-foreground">Compenso:</span> {formatTariff(tariff, ann?.tariff_type ?? null)}</div>}
+            {totalEstimate != null && <div><span className="text-muted-foreground">Totale stimato:</span> € {totalEstimate.toFixed(2)}</div>}
+            <div><span className="text-muted-foreground">Anticipo all'ingresso:</span> {arrivalMin} minuti{defaults.arrival_reason ? ` (${defaults.arrival_reason})` : ""}</div>
+            {contactName && <div><span className="text-muted-foreground">Referente:</span> {contactName}</div>}
+          </div>
+
+          {(dress.length > 0 || dressNotes) && (
+            <div>
+              <div className="font-medium mb-1">Dress code</div>
+              {dress.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {dress.map((d) => (
+                    <span key={d} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{d}</span>
+                  ))}
+                </div>
+              )}
+              {dressNotes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{dressNotes}</p>}
+            </div>
+          )}
+
+          {role && (
+            <div>
+              <div className="font-medium mb-1">Mansioni</div>
+              <p className="text-xs text-muted-foreground">{ann?.professional_profile?.trim() || "Mansioni standard del ruolo."}</p>
+            </div>
+          )}
+
+          {(skills.length > 0 || langs.length > 0 || license) && (
+            <div>
+              <div className="font-medium mb-1">Requisiti</div>
+              {skills.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {skills.map((s) => (
+                    <span key={s} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{s}</span>
+                  ))}
+                </div>
+              )}
+              {langs.length > 0 && <p className="text-xs text-muted-foreground">Lingue: {langs.join(", ")}</p>}
+              {license && <p className="text-xs text-muted-foreground">Patente: {license}</p>}
+            </div>
+          )}
+
+          {opNotesParts.length > 0 && (
+            <div>
+              <div className="font-medium mb-1">Note operative</div>
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{opNotesParts.join("\n\n")}</p>
+            </div>
+          )}
+
+          <div>
+            <div className="font-medium mb-1">Messaggio inviato al lavoratore</div>
+            <pre className="rounded-md border bg-muted/40 p-3 text-xs whitespace-pre-wrap font-sans">{previewMessage}</pre>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Per tutelare la privacy, il lavoratore vedrà "Ristorante partner" finché non accetta la proposta.
+            </p>
+          </div>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="outline" onClick={onCancel} disabled={sending}>Annulla</Button>
+          <Button onClick={onConfirm} disabled={sending}>{sending ? "Invio…" : "Invia proposta"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function WorkersMapSection({
   workers,
   fallbackCenter,
