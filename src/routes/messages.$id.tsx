@@ -2530,10 +2530,21 @@ function ProposalCard(props: {
   isWorker: boolean;
   status: string;
   onAccept: () => Promise<void>;
-  onReject: () => Promise<void>;
+  onReject: (reason?: string) => Promise<void>;
 }) {
   const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
   const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
+  const [confirmAccept, setConfirmAccept] = useState(false);
+  const [confirmReject, setConfirmReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState<string>("");
+  const WORKER_REJECT_REASONS = [
+    "Non sono disponibile",
+    "Orario non compatibile",
+    "Zona troppo distante",
+    "Compenso non adatto",
+    "Ho già un altro impegno",
+    "Altro motivo",
+  ] as const;
   // The proposal expires at the end of the shift (or, lacking end_time,
   // at service_time + duration). After that it cannot be accepted/refused.
   const deadline = useMemo<Date | null>(() => {
@@ -2563,18 +2574,78 @@ function ProposalCard(props: {
   const expired = status === "expired" || (!accepted && !rejected && timeExpired);
   const decided = accepted || rejected || expired;
 
-  const handle = async (kind: "accept" | "reject") => {
+  const openAccept = () => {
     if (busy || decided) return;
-    setBusy(kind);
+    setConfirmAccept(true);
+  };
+  const openReject = () => {
+    if (busy || decided) return;
+    setRejectReason("");
+    setConfirmReject(true);
+  };
+  const doAccept = async () => {
+    if (busy) return;
+    if (decided) {
+      toast.error("Questa proposta non è più disponibile.");
+      setConfirmAccept(false);
+      return;
+    }
+    setBusy("accept");
     try {
-      if (kind === "accept") await onAccept();
-      else await onReject();
+      await onAccept();
+      setConfirmAccept(false);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const doReject = async () => {
+    if (busy) return;
+    if (decided) {
+      toast.error("Questa proposta non è più disponibile.");
+      setConfirmReject(false);
+      return;
+    }
+    const reason = rejectReason.trim() || undefined;
+    setBusy("reject");
+    try {
+      await onReject(reason);
+      setConfirmReject(false);
     } finally {
       setBusy(null);
     }
   };
 
+  // Compact recap rows used inside the confirmation dialogs.
+  const recapRows: Array<{ label: string; value: string }> = [];
+  const role = ann?.professional_profile?.trim();
+  if (role) recapRows.push({ label: "Ruolo", value: role });
+  if (ann?.service_date) recapRows.push({ label: "Data", value: formatDateIT(ann.service_date) });
+  if (ann?.service_time) {
+    recapRows.push({
+      label: "Orario",
+      value: `${ann.service_time.slice(0, 5)}${ann.end_time ? " - " + ann.end_time.slice(0, 5) : ""}`,
+    });
+  }
+  if (ann?.duration_hours) recapRows.push({ label: "Durata", value: `${ann.duration_hours} h` });
+  const zona = [displayAddress, ann?.job_city]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .find((v) => v && v.toLowerCase() !== "undefined" && v.toLowerCase() !== "null");
+  if (zona) recapRows.push({ label: canSeePreciseInfo ? "Luogo" : "Zona", value: zona });
+  if (ann?.tariff_amount != null) {
+    const n = Number(ann.tariff_amount);
+    if (Number.isFinite(n) && n > 0) {
+      recapRows.push({ label: "Compenso", value: formatTariff(ann.tariff_amount, ann.tariff_type ?? null) });
+    }
+  }
+  const dressItems = labelsOf(ann?.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
+  const dressNotes = (ann?.dress_code_notes ?? "").trim();
+  const dressValue = [dressItems.join(", "), dressNotes].filter(Boolean).join(" — ");
+  if (dressValue) recapRows.push({ label: "Dress code", value: dressValue });
+  const tasks = labelsOf(ann?.required_skills ?? [], SKILL_OPTIONS as any);
+  if (tasks.length) recapRows.push({ label: "Mansioni", value: tasks.join(", ") });
+
   return (
+    <>
     <div className="flex justify-center my-2">
       <div className="w-full max-w-md rounded-2xl border-2 border-primary/40 bg-card shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.45)] overflow-hidden">
         <div className="bg-primary/10 px-4 py-3 border-b border-primary/30">
@@ -2679,22 +2750,22 @@ function ProposalCard(props: {
           <div className="px-4 py-3 border-t bg-secondary/30 flex gap-2">
             <Button
               type="button"
-              onClick={() => handle("accept")}
+              onClick={openAccept}
               disabled={!!busy}
               className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
             >
               <Check className="h-4 w-4" />
-              {busy === "accept" ? "Invio…" : "Accetta"}
+              {busy === "accept" ? "Operazione in corso…" : "Accetta proposta"}
             </Button>
             <Button
               type="button"
-              onClick={() => handle("reject")}
+              onClick={openReject}
               disabled={!!busy}
               variant="outline"
               className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
             >
               <X className="h-4 w-4" />
-              {busy === "reject" ? "Invio…" : "Rifiuta"}
+              {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
             </Button>
           </div>
         ) : (
@@ -2704,6 +2775,84 @@ function ProposalCard(props: {
         )}
       </div>
     </div>
+
+    {/* Confirm ACCEPT */}
+    <AlertDialog open={confirmAccept} onOpenChange={(o) => { if (!busy) setConfirmAccept(o); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confermi di voler accettare?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Stai per accettare questa proposta di lavoro. Dopo la conferma il turno sarà assegnato a te e il ristoratore riceverà la tua risposta.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {recapRows.length > 0 && (
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-sm">
+            {recapRows.map((r) => (
+              <div key={r.label} className="flex gap-2">
+                <span className="text-muted-foreground min-w-24">{r.label}:</span>
+                <span className="font-medium">{r.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy === "accept"}>Annulla</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => { e.preventDefault(); void doAccept(); }}
+            disabled={busy === "accept"}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            {busy === "accept" ? "Operazione in corso…" : "Sì, accetto la proposta"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Confirm REJECT */}
+    <AlertDialog open={confirmReject} onOpenChange={(o) => { if (!busy) setConfirmReject(o); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confermi di voler rifiutare?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Stai per rifiutare questa proposta di lavoro. Il ristoratore riceverà la tua risposta e la proposta non sarà più disponibile.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {recapRows.length > 0 && (
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-sm">
+            {recapRows
+              .filter((r) => ["Ruolo", "Data", "Orario", "Zona", "Luogo", "Compenso"].includes(r.label))
+              .map((r) => (
+                <div key={r.label} className="flex gap-2">
+                  <span className="text-muted-foreground min-w-24">{r.label}:</span>
+                  <span className="font-medium">{r.value}</span>
+                </div>
+              ))}
+          </div>
+        )}
+        <div className="py-1">
+          <Label className="text-sm font-medium">Motivo del rifiuto (facoltativo)</Label>
+          <RadioGroup value={rejectReason} onValueChange={setRejectReason} className="mt-2 space-y-1.5">
+            {WORKER_REJECT_REASONS.map((r) => (
+              <div key={r} className="flex items-center gap-2 rounded-md border px-3 py-1.5 hover:bg-muted/40">
+                <RadioGroupItem id={`wrr-${r}`} value={r} />
+                <Label htmlFor={`wrr-${r}`} className="cursor-pointer text-sm font-normal">{r}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy === "reject"}>Annulla</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => { e.preventDefault(); void doReject(); }}
+            disabled={busy === "reject"}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {busy === "reject" ? "Operazione in corso…" : "Sì, rifiuto la proposta"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
