@@ -20,7 +20,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
-import { sendShiftProposal } from "@/lib/shift-proposal";
+import { sendShiftProposal, hasUnansweredProposal } from "@/lib/shift-proposal";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
@@ -417,15 +417,15 @@ function WorkersPage() {
         .eq("template_id", "shift_proposal")
         .eq("sender_id", user.id);
       const proposalIds = ((existingProposals ?? []) as { id: string }[]).map((p) => p.id);
-      let hasUnanswered = false;
+      let answeredIds: string[] = [];
       if (proposalIds.length > 0) {
         const { data: responses } = await supabase
           .from("proposal_responses")
           .select("message_id")
           .in("message_id", proposalIds);
-        const answered = new Set(((responses ?? []) as { message_id: string }[]).map((r) => r.message_id));
-        hasUnanswered = proposalIds.some((pid) => !answered.has(pid));
+        answeredIds = ((responses ?? []) as { message_id: string }[]).map((r) => r.message_id);
       }
+      const hasUnanswered = hasUnansweredProposal(proposalIds, answeredIds);
       if (hasUnanswered) {
         toast.info("Hai già inviato una proposta a questo lavoratore per questo annuncio.");
         setProposalWorker(null);
