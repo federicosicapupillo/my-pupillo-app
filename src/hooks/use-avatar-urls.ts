@@ -65,27 +65,36 @@ export function useAvatarUrls(userIds: Array<string | null | undefined>) {
     const toFetch = missing.filter((id) => !inflight.has(id));
     const waits: Promise<void>[] = [];
     if (toFetch.length > 0) {
-      const p = fetchUrls({ data: { userIds: toFetch } })
-        .then((res) => {
-          const now = Date.now();
-          const names = (res as { names?: Record<string, string | null> }).names ?? {};
-          for (const [id, url] of Object.entries(res.urls)) {
-            cache.set(id, { url, name: names[id] ?? null, at: now });
-          }
-          // Ensure every requested id has an entry (avoid infinite refetch loop
-          // if the response omits an id for any reason).
-          for (const id of toFetch) {
-            if (!cache.has(id)) cache.set(id, { url: null, name: null, at: now });
-          }
+      // Server fn validates max 100 ids per call. Chunk to avoid validation
+      // failure when many markers are visible at once (e.g. the map view).
+      const CHUNK = 100;
+      const chunks: string[][] = [];
+      for (let i = 0; i < toFetch.length; i += CHUNK) {
+        chunks.push(toFetch.slice(i, i + CHUNK));
+      }
+      const p = Promise.all(
+        chunks.map((chunk) =>
+          fetchUrls({ data: { userIds: chunk } })
+            .then((res) => {
+              const now = Date.now();
+              const names = (res as { names?: Record<string, string | null> }).names ?? {};
+              for (const [id, url] of Object.entries(res.urls)) {
+                cache.set(id, { url, name: names[id] ?? null, at: now });
+              }
+              for (const id of chunk) {
+                if (!cache.has(id)) cache.set(id, { url: null, name: null, at: now });
+              }
+            })
+            .catch(() => {
+              const now = Date.now();
+              for (const id of chunk) {
+                if (!cache.has(id)) cache.set(id, { url: null, name: null, at: now });
+              }
+            })
+        ),
+      )
+        .then(() => {
           schedulePersist();
-        })
-        .catch(() => {
-          // Cache a short-lived null so we don't refetch on every render when
-          // the server fn fails. The TTL ensures we'll retry later.
-          const now = Date.now();
-          for (const id of toFetch) {
-            if (!cache.has(id)) cache.set(id, { url: null, name: null, at: now });
-          }
         })
         .finally(() => {
           for (const id of toFetch) inflight.delete(id);
