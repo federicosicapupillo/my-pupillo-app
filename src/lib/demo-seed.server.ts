@@ -629,7 +629,7 @@ export async function completeDemoProfiles(
         profile_completed: true,
         account_status: p.account_status ?? "active",
       };
-      const { error: uErr } = await supabaseAdmin.from("profiles").update(update).eq("id", p.id).eq("is_demo", true);
+      const { error: uErr } = await (supabaseAdmin.from("profiles") as any).update(update).eq("id", p.id).eq("is_demo", true);
       if (uErr) report.errors.push(`restaurant ${p.id.slice(0, 8)}: ${uErr.message}`);
       else report.updatedRestaurants++;
     } else {
@@ -692,7 +692,7 @@ export async function completeDemoProfiles(
         profile_completed: true,
         account_status: p.account_status ?? "active",
       };
-      const { error: uErr } = await supabaseAdmin.from("profiles").update(update).eq("id", p.id).eq("is_demo", true);
+      const { error: uErr } = await (supabaseAdmin.from("profiles") as any).update(update).eq("id", p.id).eq("is_demo", true);
       if (uErr) report.errors.push(`worker ${p.id.slice(0, 8)}: ${uErr.message}`);
       else report.updatedWorkers++;
     }
