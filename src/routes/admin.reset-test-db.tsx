@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AlertTriangle, ShieldCheck, Loader2 } from "lucide-react";
-import { previewDemoReset, executeDemoReset } from "@/lib/demo-seed.functions";
+import { previewDemoReset, executeDemoReset, completeDemoProfilesFn } from "@/lib/demo-seed.functions";
 
 export const Route = createFileRoute("/admin/reset-test-db")({
   head: () => ({ meta: [{ title: "Reset DB Demo — Admin" }] }),
@@ -23,6 +23,9 @@ export const Route = createFileRoute("/admin/reset-test-db")({
 function ResetTestDbPage() {
   const preview = useServerFn(previewDemoReset);
   const execute = useServerFn(executeDemoReset);
+  const completeProfiles = useServerFn(completeDemoProfilesFn);
+  const [completing, setCompleting] = useState(false);
+  const [completeReport, setCompleteReport] = useState<any>(null);
 
   const [emails, setEmails] = useState("");
   const [phones, setPhones] = useState("");
@@ -37,6 +40,20 @@ function ResetTestDbPage() {
 
   const parsedEmails = emails.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
   const parsedPhones = phones.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+
+  async function runCompleteProfiles() {
+    setCompleting(true);
+    setCompleteReport(null);
+    try {
+      const r = await completeProfiles({ data: {} as any });
+      setCompleteReport(r);
+      toast.success(`Profili demo completati: ${r.updatedWorkers} lavoratori, ${r.updatedRestaurants} ristoratori`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Errore completamento profili");
+    } finally {
+      setCompleting(false);
+    }
+  }
 
   async function runPreview() {
     setLoadingPreview(true);
@@ -98,6 +115,36 @@ function ResetTestDbPage() {
           </p>
         </div>
       </div>
+
+      <section className="rounded-2xl border bg-card p-5 mb-6 space-y-3">
+        <h2 className="font-medium">Completa profili test</h2>
+        <p className="text-sm text-muted-foreground">
+          Riempie automaticamente i campi mancanti su tutti i profili demo (<code>is_demo = true</code>):
+          foto/avatar, telefono fittizio confermato, documenti fake, indirizzo, città, lat/lng,
+          ruoli, disponibilità e <code>profile_completed = true</code>. Non tocca alcun profilo reale.
+        </p>
+        <Button onClick={runCompleteProfiles} disabled={completing} className="w-full sm:w-auto">
+          {completing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Completa profili test
+        </Button>
+        {completeReport && (
+          <div className="text-sm border-t pt-3 space-y-1">
+            <div>Profili analizzati: <strong>{completeReport.scannedProfiles}</strong></div>
+            <div>Lavoratori aggiornati: <strong>{completeReport.updatedWorkers}</strong></div>
+            <div>Ristoratori aggiornati: <strong>{completeReport.updatedRestaurants}</strong></div>
+            <div>Profili reali ignorati: <strong>{completeReport.skippedRealProfiles}</strong></div>
+            <div className="text-muted-foreground text-xs">Durata: {(completeReport.durationMs / 1000).toFixed(1)}s</div>
+            {completeReport.errors?.length > 0 && (
+              <details className="text-xs text-destructive">
+                <summary>Errori ({completeReport.errors.length})</summary>
+                <ul className="max-h-40 overflow-y-auto mt-1">
+                  {completeReport.errors.map((e: string, i: number) => <li key={i}>• {e}</li>)}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
+      </section>
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-2xl border bg-card p-5 space-y-4">
