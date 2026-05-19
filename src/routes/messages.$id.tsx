@@ -1093,6 +1093,20 @@ function Thread() {
       return;
     }
 
+    // Guard temporale: la chiusura turno è ammessa solo dopo la fine effettiva.
+    const endRef = ann
+      ? getShiftEndDate(ann)
+      : (shift?.shift_date ? new Date(`${shift.shift_date}T23:59:00`) : null);
+    if (endRef && Date.now() < endRef.getTime()) {
+      const hhmm = ann?.end_time ? ann.end_time.slice(0, 5) : null;
+      toast.error(
+        hhmm
+          ? `Il turno non è ancora concluso. Potrai chiuderlo dopo le ${hhmm}.`
+          : "Il turno non è ancora concluso. Potrai chiuderlo dopo l'orario di fine.",
+      );
+      return;
+    }
+
     // Crea il turno se non esiste (caso in cui non sia mai stato confermato)
     let shiftId = shift?.id ?? null;
     if (!shiftId && app.announcement_id && ann) {
