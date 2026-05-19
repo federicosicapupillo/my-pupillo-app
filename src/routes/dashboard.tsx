@@ -268,7 +268,7 @@ function DashboardInner() {
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                   {profile.venue_type && <span className="capitalize">{profile.venue_type}</span>}
                   {profile.city && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{profile.city}</span>}
-                  {profile.vat_status === "verified" && (
+                  {profile.vat_status === "valid" && (
                     <span className="inline-flex items-center gap-1 text-emerald-600"><BadgeCheck className="h-3.5 w-3.5" /> Verificato</span>
                   )}
                 </div>
