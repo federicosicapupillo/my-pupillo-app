@@ -32,7 +32,7 @@ export const Route = createFileRoute("/availability")({
   }),
   component: () => (
     <RequireAuth>
-      <RequireRole role="worker">
+      <RequireRole allow={["worker"]}>
         <AvailabilityPage />
       </RequireRole>
     </RequireAuth>
