@@ -186,3 +186,131 @@ describe("createDebouncedReload — burst collapse", () => {
     expect(load).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("applyIncomingMessage — immediate unread bump", () => {
+  const viewer = "viewer-1";
+  it("bumps unread on a new message from someone else", () => {
+    const before: InboxThread[] = [baseThread({ unread: 0 })];
+    const after = applyIncomingMessage(
+      before,
+      { application_id: "app-1", sender_id: "other", body: "ciao", created_at: "2025-05-19T12:00:00.000Z" },
+      viewer,
+      null,
+    );
+    expect((after[0] as any).unread).toBe(1);
+    expect(after[0].lastBody).toBe("ciao");
+    expect(after[0].lastAt).toBe("2025-05-19T12:00:00.000Z");
+  });
+  it("does NOT bump unread for messages sent by the viewer", () => {
+    const before: InboxThread[] = [baseThread({ unread: 0 })];
+    const after = applyIncomingMessage(
+      before,
+      { application_id: "app-1", sender_id: viewer, body: "ho risposto" },
+      viewer,
+      null,
+    );
+    expect(after).toBe(before);
+  });
+  it("does NOT bump unread for the conversation that is currently open", () => {
+    const before: InboxThread[] = [baseThread({ unread: 0 })];
+    const after = applyIncomingMessage(
+      before,
+      { application_id: "app-1", sender_id: "other", body: "hey" },
+      viewer,
+      "app-1", // open
+    );
+    expect((after[0] as any).unread).toBe(0);
+    expect(after[0].lastBody).toBe("hey");
+  });
+  it("does NOT bump unread for messages already marked read at insert time", () => {
+    const before: InboxThread[] = [baseThread({ unread: 0 })];
+    const after = applyIncomingMessage(
+      before,
+      { application_id: "app-1", sender_id: "other", body: "x", read_at: "2025-05-19T12:00:00.000Z" },
+      viewer,
+      null,
+    );
+    expect((after[0] as any).unread).toBe(0);
+  });
+  it("ignores messages for unknown application ids", () => {
+    const before: InboxThread[] = [baseThread()];
+    const after = applyIncomingMessage(
+      before,
+      { application_id: "app-UNKNOWN", sender_id: "other" },
+      viewer,
+      null,
+    );
+    expect(after).toBe(before);
+  });
+  it("stacks correctly when several messages arrive in a row", () => {
+    let threads: InboxThread[] = [baseThread({ unread: 0 })];
+    for (let i = 0; i < 3; i++) {
+      threads = applyIncomingMessage(
+        threads,
+        { application_id: "app-1", sender_id: "other", body: `m${i}` },
+        viewer,
+        null,
+      );
+    }
+    expect((threads[0] as any).unread).toBe(3);
+    expect(threads[0].lastBody).toBe("m2");
+    expect(threads).toHaveLength(1);
+  });
+});
+
+describe("applyProposalResponse — immediate badge update", () => {
+  it("flips the thread status to accepted on accept", () => {
+    const before: InboxThread[] = [baseThread({ status: "pending" })];
+    const after = applyProposalResponse(before, {
+      application_id: "app-1",
+      status: "accepted",
+    });
+    expect(after[0].status).toBe("accepted");
+  });
+  it("flips the thread status to rejected on reject", () => {
+    const before: InboxThread[] = [baseThread({ status: "pending" })];
+    const after = applyProposalResponse(before, {
+      application_id: "app-1",
+      status: "rejected",
+    });
+    expect(after[0].status).toBe("rejected");
+  });
+  it("no-op when the status already matches (no duplicate re-render)", () => {
+    const before: InboxThread[] = [baseThread({ status: "accepted" })];
+    const after = applyProposalResponse(before, {
+      application_id: "app-1",
+      status: "accepted",
+    });
+    expect(after).toBe(before);
+  });
+  it("ignores unknown response statuses", () => {
+    const before: InboxThread[] = [baseThread()];
+    const after = applyProposalResponse(before, {
+      application_id: "app-1",
+      status: "weird",
+    });
+    expect(after).toBe(before);
+  });
+  it("does NOT add a thread when the application is not in the inbox yet", () => {
+    const before: InboxThread[] = [baseThread()];
+    const after = applyProposalResponse(before, {
+      application_id: "app-NEW",
+      status: "accepted",
+    });
+    expect(after).toHaveLength(1);
+    expect(after.map((t) => t.id)).toEqual(["app-1"]);
+  });
+});
+
+describe("clearThreadUnread", () => {
+  it("zeroes unread for the targeted thread", () => {
+    const before: InboxThread[] = [baseThread({ unread: 4 })];
+    const after = clearThreadUnread(before, "app-1");
+    expect((after[0] as any).unread).toBe(0);
+  });
+  it("no-op when already zero", () => {
+    const before: InboxThread[] = [baseThread({ unread: 0 })];
+    const after = clearThreadUnread(before, "app-1");
+    expect(after).toBe(before);
+  });
+});
