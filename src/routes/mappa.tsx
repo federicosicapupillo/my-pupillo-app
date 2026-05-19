@@ -300,9 +300,24 @@ function MapPage() {
         setAppStatusByAnn({});
         setKnownRestaurantIds(new Set());
       }
+      // Per il ristoratore loggato: insieme di worker_ids "confermati"
+      // (candidatura accettata o turno assegnato) per cui possiamo mostrare
+      // nome e cognome completi sulla mappa.
+      if (user && isRestaurant) {
+        const [{ data: acceptedApps }, { data: myShifts }] = await Promise.all([
+          supabase.from("applications").select("worker_id").eq("restaurant_id", user.id).eq("status", "accepted"),
+          supabase.from("shifts").select("worker_id").eq("restaurant_id", user.id),
+        ]);
+        const known = new Set<string>();
+        (acceptedApps || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
+        (myShifts || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
+        setKnownWorkerIds(known);
+      } else {
+        setKnownWorkerIds(new Set());
+      }
       setLoading(false);
     })();
-  }, [user?.id, isWorker]);
+  }, [user?.id, isWorker, isRestaurant]);
 
   const cities = useMemo(() => Array.from(new Set(restaurants.map(r => r.city).filter(Boolean))) as string[], [restaurants]);
   const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
