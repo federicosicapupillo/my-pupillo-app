@@ -1550,39 +1550,57 @@ export type Database = {
       }
       worker_availability: {
         Row: {
+          city: string | null
           created_at: string
           day_of_week: number
+          district: string | null
           end_time: string | null
           id: string
           is_flexible: boolean
           is_last_minute: boolean
+          latitude: number | null
+          longitude: number | null
           notes: string | null
+          province: string | null
+          radius_km: number | null
           start_time: string | null
           time_slot: string
           updated_at: string
           worker_id: string
         }
         Insert: {
+          city?: string | null
           created_at?: string
           day_of_week: number
+          district?: string | null
           end_time?: string | null
           id?: string
           is_flexible?: boolean
           is_last_minute?: boolean
+          latitude?: number | null
+          longitude?: number | null
           notes?: string | null
+          province?: string | null
+          radius_km?: number | null
           start_time?: string | null
           time_slot: string
           updated_at?: string
           worker_id: string
         }
         Update: {
+          city?: string | null
           created_at?: string
           day_of_week?: number
+          district?: string | null
           end_time?: string | null
           id?: string
           is_flexible?: boolean
           is_last_minute?: boolean
+          latitude?: number | null
+          longitude?: number | null
           notes?: string | null
+          province?: string | null
+          radius_km?: number | null
           start_time?: string | null
           time_slot?: string
           updated_at?: string
@@ -1592,36 +1610,54 @@ export type Database = {
       }
       worker_availability_exceptions: {
         Row: {
+          city: string | null
           created_at: string
           date: string
+          district: string | null
           end_time: string | null
           id: string
           is_available: boolean
+          latitude: number | null
+          longitude: number | null
           notes: string | null
+          province: string | null
+          radius_km: number | null
           start_time: string | null
           time_slot: string | null
           updated_at: string
           worker_id: string
         }
         Insert: {
+          city?: string | null
           created_at?: string
           date: string
+          district?: string | null
           end_time?: string | null
           id?: string
           is_available: boolean
+          latitude?: number | null
+          longitude?: number | null
           notes?: string | null
+          province?: string | null
+          radius_km?: number | null
           start_time?: string | null
           time_slot?: string | null
           updated_at?: string
           worker_id: string
         }
         Update: {
+          city?: string | null
           created_at?: string
           date?: string
+          district?: string | null
           end_time?: string | null
           id?: string
           is_available?: boolean
+          latitude?: number | null
+          longitude?: number | null
           notes?: string | null
+          province?: string | null
+          radius_km?: number | null
           start_time?: string | null
           time_slot?: string | null
           updated_at?: string
