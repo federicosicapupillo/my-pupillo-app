@@ -265,6 +265,23 @@ function WorkersPage() {
           setSelected(preferred);
           setLastAnnouncementId(user.id, preferred);
         }
+        // Carica i default del ristoratore per arricchire l'anteprima della proposta
+        const { data: rd } = await supabase
+          .from("profiles")
+          .select("default_contact_person_name, contact_person_first_name, contact_person_last_name, default_arrival_advance_minutes, default_arrival_advance_reason")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (rd) {
+          const contactName = (rd as any).default_contact_person_name
+            || [((rd as any).contact_person_first_name ?? ""), ((rd as any).contact_person_last_name ?? "")]
+                .map((s) => String(s).trim()).filter(Boolean).join(" ")
+            || null;
+          setRestaurantDefaults({
+            contact_name: contactName,
+            arrival_minutes: (rd as any).default_arrival_advance_minutes ?? null,
+            arrival_reason: (rd as any).default_arrival_advance_reason ?? null,
+          });
+        }
       }
     })();
   }, [user]);
