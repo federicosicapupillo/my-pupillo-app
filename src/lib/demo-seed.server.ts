@@ -479,3 +479,242 @@ export async function resetAndReseedDemo(
   report.durationMs = Date.now() - start;
   return report;
 }
+
+// ---------------------------------------------------------------------------
+// "Completa profili test" — riempie i campi mancanti di tutti i profili
+// is_demo=true (lavoratori e ristoratori) senza ricreare gli utenti né
+// toccare profili reali. Usato dalla pagina Admin per avere demo completi
+// (foto, telefono fittizio confermato, documenti fake, profile_completed=true).
+
+export type CompleteDemoReport = {
+  scannedProfiles: number;
+  updatedWorkers: number;
+  updatedRestaurants: number;
+  skippedRealProfiles: number;
+  errors: string[];
+  durationMs: number;
+};
+
+function fakePhone(seed: string): string {
+  // +39 3XX YYYYYYY — fittizio coerente, deterministico sull'id.
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  const a = 20 + (h % 80);
+  const b = String(1000000 + (h % 8999999)).slice(0, 7);
+  return `+39 3${a} ${b}`;
+}
+
+function fakeAvatar(seed: string): string {
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+}
+
+function pickByHash<T>(arr: T[], seed: string): T {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return arr[h % arr.length];
+}
+
+function fakeDateBefore(seed: string, minYearsAgo: number, maxYearsAgo: number): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 17 + seed.charCodeAt(i)) >>> 0;
+  const today = new Date();
+  const years = minYearsAgo + (h % Math.max(1, maxYearsAgo - minYearsAgo + 1));
+  const d = new Date(today.getFullYear() - years, (h >> 3) % 12, ((h >> 5) % 27) + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function fakeDateAfter(seed: string, minYearsAhead: number, maxYearsAhead: number): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 19 + seed.charCodeAt(i)) >>> 0;
+  const today = new Date();
+  const years = minYearsAhead + (h % Math.max(1, maxYearsAhead - minYearsAhead + 1));
+  const d = new Date(today.getFullYear() + years, (h >> 3) % 12, ((h >> 5) % 27) + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export async function completeDemoProfiles(
+  triggeredBy: string,
+): Promise<CompleteDemoReport> {
+  const start = Date.now();
+  const report: CompleteDemoReport = {
+    scannedProfiles: 0,
+    updatedWorkers: 0,
+    updatedRestaurants: 0,
+    skippedRealProfiles: 0,
+    errors: [],
+    durationMs: 0,
+  };
+
+  // Guard di sicurezza: deve esserci il service role e non dev'esserci stripe LIVE.
+  // Riusa lo stesso safety guard del reset.
+  try {
+    assertDemoSafe({ emails: [], phones: [] });
+  } catch (e: any) {
+    report.errors.push(`safety: ${e?.message ?? e}`);
+    report.durationMs = Date.now() - start;
+    return report;
+  }
+
+  // Carica SOLO profili demo (is_demo=true). Mai modificare profili reali.
+  const { data: profiles, error } = await supabaseAdmin
+    .from("profiles")
+    .select("*")
+    .eq("is_demo", true)
+    .limit(5000);
+  if (error) {
+    report.errors.push(`load profiles: ${error.message}`);
+    report.durationMs = Date.now() - start;
+    return report;
+  }
+
+  // Mappa ruolo per ogni utente (worker / restaurant) tramite user_roles.
+  const ids = (profiles ?? []).map((p: any) => p.id);
+  const { data: roles } = await supabaseAdmin
+    .from("user_roles")
+    .select("user_id, role")
+    .in("user_id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+  const roleByUser = new Map<string, string>();
+  (roles ?? []).forEach((r: any) => roleByUser.set(r.user_id, r.role));
+
+  for (const p of profiles ?? []) {
+    report.scannedProfiles++;
+    // Doppia salvaguardia: salta se per qualche motivo is_demo è false.
+    if (!p.is_demo) {
+      report.skippedRealProfiles++;
+      continue;
+    }
+
+    const role = roleByUser.get(p.id);
+    const isRestaurant = role === "restaurant" || !!p.business_name;
+    const city = pickByHash(DEMO_CITIES, p.id);
+
+    if (isRestaurant) {
+      const fname = p.contact_person_first_name || pickByHash([...DEMO_FIRST_NAMES_M, ...DEMO_FIRST_NAMES_F], p.id + "f");
+      const lname = p.contact_person_last_name || pickByHash(DEMO_LAST_NAMES, p.id + "l");
+      const update: Record<string, any> = {
+        full_name: p.full_name ?? `${fname} ${lname}`,
+        business_name: p.business_name ?? `Ristorante ${pickByHash(DEMO_LAST_NAMES, p.id)} (demo)`,
+        venue_type: p.venue_type ?? pickByHash(DEMO_VENUE_TYPES, p.id),
+        city: p.city ?? city.city,
+        province: p.province ?? city.province,
+        province_code: p.province_code ?? city.province_code,
+        postal_code: p.postal_code ?? city.postal_code,
+        country: p.country ?? "Italia",
+        latitude: p.latitude ?? jitterCoord(city.lat),
+        longitude: p.longitude ?? jitterCoord(city.lng),
+        service_area_lat: p.service_area_lat ?? jitterCoord(city.lat, 0.02),
+        service_area_lng: p.service_area_lng ?? jitterCoord(city.lng, 0.02),
+        address: p.address ?? `Via ${pickByHash(DEMO_LAST_NAMES, p.id + "a")} ${(p.id.charCodeAt(0) % 80) + 1}, ${city.city}`,
+        neighborhood: p.neighborhood ?? "Centro",
+        contact_person_first_name: fname,
+        contact_person_last_name: lname,
+        contact_person_email: p.contact_person_email ?? p.email ?? null,
+        contact_person_phone: p.contact_person_phone ?? fakePhone(p.id + "r"),
+        contact_person_role: p.contact_person_role ?? "owner",
+        vat_number: p.vat_number ?? mockVatNumber(),
+        vat_status: p.vat_status ?? "valid",
+        vat_company_name: p.vat_company_name ?? p.business_name ?? "Ristorante Demo",
+        vat_verified_at: p.vat_verified_at ?? new Date().toISOString(),
+        company_tax_code: p.company_tax_code ?? mockTaxCode(p.id.length),
+        price_range: p.price_range ?? pickByHash(["€", "€€", "€€€"], p.id),
+        opening_hours: p.opening_hours ?? "Lun-Sab 12:00-15:00, 19:00-23:30",
+        employees_count: p.employees_count ?? 8,
+        avatar_url: p.avatar_url ?? fakeAvatar("restaurant-" + p.id),
+        phone: p.phone ?? fakePhone(p.id),
+        phone_full: p.phone_full ?? fakePhone(p.id).replace(/\s/g, ""),
+        phone_verified: true,
+        phone_verified_at: p.phone_verified_at ?? new Date().toISOString(),
+        whatsapp_connected: true,
+        terms_accepted: true,
+        profile_completed: true,
+        account_status: p.account_status ?? "active",
+      };
+      const { error: uErr } = await (supabaseAdmin.from("profiles") as any).update(update).eq("id", p.id).eq("is_demo", true);
+      if (uErr) report.errors.push(`restaurant ${p.id.slice(0, 8)}: ${uErr.message}`);
+      else report.updatedRestaurants++;
+    } else {
+      const fname = p.first_name || pickByHash([...DEMO_FIRST_NAMES_M, ...DEMO_FIRST_NAMES_F], p.id + "f");
+      const lname = p.last_name || pickByHash(DEMO_LAST_NAMES, p.id + "l");
+      const update: Record<string, any> = {
+        full_name: p.full_name ?? `${fname} ${lname}`,
+        first_name: fname,
+        last_name: lname,
+        birth_date: p.birth_date ?? fakeDateBefore(p.id + "b", 22, 45),
+        birth_place: p.birth_place ?? city.city,
+        nationality: p.nationality ?? "Italia",
+        tax_code: p.tax_code ?? mockTaxCode(p.id.length),
+        residence_address: p.residence_address ?? `Via ${pickByHash(DEMO_LAST_NAMES, p.id + "r")} ${(p.id.charCodeAt(1) % 80) + 1}`,
+        residence_city: p.residence_city ?? city.city,
+        residence_postal_code: p.residence_postal_code ?? city.postal_code,
+        residence_province: p.residence_province ?? city.province_code,
+        id_document_type: p.id_document_type ?? "carta_identita",
+        id_document_number: p.id_document_number ?? mockIdNumber(),
+        id_document_issued_at: p.id_document_issued_at ?? fakeDateBefore(p.id + "i", 1, 5),
+        id_document_expires_at: p.id_document_expires_at ?? fakeDateAfter(p.id + "e", 2, 8),
+        id_document_issuer: p.id_document_issuer ?? `Comune di ${city.city}`,
+        // Path fittizio (NON file reali). Serve solo a far risultare il
+        // documento "caricato" lato UI. Lo storage non viene toccato.
+        id_document_path: p.id_document_path ?? `demo/${p.id}/documento_test.pdf`,
+        id_document_back_path: p.id_document_back_path ?? `demo/${p.id}/documento_test_retro.pdf`,
+        avatar_url: p.avatar_url ?? fakeAvatar("worker-" + p.id),
+        primary_role: p.primary_role ?? pickByHash(DEMO_WORKER_ROLES, p.id),
+        secondary_roles: p.secondary_roles && p.secondary_roles.length > 0 ? p.secondary_roles : [pickByHash(DEMO_WORKER_ROLES, p.id + "s")],
+        experience_years: p.experience_years ?? ((p.id.charCodeAt(0) % 12)),
+        experience_level: p.experience_level ?? pickByHash(["junior", "middle", "senior"], p.id),
+        hourly_rate: p.hourly_rate ?? 10 + (p.id.charCodeAt(2) % 9),
+        is_motorized: p.is_motorized ?? ((p.id.charCodeAt(3) % 2) === 0),
+        short_bio: p.short_bio ?? "Profilo demo per test della piattaforma.",
+        languages: p.languages && p.languages.length > 0 ? p.languages : ["it"],
+        weekly_availability: p.weekly_availability && p.weekly_availability.length > 0
+          ? p.weekly_availability
+          : ["lun_sera", "mar_sera", "ven_sera", "sab_sera", "dom_pranzo"],
+        city: p.city ?? city.city,
+        province: p.province ?? city.province,
+        province_code: p.province_code ?? city.province_code,
+        neighborhood: p.neighborhood ?? "Centro",
+        service_area_city: p.service_area_city ?? city.city,
+        service_area_district: p.service_area_district ?? "Centro",
+        service_area_lat: p.service_area_lat ?? jitterCoord(city.lat, 0.02),
+        service_area_lng: p.service_area_lng ?? jitterCoord(city.lng, 0.02),
+        service_area_radius_m: p.service_area_radius_m ?? 10000,
+        work_area_mode: p.work_area_mode ?? "zones",
+        all_zones: p.all_zones ?? false,
+        selected_zones: p.selected_zones && p.selected_zones.length > 0 ? p.selected_zones : ["Centro"],
+        badge: p.badge ?? pickByHash(["basic", "pro", "elite"], p.id),
+        phone: p.phone ?? fakePhone(p.id),
+        phone_full: p.phone_full ?? fakePhone(p.id).replace(/\s/g, ""),
+        phone_verified: true,
+        phone_verified_at: p.phone_verified_at ?? new Date().toISOString(),
+        whatsapp_connected: true,
+        age_verified: true,
+        age_verified_at: p.age_verified_at ?? new Date().toISOString(),
+        terms_accepted: true,
+        profile_completed: true,
+        account_status: p.account_status ?? "active",
+      };
+      const { error: uErr } = await (supabaseAdmin.from("profiles") as any).update(update).eq("id", p.id).eq("is_demo", true);
+      if (uErr) report.errors.push(`worker ${p.id.slice(0, 8)}: ${uErr.message}`);
+      else report.updatedWorkers++;
+    }
+  }
+
+  // Log dell'operazione in activity_logs (visibile agli admin).
+  try {
+    await supabaseAdmin.from("activity_logs").insert({
+      user_id: triggeredBy,
+      action: "complete_demo_profiles",
+      entity_type: "profiles",
+      metadata: {
+        scannedProfiles: report.scannedProfiles,
+        updatedWorkers: report.updatedWorkers,
+        updatedRestaurants: report.updatedRestaurants,
+        errors: report.errors.length,
+      },
+    });
+  } catch (e: any) {
+    report.errors.push(`activity_log: ${e?.message ?? e}`);
+  }
+
+  report.durationMs = Date.now() - start;
+  return report;
+}
