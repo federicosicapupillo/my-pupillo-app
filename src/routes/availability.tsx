@@ -29,6 +29,8 @@ import {
   type TimeSlot,
   type AvailabilityRow,
   type AvailabilityExceptionRow,
+  crossesMidnight,
+  isValidTimeRange,
 } from "@/lib/availability";
 
 export const Route = createFileRoute("/availability")({
