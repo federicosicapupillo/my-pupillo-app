@@ -52,6 +52,23 @@ export const Route = createFileRoute("/availability")({
 const ALL_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute"];
 const EXC_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute", "personalizzata"];
 
+const TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    }
+  }
+  return out;
+})();
+
+const QUICK_RANGES: Array<{ start: string; end: string; label: string }> = [
+  { start: "09:00", end: "13:00", label: "09:00 – 13:00" },
+  { start: "14:00", end: "18:00", label: "14:00 – 18:00" },
+  { start: "18:00", end: "23:00", label: "18:00 – 23:00" },
+  { start: "20:00", end: "02:00", label: "20:00 – 02:00" },
+];
+
 type LocalSlot = {
   id?: string;
   time_slot: TimeSlot;
@@ -337,26 +354,27 @@ function AvailabilityPage() {
   };
 
   const addException = async () => {
-    if (!user || !newExc.date) { toast.error("Indica una data"); return; }
-    if (newExc.is_available && !newExc.city.trim()) {
-      toast.error("Seleziona la città in cui sei disponibile per questa data.");
-      return;
-    }
-    if (newExc.is_available && !newExc.time_slot) {
-      toast.error("Seleziona una fascia oraria.");
-      return;
-    }
-    if (newExc.is_available && newExc.time_slot === "personalizzata" && (!newExc.start_time || !newExc.end_time)) {
-      toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
-      return;
-    }
-    if (
-      newExc.is_available &&
-      newExc.time_slot === "personalizzata" &&
-      !isValidTimeRange(newExc.start_time, newExc.end_time)
-    ) {
-      toast.error("L'orario di inizio e fine non possono coincidere.");
-      return;
+    if (!user) return;
+    if (!newExc.date) { toast.error("Seleziona una data."); return; }
+    if (newExc.is_available) {
+      if (!newExc.city.trim()) {
+        toast.error("Seleziona la città in cui sei disponibile.");
+        return;
+      }
+      if (!newExc.time_slot) {
+        toast.error("Seleziona una fascia di disponibilità.");
+        return;
+      }
+      if (newExc.time_slot === "personalizzata") {
+        if (!newExc.start_time || !newExc.end_time) {
+          toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
+          return;
+        }
+        if (!isValidTimeRange(newExc.start_time, newExc.end_time)) {
+          toast.error("L'orario di inizio e fine non possono coincidere.");
+          return;
+        }
+      }
     }
     const start = newExc.time_slot === "personalizzata" ? (newExc.start_time || null) : null;
     const end = newExc.time_slot === "personalizzata" ? (newExc.end_time || null) : null;
@@ -738,16 +756,55 @@ function AvailabilityPage() {
             </div>
             {newExc.time_slot === "personalizzata" && (
               <>
-                <div>
+                <div className="md:col-span-3">
                   <label className="block text-xs text-muted-foreground mb-1">Dalle *</label>
-                  <Input type="time" disabled={!newExc.is_available} value={newExc.start_time} onChange={(e) => setNewExc({ ...newExc, start_time: e.target.value })} />
+                  <Select
+                    value={newExc.start_time || ""}
+                    onValueChange={(v) => setNewExc({ ...newExc, start_time: v })}
+                    disabled={!newExc.is_available}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {TIME_OPTIONS.map((t) => (
+                        <SelectItem key={`s-${t}`} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
+                <div className="md:col-span-3">
                   <label className="block text-xs text-muted-foreground mb-1">Alle *</label>
-                  <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
+                  <Select
+                    value={newExc.end_time || ""}
+                    onValueChange={(v) => setNewExc({ ...newExc, end_time: v })}
+                    disabled={!newExc.is_available}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {TIME_OPTIONS.map((t) => (
+                        <SelectItem key={`e-${t}`} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {newExc.start_time && newExc.end_time && crossesMidnight(newExc.start_time, newExc.end_time) && (
                     <p className="text-[11px] text-muted-foreground mt-1">Termina il giorno successivo</p>
                   )}
+                </div>
+                <div className="md:col-span-6">
+                  <label className="block text-xs text-muted-foreground mb-2">Scelte rapide</label>
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_RANGES.map((r) => (
+                      <Button
+                        key={r.label}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!newExc.is_available}
+                        onClick={() => setNewExc({ ...newExc, start_time: r.start, end_time: r.end })}
+                      >
+                        {r.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
