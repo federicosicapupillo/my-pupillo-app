@@ -756,16 +756,55 @@ function AvailabilityPage() {
             </div>
             {newExc.time_slot === "personalizzata" && (
               <>
-                <div>
+                <div className="md:col-span-3">
                   <label className="block text-xs text-muted-foreground mb-1">Dalle *</label>
-                  <Input type="time" disabled={!newExc.is_available} value={newExc.start_time} onChange={(e) => setNewExc({ ...newExc, start_time: e.target.value })} />
+                  <Select
+                    value={newExc.start_time || ""}
+                    onValueChange={(v) => setNewExc({ ...newExc, start_time: v })}
+                    disabled={!newExc.is_available}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {TIME_OPTIONS.map((t) => (
+                        <SelectItem key={`s-${t}`} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
+                <div className="md:col-span-3">
                   <label className="block text-xs text-muted-foreground mb-1">Alle *</label>
-                  <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
+                  <Select
+                    value={newExc.end_time || ""}
+                    onValueChange={(v) => setNewExc({ ...newExc, end_time: v })}
+                    disabled={!newExc.is_available}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {TIME_OPTIONS.map((t) => (
+                        <SelectItem key={`e-${t}`} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {newExc.start_time && newExc.end_time && crossesMidnight(newExc.start_time, newExc.end_time) && (
                     <p className="text-[11px] text-muted-foreground mt-1">Termina il giorno successivo</p>
                   )}
+                </div>
+                <div className="md:col-span-6">
+                  <label className="block text-xs text-muted-foreground mb-2">Scelte rapide</label>
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_RANGES.map((r) => (
+                      <Button
+                        key={r.label}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!newExc.is_available}
+                        onClick={() => setNewExc({ ...newExc, start_time: r.start, end_time: r.end })}
+                      >
+                        {r.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
