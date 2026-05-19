@@ -24,6 +24,9 @@ import { sendShiftProposal } from "@/lib/shift-proposal";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { formatDateIT, formatTariff } from "@/lib/format";
+import { firstNameOf } from "@/lib/public-location";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -115,7 +118,32 @@ const PLACEHOLDER_BY_CATEGORY: Record<Category, string> = {
   availability: "Aggiungi nome o ruolo",
   custom: "Scrivi qualsiasi parola chiave",
 };
-type Ann = { id: string; service_date: string; service_time: string | null; location_address: string; location_lat: number | null; location_lng: number | null };
+type Ann = {
+  id: string;
+  service_date: string;
+  service_time: string | null;
+  end_time: string | null;
+  location_address: string;
+  location_lat: number | null;
+  location_lng: number | null;
+  professional_profile: string | null;
+  tariff_amount: number | string | null;
+  tariff_type: string | null;
+  duration_hours: number | string | null;
+  shift_duration_hours: number | string | null;
+  job_city: string | null;
+  job_province: string | null;
+  job_postal_code: string | null;
+  dress_code_items: string[] | null;
+  dress_code_notes: string | null;
+  required_skills: string[] | null;
+  language_requirements: string[] | null;
+  license_requirement: string | null;
+  notes: string | null;
+  job_location_notes: string | null;
+  job_additional_directions: string | null;
+  job_contact_person_name: string | null;
+};
 
 type WorkerRel = {
   workedWith: boolean;
@@ -184,6 +212,15 @@ function WorkersPage() {
   const [view, setView] = useState<"list" | "map">("list");
   // Relazione ristoratore ↔ lavoratore (per ordinare e mostrare badge)
   const [rel, setRel] = useState<Record<string, WorkerRel>>({});
+  // Dialog "Invia proposta di lavoro"
+  const [proposalWorker, setProposalWorker] = useState<W | null>(null);
+  const [missingAnnOpen, setMissingAnnOpen] = useState(false);
+  const [sendingProposal, setSendingProposal] = useState(false);
+  const [restaurantDefaults, setRestaurantDefaults] = useState<{
+    contact_name: string | null;
+    arrival_minutes: number | null;
+    arrival_reason: string | null;
+  }>({ contact_name: null, arrival_minutes: null, arrival_reason: null });
 
   // Carica TUTTI i lavoratori attivi una sola volta. I filtri lavorano poi lato client.
   const loadWorkers = async () => {
@@ -211,7 +248,11 @@ function WorkersPage() {
   useEffect(() => {
     (async () => {
       if (user) {
-        const { data } = await supabase.from("announcements").select("id, service_date, service_time, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
+        const { data } = await supabase
+          .from("announcements")
+          .select("id, service_date, service_time, end_time, location_address, location_lat, location_lng, professional_profile, tariff_amount, tariff_type, duration_hours, shift_duration_hours, job_city, job_province, job_postal_code, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, notes, job_location_notes, job_additional_directions, job_contact_person_name")
+          .eq("restaurant_id", user.id)
+          .eq("status", "active");
         const now = new Date();
         const list = ((data as Ann[]) ?? []).filter((a) => {
           const start = getShiftStartDate(a as any);
@@ -223,6 +264,23 @@ function WorkersPage() {
           const preferred = saved && list.some((a) => a.id === saved) ? saved : list[0].id;
           setSelected(preferred);
           setLastAnnouncementId(user.id, preferred);
+        }
+        // Carica i default del ristoratore per arricchire l'anteprima della proposta
+        const { data: rd } = await supabase
+          .from("profiles")
+          .select("default_contact_person_name, contact_person_first_name, contact_person_last_name, default_arrival_advance_minutes, default_arrival_advance_reason")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (rd) {
+          const contactName = (rd as any).default_contact_person_name
+            || [((rd as any).contact_person_first_name ?? ""), ((rd as any).contact_person_last_name ?? "")]
+                .map((s) => String(s).trim()).filter(Boolean).join(" ")
+            || null;
+          setRestaurantDefaults({
+            contact_name: contactName,
+            arrival_minutes: (rd as any).default_arrival_advance_minutes ?? null,
+            arrival_reason: (rd as any).default_arrival_advance_reason ?? null,
+          });
         }
       }
     })();
@@ -319,42 +377,61 @@ function WorkersPage() {
 
   if (role !== "restaurant") return <AppShell><p>Solo i ristoratori.</p></AppShell>;
 
-  const invite = async (workerId: string) => {
+  // Apre il dialog di conferma proposta (oppure il dialog "seleziona annuncio" se mancante).
+  const openProposalDialog = (worker: W) => {
+    if (!selected) { setMissingAnnOpen(true); return; }
+    setProposalWorker(worker);
+  };
+
+  // Esegue l'invio della proposta dopo la conferma esplicita del ristoratore.
+  const sendProposal = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
-    // If a conversation already exists for this restaurant + worker + announcement, just open it.
-    const { data: existing } = await supabase
-      .from("applications")
-      .select("id")
-      .eq("announcement_id", selected)
-      .eq("worker_id", workerId)
-      .eq("restaurant_id", user.id)
-      .maybeSingle();
-    if (existing?.id) {
-      // Send a fresh proposal each time the restaurant re-contacts.
+    setSendingProposal(true);
+    try {
+      let applicationId: string | null = null;
+      const { data: existing } = await supabase
+        .from("applications")
+        .select("id")
+        .eq("announcement_id", selected)
+        .eq("worker_id", workerId)
+        .eq("restaurant_id", user.id)
+        .maybeSingle();
+      if (existing?.id) {
+        applicationId = existing.id;
+      } else {
+        const { data: created, error } = await supabase
+          .from("applications")
+          .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
+          .select("id")
+          .single();
+        if (error || !created) { toast.error(error?.message ?? "Errore"); setSendingProposal(false); return; }
+        applicationId = created.id;
+      }
+      if (!applicationId) { toast.error("Errore nella creazione della conversazione."); setSendingProposal(false); return; }
       await sendShiftProposal({
-        applicationId: existing.id,
+        applicationId,
         announcementId: selected,
         restaurantId: user.id,
-        workerId: workerId,
+        workerId,
       });
-      nav({ to: "/messages/$id", params: { id: existing.id } });
-      return;
+      // Notifica al lavoratore — sempre, con link sicuro alla conversazione esatta.
+      await supabase.from("notifications").insert({
+        user_id: workerId,
+        title: "Hai ricevuto una proposta di lavoro",
+        body: "Un ristorante ti ha inviato una proposta per un turno.",
+        link: `/messages/${applicationId}`,
+        metadata: {
+          type: "job_proposal_received",
+          application_id: applicationId,
+          announcement_id: selected,
+        },
+      } as never);
+      toast.success("Proposta inviata al lavoratore.");
+      setProposalWorker(null);
+      nav({ to: "/messages/$id", params: { id: applicationId } });
+    } finally {
+      setSendingProposal(false);
     }
-    const { data: created, error } = await supabase
-      .from("applications")
-      .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
-      .select("id")
-      .single();
-    if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
-    await sendShiftProposal({
-      applicationId: created.id,
-      announcementId: selected,
-      restaurantId: user.id,
-      workerId: workerId,
-    });
-    await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: `/messages/${created.id}` });
-    toast.success("Chat aperta con il lavoratore");
-    nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
   const fieldsOf = (w: W) => {
@@ -694,7 +771,7 @@ function WorkersPage() {
               ? [selectedAnn.location_lat as number, selectedAnn.location_lng as number]
               : [41.9028, 12.4964]
           }
-          onInvite={invite}
+          onInvite={(workerId) => { const w = workers.find((x) => x.id === workerId); if (w) openProposalDialog(w); }}
           inviteDisabled={!selected}
           inviteLabel={selected ? "Messaggia" : "Seleziona annuncio"}
         />
@@ -817,12 +894,11 @@ function WorkersPage() {
             <Button
               size="sm"
               className="mt-4 w-full gap-1"
-              onClick={() => invite(w.id)}
-              disabled={!selected}
-              title={!selected ? "Seleziona prima un annuncio" : undefined}
+              onClick={() => openProposalDialog(w)}
+              title={!selected ? "Scegli un annuncio prima di proporre un turno" : undefined}
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              {selected ? "Chatta" : "Seleziona prima un annuncio"}
+              Chatta
             </Button>
             {isBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
@@ -852,6 +928,31 @@ function WorkersPage() {
         )}
       </div>
       )}
+      <ProposalConfirmDialog
+        worker={proposalWorker}
+        announcement={selectedAnn ?? null}
+        defaults={restaurantDefaults}
+        rel={proposalWorker ? rel[proposalWorker.id] : undefined}
+        sending={sendingProposal}
+        onCancel={() => setProposalWorker(null)}
+        onConfirm={() => proposalWorker && sendProposal(proposalWorker.id)}
+      />
+      <Dialog open={missingAnnOpen} onOpenChange={setMissingAnnOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Seleziona un turno da proporre</DialogTitle>
+            <DialogDescription>
+              Per inviare una proposta a un lavoratore devi prima scegliere un annuncio attivo, oppure crearne uno nuovo.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setMissingAnnOpen(false)}>Annulla</Button>
+            <Button onClick={() => { setMissingAnnOpen(false); nav({ to: "/ristoratore/annunci/nuovo" }); }}>
+              Crea nuova proposta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
@@ -864,6 +965,163 @@ function initialsOf(name: string | null | undefined): string {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+function ProposalConfirmDialog({
+  worker,
+  announcement,
+  defaults,
+  rel,
+  sending,
+  onCancel,
+  onConfirm,
+}: {
+  worker: W | null;
+  announcement: Ann | null;
+  defaults: { contact_name: string | null; arrival_minutes: number | null; arrival_reason: string | null };
+  rel: WorkerRel | undefined;
+  sending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const open = !!worker;
+  if (!worker) {
+    return (
+      <Dialog open={false} onOpenChange={(v) => { if (!v) onCancel(); }}>
+        <DialogContent />
+      </Dialog>
+    );
+  }
+  // Privacy: prima dell'assegnazione mostra solo il nome (no cognome), salvo
+  // aver già lavorato insieme.
+  const workedTogether = !!rel?.workedWith;
+  const displayWorkerName = workedTogether
+    ? (worker.full_name || firstNameOf(worker.full_name) || "Lavoratore")
+    : (firstNameOf(worker.full_name) || "Lavoratore");
+  const ann = announcement;
+  const role = ann?.professional_profile?.trim() || "Da definire";
+  const start = ann?.service_time ? ann.service_time.slice(0, 5) : null;
+  const end = ann?.end_time ? ann.end_time.slice(0, 5) : null;
+  const durationRaw = ann?.shift_duration_hours ?? ann?.duration_hours ?? null;
+  const duration = durationRaw != null ? Number(durationRaw) : null;
+  const tariff = ann?.tariff_amount != null ? Number(ann.tariff_amount) : null;
+  const isHourly = ann?.tariff_type === "hourly";
+  const totalEstimate = isHourly && tariff != null && Number.isFinite(tariff) && duration != null && Number.isFinite(duration)
+    ? tariff * duration
+    : null;
+  const city = ann?.job_city?.trim() || null;
+  const zone = null; // zona dedotta da district del ristoratore — non disponibile in ann
+  const dress = (ann?.dress_code_items ?? []).filter(Boolean);
+  const dressNotes = ann?.dress_code_notes?.trim() || "";
+  const skills = (ann?.required_skills ?? []).filter(Boolean);
+  const langs = (ann?.language_requirements ?? []).filter(Boolean);
+  const license = ann?.license_requirement?.trim() || "";
+  const opNotesParts = [ann?.notes, ann?.job_location_notes, ann?.job_additional_directions]
+    .map((s) => (s ?? "").trim()).filter(Boolean);
+  const arrivalMin = defaults.arrival_minutes ?? 15;
+  const contactName = ann?.job_contact_person_name?.trim() || defaults.contact_name || "";
+  // Anteprima del messaggio inviato in chat (privacy: locale = "Ristorante partner")
+  const lines: string[] = [];
+  lines.push(`Ciao ${displayWorkerName}, ti proponiamo un turno come ${role}.`);
+  lines.push("");
+  lines.push("Dettagli turno:");
+  if (ann?.service_date) lines.push(`Data: ${formatDateIT(ann.service_date)}`);
+  if (start) lines.push(`Orario: ${start}${end ? " - " + end : ""}`);
+  if (duration != null) lines.push(`Durata: ${duration}h`);
+  if (city) lines.push(`Zona: ${city}`);
+  if (tariff != null) lines.push(`Compenso: ${formatTariff(tariff, ann?.tariff_type ?? null)}`);
+  if (totalEstimate != null) lines.push(`Totale stimato: € ${totalEstimate.toFixed(2)}`);
+  if (dress.length || dressNotes) {
+    lines.push("");
+    lines.push(`Dress code: ${[dress.join(", "), dressNotes].filter(Boolean).join(" — ")}`);
+  }
+  lines.push("");
+  lines.push(`Presentarsi: ${arrivalMin} minuti prima dell'ingresso.`);
+  lines.push("");
+  lines.push("Vuoi accettare questa proposta?");
+  const previewMessage = lines.join("\n");
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !sending) onCancel(); }}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Invia proposta di lavoro</DialogTitle>
+          <DialogDescription>
+            Controlla il riepilogo prima di inviare la proposta al lavoratore.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 text-sm">
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+            <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{displayWorkerName}</span></div>
+            <div><span className="text-muted-foreground">Ruolo:</span> <span className="font-medium">{role}</span></div>
+            {ann?.service_date && <div><span className="text-muted-foreground">Data:</span> {formatDateIT(ann.service_date)}</div>}
+            {start && <div><span className="text-muted-foreground">Orario:</span> {start}{end ? ` - ${end}` : ""}</div>}
+            {duration != null && <div><span className="text-muted-foreground">Durata:</span> {duration}h</div>}
+            {city && <div><span className="text-muted-foreground">Città:</span> {city}{ann?.job_province ? ` (${ann.job_province})` : ""}</div>}
+            {tariff != null && <div><span className="text-muted-foreground">Compenso:</span> {formatTariff(tariff, ann?.tariff_type ?? null)}</div>}
+            {totalEstimate != null && <div><span className="text-muted-foreground">Totale stimato:</span> € {totalEstimate.toFixed(2)}</div>}
+            <div><span className="text-muted-foreground">Anticipo all'ingresso:</span> {arrivalMin} minuti{defaults.arrival_reason ? ` (${defaults.arrival_reason})` : ""}</div>
+            {contactName && <div><span className="text-muted-foreground">Referente:</span> {contactName}</div>}
+          </div>
+
+          {(dress.length > 0 || dressNotes) && (
+            <div>
+              <div className="font-medium mb-1">Dress code</div>
+              {dress.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {dress.map((d) => (
+                    <span key={d} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{d}</span>
+                  ))}
+                </div>
+              )}
+              {dressNotes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{dressNotes}</p>}
+            </div>
+          )}
+
+          {role && (
+            <div>
+              <div className="font-medium mb-1">Mansioni</div>
+              <p className="text-xs text-muted-foreground">{ann?.professional_profile?.trim() || "Mansioni standard del ruolo."}</p>
+            </div>
+          )}
+
+          {(skills.length > 0 || langs.length > 0 || license) && (
+            <div>
+              <div className="font-medium mb-1">Requisiti</div>
+              {skills.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {skills.map((s) => (
+                    <span key={s} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{s}</span>
+                  ))}
+                </div>
+              )}
+              {langs.length > 0 && <p className="text-xs text-muted-foreground">Lingue: {langs.join(", ")}</p>}
+              {license && <p className="text-xs text-muted-foreground">Patente: {license}</p>}
+            </div>
+          )}
+
+          {opNotesParts.length > 0 && (
+            <div>
+              <div className="font-medium mb-1">Note operative</div>
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{opNotesParts.join("\n\n")}</p>
+            </div>
+          )}
+
+          <div>
+            <div className="font-medium mb-1">Messaggio inviato al lavoratore</div>
+            <pre className="rounded-md border bg-muted/40 p-3 text-xs whitespace-pre-wrap font-sans">{previewMessage}</pre>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Per tutelare la privacy, il lavoratore vedrà "Ristorante partner" finché non accetta la proposta.
+            </p>
+          </div>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="outline" onClick={onCancel} disabled={sending}>Annulla</Button>
+          <Button onClick={onConfirm} disabled={sending}>{sending ? "Invio…" : "Invia proposta"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function WorkersMapSection({
