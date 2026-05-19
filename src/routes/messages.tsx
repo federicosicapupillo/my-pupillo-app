@@ -238,22 +238,59 @@ function MessagesLayout() {
   useEffect(() => {
     if (!user || !role) return;
     const col = role === "restaurant" ? "restaurant_id" : "worker_id";
+    // Debounced reload so a burst of related events (application INSERT +
+    // message INSERT + application UPDATE for last_message_preview, which
+    // all fire when a new proposal is sent) collapses into one refresh.
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => { reloadTimer = null; load(); }, 120);
+    };
     const ch = supabase
       .channel(`inbox-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "applications", filter: `${col}=eq.${user.id}` }, (payload) => {
         const row: any = payload.new || payload.old;
-        if (!row) return;
+        if (!row) { scheduleReload(); return; }
+        // INSERT → brand-new conversation that the worker/restaurant doesn't
+        // have in the list yet (e.g. restaurant just sent the first proposal).
+        // UPDATE with a changed last_message_preview / last_message_at means
+        // the preview & ordering must refresh, not only the status field.
+        const previewChanged =
+          payload.eventType === "UPDATE" &&
+          payload.old &&
+          ((payload.old as any).last_message_at !== row.last_message_at ||
+            (payload.old as any).last_message_preview !== row.last_message_preview);
+        if (payload.eventType === "INSERT" || previewChanged) {
+          scheduleReload();
+        }
         setThreads((prev) => {
           const prevStatus = prev.find((t) => t.id === row.id)?.status;
           if (prevStatus && row.status && prevStatus !== row.status && STATUS_LABELS[row.status]) {
             toast.message(`Stato aggiornato: ${STATUS_LABELS[row.status]}`);
           }
-          return prev.map((t) => (t.id === row.id ? { ...t, status: row.status } : t));
+          return prev.map((t) =>
+            t.id === row.id
+              ? {
+                  ...t,
+                  status: row.status ?? t.status,
+                  lastBody: row.last_message_preview ?? t.lastBody,
+                  lastAt: row.last_message_at ?? t.lastAt,
+                }
+              : t,
+          );
         });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => { load(); })
+      // Any message activity in conversations the current user participates in
+      // must refresh preview + unread counter. RLS already scopes the stream.
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => { scheduleReload(); })
+      // A worker reply to a proposal updates this table; reflect the new
+      // status promptly in the inbox so the badge updates without a refresh.
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_responses" }, () => { scheduleReload(); })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      supabase.removeChannel(ch);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, role]);
 
