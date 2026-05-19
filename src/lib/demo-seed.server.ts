@@ -219,8 +219,10 @@ async function seedWorkers(batchId: string, count: number, report: ResetReport):
     const birth = new Date(today.getFullYear() - randInt(22, 45), randInt(0, 11), randInt(1, 28));
     const issued = new Date(today.getFullYear() - randInt(1, 5), randInt(0, 11), randInt(1, 28));
     const expires = new Date(today.getFullYear() + randInt(2, 8), randInt(0, 11), randInt(1, 28));
-    const seed = `seed-${uid}`;
-    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+    // Realistic hospitality portraits (pravatar serves real face photos, square,
+    // CDN-hosted, stable). Index 1..70 — deterministic per uid.
+    const imgIdx = (parseInt(uid.replace(/[^0-9]/g, "").slice(0, 6) || "0", 10) % 70) + 1;
+    const avatarUrl = `https://i.pravatar.cc/400?img=${imgIdx}`;
 
     // Keep profile_completed=false to skip the heavy worker validators while
     // still providing enough data for the reputation / list / map cards.
@@ -505,7 +507,11 @@ function fakePhone(seed: string): string {
 }
 
 function fakeAvatar(seed: string): string {
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+  // Deterministic real-photo portrait via pravatar (square, CDN-hosted).
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  const idx = (h % 70) + 1;
+  return `https://i.pravatar.cc/400?img=${idx}`;
 }
 
 function pickByHash<T>(arr: T[], seed: string): T {
