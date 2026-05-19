@@ -38,6 +38,27 @@ export type ProposalResponseRow = {
 };
 
 /**
+ * Sort threads the same way the inbox renders them:
+ * newest `lastAt` first, then alphabetically by partner name as a tiebreak.
+ * Returns the same reference when the order is already correct so React
+ * skips re-renders.
+ */
+export function sortThreads(threads: InboxThread[]): InboxThread[] {
+  const next = [...threads].sort((a, b) => {
+    const byTime = (b.lastAt ?? "").localeCompare(a.lastAt ?? "");
+    if (byTime !== 0) return byTime;
+    const aName = ((a as any).other?.name ?? "") as string;
+    const bName = ((b as any).other?.name ?? "") as string;
+    return aName.localeCompare(bName);
+  });
+  // Bail out and return the original array when nothing moved.
+  for (let i = 0; i < threads.length; i++) {
+    if (threads[i] !== next[i]) return next;
+  }
+  return threads;
+}
+
+/**
  * Apply an application UPDATE payload to the current thread list WITHOUT
  * duplicating the row. If the row doesn't exist yet, the list is returned
  * unchanged — a full reload (debounced) is expected to bring it in.
@@ -59,7 +80,7 @@ export function mergeThreadUpdate(
   });
   // No-op when the row isn't tracked yet → keep referential equality so
   // React doesn't re-render needlessly.
-  return touched ? next : threads;
+  return touched ? sortThreads(next) : threads;
 }
 
 /**
@@ -91,7 +112,7 @@ export function applyIncomingMessage(
       lastAt: msg.created_at ?? t.lastAt,
     };
   });
-  return touched ? next : threads;
+  return touched ? sortThreads(next) : threads;
 }
 
 /**

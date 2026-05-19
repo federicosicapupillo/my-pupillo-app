@@ -6,6 +6,7 @@ import {
   applyIncomingMessage,
   applyProposalResponse,
   clearThreadUnread,
+  sortThreads,
   type InboxThread,
 } from "@/lib/inbox-realtime";
 
@@ -312,5 +313,115 @@ describe("clearThreadUnread", () => {
     const before: InboxThread[] = [baseThread({ unread: 0 })];
     const after = clearThreadUnread(before, "app-1");
     expect(after).toBe(before);
+  });
+});
+
+describe("immediate ordering — newest thread first", () => {
+  const t = (id: string, lastAt: string, name = id): InboxThread => ({
+    id,
+    status: "pending",
+    lastBody: "x",
+    lastAt,
+    unread: 0,
+    other: { id: `o-${id}`, name },
+  } as any);
+
+  it("sortThreads returns the SAME reference when order is already correct", () => {
+    const list = [
+      t("a", "2025-05-19T12:00:00.000Z"),
+      t("b", "2025-05-19T10:00:00.000Z"),
+    ];
+    expect(sortThreads(list)).toBe(list);
+  });
+
+  it("sortThreads bubbles the newest lastAt to the top", () => {
+    const list = [
+      t("a", "2025-05-19T10:00:00.000Z"),
+      t("b", "2025-05-19T12:00:00.000Z"),
+      t("c", "2025-05-19T11:00:00.000Z"),
+    ];
+    expect(sortThreads(list).map((x) => x.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("applyIncomingMessage re-sorts immediately when a new message lands", () => {
+    const before: InboxThread[] = [
+      t("a", "2025-05-19T12:00:00.000Z"),
+      t("b", "2025-05-19T11:00:00.000Z"),
+      t("c", "2025-05-19T10:00:00.000Z"),
+    ];
+    // New message arrives on thread "c" — it must jump to the top BEFORE
+    // any application UPDATE for last_message_preview/last_message_at comes in.
+    const after = applyIncomingMessage(
+      before,
+      {
+        application_id: "c",
+        sender_id: "other",
+        body: "nuovo!",
+        created_at: "2025-05-19T13:00:00.000Z",
+      },
+      "viewer-1",
+      null,
+    );
+    expect(after.map((x) => x.id)).toEqual(["c", "a", "b"]);
+    expect(after[0].lastBody).toBe("nuovo!");
+    expect((after[0] as any).unread).toBe(1);
+  });
+
+  it("mergeThreadUpdate re-sorts when a late applications UPDATE bumps lastAt", () => {
+    const before: InboxThread[] = [
+      t("a", "2025-05-19T12:00:00.000Z"),
+      t("b", "2025-05-19T11:00:00.000Z"),
+    ];
+    const after = mergeThreadUpdate(before, {
+      id: "b",
+      last_message_preview: "preview catch-up",
+      last_message_at: "2025-05-19T14:00:00.000Z",
+    });
+    expect(after.map((x) => x.id)).toEqual(["b", "a"]);
+    expect(after[0].lastBody).toBe("preview catch-up");
+  });
+
+  it("is idempotent when the late UPDATE matches what the message already set", () => {
+    // Sequence: messages INSERT lands first → applyIncomingMessage bumps
+    // lastAt; then the redundant applications UPDATE arrives with the same
+    // preview/timestamp. The list must not shuffle and no thread is added.
+    let threads: InboxThread[] = [
+      t("a", "2025-05-19T12:00:00.000Z"),
+      t("b", "2025-05-19T11:00:00.000Z"),
+    ];
+    threads = applyIncomingMessage(
+      threads,
+      {
+        application_id: "b",
+        sender_id: "other",
+        body: "ciao",
+        created_at: "2025-05-19T13:00:00.000Z",
+      },
+      "viewer-1",
+      null,
+    );
+    const afterMsg = threads;
+    expect(afterMsg.map((x) => x.id)).toEqual(["b", "a"]);
+
+    // Now the late applications UPDATE with the same preview/lastAt:
+    threads = mergeThreadUpdate(threads, {
+      id: "b",
+      last_message_preview: "ciao",
+      last_message_at: "2025-05-19T13:00:00.000Z",
+    });
+    expect(threads.map((x) => x.id)).toEqual(["b", "a"]);
+    expect(threads).toHaveLength(2);
+    // unread must NOT be bumped again by the redundant application UPDATE.
+    expect((threads[0] as any).unread).toBe(1);
+  });
+
+  it("status-only UPDATE does not change order", () => {
+    const before: InboxThread[] = [
+      t("a", "2025-05-19T12:00:00.000Z"),
+      t("b", "2025-05-19T11:00:00.000Z"),
+    ];
+    const after = mergeThreadUpdate(before, { id: "b", status: "accepted" });
+    expect(after.map((x) => x.id)).toEqual(["a", "b"]);
+    expect(after[1].status).toBe("accepted");
   });
 });
