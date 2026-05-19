@@ -322,13 +322,26 @@ function ShiftDetailPage() {
       return;
     }
     if (appId) {
-      await supabase.from("messages").insert({
-        application_id: appId,
-        sender_id: user.id,
-        body: "Sistema: il turno è stato completato e il lavoratore ha ricevuto una recensione.",
-        message_type: "system",
-        action_type: "review_submitted",
-      } as never);
+      // UN SOLO messaggio combinato "Turno chiuso e recensione ricevuta"
+      // in chat (anti-duplicato): se esiste già, non crearne un altro.
+      const { data: existingMsg } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("application_id", appId)
+        .eq("template_id", "shift_closed_with_review")
+        .limit(1)
+        .maybeSingle();
+      if (!existingMsg) {
+        await supabase.from("messages").insert({
+          application_id: appId,
+          sender_id: user.id,
+          receiver_id: shift.worker_id,
+          body: "Turno chiuso e recensione ricevuta",
+          template_id: "shift_closed_with_review",
+          message_type: "system",
+          action_type: "complete_shift",
+        } as never);
+      }
     }
     toast.success("Recensione inviata");
     setExistingReview(created as any);
