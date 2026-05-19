@@ -354,26 +354,27 @@ function AvailabilityPage() {
   };
 
   const addException = async () => {
-    if (!user || !newExc.date) { toast.error("Indica una data"); return; }
-    if (newExc.is_available && !newExc.city.trim()) {
-      toast.error("Seleziona la città in cui sei disponibile per questa data.");
-      return;
-    }
-    if (newExc.is_available && !newExc.time_slot) {
-      toast.error("Seleziona una fascia oraria.");
-      return;
-    }
-    if (newExc.is_available && newExc.time_slot === "personalizzata" && (!newExc.start_time || !newExc.end_time)) {
-      toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
-      return;
-    }
-    if (
-      newExc.is_available &&
-      newExc.time_slot === "personalizzata" &&
-      !isValidTimeRange(newExc.start_time, newExc.end_time)
-    ) {
-      toast.error("L'orario di inizio e fine non possono coincidere.");
-      return;
+    if (!user) return;
+    if (!newExc.date) { toast.error("Seleziona una data."); return; }
+    if (newExc.is_available) {
+      if (!newExc.city.trim()) {
+        toast.error("Seleziona la città in cui sei disponibile.");
+        return;
+      }
+      if (!newExc.time_slot) {
+        toast.error("Seleziona una fascia di disponibilità.");
+        return;
+      }
+      if (newExc.time_slot === "personalizzata") {
+        if (!newExc.start_time || !newExc.end_time) {
+          toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
+          return;
+        }
+        if (!isValidTimeRange(newExc.start_time, newExc.end_time)) {
+          toast.error("L'orario di inizio e fine non possono coincidere.");
+          return;
+        }
+      }
     }
     const start = newExc.time_slot === "personalizzata" ? (newExc.start_time || null) : null;
     const end = newExc.time_slot === "personalizzata" ? (newExc.end_time || null) : null;
