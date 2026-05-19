@@ -408,6 +408,30 @@ function WorkersPage() {
         applicationId = created.id;
       }
       if (!applicationId) { toast.error("Errore nella creazione della conversazione."); setSendingProposal(false); return; }
+      // Anti-duplicato: se esiste già una proposta per questo annuncio + lavoratore
+      // ancora senza risposta del lavoratore, non crearne un'altra: riapri la chat.
+      const { data: existingProposals } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("application_id", applicationId)
+        .eq("template_id", "shift_proposal")
+        .eq("sender_id", user.id);
+      const proposalIds = ((existingProposals ?? []) as { id: string }[]).map((p) => p.id);
+      let hasUnanswered = false;
+      if (proposalIds.length > 0) {
+        const { data: responses } = await supabase
+          .from("proposal_responses")
+          .select("message_id")
+          .in("message_id", proposalIds);
+        const answered = new Set(((responses ?? []) as { message_id: string }[]).map((r) => r.message_id));
+        hasUnanswered = proposalIds.some((pid) => !answered.has(pid));
+      }
+      if (hasUnanswered) {
+        toast.info("Hai già inviato una proposta a questo lavoratore per questo annuncio.");
+        setProposalWorker(null);
+        nav({ to: "/messages/$id", params: { id: applicationId } });
+        return;
+      }
       await sendShiftProposal({
         applicationId,
         announcementId: selected,
