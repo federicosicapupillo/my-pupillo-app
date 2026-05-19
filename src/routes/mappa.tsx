@@ -364,7 +364,10 @@ function MapPage() {
       id: w.id,
       lat: pos[0],
       lng: pos[1],
-      name: w.full_name,
+      // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
+      // proprio (no cognome). Dopo conferma del turno è il flusso dedicato
+      // (proposta/chat) a esporre il nome completo.
+      name: isRestaurant ? firstNameOnly(w.full_name) : w.full_name,
       role: w.primary_role,
       city: w.city ?? w.neighborhood ?? null,
       rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
@@ -373,7 +376,7 @@ function MapPage() {
       initials: mapInitials(w.full_name),
       link: `/workers_/${w.id}`,
     })),
-    [locatedWorkers, workerAvatars],
+    [locatedWorkers, workerAvatars, isRestaurant],
   );
 
   const { points, coordSourceStats, coordSourceById } = useMemo(() => {
@@ -564,9 +567,25 @@ function MapPage() {
     [annsQuality]
   );
 
+  // Per il ristoratore: se non c'è ricerca / posizione browser, centra sul
+  // proprio locale (latitude/longitude o service_area_*).
+  const ownRestaurant = useMemo(
+    () => (isRestaurant && user ? restaurants.find((r) => r.id === user.id) ?? null : null),
+    [isRestaurant, user, restaurants],
+  );
+  const ownCenter: [number, number] | null = useMemo(() => {
+    if (!ownRestaurant) return null;
+    const lat = ownRestaurant.latitude ?? ownRestaurant.service_area_lat;
+    const lng = ownRestaurant.longitude ?? ownRestaurant.service_area_lng;
+    if (lat == null || lng == null) return null;
+    return [lat, lng];
+  }, [ownRestaurant]);
+
   const center: [number, number] = searchCenter
     ? [searchCenter.lat, searchCenter.lng]
     : me ? [me.lat, me.lng]
+    : ownCenter
+    ? ownCenter
     : isRestaurant && workerMapPoints.length > 0
       ? [
           workerMapPoints.reduce((s, p) => s + p.lat, 0) / workerMapPoints.length,
