@@ -331,17 +331,16 @@ function AvailabilityPage() {
       toast.error("Seleziona la città in cui sei disponibile per questa data.");
       return;
     }
-    if (newExc.is_available && !newExc.time_slot && !newExc.start_time && !newExc.end_time) {
-      toast.error("Indica almeno una fascia oraria o un orario di disponibilità.");
+    if (newExc.is_available && !newExc.time_slot) {
+      toast.error("Seleziona una fascia oraria.");
       return;
     }
-    let start = newExc.start_time || null;
-    let end = newExc.end_time || null;
-    if (newExc.time_slot && !start && !end && newExc.time_slot !== "last_minute" && newExc.time_slot !== "flessibile") {
-      const def = SLOT_DEFAULT_TIMES[newExc.time_slot];
-      start = def.start;
-      end = def.end;
+    if (newExc.is_available && newExc.time_slot === "personalizzata" && (!newExc.start_time || !newExc.end_time)) {
+      toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
+      return;
     }
+    const start = newExc.time_slot === "personalizzata" ? (newExc.start_time || null) : null;
+    const end = newExc.time_slot === "personalizzata" ? (newExc.end_time || null) : null;
     const payload = {
       worker_id: user.id,
       date: newExc.date,
