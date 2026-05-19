@@ -553,3 +553,196 @@ describe("messages + proposal_responses — notification state without duplicate
     expect(afterResp).toHaveLength(1);
   });
 });
+
+describe("multi-user realtime — filter by user.id (Federico, Enrico, Admin)", () => {
+  // Three viewers share the same realtime stream but each has their own
+  // inbox state. Helpers must filter strictly by viewerId / thread membership
+  // so events for one user never leak into another's unread badge.
+  const FEDERICO = "user-federico"; // worker
+  const ENRICO = "user-enrico"; // restaurant
+  const ADMIN = "user-admin"; // admin watching both sides
+
+  const seedThread = (id: string): InboxThread => ({
+    id,
+    status: "pending",
+    lastBody: "ciao",
+    lastAt: "2025-05-19T10:00:00.000Z",
+    unread: 0,
+  });
+
+  // Federico ↔ Enrico share app-FE. Admin sees both app-FE and a second
+  // conversation app-OTHER that Federico is NOT part of.
+  const seedInboxes = () => ({
+    federico: [seedThread("app-FE")] as InboxThread[],
+    enrico: [seedThread("app-FE")] as InboxThread[],
+    admin: [seedThread("app-FE"), seedThread("app-OTHER")] as InboxThread[],
+  });
+
+  it("a message sent by Federico bumps unread for Enrico and Admin, NOT for Federico", () => {
+    const inbox = seedInboxes();
+    const msg = {
+      application_id: "app-FE",
+      sender_id: FEDERICO,
+      body: "ciao Enrico",
+      created_at: "2025-05-19T12:00:00.000Z",
+    };
+    const fed = applyIncomingMessage(inbox.federico, msg, FEDERICO, null);
+    const enr = applyIncomingMessage(inbox.enrico, msg, ENRICO, null);
+    const adm = applyIncomingMessage(inbox.admin, msg, ADMIN, null);
+
+    expect(fed).toBe(inbox.federico); // sender — no bump, same ref
+    expect((fed[0] as any).unread).toBe(0);
+
+    expect((enr[0] as any).unread).toBe(1);
+    expect(enr[0].lastBody).toBe("ciao Enrico");
+
+    expect(adm.find((t) => t.id === "app-FE")!.unread).toBe(1);
+    // The unrelated thread in admin's inbox must NOT be touched.
+    expect(adm.find((t) => t.id === "app-OTHER")!.unread).toBe(0);
+  });
+
+  it("a reply from Enrico bumps unread for Federico and Admin, NOT for Enrico", () => {
+    const inbox = seedInboxes();
+    const msg = {
+      application_id: "app-FE",
+      sender_id: ENRICO,
+      body: "ok",
+      created_at: "2025-05-19T12:05:00.000Z",
+    };
+    const fed = applyIncomingMessage(inbox.federico, msg, FEDERICO, null);
+    const enr = applyIncomingMessage(inbox.enrico, msg, ENRICO, null);
+    const adm = applyIncomingMessage(inbox.admin, msg, ADMIN, null);
+
+    expect((fed[0] as any).unread).toBe(1);
+    expect(enr).toBe(inbox.enrico);
+    expect(adm.find((t) => t.id === "app-FE")!.unread).toBe(1);
+  });
+
+  it("events for an application a user is not part of are ignored", () => {
+    const inbox = seedInboxes();
+    // A message lands on app-OTHER (Federico has no such thread).
+    const msg = {
+      application_id: "app-OTHER",
+      sender_id: "someone-else",
+      body: "fuori contesto",
+    };
+    const fed = applyIncomingMessage(inbox.federico, msg, FEDERICO, null);
+    const enr = applyIncomingMessage(inbox.enrico, msg, ENRICO, null);
+    const adm = applyIncomingMessage(inbox.admin, msg, ADMIN, null);
+
+    // Federico & Enrico have no app-OTHER thread → strict no-op (same ref).
+    expect(fed).toBe(inbox.federico);
+    expect(enr).toBe(inbox.enrico);
+    // Admin sees the bump on the right thread, app-FE stays at 0.
+    expect(adm.find((t) => t.id === "app-OTHER")!.unread).toBe(1);
+    expect(adm.find((t) => t.id === "app-FE")!.unread).toBe(0);
+  });
+
+  it("if Federico has the chat open, his unread stays at 0 while Enrico/Admin still bump", () => {
+    const inbox = seedInboxes();
+    const msg = {
+      application_id: "app-FE",
+      sender_id: ENRICO,
+      body: "leggi",
+    };
+    const fed = applyIncomingMessage(inbox.federico, msg, FEDERICO, "app-FE");
+    const enr = applyIncomingMessage(inbox.enrico, msg, ENRICO, null);
+    const adm = applyIncomingMessage(inbox.admin, msg, ADMIN, null);
+
+    expect((fed[0] as any).unread).toBe(0);
+    expect(fed[0].lastBody).toBe("leggi"); // preview still refreshed
+    expect(enr).toBe(inbox.enrico); // sender
+    expect(adm.find((t) => t.id === "app-FE")!.unread).toBe(1);
+  });
+
+  it("a proposal_responses INSERT propagates the same status to every viewer that has the thread", () => {
+    const inbox = seedInboxes();
+    const resp = { application_id: "app-FE", status: "accepted" as const };
+    const fed = applyProposalResponse(inbox.federico, resp);
+    const enr = applyProposalResponse(inbox.enrico, resp);
+    const adm = applyProposalResponse(inbox.admin, resp);
+
+    expect(fed[0].status).toBe("accepted");
+    expect(enr[0].status).toBe("accepted");
+    expect(adm.find((t) => t.id === "app-FE")!.status).toBe("accepted");
+    // Unrelated thread must not flip status.
+    expect(adm.find((t) => t.id === "app-OTHER")!.status).toBe("pending");
+  });
+
+  it("a proposal_responses for an application a user does not have is a no-op", () => {
+    const inbox = seedInboxes();
+    const resp = { application_id: "app-OTHER", status: "rejected" as const };
+    const fed = applyProposalResponse(inbox.federico, resp);
+    const enr = applyProposalResponse(inbox.enrico, resp);
+    expect(fed).toBe(inbox.federico);
+    expect(enr).toBe(inbox.enrico);
+  });
+
+  it("clearThreadUnread for one viewer does not affect the others' unread", () => {
+    let { federico, enrico, admin } = seedInboxes();
+    const msg = { application_id: "app-FE", sender_id: ENRICO, body: "x" };
+    federico = applyIncomingMessage(federico, msg, FEDERICO, null);
+    admin = applyIncomingMessage(admin, msg, ADMIN, null);
+    expect((federico[0] as any).unread).toBe(1);
+    expect(admin.find((t) => t.id === "app-FE")!.unread).toBe(1);
+
+    // Federico opens the chat → clears HIS unread only.
+    federico = clearThreadUnread(federico, "app-FE");
+    expect((federico[0] as any).unread).toBe(0);
+    expect(admin.find((t) => t.id === "app-FE")!.unread).toBe(1);
+    expect((enrico[0] as any).unread).toBe(0);
+  });
+
+  it("a full message + proposal_response flow leaves every inbox consistent (no duplicates)", () => {
+    let { federico, enrico, admin } = seedInboxes();
+
+    // 1) Enrico sends a proposal message.
+    const msg1 = {
+      application_id: "app-FE",
+      sender_id: ENRICO,
+      body: "ti propongo un turno",
+      created_at: "2025-05-19T12:00:00.000Z",
+    };
+    federico = applyIncomingMessage(federico, msg1, FEDERICO, null);
+    enrico = applyIncomingMessage(enrico, msg1, ENRICO, null);
+    admin = applyIncomingMessage(admin, msg1, ADMIN, null);
+
+    // 2) Late applications UPDATE (preview catch-up) — must NOT re-bump.
+    const upd = {
+      id: "app-FE",
+      last_message_preview: "ti propongo un turno",
+      last_message_at: "2025-05-19T12:00:00.000Z",
+    };
+    federico = mergeThreadUpdate(federico, upd);
+    enrico = mergeThreadUpdate(enrico, upd);
+    admin = mergeThreadUpdate(admin, upd);
+
+    // 3) Federico accepts → proposal_responses event for everyone.
+    const resp = { application_id: "app-FE", status: "accepted" as const };
+    federico = applyProposalResponse(federico, resp);
+    enrico = applyProposalResponse(enrico, resp);
+    admin = applyProposalResponse(admin, resp);
+
+    // No duplicate threads anywhere.
+    expect(federico).toHaveLength(1);
+    expect(enrico).toHaveLength(1);
+    expect(admin).toHaveLength(2);
+
+    // Federico is the sender of the accept event but the RECIPIENT of msg1,
+    // so his unread is 1 (only msg1, not re-bumped by the late UPDATE).
+    expect((federico[0] as any).unread).toBe(1);
+    expect(federico[0].status).toBe("accepted");
+
+    // Enrico sent msg1 → unread 0; status flipped.
+    expect((enrico[0] as any).unread).toBe(0);
+    expect(enrico[0].status).toBe("accepted");
+
+    // Admin: app-FE unread 1, status accepted; app-OTHER untouched.
+    const adminFE = admin.find((t) => t.id === "app-FE")!;
+    const adminOther = admin.find((t) => t.id === "app-OTHER")!;
+    expect(adminFE.unread).toBe(1);
+    expect(adminFE.status).toBe("accepted");
+    expect(adminOther.unread).toBe(0);
+    expect(adminOther.status).toBe("pending");
+  });
+});
