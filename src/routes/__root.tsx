@@ -14,6 +14,7 @@ import { Toaster } from "sonner";
 import { PhoneVerificationGate } from "@/components/PhoneVerificationGate";
 import { StalePreviewOverlay } from "@/components/StalePreviewOverlay";
 import { installServerFnAuthFetch } from "@/lib/server-fn-auth";
+import { DevLoopMonitor } from "@/lib/dev-loop-monitor";
 
 installServerFnAuthFetch();
 
@@ -135,6 +136,7 @@ function RootComponent() {
         </PhoneVerificationGate>
         <Toaster richColors position="top-right" />
         <StalePreviewOverlay />
+        {import.meta.env.DEV ? <DevLoopMonitor /> : null}
       </AuthProvider>
     </QueryClientProvider>
   );
