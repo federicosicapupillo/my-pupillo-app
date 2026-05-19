@@ -669,6 +669,38 @@ function Thread() {
     if (data) pushMessage(data as Msg);
   };
 
+  // Inserisce UN SOLO messaggio combinato "Turno chiuso e recensione ricevuta"
+  // in chat, evitando duplicati se già presente per la stessa application.
+  const SHIFT_REVIEW_TEMPLATE_ID = "shift_closed_with_review";
+  const insertShiftClosedWithReview = async () => {
+    if (!user || !app) return;
+    // Anti-duplicato lato client: se esiste già il messaggio combinato per
+    // questa conversazione, non crearne un altro.
+    const { data: existing } = await supabase
+      .from("messages")
+      .select("id")
+      .eq("application_id", id)
+      .eq("template_id", SHIFT_REVIEW_TEMPLATE_ID)
+      .limit(1)
+      .maybeSingle();
+    if (existing) return;
+    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+    const createdAt = new Date().toISOString();
+    const { data, error } = await supabase.from("messages").insert({
+      application_id: id,
+      sender_id: user.id,
+      receiver_id: receiverId,
+      body: "Turno chiuso e recensione ricevuta",
+      created_at: createdAt,
+      read_at: null,
+      template_id: SHIFT_REVIEW_TEMPLATE_ID,
+      message_type: "system",
+      action_type: "complete_shift",
+    } as never).select("*").single();
+    if (error) throw error;
+    if (data) pushMessage(data as Msg);
+  };
+
   const sendTemplate = async () => {
     if (sending) return;
     if (!app) {
