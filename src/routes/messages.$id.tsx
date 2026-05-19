@@ -929,15 +929,19 @@ function Thread() {
     }
     // Quando il ristoratore accetta la candidatura, invia automaticamente al
     // lavoratore una "Conferma turno" con tutti i dettagli operativi in chiaro.
-    if (next === "accepted" && role === "restaurant") {
+    // Lo stesso messaggio viene inviato anche quando il lavoratore accetta la
+    // proposta, così riceve subito tutti i dati operativi sbloccati.
+    if (next === "accepted" && !msgs.some(mm => mm.template_id === CONFIRMATION_TEMPLATE_ID && mm.application_id === app.id)) {
       try {
         // After acceptance the worker is allowed to see the real venue name;
         // by this point the application status is "accepted" so privacy is
         // already unlocked client-side too.
-        const venueName = profile?.business_name || profile?.full_name || null;
-        const body = buildConfirmationBody(ann, venueName);
+        const venueName = role === "restaurant"
+          ? (profile?.business_name || profile?.full_name || null)
+          : (otherIdentity?.businessName || otherIdentity?.fullName || null);
+        const body = buildConfirmationBody(ann, venueName, restaurantArrivalAdvance);
         const createdAt = new Date().toISOString();
-        const receiverId = app.worker_id;
+        const receiverId = role === "restaurant" ? app.worker_id : app.restaurant_id;
         const { data: confMsg } = await supabase.from("messages").insert({
           application_id: app.id,
           sender_id: user.id,
@@ -951,15 +955,19 @@ function Thread() {
         } as never).select("*").single();
         if (confMsg) pushMessage(confMsg as Msg);
         await supabase.from("applications").update({
-          last_message_preview: "Candidatura accettata · dettagli del turno inviati",
+          last_message_preview: "Proposta accettata · dettagli operativi sbloccati",
           last_message_at: createdAt,
         } as never).eq("id", app.id);
-        await supabase.from("notifications").insert({
-          user_id: receiverId,
-          title: "Candidatura accettata",
-          body: `Il ristoratore ha confermato la tua presenza per il turno${ann?.service_date ? ` del ${formatDateIT(ann.service_date)}` : ""}.`,
-          link: `/messages/${app.id}`,
-        } as never);
+        if (role === "restaurant") {
+          // When the worker accepts, the proposal handler already notifies
+          // the restaurant — avoid duplicate notifications in that path.
+          await supabase.from("notifications").insert({
+            user_id: receiverId,
+            title: "Candidatura accettata",
+            body: `Il ristoratore ha confermato la tua presenza per il turno${ann?.service_date ? ` del ${formatDateIT(ann.service_date)}` : ""}.`,
+            link: `/messages/${app.id}`,
+          } as never);
+        }
       } catch (e) {
         console.error("[accept] confirmation message failed", e);
       }
