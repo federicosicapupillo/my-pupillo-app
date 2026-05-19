@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Star } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export type WorkerMapPoint = {
   id: string;
@@ -104,35 +105,7 @@ export default function WorkersMapInner({
             <Popup>
               <div style={{ minWidth: 200, fontFamily: "Inter, system-ui, sans-serif" }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: "50%",
-                      overflow: "hidden",
-                      background: "#f1f5f9",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 600,
-                      color: "#111",
-                      flexShrink: 0,
-                      border: "1px solid rgba(0,0,0,0.08)",
-                    }}
-                  >
-                    {p.avatarUrl ? (
-                      <img
-                        src={p.avatarUrl}
-                        alt=""
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <span>{(p.initials || "?").slice(0, 2)}</span>
-                    )}
-                  </div>
+                <UserAvatar userId={p.id} name={p.name} className="h-11 w-11 flex-shrink-0" />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14, color: "#111" }}>{p.name ?? "Lavoratore"}</div>
                     {p.role && (
