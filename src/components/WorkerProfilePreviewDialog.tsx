@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, MessageSquare, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, ExternalLink, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 type WorkerProfile = {
