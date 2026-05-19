@@ -19,6 +19,7 @@ import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
+import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
