@@ -212,6 +212,15 @@ function WorkersPage() {
   const [view, setView] = useState<"list" | "map">("list");
   // Relazione ristoratore ↔ lavoratore (per ordinare e mostrare badge)
   const [rel, setRel] = useState<Record<string, WorkerRel>>({});
+  // Dialog "Invia proposta di lavoro"
+  const [proposalWorker, setProposalWorker] = useState<W | null>(null);
+  const [missingAnnOpen, setMissingAnnOpen] = useState(false);
+  const [sendingProposal, setSendingProposal] = useState(false);
+  const [restaurantDefaults, setRestaurantDefaults] = useState<{
+    contact_name: string | null;
+    arrival_minutes: number | null;
+    arrival_reason: string | null;
+  }>({ contact_name: null, arrival_minutes: null, arrival_reason: null });
 
   // Carica TUTTI i lavoratori attivi una sola volta. I filtri lavorano poi lato client.
   const loadWorkers = async () => {
