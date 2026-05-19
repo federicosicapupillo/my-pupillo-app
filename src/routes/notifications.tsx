@@ -87,11 +87,22 @@ function NotificationsPage() {
     const ch = supabase
       .channel(`notif-page-${user.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        (p) => setItems(prev => [p.new as Notif, ...prev]))
+        (p) => { const n = p.new as Notif; setItems(prev => prev.some(i => i.id === n.id) ? prev : [n, ...prev]); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        (p) => { const n = p.new as Notif; setItems(prev => prev.map(i => i.id === n.id ? { ...i, ...n } : i)); })
+        (p) => {
+          const n = p.new as Notif;
+          setItems(prev => {
+            const idx = prev.findIndex(i => i.id === n.id);
+            if (idx === -1) return prev;
+            const cur = prev[idx];
+            if (cur.read === n.read && cur.title === n.title && cur.body === n.body && cur.link === n.link && cur.read_at === n.read_at) return prev;
+            const next = prev.slice();
+            next[idx] = { ...cur, ...n };
+            return next;
+          });
+        })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        (p) => { const o = p.old as Notif; setItems(prev => prev.filter(i => i.id !== o.id)); })
+        (p) => { const o = p.old as Notif; setItems(prev => prev.some(i => i.id === o.id) ? prev.filter(i => i.id !== o.id) : prev); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
