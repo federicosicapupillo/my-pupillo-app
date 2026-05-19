@@ -45,7 +45,7 @@ function ResetTestDbPage() {
     setCompleting(true);
     setCompleteReport(null);
     try {
-      const r = await completeProfiles({ data: {} as any });
+      const r = await completeProfiles();
       setCompleteReport(r);
       toast.success(`Profili demo completati: ${r.updatedWorkers} lavoratori, ${r.updatedRestaurants} ristoratori`);
     } catch (e: any) {
