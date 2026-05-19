@@ -507,7 +507,11 @@ function fakePhone(seed: string): string {
 }
 
 function fakeAvatar(seed: string): string {
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+  // Deterministic real-photo portrait via pravatar (square, CDN-hosted).
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  const idx = (h % 70) + 1;
+  return `https://i.pravatar.cc/400?img=${idx}`;
 }
 
 function pickByHash<T>(arr: T[], seed: string): T {
