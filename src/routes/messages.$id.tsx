@@ -2885,12 +2885,25 @@ function ProposalCard(props: {
           )}
         </dl>
         {!canSeePreciseInfo ? (
-          <div className="mx-4 mb-3 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>La posizione esatta e il referente saranno visibili solo dopo l'assegnazione definitiva.</span>
+          <div className="mx-4 mb-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-amber-900 dark:text-amber-200">
+            <div className="flex items-center gap-2 font-semibold">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              Dati completi disponibili dopo l'accettazione
+            </div>
+            <p className="mt-1 text-xs leading-relaxed">
+              Per proteggere la privacy del locale, nome reale, indirizzo completo, referente e istruzioni operative verranno mostrati solo dopo che avrai accettato la proposta.
+            </p>
           </div>
         ) : (
-          <p className="px-4 pb-3 text-xs text-muted-foreground">Fammi sapere se puoi esserci.</p>
+          <div className="mx-4 mb-3 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-200">
+            <div className="flex items-center gap-2 font-semibold">
+              <Unlock className="h-4 w-4 shrink-0" />
+              Dati operativi sbloccati
+            </div>
+            <p className="mt-1 text-xs leading-relaxed">
+              Trovi nome del locale, indirizzo completo, referente e indicazioni nel messaggio "Proposta accettata: dettagli operativi disponibili" qui sotto in chat.
+            </p>
+          </div>
         )}
 
         {deadline && !accepted && !rejected && (
