@@ -414,18 +414,10 @@ function WorkersPage() {
         restaurantId: user.id,
         workerId,
       });
-      // Notifica al lavoratore — sempre, con link sicuro alla conversazione esatta.
-      await supabase.from("notifications").insert({
-        user_id: workerId,
-        title: "Hai ricevuto una proposta di lavoro",
-        body: "Un ristorante ti ha inviato una proposta per un turno.",
-        link: `/messages/${applicationId}`,
-        metadata: {
-          type: "job_proposal_received",
-          application_id: applicationId,
-          announcement_id: selected,
-        },
-      } as never);
+      // La notifica al lavoratore viene creata automaticamente dal trigger
+      // `notify_new_message` con titolo "Hai ricevuto una proposta di lavoro"
+      // e link `/messages/<applicationId>` quando il messaggio è di tipo
+      // `shift_proposal`.
       toast.success("Proposta inviata al lavoratore.");
       setProposalWorker(null);
       nav({ to: "/messages/$id", params: { id: applicationId } });
