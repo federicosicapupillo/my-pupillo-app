@@ -895,11 +895,10 @@ function WorkersPage() {
               size="sm"
               className="mt-4 w-full gap-1"
               onClick={() => openProposalDialog(w)}
-              disabled={!selected}
-              title={!selected ? "Seleziona prima un annuncio" : undefined}
+              title={!selected ? "Scegli un annuncio prima di proporre un turno" : undefined}
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              {selected ? "Chatta" : "Seleziona prima un annuncio"}
+              Chatta
             </Button>
             {isBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
@@ -929,6 +928,31 @@ function WorkersPage() {
         )}
       </div>
       )}
+      <ProposalConfirmDialog
+        worker={proposalWorker}
+        announcement={selectedAnn ?? null}
+        defaults={restaurantDefaults}
+        rel={proposalWorker ? rel[proposalWorker.id] : undefined}
+        sending={sendingProposal}
+        onCancel={() => setProposalWorker(null)}
+        onConfirm={() => proposalWorker && sendProposal(proposalWorker.id)}
+      />
+      <Dialog open={missingAnnOpen} onOpenChange={setMissingAnnOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Seleziona un turno da proporre</DialogTitle>
+            <DialogDescription>
+              Per inviare una proposta a un lavoratore devi prima scegliere un annuncio attivo, oppure crearne uno nuovo.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setMissingAnnOpen(false)}>Annulla</Button>
+            <Button onClick={() => { setMissingAnnOpen(false); nav({ to: "/ristoratore/annunci/nuovo" }); }}>
+              Crea nuova proposta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
