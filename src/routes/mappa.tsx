@@ -408,9 +408,9 @@ function MapPage() {
       lat: pos[0],
       lng: pos[1],
       // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
-      // proprio (no cognome). Dopo conferma del turno è il flusso dedicato
-      // (proposta/chat) a esporre il nome completo.
-      name: isRestaurant ? firstNameOnly(w.full_name) : w.full_name,
+      // (no cognome). Dopo una candidatura accettata o un turno assegnato
+      // mostriamo invece nome e cognome completi.
+      name: isRestaurant && !knownWorkerIds.has(w.id) ? firstNameOnly(w.full_name) : w.full_name,
       role: w.primary_role,
       city: w.city ?? w.neighborhood ?? null,
       rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
@@ -419,7 +419,7 @@ function MapPage() {
       initials: mapInitials(w.full_name),
       link: `/workers_/${w.id}`,
     })),
-    [locatedWorkers, workerAvatars, isRestaurant],
+    [locatedWorkers, workerAvatars, isRestaurant, knownWorkerIds],
   );
 
   const { points, coordSourceStats, coordSourceById } = useMemo(() => {
