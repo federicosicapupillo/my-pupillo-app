@@ -137,6 +137,14 @@ type Review = {
   author_id: string;
   target_id: string;
   shift_id: string | null;
+  punctuality?: number | null;
+  professionalism?: number | null;
+  competence?: number | null;
+  reliability?: number | null;
+  teamwork?: number | null;
+  would_rehire?: "yes" | "maybe" | "no" | string | null;
+  positive_tags?: string[] | null;
+  negative_tags?: string[] | null;
 };
 
 type WorkerReview = {
@@ -524,11 +532,15 @@ function Thread() {
           .maybeSingle();
         setShift((sh as Shift | null) ?? null);
         if (sh && user) {
+          // Recupera la recensione del turno (visibile sia al ristoratore
+          // sia al lavoratore: serve a renderizzare la card "Turno chiuso
+          // e recensione ricevuta" anche lato lavoratore).
           const { data: rev } = await supabase
             .from("reviews")
-            .select("id, rating, comment, tags, created_at, author_id, target_id, shift_id")
+            .select("id, rating, comment, tags, created_at, author_id, target_id, shift_id, punctuality, professionalism, competence, reliability, teamwork, would_rehire, positive_tags, negative_tags")
             .eq("shift_id", (sh as any).id)
-            .eq("author_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
             .maybeSingle();
           setExistingReview((rev as Review | null) ?? null);
         }
@@ -652,6 +664,38 @@ function Thread() {
       template_id: null,
       message_type: "system",
       action_type: actionType ?? null,
+    } as never).select("*").single();
+    if (error) throw error;
+    if (data) pushMessage(data as Msg);
+  };
+
+  // Inserisce UN SOLO messaggio combinato "Turno chiuso e recensione ricevuta"
+  // in chat, evitando duplicati se già presente per la stessa application.
+  const SHIFT_REVIEW_TEMPLATE_ID = "shift_closed_with_review";
+  const insertShiftClosedWithReview = async () => {
+    if (!user || !app) return;
+    // Anti-duplicato lato client: se esiste già il messaggio combinato per
+    // questa conversazione, non crearne un altro.
+    const { data: existing } = await supabase
+      .from("messages")
+      .select("id")
+      .eq("application_id", id)
+      .eq("template_id", SHIFT_REVIEW_TEMPLATE_ID)
+      .limit(1)
+      .maybeSingle();
+    if (existing) return;
+    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+    const createdAt = new Date().toISOString();
+    const { data, error } = await supabase.from("messages").insert({
+      application_id: id,
+      sender_id: user.id,
+      receiver_id: receiverId,
+      body: "Turno chiuso e recensione ricevuta",
+      created_at: createdAt,
+      read_at: null,
+      template_id: SHIFT_REVIEW_TEMPLATE_ID,
+      message_type: "system",
+      action_type: "complete_shift",
     } as never).select("*").single();
     if (error) throw error;
     if (data) pushMessage(data as Msg);
@@ -1158,9 +1202,11 @@ function Thread() {
       return;
     }
     setExistingReview(data as Review);
-    // Messaggio di sistema in chat
+    // UN SOLO messaggio di sistema combinato in chat ("Turno chiuso e
+    // recensione ricevuta"), con anti-duplicato. Non inviare anche il
+    // vecchio messaggio "Turno chiuso" — evita doppioni lato lavoratore.
     try {
-      await insertSystemMessage(`Turno chiuso. Il ristoratore ha inviato la recensione del servizio.`, "complete_shift");
+      await insertShiftClosedWithReview();
     } catch (e) { /* non bloccante */ }
     // Nota: la notifica "Hai ricevuto una recensione" viene creata
     // automaticamente dal trigger DB `handle_new_review` per evitare duplicati.
@@ -1708,6 +1754,15 @@ function Thread() {
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
+            // Card combinata "Turno chiuso e recensione ricevuta" — UN SOLO
+            // messaggio visibile sia al ristoratore sia al lavoratore.
+            if (m.template_id === SHIFT_REVIEW_TEMPLATE_ID) {
+              return (
+                <div key={m.id} className="flex justify-center">
+                  <ShiftClosedWithReviewCard review={existingReview} />
+                </div>
+              );
+            }
             if (isSystem) {
               const isAccept = m.action_type === "accept_application";
               const isReject = m.action_type === "reject_application";
@@ -2648,6 +2703,73 @@ function ProposalCard(props: {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ShiftClosedWithReviewCard({ review }: { review: Review | null }) {
+  const wouldRehireLabel = (v?: string | null) => {
+    if (v === "yes") return "Sì";
+    if (v === "maybe") return "Forse";
+    if (v === "no") return "No";
+    return null;
+  };
+  const Row = ({ label, value }: { label: string; value: string | number | null | undefined }) => {
+    if (value === null || value === undefined || value === "") return null;
+    return (
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium text-foreground">{value}</span>
+      </div>
+    );
+  };
+  const formatScore = (n?: number | null) => (typeof n === "number" && n > 0 ? `${n}/5` : null);
+  const tags = [
+    ...((review?.positive_tags as string[] | null) ?? []),
+    ...((review?.negative_tags as string[] | null) ?? []),
+  ].filter(Boolean);
+  const comment = review?.comment?.trim() ?? "";
+  const rehire = wouldRehireLabel(review?.would_rehire ?? null);
+  return (
+    <div className="w-full max-w-md rounded-2xl border bg-emerald-500/10 border-emerald-500/30 px-4 py-3 space-y-2 text-left">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Star className="h-4 w-4 text-emerald-700 dark:text-emerald-300" />
+          <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+            Turno chiuso e recensione ricevuta
+          </span>
+        </div>
+        <span className="rounded-full bg-emerald-600/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+          Servizio completato
+        </span>
+      </div>
+      <p className="text-xs text-emerald-900/80 dark:text-emerald-100/80">
+        Il turno è stato chiuso dal ristoratore e hai ricevuto una recensione per il servizio svolto.
+      </p>
+      {review ? (
+        <div className="rounded-xl bg-background/70 p-3 space-y-1.5 border border-emerald-500/20">
+          <Row label="Valutazione generale" value={formatScore(review.rating)} />
+          <Row label="Affidabilità" value={formatScore(review.reliability ?? null)} />
+          <Row label="Puntualità" value={formatScore(review.punctuality ?? null)} />
+          <Row label="Professionalità" value={formatScore(review.professionalism ?? null)} />
+          <Row label="Qualità del servizio" value={formatScore(review.competence ?? null)} />
+          {rehire && <Row label="Lo richiamerebbe" value={rehire} />}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {tags.map((t) => (
+                <span key={t} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+          {comment && (
+            <div className="pt-1.5 border-t border-emerald-500/20 mt-1.5">
+              <p className="text-xs text-foreground italic">"{comment}"</p>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
