@@ -180,7 +180,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       return_url: data.returnUrl,
       // End-to-end compliance handling: Stripe handles VAT calc/collection/filing,
       // fraud, disputes and customer support on supported countries.
-      managed_payments: { enabled: true },
+      // Cast: the param exists on API version 2026-03-25.dahlia but is not yet
+      // in the SDK type definitions.
+      ...({ managed_payments: { enabled: true } } as any),
       ...(discounts && { discounts }),
       ...(customerId && { customer: customerId }),
       ...(!isRecurring && productDescription && {
