@@ -47,7 +47,11 @@ const NEON = {
 function Index() {
   const [isLight, setIsLight] = useState(false);
   useEffect(() => {
-    const update = () => setIsLight(document.documentElement.classList.contains("light"));
+    const update = () =>
+      setIsLight((prev) => {
+        const next = document.documentElement.classList.contains("light");
+        return prev === next ? prev : next;
+      });
     update();
     const obs = new MutationObserver(update);
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
