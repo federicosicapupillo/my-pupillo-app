@@ -441,6 +441,16 @@ html.light [role="menu"] {
   box-shadow: 0 10px 30px -10px oklch(0.21 0.04 265 / 18%) !important;
 }
 
+/* Ensure Leaflet map panes and controls never sit above modal dialogs.
+   Radix dialogs use z-50; leaflet defaults go up to 1000 (controls) which
+   leaks above the overlay. Cap everything below the dialog layer. */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom,
+.leaflet-control,
+.leaflet-control-container { z-index: 1 !important; }
+.leaflet-popup-pane { z-index: 2 !important; }
+
 /* Light-mode leaflet — clean light tiles backdrop */
 html.light .leaflet-container { background: oklch(0.96 0.005 280) !important; font-family: inherit; }
 html.light .leaflet-popup-content-wrapper,
