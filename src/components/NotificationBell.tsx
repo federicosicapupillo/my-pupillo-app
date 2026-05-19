@@ -24,6 +24,11 @@ export function NotificationBell() {
   const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">(
     canUseBrowserPush() ? Notification.permission : "unsupported"
   );
+  // Track notification IDs we've already toasted so duplicate realtime
+  // events (or reconnections that replay INSERTs) don't fire twice.
+  const toastedRef = (typeof window !== "undefined")
+    ? (window as any).__pupilloToastedNotifIds ||= new Set<string>()
+    : new Set<string>();
 
   const load = async () => {
     if (!user) return;
@@ -44,9 +49,14 @@ export function NotificationBell() {
       .channel(`notif-${user.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
         const n = p.new as Notif;
-        setItems(prev => prev.some(i => i.id === n.id) ? prev : [n, ...prev]);
-        // Skip toast/push if it's a duplicate event for an already-known notification.
-        // setItems above only no-ops on dedupe; check separately to avoid double toasts.
+        let isNew = false;
+        setItems(prev => {
+          if (prev.some(i => i.id === n.id)) return prev;
+          isNew = true;
+          return [n, ...prev];
+        });
+        if (!isNew || toastedRef.has(n.id)) return;
+        toastedRef.add(n.id);
         // In-app toast
         toast.message(n.title, {
           description: n.body || undefined,
