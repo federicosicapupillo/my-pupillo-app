@@ -11,6 +11,9 @@ import { Progress } from "@/components/ui/progress";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { createPortalSession } from "@/utils/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
+import { Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/billing")({
   head: () => ({ meta: [{ title: "Crediti e piano — Pupillo" }] }),
@@ -34,6 +37,24 @@ function Billing() {
   const [discount, setDiscount] = useState<{ code: string; type: string; value: number; applies_to: string } | null>(null);
   const [discountBusy, setDiscountBusy] = useState(false);
   const [syncingPayment, setSyncingPayment] = useState(false);
+  const [portalBusy, setPortalBusy] = useState(false);
+
+  const openPortal = async () => {
+    setPortalBusy(true);
+    try {
+      const url = await createPortalSession({
+        data: {
+          environment: getStripeEnvironment(),
+          returnUrl: typeof window !== "undefined" ? `${window.location.origin}/billing` : undefined,
+        },
+      });
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Impossibile aprire la gestione fatturazione.");
+    } finally {
+      setPortalBusy(false);
+    }
+  };
 
   const applyDiscount = async () => {
     const code = discountInput.trim().toUpperCase();
@@ -248,6 +269,16 @@ function Billing() {
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">Passa a Pro o Business per pubblicare e invitare senza scalare crediti.</p>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4 gap-2"
+            onClick={openPortal}
+            disabled={portalBusy}
+          >
+            <Receipt className="h-4 w-4" />
+            {portalBusy ? "Apertura…" : "Gestisci abbonamento / Fatture"}
+          </Button>
         </div>
       </div>
 
