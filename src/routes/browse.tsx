@@ -39,6 +39,32 @@ type RestaurantInfo = { id: string; full_name: string | null; business_name: str
 const ROLES = ["cameriere","bartender","chef","aiuto cucina","runner","lavapiatti","hostess","responsabile sala"];
 const SPEEDS = [{v:"normal",l:"Standard"},{v:"urgent",l:"Urgente"},{v:"flash",l:"Flash"}];
 
+function roleEmoji(role: string | null | undefined): string {
+  const r = (role || "").toLowerCase();
+  if (r.includes("camer")) return "🍽️";
+  if (r.includes("barman") || r.includes("bartender") || r.includes("barista")) return "🍸";
+  if (r.includes("cuoc") || r.includes("chef") || r.includes("cucina")) return "👨‍🍳";
+  if (r.includes("lavapiatti") || r.includes("plonge")) return "🧽";
+  if (r.includes("pizz")) return "🍕";
+  if (r.includes("hostess") || r.includes("steward") || r.includes("accogli")) return "🎀";
+  if (r.includes("runner")) return "🏃";
+  if (r.includes("sommelier")) return "🍷";
+  if (r.includes("commis")) return "🧑‍🍳";
+  return "💼";
+}
+
+function speedLabel(s: string): string {
+  if (s === "urgent") return "Urgente";
+  if (s === "flash") return "Subito";
+  return "Normal";
+}
+
+function speedClasses(s: string): string {
+  if (s === "urgent") return "bg-destructive/15 text-destructive border border-destructive/30";
+  if (s === "flash") return "bg-amber-500/15 text-amber-400 border border-amber-500/30";
+  return "bg-secondary/60 text-foreground/80 border border-white/10";
+}
+
 function distKm(aLat:number,aLng:number,bLat:number,bLng:number){
   const R=6371,toRad=(d:number)=>d*Math.PI/180;
   const dLat=toRad(bLat-aLat),dLng=toRad(bLng-aLng);
