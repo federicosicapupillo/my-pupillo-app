@@ -34,12 +34,15 @@ import {
   CONFIRMATION_ACTION,
   CONFIRMATION_EMPTY_LABELS,
   buildConfirmationBody,
+  computeEntryTime,
+  DEFAULT_ARRIVAL_ADVANCE_MINUTES,
 } from "@/lib/shift-confirmation";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatTariff } from "@/lib/format";
 import { getShiftEndDate } from "@/lib/announcement-time";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock, Phone, User as UserIcon, Navigation, ExternalLink } from "lucide-react";
+import { ShieldAlert, Unlock } from "lucide-react";
 import {
   labelOf, labelsOf,
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
@@ -350,6 +353,7 @@ function Thread() {
   const [app, setApp] = useState<App | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
   const [other, setOther] = useState<{ name: string; city: string | null; neighborhood: string | null; profile_completed: boolean; phone_verified: boolean } | null>(null);
+  const [otherArrivalAdvance, setOtherArrivalAdvance] = useState<number | null>(null);
   const [otherIdentity, setOtherIdentity] = useState<{ businessName: string | null; fullName: string | null; firstName: string | null } | null>(null);
   const [hasWorkedTogether, setHasWorkedTogether] = useState(false);
   const [workerRep, setWorkerRep] = useState<WorkerReputationInput | null>(null);
@@ -423,7 +427,7 @@ function Thread() {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
-          supabase.from("profiles").select("full_name, first_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, id_document_path").eq("id", otherId).maybeSingle(),
+          supabase.from("profiles").select("full_name, first_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, id_document_path, default_arrival_advance_minutes").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address, job_contact_person_name, job_contact_person_phone").eq("id", a.announcement_id).maybeSingle(),
         ]);
         setOther({
@@ -433,6 +437,11 @@ function Thread() {
           profile_completed: !!(p as any)?.profile_completed,
           phone_verified: !!(p as any)?.phone_verified,
         });
+        setOtherArrivalAdvance(
+          typeof (p as any)?.default_arrival_advance_minutes === "number"
+            ? (p as any).default_arrival_advance_minutes
+            : null,
+        );
         setOtherIdentity({
           businessName: (p as any)?.business_name ?? null,
           fullName: (p as any)?.full_name ?? null,
@@ -920,15 +929,19 @@ function Thread() {
     }
     // Quando il ristoratore accetta la candidatura, invia automaticamente al
     // lavoratore una "Conferma turno" con tutti i dettagli operativi in chiaro.
-    if (next === "accepted" && role === "restaurant") {
+    // Lo stesso messaggio viene inviato anche quando il lavoratore accetta la
+    // proposta, così riceve subito tutti i dati operativi sbloccati.
+    if (next === "accepted" && !msgs.some(mm => mm.template_id === CONFIRMATION_TEMPLATE_ID && mm.application_id === app.id)) {
       try {
         // After acceptance the worker is allowed to see the real venue name;
         // by this point the application status is "accepted" so privacy is
         // already unlocked client-side too.
-        const venueName = profile?.business_name || profile?.full_name || null;
-        const body = buildConfirmationBody(ann, venueName);
+        const venueName = role === "restaurant"
+          ? (profile?.business_name || profile?.full_name || null)
+          : (otherIdentity?.businessName || otherIdentity?.fullName || null);
+        const body = buildConfirmationBody(ann, venueName, restaurantArrivalAdvance);
         const createdAt = new Date().toISOString();
-        const receiverId = app.worker_id;
+        const receiverId = role === "restaurant" ? app.worker_id : app.restaurant_id;
         const { data: confMsg } = await supabase.from("messages").insert({
           application_id: app.id,
           sender_id: user.id,
@@ -942,15 +955,19 @@ function Thread() {
         } as never).select("*").single();
         if (confMsg) pushMessage(confMsg as Msg);
         await supabase.from("applications").update({
-          last_message_preview: "Candidatura accettata · dettagli del turno inviati",
+          last_message_preview: "Proposta accettata · dettagli operativi sbloccati",
           last_message_at: createdAt,
         } as never).eq("id", app.id);
-        await supabase.from("notifications").insert({
-          user_id: receiverId,
-          title: "Candidatura accettata",
-          body: `Il ristoratore ha confermato la tua presenza per il turno${ann?.service_date ? ` del ${formatDateIT(ann.service_date)}` : ""}.`,
-          link: `/messages/${app.id}`,
-        } as never);
+        if (role === "restaurant") {
+          // When the worker accepts, the proposal handler already notifies
+          // the restaurant — avoid duplicate notifications in that path.
+          await supabase.from("notifications").insert({
+            user_id: receiverId,
+            title: "Candidatura accettata",
+            body: `Il ristoratore ha confermato la tua presenza per il turno${ann?.service_date ? ` del ${formatDateIT(ann.service_date)}` : ""}.`,
+            link: `/messages/${app.id}`,
+          } as never);
+        }
       } catch (e) {
         console.error("[accept] confirmation message failed", e);
       }
@@ -1136,6 +1153,14 @@ function Thread() {
     isAdmin: role === "admin",
     applicationStatus: app?.status ?? null,
   });
+  // Minutes the worker must show up before service_time. When the viewer is
+  // the restaurant we read it from their own profile; when the viewer is the
+  // worker we read it from the partner (restaurant) profile.
+  const restaurantArrivalAdvance: number | null = role === "restaurant"
+    ? (typeof (profile as any)?.default_arrival_advance_minutes === "number"
+        ? (profile as any).default_arrival_advance_minutes
+        : null)
+    : otherArrivalAdvance;
   const restaurantHints = role === "restaurant"
     ? null
     : { city: other?.city ?? null, neighborhood: other?.neighborhood ?? null };
@@ -1856,6 +1881,7 @@ function Thread() {
                   announcementId={app?.announcement_id ?? null}
                   isWorker={role === "worker"}
                   acknowledged={hasAcknowledged}
+                  arrivalAdvanceMinutes={restaurantArrivalAdvance}
                   onAcknowledge={async () => {
                     if (!user || !app) return;
                     const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
@@ -2859,12 +2885,25 @@ function ProposalCard(props: {
           )}
         </dl>
         {!canSeePreciseInfo ? (
-          <div className="mx-4 mb-3 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>La posizione esatta e il referente saranno visibili solo dopo l'assegnazione definitiva.</span>
+          <div className="mx-4 mb-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-amber-900 dark:text-amber-200">
+            <div className="flex items-center gap-2 font-semibold">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              Dati completi disponibili dopo l'accettazione
+            </div>
+            <p className="mt-1 text-xs leading-relaxed">
+              Per proteggere la privacy del locale, nome reale, indirizzo completo, referente e istruzioni operative verranno mostrati solo dopo che avrai accettato la proposta.
+            </p>
           </div>
         ) : (
-          <p className="px-4 pb-3 text-xs text-muted-foreground">Fammi sapere se puoi esserci.</p>
+          <div className="mx-4 mb-3 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-200">
+            <div className="flex items-center gap-2 font-semibold">
+              <Unlock className="h-4 w-4 shrink-0" />
+              Dati operativi sbloccati
+            </div>
+            <p className="mt-1 text-xs leading-relaxed">
+              Trovi nome del locale, indirizzo completo, referente e indicazioni nel messaggio "Proposta accettata: dettagli operativi disponibili" qui sotto in chat.
+            </p>
+          </div>
         )}
 
         {deadline && !accepted && !rejected && (
@@ -2934,6 +2973,15 @@ function ProposalCard(props: {
             Stai per accettare questa proposta di lavoro. Dopo la conferma il turno sarà assegnato a te e il ristoratore riceverà la tua risposta.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-900 dark:text-emerald-200">
+          <div className="flex items-center gap-2 font-semibold">
+            <Unlock className="h-4 w-4 shrink-0" />
+            Sbloccherai subito tutti i dati operativi
+          </div>
+          <p className="mt-1 text-xs leading-relaxed">
+            Accettando questa proposta riceverai subito tutti i dettagli operativi: nome locale, indirizzo completo, referente, orario di ingresso, anticipo richiesto, dress code e istruzioni per il servizio.
+          </p>
+        </div>
         {recapRows.length > 0 && (
           <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-sm">
             {recapRows.map((r) => (
@@ -3091,9 +3139,10 @@ function ConfirmationCard(props: {
   announcementId: string | null;
   isWorker: boolean;
   acknowledged?: boolean;
+  arrivalAdvanceMinutes?: number | null;
   onAcknowledge?: () => Promise<void> | void;
 }) {
-  const { ann, venueName, applicationId, isWorker, acknowledged = false, onAcknowledge } = props;
+  const { ann, venueName, applicationId, isWorker, acknowledged = false, arrivalAdvanceMinutes, onAcknowledge } = props;
   const [ackBusy, setAckBusy] = useState(false);
   const clean = (v: unknown): string => {
     if (v == null) return "";
@@ -3106,6 +3155,10 @@ function ConfirmationCard(props: {
   const fullAddress = clean(ann?.location_address) || clean(ann?.job_address) || clean(ann?.job_city) || "Indirizzo non disponibile";
   const start = ann?.service_time ? ann.service_time.slice(0, 5) : null;
   const end = ann?.end_time ? ann.end_time.slice(0, 5) : null;
+  const advMin = Number.isFinite(Number(arrivalAdvanceMinutes)) && Number(arrivalAdvanceMinutes) > 0
+    ? Number(arrivalAdvanceMinutes)
+    : DEFAULT_ARRIVAL_ADVANCE_MINUTES;
+  const entryTime = computeEntryTime(ann?.service_time ?? null, advMin);
   const skills = labelsOf(ann?.required_skills ?? [], SKILL_OPTIONS as any);
   const dressItems = labelsOf(ann?.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
   const dressNotes = clean(ann?.dress_code_notes);
@@ -3160,6 +3213,13 @@ function ConfirmationCard(props: {
             label="Orario"
             value={start ? `${start}${end ? ` - ${end}` : ""}` : CONFIRMATION_EMPTY_LABELS.endTime}
           />
+          {entryTime && (
+            <ProposalRow
+              icon={AlarmClock}
+              label="Orario ingresso"
+              value={`${entryTime} · presentati ${advMin} minuti prima`}
+            />
+          )}
           <ProposalRow icon={MapPin} label="Indirizzo" value={fullAddress} />
           <ProposalRow
             icon={UserIcon}
