@@ -3117,9 +3117,10 @@ function ConfirmationCard(props: {
   announcementId: string | null;
   isWorker: boolean;
   acknowledged?: boolean;
+  arrivalAdvanceMinutes?: number | null;
   onAcknowledge?: () => Promise<void> | void;
 }) {
-  const { ann, venueName, applicationId, isWorker, acknowledged = false, onAcknowledge } = props;
+  const { ann, venueName, applicationId, isWorker, acknowledged = false, arrivalAdvanceMinutes, onAcknowledge } = props;
   const [ackBusy, setAckBusy] = useState(false);
   const clean = (v: unknown): string => {
     if (v == null) return "";
@@ -3132,6 +3133,10 @@ function ConfirmationCard(props: {
   const fullAddress = clean(ann?.location_address) || clean(ann?.job_address) || clean(ann?.job_city) || "Indirizzo non disponibile";
   const start = ann?.service_time ? ann.service_time.slice(0, 5) : null;
   const end = ann?.end_time ? ann.end_time.slice(0, 5) : null;
+  const advMin = Number.isFinite(Number(arrivalAdvanceMinutes)) && Number(arrivalAdvanceMinutes) > 0
+    ? Number(arrivalAdvanceMinutes)
+    : DEFAULT_ARRIVAL_ADVANCE_MINUTES;
+  const entryTime = computeEntryTime(ann?.service_time ?? null, advMin);
   const skills = labelsOf(ann?.required_skills ?? [], SKILL_OPTIONS as any);
   const dressItems = labelsOf(ann?.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
   const dressNotes = clean(ann?.dress_code_notes);
