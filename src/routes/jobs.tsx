@@ -185,13 +185,13 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   if (r.status === "expired")
     return { label: "Scaduta", cls: "bg-muted text-muted-foreground border-border" };
   if (r.status === "counter_offer")
-    return { label: "In attesa conferma", cls: "bg-sky-100 text-sky-900 border-sky-200" };
+    return { label: "In attesa conferma ristoratore", cls: "bg-sky-100 text-sky-900 border-sky-200" };
   if (r.status === "interested")
     return { label: "Accettata da te", cls: "bg-sky-100 text-sky-900 border-sky-200" };
   if (r.status === "pending")
     return isNew
       ? { label: "Nuova offerta", cls: "bg-primary/15 text-primary border-primary/30" }
-      : { label: "In attesa di risposta", cls: "bg-amber-100 text-amber-900 border-amber-200" };
+      : { label: "Da rispondere", cls: "bg-amber-100 text-amber-900 border-amber-200" };
   return { label: r.status, cls: "bg-secondary text-foreground border-border" };
 }
 
@@ -200,7 +200,7 @@ const TABS: { key: "tutte" | Bucket; label: string }[] = [
   { key: "nuove", label: "Nuove" },
   { key: "da_rispondere", label: "Da rispondere" },
   { key: "accettate_da_me", label: "Accettate" },
-  { key: "in_attesa_conferma", label: "In attesa" },
+  { key: "in_attesa_conferma", label: "In attesa conferma" },
   { key: "confermate", label: "Confermate" },
   { key: "completate", label: "Completate" },
   { key: "da_recensire", label: "Da recensire" },
@@ -414,8 +414,8 @@ function Jobs() {
       tab: "nuove",
     },
     {
-      label: "In attesa",
-      value: counts.da_rispondere + counts.in_attesa_conferma,
+      label: "Da rispondere",
+      value: counts.da_rispondere,
       tone: "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
       tab: "da_rispondere",
     },
