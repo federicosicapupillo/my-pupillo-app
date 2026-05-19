@@ -8,6 +8,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
+import { createDebouncedReload } from "@/lib/inbox-realtime";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 
 
@@ -85,15 +86,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         .in("application_id", ids)
         .neq("sender_id", user.id)
         .is("read_at", null);
-      if (!cancelled) setUnreadMsgs(count ?? 0);
+      if (!cancelled) setUnreadMsgs((prev) => (prev === (count ?? 0) ? prev : (count ?? 0)));
     };
     load();
+    const reloader = createDebouncedReload(() => { load(); }, 300);
     const ch = supabase
       .channel(`unread-msgs-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => reloader.schedule())
       .subscribe();
-    return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [user, role]);
+    return () => { cancelled = true; reloader.cancel(); supabase.removeChannel(ch); };
+  }, [user?.id, role]);
 
   // Chiudi automaticamente al cambio di route
   useEffect(() => { setMobileOpen(false); }, [loc.pathname]);

@@ -577,12 +577,27 @@ function Thread() {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `application_id=eq.${id}` },
         (p) => {
           const m = p.new as Msg;
-          setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, ...m } : x));
+          setMsgs(prev => {
+            const idx = prev.findIndex(x => x.id === m.id);
+            if (idx === -1) return prev;
+            const cur = prev[idx];
+            if (cur.body === m.body && cur.read_at === m.read_at && cur.action_type === m.action_type) return prev;
+            const next = prev.slice();
+            next[idx] = { ...cur, ...m };
+            return next;
+          });
         })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `id=eq.${id}` },
-        (p) => setApp(p.new as App))
+        (p) => {
+          const next = p.new as App;
+          setApp(prev => {
+            if (!prev) return next;
+            if (prev.status === next.status && prev.proposed_tariff === next.proposed_tariff) return prev;
+            return { ...prev, ...next };
+          });
+        })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs", filter: `entity_id=eq.${id}` },
-        (p) => setEvents(prev => [...prev, p.new as LogEvent]))
+        (p) => { const ev = p.new as LogEvent; setEvents(prev => prev.some(x => x.id === ev.id) ? prev : [...prev, ev]); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_responses", filter: `application_id=eq.${id}` },
         (p) => {
           const r = p.new as { message_id: string; status: "accepted" | "rejected" };
@@ -595,7 +610,7 @@ function Thread() {
         }
       });
     return () => { supabase.removeChannel(ch); };
-  }, [id, user, refetchSeq]);
+  }, [id, user?.id, refetchSeq]);
 
   // Admin debug: fetch proposal_responses + related notifications for each
   // proposal message so admins can see where the flow breaks.
