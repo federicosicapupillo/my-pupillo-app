@@ -2707,6 +2707,73 @@ function ProposalCard(props: {
   );
 }
 
+function ShiftClosedWithReviewCard({ review }: { review: Review | null }) {
+  const wouldRehireLabel = (v?: string | null) => {
+    if (v === "yes") return "Sì";
+    if (v === "maybe") return "Forse";
+    if (v === "no") return "No";
+    return null;
+  };
+  const Row = ({ label, value }: { label: string; value: string | number | null | undefined }) => {
+    if (value === null || value === undefined || value === "") return null;
+    return (
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium text-foreground">{value}</span>
+      </div>
+    );
+  };
+  const formatScore = (n?: number | null) => (typeof n === "number" && n > 0 ? `${n}/5` : null);
+  const tags = [
+    ...((review?.positive_tags as string[] | null) ?? []),
+    ...((review?.negative_tags as string[] | null) ?? []),
+  ].filter(Boolean);
+  const comment = review?.comment?.trim() ?? "";
+  const rehire = wouldRehireLabel(review?.would_rehire ?? null);
+  return (
+    <div className="w-full max-w-md rounded-2xl border bg-emerald-500/10 border-emerald-500/30 px-4 py-3 space-y-2 text-left">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Star className="h-4 w-4 text-emerald-700 dark:text-emerald-300" />
+          <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+            Turno chiuso e recensione ricevuta
+          </span>
+        </div>
+        <span className="rounded-full bg-emerald-600/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+          Servizio completato
+        </span>
+      </div>
+      <p className="text-xs text-emerald-900/80 dark:text-emerald-100/80">
+        Il turno è stato chiuso dal ristoratore e hai ricevuto una recensione per il servizio svolto.
+      </p>
+      {review ? (
+        <div className="rounded-xl bg-background/70 p-3 space-y-1.5 border border-emerald-500/20">
+          <Row label="Valutazione generale" value={formatScore(review.rating)} />
+          <Row label="Affidabilità" value={formatScore(review.reliability ?? null)} />
+          <Row label="Puntualità" value={formatScore(review.punctuality ?? null)} />
+          <Row label="Professionalità" value={formatScore(review.professionalism ?? null)} />
+          <Row label="Qualità del servizio" value={formatScore(review.competence ?? null)} />
+          {rehire && <Row label="Lo richiamerebbe" value={rehire} />}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {tags.map((t) => (
+                <span key={t} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+          {comment && (
+            <div className="pt-1.5 border-t border-emerald-500/20 mt-1.5">
+              <p className="text-xs text-foreground italic">"{comment}"</p>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ProposalRow({ icon: Icon, label, value }: { icon: typeof Send; label: string; value: string }) {
   return (
     <div className="flex items-start gap-2">
