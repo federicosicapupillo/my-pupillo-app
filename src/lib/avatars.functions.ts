@@ -8,6 +8,14 @@ const InputSchema = z.object({
   userIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
+function fallbackAvatarUrl(userId: string, name: string | null, isRestaurant: boolean) {
+  const seed = encodeURIComponent(name?.trim() || userId);
+  // DiceBear: deterministic, free, CDN-hosted. Different style for restaurants
+  // so they're visually distinguishable from worker portraits.
+  const style = isRestaurant ? "shapes" : "initials";
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundType=gradientLinear`;
+}
+
 export const getAvatarUrls = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
@@ -31,10 +39,14 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
     const PATH_RE = /^([0-9a-f-]{36})\/avatar-\d+\.(jpe?g|png|webp)$/i;
     for (const row of rows ?? []) {
       const r = row as any;
-      names[row.id] = (r.business_name as string | null) || (r.full_name as string | null) || null;
+      const businessName = (r.business_name as string | null) || null;
+      const fullName = (r.full_name as string | null) || null;
+      const displayName = businessName || fullName;
+      const isRestaurant = !!businessName;
+      names[row.id] = displayName;
       const stored = (row as any).avatar_url as string | null;
       if (!stored || typeof stored !== "string") {
-        result[row.id] = null;
+        result[row.id] = fallbackAvatarUrl(row.id, displayName, isRestaurant);
         continue;
       }
       // Legacy/seed data may store a full http(s) URL (e.g. seed avatars).
@@ -45,19 +57,19 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
       }
       // Reject other absolute/external schemes (data:, blob:, protocol-relative).
       if (/^(data:|blob:|\/\/)/i.test(stored)) {
-        result[row.id] = null;
+        result[row.id] = fallbackAvatarUrl(row.id, displayName, isRestaurant);
         continue;
       }
       const m = stored.match(PATH_RE);
       // The path's owner folder MUST match the row's user id.
       if (!m || m[1] !== row.id) {
-        result[row.id] = null;
+        result[row.id] = fallbackAvatarUrl(row.id, displayName, isRestaurant);
         continue;
       }
       const { data: signed } = await admin.storage
         .from("avatars")
         .createSignedUrl(stored, 60 * 60);
-      result[row.id] = signed?.signedUrl ?? null;
+      result[row.id] = signed?.signedUrl ?? fallbackAvatarUrl(row.id, displayName, isRestaurant);
     }
     return { urls: result, names };
   });
