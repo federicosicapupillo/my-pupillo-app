@@ -456,8 +456,8 @@ function Jobs() {
   return (
     <AppShell>
       <PageHeader
-        title="Offerte ricevute"
-        subtitle="Qui trovi le proposte di lavoro ricevute dai ristoratori."
+        title="Offerte per te"
+        subtitle="Proposte ricevute dai ristoratori"
       />
 
       {/* Riepilogo numerico — KPI chiari in alto */}
@@ -576,7 +576,7 @@ function Jobs() {
             Nessuna offerta in questa categoria.
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-2">
             {filtered.map((r) => (
               <OfferCard key={r.id} r={r} lastSeenAt={lastSeenAt} onRespond={respond} />
             ))}
