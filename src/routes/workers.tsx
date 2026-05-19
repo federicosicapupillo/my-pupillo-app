@@ -377,42 +377,61 @@ function WorkersPage() {
 
   if (role !== "restaurant") return <AppShell><p>Solo i ristoratori.</p></AppShell>;
 
-  const invite = async (workerId: string) => {
+  // Apre il dialog di conferma proposta (oppure il dialog "seleziona annuncio" se mancante).
+  const openProposalDialog = (worker: W) => {
+    if (!selected) { setMissingAnnOpen(true); return; }
+    setProposalWorker(worker);
+  };
+
+  // Esegue l'invio della proposta dopo la conferma esplicita del ristoratore.
+  const sendProposal = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
-    // If a conversation already exists for this restaurant + worker + announcement, just open it.
-    const { data: existing } = await supabase
-      .from("applications")
-      .select("id")
-      .eq("announcement_id", selected)
-      .eq("worker_id", workerId)
-      .eq("restaurant_id", user.id)
-      .maybeSingle();
-    if (existing?.id) {
-      // Send a fresh proposal each time the restaurant re-contacts.
+    setSendingProposal(true);
+    try {
+      let applicationId: string | null = null;
+      const { data: existing } = await supabase
+        .from("applications")
+        .select("id")
+        .eq("announcement_id", selected)
+        .eq("worker_id", workerId)
+        .eq("restaurant_id", user.id)
+        .maybeSingle();
+      if (existing?.id) {
+        applicationId = existing.id;
+      } else {
+        const { data: created, error } = await supabase
+          .from("applications")
+          .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
+          .select("id")
+          .single();
+        if (error || !created) { toast.error(error?.message ?? "Errore"); setSendingProposal(false); return; }
+        applicationId = created.id;
+      }
+      if (!applicationId) { toast.error("Errore nella creazione della conversazione."); setSendingProposal(false); return; }
       await sendShiftProposal({
-        applicationId: existing.id,
+        applicationId,
         announcementId: selected,
         restaurantId: user.id,
-        workerId: workerId,
+        workerId,
       });
-      nav({ to: "/messages/$id", params: { id: existing.id } });
-      return;
+      // Notifica al lavoratore — sempre, con link sicuro alla conversazione esatta.
+      await supabase.from("notifications").insert({
+        user_id: workerId,
+        title: "Hai ricevuto una proposta di lavoro",
+        body: "Un ristorante ti ha inviato una proposta per un turno.",
+        link: `/messages/${applicationId}`,
+        metadata: {
+          type: "job_proposal_received",
+          application_id: applicationId,
+          announcement_id: selected,
+        },
+      } as never);
+      toast.success("Proposta inviata al lavoratore.");
+      setProposalWorker(null);
+      nav({ to: "/messages/$id", params: { id: applicationId } });
+    } finally {
+      setSendingProposal(false);
     }
-    const { data: created, error } = await supabase
-      .from("applications")
-      .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
-      .select("id")
-      .single();
-    if (error || !created) { toast.error(error?.message ?? "Errore"); return; }
-    await sendShiftProposal({
-      applicationId: created.id,
-      announcementId: selected,
-      restaurantId: user.id,
-      workerId: workerId,
-    });
-    await supabase.from("notifications").insert({ user_id: workerId, title: "Nuova offerta di lavoro", body: "Un ristoratore ti ha contattato.", link: `/messages/${created.id}` });
-    toast.success("Chat aperta con il lavoratore");
-    nav({ to: "/messages/$id", params: { id: created.id } });
   };
 
   const fieldsOf = (w: W) => {
