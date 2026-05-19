@@ -201,6 +201,7 @@ function MapPage() {
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
   const [focusWorkerId, setFocusWorkerId] = useState<string | null>(null);
   const [focusWorkerNonce, setFocusWorkerNonce] = useState(0);
+  const [previewWorkerId, setPreviewWorkerId] = useState<string | null>(null);
 
   const focusWorkerOnMap = (workerId: string) => {
     const located = locatedWorkers.find((x) => x.w.id === workerId);
@@ -853,7 +854,7 @@ function MapPage() {
                             toast.error("Posizione non disponibile per questo lavoratore.");
                           }
                         }}>Mostra sulla mappa</Button>
-                        <Link to="/workers"><Button size="sm">Vedi profilo</Button></Link>
+                        <Button size="sm" onClick={() => setPreviewWorkerId(w.id)}>Vedi profilo</Button>
                       </div>
                     </li>
                   );
@@ -956,6 +957,7 @@ function MapPage() {
                   height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
                   focusId={focusWorkerId}
                   focusNonce={focusWorkerNonce}
+                  onViewProfile={(id) => setPreviewWorkerId(id)}
                 />
                 <div className="mt-2 text-xs text-muted-foreground">
                   {workerMapPoints.length} lavorator{workerMapPoints.length === 1 ? "e" : "i"} sulla mappa · posizione approssimativa per tutela privacy · OpenStreetMap
