@@ -771,7 +771,7 @@ function WorkersPage() {
               ? [selectedAnn.location_lat as number, selectedAnn.location_lng as number]
               : [41.9028, 12.4964]
           }
-          onInvite={invite}
+          onInvite={(workerId) => { const w = workers.find((x) => x.id === workerId); if (w) openProposalDialog(w); }}
           inviteDisabled={!selected}
           inviteLabel={selected ? "Messaggia" : "Seleziona annuncio"}
         />
@@ -894,7 +894,7 @@ function WorkersPage() {
             <Button
               size="sm"
               className="mt-4 w-full gap-1"
-              onClick={() => invite(w.id)}
+              onClick={() => openProposalDialog(w)}
               disabled={!selected}
               title={!selected ? "Seleziona prima un annuncio" : undefined}
             >
