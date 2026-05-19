@@ -80,7 +80,7 @@ export function mergeThreadUpdate(
   });
   // No-op when the row isn't tracked yet → keep referential equality so
   // React doesn't re-render needlessly.
-  return touched ? next : threads;
+  return touched ? sortThreads(next) : threads;
 }
 
 /**
@@ -112,7 +112,7 @@ export function applyIncomingMessage(
       lastAt: msg.created_at ?? t.lastAt,
     };
   });
-  return touched ? next : threads;
+  return touched ? sortThreads(next) : threads;
 }
 
 /**
