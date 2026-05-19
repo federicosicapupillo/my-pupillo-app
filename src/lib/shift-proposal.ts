@@ -4,6 +4,23 @@ import { formatDateIT, formatTariff } from "@/lib/format";
 export const PROPOSAL_TEMPLATE_ID = "shift_proposal";
 export const PROPOSAL_ACTION = "propose_shift";
 
+/**
+ * Anti-duplicate gate used by the restaurant before sending a proposal from
+ * the "Cerca lavoratori" flow. Given the proposal message ids already sent
+ * to a worker for a given application, and the message ids that have a
+ * response recorded in `proposal_responses`, returns true when at least one
+ * proposal is still waiting for the worker's answer — in which case the UI
+ * must NOT create a second one and must re-open the existing chat instead.
+ */
+export function hasUnansweredProposal(
+  proposalIds: ReadonlyArray<string>,
+  answeredMessageIds: ReadonlyArray<string>,
+): boolean {
+  if (proposalIds.length === 0) return false;
+  const answered = new Set(answeredMessageIds);
+  return proposalIds.some((id) => !answered.has(id));
+}
+
 export type ProposalAnnouncement = {
   id: string;
   service_date: string | null;
