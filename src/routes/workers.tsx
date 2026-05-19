@@ -239,7 +239,11 @@ function WorkersPage() {
   useEffect(() => {
     (async () => {
       if (user) {
-        const { data } = await supabase.from("announcements").select("id, service_date, service_time, location_address, location_lat, location_lng").eq("restaurant_id", user.id).eq("status", "active");
+        const { data } = await supabase
+          .from("announcements")
+          .select("id, service_date, service_time, end_time, location_address, location_lat, location_lng, professional_profile, tariff_amount, tariff_type, duration_hours, shift_duration_hours, job_city, job_province, job_postal_code, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, notes, job_location_notes, job_additional_directions, job_contact_person_name")
+          .eq("restaurant_id", user.id)
+          .eq("status", "active");
         const now = new Date();
         const list = ((data as Ann[]) ?? []).filter((a) => {
           const start = getShiftStartDate(a as any);
