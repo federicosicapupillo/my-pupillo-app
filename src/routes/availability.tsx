@@ -12,12 +12,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CalendarDays, Save, Plus, Trash2, Zap, Info } from "lucide-react";
+import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy } from "lucide-react";
 import {
   DAY_LABELS,
   SLOT_LABELS,
   SLOT_DEFAULT_TIMES,
+  RADIUS_OPTIONS,
   type TimeSlot,
   type AvailabilityRow,
   type AvailabilityExceptionRow,
@@ -27,7 +35,7 @@ export const Route = createFileRoute("/availability")({
   head: () => ({
     meta: [
       { title: "Le mie disponibilità — Pupillo" },
-      { name: "description", content: "Imposta i giorni e le fasce orarie in cui sei disponibile a ricevere proposte di lavoro dai ristoratori." },
+      { name: "description", content: "Imposta giorni, fasce orarie, città e zone in cui sei disponibile a ricevere proposte di lavoro." },
     ],
   }),
   component: () => (
@@ -52,31 +60,81 @@ type LocalSlot = {
 
 type DayState = {
   is_available: boolean;
-  flexible: boolean; // "Disponibile, ma valuto in base alla proposta"
+  flexible: boolean;
   notes: string;
   slots: LocalSlot[];
+  city: string;
+  province: string;
+  district: string;
+  radius_km: number | null;
 };
 
-function emptyDay(): DayState {
-  return { is_available: false, flexible: false, notes: "", slots: [] };
+type NewExc = {
+  date: string;
+  is_available: boolean;
+  start_time: string;
+  end_time: string;
+  notes: string;
+  city: string;
+  province: string;
+  district: string;
+  radius_km: number | null;
+  time_slot: TimeSlot | "";
+};
+
+function emptyDay(city = "", province = "", district = "", radius_km: number | null = null): DayState {
+  return {
+    is_available: false,
+    flexible: false,
+    notes: "",
+    slots: [],
+    city,
+    province,
+    district,
+    radius_km,
+  };
+}
+
+function emptyNewExc(city = "", province = "", district = "", radius_km: number | null = null): NewExc {
+  return {
+    date: "",
+    is_available: true,
+    start_time: "",
+    end_time: "",
+    notes: "",
+    city,
+    province,
+    district,
+    radius_km,
+    time_slot: "",
+  };
 }
 
 function AvailabilityPage() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [days, setDays] = useState<DayState[]>(() => Array.from({ length: 7 }, emptyDay));
+
+  // Defaults from worker profile
+  const defaults = useMemo(() => {
+    const p = (profile ?? {}) as Record<string, unknown>;
+    const radiusM = (p.service_area_radius_m as number | null) ?? null;
+    return {
+      city: (p.service_area_city as string | null) ?? (p.city as string | null) ?? "",
+      province: (p.province as string | null) ?? "",
+      district: (p.service_area_district as string | null) ?? (p.neighborhood as string | null) ?? "",
+      radius_km: radiusM ? Math.max(1, Math.round(radiusM / 1000)) : null,
+    };
+  }, [profile]);
+
+  const [days, setDays] = useState<DayState[]>(() => Array.from({ length: 7 }, () => emptyDay()));
   const [exceptions, setExceptions] = useState<AvailabilityExceptionRow[]>([]);
-  const [newExc, setNewExc] = useState<{ date: string; is_available: boolean; start_time: string; end_time: string; notes: string }>({
-    date: "",
-    is_available: true,
-    start_time: "",
-    end_time: "",
-    notes: "",
-  });
+  const [newExc, setNewExc] = useState<NewExc>(() => emptyNewExc());
   const [availableNow, setAvailableNow] = useState(false);
   const [availableNowUntil, setAvailableNowUntil] = useState<string | null>(null);
   const [availableNowDuration, setAvailableNowDuration] = useState<"2h" | "today" | "tonight">("2h");
+  const [duplicateFrom, setDuplicateFrom] = useState<number | null>(null);
+  const [duplicateTargets, setDuplicateTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
 
   useEffect(() => {
     if (!user) return;
@@ -88,12 +146,18 @@ function AvailabilityPage() {
         supabase.from("worker_availability_exceptions").select("*").eq("worker_id", user.id).order("date", { ascending: true }),
       ]);
       if (cancelled) return;
-      const rows = (rowsRes.data ?? []) as AvailabilityRow[];
-      const exc = (excRes.data ?? []) as AvailabilityExceptionRow[];
-      const next: DayState[] = Array.from({ length: 7 }, emptyDay);
+      const rows = (rowsRes.data ?? []) as unknown as AvailabilityRow[];
+      const exc = (excRes.data ?? []) as unknown as AvailabilityExceptionRow[];
+      const next: DayState[] = Array.from({ length: 7 }, () =>
+        emptyDay(defaults.city, defaults.province, defaults.district, defaults.radius_km),
+      );
       rows.forEach((r) => {
         const d = next[r.day_of_week];
         d.is_available = true;
+        if (r.city) d.city = r.city;
+        if (r.province) d.province = r.province;
+        if (r.district) d.district = r.district;
+        if (r.radius_km != null) d.radius_km = r.radius_km;
         if (r.time_slot === "flessibile") {
           d.flexible = true;
         } else {
@@ -110,7 +174,8 @@ function AvailabilityPage() {
       });
       setDays(next);
       setExceptions(exc);
-      const until = (profile as any)?.available_now_until as string | null | undefined;
+      setNewExc(emptyNewExc(defaults.city, defaults.province, defaults.district, defaults.radius_km));
+      const until = (profile as { available_now_until?: string | null } | null)?.available_now_until ?? null;
       if (until && new Date(until).getTime() > Date.now()) {
         setAvailableNow(true);
         setAvailableNowUntil(until);
@@ -118,20 +183,19 @@ function AvailabilityPage() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [user, profile]);
+  }, [user, profile, defaults.city, defaults.province, defaults.district, defaults.radius_km]);
 
-  const toggleDay = (i: number, on: boolean) => {
-    setDays((d) => d.map((x, idx) => (idx === i ? { ...x, is_available: on } : x)));
-  };
+  const updateDay = (i: number, patch: Partial<DayState>) =>
+    setDays((d) => d.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+
+  const toggleDay = (i: number, on: boolean) => updateDay(i, { is_available: on });
 
   const toggleSlot = (i: number, slot: TimeSlot) => {
     setDays((d) =>
       d.map((x, idx) => {
         if (idx !== i) return x;
         const has = x.slots.find((s) => s.time_slot === slot);
-        if (has) {
-          return { ...x, slots: x.slots.filter((s) => s.time_slot !== slot) };
-        }
+        if (has) return { ...x, slots: x.slots.filter((s) => s.time_slot !== slot) };
         const def = SLOT_DEFAULT_TIMES[slot];
         return {
           ...x,
@@ -161,25 +225,64 @@ function AvailabilityPage() {
     );
   };
 
-  const setFlexible = (i: number, on: boolean) => {
-    setDays((d) => d.map((x, idx) => (idx === i ? { ...x, flexible: on, is_available: on || x.is_available } : x)));
+  const setFlexible = (i: number, on: boolean) =>
+    updateDay(i, { flexible: on, is_available: on || days[i].is_available });
+
+  const openDuplicate = (i: number) => {
+    setDuplicateFrom(i);
+    setDuplicateTargets(Array.from({ length: 7 }, (_, idx) => false));
   };
 
-  const setNotes = (i: number, v: string) => {
-    setDays((d) => d.map((x, idx) => (idx === i ? { ...x, notes: v } : x)));
+  const applyDuplicate = () => {
+    if (duplicateFrom == null) return;
+    const src = days[duplicateFrom];
+    setDays((d) =>
+      d.map((x, idx) => {
+        if (idx === duplicateFrom || !duplicateTargets[idx]) return x;
+        return {
+          ...src,
+          slots: src.slots.map((s) => ({ ...s, id: undefined })),
+        };
+      }),
+    );
+    setDuplicateFrom(null);
+    toast.success("Disponibilità duplicata sui giorni selezionati");
+  };
+
+  const validateBeforeSave = (): string | null => {
+    for (let i = 0; i < days.length; i++) {
+      const d = days[i];
+      if (!d.is_available) continue;
+      if (!d.city || !d.city.trim()) {
+        return `Seleziona la città in cui sei disponibile (${DAY_LABELS[i]}).`;
+      }
+      if (!d.flexible && d.slots.length === 0) {
+        return `Indica almeno una fascia oraria o un orario di disponibilità per ${DAY_LABELS[i]}.`;
+      }
+    }
+    return null;
   };
 
   const save = async () => {
     if (!user) return;
+    const err = validateBeforeSave();
+    if (err) { toast.error(err); return; }
     setSaving(true);
     try {
-      // Replace all rows for this worker
       const { error: delErr } = await supabase.from("worker_availability").delete().eq("worker_id", user.id);
       if (delErr) throw delErr;
 
       const inserts: Array<Omit<AvailabilityRow, "id">> = [];
       days.forEach((d, dow) => {
         if (!d.is_available) return;
+        const loc = {
+          city: d.city.trim() || null,
+          province: d.province.trim() || null,
+          district: d.district.trim() || null,
+          latitude: null,
+          longitude: null,
+          radius_km: d.radius_km,
+        };
         if (d.flexible) {
           inserts.push({
             worker_id: user.id,
@@ -190,6 +293,7 @@ function AvailabilityPage() {
             is_flexible: true,
             is_last_minute: false,
             notes: d.notes || null,
+            ...loc,
           });
         }
         d.slots.forEach((s) => {
@@ -202,6 +306,7 @@ function AvailabilityPage() {
             is_flexible: false,
             is_last_minute: s.time_slot === "last_minute",
             notes: d.notes || null,
+            ...loc,
           });
         });
       });
@@ -220,39 +325,51 @@ function AvailabilityPage() {
   };
 
   const addException = async () => {
-    if (!user || !newExc.date) {
-      toast.error("Indica una data");
+    if (!user || !newExc.date) { toast.error("Indica una data"); return; }
+    if (newExc.is_available && !newExc.city.trim()) {
+      toast.error("Seleziona la città in cui sei disponibile per questa data.");
       return;
+    }
+    if (newExc.is_available && !newExc.time_slot && !newExc.start_time && !newExc.end_time) {
+      toast.error("Indica almeno una fascia oraria o un orario di disponibilità.");
+      return;
+    }
+    let start = newExc.start_time || null;
+    let end = newExc.end_time || null;
+    if (newExc.time_slot && !start && !end && newExc.time_slot !== "last_minute" && newExc.time_slot !== "flessibile") {
+      const def = SLOT_DEFAULT_TIMES[newExc.time_slot];
+      start = def.start;
+      end = def.end;
     }
     const payload = {
       worker_id: user.id,
       date: newExc.date,
       is_available: newExc.is_available,
-      start_time: newExc.is_available && newExc.start_time ? newExc.start_time : null,
-      end_time: newExc.is_available && newExc.end_time ? newExc.end_time : null,
-      time_slot: null,
+      start_time: newExc.is_available ? start : null,
+      end_time: newExc.is_available ? end : null,
+      time_slot: newExc.is_available && newExc.time_slot ? newExc.time_slot : null,
       notes: newExc.notes || null,
+      city: newExc.is_available ? (newExc.city.trim() || null) : null,
+      province: newExc.is_available ? (newExc.province.trim() || null) : null,
+      district: newExc.is_available ? (newExc.district.trim() || null) : null,
+      latitude: null,
+      longitude: null,
+      radius_km: newExc.is_available ? newExc.radius_km : null,
     };
     const { data, error } = await supabase
       .from("worker_availability_exceptions")
       .insert(payload as never)
       .select("*")
       .single();
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setExceptions((e) => [...e, data as AvailabilityExceptionRow].sort((a, b) => a.date.localeCompare(b.date)));
-    setNewExc({ date: "", is_available: true, start_time: "", end_time: "", notes: "" });
-    toast.success("Eccezione aggiunta");
+    if (error) { toast.error(error.message); return; }
+    setExceptions((e) => [...e, data as unknown as AvailabilityExceptionRow].sort((a, b) => a.date.localeCompare(b.date)));
+    setNewExc(emptyNewExc(defaults.city, defaults.province, defaults.district, defaults.radius_km));
+    toast.success("Disponibilità speciale aggiunta");
   };
 
   const removeException = async (id: string) => {
     const { error } = await supabase.from("worker_availability_exceptions").delete().eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) { toast.error(error.message); return; }
     setExceptions((e) => e.filter((x) => x.id !== id));
   };
 
@@ -261,11 +378,9 @@ function AvailabilityPage() {
     setAvailableNow(on);
     let until: string | null = null;
     if (on) {
-      const now = new Date();
-      const d = new Date(now);
+      const d = new Date();
       if (availableNowDuration === "2h") d.setHours(d.getHours() + 2);
-      else if (availableNowDuration === "today") d.setHours(23, 59, 59, 0);
-      else d.setHours(23, 59, 59, 0); // tonight ~ end of day
+      else d.setHours(23, 59, 59, 0);
       until = d.toISOString();
     }
     setAvailableNowUntil(until);
@@ -281,8 +396,22 @@ function AvailabilityPage() {
   const summary = useMemo(() => {
     const active = days.filter((d) => d.is_available).length;
     const totalSlots = days.reduce((acc, d) => acc + d.slots.length + (d.flexible ? 1 : 0), 0);
-    return { active, totalSlots };
-  }, [days]);
+    const cityCounts = new Map<string, number>();
+    days.forEach((d) => {
+      if (!d.is_available || !d.city) return;
+      const k = d.city.trim();
+      if (!k) return;
+      cityCounts.set(k, (cityCounts.get(k) ?? 0) + 1);
+    });
+    let prevalentCity: string | null = null;
+    let max = 0;
+    cityCounts.forEach((v, k) => { if (v > max) { max = v; prevalentCity = k; } });
+    const today = new Date(); today.setHours(0,0,0,0);
+    const nextSpecial = exceptions
+      .filter((e) => new Date(e.date + "T00:00:00") >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null;
+    return { active, totalSlots, prevalentCity, nextSpecial };
+  }, [days, exceptions]);
 
   const isEmpty = !loading && summary.active === 0 && exceptions.length === 0;
 
@@ -290,7 +419,7 @@ function AvailabilityPage() {
     <AppShell>
       <PageHeader
         title="Le mie disponibilità"
-        subtitle="Indica quando sei disponibile a ricevere proposte di lavoro dai ristoratori."
+        subtitle="Indica quando e dove sei disponibile a ricevere proposte di lavoro."
         action={
           <Button onClick={save} disabled={saving || loading} className="gap-2">
             <Save className="h-4 w-4" /> {saving ? "Salvataggio..." : "Salva disponibilità settimanale"}
@@ -336,9 +465,20 @@ function AvailabilityPage() {
         <span className="text-muted-foreground">
           {summary.active} {summary.active === 1 ? "giorno disponibile" : "giorni disponibili"} · {summary.totalSlots} {summary.totalSlots === 1 ? "fascia" : "fasce"}
         </span>
+        {summary.prevalentCity && (
+          <span className="inline-flex items-center gap-1 text-foreground">
+            <MapPin className="h-3.5 w-3.5 text-primary" /> Principalmente su <strong>{summary.prevalentCity}</strong>
+          </span>
+        )}
+        {summary.nextSpecial && (
+          <span className="text-xs text-muted-foreground">
+            Prossima speciale: {new Date(summary.nextSpecial.date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long" })}
+            {summary.nextSpecial.city ? ` · ${summary.nextSpecial.city}` : ""}
+          </span>
+        )}
         <span className="ml-auto text-xs text-muted-foreground inline-flex items-center gap-1">
           <Info className="h-3.5 w-3.5" />
-          Inserire un orario preciso aumenta la possibilità di ricevere proposte adatte alla tua disponibilità.
+          Inserire città e orario aumenta le proposte coerenti.
         </span>
       </div>
 
@@ -348,7 +488,7 @@ function AvailabilityPage() {
             <CalendarDays className="h-10 w-10 mx-auto text-muted-foreground" />
             <div className="font-semibold text-lg">Non hai ancora inserito le tue disponibilità.</div>
             <p className="text-sm text-muted-foreground">
-              Inseriscile per ricevere proposte di lavoro più adatte ai tuoi orari.
+              Inseriscile per ricevere proposte di lavoro coerenti con i tuoi giorni, orari e zone.
             </p>
           </CardContent>
         </Card>
@@ -367,6 +507,50 @@ function AvailabilityPage() {
             </CardHeader>
             {d.is_available && (
               <CardContent className="space-y-4">
+                {/* Location */}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Città *</label>
+                    <Input
+                      value={d.city}
+                      placeholder={defaults.city || "Es. Bologna"}
+                      onChange={(e) => updateDay(i, { city: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere</label>
+                    <Input
+                      value={d.district}
+                      placeholder={defaults.district || "Es. Centro, Navigli..."}
+                      onChange={(e) => updateDay(i, { district: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
+                    <Input
+                      value={d.province}
+                      placeholder={defaults.province || "Es. BO"}
+                      onChange={(e) => updateDay(i, { province: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Raggio massimo</label>
+                    <Select
+                      value={d.radius_km != null ? String(d.radius_km) : "none"}
+                      onValueChange={(v) => updateDay(i, { radius_km: v === "none" ? null : parseInt(v, 10) })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Nessun limite" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nessun limite</SelectItem>
+                        {RADIUS_OPTIONS.map((r) => (
+                          <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Slots */}
                 <div className="flex flex-wrap gap-2">
                   {ALL_SLOTS.map((slot) => {
                     const active = !!d.slots.find((s) => s.time_slot === slot);
@@ -411,19 +595,11 @@ function AvailabilityPage() {
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="block text-xs text-muted-foreground mb-1">Dalle</label>
-                              <Input
-                                type="time"
-                                value={s.start_time ?? ""}
-                                onChange={(e) => updateSlotTime(i, s.time_slot, "start_time", e.target.value)}
-                              />
+                              <Input type="time" value={s.start_time ?? ""} onChange={(e) => updateSlotTime(i, s.time_slot, "start_time", e.target.value)} />
                             </div>
                             <div>
                               <label className="block text-xs text-muted-foreground mb-1">Alle</label>
-                              <Input
-                                type="time"
-                                value={s.end_time ?? ""}
-                                onChange={(e) => updateSlotTime(i, s.time_slot, "end_time", e.target.value)}
-                              />
+                              <Input type="time" value={s.end_time ?? ""} onChange={(e) => updateSlotTime(i, s.time_slot, "end_time", e.target.value)} />
                             </div>
                           </div>
                         )}
@@ -436,10 +612,16 @@ function AvailabilityPage() {
                   <label className="block text-xs text-muted-foreground mb-1">Note sulla disponibilità (facoltative)</label>
                   <Textarea
                     value={d.notes}
-                    onChange={(e) => setNotes(i, e.target.value)}
+                    onChange={(e) => updateDay(i, { notes: e.target.value })}
                     placeholder="Es. Preferisco turni serali in zona centro"
                     rows={2}
                   />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => openDuplicate(i)}>
+                    <Copy className="h-3.5 w-3.5" /> Duplica su altri giorni
+                  </Button>
                 </div>
               </CardContent>
             )}
@@ -453,26 +635,85 @@ function AvailabilityPage() {
         </Button>
       </div>
 
-      {/* Exceptions */}
+      {/* Special dates */}
       <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-2">Eccezioni</h2>
+        <h2 className="text-xl font-semibold mb-2">Disponibilità speciali / spostamenti</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Indica date specifiche in cui sei disponibile anche se normalmente non lo sei, o viceversa.
+          Indica date specifiche in cui sei disponibile in un'altra città o con orari diversi. Queste hanno priorità sulla disponibilità ricorrente.
         </p>
 
         <Card>
-          <CardContent className="p-4 grid gap-3 md:grid-cols-5">
-            <div className="md:col-span-1">
+          <CardContent className="p-4 grid gap-3 md:grid-cols-6">
+            <div className="md:col-span-2">
               <label className="block text-xs text-muted-foreground mb-1">Data</label>
               <Input type="date" value={newExc.date} onChange={(e) => setNewExc({ ...newExc, date: e.target.value })} />
             </div>
-            <div className="md:col-span-1">
+            <div className="md:col-span-2">
               <label className="block text-xs text-muted-foreground mb-1">Stato</label>
               <Select value={newExc.is_available ? "yes" : "no"} onValueChange={(v) => setNewExc({ ...newExc, is_available: v === "yes" })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="yes">Disponibile</SelectItem>
                   <SelectItem value="no">Non disponibile</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-muted-foreground mb-1">Fascia</label>
+              <Select
+                value={newExc.time_slot || "none"}
+                onValueChange={(v) => setNewExc({ ...newExc, time_slot: v === "none" ? "" : (v as TimeSlot) })}
+                disabled={!newExc.is_available}
+              >
+                <SelectTrigger><SelectValue placeholder="Nessuna" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nessuna</SelectItem>
+                  {ALL_SLOTS.map((s) => (
+                    <SelectItem key={s} value={s}>{SLOT_LABELS[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-muted-foreground mb-1">Città {newExc.is_available ? "*" : ""}</label>
+              <Input
+                disabled={!newExc.is_available}
+                value={newExc.city}
+                placeholder={defaults.city || "Es. Milano"}
+                onChange={(e) => setNewExc({ ...newExc, city: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere</label>
+              <Input
+                disabled={!newExc.is_available}
+                value={newExc.district}
+                placeholder="Es. Navigli"
+                onChange={(e) => setNewExc({ ...newExc, district: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
+              <Input
+                disabled={!newExc.is_available}
+                value={newExc.province}
+                placeholder="MI"
+                onChange={(e) => setNewExc({ ...newExc, province: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Raggio</label>
+              <Select
+                value={newExc.radius_km != null ? String(newExc.radius_km) : "none"}
+                onValueChange={(v) => setNewExc({ ...newExc, radius_km: v === "none" ? null : parseInt(v, 10) })}
+                disabled={!newExc.is_available}
+              >
+                <SelectTrigger><SelectValue placeholder="Nessuno" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nessuno</SelectItem>
+                  {RADIUS_OPTIONS.map((r) => (
+                    <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -484,30 +725,40 @@ function AvailabilityPage() {
               <label className="block text-xs text-muted-foreground mb-1">Alle</label>
               <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
             </div>
-            <div className="md:col-span-1 flex items-end">
-              <Button onClick={addException} className="w-full gap-2">
-                <Plus className="h-4 w-4" /> Aggiungi
-              </Button>
-            </div>
-            <div className="md:col-span-5">
+            <div className="md:col-span-6">
               <label className="block text-xs text-muted-foreground mb-1">Note (facoltative)</label>
-              <Input value={newExc.notes} onChange={(e) => setNewExc({ ...newExc, notes: e.target.value })} placeholder="Es. Vacanza, evento speciale..." />
+              <Input value={newExc.notes} onChange={(e) => setNewExc({ ...newExc, notes: e.target.value })} placeholder="Es. Sono a Milano per il weekend" />
+            </div>
+            <div className="md:col-span-6 flex justify-end">
+              <Button onClick={addException} className="gap-2">
+                <Plus className="h-4 w-4" /> Aggiungi disponibilità speciale
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         <div className="mt-4 space-y-2">
           {exceptions.length === 0 && (
-            <p className="text-sm text-muted-foreground italic">Nessuna eccezione impostata.</p>
+            <p className="text-sm text-muted-foreground italic">Nessuna disponibilità speciale impostata.</p>
           )}
           {exceptions.map((e) => (
-            <div key={e.id} className="rounded-lg border p-3 flex items-center gap-3 text-sm">
+            <div key={e.id} className="rounded-lg border p-3 flex flex-wrap items-center gap-3 text-sm">
               <Badge variant={e.is_available ? "default" : "destructive"}>
                 {e.is_available ? "Disponibile" : "Non disponibile"}
               </Badge>
               <span className="font-medium">
                 {new Date(e.date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
               </span>
+              {e.is_available && e.city && (
+                <span className="inline-flex items-center gap-1 text-foreground">
+                  <MapPin className="h-3.5 w-3.5 text-primary" />
+                  {e.city}{e.district ? ` · ${e.district}` : ""}
+                  {e.radius_km ? ` · entro ${e.radius_km} km` : ""}
+                </span>
+              )}
+              {e.is_available && e.time_slot && (
+                <Badge variant="secondary">{SLOT_LABELS[e.time_slot]}</Badge>
+              )}
               {e.is_available && e.start_time && e.end_time && (
                 <span className="text-muted-foreground">
                   {e.start_time.slice(0, 5)} – {e.end_time.slice(0, 5)}
@@ -519,7 +770,7 @@ function AvailabilityPage() {
                 size="icon"
                 className="ml-auto"
                 onClick={() => removeException(e.id)}
-                aria-label="Rimuovi eccezione"
+                aria-label="Rimuovi disponibilità speciale"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -527,6 +778,40 @@ function AvailabilityPage() {
           ))}
         </div>
       </section>
+
+      {/* Duplicate dialog */}
+      <Dialog open={duplicateFrom != null} onOpenChange={(open) => { if (!open) setDuplicateFrom(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Duplica {duplicateFrom != null ? DAY_LABELS[duplicateFrom] : ""} su altri giorni
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Verranno copiati città, zona, raggio, fasce orarie e note. I dati esistenti sui giorni selezionati saranno sovrascritti.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {DAY_LABELS.map((lbl, idx) => (
+                <label key={idx} className={`flex items-center gap-2 rounded-lg border p-2 text-sm ${idx === duplicateFrom ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+                  <input
+                    type="checkbox"
+                    disabled={idx === duplicateFrom}
+                    checked={duplicateTargets[idx]}
+                    onChange={(e) => setDuplicateTargets((t) => t.map((v, i) => (i === idx ? e.target.checked : v)))}
+                    className="h-4 w-4"
+                  />
+                  {lbl}
+                </label>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDuplicateFrom(null)}>Annulla</Button>
+            <Button onClick={applyDuplicate} disabled={!duplicateTargets.some(Boolean)}>Duplica</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="mt-8 text-center">
         <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
