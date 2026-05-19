@@ -301,32 +301,87 @@ function Browse() {
           {filtered.map(a => {
             const applied = appliedIds.has(a.id);
             const fav = favIds.has(a.id);
+            const role = a.professional_profile || "ruolo";
+            const loc = publicLocationLabel({
+              job_city: a.job_city,
+              city: restaurantsById[a.restaurant_id]?.city,
+              neighborhood: restaurantsById[a.restaurant_id]?.neighborhood,
+            });
+            const totalEstimate =
+              a.tariff_type === "hourly" && Number.isFinite(a.tariff_amount) && Number.isFinite(a.duration_hours)
+                ? Math.round(a.tariff_amount * a.duration_hours)
+                : null;
             return (
-              <div key={a.id} className="rounded-2xl border bg-card p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="rounded-full bg-secondary px-2 py-0.5 capitalize">{a.professional_profile || "ruolo"}</span>
-                      <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{a.speed}</span>
+              <div
+                key={a.id}
+                className="group relative rounded-3xl border border-white/[0.06] bg-card p-5 shadow-[0_20px_50px_-30px_oklch(0_0_0/0.7)] transition-all hover:border-primary/30 hover:shadow-[0_28px_60px_-25px_oklch(0.65_0.25_310/0.35)]"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleFav(a.id)}
+                  aria-label="Preferiti"
+                  className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-background/40 backdrop-blur transition-colors hover:bg-background/70"
+                >
+                  <Heart className={`h-5 w-5 ${fav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                </button>
+
+                <div className="flex items-start gap-4 pr-10">
+                  <div className="relative shrink-0">
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 blur-md opacity-70" aria-hidden />
+                    <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-background/60 text-2xl">
+                      <span aria-hidden>{roleEmoji(a.professional_profile)}</span>
                     </div>
-                    <h3 className="mt-2 font-semibold">{a.duration_hours}h · {formatTariff(a.tariff_amount, a.tariff_type)}</h3>
                   </div>
-                  <Button size="icon" variant="ghost" onClick={()=>toggleFav(a.id)} aria-label="Preferiti">
-                    <Heart className={`h-5 w-5 ${fav?"fill-primary text-primary":""}`} />
-                  </Button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-semibold leading-tight capitalize truncate">{role}</h3>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${speedClasses(a.speed)}`}>
+                        {speedLabel(a.speed)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Ristorante partner</p>
+                  </div>
                 </div>
-                <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2"><Calendar className="h-4 w-4" />{new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}</div>
-                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{publicLocationLabel({ job_city: a.job_city, city: restaurantsById[a.restaurant_id]?.city, neighborhood: restaurantsById[a.restaurant_id]?.neighborhood })}</div>
-                  <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
+
+                <div className="mt-4 grid gap-1.5 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 shrink-0 text-primary/80" />
+                    <span className="text-foreground/90">
+                      {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}
+                    </span>
+                    <span className="text-muted-foreground">· Durata {a.duration_hours}h</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 shrink-0 text-primary/80" />
+                    <span className="truncate">{loc}</span>
+                  </div>
                 </div>
-                <div className="mt-4 flex gap-2">
-                  {applied ? (
-                    <Button size="sm" variant="secondary" disabled className="flex-1">Candidatura inviata</Button>
-                  ) : (
-                    <Button size="sm" className="flex-1 gap-2" onClick={()=>apply(a)}><Send className="h-4 w-4" />Candidati</Button>
+
+                <div className="mt-4 rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Euro className="h-4 w-4 text-primary" />
+                    <span className="text-base font-bold text-foreground">{formatTariff(a.tariff_amount, a.tariff_type)}</span>
+                  </div>
+                  {totalEstimate != null && (
+                    <span className="text-xs text-muted-foreground">Totale stimato €{totalEstimate}</span>
                   )}
-                  <Button size="sm" variant="outline" onClick={()=>setOpenId(a.id)}>Dettagli</Button>
+                </div>
+
+                <div className="mt-4 flex items-center gap-2">
+                  {applied ? (
+                    <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Candidatura inviata
+                    </div>
+                  ) : (
+                    <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={() => apply(a)}>
+                      <Send className="h-4 w-4" />
+                      Candidati
+                    </Button>
+                  )}
+                  <Button size="lg" variant="outline" className="rounded-xl" onClick={() => setOpenId(a.id)}>
+                    Dettagli
+                  </Button>
                 </div>
               </div>
             );
