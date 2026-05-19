@@ -1,7 +1,8 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Star } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 export type WorkerMapPoint = {
   id: string;
@@ -61,6 +62,8 @@ export default function WorkersMapInner({
   onInvite,
   inviteLabel,
   inviteDisabled,
+  focusId,
+  focusNonce,
 }: {
   points: WorkerMapPoint[];
   height: number;
@@ -68,8 +71,11 @@ export default function WorkersMapInner({
   onInvite?: (workerId: string) => void;
   inviteLabel?: string;
   inviteDisabled?: boolean;
+  focusId?: string | null;
+  focusNonce?: number;
 }) {
   const zoom = points.length > 0 ? 11 : 6;
+  const markerRefs = useRef<Record<string, L.Marker | null>>({});
   return (
     <div className="overflow-hidden rounded-2xl border" style={{ height }}>
       <MapContainer center={center} zoom={zoom} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
@@ -77,8 +83,21 @@ export default function WorkersMapInner({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <FocusController
+          points={points}
+          focusId={focusId ?? null}
+          focusNonce={focusNonce ?? 0}
+          markerRefs={markerRefs}
+        />
         {points.map((p) => (
-          <Marker key={p.id} position={[p.lat, p.lng]} icon={avatarIcon(p)}>
+          <Marker
+            key={p.id}
+            position={[p.lat, p.lng]}
+            icon={avatarIcon(p)}
+            ref={(ref) => {
+              markerRefs.current[p.id] = ref;
+            }}
+          >
             <Popup>
               <div style={{ minWidth: 200, fontFamily: "Inter, system-ui, sans-serif" }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
@@ -184,4 +203,31 @@ export default function WorkersMapInner({
       </MapContainer>
     </div>
   );
+}
+
+function FocusController({
+  points,
+  focusId,
+  focusNonce,
+  markerRefs,
+}: {
+  points: WorkerMapPoint[];
+  focusId: string | null;
+  focusNonce: number;
+  markerRefs: React.MutableRefObject<Record<string, L.Marker | null>>;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!focusId) return;
+    const p = points.find((x) => x.id === focusId);
+    if (!p) return;
+    map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 14), { duration: 0.6 });
+    const t = setTimeout(() => {
+      const m = markerRefs.current[focusId];
+      if (m) m.openPopup();
+    }, 650);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId, focusNonce]);
+  return null;
 }

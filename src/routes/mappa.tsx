@@ -198,6 +198,23 @@ function MapPage() {
   const [geocoding, setGeocoding] = useState(false);
   const [focusZoom, setFocusZoom] = useState<number | undefined>(undefined);
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
+  const [focusWorkerId, setFocusWorkerId] = useState<string | null>(null);
+  const [focusWorkerNonce, setFocusWorkerNonce] = useState(0);
+
+  const focusWorkerOnMap = (workerId: string) => {
+    const located = locatedWorkers.find((x) => x.w.id === workerId);
+    if (!located) {
+      toast.error("Posizione non disponibile per questo lavoratore.");
+      return;
+    }
+    setFocusWorkerId(workerId);
+    setFocusWorkerNonce((n) => n + 1);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      requestAnimationFrame(() =>
+        mapBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+    }
+  };
 
   const focusOnMap = (lat: number, lng: number, label?: string) => {
     setSearchCenter({ lat, lng, label });
@@ -827,8 +844,12 @@ function MapPage() {
                       </div>
                       <div className="mt-3 flex gap-2">
                         <Button size="sm" variant="outline" className="flex-1" onClick={() => {
-                          if (w.service_area_lat != null && w.service_area_lng != null) {
+                          if (isRestaurant) {
+                            focusWorkerOnMap(w.id);
+                          } else if (w.service_area_lat != null && w.service_area_lng != null) {
                             focusOnMap(w.service_area_lat, w.service_area_lng, w.full_name || undefined);
+                          } else {
+                            toast.error("Posizione non disponibile per questo lavoratore.");
                           }
                         }}>Mostra sulla mappa</Button>
                         <Link to="/workers"><Button size="sm">Vedi profilo</Button></Link>
@@ -932,6 +953,8 @@ function MapPage() {
                   points={workerMapPoints}
                   center={center}
                   height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
+                  focusId={focusWorkerId}
+                  focusNonce={focusWorkerNonce}
                 />
                 <div className="mt-2 text-xs text-muted-foreground">
                   {workerMapPoints.length} lavorator{workerMapPoints.length === 1 ? "e" : "i"} sulla mappa · posizione approssimativa per tutela privacy · OpenStreetMap

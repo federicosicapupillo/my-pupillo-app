@@ -12,6 +12,8 @@ export function WorkersMap(props: {
   onInvite?: (workerId: string) => void;
   inviteLabel?: string;
   inviteDisabled?: boolean;
+  focusId?: string | null;
+  focusNonce?: number;
 }) {
   const height = props.height ?? 480;
   if (typeof window === "undefined") {
