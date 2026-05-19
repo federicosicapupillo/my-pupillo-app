@@ -1891,13 +1891,16 @@ function Thread() {
                       // Always emit a system message so both sides see the outcome,
                       // even if the status update partially fails.
                       try {
-                        await insertSystemMessage("Proposta accettata", "accept_application");
+                        await insertSystemMessage(
+                          "Proposta accettata.\nHai accettato il turno. Ora puoi visualizzare tutti i dettagli operativi del servizio.",
+                          "accept_application",
+                        );
                       } catch (err) {
                         console.error("[proposal] system message insert failed", err);
                       }
                     }
                   }}
-                  onReject={async () => {
+                  onReject={async (reason?: string) => {
                     if (user) {
                       const { error: respErr } = await supabase.from("proposal_responses").insert({
                         message_id: m.id,
@@ -1931,7 +1934,9 @@ function Thread() {
                       // per-proposal record + system message communicate THIS refusal.
                     } finally {
                       try {
-                        await insertSystemMessage("Proposta rifiutata", "reject_application");
+                        const base = "Proposta rifiutata.\nHai rifiutato questa proposta di lavoro.";
+                        const body = reason ? `${base}\nMotivo: ${reason}` : base;
+                        await insertSystemMessage(body, "reject_application");
                       } catch (err) {
                         console.error("[proposal] system message insert failed", err);
                       }
