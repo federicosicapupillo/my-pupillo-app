@@ -745,6 +745,9 @@ function AvailabilityPage() {
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Alle *</label>
                   <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
+                  {newExc.start_time && newExc.end_time && crossesMidnight(newExc.start_time, newExc.end_time) && (
+                    <p className="text-[11px] text-muted-foreground mt-1">Termina il giorno successivo</p>
+                  )}
                 </div>
               </>
             )}
