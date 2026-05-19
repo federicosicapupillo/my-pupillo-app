@@ -668,7 +668,7 @@ function AvailabilityPage() {
                 <SelectTrigger><SelectValue placeholder="Nessuna" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nessuna</SelectItem>
-                  {ALL_SLOTS.map((s) => (
+                  {EXC_SLOTS.map((s) => (
                     <SelectItem key={s} value={s}>{SLOT_LABELS[s]}</SelectItem>
                   ))}
                 </SelectContent>
@@ -717,14 +717,18 @@ function AvailabilityPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Dalle</label>
-              <Input type="time" disabled={!newExc.is_available} value={newExc.start_time} onChange={(e) => setNewExc({ ...newExc, start_time: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Alle</label>
-              <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
-            </div>
+            {newExc.time_slot === "personalizzata" && (
+              <>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Dalle *</label>
+                  <Input type="time" disabled={!newExc.is_available} value={newExc.start_time} onChange={(e) => setNewExc({ ...newExc, start_time: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Alle *</label>
+                  <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
+                </div>
+              </>
+            )}
             <div className="md:col-span-6">
               <label className="block text-xs text-muted-foreground mb-1">Note (facoltative)</label>
               <Input value={newExc.notes} onChange={(e) => setNewExc({ ...newExc, notes: e.target.value })} placeholder="Es. Sono a Milano per il weekend" />
