@@ -215,10 +215,16 @@ function MapPage() {
           .select("id, business_name, full_name, venue_type, venue_type_other, price_range, address, city, province, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
+        // NB: interroghiamo `profiles` direttamente perché la tabella
+        // `user_roles` ha RLS che permette ad ogni utente di vedere solo i
+        // propri ruoli. Filtriamo i lavoratori escludendo i profili
+        // ristoratore (business_name valorizzato) e richiedendo un
+        // primary_role del lavoratore.
         supabase
-          .from("user_roles")
-          .select("user_id, profiles:profiles!inner(id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status)")
-          .eq("role", "worker")
+          .from("profiles")
+          .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name")
+          .is("business_name", null)
+          .not("primary_role", "is", null)
           .limit(2000),
         supabase.from("announcements")
           .select("id, professional_profile, location_address, location_lat, location_lng, job_latitude, job_longitude, job_address, job_contact_person_name, job_contact_person_phone, job_contact_person_email, status, restaurant_id, service_date, service_time, duration_hours, tariff_amount, tariff_type, notes, required_skills, dress_code_items, language_requirements")
@@ -226,7 +232,7 @@ function MapPage() {
           .limit(1000),
       ]);
       setRestaurants((r as Restaurant[]) || []);
-      const wsRaw = ((w as any[]) || []).map(x => x.profiles).filter(Boolean) as Worker[];
+      const wsRaw = ((w as any[]) || []) as Worker[];
       setWorkers(wsRaw);
       setAnns((a as Ann[]) || []);
       const counts: Record<string, number> = {};
