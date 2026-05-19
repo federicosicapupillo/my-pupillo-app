@@ -2973,6 +2973,15 @@ function ProposalCard(props: {
             Stai per accettare questa proposta di lavoro. Dopo la conferma il turno sarà assegnato a te e il ristoratore riceverà la tua risposta.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-900 dark:text-emerald-200">
+          <div className="flex items-center gap-2 font-semibold">
+            <Unlock className="h-4 w-4 shrink-0" />
+            Sbloccherai subito tutti i dati operativi
+          </div>
+          <p className="mt-1 text-xs leading-relaxed">
+            Accettando questa proposta riceverai subito tutti i dettagli operativi: nome locale, indirizzo completo, referente, orario di ingresso, anticipo richiesto, dress code e istruzioni per il servizio.
+          </p>
+        </div>
         {recapRows.length > 0 && (
           <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-sm">
             {recapRows.map((r) => (
