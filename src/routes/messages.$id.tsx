@@ -2588,6 +2588,88 @@ function CriterionRow({ label, value, onChange }: { label: string; value: number
   );
 }
 
+function ProposalDebugPanel({ conversationId, messageId, info, effectiveStatus, open, onToggle }: {
+  conversationId: string;
+  messageId: string;
+  info: { responseId: string | null; responseStatus: string | null; responseAt: string | null; notifications: { id: string; user_id: string; title: string; read: boolean | null; created_at: string }[] } | undefined;
+  effectiveStatus: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copiato");
+    } catch {
+      toast.error("Copia non riuscita");
+    }
+  };
+  const notifCount = info?.notifications.length ?? 0;
+  const unreadCount = (info?.notifications ?? []).filter((n) => !n.read).length;
+  return (
+    <div className="rounded-lg border border-dashed border-amber-400/60 bg-amber-50/60 dark:bg-amber-950/20 text-[11px] font-mono text-foreground/80 overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-1.5 bg-amber-100/60 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition"
+      >
+        <span className="font-semibold tracking-wide">DEBUG · proposta</span>
+        <span className="text-[10px] opacity-70">
+          stato: {effectiveStatus} · notif: {notifCount} ({unreadCount} non lette) · {open ? "−" : "+"}
+        </span>
+      </button>
+      {open && (
+        <div className="px-3 py-2 space-y-1 break-all">
+          <div className="flex items-start gap-2">
+            <span className="opacity-60 shrink-0">conversation_id:</span>
+            <button type="button" onClick={() => copy(conversationId)} className="underline-offset-2 hover:underline text-left">{conversationId}</button>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="opacity-60 shrink-0">message_id:</span>
+            <button type="button" onClick={() => copy(messageId)} className="underline-offset-2 hover:underline text-left">{messageId}</button>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="opacity-60 shrink-0">proposal_id:</span>
+            {info?.responseId ? (
+              <button type="button" onClick={() => copy(info.responseId!)} className="underline-offset-2 hover:underline text-left">
+                {info.responseId} <span className="opacity-60">({info.responseStatus})</span>
+              </button>
+            ) : (
+              <span className="opacity-60">— nessuna risposta registrata</span>
+            )}
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="opacity-60 shrink-0">response_at:</span>
+            <span>{info?.responseAt ? new Date(info.responseAt).toLocaleString("it-IT") : "—"}</span>
+          </div>
+          <div>
+            <div className="opacity-60">notifications ({notifCount}):</div>
+            {notifCount === 0 ? (
+              <div className="pl-2 opacity-60">— nessuna notifica trovata per questa conversazione</div>
+            ) : (
+              <ul className="pl-2 space-y-0.5">
+                {info!.notifications.map((n) => (
+                  <li key={n.id} className="flex items-start gap-1">
+                    <span className={n.read ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
+                      {n.read ? "✓ letta" : "● non letta"}
+                    </span>
+                    <span className="opacity-80">·</span>
+                    <span className="opacity-80">{n.title}</span>
+                    <span className="opacity-60">·</span>
+                    <span className="opacity-60">user: {n.user_id.slice(0, 8)}…</span>
+                    <span className="opacity-60">·</span>
+                    <span className="opacity-60">{new Date(n.created_at).toLocaleString("it-IT")}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProposalCard(props: {
   message: Msg;
   ann: Ann | null;
