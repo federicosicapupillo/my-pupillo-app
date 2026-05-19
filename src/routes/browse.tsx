@@ -27,6 +27,11 @@ type Ann = {
   location_address: string; location_lat: number | null; location_lng: number | null;
   professional_profile: string | null; status: string; created_at: string;
   job_city?: string | null; job_province?: string | null;
+  dress_code_items?: string[] | null; dress_code_notes?: string | null;
+  required_skills?: string[] | null; language_requirements?: string[] | null;
+  license_requirement?: string | null;
+  notes?: string | null; job_location_notes?: string | null;
+  job_additional_directions?: string | null; job_access_restrictions?: string | null;
 };
 
 type RestaurantInfo = { id: string; full_name: string | null; business_name: string | null; venue_type: string | null; city: string | null; neighborhood: string | null; rating_avg: number | null } | null;
