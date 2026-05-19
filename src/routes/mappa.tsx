@@ -803,7 +803,9 @@ function MapPage() {
                     <li key={w.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="font-semibold truncate">{w.full_name || "Lavoratore"}</div>
+                          <div className="font-semibold truncate">
+                            {isRestaurant ? firstNameOnly(w.full_name) : (w.full_name || "Lavoratore")}
+                          </div>
                           <div className="text-xs text-muted-foreground capitalize">{w.primary_role || "—"}</div>
                         </div>
                         {d != null && <span className="text-xs rounded-full bg-secondary px-2 py-0.5 whitespace-nowrap">{d.toFixed(1)} km</span>}
