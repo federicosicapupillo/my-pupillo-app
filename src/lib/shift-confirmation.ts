@@ -35,15 +35,47 @@ function clean(v: unknown): string {
   return s;
 }
 
+/**
+ * Default minutes that the worker should arrive before the shift starts when
+ * the restaurant has not specified a custom value.
+ */
+export const DEFAULT_ARRIVAL_ADVANCE_MINUTES = 10;
+
+/**
+ * Subtracts `minutes` from a HH:MM[:SS] service start time and returns the
+ * resulting "entry" time as HH:MM. Returns null if the input is invalid.
+ * Handles negative roll-over (e.g. 00:05 - 15min → 23:50).
+ */
+export function computeEntryTime(
+  serviceTime: string | null | undefined,
+  minutes: number | null | undefined,
+): string | null {
+  if (!serviceTime) return null;
+  const m = /^([0-9]{1,2}):([0-9]{2})/.exec(serviceTime);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(mm)) return null;
+  const adv = Number.isFinite(Number(minutes)) && Number(minutes) > 0
+    ? Number(minutes)
+    : DEFAULT_ARRIVAL_ADVANCE_MINUTES;
+  let total = h * 60 + mm - adv;
+  total = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hh = String(Math.floor(total / 60)).padStart(2, "0");
+  const mn = String(total % 60).padStart(2, "0");
+  return `${hh}:${mn}`;
+}
+
 /** Plain-text fallback body (also used for chat preview / notifications). */
 export function buildConfirmationBody(
   ann: ConfirmationAnnouncement | null,
   venueName: string | null,
+  arrivalAdvanceMinutes?: number | null,
 ): string {
   const lines: string[] = [
-    "Candidatura confermata!",
+    "Proposta accettata: dettagli operativi disponibili",
     "",
-    "Sei stato confermato per questo turno.",
+    "Hai accettato la proposta di lavoro. Di seguito trovi tutte le informazioni operative per il servizio.",
     "",
     "Dettagli del servizio:",
     "",
@@ -58,6 +90,12 @@ export function buildConfirmationBody(
     const end = ann.end_time ? ` - ${ann.end_time.slice(0, 5)}` : "";
     lines.push(`Orario: ${ann.service_time.slice(0, 5)}${end}`);
   }
+  const advMin = Number.isFinite(Number(arrivalAdvanceMinutes)) && Number(arrivalAdvanceMinutes) > 0
+    ? Number(arrivalAdvanceMinutes)
+    : DEFAULT_ARRIVAL_ADVANCE_MINUTES;
+  const entry = computeEntryTime(ann?.service_time ?? null, advMin);
+  if (entry) lines.push(`Orario ingresso: ${entry}`);
+  lines.push(`Presentati ${advMin} minuti prima dell'inizio del turno.`);
   const amt = ann?.tariff_amount == null ? null : Number(ann.tariff_amount);
   if (amt != null && Number.isFinite(amt) && amt > 0) {
     lines.push(`Compenso: ${formatTariff(ann?.tariff_amount ?? null, ann?.tariff_type ?? null)}`);
