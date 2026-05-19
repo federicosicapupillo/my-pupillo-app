@@ -5,7 +5,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart, Store, BadgeCheck } from "lucide-react";
+import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart, Store, BadgeCheck, CalendarDays } from "lucide-react";
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
@@ -334,6 +334,30 @@ function DashboardInner() {
 
       {role === "worker" && user && profile && (
         <div className="mt-6 space-y-6">
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-primary" />
+                <h2 className="font-semibold">Le mie disponibilità</h2>
+              </div>
+              <Link to="/availability">
+                <Button variant="ghost" size="sm" className="gap-1">
+                  Gestisci <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
+            <div className="rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
+              Indica i giorni e gli orari in cui sei disponibile per ricevere proposte di lavoro più adatte ai tuoi orari.
+              <div className="mt-3">
+                <Link to="/availability">
+                  <Button size="sm" className="gap-2">
+                    <CalendarDays className="h-4 w-4" /> Imposta disponibilità
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+
           <section>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
