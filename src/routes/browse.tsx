@@ -27,6 +27,11 @@ type Ann = {
   location_address: string; location_lat: number | null; location_lng: number | null;
   professional_profile: string | null; status: string; created_at: string;
   job_city?: string | null; job_province?: string | null;
+  dress_code_items?: string[] | null; dress_code_notes?: string | null;
+  required_skills?: string[] | null; language_requirements?: string[] | null;
+  license_requirement?: string | null;
+  notes?: string | null; job_location_notes?: string | null;
+  job_additional_directions?: string | null; job_access_restrictions?: string | null;
 };
 
 type RestaurantInfo = { id: string; full_name: string | null; business_name: string | null; venue_type: string | null; city: string | null; neighborhood: string | null; rating_avg: number | null } | null;
@@ -196,6 +201,7 @@ function Browse() {
     setSubmitting(false);
     if (app?.id) {
       setSuccessApp({ id: app.id, ann: confirmAnn });
+      toast.success("Candidatura inviata correttamente.");
     }
     setConfirmAnn(null);
     setOpenId(null);
@@ -411,19 +417,28 @@ function ApplyConfirmDialog({
     return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
   })();
   const zone = ann ? publicLocationLabel({ job_city: ann.job_city, city: restaurantInfo?.city, neighborhood: restaurantInfo?.neighborhood }) : "";
+  const totalEstimate = ann && ann.tariff_type === "hourly"
+    ? `${(Number(ann.tariff_amount) * Number(ann.duration_hours || 0)).toFixed(2).replace(/\.?0+$/, "")} EUR`
+    : ann ? `${ann.tariff_amount} EUR` : "—";
+  const dressCodeItems = (ann?.dress_code_items ?? []).filter(Boolean);
+  const requiredSkills = (ann?.required_skills ?? []).filter(Boolean);
+  const languageReqs = (ann?.language_requirements ?? []).filter(Boolean);
+  const operationalNotes = [ann?.notes, ann?.job_location_notes, ann?.job_additional_directions, ann?.job_access_restrictions]
+    .map((s) => (s ?? "").trim()).filter(Boolean);
 
   return (
     <Dialog open={!!ann} onOpenChange={(o) => !o && onCancel()}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-primary/20 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.4)] animate-scale-in">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-primary/20 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.4)] animate-scale-in max-h-[90vh] flex flex-col">
         <div className="bg-gradient-to-br from-primary/10 via-card to-card p-6 pb-4">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold tracking-tight">Confermi la candidatura?</DialogTitle>
             <DialogDescription className="text-sm">
-              Stai inviando la tua disponibilità per questo turno.
+              Controlla i dettagli del turno prima di inviare la candidatura.
             </DialogDescription>
           </DialogHeader>
         </div>
 
+        <div className="overflow-y-auto flex-1">
         {ann && (
           <div className="px-6 pb-2 space-y-3">
             <div className="rounded-xl border bg-muted/30 p-4 space-y-2.5 text-sm">
@@ -443,6 +458,14 @@ function ApplyConfirmDialog({
               <div className="flex items-center gap-2 font-medium text-foreground">
                 <Euro className="h-4 w-4 text-primary" />{formatTariff(ann.tariff_amount, ann.tariff_type)}
               </div>
+              {ann.tariff_type === "hourly" && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
+                  Totale stimato: <span className="font-medium text-foreground">{totalEstimate}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
+                Ristorante partner · Locale verificato
+              </div>
             </div>
             {(night || long) && (
               <div className="flex flex-wrap gap-2">
@@ -456,6 +479,70 @@ function ApplyConfirmDialog({
                     <Hourglass className="h-3 w-3" />Turno lungo
                   </span>
                 )}
+              </div>
+            )}
+
+            <div className="rounded-xl border bg-card p-3 text-sm space-y-1">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dress code</div>
+              {dressCodeItems.length > 0 || ann.dress_code_notes ? (
+                <>
+                  {dressCodeItems.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {dressCodeItems.map((d) => (
+                        <span key={d} className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{d}</span>
+                      ))}
+                    </div>
+                  )}
+                  {ann.dress_code_notes && <div className="text-muted-foreground">{ann.dress_code_notes}</div>}
+                </>
+              ) : (
+                <div className="text-muted-foreground">Non specificato dal ristoratore.</div>
+              )}
+            </div>
+
+            <div className="rounded-xl border bg-card p-3 text-sm space-y-1">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quando presentarsi</div>
+              <div className="text-muted-foreground">
+                Ti consigliamo di presentarti almeno 10 minuti prima dell'orario di ingresso.
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-card p-3 text-sm space-y-1">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mansioni</div>
+              <div className="text-muted-foreground capitalize">
+                {ann.professional_profile || "Mansioni standard del ruolo."}
+              </div>
+            </div>
+
+            {(requiredSkills.length > 0 || languageReqs.length > 0 || ann.license_requirement) && (
+              <div className="rounded-xl border bg-card p-3 text-sm space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Requisiti</div>
+                {requiredSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {requiredSkills.map((s) => (
+                      <span key={s} className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{s}</span>
+                    ))}
+                  </div>
+                )}
+                {languageReqs.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Lingue: <span className="text-foreground">{languageReqs.join(", ")}</span>
+                  </div>
+                )}
+                {ann.license_requirement && (
+                  <div className="text-xs text-muted-foreground">
+                    Patente/mezzo: <span className="text-foreground">{ann.license_requirement}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {operationalNotes.length > 0 && (
+              <div className="rounded-xl border bg-card p-3 text-sm space-y-1">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Note operative</div>
+                {operationalNotes.map((n, i) => (
+                  <div key={i} className="text-muted-foreground whitespace-pre-wrap">{n}</div>
+                ))}
               </div>
             )}
           </div>
@@ -509,13 +596,14 @@ function ApplyConfirmDialog({
             )}
           </div>
         )}
+        </div>
 
         <DialogFooter className="p-6 pt-4 gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
           <Button variant="outline" onClick={onCancel} disabled={submitting} className="sm:flex-1">
             Annulla
           </Button>
           <Button onClick={onConfirm} disabled={submitting} className="sm:flex-1 gap-2 shadow-lg shadow-primary/30">
-            {submitting ? (<><Loader2 className="h-4 w-4 animate-spin" />Invio candidatura…</>) : (<><Send className="h-4 w-4" />Conferma candidatura</>)}
+            {submitting ? (<><Loader2 className="h-4 w-4 animate-spin" />Invio candidatura…</>) : (<><Send className="h-4 w-4" />Invia candidatura</>)}
           </Button>
         </DialogFooter>
       </DialogContent>
