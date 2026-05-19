@@ -1894,8 +1894,8 @@ function Thread() {
               // response anywhere) fall back to the application status once.
               const effectiveStatus = ownStatus ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
               return (
+                <div key={m.id} className="flex flex-col gap-2">
                 <ProposalCard
-                  key={m.id}
                   message={m}
                   ann={ann}
                   venueName={role === "worker" ? displayOtherName : displayOtherName}
@@ -1994,6 +1994,17 @@ function Thread() {
                     }
                   }}
                 />
+                {role === "admin" && (
+                  <ProposalDebugPanel
+                    conversationId={id}
+                    messageId={m.id}
+                    info={proposalDebug[m.id]}
+                    effectiveStatus={effectiveStatus}
+                    open={debugOpen}
+                    onToggle={() => setDebugOpen((v) => !v)}
+                  />
+                )}
+                </div>
               );
             }
             return (
