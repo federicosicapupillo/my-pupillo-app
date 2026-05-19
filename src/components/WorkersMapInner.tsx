@@ -65,6 +65,7 @@ export default function WorkersMapInner({
   inviteDisabled,
   focusId,
   focusNonce,
+  onViewProfile,
 }: {
   points: WorkerMapPoint[];
   height: number;
@@ -74,6 +75,7 @@ export default function WorkersMapInner({
   inviteDisabled?: boolean;
   focusId?: string | null;
   focusNonce?: number;
+  onViewProfile?: (workerId: string) => void;
 }) {
   const zoom = points.length > 0 ? 11 : 6;
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
@@ -184,24 +186,45 @@ export default function WorkersMapInner({
                       {inviteLabel ?? "Messaggia"}
                     </button>
                   )}
-                  {p.link && (
-                    <a
-                      href={p.link}
-                      style={{
-                        flex: 1,
-                        background: "#fff",
-                        color: "#111",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 8,
-                        padding: "6px 10px",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        textAlign: "center",
-                        textDecoration: "none",
-                      }}
-                    >
-                      Profilo
-                    </a>
+                  {(onViewProfile || p.link) && (
+                    onViewProfile ? (
+                      <button
+                        type="button"
+                        onClick={() => onViewProfile(p.id)}
+                        style={{
+                          flex: 1,
+                          background: "#fff",
+                          color: "#111",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 8,
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          textAlign: "center",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Vedi profilo
+                      </button>
+                    ) : (
+                      <a
+                        href={p.link!}
+                        style={{
+                          flex: 1,
+                          background: "#fff",
+                          color: "#111",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 8,
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          textAlign: "center",
+                          textDecoration: "none",
+                        }}
+                      >
+                        Vedi profilo
+                      </a>
+                    )
                   )}
                 </div>
               </div>
