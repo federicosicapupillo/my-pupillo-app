@@ -146,6 +146,9 @@ function MapPage() {
   // o una candidatura accettata). Per questi il nome del locale è visibile
   // anche prima di una nuova conferma.
   const [knownRestaurantIds, setKnownRestaurantIds] = useState<Set<string>>(new Set());
+  // Worker_ids con cui il ristoratore loggato ha una candidatura accettata o
+  // un turno confermato: per questi mostriamo nome e cognome completi.
+  const [knownWorkerIds, setKnownWorkerIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   // search & filters
@@ -297,9 +300,24 @@ function MapPage() {
         setAppStatusByAnn({});
         setKnownRestaurantIds(new Set());
       }
+      // Per il ristoratore loggato: insieme di worker_ids "confermati"
+      // (candidatura accettata o turno assegnato) per cui possiamo mostrare
+      // nome e cognome completi sulla mappa.
+      if (user && isRestaurant) {
+        const [{ data: acceptedApps }, { data: myShifts }] = await Promise.all([
+          supabase.from("applications").select("worker_id").eq("restaurant_id", user.id).eq("status", "accepted"),
+          supabase.from("shifts").select("worker_id").eq("restaurant_id", user.id),
+        ]);
+        const known = new Set<string>();
+        (acceptedApps || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
+        (myShifts || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
+        setKnownWorkerIds(known);
+      } else {
+        setKnownWorkerIds(new Set());
+      }
       setLoading(false);
     })();
-  }, [user?.id, isWorker]);
+  }, [user?.id, isWorker, isRestaurant]);
 
   const cities = useMemo(() => Array.from(new Set(restaurants.map(r => r.city).filter(Boolean))) as string[], [restaurants]);
   const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
@@ -390,9 +408,9 @@ function MapPage() {
       lat: pos[0],
       lng: pos[1],
       // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
-      // proprio (no cognome). Dopo conferma del turno è il flusso dedicato
-      // (proposta/chat) a esporre il nome completo.
-      name: isRestaurant ? firstNameOnly(w.full_name) : w.full_name,
+      // (no cognome). Dopo una candidatura accettata o un turno assegnato
+      // mostriamo invece nome e cognome completi.
+      name: isRestaurant && !knownWorkerIds.has(w.id) ? firstNameOnly(w.full_name) : w.full_name,
       role: w.primary_role,
       city: w.city ?? w.neighborhood ?? null,
       rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
@@ -401,7 +419,7 @@ function MapPage() {
       initials: mapInitials(w.full_name),
       link: `/workers_/${w.id}`,
     })),
-    [locatedWorkers, workerAvatars, isRestaurant],
+    [locatedWorkers, workerAvatars, isRestaurant, knownWorkerIds],
   );
 
   const { points, coordSourceStats, coordSourceById } = useMemo(() => {
@@ -829,7 +847,9 @@ function MapPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="font-semibold truncate">
-                            {isRestaurant ? firstNameOnly(w.full_name) : (w.full_name || "Lavoratore")}
+                            {isRestaurant && !knownWorkerIds.has(w.id)
+                              ? firstNameOnly(w.full_name)
+                              : (w.full_name || "Lavoratore")}
                           </div>
                           <div className="text-xs text-muted-foreground capitalize">{w.primary_role || "—"}</div>
                         </div>
