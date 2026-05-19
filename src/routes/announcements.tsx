@@ -655,13 +655,7 @@ function AnnouncementsPage() {
                       return (
                         <li key={c.worker_id} className="rounded-lg border bg-card p-2.5">
                           <div className="flex items-start gap-2.5">
-                            {c.avatar_url ? (
-                              <img src={c.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
-                            ) : (
-                              <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-secondary-foreground">
-                                {(c.full_name || "?").slice(0, 1).toUpperCase()}
-                              </div>
-                            )}
+                            <UserAvatar userId={c.worker_id} name={c.full_name} className="h-9 w-9 shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-sm font-semibold text-foreground truncate">
