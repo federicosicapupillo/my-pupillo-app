@@ -137,6 +137,14 @@ type Review = {
   author_id: string;
   target_id: string;
   shift_id: string | null;
+  punctuality?: number | null;
+  professionalism?: number | null;
+  competence?: number | null;
+  reliability?: number | null;
+  teamwork?: number | null;
+  would_rehire?: "yes" | "maybe" | "no" | string | null;
+  positive_tags?: string[] | null;
+  negative_tags?: string[] | null;
 };
 
 type WorkerReview = {
@@ -524,11 +532,15 @@ function Thread() {
           .maybeSingle();
         setShift((sh as Shift | null) ?? null);
         if (sh && user) {
+          // Recupera la recensione del turno (visibile sia al ristoratore
+          // sia al lavoratore: serve a renderizzare la card "Turno chiuso
+          // e recensione ricevuta" anche lato lavoratore).
           const { data: rev } = await supabase
             .from("reviews")
-            .select("id, rating, comment, tags, created_at, author_id, target_id, shift_id")
+            .select("id, rating, comment, tags, created_at, author_id, target_id, shift_id, punctuality, professionalism, competence, reliability, teamwork, would_rehire, positive_tags, negative_tags")
             .eq("shift_id", (sh as any).id)
-            .eq("author_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
             .maybeSingle();
           setExistingReview((rev as Review | null) ?? null);
         }
