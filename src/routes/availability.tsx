@@ -29,6 +29,8 @@ import {
   type TimeSlot,
   type AvailabilityRow,
   type AvailabilityExceptionRow,
+  crossesMidnight,
+  isValidTimeRange,
 } from "@/lib/availability";
 
 export const Route = createFileRoute("/availability")({
@@ -260,6 +262,15 @@ function AvailabilityPage() {
       if (!d.flexible && d.slots.length === 0) {
         return `Indica almeno una fascia oraria o un orario di disponibilità per ${DAY_LABELS[i]}.`;
       }
+      for (const s of d.slots) {
+        if (s.time_slot === "last_minute") continue;
+        if (!s.start_time || !s.end_time) {
+          return `Completa orario di inizio e fine per ${DAY_LABELS[i]}.`;
+        }
+        if (!isValidTimeRange(s.start_time, s.end_time)) {
+          return `Orario di inizio e fine non possono coincidere (${DAY_LABELS[i]}).`;
+        }
+      }
     }
     return null;
   };
@@ -337,6 +348,14 @@ function AvailabilityPage() {
     }
     if (newExc.is_available && newExc.time_slot === "personalizzata" && (!newExc.start_time || !newExc.end_time)) {
       toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
+      return;
+    }
+    if (
+      newExc.is_available &&
+      newExc.time_slot === "personalizzata" &&
+      !isValidTimeRange(newExc.start_time, newExc.end_time)
+    ) {
+      toast.error("L'orario di inizio e fine non possono coincidere.");
       return;
     }
     const start = newExc.time_slot === "personalizzata" ? (newExc.start_time || null) : null;
@@ -726,6 +745,9 @@ function AvailabilityPage() {
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Alle *</label>
                   <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
+                  {newExc.start_time && newExc.end_time && crossesMidnight(newExc.start_time, newExc.end_time) && (
+                    <p className="text-[11px] text-muted-foreground mt-1">Termina il giorno successivo</p>
+                  )}
                 </div>
               </>
             )}

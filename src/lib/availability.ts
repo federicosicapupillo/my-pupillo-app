@@ -152,6 +152,18 @@ function toMinutes(t: string): number {
   return h * 60 + (m || 0);
 }
 
+/** True if end falls on the day after start (e.g. 21:00 → 02:00). */
+export function crossesMidnight(start: string, end: string): boolean {
+  return toMinutes(end) < toMinutes(start);
+}
+
+/** Valid time range: start and end are different. End < start means it
+ *  crosses midnight and ends the next day — that is allowed, not an error. */
+export function isValidTimeRange(start: string | null | undefined, end: string | null | undefined): boolean {
+  if (!start || !end) return false;
+  return toMinutes(start) !== toMinutes(end);
+}
+
 /** Compute overlap considering ranges that may cross midnight. */
 export function overlapLevel(aStart: string, aEnd: string, bStart: string, bEnd: string): CompatibilityLevel {
   const a1 = toMinutes(aStart);
