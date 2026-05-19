@@ -48,6 +48,7 @@ export const Route = createFileRoute("/availability")({
 });
 
 const ALL_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute"];
+const EXC_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute", "personalizzata"];
 
 type LocalSlot = {
   id?: string;
