@@ -775,7 +775,10 @@ export type Database = {
           country: string | null
           created_at: string
           credits: number | null
+          default_arrival_advance_minutes: number | null
+          default_arrival_advance_reason: string | null
           default_beard_allowed: string | null
+          default_contact_person_name: string | null
           default_dress_code_items: string[] | null
           default_dress_code_notes: string | null
           default_language_requirements: string[] | null
@@ -925,7 +928,10 @@ export type Database = {
           country?: string | null
           created_at?: string
           credits?: number | null
+          default_arrival_advance_minutes?: number | null
+          default_arrival_advance_reason?: string | null
           default_beard_allowed?: string | null
+          default_contact_person_name?: string | null
           default_dress_code_items?: string[] | null
           default_dress_code_notes?: string | null
           default_language_requirements?: string[] | null
@@ -1075,7 +1081,10 @@ export type Database = {
           country?: string | null
           created_at?: string
           credits?: number | null
+          default_arrival_advance_minutes?: number | null
+          default_arrival_advance_reason?: string | null
           default_beard_allowed?: string | null
+          default_contact_person_name?: string | null
           default_dress_code_items?: string[] | null
           default_dress_code_notes?: string | null
           default_language_requirements?: string[] | null
