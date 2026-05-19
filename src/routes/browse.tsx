@@ -201,6 +201,7 @@ function Browse() {
     setSubmitting(false);
     if (app?.id) {
       setSuccessApp({ id: app.id, ann: confirmAnn });
+      toast.success("Candidatura inviata correttamente.");
     }
     setConfirmAnn(null);
     setOpenId(null);
