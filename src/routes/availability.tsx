@@ -48,6 +48,7 @@ export const Route = createFileRoute("/availability")({
 });
 
 const ALL_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute"];
+const EXC_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute", "personalizzata"];
 
 type LocalSlot = {
   id?: string;
@@ -330,17 +331,16 @@ function AvailabilityPage() {
       toast.error("Seleziona la città in cui sei disponibile per questa data.");
       return;
     }
-    if (newExc.is_available && !newExc.time_slot && !newExc.start_time && !newExc.end_time) {
-      toast.error("Indica almeno una fascia oraria o un orario di disponibilità.");
+    if (newExc.is_available && !newExc.time_slot) {
+      toast.error("Seleziona una fascia oraria.");
       return;
     }
-    let start = newExc.start_time || null;
-    let end = newExc.end_time || null;
-    if (newExc.time_slot && !start && !end && newExc.time_slot !== "last_minute" && newExc.time_slot !== "flessibile") {
-      const def = SLOT_DEFAULT_TIMES[newExc.time_slot];
-      start = def.start;
-      end = def.end;
+    if (newExc.is_available && newExc.time_slot === "personalizzata" && (!newExc.start_time || !newExc.end_time)) {
+      toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
+      return;
     }
+    const start = newExc.time_slot === "personalizzata" ? (newExc.start_time || null) : null;
+    const end = newExc.time_slot === "personalizzata" ? (newExc.end_time || null) : null;
     const payload = {
       worker_id: user.id,
       date: newExc.date,
@@ -668,7 +668,7 @@ function AvailabilityPage() {
                 <SelectTrigger><SelectValue placeholder="Nessuna" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nessuna</SelectItem>
-                  {ALL_SLOTS.map((s) => (
+                  {EXC_SLOTS.map((s) => (
                     <SelectItem key={s} value={s}>{SLOT_LABELS[s]}</SelectItem>
                   ))}
                 </SelectContent>
@@ -717,14 +717,18 @@ function AvailabilityPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Dalle</label>
-              <Input type="time" disabled={!newExc.is_available} value={newExc.start_time} onChange={(e) => setNewExc({ ...newExc, start_time: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Alle</label>
-              <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
-            </div>
+            {newExc.time_slot === "personalizzata" && (
+              <>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Dalle *</label>
+                  <Input type="time" disabled={!newExc.is_available} value={newExc.start_time} onChange={(e) => setNewExc({ ...newExc, start_time: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Alle *</label>
+                  <Input type="time" disabled={!newExc.is_available} value={newExc.end_time} onChange={(e) => setNewExc({ ...newExc, end_time: e.target.value })} />
+                </div>
+              </>
+            )}
             <div className="md:col-span-6">
               <label className="block text-xs text-muted-foreground mb-1">Note (facoltative)</label>
               <Input value={newExc.notes} onChange={(e) => setNewExc({ ...newExc, notes: e.target.value })} placeholder="Es. Sono a Milano per il weekend" />

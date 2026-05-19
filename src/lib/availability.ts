@@ -5,7 +5,8 @@ export type TimeSlot =
   | "serale"
   | "intera_giornata"
   | "last_minute"
-  | "flessibile";
+  | "flessibile"
+  | "personalizzata";
 
 export const SLOT_LABELS: Record<TimeSlot, string> = {
   pranzo: "Pranzo",
@@ -15,6 +16,7 @@ export const SLOT_LABELS: Record<TimeSlot, string> = {
   intera_giornata: "Intera giornata",
   last_minute: "Last minute",
   flessibile: "Valuto in base alla proposta",
+  personalizzata: "Personalizzata",
 };
 
 export const SLOT_DEFAULT_TIMES: Record<TimeSlot, { start: string | null; end: string | null }> = {
@@ -25,6 +27,7 @@ export const SLOT_DEFAULT_TIMES: Record<TimeSlot, { start: string | null; end: s
   intera_giornata: { start: "09:00", end: "23:00" },
   last_minute: { start: null, end: null },
   flessibile: { start: null, end: null },
+  personalizzata: { start: null, end: null },
 };
 
 export const DAY_LABELS: string[] = [
