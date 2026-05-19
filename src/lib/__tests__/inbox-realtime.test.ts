@@ -3,6 +3,9 @@ import {
   mergeThreadUpdate,
   previewChanged,
   createDebouncedReload,
+  applyIncomingMessage,
+  applyProposalResponse,
+  clearThreadUnread,
   type InboxThread,
 } from "@/lib/inbox-realtime";
 
@@ -11,6 +14,7 @@ const baseThread = (over: Partial<InboxThread> = {}): InboxThread => ({
   status: "pending",
   lastBody: "ciao",
   lastAt: "2025-05-19T10:00:00.000Z",
+  unread: 0,
   ...over,
 });
 
