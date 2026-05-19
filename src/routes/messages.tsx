@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-rout
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -113,6 +113,8 @@ function MessagesLayout() {
   const selectedId = location.pathname.startsWith("/messages/")
     ? decodeURIComponent(location.pathname.split("/")[2] ?? "")
     : "";
+  const selectedIdRef = useRef(selectedId);
+  useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -280,7 +282,7 @@ function MessagesLayout() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
         const msg = payload.new as any;
         if (msg && user) {
-          setThreads((prev) => applyIncomingMessage(prev as any, msg, user.id, selectedId || null) as typeof prev);
+          setThreads((prev) => applyIncomingMessage(prev as any, msg, user.id, selectedIdRef.current || null) as typeof prev);
         }
         scheduleReload();
       })
