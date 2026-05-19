@@ -1145,6 +1145,14 @@ function Thread() {
     isAdmin: role === "admin",
     applicationStatus: app?.status ?? null,
   });
+  // Minutes the worker must show up before service_time. When the viewer is
+  // the restaurant we read it from their own profile; when the viewer is the
+  // worker we read it from the partner (restaurant) profile.
+  const restaurantArrivalAdvance: number | null = role === "restaurant"
+    ? (typeof (profile as any)?.default_arrival_advance_minutes === "number"
+        ? (profile as any).default_arrival_advance_minutes
+        : null)
+    : otherArrivalAdvance;
   const restaurantHints = role === "restaurant"
     ? null
     : { city: other?.city ?? null, neighborhood: other?.neighborhood ?? null };
