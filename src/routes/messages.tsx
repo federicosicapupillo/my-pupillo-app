@@ -11,7 +11,14 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { otherColumnForRole, groupThreadsByOther } from "@/lib/messages-grouping";
-import { mergeThreadUpdate, previewChanged, createDebouncedReload } from "@/lib/inbox-realtime";
+import {
+  mergeThreadUpdate,
+  previewChanged,
+  createDebouncedReload,
+  applyIncomingMessage,
+  applyProposalResponse,
+  clearThreadUnread,
+} from "@/lib/inbox-realtime";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import {
   isApplicationConfirmed,
@@ -267,12 +274,38 @@ function MessagesLayout() {
           return mergeThreadUpdate(prev as any, row) as typeof prev;
         });
       })
-      // Any message activity in conversations the current user participates in
-      // must refresh preview + unread counter. RLS already scopes the stream.
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => { scheduleReload(); })
+      // Message activity in conversations the current user participates in.
+      // Bump unread + preview *immediately* (RLS already scopes the stream),
+      // then a debounced reload reconciles any drift with the server.
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const msg = payload.new as any;
+        if (msg && user) {
+          setThreads((prev) => applyIncomingMessage(prev as any, msg, user.id, selectedId || null) as typeof prev);
+        }
+        scheduleReload();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, (payload) => {
+        // Mark-as-read events: if the recipient just read messages in a
+        // thread I own, clear its unread badge locally.
+        const m = payload.new as any;
+        const old = payload.old as any;
+        if (m?.read_at && !old?.read_at && user && m.sender_id === user.id) {
+          setThreads((prev) => clearThreadUnread(prev as any, m.application_id) as typeof prev);
+        }
+        scheduleReload();
+      })
       // A worker reply to a proposal updates this table; reflect the new
-      // status promptly in the inbox so the badge updates without a refresh.
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_responses" }, () => { scheduleReload(); })
+      // status immediately on the badge, then debounced reload reconciles.
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_responses" }, (payload) => {
+        const r = payload.new as any;
+        if (r) {
+          setThreads((prev) => applyProposalResponse(prev as any, r) as typeof prev);
+          if (r.status && STATUS_LABELS[r.status]) {
+            toast.message(`Stato aggiornato: ${STATUS_LABELS[r.status]}`);
+          }
+        }
+        scheduleReload();
+      })
       .subscribe();
     return () => {
       reloader.cancel();
