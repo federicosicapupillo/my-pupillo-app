@@ -748,6 +748,7 @@ export type Database = {
           age_verified: boolean
           age_verified_at: string | null
           all_zones: boolean
+          available_now_until: string | null
           avatar_url: string | null
           avg_competence: number
           avg_professionalism: number
@@ -901,6 +902,7 @@ export type Database = {
           age_verified?: boolean
           age_verified_at?: string | null
           all_zones?: boolean
+          available_now_until?: string | null
           avatar_url?: string | null
           avg_competence?: number
           avg_professionalism?: number
@@ -1054,6 +1056,7 @@ export type Database = {
           age_verified?: boolean
           age_verified_at?: string | null
           all_zones?: boolean
+          available_now_until?: string | null
           avatar_url?: string | null
           avg_competence?: number
           avg_professionalism?: number
@@ -1542,6 +1545,87 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      worker_availability: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string | null
+          id: string
+          is_flexible: boolean
+          is_last_minute: boolean
+          notes: string | null
+          start_time: string | null
+          time_slot: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time?: string | null
+          id?: string
+          is_flexible?: boolean
+          is_last_minute?: boolean
+          notes?: string | null
+          start_time?: string | null
+          time_slot: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string | null
+          id?: string
+          is_flexible?: boolean
+          is_last_minute?: boolean
+          notes?: string | null
+          start_time?: string | null
+          time_slot?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: []
+      }
+      worker_availability_exceptions: {
+        Row: {
+          created_at: string
+          date: string
+          end_time: string | null
+          id: string
+          is_available: boolean
+          notes: string | null
+          start_time: string | null
+          time_slot: string | null
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          end_time?: string | null
+          id?: string
+          is_available: boolean
+          notes?: string | null
+          start_time?: string | null
+          time_slot?: string | null
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          end_time?: string | null
+          id?: string
+          is_available?: boolean
+          notes?: string | null
+          start_time?: string | null
+          time_slot?: string | null
+          updated_at?: string
+          worker_id?: string
         }
         Relationships: []
       }
