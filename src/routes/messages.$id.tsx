@@ -3191,6 +3191,13 @@ function ConfirmationCard(props: {
             label="Orario"
             value={start ? `${start}${end ? ` - ${end}` : ""}` : CONFIRMATION_EMPTY_LABELS.endTime}
           />
+          {entryTime && (
+            <ProposalRow
+              icon={AlarmClock}
+              label="Orario ingresso"
+              value={`${entryTime} · presentati ${advMin} minuti prima`}
+            />
+          )}
           <ProposalRow icon={MapPin} label="Indirizzo" value={fullAddress} />
           <ProposalRow
             icon={UserIcon}
