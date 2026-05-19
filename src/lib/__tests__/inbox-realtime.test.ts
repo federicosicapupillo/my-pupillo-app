@@ -746,3 +746,188 @@ describe("multi-user realtime — filter by user.id (Federico, Enrico, Admin)", 
     expect(adminOther.status).toBe("pending");
   });
 });
+
+describe("fallback — load() failures and incomplete payloads keep the inbox stable", () => {
+  const viewer = "viewer-1";
+
+  describe("createDebouncedReload — load() throwing must not break future schedules", () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it("a synchronous throw inside fn does not prevent the next schedule from firing", () => {
+      let calls = 0;
+      const fn = vi.fn(() => {
+        calls++;
+        if (calls === 1) throw new Error("network down");
+      });
+      const r = createDebouncedReload(fn, 120);
+
+      r.schedule();
+      // First burst — the timer fires and fn throws. We swallow it like the
+      // route does (the inbox already shows the optimistic state).
+      expect(() => vi.advanceTimersByTime(120)).toThrow("network down");
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      // The debouncer must still be usable: a new schedule fires fn again.
+      r.schedule();
+      vi.advanceTimersByTime(120);
+      expect(fn).toHaveBeenCalledTimes(2);
+    });
+
+    it("a rejected async load() does not leave the debouncer stuck", async () => {
+      const fn = vi.fn(async () => {
+        throw new Error("supabase 500");
+      });
+      const r = createDebouncedReload(() => { void fn().catch(() => {}); }, 120);
+
+      r.schedule();
+      vi.advanceTimersByTime(120);
+      expect(fn).toHaveBeenCalledTimes(1);
+
+      // Subsequent burst still goes through.
+      r.schedule();
+      r.schedule();
+      vi.advanceTimersByTime(120);
+      expect(fn).toHaveBeenCalledTimes(2);
+      // No pending timer left behind.
+      expect(r.pending).toBe(false);
+    });
+  });
+
+  describe("mergeThreadUpdate — incomplete application payloads", () => {
+    it("application UPDATE with only id is a no-op on tracked rows (no field wipe)", () => {
+      const before: InboxThread[] = [
+        baseThread({ status: "pending", lastBody: "ciao", lastAt: "2025-05-19T10:00:00.000Z" }),
+      ];
+      const after = mergeThreadUpdate(before, { id: "app-1" });
+      expect(after).toHaveLength(1);
+      expect(after[0].status).toBe("pending");
+      expect(after[0].lastBody).toBe("ciao");
+      expect(after[0].lastAt).toBe("2025-05-19T10:00:00.000Z");
+    });
+
+    it("null fields in the payload fall back to existing values", () => {
+      const before: InboxThread[] = [
+        baseThread({ status: "pending", lastBody: "ciao", lastAt: "2025-05-19T10:00:00.000Z" }),
+      ];
+      const after = mergeThreadUpdate(before, {
+        id: "app-1",
+        status: null,
+        last_message_preview: null,
+        last_message_at: null,
+      });
+      expect(after[0].status).toBe("pending");
+      expect(after[0].lastBody).toBe("ciao");
+      expect(after[0].lastAt).toBe("2025-05-19T10:00:00.000Z");
+    });
+
+    it("a malformed payload missing id is ignored (no crash, no mutation)", () => {
+      const before: InboxThread[] = [baseThread()];
+      // Cast through unknown — realtime sometimes sends partial rows.
+      const after = mergeThreadUpdate(before, {} as unknown as { id: string });
+      expect(after).toBe(before);
+    });
+  });
+
+  describe("applyIncomingMessage — incomplete message payloads", () => {
+    it("missing body / created_at falls back to existing values, unread still bumps", () => {
+      const before: InboxThread[] = [
+        baseThread({ unread: 0, lastBody: "vecchio", lastAt: "2025-05-19T09:00:00.000Z" }),
+      ];
+      const after = applyIncomingMessage(
+        before,
+        { application_id: "app-1", sender_id: "other" }, // no body, no created_at
+        viewer,
+        null,
+      );
+      expect((after[0] as any).unread).toBe(1);
+      expect(after[0].lastBody).toBe("vecchio");
+      expect(after[0].lastAt).toBe("2025-05-19T09:00:00.000Z");
+    });
+
+    it("missing sender_id is treated as 'not the viewer' and still bumps unread", () => {
+      const before: InboxThread[] = [baseThread({ unread: 0 })];
+      const after = applyIncomingMessage(
+        before,
+        { application_id: "app-1", sender_id: undefined as unknown as string, body: "x" },
+        viewer,
+        null,
+      );
+      expect((after[0] as any).unread).toBe(1);
+    });
+
+    it("missing application_id is ignored without throwing", () => {
+      const before: InboxThread[] = [baseThread()];
+      const after = applyIncomingMessage(
+        before,
+        { application_id: undefined as unknown as string, sender_id: "other", body: "x" },
+        viewer,
+        null,
+      );
+      expect(after).toBe(before);
+    });
+  });
+
+  describe("applyProposalResponse — malformed payloads", () => {
+    it("missing status is ignored", () => {
+      const before: InboxThread[] = [baseThread()];
+      const after = applyProposalResponse(before, {
+        application_id: "app-1",
+        status: undefined as unknown as string,
+      });
+      expect(after).toBe(before);
+    });
+
+    it("missing application_id is ignored", () => {
+      const before: InboxThread[] = [baseThread()];
+      const after = applyProposalResponse(before, {
+        application_id: undefined as unknown as string,
+        status: "accepted",
+      });
+      expect(after).toBe(before);
+    });
+
+    it("an empty inbox stays empty for any response (no synthetic insert)", () => {
+      const before: InboxThread[] = [];
+      const after = applyProposalResponse(before, {
+        application_id: "app-1",
+        status: "accepted",
+      });
+      expect(after).toEqual([]);
+    });
+  });
+
+  describe("end-to-end fallback — repeated load failures + partial events", () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it("optimistic state survives multiple consecutive load() failures", () => {
+      let threads: InboxThread[] = [baseThread({ unread: 0 })];
+      const load = vi.fn(() => { throw new Error("offline"); });
+      const r = createDebouncedReload(() => {
+        try { load(); } catch { /* swallow — keep inbox stable */ }
+      }, 120);
+
+      // Message arrives → optimistic bump.
+      threads = applyIncomingMessage(
+        threads,
+        { application_id: "app-1", sender_id: "other", body: "ciao" },
+        viewer,
+        null,
+      );
+      r.schedule();
+      vi.advanceTimersByTime(120);
+
+      // Partial application UPDATE catches up but load() still fails.
+      threads = mergeThreadUpdate(threads, { id: "app-1" });
+      r.schedule();
+      vi.advanceTimersByTime(120);
+
+      expect(load).toHaveBeenCalledTimes(2);
+      // Inbox kept the optimistic state — no crash, no duplicate, unread intact.
+      expect(threads).toHaveLength(1);
+      expect((threads[0] as any).unread).toBe(1);
+      expect(threads[0].lastBody).toBe("ciao");
+    });
+  });
+});
