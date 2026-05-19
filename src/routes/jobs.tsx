@@ -618,117 +618,125 @@ function OfferCard({
   const receivedAt = new Date(r.created_at).toLocaleDateString("it-IT");
 
   return (
-    <div className="group flex flex-col rounded-2xl border bg-card p-5 shadow-sm transition hover:shadow-md">
-      {/* Header: stato in alto, ruolo grande, contesto locale piccolo */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Store className="h-3.5 w-3.5" />
-            <span className="truncate">{venue}</span>
-          </div>
-          <h3 className="mt-1.5 truncate text-lg font-semibold leading-tight text-foreground">
-            {role}
-          </h3>
-          {confirmed && (
-            <div className="mt-0.5 truncate text-sm text-muted-foreground">
-              {r.restaurant?.business_name || r.restaurant?.full_name || "Ristoratore"}
-            </div>
-          )}
+    <div className="group relative flex flex-col overflow-hidden rounded-3xl border border-white/[0.06] bg-card p-5 shadow-[0_20px_50px_-25px_oklch(0_0_0/0.6)] transition-shadow hover:shadow-[0_24px_60px_-25px_oklch(0.65_0.25_310/0.35)] sm:p-6">
+      {/* Top row: avatar + role/locale + badge */}
+      <div className="flex items-start gap-4">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/25 to-accent/25 text-2xl ring-1 ring-white/10 sm:h-16 sm:w-16 sm:text-3xl">
+          <span aria-hidden>{roleEmoji(role)}</span>
         </div>
-        <span
-          className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${badge.cls}`}
-        >
-          {badge.label}
-        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-xl font-bold leading-tight text-foreground sm:text-2xl">
+              {role}
+            </h3>
+            <span
+              className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${badge.cls}`}
+            >
+              {badge.label}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Store className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {confirmed
+                ? r.restaurant?.business_name || r.restaurant?.full_name || venue || "Ristoratore"
+                : venue || "Ristorante partner"}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Info chiave: data/orario + luogo + compenso, in evidenza */}
-      <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl bg-muted/30 p-3 text-sm sm:grid-cols-2">
-        <div className="flex items-center gap-2 text-foreground">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">
-            {dateStr}
-            {startTime ? ` · ${startTime}` : ""}
-            {endTime ? `–${endTime}` : ""}
-          </span>
-          {duration ? (
-            <span className="text-xs text-muted-foreground">({duration}h)</span>
-          ) : null}
+      {/* Key info row: date/time, location, compenso */}
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div className="space-y-1.5 text-sm">
+          <div className="flex items-center gap-2 text-foreground">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="font-semibold">
+              {dateStr}
+              {startTime ? ` · ${startTime}` : ""}
+              {endTime ? `–${endTime}` : ""}
+            </span>
+            {duration ? (
+              <span className="text-xs text-muted-foreground">({duration}h)</span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <MapPin className="h-4 w-4" />
+            <span className="truncate">
+              {confirmed && r.restaurant?.address ? r.restaurant.address : zone}
+            </span>
+          </div>
         </div>
         {tariff && (
-          <div className="flex items-center gap-2 text-foreground">
-            <Euro className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{tariff}</span>
+          <div className="flex items-center justify-start gap-1 rounded-2xl bg-primary/10 px-4 py-2 ring-1 ring-primary/30 sm:justify-end">
+            <Euro className="h-4 w-4 text-primary" />
+            <span className="text-xl font-extrabold tracking-tight text-primary tabular-nums">
+              {tariff}
+            </span>
           </div>
         )}
-        <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
-          <MapPin className="h-4 w-4" />
-          <span className="truncate">
-            {confirmed && r.restaurant?.address ? r.restaurant.address : zone}
-          </span>
-        </div>
-      </div>
-
-      {/* Info secondarie meno invasive */}
-      <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Clock className="h-3.5 w-3.5" />
-        <span>Ricevuta il {receivedAt}</span>
       </div>
 
       {r.lastMessage && (
-        <div className="mt-3 rounded-lg border border-border/60 bg-background/60 p-2.5 text-xs text-muted-foreground line-clamp-2">
+        <div className="mt-4 rounded-xl border border-border/60 bg-background/40 p-3 text-xs text-muted-foreground line-clamp-2">
           <span className="font-medium text-foreground">Messaggio: </span>
           {r.lastMessage}
         </div>
       )}
 
-      {!confirmed && (
-        <div className="mt-3 flex items-start gap-1.5 text-[11px] text-muted-foreground">
-          <Info className="mt-0.5 h-3 w-3 shrink-0" />
-          <span>Dati completi del locale visibili dopo la conferma reciproca.</span>
-        </div>
-      )}
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <Clock className="h-3 w-3" /> Ricevuta il {receivedAt}
+        </span>
+        {!confirmed && (
+          <span className="inline-flex items-center gap-1">
+            <Info className="h-3 w-3" /> Nome locale visibile dopo conferma
+          </span>
+        )}
+      </div>
 
-      {/* Azioni: spinte in fondo per allineare card di altezze diverse */}
-      <div className="mt-auto pt-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          {r.status === "pending" && (
-            <>
-              <Button size="sm" className="flex-1" onClick={() => onRespond(r.id, "interested")}>
-                Accetta offerta
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1"
-                onClick={() => onRespond(r.id, "not_interested")}
-              >
-                Rifiuta
-              </Button>
-            </>
-          )}
-          {(r.status === "interested" || r.status === "counter_offer" || r.status === "accepted") && (
-            <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
-              <Button size="sm" className="w-full gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Scrivi al ristoratore
-              </Button>
-            </Link>
-          )}
-          {isCompleted(r) && !r.hasWorkerReview && (
-            <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
-              <Button size="sm" className="w-full gap-2">
-                <Star className="h-4 w-4" />
-                Lascia recensione
-              </Button>
-            </Link>
-          )}
+      {/* Actions */}
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        {r.status === "pending" && (
+          <>
+            <Button
+              size="lg"
+              className="flex-1 rounded-xl text-base"
+              onClick={() => onRespond(r.id, "interested")}
+            >
+              Accetta offerta
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="flex-1 rounded-xl text-base"
+              onClick={() => onRespond(r.id, "not_interested")}
+            >
+              Rifiuta
+            </Button>
+          </>
+        )}
+        {(r.status === "interested" || r.status === "counter_offer" || r.status === "accepted") && (
           <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
-            <Button size="sm" variant="secondary" className="w-full gap-2">
-              Apri dettagli
+            <Button size="lg" className="w-full gap-2 rounded-xl text-base">
+              <MessageSquare className="h-4 w-4" />
+              Scrivi al ristoratore
             </Button>
           </Link>
-        </div>
+        )}
+        {isCompleted(r) && !r.hasWorkerReview && (
+          <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
+            <Button size="lg" className="w-full gap-2 rounded-xl text-base">
+              <Star className="h-4 w-4" />
+              Lascia recensione
+            </Button>
+          </Link>
+        )}
+        <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
+          <Button size="lg" variant="secondary" className="w-full gap-2 rounded-xl text-base">
+            Apri dettagli
+          </Button>
+        </Link>
       </div>
     </div>
   );
