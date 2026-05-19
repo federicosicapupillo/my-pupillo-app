@@ -5,7 +5,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart } from "lucide-react";
+import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart, Store, BadgeCheck } from "lucide-react";
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
@@ -254,6 +254,36 @@ function DashboardInner() {
 
       <ProfileStatusBanner />
       {role === "restaurant" && <RequiredReviewsBanner />}
+
+      {role === "restaurant" && profile && (
+        <div className="mb-6 rounded-2xl border bg-card p-5 flex items-start gap-4">
+          <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Store className="h-6 w-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Locale</div>
+            {profile.business_name ? (
+              <>
+                <div className="text-lg font-semibold text-foreground truncate">{profile.business_name}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                  {profile.venue_type && <span className="capitalize">{profile.venue_type}</span>}
+                  {profile.city && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{profile.city}</span>}
+                  {profile.vat_status === "valid" && (
+                    <span className="inline-flex items-center gap-1 text-emerald-600"><BadgeCheck className="h-3.5 w-3.5" /> Verificato</span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-base font-medium text-foreground">Nome locale non ancora inserito</div>
+                <div className="mt-2">
+                  <Link to="/onboarding"><Button size="sm" variant="outline">Completa profilo locale</Button></Link>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {profile && !profile.profile_completed && (
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-yellow-300 bg-yellow-50 p-4">
