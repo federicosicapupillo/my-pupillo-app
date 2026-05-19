@@ -200,7 +200,7 @@ async function handleChargeRefunded(charge: any, env: StripeEnv) {
   await getSupabase().rpc("grant_credits", {
     _user_id: tx.user_id,
     _amount: -Number(tx.delta),
-    _kind: "adjustment",
+    _kind: "refund",
     _reason: "Refund",
     _reference_id: `refund:${sessionId}`,
   });
