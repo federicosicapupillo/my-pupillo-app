@@ -18,6 +18,8 @@ export type LocationDefaults = {
   contact_person_name?: string | null;
   contact_person_phone?: string | null;
   contact_person_email?: string | null;
+  arrival_advance_minutes?: number | null;
+  arrival_advance_reason?: string | null;
 };
 
 export type VenueDefaults = {
@@ -36,6 +38,26 @@ export function buildDefaultsUpdate(opts: {
   const contactName = (location.contact_person_name || "").trim();
   const [firstName, ...rest] = contactName.split(/\s+/);
   const lastName = rest.join(" ");
+  // Avoid wiping previously saved defaults when the user leaves a field blank:
+  // only persist contact-person fields when the user actually provided a value.
+  const contactFields: Record<string, unknown> = {};
+  if (contactName.length > 0) {
+    contactFields.contact_person_first_name = firstName || null;
+    contactFields.contact_person_last_name = lastName || null;
+    contactFields.default_contact_person_name = contactName;
+  }
+  if ((location.contact_person_phone || "").trim().length > 0) {
+    contactFields.contact_person_phone = location.contact_person_phone;
+  }
+  if ((location.contact_person_email || "").trim().length > 0) {
+    contactFields.contact_person_email = location.contact_person_email;
+  }
+  const arrivalFields: Record<string, unknown> = {};
+  if (typeof location.arrival_advance_minutes === "number" && Number.isFinite(location.arrival_advance_minutes)) {
+    arrivalFields.default_arrival_advance_minutes = location.arrival_advance_minutes;
+    arrivalFields.default_arrival_advance_reason =
+      (location.arrival_advance_reason || "").trim() || null;
+  }
   return {
     // Luogo (riusa colonne profilo esistenti)
     address: location.address || null,
@@ -49,10 +71,8 @@ export function buildDefaultsUpdate(opts: {
     access_restrictions: location.access_restrictions || null,
     additional_directions: location.additional_directions || null,
     location_notes: location.location_notes || null,
-    contact_person_first_name: firstName || null,
-    contact_person_last_name: lastName || null,
-    contact_person_phone: location.contact_person_phone || null,
-    contact_person_email: location.contact_person_email || null,
+    ...contactFields,
+    ...arrivalFields,
     // Requisiti / dress code
     ...reqToProfileUpdate(requirements),
     // Tipologia / fascia
