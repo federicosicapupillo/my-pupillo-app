@@ -1754,6 +1754,15 @@ function Thread() {
           {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
+            // Card combinata "Turno chiuso e recensione ricevuta" — UN SOLO
+            // messaggio visibile sia al ristoratore sia al lavoratore.
+            if (m.template_id === SHIFT_REVIEW_TEMPLATE_ID) {
+              return (
+                <div key={m.id} className="flex justify-center">
+                  <ShiftClosedWithReviewCard review={existingReview} />
+                </div>
+              );
+            }
             if (isSystem) {
               const isAccept = m.action_type === "accept_application";
               const isReject = m.action_type === "reject_application";
