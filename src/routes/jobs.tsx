@@ -22,6 +22,20 @@ import { formatTariff } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
 import { venueTypeLabel } from "@/lib/venue-types";
 
+function roleEmoji(role: string | null | undefined): string {
+  const r = (role || "").toLowerCase();
+  if (r.includes("camer")) return "🍽️";
+  if (r.includes("barman") || r.includes("bartender") || r.includes("barista")) return "🍸";
+  if (r.includes("cuoc") || r.includes("chef") || r.includes("cucina")) return "👨‍🍳";
+  if (r.includes("lavapiatti") || r.includes("plonge")) return "🧽";
+  if (r.includes("pizz")) return "🍕";
+  if (r.includes("hostess") || r.includes("steward") || r.includes("accogli")) return "🎀";
+  if (r.includes("runner")) return "🏃";
+  if (r.includes("sommelier")) return "🍷";
+  if (r.includes("commis")) return "🧑‍🍳";
+  return "💼";
+}
+
 export const Route = createFileRoute("/jobs")({
   head: () => ({ meta: [{ title: "Offerte ricevute — Pupillo" }] }),
   component: () => (
