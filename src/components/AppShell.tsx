@@ -148,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-transparent">
       <PaymentTestModeBanner />
       <header className="sticky top-0 z-10 border-b border-white/10 bg-[oklch(0.13_0.02_280/0.65)] backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-7xl px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
           <Link
             to={homeTo as never}
             aria-label="Vai alla home page"
@@ -180,7 +180,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               ref={mobileToggleRef}
               variant="ghost"
@@ -287,16 +287,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       )}
-      <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-7xl px-3 sm:px-4 py-4 sm:py-8">{children}</main>
     </div>
   );
 }
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+    <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="min-w-0">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight break-words">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
       {action}
