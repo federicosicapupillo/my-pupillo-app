@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { BellOff, BellRing } from "lucide-react";
 import { PupilloBell } from "@/components/PupilloIcons";
