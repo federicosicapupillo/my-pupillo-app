@@ -425,3 +425,131 @@ describe("immediate ordering — newest thread first", () => {
     expect(after[1].status).toBe("accepted");
   });
 });
+
+describe("messages + proposal_responses — notification state without duplicates", () => {
+  const viewer = "viewer-1";
+
+  it("messages INSERT followed by the late applications UPDATE bumps unread exactly once", () => {
+    let threads: InboxThread[] = [baseThread({ unread: 0 })];
+    // 1) realtime: messages INSERT (immediate)
+    threads = applyIncomingMessage(
+      threads,
+      {
+        application_id: "app-1",
+        sender_id: "other",
+        body: "nuovo",
+        created_at: "2025-05-19T13:00:00.000Z",
+      },
+      viewer,
+      null,
+    );
+    // 2) realtime: applications UPDATE with same preview/lastAt (catch-up)
+    threads = mergeThreadUpdate(threads, {
+      id: "app-1",
+      last_message_preview: "nuovo",
+      last_message_at: "2025-05-19T13:00:00.000Z",
+    });
+    expect(threads).toHaveLength(1);
+    expect((threads[0] as any).unread).toBe(1);
+    expect(threads[0].lastBody).toBe("nuovo");
+  });
+
+  it("multiple messages INSERT events do not create duplicate threads", () => {
+    let threads: InboxThread[] = [baseThread({ unread: 0 })];
+    for (let i = 0; i < 5; i++) {
+      threads = applyIncomingMessage(
+        threads,
+        { application_id: "app-1", sender_id: "other", body: `m${i}` },
+        viewer,
+        null,
+      );
+    }
+    expect(threads).toHaveLength(1);
+    expect(threads.filter((x) => x.id === "app-1")).toHaveLength(1);
+    expect((threads[0] as any).unread).toBe(5);
+  });
+
+  it("proposal_responses INSERT + applications UPDATE for same status is idempotent", () => {
+    let threads: InboxThread[] = [baseThread({ status: "pending" })];
+    // proposal_responses INSERT
+    threads = applyProposalResponse(threads, {
+      application_id: "app-1",
+      status: "accepted",
+    });
+    // catch-up applications UPDATE with the same status
+    threads = mergeThreadUpdate(threads, { id: "app-1", status: "accepted" });
+    expect(threads).toHaveLength(1);
+    expect(threads[0].status).toBe("accepted");
+  });
+
+  it("duplicate proposal_responses events do not re-trigger state changes", () => {
+    const before: InboxThread[] = [baseThread({ status: "pending" })];
+    const once = applyProposalResponse(before, {
+      application_id: "app-1",
+      status: "accepted",
+    });
+    // A second identical INSERT event (e.g. retry) must be a no-op.
+    const twice = applyProposalResponse(once, {
+      application_id: "app-1",
+      status: "accepted",
+    });
+    expect(twice).toBe(once);
+    expect(twice[0].status).toBe("accepted");
+  });
+
+  it("a proposal_responses event does NOT touch unread", () => {
+    const before: InboxThread[] = [baseThread({ unread: 2, status: "pending" })];
+    const after = applyProposalResponse(before, {
+      application_id: "app-1",
+      status: "rejected",
+    });
+    expect((after[0] as any).unread).toBe(2);
+    expect(after[0].status).toBe("rejected");
+  });
+
+  it("interleaved messages + proposal_responses keep a single thread with correct unread", () => {
+    let threads: InboxThread[] = [baseThread({ unread: 0, status: "pending" })];
+    threads = applyIncomingMessage(
+      threads,
+      { application_id: "app-1", sender_id: "other", body: "ciao" },
+      viewer,
+      null,
+    );
+    threads = applyProposalResponse(threads, {
+      application_id: "app-1",
+      status: "accepted",
+    });
+    threads = applyIncomingMessage(
+      threads,
+      { application_id: "app-1", sender_id: "other", body: "a presto" },
+      viewer,
+      null,
+    );
+    // catch-up applications UPDATE for the second message
+    threads = mergeThreadUpdate(threads, {
+      id: "app-1",
+      status: "accepted",
+      last_message_preview: "a presto",
+    });
+    expect(threads).toHaveLength(1);
+    expect(threads[0].status).toBe("accepted");
+    expect((threads[0] as any).unread).toBe(2);
+    expect(threads[0].lastBody).toBe("a presto");
+  });
+
+  it("ignores messages and proposal_responses events for unknown applications (no duplicates)", () => {
+    const before: InboxThread[] = [baseThread()];
+    const afterMsg = applyIncomingMessage(
+      before,
+      { application_id: "app-UNKNOWN", sender_id: "other", body: "x" },
+      viewer,
+      null,
+    );
+    const afterResp = applyProposalResponse(afterMsg, {
+      application_id: "app-UNKNOWN",
+      status: "accepted",
+    });
+    expect(afterResp).toBe(before);
+    expect(afterResp).toHaveLength(1);
+  });
+});
