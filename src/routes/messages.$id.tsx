@@ -1202,9 +1202,11 @@ function Thread() {
       return;
     }
     setExistingReview(data as Review);
-    // Messaggio di sistema in chat
+    // UN SOLO messaggio di sistema combinato in chat ("Turno chiuso e
+    // recensione ricevuta"), con anti-duplicato. Non inviare anche il
+    // vecchio messaggio "Turno chiuso" — evita doppioni lato lavoratore.
     try {
-      await insertSystemMessage(`Turno chiuso. Il ristoratore ha inviato la recensione del servizio.`, "complete_shift");
+      await insertShiftClosedWithReview();
     } catch (e) { /* non bloccante */ }
     // Nota: la notifica "Hai ricevuto una recensione" viene creata
     // automaticamente dal trigger DB `handle_new_review` per evitare duplicati.
