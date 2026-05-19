@@ -878,6 +878,7 @@ export type Database = {
           spoken_languages: Json
           street: string | null
           street_number: string | null
+          stripe_customer_id: string | null
           tax_code: string | null
           terms_accepted: boolean | null
           updated_at: string
@@ -1032,6 +1033,7 @@ export type Database = {
           spoken_languages?: Json
           street?: string | null
           street_number?: string | null
+          stripe_customer_id?: string | null
           tax_code?: string | null
           terms_accepted?: boolean | null
           updated_at?: string
@@ -1186,6 +1188,7 @@ export type Database = {
           spoken_languages?: Json
           street?: string | null
           street_number?: string | null
+          stripe_customer_id?: string | null
           tax_code?: string | null
           terms_accepted?: boolean | null
           updated_at?: string
