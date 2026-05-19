@@ -53,6 +53,12 @@ export type AvailabilityRow = {
   is_flexible: boolean;
   is_last_minute: boolean;
   notes: string | null;
+  city: string | null;
+  province: string | null;
+  district: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  radius_km: number | null;
 };
 
 export type AvailabilityExceptionRow = {
@@ -64,6 +70,12 @@ export type AvailabilityExceptionRow = {
   start_time: string | null;
   end_time: string | null;
   notes: string | null;
+  city: string | null;
+  province: string | null;
+  district: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  radius_km: number | null;
 };
 
 /**
@@ -78,11 +90,13 @@ export function computeCompatibility(
   targetDate: string, // YYYY-MM-DD
   targetStart?: string | null,
   targetEnd?: string | null,
+  targetCity?: string | null,
 ): CompatibilityLevel {
   // Check exception override first
   const exc = exceptions.find((e) => e.date === targetDate);
   if (exc) {
     if (!exc.is_available) return "non_disponibile";
+    if (targetCity && exc.city && !sameCity(exc.city, targetCity)) return "non_disponibile";
     if (!targetStart || !targetEnd) return "disponibile";
     if (exc.start_time && exc.end_time) {
       return overlapLevel(exc.start_time, exc.end_time, targetStart, targetEnd);
@@ -91,7 +105,12 @@ export function computeCompatibility(
   }
   const d = new Date(targetDate + "T00:00:00");
   const dow = jsDayToDow(d.getDay());
-  const slots = rows.filter((r) => r.day_of_week === dow);
+  let slots = rows.filter((r) => r.day_of_week === dow);
+  if (targetCity) {
+    const inCity = slots.filter((s) => s.city && sameCity(s.city, targetCity));
+    if (inCity.length > 0) slots = inCity;
+    else if (slots.some((s) => s.city)) return "non_disponibile";
+  }
   if (slots.length === 0) return "non_disponibile";
   if (slots.some((s) => s.is_last_minute)) return "disponibile";
   if (!targetStart || !targetEnd) return "compatibile";
@@ -110,6 +129,20 @@ export function computeCompatibility(
   }
   return best;
 }
+
+export function sameCity(a: string, b: string): boolean {
+  return a.trim().toLocaleLowerCase("it-IT") === b.trim().toLocaleLowerCase("it-IT");
+}
+
+export const RADIUS_OPTIONS: { value: number; label: string }[] = [
+  { value: 2, label: "2 km" },
+  { value: 5, label: "5 km" },
+  { value: 10, label: "10 km" },
+  { value: 15, label: "15 km" },
+  { value: 20, label: "20 km" },
+  { value: 30, label: "30 km" },
+  { value: 50, label: "50 km" },
+];
 
 function toMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
