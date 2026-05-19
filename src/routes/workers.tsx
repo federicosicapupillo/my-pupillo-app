@@ -24,6 +24,9 @@ import { sendShiftProposal } from "@/lib/shift-proposal";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { formatDateIT, formatTariff } from "@/lib/format";
+import { firstNameOf } from "@/lib/public-location";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
