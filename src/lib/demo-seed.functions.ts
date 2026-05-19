@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { previewReset, resetAndReseedDemo } from "./demo-seed.server";
+import { previewReset, resetAndReseedDemo, completeDemoProfiles } from "./demo-seed.server";
 
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -45,4 +45,11 @@ export const executeDemoReset = createServerFn({ method: "POST" })
       { emails: data.emails, phones: data.phones },
       { restaurants: data.restaurants, workers: data.workers },
     );
+  });
+
+export const completeDemoProfilesFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    return completeDemoProfiles(context.userId);
   });
