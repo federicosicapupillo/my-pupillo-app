@@ -257,7 +257,9 @@ function NewRestaurantJobRequest() {
   useEffect(() => {
     if (!profile) return;
     const p = profile as any;
-    const contactName = [p.contact_person_first_name, p.contact_person_last_name].filter(Boolean).join(" ");
+    const contactName =
+      (p.default_contact_person_name && String(p.default_contact_person_name).trim()) ||
+      [p.contact_person_first_name, p.contact_person_last_name].filter(Boolean).join(" ");
     setF(prev => ({
       ...prev,
       restaurant_name: prev.restaurant_name || p.business_name || p.full_name || "",
@@ -286,6 +288,17 @@ function NewRestaurantJobRequest() {
     setLanguageReqs(prev => prev.length ? prev : (p.default_language_requirements ?? []));
     setSkills(prev => prev.length ? prev : (p.default_required_skills ?? []));
     setDressItems(prev => prev.length ? prev : (p.default_dress_code_items ?? []));
+    // Precompila l'anticipo richiesto all'ingresso dai default salvati.
+    const savedAdvance = p.default_arrival_advance_minutes;
+    if (typeof savedAdvance === "number" && Number.isFinite(savedAdvance)) {
+      setAccessChoice(prev => {
+        if (prev) return prev;
+        return savedAdvance > 15 ? "over15" : "15";
+      });
+      if (savedAdvance > 15 && p.default_arrival_advance_reason) {
+        setAccessReason(prev => prev || String(p.default_arrival_advance_reason));
+      }
+    }
     if (!defaultsLoaded && hasSavedDefaults(p)) {
       toast.info("Abbiamo caricato le tue impostazioni predefinite. Puoi modificarle per questo annuncio.");
     }
@@ -560,6 +573,9 @@ function NewRestaurantJobRequest() {
           contact_person_name: f.contact_person_name,
           contact_person_phone: f.contact_person_phone,
           contact_person_email: f.contact_person_email,
+          arrival_advance_minutes:
+            accessChoice === "15" ? 15 : accessChoice === "over15" ? 30 : null,
+          arrival_advance_reason: accessChoice === "over15" ? accessReason : null,
         },
         requirements: {
           license_requirement: f.license_requirement,
