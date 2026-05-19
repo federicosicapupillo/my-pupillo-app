@@ -52,6 +52,23 @@ export const Route = createFileRoute("/availability")({
 const ALL_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute"];
 const EXC_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute", "personalizzata"];
 
+const TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    }
+  }
+  return out;
+})();
+
+const QUICK_RANGES: Array<{ start: string; end: string; label: string }> = [
+  { start: "09:00", end: "13:00", label: "09:00 – 13:00" },
+  { start: "14:00", end: "18:00", label: "14:00 – 18:00" },
+  { start: "18:00", end: "23:00", label: "18:00 – 23:00" },
+  { start: "20:00", end: "02:00", label: "20:00 – 02:00" },
+];
+
 type LocalSlot = {
   id?: string;
   time_slot: TimeSlot;
