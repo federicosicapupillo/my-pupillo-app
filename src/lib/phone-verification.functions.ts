@@ -21,15 +21,20 @@ function isTestOtpFlagEnabled(): boolean {
   );
 }
 
-function isPreviewOrLocalHost(): boolean {
+function isLovableTestHostOrLocal(): boolean {
   const host = getRequest()?.headers.get("host") ?? "";
   return (
     host.includes("preview") ||
+    host.endsWith(".lovable.app") ||
     host.endsWith(".lovableproject.com") ||
     host.startsWith("localhost") ||
     host.startsWith("127.0.0.1") ||
     process.env.LOVABLE_SANDBOX === "true"
   );
+}
+
+function isWhatsAppSimulatedMode(): boolean {
+  return !process.env.LOVABLE_API_KEY || !process.env.TWILIO_API_KEY || !process.env.TWILIO_WHATSAPP_FROM;
 }
 
 function isTestOrDemoUser(profile: { email?: string | null; is_demo?: boolean | null } | null, phoneFull?: string | null): boolean {
@@ -46,14 +51,14 @@ function isTestOrDemoUser(profile: { email?: string | null; is_demo?: boolean | 
 }
 
 /**
- * Test OTP accepted only when BOTH:
- *  - server has an explicit test flag (ENABLE_TEST_OTP / VITE_ENABLE_TEST_OTP), or runs on a preview/local host
- *  - AND the current user is a test/demo profile
- * This keeps real production users safe even if the flag is accidentally set.
+ * Demo OTP is accepted only in test-like environments:
+ *  - explicit server test flag, Lovable test/published preview host, local sandbox, or simulated WhatsApp delivery
+ *  - AND either the profile is demo/test, or WhatsApp delivery is simulated so no real OTP can be received.
  */
 function isTestOtpAllowedFor(profile: { email?: string | null; is_demo?: boolean | null } | null, phoneFull?: string | null): boolean {
-  const envAllows = isTestOtpFlagEnabled() || isPreviewOrLocalHost();
-  return envAllows && isTestOrDemoUser(profile, phoneFull);
+  const envAllows = isTestOtpFlagEnabled() || isLovableTestHostOrLocal() || isWhatsAppSimulatedMode();
+  if (!envAllows) return false;
+  return isTestOrDemoUser(profile, phoneFull) || isWhatsAppSimulatedMode();
 }
 
 function hashOtp(code: string, userId: string): string {
@@ -77,7 +82,7 @@ async function sendWhatsAppMessage(phoneFull: string, code: string): Promise<{ o
   const contentSid = process.env.TWILIO_CONTENT_SID;
   const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
 
-  if (!lovableKey || !twilioKey || !from) {
+  if (isWhatsAppSimulatedMode()) {
     console.log(`[whatsapp:simulated] to=${phoneFull} code=${code}`);
     return { ok: true, provider: "simulated" };
   }
@@ -89,11 +94,11 @@ async function sendWhatsAppMessage(phoneFull: string, code: string): Promise<{ o
   if (contentSid) {
     // Template-based (works outside 24h window). ContentVariables maps to your template placeholders.
     if (messagingServiceSid) params.set("MessagingServiceSid", messagingServiceSid);
-    else params.set("From", from);
+    else params.set("From", from!);
     params.set("ContentSid", contentSid);
     params.set("ContentVariables", JSON.stringify({ "1": code }));
   } else {
-    params.set("From", from);
+    params.set("From", from!);
     params.set(
       "Body",
       `Pupillo: il tuo codice di conferma è ${code}. Valido ${OTP_TTL_MINUTES} minuti. Se non l'hai richiesto, ignora questo messaggio.`,
@@ -105,7 +110,7 @@ async function sendWhatsAppMessage(phoneFull: string, code: string): Promise<{ o
       method: "POST",
       headers: {
         Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": twilioKey,
+        "X-Connection-Api-Key": twilioKey!,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: params.toString(),
