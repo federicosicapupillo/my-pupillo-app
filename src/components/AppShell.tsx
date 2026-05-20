@@ -10,6 +10,7 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { createDebouncedReload } from "@/lib/inbox-realtime";
 import pupilloLogo from "@/assets/pupillo-logo.png";
+import { AssistantFab } from "@/components/assistant/AssistantFab";
 
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -290,6 +291,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       <main className="mx-auto max-w-7xl px-3 sm:px-4 py-4 sm:py-8">{children}</main>
+      <AssistantFab />
     </div>
   );
 }
