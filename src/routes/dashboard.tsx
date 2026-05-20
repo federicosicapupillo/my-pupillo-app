@@ -61,7 +61,11 @@ function DashboardInner() {
 
   useEffect(() => {
     if (!user || !role) return;
-    if (profile && !profile.profile_completed) nav({ to: "/onboarding" });
+    // Restaurants keep the auto-redirect to the onboarding wizard.
+    // Workers stay on the dashboard so the new welcome guide / checklist is visible.
+    if (role === "restaurant" && profile && !profile.profile_completed) {
+      nav({ to: "/onboarding" });
+    }
   }, [user, role, profile, nav]);
 
   // Promemoria: toast una volta per sessione (dedup centralizzato).
