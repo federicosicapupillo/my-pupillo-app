@@ -22,6 +22,7 @@ import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MappaRouteImport } from './routes/mappa'
 import { Route as JobsRouteImport } from './routes/jobs'
+import { Route as GuidaRouteImport } from './routes/guida'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
@@ -109,6 +110,11 @@ const MappaRoute = MappaRouteImport.update({
 const JobsRoute = JobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidaRoute = GuidaRouteImport.update({
+  id: '/guida',
+  path: '/guida',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForbiddenRoute = ForbiddenRouteImport.update({
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
+  '/guida': typeof GuidaRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
+  '/guida': typeof GuidaRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
@@ -318,6 +326,7 @@ export interface FileRoutesById {
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/forbidden': typeof ForbiddenRoute
+  '/guida': typeof GuidaRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
   '/messages': typeof MessagesRouteWithChildren
@@ -358,6 +367,7 @@ export interface FileRouteTypes {
     | '/come-funziona'
     | '/dashboard'
     | '/forbidden'
+    | '/guida'
     | '/jobs'
     | '/mappa'
     | '/messages'
@@ -396,6 +406,7 @@ export interface FileRouteTypes {
     | '/come-funziona'
     | '/dashboard'
     | '/forbidden'
+    | '/guida'
     | '/jobs'
     | '/mappa'
     | '/messages'
@@ -434,6 +445,7 @@ export interface FileRouteTypes {
     | '/come-funziona'
     | '/dashboard'
     | '/forbidden'
+    | '/guida'
     | '/jobs'
     | '/mappa'
     | '/messages'
@@ -473,6 +485,7 @@ export interface RootRouteChildren {
   ComeFunzionaRoute: typeof ComeFunzionaRoute
   DashboardRoute: typeof DashboardRoute
   ForbiddenRoute: typeof ForbiddenRoute
+  GuidaRoute: typeof GuidaRoute
   JobsRoute: typeof JobsRoute
   MappaRoute: typeof MappaRoute
   MessagesRoute: typeof MessagesRouteWithChildren
@@ -587,6 +600,13 @@ declare module '@tanstack/react-router' {
       path: '/jobs'
       fullPath: '/jobs'
       preLoaderRoute: typeof JobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guida': {
+      id: '/guida'
+      path: '/guida'
+      fullPath: '/guida'
+      preLoaderRoute: typeof GuidaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forbidden': {
@@ -802,6 +822,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComeFunzionaRoute: ComeFunzionaRoute,
   DashboardRoute: DashboardRoute,
   ForbiddenRoute: ForbiddenRoute,
+  GuidaRoute: GuidaRoute,
   JobsRoute: JobsRoute,
   MappaRoute: MappaRoute,
   MessagesRoute: MessagesRouteWithChildren,

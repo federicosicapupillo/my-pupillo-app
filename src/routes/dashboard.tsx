@@ -12,6 +12,7 @@ import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
+import { WorkerOnboardingChecklist } from "@/components/WorkerOnboardingChecklist";
 import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
 import {
   AlertDialog,
@@ -334,6 +335,8 @@ function DashboardInner() {
 
       {role === "worker" && user && profile && (
         <div className="mt-6 space-y-6">
+          <WorkerOnboardingChecklist />
+
           <section>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
