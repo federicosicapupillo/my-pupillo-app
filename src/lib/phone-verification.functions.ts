@@ -94,11 +94,11 @@ async function sendWhatsAppMessage(phoneFull: string, code: string): Promise<{ o
   if (contentSid) {
     // Template-based (works outside 24h window). ContentVariables maps to your template placeholders.
     if (messagingServiceSid) params.set("MessagingServiceSid", messagingServiceSid);
-    else params.set("From", from);
+    else params.set("From", from!);
     params.set("ContentSid", contentSid);
     params.set("ContentVariables", JSON.stringify({ "1": code }));
   } else {
-    params.set("From", from);
+    params.set("From", from!);
     params.set(
       "Body",
       `Pupillo: il tuo codice di conferma è ${code}. Valido ${OTP_TTL_MINUTES} minuti. Se non l'hai richiesto, ignora questo messaggio.`,
@@ -110,7 +110,7 @@ async function sendWhatsAppMessage(phoneFull: string, code: string): Promise<{ o
       method: "POST",
       headers: {
         Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": twilioKey,
+        "X-Connection-Api-Key": twilioKey!,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: params.toString(),
