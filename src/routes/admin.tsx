@@ -16,6 +16,7 @@ import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 import { AdminRequiredReviewsSection } from "@/components/AdminRequiredReviewsSection";
 import { AdminBackupsSection } from "@/components/AdminBackupsSection";
 import { AdminBackupSystemSection } from "@/components/AdminBackupSystemSection";
+import { AdminSupportTicketsSection } from "@/components/AdminSupportTicketsSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/admin")({
@@ -258,6 +259,7 @@ function Admin() {
           <TabsTrigger value="credits">Crediti</TabsTrigger>
           <TabsTrigger value="reviews">Recensioni</TabsTrigger>
           <TabsTrigger value="backups">Backup</TabsTrigger>
+          <TabsTrigger value="support">Segnalazioni</TabsTrigger>
         </TabsList>
 
         {/* PANORAMICA */}
@@ -593,6 +595,9 @@ function Admin() {
         <TabsContent value="backups" className="space-y-6">
           <AdminBackupSystemSection />
           <AdminBackupsSection />
+        </TabsContent>
+        <TabsContent value="support" className="space-y-6">
+          <AdminSupportTicketsSection />
         </TabsContent>
       </Tabs>
     </AppShell>

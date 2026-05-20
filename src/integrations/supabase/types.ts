@@ -1533,6 +1533,42 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          message: string
+          page_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          user_role: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          message: string
+          page_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_role?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          page_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
