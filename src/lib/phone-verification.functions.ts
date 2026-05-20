@@ -11,26 +11,49 @@ const MAX_ATTEMPTS = 3;
 const RESEND_COOLDOWN_SECONDS = 60;
 const TEST_OTP_CODE = "123456";
 
-function isTestOtpEnabled(): boolean {
-  const readFlag = (value: unknown) => String(value ?? "").replace(/^['\"]|['\"]$/g, "").trim().toLowerCase() === "true";
-  const enabled =
+function isTestOtpFlagEnabled(): boolean {
+  const readFlag = (value: unknown) =>
+    String(value ?? "").replace(/^['"]|['"]$/g, "").trim().toLowerCase() === "true";
+  return (
     readFlag(process.env.ENABLE_TEST_OTP) ||
     readFlag(process.env.VITE_ENABLE_TEST_OTP) ||
-    readFlag(import.meta.env.VITE_ENABLE_TEST_OTP);
+    readFlag(import.meta.env.VITE_ENABLE_TEST_OTP)
+  );
+}
 
-  if (!enabled) return false;
-
-  // NODE_ENV can be "production" in preview builds too. Allow only local/preview
-  // hosts and block the published app even if a test flag is accidentally set.
+function isPreviewOrLocalHost(): boolean {
   const host = getRequest()?.headers.get("host") ?? "";
-  const isPublishedHost = host === "my-pupillo-app.lovable.app" || (host.endsWith(".lovable.app") && !host.includes("preview"));
-  const isPreviewOrLocalHost =
+  return (
     host.includes("preview") ||
     host.endsWith(".lovableproject.com") ||
     host.startsWith("localhost") ||
-    host.startsWith("127.0.0.1");
+    host.startsWith("127.0.0.1") ||
+    process.env.LOVABLE_SANDBOX === "true"
+  );
+}
 
-  return !isPublishedHost && (process.env.NODE_ENV !== "production" || isPreviewOrLocalHost || process.env.LOVABLE_SANDBOX === "true");
+function isTestOrDemoUser(profile: { email?: string | null; is_demo?: boolean | null } | null, phoneFull?: string | null): boolean {
+  if (!profile) return false;
+  if (profile.is_demo === true) return true;
+  const email = (profile.email ?? "").toLowerCase();
+  if (email.includes("test") || email.includes("demo") || email.includes("+test") || email.endsWith("@example.com")) {
+    return true;
+  }
+  // Fictitious phone numbers commonly used for testing
+  const p = (phoneFull ?? "").replace(/\s+/g, "");
+  if (/^\+?39?000/.test(p) || /^\+?1?555/.test(p) || /^\+?123456/.test(p)) return true;
+  return false;
+}
+
+/**
+ * Test OTP accepted only when BOTH:
+ *  - server has an explicit test flag (ENABLE_TEST_OTP / VITE_ENABLE_TEST_OTP), or runs on a preview/local host
+ *  - AND the current user is a test/demo profile
+ * This keeps real production users safe even if the flag is accidentally set.
+ */
+function isTestOtpAllowedFor(profile: { email?: string | null; is_demo?: boolean | null } | null, phoneFull?: string | null): boolean {
+  const envAllows = isTestOtpFlagEnabled() || isPreviewOrLocalHost();
+  return envAllows && isTestOrDemoUser(profile, phoneFull);
 }
 
 function hashOtp(code: string, userId: string): string {
@@ -161,7 +184,12 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
       return { ok: false, error: "Questo numero risulta già registrato. Accedi con il tuo account oppure usa un altro numero." };
     }
 
-    const code = isTestOtpEnabled() ? TEST_OTP_CODE : genOtp();
+    const { data: startProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("email, is_demo")
+      .eq("id", userId)
+      .maybeSingle();
+    const code = isTestOtpAllowedFor(startProfile, phoneFull) ? TEST_OTP_CODE : genOtp();
     const codeHash = hashOtp(code, userId);
     const expires = new Date(Date.now() + OTP_TTL_MINUTES * 60_000).toISOString();
 
@@ -252,8 +280,16 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
-    // TEST MODE: accept fixed code without an active OTP row (dev-only)
-    if (isTestOtpEnabled() && data.code === TEST_OTP_CODE) {
+    // TEST MODE: accept fixed code without an active OTP row (test/demo users only)
+    const { data: verifyProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("email, is_demo, phone_full")
+      .eq("id", userId)
+      .maybeSingle();
+    if (
+      data.code === TEST_OTP_CODE &&
+      isTestOtpAllowedFor(verifyProfile, verifyProfile?.phone_full ?? null)
+    ) {
       const now = new Date().toISOString();
       if (row) {
         await supabaseAdmin
