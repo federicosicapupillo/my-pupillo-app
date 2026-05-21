@@ -678,14 +678,31 @@ function OfferCard({
             </span>
           </div>
         </div>
-        {tariff && (
+        {totalDisplay ? (
+          <div className="flex flex-col items-start gap-0.5 rounded-2xl bg-primary/10 px-4 py-2 ring-1 ring-primary/30 sm:items-end sm:text-right">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">
+              Totale servizio
+            </span>
+            <div className="flex items-center gap-1">
+              <Euro className="h-5 w-5 text-primary" />
+              <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">
+                {totalDisplay}
+              </span>
+            </div>
+            {hourlyRate != null && durationH != null && (
+              <span className="text-[10px] text-primary/70">
+                Calcolato su €{hourlyRate}/ora per {durationH}h
+              </span>
+            )}
+          </div>
+        ) : tariff ? (
           <div className="flex items-center justify-start gap-1 rounded-2xl bg-primary/10 px-4 py-2 ring-1 ring-primary/30 sm:justify-end">
             <Euro className="h-4 w-4 text-primary" />
             <span className="text-xl font-extrabold tracking-tight text-primary tabular-nums">
               {tariff}
             </span>
           </div>
-        )}
+        ) : null}
       </div>
 
       {r.lastMessage && (
