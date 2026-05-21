@@ -36,3 +36,56 @@ export function fromISODate(value: string | null | undefined): Date | undefined 
   if (!y || !m || !d) return undefined;
   return new Date(y, m - 1, d);
 }
+
+/** Compute duration in hours from start/end time strings (HH:MM).
+    Handles overnight shifts. Returns null if inputs invalid. */
+export function computeDurationHours(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): number | null {
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  if ([sh, sm, eh, em].some((n) => !Number.isFinite(n))) return null;
+  let startMin = sh * 60 + sm;
+  let endMin = eh * 60 + em;
+  if (endMin <= startMin) endMin += 24 * 60;
+  const diff = endMin - startMin;
+  if (diff <= 1) return null;
+  return diff / 60;
+}
+
+/** Compute total service amount given tariff, type and duration.
+    For flat-rate returns amount as-is; for hourly multiplies by duration.
+    Falls back to start/end times if duration is missing.
+    Returns null if unable to compute. */
+export function computeServiceTotal(
+  amount: number,
+  type: string,
+  durationHours?: number | null,
+  start?: string | null,
+  end?: string | null,
+): number | null {
+  if (type === "flat") return amount;
+  if (type !== "hourly") return null;
+  let dur = durationHours;
+  if (dur == null && start && end) {
+    dur = computeDurationHours(start, end);
+  }
+  if (dur == null || dur <= 1) return null;
+  return Math.round(amount * dur * 100) / 100;
+}
+
+/** Format total service for display: e.g. "€60". */
+export function formatTotalService(
+  amount: number,
+  type: string,
+  durationHours?: number | null,
+  start?: string | null,
+  end?: string | null,
+): string | null {
+  const total = computeServiceTotal(amount, type, durationHours, start, end);
+  if (total == null) return null;
+  const pretty = Number.isInteger(total) ? String(total) : total.toFixed(2).replace(/\.?0+$/, "");
+  return `€${pretty}`;
+}
