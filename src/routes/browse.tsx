@@ -441,14 +441,14 @@ function Browse() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="rounded-full bg-secondary px-2 py-1 text-xs capitalize">{selected.speed}</span>
                   <span className="rounded-full bg-accent text-accent-foreground px-2 py-1 text-xs">{selected.duration_hours}h</span>
-                  <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">{formatTariff(selected.tariff_amount, selected.tariff_type)}</span>
+                  <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">{selectedTotal ?? formatTariff(selected.tariff_amount, selected.tariff_type)}</span>
                   {dist != null && <span className="rounded-full bg-muted px-2 py-1 text-xs">{dist.toFixed(1)} km</span>}
                 </div>
 
                 <div className="mt-5 space-y-3 text-sm">
                   <Row icon={Calendar} label="Data" value={new Date(selected.service_date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" })} />
                   <Row icon={Clock} label="Orario" value={`${selected.service_time?.slice(0,5)} · durata ${selected.duration_hours}h`} />
-                  <Row icon={Euro} label="Compenso" value={formatTariff(selected.tariff_amount, selected.tariff_type)} />
+                  <Row icon={Euro} label="Compenso" value={selectedTotal ?? formatTariff(selected.tariff_amount, selected.tariff_type)} detail={selectedTotal && selected.tariff_type === "hourly" ? `€${selected.tariff_amount}/ora × ${selected.duration_hours}h` : undefined} />
                   <Row icon={Zap} label="Tipologia" value={selected.speed} />
                   <Row icon={MapPin} label="Zona" value={publicLocationLabel({ job_city: selected.job_city, city: restaurant?.city, neighborhood: restaurant?.neighborhood })} />
                   {restaurant?.venue_type && <Row icon={User} label="Locale" value={restaurant.venue_type} />}
