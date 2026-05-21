@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User, CheckCircle2, Moon, Hourglass, Loader2 } from "lucide-react";
-import { formatTariff } from "@/lib/format";
+import { formatTariff, formatTotalService } from "@/lib/format";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -307,10 +307,14 @@ function Browse() {
               city: restaurantsById[a.restaurant_id]?.city,
               neighborhood: restaurantsById[a.restaurant_id]?.neighborhood,
             });
-            const totalEstimate =
-              a.tariff_type === "hourly" && Number.isFinite(a.tariff_amount) && Number.isFinite(a.duration_hours)
-                ? Math.round(a.tariff_amount * a.duration_hours)
-                : null;
+            const totalDisplay = formatTotalService(
+              a.tariff_amount,
+              a.tariff_type,
+              a.duration_hours,
+              a.service_time,
+              null, // end_time non disponibile in Ann, usiamo duration_hours
+            );
+            const hourlyRate = a.tariff_type === "hourly" ? a.tariff_amount : null;
             return (
               <div
                 key={a.id}
@@ -357,15 +361,29 @@ function Browse() {
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                {totalDisplay ? (
+                  <div className="mt-4 flex flex-col gap-0.5 rounded-2xl bg-primary/10 px-4 py-3 ring-1 ring-primary/30">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">
+                      Totale servizio
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Euro className="h-5 w-5 text-primary" />
+                      <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">
+                        {totalDisplay}
+                      </span>
+                    </div>
+                    {hourlyRate != null && (
+                      <span className="text-[10px] text-primary/70">
+                        Calcolato su €{hourlyRate}/ora per {a.duration_hours}h
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center gap-2">
                     <Euro className="h-4 w-4 text-primary" />
                     <span className="text-base font-bold text-foreground">{formatTariff(a.tariff_amount, a.tariff_type)}</span>
                   </div>
-                  {totalEstimate != null && (
-                    <span className="text-xs text-muted-foreground">Totale stimato €{totalEstimate}</span>
-                  )}
-                </div>
+                )}
 
                 <div className="mt-4 flex items-center gap-2">
                   {applied ? (
@@ -403,6 +421,13 @@ function Browse() {
             const fav = favIds.has(selected.id);
             const dist = (profile?.service_area_lat != null && profile?.service_area_lng != null && selected.location_lat != null && selected.location_lng != null)
               ? distKm(profile.service_area_lat, profile.service_area_lng, selected.location_lat, selected.location_lng) : null;
+            const selectedTotal = formatTotalService(
+              selected.tariff_amount,
+              selected.tariff_type,
+              selected.duration_hours,
+              selected.service_time,
+              null,
+            );
             return (
               <>
                 <SheetHeader>
@@ -416,14 +441,14 @@ function Browse() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="rounded-full bg-secondary px-2 py-1 text-xs capitalize">{selected.speed}</span>
                   <span className="rounded-full bg-accent text-accent-foreground px-2 py-1 text-xs">{selected.duration_hours}h</span>
-                  <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">{formatTariff(selected.tariff_amount, selected.tariff_type)}</span>
+                  <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">{selectedTotal ?? formatTariff(selected.tariff_amount, selected.tariff_type)}</span>
                   {dist != null && <span className="rounded-full bg-muted px-2 py-1 text-xs">{dist.toFixed(1)} km</span>}
                 </div>
 
                 <div className="mt-5 space-y-3 text-sm">
                   <Row icon={Calendar} label="Data" value={new Date(selected.service_date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" })} />
                   <Row icon={Clock} label="Orario" value={`${selected.service_time?.slice(0,5)} · durata ${selected.duration_hours}h`} />
-                  <Row icon={Euro} label="Compenso" value={formatTariff(selected.tariff_amount, selected.tariff_type)} />
+                  <Row icon={Euro} label="Compenso" value={selectedTotal ?? formatTariff(selected.tariff_amount, selected.tariff_type)} detail={selectedTotal && selected.tariff_type === "hourly" ? `€${selected.tariff_amount}/ora × ${selected.duration_hours}h` : undefined} />
                   <Row icon={Zap} label="Tipologia" value={selected.speed} />
                   <Row icon={MapPin} label="Zona" value={publicLocationLabel({ job_city: selected.job_city, city: restaurant?.city, neighborhood: restaurant?.neighborhood })} />
                   {restaurant?.venue_type && <Row icon={User} label="Locale" value={restaurant.venue_type} />}
@@ -498,9 +523,13 @@ function ApplyConfirmDialog({
     return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
   })();
   const zone = ann ? publicLocationLabel({ job_city: ann.job_city, city: restaurantInfo?.city, neighborhood: restaurantInfo?.neighborhood }) : "";
-  const totalEstimate = ann && ann.tariff_type === "hourly"
-    ? `${(Number(ann.tariff_amount) * Number(ann.duration_hours || 0)).toFixed(2).replace(/\.?0+$/, "")} EUR`
-    : ann ? `${ann.tariff_amount} EUR` : "—";
+  const totalDisplay = ann ? formatTotalService(
+    ann.tariff_amount,
+    ann.tariff_type,
+    ann.duration_hours,
+    ann.service_time,
+    null,
+  ) : null;
   const dressCodeItems = (ann?.dress_code_items ?? []).filter(Boolean);
   const requiredSkills = (ann?.required_skills ?? []).filter(Boolean);
   const languageReqs = (ann?.language_requirements ?? []).filter(Boolean);
@@ -536,12 +565,20 @@ function ApplyConfirmDialog({
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4" /><span>{new Date(ann.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
               </div>
-              <div className="flex items-center gap-2 font-medium text-foreground">
-                <Euro className="h-4 w-4 text-primary" />{formatTariff(ann.tariff_amount, ann.tariff_type)}
-              </div>
-              {ann.tariff_type === "hourly" && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
-                  Totale stimato: <span className="font-medium text-foreground">{totalEstimate}</span>
+              {totalDisplay ? (
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2 text-lg font-extrabold text-primary">
+                    <Euro className="h-5 w-5 text-primary" />{totalDisplay}
+                  </div>
+                  {ann.tariff_type === "hourly" && (
+                    <div className="text-xs text-muted-foreground pl-7">
+                      Calcolato su €{ann.tariff_amount}/ora per {ann.duration_hours}h
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 font-medium text-foreground">
+                  <Euro className="h-4 w-4 text-primary" />{formatTariff(ann.tariff_amount, ann.tariff_type)}
                 </div>
               )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
@@ -714,13 +751,14 @@ function SuccessDialog({ open, onClose, onGoToApplications }: { open: boolean; o
   );
 }
 
-function Row({ icon: Icon, label, value }: { icon: typeof Calendar; label: string; value: string }) {
+function Row({ icon: Icon, label, value, detail }: { icon: typeof Calendar; label: string; value: string; detail?: string }) {
   return (
     <div className="flex items-start gap-3">
       <Icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
       <div className="flex-1">
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className="capitalize">{value}</div>
+        {detail && <div className="text-xs text-muted-foreground/70">{detail}</div>}
       </div>
     </div>
   );
