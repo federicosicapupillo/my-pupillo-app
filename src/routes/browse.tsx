@@ -523,9 +523,13 @@ function ApplyConfirmDialog({
     return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
   })();
   const zone = ann ? publicLocationLabel({ job_city: ann.job_city, city: restaurantInfo?.city, neighborhood: restaurantInfo?.neighborhood }) : "";
-  const totalEstimate = ann && ann.tariff_type === "hourly"
-    ? `${(Number(ann.tariff_amount) * Number(ann.duration_hours || 0)).toFixed(2).replace(/\.?0+$/, "")} EUR`
-    : ann ? `${ann.tariff_amount} EUR` : "—";
+  const totalDisplay = ann ? formatTotalService(
+    ann.tariff_amount,
+    ann.tariff_type,
+    ann.duration_hours,
+    ann.service_time,
+    null,
+  ) : null;
   const dressCodeItems = (ann?.dress_code_items ?? []).filter(Boolean);
   const requiredSkills = (ann?.required_skills ?? []).filter(Boolean);
   const languageReqs = (ann?.language_requirements ?? []).filter(Boolean);
