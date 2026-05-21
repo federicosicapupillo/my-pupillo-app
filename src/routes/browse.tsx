@@ -739,13 +739,14 @@ function SuccessDialog({ open, onClose, onGoToApplications }: { open: boolean; o
   );
 }
 
-function Row({ icon: Icon, label, value }: { icon: typeof Calendar; label: string; value: string }) {
+function Row({ icon: Icon, label, value, detail }: { icon: typeof Calendar; label: string; value: string; detail?: string }) {
   return (
     <div className="flex items-start gap-3">
       <Icon className="h-4 w-4 mt-0.5 text-muted-foreground" />
       <div className="flex-1">
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className="capitalize">{value}</div>
+        {detail && <div className="text-xs text-muted-foreground/70">{detail}</div>}
       </div>
     </div>
   );
