@@ -421,6 +421,13 @@ function Browse() {
             const fav = favIds.has(selected.id);
             const dist = (profile?.service_area_lat != null && profile?.service_area_lng != null && selected.location_lat != null && selected.location_lng != null)
               ? distKm(profile.service_area_lat, profile.service_area_lng, selected.location_lat, selected.location_lng) : null;
+            const selectedTotal = formatTotalService(
+              selected.tariff_amount,
+              selected.tariff_type,
+              selected.duration_hours,
+              selected.service_time,
+              null,
+            );
             return (
               <>
                 <SheetHeader>
