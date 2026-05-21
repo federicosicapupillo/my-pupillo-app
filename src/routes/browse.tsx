@@ -565,12 +565,20 @@ function ApplyConfirmDialog({
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4" /><span>{new Date(ann.service_date).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
               </div>
-              <div className="flex items-center gap-2 font-medium text-foreground">
-                <Euro className="h-4 w-4 text-primary" />{formatTariff(ann.tariff_amount, ann.tariff_type)}
-              </div>
-              {ann.tariff_type === "hourly" && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
-                  Totale stimato: <span className="font-medium text-foreground">{totalEstimate}</span>
+              {totalDisplay ? (
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2 text-lg font-extrabold text-primary">
+                    <Euro className="h-5 w-5 text-primary" />{totalDisplay}
+                  </div>
+                  {ann.tariff_type === "hourly" && (
+                    <div className="text-xs text-muted-foreground pl-7">
+                      Calcolato su €{ann.tariff_amount}/ora per {ann.duration_hours}h
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 font-medium text-foreground">
+                  <Euro className="h-4 w-4 text-primary" />{formatTariff(ann.tariff_amount, ann.tariff_type)}
                 </div>
               )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
