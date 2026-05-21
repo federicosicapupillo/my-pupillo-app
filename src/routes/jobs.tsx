@@ -612,6 +612,17 @@ function OfferCard({
   const startTime = r.announcement?.service_time?.slice(0, 5);
   const endTime = r.announcement?.end_time?.slice(0, 5);
   const duration = r.announcement?.duration_hours;
+  const totalDisplay = r.announcement
+    ? formatTotalService(
+        r.announcement.tariff_amount,
+        r.announcement.tariff_type,
+        r.announcement.duration_hours,
+        r.announcement.service_time,
+        r.announcement.end_time,
+      )
+    : null;
+  const hourlyRate = r.announcement?.tariff_type === "hourly" ? r.announcement.tariff_amount : null;
+  const durationH = r.announcement?.duration_hours;
   const tariff = r.announcement
     ? formatTariff(r.announcement.tariff_amount, r.announcement.tariff_type)
     : null;
