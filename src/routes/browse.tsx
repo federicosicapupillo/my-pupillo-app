@@ -347,43 +347,47 @@ function Browse() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-1.5 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 shrink-0 text-primary/80" />
-                    <span className="text-foreground/90">
-                      {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}
-                    </span>
-                    <span className="text-muted-foreground">· Durata {a.duration_hours}h</span>
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div className="space-y-1.5 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 shrink-0 text-primary/80" />
+                      <span className="text-foreground/90">
+                        {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}
+                      </span>
+                      <span className="text-muted-foreground">· Durata {a.duration_hours}h</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 shrink-0 text-primary/80" />
+                      <span className="truncate">{loc}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 shrink-0 text-primary/80" />
-                    <span className="truncate">{loc}</span>
-                  </div>
-                </div>
 
-                {totalDisplay ? (
-                  <div className="mt-4 flex flex-col gap-0.5 rounded-2xl bg-primary/10 px-4 py-3 ring-1 ring-primary/30">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">
-                      Totale servizio
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Euro className="h-5 w-5 text-primary" />
-                      <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">
-                        {totalDisplay}
+                  {totalDisplay ? (
+                    <div className="flex flex-col items-start gap-0.5 rounded-2xl bg-primary/10 px-4 py-2 ring-1 ring-primary/30 sm:items-end sm:text-right">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">
+                        Totale servizio
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Euro className="h-5 w-5 text-primary" />
+                        <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">
+                          {totalDisplay}
+                        </span>
+                      </div>
+                      {hourlyRate != null && (
+                        <span className="text-[10px] text-primary/70">
+                          Calcolato su €{hourlyRate}/ora per {a.duration_hours}h
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-start gap-1 rounded-2xl bg-primary/10 px-4 py-2 ring-1 ring-primary/30 sm:justify-end">
+                      <Euro className="h-4 w-4 text-primary" />
+                      <span className="text-xl font-extrabold tracking-tight text-primary tabular-nums">
+                        {formatTariff(a.tariff_amount, a.tariff_type)}
                       </span>
                     </div>
-                    {hourlyRate != null && (
-                      <span className="text-[10px] text-primary/70">
-                        Calcolato su €{hourlyRate}/ora per {a.duration_hours}h
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center gap-2">
-                    <Euro className="h-4 w-4 text-primary" />
-                    <span className="text-base font-bold text-foreground">{formatTariff(a.tariff_amount, a.tariff_type)}</span>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 <div className="mt-4 flex items-center gap-2">
                   {applied ? (
