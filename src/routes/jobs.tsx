@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   Info,
 } from "lucide-react";
-import { formatTariff } from "@/lib/format";
+import { formatTariff, formatTotalService } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
 import { venueTypeLabel } from "@/lib/venue-types";
 
