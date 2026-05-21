@@ -307,10 +307,14 @@ function Browse() {
               city: restaurantsById[a.restaurant_id]?.city,
               neighborhood: restaurantsById[a.restaurant_id]?.neighborhood,
             });
-            const totalEstimate =
-              a.tariff_type === "hourly" && Number.isFinite(a.tariff_amount) && Number.isFinite(a.duration_hours)
-                ? Math.round(a.tariff_amount * a.duration_hours)
-                : null;
+            const totalDisplay = formatTotalService(
+              a.tariff_amount,
+              a.tariff_type,
+              a.duration_hours,
+              a.service_time,
+              null, // end_time non disponibile in Ann, usiamo duration_hours
+            );
+            const hourlyRate = a.tariff_type === "hourly" ? a.tariff_amount : null;
             return (
               <div
                 key={a.id}
@@ -357,15 +361,29 @@ function Browse() {
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                {totalDisplay ? (
+                  <div className="mt-4 flex flex-col gap-0.5 rounded-2xl bg-primary/10 px-4 py-3 ring-1 ring-primary/30">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">
+                      Totale servizio
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Euro className="h-5 w-5 text-primary" />
+                      <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">
+                        {totalDisplay}
+                      </span>
+                    </div>
+                    {hourlyRate != null && (
+                      <span className="text-[10px] text-primary/70">
+                        Calcolato su €{hourlyRate}/ora per {a.duration_hours}h
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center gap-2">
                     <Euro className="h-4 w-4 text-primary" />
                     <span className="text-base font-bold text-foreground">{formatTariff(a.tariff_amount, a.tariff_type)}</span>
                   </div>
-                  {totalEstimate != null && (
-                    <span className="text-xs text-muted-foreground">Totale stimato €{totalEstimate}</span>
-                  )}
-                </div>
+                )}
 
                 <div className="mt-4 flex items-center gap-2">
                   {applied ? (
