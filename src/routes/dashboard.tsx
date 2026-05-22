@@ -253,6 +253,8 @@ function DashboardInner() {
         )}
       />
 
+      {role === "restaurant" && <PayOnHireBox className="mb-6" />}
+
       <ProfileStatusBanner />
       {role === "restaurant" && <RequiredReviewsBanner />}
 
