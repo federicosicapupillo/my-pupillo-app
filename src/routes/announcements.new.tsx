@@ -382,6 +382,7 @@ function NewAnn() {
   return (
     <AppShell>
       <PageHeader title="Nuovo annuncio" subtitle="Pubblica una richiesta di personale extra" />
+      <PayOnHireBox className="mb-4 max-w-2xl" compact />
       <div className={`mb-4 max-w-2xl flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-primary" />

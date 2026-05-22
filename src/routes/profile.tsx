@@ -67,6 +67,7 @@ function Profile() {
   return (
     <AppShell>
       <PageHeader title="Il tuo profilo" subtitle="Visualizza e modifica le tue informazioni" action={<Link to="/onboarding"><Button>Modifica</Button></Link>} />
+      {role === "restaurant" && <PayOnHireBox className="mb-6 max-w-2xl" />}
       <div className="rounded-2xl border bg-card p-6 max-w-2xl space-y-3">
         <Row label="Email" value={user?.email} />
         <Row label="Ruolo" value={role} />
