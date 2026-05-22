@@ -368,7 +368,6 @@ function Browse() {
                         Totale servizio
                       </span>
                       <div className="flex items-center gap-1">
-                        <Euro className="h-5 w-5 text-primary" />
                         <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">
                           {totalDisplay}
                         </span>
@@ -572,7 +571,7 @@ function ApplyConfirmDialog({
               {totalDisplay ? (
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2 text-lg font-extrabold text-primary">
-                    <Euro className="h-5 w-5 text-primary" />{totalDisplay}
+                    {totalDisplay}
                   </div>
                   {ann.tariff_type === "hourly" && (
                     <div className="text-xs text-muted-foreground pl-7">
