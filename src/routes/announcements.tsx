@@ -46,7 +46,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 function AnnouncementMapBlock({
-  annId, lat, lng, address, open, onToggle,
+  annId, lat, lng, address, open, onToggle, showToggle = true,
 }: {
   annId: string;
   lat: number | null;
@@ -54,6 +54,7 @@ function AnnouncementMapBlock({
   address: string | null | undefined;
   open: boolean;
   onToggle: () => void;
+  showToggle?: boolean;
 }) {
   const hasCoords = lat != null && lng != null;
   const hasAddress = !!(address && address.trim().length > 0);
