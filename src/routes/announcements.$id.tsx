@@ -124,6 +124,19 @@ const APP_STATUS_CLS: Record<string, string> = {
   expired: "bg-muted text-muted-foreground",
 };
 
+/**
+ * Returns true when the application was closed because the slot was taken
+ * by another worker (not a manual reject of THIS specific candidate).
+ */
+function isSlotTakenByOther(app: { status: string; worker_id: string }, ann: { status?: string | null; assigned_worker_id?: string | null } | null): boolean {
+  if (!ann || app.status !== "rejected") return false;
+  if (!ann.assigned_worker_id) return false;
+  return ann.assigned_worker_id !== app.worker_id;
+}
+
+const SLOT_TAKEN_LABEL = "Turno assegnato ad altro lavoratore";
+const SLOT_TAKEN_CLS = "bg-muted text-muted-foreground border-border";
+
 function AnnouncementDetail() {
   const { id } = Route.useParams();
   const { section } = Route.useSearch();
