@@ -106,6 +106,8 @@ type Ann = {
   tariff_type: string;
   job_city?: string | null;
   restaurant_id?: string;
+  status?: string | null;
+  assigned_worker_id?: string | null;
   notes?: string | null;
   professional_profile?: string | null;
   dress_code_items?: string[] | null;
