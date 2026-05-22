@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send } from "lucide-react";
@@ -878,6 +878,68 @@ function AnnouncementsPage() {
         <div className="rounded-2xl border bg-card p-12 text-center">
           <p className="text-muted-foreground">Nessun annuncio.</p>
           {role === "restaurant" && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
+        </div>
+      ) : role === "restaurant" ? (
+        <div className="md:grid md:grid-cols-[320px_minmax(0,1fr)] md:gap-5 md:items-start">
+          {/* LEFT: compact list of announcements */}
+          <aside className="md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto md:pr-1">
+            {statusFilter === "all" ? (
+              <div className="space-y-5">
+                {upcoming.length > 0 && (
+                  <div>
+                    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground">Attivi / in arrivo</h2>
+                    <div className="space-y-2">
+                      {upcoming.map((a) => (
+                        <Fragment key={a.id}>
+                          {renderCompactItem(a)}
+                          {selectedAnnId === a.id && (
+                            <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {past.length > 0 && (
+                  <div>
+                    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Scaduti / completati</h2>
+                    <div className="space-y-2">
+                      {past.map((a) => (
+                        <Fragment key={a.id}>
+                          {renderCompactItem(a)}
+                          {selectedAnnId === a.id && (
+                            <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {upcoming.map((a) => (
+                  <Fragment key={a.id}>
+                    {renderCompactItem(a)}
+                    {selectedAnnId === a.id && (
+                      <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
+                    )}
+                  </Fragment>
+                ))}
+              </div>
+            )}
+          </aside>
+
+          {/* RIGHT: full detail (desktop only) */}
+          <section className="hidden md:block">
+            {selectedAnn ? (
+              renderCard(selectedAnn)
+            ) : (
+              <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
+                Seleziona un annuncio dalla lista per vederne i dettagli.
+              </div>
+            )}
+          </section>
         </div>
       ) : (
         <div className="space-y-6">
