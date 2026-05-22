@@ -11,8 +11,13 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-/** Shift statuses that count as "real collaboration" between worker and restaurant. */
-export const COLLABORATED_SHIFT_STATUSES = ["completed", "closed", "reviewed", "done"] as const;
+/**
+ * Shift statuses that count as "real collaboration" between worker and
+ * restaurant. In the Pupillo schema the only status that represents a
+ * shift actually performed and closed is `completed`. We keep this as a
+ * single source of truth so the rule can evolve if new statuses are added.
+ */
+export const COLLABORATED_SHIFT_STATUSES = ["completed"] as const;
 
 /** Format a worker name applying the privacy rule. */
 export function formatCandidateName(fullName: string | null | undefined, hasCollaborated: boolean): string {
@@ -41,7 +46,7 @@ export async function hasCompletedShiftWithRestaurant(
     .select("id")
     .eq("worker_id", workerId)
     .eq("restaurant_id", restaurantId)
-    .in("status", COLLABORATED_SHIFT_STATUSES as unknown as string[])
+    .in("status", COLLABORATED_SHIFT_STATUSES as unknown as any)
     .limit(1);
   if (error) return false;
   return (data?.length ?? 0) > 0;
@@ -58,7 +63,7 @@ export async function loadCollaboratedWorkerIds(restaurantId: string): Promise<S
     .from("shifts")
     .select("worker_id")
     .eq("restaurant_id", restaurantId)
-    .in("status", COLLABORATED_SHIFT_STATUSES as unknown as string[]);
+    .in("status", COLLABORATED_SHIFT_STATUSES as unknown as any);
   if (error || !data) return new Set();
   return new Set(data.map((r: any) => r.worker_id).filter(Boolean));
 }
