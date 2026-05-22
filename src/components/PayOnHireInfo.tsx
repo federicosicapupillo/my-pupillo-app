@@ -11,34 +11,48 @@ export function PayOnHireBox({ className, compact = false }: { className?: strin
   return (
     <div
       className={cn(
-        "rounded-2xl border border-primary/25 bg-primary/[0.06] p-4 sm:p-5",
-        "shadow-[inset_0_1px_0_oklch(0.97_0.01_100/0.04)]",
+        "relative overflow-hidden rounded-2xl border-2 border-lime-400/30",
+        "bg-gradient-to-br from-lime-500/[0.10] via-lime-400/[0.04] to-transparent",
+        compact ? "p-4 sm:p-5" : "p-5 sm:p-6",
         className,
       )}
       role="note"
       aria-label="Come funzionano i crediti su Pupillo"
     >
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-          <ShieldCheck className="h-5 w-5" />
+      {/* Sottile alone decorativo in alto a destra */}
+      <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-lime-400/[0.06] blur-2xl" />
+
+      <div className="relative flex items-start gap-4">
+        <div
+          className={cn(
+            "shrink-0 rounded-2xl bg-lime-400/15 text-lime-300 flex items-center justify-center ring-1 ring-lime-400/25",
+            compact ? "h-12 w-12" : "h-14 w-14",
+          )}
+        >
+          <ShieldCheck className={cn(compact ? "h-6 w-6" : "h-7 w-7")} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-foreground leading-tight">
-            Paghi solo quando confermi
+          <div className="flex flex-wrap items-center gap-2">
+            <div className={cn("font-bold text-foreground leading-tight", compact ? "text-lg" : "text-xl")}>
+              Paghi solo quando confermi
+            </div>
+            <span className="inline-flex items-center rounded-full bg-lime-400/15 px-2.5 py-1 text-xs font-semibold text-lime-300 border border-lime-400/25">
+              Nessun costo per pubblicare
+            </span>
           </div>
+
+          <p className={cn("mt-2 leading-relaxed", compact ? "text-sm text-muted-foreground" : "text-sm text-foreground/80")}>
+            Puoi pubblicare offerte, ricevere candidature e chattare gratuitamente. I crediti vengono scalati solo quando confermi un lavoratore per un turno.
+          </p>
+
           {!compact && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Puoi pubblicare offerte, ricevere candidature e chattare senza costi.
-              I crediti vengono scalati solo quando confermi un lavoratore per il servizio.
+            <p className="mt-1.5 text-xs text-lime-300/70">
+              Così paghi solo quando Pupillo ti aiuta davvero a coprire un servizio.
             </p>
           )}
-          {compact && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Pubblicare, ricevere candidature e chattare è gratis. Scali crediti solo alla conferma.
-            </p>
-          )}
-          <div className="mt-2">
-            <HowCreditsWorkPopover />
+
+          <div className="mt-3">
+            <HowCreditsWorkPopover compact={compact} />
           </div>
         </div>
       </div>
@@ -46,19 +60,20 @@ export function PayOnHireBox({ className, compact = false }: { className?: strin
   );
 }
 
-export function HowCreditsWorkPopover({ className }: { className?: string }) {
+export function HowCreditsWorkPopover({ className, compact = false }: { className?: string; compact?: boolean }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
           className={cn(
-            "inline-flex items-center gap-1.5 text-xs font-medium text-primary",
+            "inline-flex items-center gap-1.5 font-medium text-lime-300",
             "underline-offset-4 hover:underline focus-visible:underline outline-none",
+            compact ? "text-xs" : "text-sm",
             className,
           )}
         >
-          <Coins className="h-3.5 w-3.5" />
+          <Coins className={cn(compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
           Come funzionano i crediti?
         </button>
       </PopoverTrigger>
