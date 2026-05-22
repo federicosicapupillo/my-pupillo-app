@@ -60,8 +60,8 @@ function ShiftsPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "upcoming" | "assigned" | "past" | "to-review">(
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "all"
+  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past">(
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "assigned"
   );
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
   const [live, setLive] = useState(false);
@@ -386,18 +386,21 @@ function ShiftsPage() {
   const filtered = useMemo(() => {
     if (filter === "upcoming") return [] as Shift[]; // pending applications rendered separately
     if (filter === "assigned") return shifts.filter(s => s.status === "scheduled" && s.shift_date >= today);
-    if (filter === "past") return shifts.filter(s => s.status === "completed" || (s.status === "scheduled" && s.shift_date < today));
+    if (filter === "completed") return shifts.filter(s => s.status === "completed");
+    if (filter === "past") return shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled");
     if (filter === "to-review") return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
+    if (filter === "no_show") return shifts.filter(s => s.status === "no_show");
     return shifts;
   }, [shifts, filter, reqByShift, today]);
 
   const counts = useMemo(() => {
     const assigned = shifts.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
-    const past = shifts.filter(s => s.status === "completed" || (s.status === "scheduled" && s.shift_date < today)).length;
+    const past = shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled").length;
+    const completed = shifts.filter(s => s.status === "completed").length;
     const toReview = shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
+    const noShow = shifts.filter(s => s.status === "no_show").length;
     const pending = role === "restaurant" ? pendingApps.length : 0;
-    const all = shifts.length + pending;
-    return { all, pending, assigned, past, toReview };
+    return { pending, assigned, completed, past, toReview, noShow };
   }, [shifts, pendingApps, reqByShift, role, today]);
 
   const displayShifts = useMemo(() => {
@@ -435,12 +438,13 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["all", "upcoming", "assigned", "past", "to-review"] as const).map(f => {
+        {(["assigned", "upcoming", "completed", "to-review", "no_show", "past"] as const).map(f => {
           const label =
-            f === "all" ? `Tutti (${counts.all})`
+            f === "assigned" ? `Assegnati (${counts.assigned})`
             : f === "upcoming" ? `In attesa (${counts.pending})`
-            : f === "assigned" ? `Assegnati (${counts.assigned})`
-            : f === "past" ? `Passati (${counts.past})`
+            : f === "completed" ? `Completati (${counts.completed})`
+            : f === "past" ? `Archiviati / Passati (${counts.past})`
+            : f === "no_show" ? `No show / Segnalazioni (${counts.noShow})`
             : `Da recensire (${counts.toReview})`;
           return (
             <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
@@ -515,7 +519,7 @@ function ShiftsPage() {
 
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : (
         <>
-          {role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0 && (
+          {role === "restaurant" && filter === "upcoming" && pendingApps.length > 0 && (
             <div className="space-y-3 mb-3">
               {pendingApps.map(a => {
                 const w = profiles[a.worker_id];
@@ -548,7 +552,7 @@ function ShiftsPage() {
               })}
             </div>
           )}
-          {displayShifts.length === 0 && !(role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0) ? (
+          {displayShifts.length === 0 && !(role === "restaurant" && filter === "upcoming" && pendingApps.length > 0) ? (
         <div className="rounded-2xl border bg-card p-8 text-center">
           <CalendarClock className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
           <p className="text-muted-foreground">
