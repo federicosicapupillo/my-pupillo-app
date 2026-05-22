@@ -18,7 +18,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
-import { formatTariff } from "@/lib/format";
+import { formatTariff, formatTotalService, computeDurationHours } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { formatCandidateName, loadCollaboratedWorkerIds } from "@/lib/candidate-display";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
