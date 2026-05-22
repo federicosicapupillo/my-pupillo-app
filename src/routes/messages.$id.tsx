@@ -3238,7 +3238,7 @@ function ConfirmationCard(props: {
         {acknowledged && (
           <div className="mx-4 mb-3 flex items-center justify-center gap-2 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
             <BadgeCheck className="h-5 w-5" />
-            Presa visione confermata
+            Istruzioni confermate
           </div>
         )}
         <div className="px-4 py-4 border-t bg-secondary/20 flex flex-col gap-3">
@@ -3256,7 +3256,7 @@ function ConfirmationCard(props: {
               {acknowledged ? (
                 <>
                   <BadgeCheck className="h-5 w-5" />
-                  Presa visione confermata
+                  Istruzioni confermate
                 </>
               ) : ackBusy ? (
                 <>
@@ -3266,7 +3266,7 @@ function ConfirmationCard(props: {
               ) : (
                 <>
                   <Check className="h-5 w-5" />
-                  Confermo di aver letto le istruzioni
+                  Ho letto e confermo le istruzioni
                 </>
               )}
             </Button>
