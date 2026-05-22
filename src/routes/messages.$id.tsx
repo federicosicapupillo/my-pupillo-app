@@ -1635,23 +1635,6 @@ function Thread() {
                   <MessageSquare className="h-4 w-4" />
                   Chatta
                 </Button>
-                <Button
-                  variant="secondary"
-                  className="gap-2 w-full"
-                  onClick={() => setRejectOpen(true)}
-                  disabled={transitioning !== null}
-                >
-                  {transitioning === "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                  {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
-                </Button>
-                <Button
-                  className="gap-2 w-full bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
-                  onClick={() => transition("accepted")}
-                  disabled={transitioning !== null}
-                >
-                  {transitioning === "accepted" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  {transitioning === "accepted" ? "Conferma in corso…" : "Accetta candidatura"}
-                </Button>
               </div>
               <PayOnHireBox className="mt-3" compact />
             </div>
