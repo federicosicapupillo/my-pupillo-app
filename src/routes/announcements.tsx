@@ -441,6 +441,49 @@ function AnnouncementsPage() {
     setDetailsAnn((prev) => prev && prev.id === updated.id ? { ...prev, ...updated } : prev);
   };
 
+  const renderCompactItem = (a: Ann) => {
+    const eff = computeEffectiveStatus(a, now);
+    const isSelected = selectedAnnId === a.id;
+    const candCount = counts[a.id] ?? 0;
+    return (
+      <button
+        type="button"
+        key={a.id}
+        onClick={() => setSelectedAnnId((cur) => (cur === a.id ? null : a.id))}
+        aria-pressed={isSelected}
+        className={`group w-full text-left rounded-xl border p-3 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+          isSelected
+            ? "border-primary bg-primary/10 ring-1 ring-primary/40 shadow-[0_0_30px_-15px_oklch(var(--primary)/0.6)]"
+            : "border-border bg-card hover:border-primary/40 hover:bg-primary/[0.04]"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-foreground">
+              {a.professional_profile?.trim() || "Ruolo non specificato"}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              <span className="truncate">{formatRange(a)}</span>
+            </div>
+          </div>
+          <span className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 font-medium ${STATUS_CLS[eff.kind] ?? "bg-muted text-muted-foreground"}`}>
+            {STATUS_LABEL[eff.kind] ?? eff.kind}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${candCount > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+            <Users className="h-3 w-3" />
+            {candCount} candidat{candCount === 1 ? "o" : "i"}
+          </span>
+          {eff.countdown && (eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned") && (
+            <span className="truncate text-muted-foreground">{eff.countdown}</span>
+          )}
+        </div>
+      </button>
+    );
+  };
+
   const renderCard = (a: Ann) => {
     const effOuter = computeEffectiveStatus(a, now);
     const isExpired = effOuter.kind === "expired" || effOuter.kind === "cancelled";
