@@ -303,8 +303,8 @@ function AnnouncementsPage() {
   const [blockOpen, setBlockOpen] = useState(false);
   const [closeTarget, setCloseTarget] = useState<Ann | null>(null);
   const [closing, setClosing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "active" | "assigned" | "completed" | "expired" | "cancelled">(
-    (initialStatus as any) || "all"
+  const [statusFilter, setStatusFilter] = useState<"active" | "draft" | "assigned" | "completed" | "expired" | "cancelled">(
+    (["active","draft","assigned","completed","expired","cancelled"].includes(initialStatus as string) ? initialStatus : "active") as any
   );
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -417,19 +417,14 @@ function AnnouncementsPage() {
     })();
   }, [user, role]);
 
-  const isPastKind = (kind: EffectiveStatus) => kind === "expired" || kind === "completed" || kind === "cancelled";
-
-  const filtered = items.filter(a => statusFilter === "all" ? true : a.status === statusFilter);
-  const upcoming = statusFilter === "all" ? filtered.filter(a => !isPastKind(computeEffectiveStatus(a, now).kind)) : filtered;
-  const past = statusFilter === "all" ? filtered.filter(a => isPastKind(computeEffectiveStatus(a, now).kind)) : [];
+  const filtered = items.filter(a => a.status === statusFilter);
 
   // Default-select the first item so the right pane is never empty on desktop.
   useEffect(() => {
     if (role !== "restaurant") return;
-    const flat = [...upcoming, ...past];
-    if (!flat.length) { if (selectedAnnId) setSelectedAnnId(null); return; }
-    if (!selectedAnnId || !flat.some((x) => x.id === selectedAnnId)) {
-      setSelectedAnnId(flat[0].id);
+    if (!filtered.length) { if (selectedAnnId) setSelectedAnnId(null); return; }
+    if (!selectedAnnId || !filtered.some((x) => x.id === selectedAnnId)) {
+      setSelectedAnnId(filtered[0].id);
     }
   }, [role, items, statusFilter]);
 
@@ -867,9 +862,9 @@ function AnnouncementsPage() {
       />
       {role === "restaurant" && (
         <div className="flex gap-2 mb-4 overflow-x-auto">
-          {(["all","draft","active","assigned","completed","expired","cancelled"] as const).map(f => (
+          {(["active","draft","assigned","completed","expired","cancelled"] as const).map(f => (
             <Button key={f} size="sm" variant={statusFilter === f ? "default" : "outline"} onClick={() => setStatusFilter(f)}>
-              {f === "all" ? "Tutti" : f === "draft" ? "Bozze" : f === "active" ? "Pubblicati" : f === "assigned" ? "Assegnati" : f === "completed" ? "Completati" : f === "expired" ? "Scaduti" : "Annullati"}
+              {f === "active" ? "Pubblicati" : f === "draft" ? "In attesa" : f === "assigned" ? "Assegnati" : f === "completed" ? "Completati" : f === "expired" ? "Scaduti" : "Annullati"}
             </Button>
           ))}
         </div>
@@ -883,51 +878,16 @@ function AnnouncementsPage() {
         <div className="md:grid md:grid-cols-[320px_minmax(0,1fr)] md:gap-5 md:items-start">
           {/* LEFT: compact list of announcements */}
           <aside className="md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto md:pr-1">
-            {statusFilter === "all" ? (
-              <div className="space-y-5">
-                {upcoming.length > 0 && (
-                  <div>
-                    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground">Attivi / in arrivo</h2>
-                    <div className="space-y-2">
-                      {upcoming.map((a) => (
-                        <Fragment key={a.id}>
-                          {renderCompactItem(a)}
-                          {selectedAnnId === a.id && (
-                            <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
-                          )}
-                        </Fragment>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {past.length > 0 && (
-                  <div>
-                    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Scaduti / completati</h2>
-                    <div className="space-y-2">
-                      {past.map((a) => (
-                        <Fragment key={a.id}>
-                          {renderCompactItem(a)}
-                          {selectedAnnId === a.id && (
-                            <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
-                          )}
-                        </Fragment>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {upcoming.map((a) => (
-                  <Fragment key={a.id}>
-                    {renderCompactItem(a)}
-                    {selectedAnnId === a.id && (
-                      <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
-                    )}
-                  </Fragment>
-                ))}
-              </div>
-            )}
+            <div className="space-y-2">
+              {filtered.map((a) => (
+                <Fragment key={a.id}>
+                  {renderCompactItem(a)}
+                  {selectedAnnId === a.id && (
+                    <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
+                  )}
+                </Fragment>
+              ))}
+            </div>
           </aside>
 
           {/* RIGHT: full detail (desktop only) */}
@@ -943,27 +903,9 @@ function AnnouncementsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {statusFilter === "all" && upcoming.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">Annunci attivi / in arrivo</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {upcoming.map((a) => renderCard(a))}
-              </div>
-            </div>
-          )}
-          {statusFilter === "all" && past.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Annunci scaduti / completati</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {past.map((a) => renderCard(a))}
-              </div>
-            </div>
-          )}
-          {statusFilter !== "all" && (
-            <div className="grid gap-4 md:grid-cols-2">
-              {upcoming.map((a) => renderCard(a))}
-            </div>
-          )}
+          <div className="grid gap-4 md:grid-cols-2">
+            {filtered.map((a) => renderCard(a))}
+          </div>
         </div>
       )}
 
