@@ -124,6 +124,19 @@ const APP_STATUS_CLS: Record<string, string> = {
   expired: "bg-muted text-muted-foreground",
 };
 
+/**
+ * Returns true when the application was closed because the slot was taken
+ * by another worker (not a manual reject of THIS specific candidate).
+ */
+function isSlotTakenByOther(app: { status: string; worker_id: string }, ann: { status?: string | null; assigned_worker_id?: string | null } | null): boolean {
+  if (!ann || app.status !== "rejected") return false;
+  if (!ann.assigned_worker_id) return false;
+  return ann.assigned_worker_id !== app.worker_id;
+}
+
+const SLOT_TAKEN_LABEL = "Turno assegnato ad altro lavoratore";
+const SLOT_TAKEN_CLS = "bg-muted text-muted-foreground border-border";
+
 function AnnouncementDetail() {
   const { id } = Route.useParams();
   const { section } = Route.useSearch();
@@ -286,7 +299,50 @@ function AnnouncementDetail() {
     await supabase.from("announcements")
       .update({ status: "assigned", assigned_worker_id: app.worker_id })
       .eq("id", id);
+    // The slot is now covered (Pupillo's announcement model is single-worker):
+    // auto-close every still-open application for this announcement with a
+    // neutral notice — no rejection wording, no info about who was picked.
+    try {
+      const { data: others } = await supabase
+        .from("applications")
+        .select("id, worker_id")
+        .eq("announcement_id", id!)
+        .neq("id", app.id)
+        .in("status", ["pending", "interested", "counter_offer"]);
+      const otherList = (others ?? []) as { id: string; worker_id: string }[];
+      if (otherList.length) {
+        const otherIds = otherList.map((o) => o.id);
+        await supabase
+          .from("applications")
+          .update({ status: "rejected" })
+          .in("id", otherIds);
+        // Neutral notification + neutral chat system message per candidate.
+        const NEUTRAL_BODY = "Questo turno è già stato assegnato a un altro lavoratore. Continua a candidarti alle nuove offerte disponibili.";
+        const CHAT_BODY = "Turno assegnato a un altro lavoratore.";
+        await Promise.all(otherList.map(async (o) => {
+          try {
+            await supabase.from("notifications").insert({
+              user_id: o.worker_id,
+              title: "Turno assegnato",
+              body: NEUTRAL_BODY,
+              link: `/messages/${o.id}`,
+            });
+          } catch (e) { console.error("[accept] notify other failed", e); }
+          try {
+            await supabase.from("messages").insert({
+              application_id: o.id,
+              sender_id: user!.id,
+              receiver_id: o.worker_id,
+              body: CHAT_BODY,
+              message_type: "system",
+              action_type: "slot_taken",
+            } as never);
+          } catch (e) { console.error("[accept] system msg failed", e); }
+        }));
+      }
+    } catch (e) { console.error("[accept] auto-close failed", e); }
     toast.success("Lavoratore assegnato!");
+    load();
   };
   const reject = async (app: App) => {
     setBusyId(app.id);
@@ -577,9 +633,16 @@ function AnnouncementDetail() {
                           <div className="text-[10px] text-primary mt-1">Vedi scheda lavoratore →</div>
                         </div>
                       </Link>
-                      <Badge variant="outline" className={APP_STATUS_CLS[a.status] ?? ""}>
-                        {APP_STATUS_LABEL[a.status] ?? a.status}
-                      </Badge>
+                      {(() => {
+                        const slotTaken = isSlotTakenByOther(a, ann);
+                        const cls = slotTaken ? SLOT_TAKEN_CLS : (APP_STATUS_CLS[a.status] ?? "");
+                        const label = slotTaken ? SLOT_TAKEN_LABEL : (APP_STATUS_LABEL[a.status] ?? a.status);
+                        return (
+                          <Badge variant="outline" className={cls}>
+                            {label}
+                          </Badge>
+                        );
+                      })()}
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 mt-3 text-xs">

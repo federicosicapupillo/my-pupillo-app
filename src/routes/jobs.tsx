@@ -186,11 +186,21 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
     return { label: "Annullata", cls: "bg-amber-100 text-amber-900 border-amber-200" };
   if (r.status === "accepted")
     return { label: "Confermata da entrambi", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
-  if (r.status === "rejected")
+  if (r.status === "rejected") {
+    // If the slot was simply taken by another candidate, soften the label —
+    // the worker was not personally rejected.
+    const assignedTo = r.announcement?.assigned_worker_id ?? null;
+    if (assignedTo) {
+      return {
+        label: "Turno assegnato ad altri",
+        cls: "bg-muted text-muted-foreground border-border",
+      };
+    }
     return {
-      label: "Rifiutata dal ristoratore",
+      label: "Non selezionato",
       cls: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
     };
+  }
   if (r.status === "not_interested")
     return {
       label: "Hai rifiutato",
