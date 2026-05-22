@@ -644,9 +644,6 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
             );
           })()}
         </div>
-        {role === "restaurant" && (
-          <AnnouncementCostBox ann={a} />
-        )}
         {(() => {
         const canSeePrecise = role === "restaurant" || (!!user && a.assigned_worker_id === user.id);
         const zoneLabel = publicLocationLabel({ job_city: a.job_city });
