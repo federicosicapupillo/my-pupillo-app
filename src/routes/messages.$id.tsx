@@ -1196,7 +1196,13 @@ function Thread() {
         neighborhood: restaurantHints?.neighborhood ?? null,
       });
 
-  const steps = buildTimeline(app?.status);
+  const slotTakenByOther = !!(
+    app && ann &&
+    app.status === "rejected" &&
+    ann.assigned_worker_id &&
+    ann.assigned_worker_id !== app.worker_id
+  );
+  const steps = buildTimeline(app?.status, { slotTakenByOther });
 
   const logEvent = async (action: string, metadata: Record<string, unknown>) => {
     if (!user) return;
