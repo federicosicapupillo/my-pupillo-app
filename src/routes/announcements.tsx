@@ -486,7 +486,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
   const totalDisplay = formatTotalService(ann.tariff_amount, ann.tariff_type, finalDuration, ann.service_time, ann.end_time);
   if (!totalDisplay) {
     return (
-      <div className="mt-3 inline-flex flex-col items-center gap-0.5 rounded-2xl bg-muted px-4 py-2.5 ring-1 ring-border">
+      <div className="inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-muted px-4 py-3 ring-1 ring-border min-w-[120px]">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Costo servizio</span>
         <span className="text-sm font-semibold text-muted-foreground">Costo non disponibile</span>
         <span className="text-[10px] text-muted-foreground">{formatTariff(ann.tariff_amount, ann.tariff_type)}</span>
@@ -495,18 +495,18 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
   }
   const hourlyRate = ann.tariff_type === "hourly" ? ann.tariff_amount : null;
   return (
-    <div className="mt-3 inline-flex flex-col items-center gap-0.5 rounded-2xl bg-primary/10 px-5 py-3 ring-1 ring-primary/30 max-w-[200px]">
+    <div className="inline-flex flex-col items-end justify-center gap-0.5 rounded-2xl bg-primary/10 px-4 py-2.5 ring-1 ring-primary/30 max-w-[180px]">
       <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">Costo servizio</span>
       <div className="flex items-center gap-1">
-        <Euro className="h-5 w-5 text-primary" />
-        <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">{totalDisplay}</span>
+        <Euro className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-xl font-extrabold tracking-tight text-primary tabular-nums">{totalDisplay}</span>
       </div>
       {hourlyRate != null && finalDuration != null && (
         <span className="text-[10px] text-primary/70">
-          Calcolato su €{hourlyRate}/ora × {Number.isInteger(finalDuration) ? String(finalDuration) : finalDuration.toFixed(1).replace(/\.?0+$/, "")}h
+          €{hourlyRate}/ora × {Number.isInteger(finalDuration) ? String(finalDuration) : finalDuration.toFixed(1).replace(/\.?0+$/, "")}h
         </span>
       )}
-      <span className="text-[10px] text-primary/50">Questo è l&apos;importo previsto per il lavoratore.</span>
+      <span className="text-[9px] text-primary/50 leading-tight">Importo previsto per il lavoratore</span>
     </div>
   );
 }
