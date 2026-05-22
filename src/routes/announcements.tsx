@@ -1591,7 +1591,7 @@ function ProposalConfirmDialog({
         <DialogHeader>
           <DialogTitle>Conferma invio proposta</DialogTitle>
           <DialogDescription>
-            Stai per inviare una proposta di lavoro a <strong>{candidate.full_name || "questo lavoratore"}</strong>. Controlla il riepilogo del turno prima di procedere.
+            Stai per inviare una proposta di lavoro a <strong>{formatCandidateName(candidate.full_name, false)}</strong>. Controlla il riepilogo del turno prima di procedere.
           </DialogDescription>
         </DialogHeader>
 
