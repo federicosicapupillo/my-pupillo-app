@@ -667,8 +667,11 @@ function AnnouncementsPage() {
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-sm font-semibold text-foreground truncate">
-                                  {c.full_name || "Lavoratore"}
+                                  {formatCandidateName(c.full_name, collaboratedWorkerIds.has(c.worker_id))}
                                 </span>
+                                {collaboratedWorkerIds.has(c.worker_id) && (
+                                  <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
+                                )}
                                 {c.rating_avg != null && (
                                   <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
                                     <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
@@ -755,7 +758,10 @@ function AnnouncementsPage() {
                         className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
                       >
                         <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                          {c.full_name || "Lavoratore"}
+                          {formatCandidateName(c.full_name, collaboratedWorkerIds.has(c.worker_id))}
+                          {collaboratedWorkerIds.has(c.worker_id) && (
+                            <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
+                          )}
                           {isAssigned && (
                             <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 text-green-800 px-1.5 py-0.5 text-[10px] font-medium">
                               Assegnato
@@ -885,7 +891,7 @@ function AnnouncementsPage() {
                   <div><span className="text-muted-foreground">Locale:</span> <span className="font-medium">{(profile as any).business_name}</span></div>
                 )}
                 <div><span className="text-muted-foreground">Indirizzo:</span> <span className="font-medium">{closeTarget.location_address || "—"}</span></div>
-                <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{info?.full_name || "Lavoratore"}</span></div>
+                <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{info ? formatCandidateName(info.full_name, collaboratedWorkerIds.has(info.worker_id)) : "Lavoratore"}</span></div>
                 <div><span className="text-muted-foreground">Stato:</span> <span className="font-medium">Da chiudere</span></div>
               </div>
             );
