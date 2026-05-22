@@ -884,7 +884,9 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         </div>
         {role === "restaurant" && (
           <div className="mt-4 flex justify-end">
-            <AnnouncementCostBox ann={a} />
+            <div className="w-full sm:w-auto">
+              <AnnouncementCostBox ann={a} />
+            </div>
           </div>
         )}
       </div>
