@@ -882,6 +882,11 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
             </Link>
           )}
         </div>
+        {role === "restaurant" && (
+          <div className="mt-4 flex justify-end">
+            <AnnouncementCostBox ann={a} />
+          </div>
+        )}
       </div>
     );
   };
