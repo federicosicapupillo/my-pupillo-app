@@ -1,3 +1,4 @@
+import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
