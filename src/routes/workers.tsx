@@ -914,7 +914,7 @@ function WorkersPage() {
               title={!selected ? "Scegli un annuncio prima di proporre un turno" : undefined}
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              Chatta
+              Invia proposta
             </Button>
             {isBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
