@@ -3175,12 +3175,14 @@ function ConfirmationCard(props: {
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase tracking-wide">
               <Check className="h-3 w-3" />Confermato
             </span>
-            <h4 className="font-bold text-sm">Candidatura accettata</h4>
+            <h4 className="font-bold text-sm">Candidatura confermata</h4>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {isWorker
-              ? "Il ristoratore ha confermato la tua presenza per questo turno."
-              : "Hai confermato il lavoratore. Riceverà tutti i dettagli del turno."}
+              ? "Il ristoratore ha confermato la tua candidatura per questo servizio. Leggi attentamente le istruzioni operative prima del turno: sono informazioni importanti per presentarti nel modo corretto."
+              : (acknowledged
+                  ? "Il lavoratore ha confermato la lettura delle istruzioni."
+                  : "In attesa di conferma lettura istruzioni da parte del lavoratore.")}
           </p>
         </div>
         <dl className="px-4 py-3 space-y-2 text-sm">
