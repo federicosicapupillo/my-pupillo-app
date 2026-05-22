@@ -1727,45 +1727,6 @@ function Thread() {
                   </Button>
                 )}
               </>)}
-              {role === "restaurant" && (() => {
-                const statuses = Object.values(proposalStatuses);
-                const hasAccepted = statuses.includes("accepted");
-                const hasProposal = msgs.some((x) => x.template_id === PROPOSAL_TEMPLATE_ID);
-                const lastProposalRejected =
-                  hasProposal && !hasAccepted && statuses.length > 0 && statuses.every((s) => s === "rejected");
-                // Server-side check is authoritative. While loading, fall back to client heuristics.
-                const serverDisabled = serverAssign ? !serverAssign.canAssign : !hasAccepted;
-                const disabled = serverDisabled;
-                const helper = serverAssign?.reason
-                  ? serverAssign.reason
-                  : !hasProposal
-                  ? "Invia una proposta di lavoro per poter assegnare il turno."
-                  : !hasAccepted && lastProposalRejected
-                    ? "Il lavoratore ha rifiutato la proposta."
-                    : !hasAccepted
-                      ? "In attesa che il lavoratore accetti la proposta."
-                      : isBlocked
-                        ? "Prima di assegnare nuovi turni devi chiudere e recensire i turni conclusi."
-                        : null;
-                return (
-                  <div className="flex flex-col gap-1">
-                    <Button
-                      size="sm"
-                      className="gap-2"
-                      disabled={disabled || transitioning !== null}
-                      onClick={() => transition("accepted")}
-                    >
-                      <Check className="h-4 w-4" />
-                      {transitioning === "accepted" ? "Assegnazione in corso…" : "Assegna"}
-                    </Button>
-                    {helper && (
-                      <span className={`text-xs ${lastProposalRejected || isBlocked ? "text-destructive" : "text-muted-foreground"}`}>
-                        {helper}
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
               {role === "restaurant" && app.status === "counter_offer" && ann?.tariff_amount != null && (
                 <Button
                   size="sm"
@@ -1792,10 +1753,6 @@ function Thread() {
                   <Euro className="h-4 w-4" />Proponi tariffa originale
                 </Button>
               )}
-              <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("rejected")}>
-                <X className="h-4 w-4" />
-                {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
-              </Button>
             </div>
             {role === "restaurant" && app.status === "counter_offer" && app.proposed_tariff != null && ann && (
               <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 shadow-[0_0_24px_-8px_hsl(var(--primary)/0.5)]">
