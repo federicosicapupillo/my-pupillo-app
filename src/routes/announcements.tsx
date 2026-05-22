@@ -46,7 +46,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 function AnnouncementMapBlock({
-  annId, lat, lng, address, open, onToggle,
+  annId, lat, lng, address, open, onToggle, showToggle = true,
 }: {
   annId: string;
   lat: number | null;
@@ -54,6 +54,7 @@ function AnnouncementMapBlock({
   address: string | null | undefined;
   open: boolean;
   onToggle: () => void;
+  showToggle?: boolean;
 }) {
   const hasCoords = lat != null && lng != null;
   const hasAddress = !!(address && address.trim().length > 0);
@@ -82,18 +83,20 @@ function AnnouncementMapBlock({
 
   return (
     <>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="gap-1"
-        onClick={onToggle}
-        aria-expanded={open}
-      >
-        {open ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
-      </Button>
+      {showToggle && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="gap-1"
+          onClick={onToggle}
+          aria-expanded={open}
+        >
+          {open ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
+        </Button>
+      )}
       {open && (
-        <div className="mt-3 space-y-2">
+        <div className={`space-y-2 ${showToggle ? "mt-3" : ""}`}>
           {effLat != null && effLng != null ? (
             <div className="overflow-hidden rounded-xl">
               <AnnouncementMap key={annId} lat={effLat} lng={effLng} address={address ?? undefined} height={280} />
@@ -669,6 +672,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
               address={a.location_address}
               open={!!openMaps[a.id]}
               onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+              showToggle={role !== "restaurant"}
             />
           ) : (
             <div className="space-y-2">
@@ -707,7 +711,19 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         })()}
         {role === "restaurant" && (
           <div className="mt-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-3 items-start">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+                aria-expanded={!!openMaps[a.id]}
+              >
+                {openMaps[a.id]
+                  ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>)
+                  : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -717,26 +733,24 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                 <FileText className="h-3.5 w-3.5" />
                 Vedi riepilogo annuncio
               </Button>
+              {a.status !== "active" && (() => {
+                const eff = computeEffectiveStatus(a, now);
+                const label = eff.kind === "expired" ? "Ripubblica annuncio" : "Riusa come nuovo";
+                return (
+                  <Button
+                    variant={eff.kind === "expired" ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => { setRepublishAnn(a); setRepublishOpen(true); }}
+                  >
+                    <RotateCw className="h-3 w-3" />{label}
+                  </Button>
+                );
+              })()}
             </div>
-            <div className="flex justify-end sm:justify-start sm:ml-auto">
-              <AnnouncementCostBox ann={a} />
-            </div>
+            <AnnouncementCostBox ann={a} />
           </div>
         )}
-        {role === "restaurant" && a.status !== "active" && (() => {
-          const eff = computeEffectiveStatus(a, now);
-          const label = eff.kind === "expired" ? "Ripubblica annuncio" : "Riusa come nuovo";
-          return (
-            <Button
-              variant={eff.kind === "expired" ? "default" : "outline"}
-              size="sm"
-              className="gap-2 mt-3"
-              onClick={() => { setRepublishAnn(a); setRepublishOpen(true); }}
-            >
-              <RotateCw className="h-3 w-3" />{label}
-            </Button>
-          );
-        })()}
         <div className="mt-3">
           {role === "restaurant" ? (
             <>
