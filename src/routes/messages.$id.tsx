@@ -1867,7 +1867,7 @@ function Thread() {
                     if (!user || !app) return;
                     const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
                     if (!receiverId) return;
-                    const body = "Ho letto e confermo la presa visione di tutte le istruzioni del turno.";
+                    const body = "Hai confermato di aver letto le istruzioni del servizio.";
                     const createdAt = new Date().toISOString();
                     const { data, error } = await supabase.from("messages").insert({
                       application_id: app.id,
@@ -1889,7 +1889,18 @@ function Thread() {
                       last_message_preview: body,
                       last_message_at: createdAt,
                     } as never).eq("id", app.id);
-                    toast.success("Presa visione confermata");
+                    toast.success("Istruzioni confermate");
+                    // Notify the restaurant that the worker has read the instructions.
+                    try {
+                      await supabase.from("notifications").insert({
+                        user_id: receiverId,
+                        title: "Istruzioni confermate",
+                        body: "Il lavoratore ha confermato la lettura delle istruzioni del servizio.",
+                        link: `/messages/${app.id}`,
+                      } as never);
+                    } catch (e) {
+                      console.error("[ack] notify restaurant failed", e);
+                    }
                   }}
                 />
               );
