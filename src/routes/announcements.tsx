@@ -486,7 +486,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
   const totalDisplay = formatTotalService(ann.tariff_amount, ann.tariff_type, finalDuration, ann.service_time, ann.end_time);
   if (!totalDisplay) {
     return (
-      <div className="inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-muted px-4 py-3 ring-1 ring-border min-w-[120px]">
+      <div className="w-full sm:w-auto inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-muted px-4 py-3 ring-1 ring-border min-w-[120px]">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Costo servizio</span>
         <span className="text-sm font-semibold text-muted-foreground">Costo non disponibile</span>
         <span className="text-[10px] text-muted-foreground">{formatTariff(ann.tariff_amount, ann.tariff_type)}</span>
