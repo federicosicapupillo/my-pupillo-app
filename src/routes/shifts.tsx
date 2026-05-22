@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
@@ -64,6 +64,20 @@ function ShiftsPage() {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "assigned"
   );
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
+  const focusRef = useRef<HTMLDivElement | null>(null);
+  const [focusedShift, setFocusedShift] = useState<string | null>(initialFocusShift);
+  // After the focused shift card mounts, scroll it into view and fade the
+  // highlight after a few seconds so the page returns to its normal state.
+  useEffect(() => {
+    if (!focusedShift) return;
+    const t = setTimeout(() => {
+      if (focusRef.current) {
+        focusRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 200);
+    const fade = setTimeout(() => setFocusedShift(null), 4000);
+    return () => { clearTimeout(t); clearTimeout(fade); };
+  }, [focusedShift, shifts.length]);
   const [live, setLive] = useState(false);
   const [reviewMap, setReviewMap] = useState<Record<string, number>>({});
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
@@ -575,7 +589,13 @@ function ShiftsPage() {
             const canWorkerComplete = role === "worker" && s.status === "scheduled" && isPast;
 
             return (
-              <div key={s.id} className="rounded-2xl border bg-card p-4 sm:p-5">
+              <div
+                key={s.id}
+                ref={focusedShift === s.id ? focusRef : undefined}
+                className={`rounded-2xl border bg-card p-4 sm:p-5 transition ${
+                  focusedShift === s.id ? "ring-2 ring-primary border-primary/50 shadow-lg" : ""
+                }`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-medium truncate">{otherName}</div>
