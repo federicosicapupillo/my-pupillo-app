@@ -66,6 +66,18 @@ function ShiftsPage() {
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
   const focusRef = useRef<HTMLDivElement | null>(null);
   const [focusedShift, setFocusedShift] = useState<string | null>(initialFocusShift);
+  // After the focused shift card mounts, scroll it into view and fade the
+  // highlight after a few seconds so the page returns to its normal state.
+  useEffect(() => {
+    if (!focusedShift) return;
+    const t = setTimeout(() => {
+      if (focusRef.current) {
+        focusRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 200);
+    const fade = setTimeout(() => setFocusedShift(null), 4000);
+    return () => { clearTimeout(t); clearTimeout(fade); };
+  }, [focusedShift, shifts.length]);
   const [live, setLive] = useState(false);
   const [reviewMap, setReviewMap] = useState<Record<string, number>>({});
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
