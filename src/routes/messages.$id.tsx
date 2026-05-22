@@ -1736,10 +1736,12 @@ function Thread() {
                   <Euro className="h-4 w-4" />Proponi tariffa originale
                 </Button>
               )}
-              <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("rejected")}>
-                <X className="h-4 w-4" />
-                {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
-              </Button>
+              {role !== "restaurant" && (
+                <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("rejected")}>
+                  <X className="h-4 w-4" />
+                  {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
+                </Button>
+              )}
             </div>
             {role === "restaurant" && app.status === "counter_offer" && app.proposed_tariff != null && ann && (
               <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 shadow-[0_0_24px_-8px_hsl(var(--primary)/0.5)]">
