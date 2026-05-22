@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Fragment, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send, ChevronDown, ChevronUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -297,6 +297,7 @@ function AnnouncementsPage() {
   const [collaboratedWorkerIds, setCollaboratedWorkerIds] = useState<Set<string>>(() => new Set());
   const [selectedAnnId, setSelectedAnnId] = useState<string | null>(null);
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
+  const [openCandidates, setOpenCandidates] = useState<Record<string, boolean>>({});
   const [republishOpen, setRepublishOpen] = useState(false);
   const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
