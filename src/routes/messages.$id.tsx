@@ -320,9 +320,10 @@ function buildEventList(app: App, events: LogEvent[]): TimelineEvent[] {
 type StepState = "done" | "current" | "todo" | "error";
 type Step = { key: string; label: string; icon: typeof Send; state: StepState };
 
-function buildTimeline(status?: string): Step[] {
+function buildTimeline(status?: string, opts?: { slotTakenByOther?: boolean }): Step[] {
   const s = status ?? "pending";
   const isReject = s === "rejected" || s === "not_interested";
+  const slotTaken = !!opts?.slotTakenByOther && s === "rejected";
   const isCounter = s === "counter_offer";
   const isAccepted = s === "accepted";
   const isInterested = s === "interested";
@@ -339,7 +340,7 @@ function buildTimeline(status?: string): Step[] {
     { key: "counter", label: "Controfferta", icon: Handshake,
       state: isCounter ? "current" : (isAccepted ? "done" : "todo") },
     { key: "outcome",
-      label: isCancelled ? "Annullata" : isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
+      label: isCancelled ? "Annullata" : slotTaken ? "Turno assegnato ad altri" : isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
       icon: isReject || isExpired || isCancelled ? Ban : Check,
       state: isAccepted ? "done" : (isReject || isExpired || isCancelled) ? "error" : "todo" },
   ];
