@@ -672,6 +672,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
               address={a.location_address}
               open={!!openMaps[a.id]}
               onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+              showToggle={role !== "restaurant"}
             />
           ) : (
             <div className="space-y-2">
