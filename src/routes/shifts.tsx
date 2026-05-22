@@ -858,6 +858,84 @@ function ShiftsPage() {
           )}
         </DialogContent>
       </Dialog>
+      <Dialog
+        open={!!noShowDialog}
+        onOpenChange={(open) => {
+          if (!open && !noShowSubmitting) {
+            setNoShowDialog(null);
+            setNoShowNotes("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confermi il No Show?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>Stai segnalando che il lavoratore non si è presentato al turno.</p>
+            <p>Questa segnalazione può incidere sulla reputazione del profilo del lavoratore.</p>
+            <p>Prima di applicare eventuali penalizzazioni definitive, il caso verrà verificato dal reparto controllo Pupillo.</p>
+            <p>Conferma solo se sei certo che il lavoratore non si sia presentato al servizio.</p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Motivo / note sulla segnalazione (facoltativo)</label>
+            <Textarea
+              value={noShowNotes}
+              onChange={(e) => setNoShowNotes(e.target.value)}
+              placeholder="Scrivi eventuali dettagli utili per la verifica"
+              rows={3}
+              maxLength={1000}
+              disabled={noShowSubmitting}
+            />
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => { setNoShowDialog(null); setNoShowNotes(""); }}
+              disabled={noShowSubmitting}
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={async () => {
+                const s = noShowDialog;
+                if (!s) return;
+                setNoShowSubmitting(true);
+                const { error } = await supabase.from("shifts").update({ status: "no_show" }).eq("id", s.id);
+                if (error) {
+                  toast.error(error.message);
+                  setNoShowSubmitting(false);
+                  return;
+                }
+                if (user) {
+                  supabase.from("activity_logs").insert({
+                    user_id: user.id,
+                    action: "shift_no_show_reported",
+                    entity_type: "shift",
+                    entity_id: s.id,
+                    metadata: {
+                      shift_id: s.id,
+                      worker_id: s.worker_id,
+                      restaurant_id: s.restaurant_id,
+                      review_status: "under_review",
+                      notes: noShowNotes.trim() || null,
+                    },
+                  } as never).then(() => {}, () => {});
+                }
+                toast.success("Segnalazione ricevuta. Il caso verrà verificato dal reparto controllo Pupillo.");
+                setNoShowSubmitting(false);
+                setNoShowDialog(null);
+                setNoShowNotes("");
+              }}
+              disabled={noShowSubmitting}
+              className="gap-1"
+            >
+              {noShowSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Conferma segnalazione
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
