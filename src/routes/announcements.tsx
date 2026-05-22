@@ -327,6 +327,7 @@ function AnnouncementsPage() {
       });
       setItems(list);
       if (role === "restaurant" && list.length) {
+        loadCollaboratedWorkerIds(user.id).then(setCollaboratedWorkerIds).catch(() => {});
         const ids = list.map(a => a.id);
         const { data: apps } = await supabase
           .from("applications")
@@ -467,7 +468,10 @@ function AnnouncementsPage() {
                 <span>{stateLabel}</span>
               </div>
               <div className="mt-1 text-sm text-foreground">
-                Lavoratore: <span className="font-medium">{info.full_name || "Lavoratore"}</span>
+                Lavoratore: <span className="font-medium">{formatCandidateName(info.full_name, collaboratedWorkerIds.has(info.worker_id))}</span>
+                {collaboratedWorkerIds.has(info.worker_id) && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
+                )}
               </div>
               {hasReview && (
                 <div className="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
