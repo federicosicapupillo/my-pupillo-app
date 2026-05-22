@@ -423,6 +423,18 @@ function AnnouncementsPage() {
   const upcoming = statusFilter === "all" ? filtered.filter(a => !isPastKind(computeEffectiveStatus(a, now).kind)) : filtered;
   const past = statusFilter === "all" ? filtered.filter(a => isPastKind(computeEffectiveStatus(a, now).kind)) : [];
 
+  // Default-select the first item so the right pane is never empty on desktop.
+  useEffect(() => {
+    if (role !== "restaurant") return;
+    const flat = [...upcoming, ...past];
+    if (!flat.length) { if (selectedAnnId) setSelectedAnnId(null); return; }
+    if (!selectedAnnId || !flat.some((x) => x.id === selectedAnnId)) {
+      setSelectedAnnId(flat[0].id);
+    }
+  }, [role, items, statusFilter]);
+
+  const selectedAnn = role === "restaurant" ? items.find((x) => x.id === selectedAnnId) ?? null : null;
+
   const openDetails = (a: Ann) => { setDetailsAnn(a); setDetailsOpen(true); };
   const handleAnnUpdated = (updated: Ann) => {
     setItems((prev) => prev.map((x) => x.id === updated.id ? { ...x, ...updated } : x));
