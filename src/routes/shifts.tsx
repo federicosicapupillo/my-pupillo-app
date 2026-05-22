@@ -105,6 +105,11 @@ function ShiftsPage() {
   const [noShowDialog, setNoShowDialog] = useState<Shift | null>(null);
   const [noShowNotes, setNoShowNotes] = useState("");
   const [noShowSubmitting, setNoShowSubmitting] = useState(false);
+  const [notEndedDialog, setNotEndedDialog] = useState<Shift | null>(null);
+  const [cancelDialog, setCancelDialog] = useState<Shift | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
