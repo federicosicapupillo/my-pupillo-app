@@ -83,18 +83,20 @@ function AnnouncementMapBlock({
 
   return (
     <>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="gap-1"
-        onClick={onToggle}
-        aria-expanded={open}
-      >
-        {open ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
-      </Button>
+      {showToggle && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="gap-1"
+          onClick={onToggle}
+          aria-expanded={open}
+        >
+          {open ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
+        </Button>
+      )}
       {open && (
-        <div className="mt-3 space-y-2">
+        <div className={`space-y-2 ${showToggle ? "mt-3" : ""}`}>
           {effLat != null && effLng != null ? (
             <div className="overflow-hidden rounded-xl">
               <AnnouncementMap key={annId} lat={effLat} lng={effLng} address={address ?? undefined} height={280} />
