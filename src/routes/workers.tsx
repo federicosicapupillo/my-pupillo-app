@@ -789,7 +789,7 @@ function WorkersPage() {
           }
           onInvite={(workerId) => { const w = workers.find((x) => x.id === workerId); if (w) openProposalDialog(w); }}
           inviteDisabled={!selected}
-          inviteLabel={selected ? "Messaggia" : "Seleziona annuncio"}
+          inviteLabel={selected ? "Invia proposta" : "Seleziona annuncio"}
         />
       ) : (
       <div className="space-y-6">
