@@ -88,6 +88,9 @@ function ShiftsPage() {
   const [dialogWouldRehire, setDialogWouldRehire] = useState<WouldRehireValue>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
+  const [noShowDialog, setNoShowDialog] = useState<Shift | null>(null);
+  const [noShowNotes, setNoShowNotes] = useState("");
+  const [noShowSubmitting, setNoShowSubmitting] = useState(false);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
@@ -614,7 +617,7 @@ function ShiftsPage() {
                         <Button size="sm" onClick={() => updateStatus(s, "completed")} className="gap-1">
                           <CheckCircle2 className="h-4 w-4" /> Completato
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => updateStatus(s, "no_show")} className="gap-1">
+                        <Button size="sm" variant="outline" onClick={() => { setNoShowDialog(s); setNoShowNotes(""); }} className="gap-1">
                           <AlertTriangle className="h-4 w-4" /> No-show
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => updateStatus(s, "cancelled")} className="gap-1">
