@@ -18,7 +18,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
-import { formatTariff } from "@/lib/format";
+import { formatTariff, formatTotalService, computeDurationHours } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
 import { formatCandidateName, loadCollaboratedWorkerIds } from "@/lib/candidate-display";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
@@ -479,6 +479,38 @@ function AnnouncementsPage() {
     );
   };
 
+function AnnouncementCostBox({ ann }: { ann: Ann }) {
+  const durationHours = ann.shift_duration_hours ?? ann.duration_hours;
+  const computedDuration = computeDurationHours(ann.service_time, ann.end_time);
+  const finalDuration = computedDuration ?? durationHours;
+  const totalDisplay = formatTotalService(ann.tariff_amount, ann.tariff_type, finalDuration, ann.service_time, ann.end_time);
+  if (!totalDisplay) {
+    return (
+      <div className="mt-3 inline-flex flex-col items-center gap-0.5 rounded-2xl bg-muted px-4 py-2.5 ring-1 ring-border">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Costo servizio</span>
+        <span className="text-sm font-semibold text-muted-foreground">Costo non disponibile</span>
+        <span className="text-[10px] text-muted-foreground">{formatTariff(ann.tariff_amount, ann.tariff_type)}</span>
+      </div>
+    );
+  }
+  const hourlyRate = ann.tariff_type === "hourly" ? ann.tariff_amount : null;
+  return (
+    <div className="mt-3 inline-flex flex-col items-center gap-0.5 rounded-2xl bg-primary/10 px-5 py-3 ring-1 ring-primary/30 max-w-[200px]">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">Costo servizio</span>
+      <div className="flex items-center gap-1">
+        <Euro className="h-5 w-5 text-primary" />
+        <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">{totalDisplay}</span>
+      </div>
+      {hourlyRate != null && finalDuration != null && (
+        <span className="text-[10px] text-primary/70">
+          Calcolato su €{hourlyRate}/ora × {Number.isInteger(finalDuration) ? String(finalDuration) : finalDuration.toFixed(1).replace(/\.?0+$/, "")}h
+        </span>
+      )}
+      <span className="text-[10px] text-primary/50">Questo è l&apos;importo previsto per il lavoratore.</span>
+    </div>
+  );
+}
+
   const renderCard = (a: Ann) => {
     const effOuter = computeEffectiveStatus(a, now);
     const isExpired = effOuter.kind === "expired" || effOuter.kind === "cancelled";
@@ -612,6 +644,9 @@ function AnnouncementsPage() {
             );
           })()}
         </div>
+        {role === "restaurant" && (
+          <AnnouncementCostBox ann={a} />
+        )}
         {(() => {
         const canSeePrecise = role === "restaurant" || (!!user && a.assigned_worker_id === user.id);
         const zoneLabel = publicLocationLabel({ job_city: a.job_city });
