@@ -1638,6 +1638,7 @@ function Thread() {
                   {transitioning === "accepted" ? "Conferma in corso…" : "Accetta candidatura"}
                 </Button>
               </div>
+              <PayOnHireBox className="mt-3" compact />
             </div>
           );
         })()}
