@@ -20,6 +20,7 @@ import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
+import { formatCandidateName, loadCollaboratedWorkerIds } from "@/lib/candidate-display";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useRequiredReviews } from "@/lib/required-reviews";
@@ -290,6 +291,8 @@ function AnnouncementsPage() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
   const [assigned, setAssigned] = useState<Record<string, AssignedInfo>>({});
+  const [collaboratedWorkerIds, setCollaboratedWorkerIds] = useState<Set<string>>(() => new Set());
+  const [selectedAnnId, setSelectedAnnId] = useState<string | null>(null);
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
   const [republishOpen, setRepublishOpen] = useState(false);
   const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
