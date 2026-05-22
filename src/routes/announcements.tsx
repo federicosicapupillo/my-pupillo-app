@@ -706,15 +706,22 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         );
         })()}
         {role === "restaurant" && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 mt-3"
-            onClick={() => openDetails(a)}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            Vedi riepilogo annuncio
-          </Button>
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => openDetails(a)}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Vedi riepilogo annuncio
+              </Button>
+            </div>
+            <div className="flex justify-end sm:justify-start sm:ml-auto">
+              <AnnouncementCostBox ann={a} />
+            </div>
+          </div>
         )}
         {role === "restaurant" && a.status !== "active" && (() => {
           const eff = computeEffectiveStatus(a, now);
@@ -882,13 +889,6 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
             </Link>
           )}
         </div>
-        {role === "restaurant" && (
-          <div className="mt-4 flex justify-end">
-            <div className="w-full sm:w-auto">
-              <AnnouncementCostBox ann={a} />
-            </div>
-          </div>
-        )}
       </div>
     );
   };
