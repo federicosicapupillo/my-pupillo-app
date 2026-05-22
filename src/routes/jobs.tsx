@@ -694,7 +694,6 @@ function OfferCard({
               Totale servizio
             </span>
             <div className="flex items-center gap-1">
-              <Euro className="h-5 w-5 text-primary" />
               <span className="text-2xl font-extrabold tracking-tight text-primary tabular-nums">
                 {totalDisplay}
               </span>
