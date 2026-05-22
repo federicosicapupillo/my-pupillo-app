@@ -1,3 +1,4 @@
+import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
@@ -1638,6 +1639,7 @@ function Thread() {
                   {transitioning === "accepted" ? "Conferma in corso…" : "Accetta candidatura"}
                 </Button>
               </div>
+              <PayOnHireBox className="mt-3" compact />
             </div>
           );
         })()}

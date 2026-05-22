@@ -1,3 +1,4 @@
+import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
@@ -201,6 +202,8 @@ function Billing() {
   return (
     <AppShell>
       <PageHeader title="Crediti e piano" subtitle="Gestisci il saldo crediti e il piano del tuo locale" />
+
+      <PayOnHireBox className="mb-6" />
 
       {syncingPayment && (
         <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
