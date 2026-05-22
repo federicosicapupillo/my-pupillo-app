@@ -258,7 +258,6 @@ function DashboardInner() {
       <ProfileStatusBanner />
       {role === "restaurant" && <RequiredReviewsBanner />}
 
-      {role === "restaurant" && <PayOnHireBox className="mb-6" />}
 
       {role === "restaurant" && profile && (
         <div className="mb-6 rounded-2xl border bg-card p-5 flex items-start gap-4">
