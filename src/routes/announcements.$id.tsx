@@ -286,7 +286,50 @@ function AnnouncementDetail() {
     await supabase.from("announcements")
       .update({ status: "assigned", assigned_worker_id: app.worker_id })
       .eq("id", id);
+    // The slot is now covered (Pupillo's announcement model is single-worker):
+    // auto-close every still-open application for this announcement with a
+    // neutral notice — no rejection wording, no info about who was picked.
+    try {
+      const { data: others } = await supabase
+        .from("applications")
+        .select("id, worker_id")
+        .eq("announcement_id", id!)
+        .neq("id", app.id)
+        .in("status", ["pending", "interested", "counter_offer"]);
+      const otherList = (others ?? []) as { id: string; worker_id: string }[];
+      if (otherList.length) {
+        const otherIds = otherList.map((o) => o.id);
+        await supabase
+          .from("applications")
+          .update({ status: "rejected" })
+          .in("id", otherIds);
+        // Neutral notification + neutral chat system message per candidate.
+        const NEUTRAL_BODY = "Questo turno è già stato assegnato a un altro lavoratore. Continua a candidarti alle nuove offerte disponibili.";
+        const CHAT_BODY = "Turno assegnato a un altro lavoratore.";
+        await Promise.all(otherList.map(async (o) => {
+          try {
+            await supabase.from("notifications").insert({
+              user_id: o.worker_id,
+              title: "Turno assegnato",
+              body: NEUTRAL_BODY,
+              link: `/messages/${o.id}`,
+            });
+          } catch (e) { console.error("[accept] notify other failed", e); }
+          try {
+            await supabase.from("messages").insert({
+              application_id: o.id,
+              sender_id: user!.id,
+              receiver_id: o.worker_id,
+              body: CHAT_BODY,
+              message_type: "system",
+              action_type: "slot_taken",
+            } as never);
+          } catch (e) { console.error("[accept] system msg failed", e); }
+        }));
+      }
+    } catch (e) { console.error("[accept] auto-close failed", e); }
     toast.success("Lavoratore assegnato!");
+    load();
   };
   const reject = async (app: App) => {
     setBusyId(app.id);
