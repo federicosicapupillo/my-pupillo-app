@@ -188,8 +188,11 @@ function AnnouncementDetail() {
           const n = p.new as App;
           if (isOwnerNow) {
             // fetch worker name for nicer toast
-            const { data: w } = await supabase.from("profiles").select("full_name").eq("id", n.worker_id).maybeSingle();
-            const who = (w as any)?.full_name || "Un lavoratore";
+            const { data: w } = await supabase.from("profiles").select("first_name, full_name").eq("id", n.worker_id).maybeSingle();
+            const ww: any = w ?? {};
+            const who = (ww.first_name && String(ww.first_name).trim())
+              || (ww.full_name ? String(ww.full_name).trim().split(/\s+/)[0] : "")
+              || "Un lavoratore";
             toast.success("Nuova candidatura", { description: `${who} si è candidato per questo annuncio.` });
           }
           load();
@@ -199,8 +202,14 @@ function AnnouncementDetail() {
           const oldA = p.old as App;
           const newA = p.new as App;
           if (isOwnerNow && oldA.status !== newA.status) {
-            const { data: w } = await supabase.from("profiles").select("full_name").eq("id", newA.worker_id).maybeSingle();
-            const who = (w as any)?.full_name || "Lavoratore";
+            const { data: w } = await supabase.from("profiles").select("first_name, full_name").eq("id", newA.worker_id).maybeSingle();
+            const ww: any = w ?? {};
+            // After "accepted" the restaurant is allowed to see the full name.
+            const allowFull = newA.status === "accepted";
+            const firstOnly = (ww.first_name && String(ww.first_name).trim())
+              || (ww.full_name ? String(ww.full_name).trim().split(/\s+/)[0] : "")
+              || "Lavoratore";
+            const who = allowFull ? ((ww.full_name && String(ww.full_name).trim()) || firstOnly) : firstOnly;
             const label = ({
               interested: `${who}: interessato`,
               counter_offer: `${who}: controfferta ricevuta`,

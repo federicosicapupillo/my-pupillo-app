@@ -1082,7 +1082,12 @@ function Thread() {
       try { await insertSystemMessage("Il lavoratore ha annullato la candidatura per il turno.", "withdraw_application"); } catch (e) { console.error(e); }
       if (app.restaurant_id) {
         try {
-          const workerName = profile?.full_name ?? "Un lavoratore";
+          // Privacy: notify the restaurant using the worker's first name only.
+          const fn = (profile as any)?.first_name;
+          const firstName = (fn && String(fn).trim())
+            || (profile?.full_name ? String(profile.full_name).trim().split(/\s+/)[0] : "")
+            || "Un lavoratore";
+          const workerName = firstName;
           await supabase.from("notifications").insert({
             user_id: app.restaurant_id,
             title: "Candidatura annullata",
