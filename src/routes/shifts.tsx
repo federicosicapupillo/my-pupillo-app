@@ -105,6 +105,11 @@ function ShiftsPage() {
   const [noShowDialog, setNoShowDialog] = useState<Shift | null>(null);
   const [noShowNotes, setNoShowNotes] = useState("");
   const [noShowSubmitting, setNoShowSubmitting] = useState(false);
+  const [notEndedDialog, setNotEndedDialog] = useState<Shift | null>(null);
+  const [cancelDialog, setCancelDialog] = useState<Shift | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
@@ -205,6 +210,90 @@ function ShiftsPage() {
     const { error } = await supabase.from("shifts").update({ status: newStatus }).eq("id", s.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Stato turno aggiornato");
+  };
+
+  /** Returns true when the scheduled end of the shift is still in the future. */
+  const isShiftNotEnded = (s: Shift): boolean => {
+    const ann = announcementsMap[s.announcement_id || ""];
+    const end = getShiftEndDate({
+      service_date: ann?.service_date ?? s.shift_date,
+      service_time: ann?.service_time ?? null,
+      end_time: ann?.end_time ?? null,
+      shift_duration_hours: ann?.shift_duration_hours ?? null,
+      duration_hours: ann?.duration_hours ?? s.hours ?? null,
+    });
+    if (!end) return false;
+    return Date.now() < end.getTime();
+  };
+
+  const handleCloseShift = (s: Shift) => {
+    if (isShiftNotEnded(s)) {
+      setNotEndedDialog(s);
+      return;
+    }
+    updateStatus(s, "completed");
+  };
+
+  const openCancelDialog = (s: Shift) => {
+    setCancelReason("");
+    setCancelError(null);
+    setCancelDialog(s);
+  };
+
+  const confirmCancel = async () => {
+    const s = cancelDialog;
+    if (!s || !user) return;
+    const reason = cancelReason.trim();
+    if (reason.length < 10) {
+      setCancelError("Inserisci una motivazione di almeno 10 caratteri.");
+      return;
+    }
+    setCancelSubmitting(true);
+    setCancelError(null);
+    try {
+      const { error } = await supabase.from("shifts").update({ status: "cancelled" }).eq("id", s.id);
+      if (error) {
+        toast.error(error.message);
+        setCancelError(error.message);
+        setCancelSubmitting(false);
+        return;
+      }
+      // Notify worker (worker-side label: "Servizio annullato")
+      const appId = s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null;
+      const notifBody = `Il servizio è stato annullato dal ristoratore.\n\nMotivazione:\n${reason}`;
+      supabase.from("notifications").insert({
+        user_id: s.worker_id,
+        title: "Servizio annullato",
+        body: notifBody,
+        link: appId ? `/messages/${appId}` : `/shifts?shift=${s.id}`,
+        metadata: { shift_id: s.id, reason, kind: "shift_cancelled" },
+      } as never).then(() => {}, () => {});
+      // System message in chat if a conversation exists
+      if (appId) {
+        const chatBody = `Il ristoratore ha annullato il servizio.\n\nMotivazione:\n${reason}`;
+        supabase.from("messages").insert({
+          application_id: appId,
+          sender_id: user.id,
+          receiver_id: s.worker_id,
+          body: chatBody,
+          message_type: "system",
+          template_id: "shift_cancelled",
+        } as never).then(() => {}, () => {});
+      }
+      supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: "shift_cancelled_by_restaurant",
+        entity_type: "shift",
+        entity_id: s.id,
+        metadata: { shift_id: s.id, worker_id: s.worker_id, reason },
+      } as never).then(() => {}, () => {});
+      toast.success("Servizio annullato. Il lavoratore è stato avvisato.");
+      setShifts(prev => prev.map(x => x.id === s.id ? { ...x, status: "cancelled" as const } : x));
+      setCancelDialog(null);
+      setCancelReason("");
+    } finally {
+      setCancelSubmitting(false);
+    }
   };
 
   const submitReview = async (s: Shift) => {
@@ -638,13 +727,13 @@ function ShiftsPage() {
                     )}
                     {canRestaurantAct && (
                       <>
-                        <Button size="sm" onClick={() => updateStatus(s, "completed")} className="gap-1">
+                        <Button size="sm" onClick={() => handleCloseShift(s)} className="gap-1">
                           <CheckCircle2 className="h-4 w-4" /> Completato
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => { setNoShowDialog(s); setNoShowNotes(""); }} className="gap-1">
                           <AlertTriangle className="h-4 w-4" /> No-show
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => updateStatus(s, "cancelled")} className="gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openCancelDialog(s)} className="gap-1">
                           <XCircle className="h-4 w-4" /> Annulla
                         </Button>
                       </>
@@ -956,6 +1045,86 @@ function ShiftsPage() {
             >
               {noShowSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Conferma segnalazione
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!notEndedDialog} onOpenChange={(open) => { if (!open) setNotEndedDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Il turno non è ancora terminato</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>Questo turno risulta ancora in corso o non ancora concluso.</p>
+            <p>Potrai chiuderlo solo al termine dell'orario previsto del servizio.</p>
+            <p>Se ci sono problemi con il lavoratore, puoi usare le azioni disponibili come "No show" o contattare l'assistenza Pupillo.</p>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => setNotEndedDialog(null)}>Ho capito</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!cancelDialog}
+        onOpenChange={(open) => {
+          if (!open && !cancelSubmitting) {
+            setCancelDialog(null);
+            setCancelReason("");
+            setCancelError(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confermi l'annullamento del servizio?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>Stai annullando un turno già assegnato.</p>
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-400">
+              L'annullamento non prevede alcun rimborso dei crediti o dei costi già sostenuti.
+            </p>
+            <p>Per correttezza verso il lavoratore, devi indicare una motivazione. La motivazione sarà inviata al lavoratore insieme alla comunicazione di annullamento.</p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">
+              Motivo dell'annullamento <span className="text-destructive">*</span>
+            </label>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => { setCancelReason(e.target.value); if (cancelError) setCancelError(null); }}
+              placeholder="Scrivi il motivo dell'annullamento del servizio..."
+              rows={4}
+              maxLength={1000}
+              disabled={cancelSubmitting}
+            />
+            <div className="text-xs text-muted-foreground">
+              Minimo 10 caratteri ({cancelReason.trim().length}/10).
+            </div>
+          </div>
+          {cancelError && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="flex-1">{cancelError}</div>
+            </div>
+          )}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => { setCancelDialog(null); setCancelReason(""); setCancelError(null); }}
+              disabled={cancelSubmitting}
+            >
+              Torna indietro
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmCancel}
+              disabled={cancelSubmitting || cancelReason.trim().length < 10}
+              className="gap-1"
+            >
+              {cancelSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Conferma annullamento
             </Button>
           </div>
         </DialogContent>
