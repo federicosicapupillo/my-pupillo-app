@@ -727,13 +727,13 @@ function ShiftsPage() {
                     )}
                     {canRestaurantAct && (
                       <>
-                        <Button size="sm" onClick={() => updateStatus(s, "completed")} className="gap-1">
+                        <Button size="sm" onClick={() => handleCloseShift(s)} className="gap-1">
                           <CheckCircle2 className="h-4 w-4" /> Completato
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => { setNoShowDialog(s); setNoShowNotes(""); }} className="gap-1">
                           <AlertTriangle className="h-4 w-4" /> No-show
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => updateStatus(s, "cancelled")} className="gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openCancelDialog(s)} className="gap-1">
                           <XCircle className="h-4 w-4" /> Annulla
                         </Button>
                       </>
