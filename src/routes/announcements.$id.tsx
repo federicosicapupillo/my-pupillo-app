@@ -633,9 +633,16 @@ function AnnouncementDetail() {
                           <div className="text-[10px] text-primary mt-1">Vedi scheda lavoratore →</div>
                         </div>
                       </Link>
-                      <Badge variant="outline" className={APP_STATUS_CLS[a.status] ?? ""}>
-                        {APP_STATUS_LABEL[a.status] ?? a.status}
-                      </Badge>
+                      {(() => {
+                        const slotTaken = isSlotTakenByOther(a, ann);
+                        const cls = slotTaken ? SLOT_TAKEN_CLS : (APP_STATUS_CLS[a.status] ?? "");
+                        const label = slotTaken ? SLOT_TAKEN_LABEL : (APP_STATUS_LABEL[a.status] ?? a.status);
+                        return (
+                          <Badge variant="outline" className={cls}>
+                            {label}
+                          </Badge>
+                        );
+                      })()}
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
