@@ -977,16 +977,9 @@ function Thread() {
           last_message_preview: "Proposta accettata · dettagli operativi sbloccati",
           last_message_at: createdAt,
         } as never).eq("id", app.id);
-        if (role === "restaurant") {
-          // When the worker accepts, the proposal handler already notifies
-          // the restaurant — avoid duplicate notifications in that path.
-          await supabase.from("notifications").insert({
-            user_id: receiverId,
-            title: "Candidatura accettata",
-            body: `Il ristoratore ha confermato la tua presenza per il turno${ann?.service_date ? ` del ${formatDateIT(ann.service_date)}` : ""}.`,
-            link: `/messages/${app.id}`,
-          } as never);
-        }
+        // Worker notification is emitted by the DB trigger
+        // `notify_application_status_change` to guarantee a single
+        // "Candidatura confermata" message regardless of UI path.
       } catch (e) {
         console.error("[accept] confirmation message failed", e);
       }
