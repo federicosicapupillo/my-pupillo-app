@@ -755,7 +755,36 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         <div className="mt-3">
           {role === "restaurant" ? (
             <>
-              {(candidates[a.id]?.length ?? 0) > 0 && (
+              {(() => {
+                const list = candidates[a.id] ?? [];
+                const total = list.length;
+                const sentCount = list.filter((c) => {
+                  const ps = deriveProposalStatus(a, c);
+                  return ps === "accepted" || ps === "confirmed" || ps === "completed" || ps === "review_pending" || ps === "review_sent";
+                }).length;
+                const receivedCount = total - sentCount;
+                const isOpen = !!openCandidates[a.id];
+                const hasBoth = sentCount > 0 && receivedCount > 0;
+                const baseLabel = hasBoth ? "candidati e offerte" : "candidati";
+                return (
+                  <div className="mb-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={isOpen ? "outline" : "default"}
+                      className="gap-1"
+                      onClick={() => setOpenCandidates((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
+                      aria-expanded={isOpen}
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      {isOpen ? `Nascondi ${baseLabel}` : `Vedi ${baseLabel}`}
+                      {total > 0 && ` (${total})`}
+                      {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                );
+              })()}
+              {openCandidates[a.id] && (candidates[a.id]?.length ?? 0) > 0 && (
                 <div className="mb-3 rounded-xl border bg-muted/30 p-3">
                   <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <Send className="h-3.5 w-3.5" />
@@ -819,11 +848,12 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                   </ul>
                 </div>
               )}
+              {openCandidates[a.id] && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="default" className="gap-1">
+                  <Button size="sm" variant="outline" className="gap-1">
                     <Users className="h-3.5 w-3.5" />
-                    Vedi candidature{counts[a.id] ? ` (${counts[a.id]})` : ""}
+                    Invia proposta a un candidato{counts[a.id] ? ` (${counts[a.id]})` : ""}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)] z-50">
@@ -897,6 +927,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+              )}
             </>
           ) : (
             <Link to="/announcements/$id" params={{ id: a.id }}>
