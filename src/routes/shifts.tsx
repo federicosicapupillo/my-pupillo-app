@@ -212,6 +212,90 @@ function ShiftsPage() {
     toast.success("Stato turno aggiornato");
   };
 
+  /** Returns true when the scheduled end of the shift is still in the future. */
+  const isShiftNotEnded = (s: Shift): boolean => {
+    const ann = announcementsMap[s.announcement_id || ""];
+    const end = getShiftEndDate({
+      service_date: ann?.service_date ?? s.shift_date,
+      service_time: ann?.service_time ?? null,
+      end_time: ann?.end_time ?? null,
+      shift_duration_hours: ann?.shift_duration_hours ?? null,
+      duration_hours: ann?.duration_hours ?? s.hours ?? null,
+    });
+    if (!end) return false;
+    return Date.now() < end.getTime();
+  };
+
+  const handleCloseShift = (s: Shift) => {
+    if (isShiftNotEnded(s)) {
+      setNotEndedDialog(s);
+      return;
+    }
+    updateStatus(s, "completed");
+  };
+
+  const openCancelDialog = (s: Shift) => {
+    setCancelReason("");
+    setCancelError(null);
+    setCancelDialog(s);
+  };
+
+  const confirmCancel = async () => {
+    const s = cancelDialog;
+    if (!s || !user) return;
+    const reason = cancelReason.trim();
+    if (reason.length < 10) {
+      setCancelError("Inserisci una motivazione di almeno 10 caratteri.");
+      return;
+    }
+    setCancelSubmitting(true);
+    setCancelError(null);
+    try {
+      const { error } = await supabase.from("shifts").update({ status: "cancelled" }).eq("id", s.id);
+      if (error) {
+        toast.error(error.message);
+        setCancelError(error.message);
+        setCancelSubmitting(false);
+        return;
+      }
+      // Notify worker (worker-side label: "Servizio annullato")
+      const appId = s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null;
+      const notifBody = `Il servizio è stato annullato dal ristoratore.\n\nMotivazione:\n${reason}`;
+      supabase.from("notifications").insert({
+        user_id: s.worker_id,
+        title: "Servizio annullato",
+        body: notifBody,
+        link: appId ? `/messages/${appId}` : `/shifts?shift=${s.id}`,
+        metadata: { shift_id: s.id, reason, kind: "shift_cancelled" },
+      } as never).then(() => {}, () => {});
+      // System message in chat if a conversation exists
+      if (appId) {
+        const chatBody = `Il ristoratore ha annullato il servizio.\n\nMotivazione:\n${reason}`;
+        supabase.from("messages").insert({
+          application_id: appId,
+          sender_id: user.id,
+          receiver_id: s.worker_id,
+          body: chatBody,
+          message_type: "system",
+          template_id: "shift_cancelled",
+        } as never).then(() => {}, () => {});
+      }
+      supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: "shift_cancelled_by_restaurant",
+        entity_type: "shift",
+        entity_id: s.id,
+        metadata: { shift_id: s.id, worker_id: s.worker_id, reason },
+      } as never).then(() => {}, () => {});
+      toast.success("Servizio annullato. Il lavoratore è stato avvisato.");
+      setShifts(prev => prev.map(x => x.id === s.id ? { ...x, status: "cancelled" as const } : x));
+      setCancelDialog(null);
+      setCancelReason("");
+    } finally {
+      setCancelSubmitting(false);
+    }
+  };
+
   const submitReview = async (s: Shift) => {
     if (!user) return;
     if (submittingReview) return;
