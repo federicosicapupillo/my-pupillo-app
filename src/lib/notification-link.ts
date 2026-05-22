@@ -79,47 +79,19 @@ export async function navigateFromNotificationLink(
     if (parts.length === 2 && parts[0] === "messages") {
       const id = seg(1);
       if (!isValidId(id)) return fallback();
-      // Worker-specific routing: when a notification points to an application
-      // chat AND the application has been accepted, the operational page for
-      // the worker is "I miei turni" with the assigned shift highlighted —
-      // not the chat. This fixes the "page didn't load" error when the chat
-      // route is not reachable for the worker post-acceptance.
+      // For both worker and restaurant, the notification destination is the
+      // chat thread. Validate visibility first to avoid a 404; if the chat
+      // is not reachable (e.g. RLS denies access), fall back to a safe page.
       if (role === "worker") {
         try {
           const { data: appRow } = await supabase
             .from("applications")
-            .select("id, status, worker_id, announcement_id")
+            .select("id")
             .eq("id", id)
             .maybeSingle();
-          const a = appRow as
-            | { id: string; status: string; worker_id: string; announcement_id: string | null }
-            | null;
-          if (!a) {
-            // Application not visible to this worker → soft fallback.
-            return navigate({ to: "/shifts" });
-          }
-          if (a.status === "accepted" && a.announcement_id) {
-            // Find the assigned shift for this worker/announcement.
-            const { data: shiftRow } = await supabase
-              .from("shifts")
-              .select("id")
-              .eq("announcement_id", a.announcement_id)
-              .eq("worker_id", a.worker_id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            const shiftId = (shiftRow as { id?: string } | null)?.id;
-            if (isValidId(shiftId)) {
-              return navigate({
-                to: "/shifts",
-                search: { shift: shiftId } as never,
-              });
-            }
-            // No shift yet → go to "I miei turni" with the assigned filter.
-            return navigate({ to: "/shifts" });
-          }
+          if (!appRow) return navigate({ to: "/shifts" });
         } catch {
-          /* fall through to the chat route */
+          return navigate({ to: "/shifts" });
         }
       }
       return navigate({ to: "/messages/$id", params: { id } });

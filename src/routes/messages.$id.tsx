@@ -977,16 +977,9 @@ function Thread() {
           last_message_preview: "Proposta accettata · dettagli operativi sbloccati",
           last_message_at: createdAt,
         } as never).eq("id", app.id);
-        if (role === "restaurant") {
-          // When the worker accepts, the proposal handler already notifies
-          // the restaurant — avoid duplicate notifications in that path.
-          await supabase.from("notifications").insert({
-            user_id: receiverId,
-            title: "Candidatura accettata",
-            body: `Il ristoratore ha confermato la tua presenza per il turno${ann?.service_date ? ` del ${formatDateIT(ann.service_date)}` : ""}.`,
-            link: `/messages/${app.id}`,
-          } as never);
-        }
+        // Worker notification is emitted by the DB trigger
+        // `notify_application_status_change` to guarantee a single
+        // "Candidatura confermata" message regardless of UI path.
       } catch (e) {
         console.error("[accept] confirmation message failed", e);
       }
@@ -1874,7 +1867,7 @@ function Thread() {
                     if (!user || !app) return;
                     const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
                     if (!receiverId) return;
-                    const body = "Ho letto e confermo la presa visione di tutte le istruzioni del turno.";
+                    const body = "Hai confermato di aver letto le istruzioni del servizio.";
                     const createdAt = new Date().toISOString();
                     const { data, error } = await supabase.from("messages").insert({
                       application_id: app.id,
@@ -1896,7 +1889,18 @@ function Thread() {
                       last_message_preview: body,
                       last_message_at: createdAt,
                     } as never).eq("id", app.id);
-                    toast.success("Presa visione confermata");
+                    toast.success("Istruzioni confermate");
+                    // Notify the restaurant that the worker has read the instructions.
+                    try {
+                      await supabase.from("notifications").insert({
+                        user_id: receiverId,
+                        title: "Istruzioni confermate",
+                        body: "Il lavoratore ha confermato la lettura delle istruzioni del servizio.",
+                        link: `/messages/${app.id}`,
+                      } as never);
+                    } catch (e) {
+                      console.error("[ack] notify restaurant failed", e);
+                    }
                   }}
                 />
               );
@@ -3182,12 +3186,14 @@ function ConfirmationCard(props: {
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase tracking-wide">
               <Check className="h-3 w-3" />Confermato
             </span>
-            <h4 className="font-bold text-sm">Candidatura accettata</h4>
+            <h4 className="font-bold text-sm">Candidatura confermata</h4>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {isWorker
-              ? "Il ristoratore ha confermato la tua presenza per questo turno."
-              : "Hai confermato il lavoratore. Riceverà tutti i dettagli del turno."}
+              ? "Il ristoratore ha confermato la tua candidatura per questo servizio. Leggi attentamente le istruzioni operative prima del turno: sono informazioni importanti per presentarti nel modo corretto."
+              : (acknowledged
+                  ? "Il lavoratore ha confermato la lettura delle istruzioni."
+                  : "In attesa di conferma lettura istruzioni da parte del lavoratore.")}
           </p>
         </div>
         <dl className="px-4 py-3 space-y-2 text-sm">
@@ -3243,7 +3249,7 @@ function ConfirmationCard(props: {
         {acknowledged && (
           <div className="mx-4 mb-3 flex items-center justify-center gap-2 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
             <BadgeCheck className="h-5 w-5" />
-            Presa visione confermata
+            Istruzioni confermate
           </div>
         )}
         <div className="px-4 py-4 border-t bg-secondary/20 flex flex-col gap-3">
@@ -3261,7 +3267,7 @@ function ConfirmationCard(props: {
               {acknowledged ? (
                 <>
                   <BadgeCheck className="h-5 w-5" />
-                  Presa visione confermata
+                  Istruzioni confermate
                 </>
               ) : ackBusy ? (
                 <>
@@ -3271,7 +3277,7 @@ function ConfirmationCard(props: {
               ) : (
                 <>
                   <Check className="h-5 w-5" />
-                  Confermo di aver letto le istruzioni
+                  Ho letto e confermo le istruzioni
                 </>
               )}
             </Button>
