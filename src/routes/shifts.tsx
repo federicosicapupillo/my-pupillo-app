@@ -438,12 +438,13 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["all", "upcoming", "assigned", "past", "to-review"] as const).map(f => {
+        {(["assigned", "upcoming", "completed", "to-review", "no_show", "past"] as const).map(f => {
           const label =
-            f === "all" ? `Tutti (${counts.all})`
+            f === "assigned" ? `Assegnati (${counts.assigned})`
             : f === "upcoming" ? `In attesa (${counts.pending})`
-            : f === "assigned" ? `Assegnati (${counts.assigned})`
-            : f === "past" ? `Passati (${counts.past})`
+            : f === "completed" ? `Completati (${counts.completed})`
+            : f === "past" ? `Archiviati / Passati (${counts.past})`
+            : f === "no_show" ? `No show / Segnalazioni (${counts.noShow})`
             : `Da recensire (${counts.toReview})`;
           return (
             <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
@@ -518,7 +519,7 @@ function ShiftsPage() {
 
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : (
         <>
-          {role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0 && (
+          {role === "restaurant" && filter === "upcoming" && pendingApps.length > 0 && (
             <div className="space-y-3 mb-3">
               {pendingApps.map(a => {
                 const w = profiles[a.worker_id];
@@ -551,7 +552,7 @@ function ShiftsPage() {
               })}
             </div>
           )}
-          {displayShifts.length === 0 && !(role === "restaurant" && (filter === "all" || filter === "upcoming") && pendingApps.length > 0) ? (
+          {displayShifts.length === 0 && !(role === "restaurant" && filter === "upcoming" && pendingApps.length > 0) ? (
         <div className="rounded-2xl border bg-card p-8 text-center">
           <CalendarClock className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
           <p className="text-muted-foreground">
