@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send } from "lucide-react";
@@ -20,6 +20,7 @@ import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { formatTariff } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
+import { formatCandidateName, loadCollaboratedWorkerIds } from "@/lib/candidate-display";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useRequiredReviews } from "@/lib/required-reviews";
@@ -290,6 +291,8 @@ function AnnouncementsPage() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
   const [assigned, setAssigned] = useState<Record<string, AssignedInfo>>({});
+  const [collaboratedWorkerIds, setCollaboratedWorkerIds] = useState<Set<string>>(() => new Set());
+  const [selectedAnnId, setSelectedAnnId] = useState<string | null>(null);
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
   const [republishOpen, setRepublishOpen] = useState(false);
   const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
@@ -324,6 +327,7 @@ function AnnouncementsPage() {
       });
       setItems(list);
       if (role === "restaurant" && list.length) {
+        loadCollaboratedWorkerIds(user.id).then(setCollaboratedWorkerIds).catch(() => {});
         const ids = list.map(a => a.id);
         const { data: apps } = await supabase
           .from("applications")
@@ -419,10 +423,65 @@ function AnnouncementsPage() {
   const upcoming = statusFilter === "all" ? filtered.filter(a => !isPastKind(computeEffectiveStatus(a, now).kind)) : filtered;
   const past = statusFilter === "all" ? filtered.filter(a => isPastKind(computeEffectiveStatus(a, now).kind)) : [];
 
+  // Default-select the first item so the right pane is never empty on desktop.
+  useEffect(() => {
+    if (role !== "restaurant") return;
+    const flat = [...upcoming, ...past];
+    if (!flat.length) { if (selectedAnnId) setSelectedAnnId(null); return; }
+    if (!selectedAnnId || !flat.some((x) => x.id === selectedAnnId)) {
+      setSelectedAnnId(flat[0].id);
+    }
+  }, [role, items, statusFilter]);
+
+  const selectedAnn = role === "restaurant" ? items.find((x) => x.id === selectedAnnId) ?? null : null;
+
   const openDetails = (a: Ann) => { setDetailsAnn(a); setDetailsOpen(true); };
   const handleAnnUpdated = (updated: Ann) => {
     setItems((prev) => prev.map((x) => x.id === updated.id ? { ...x, ...updated } : x));
     setDetailsAnn((prev) => prev && prev.id === updated.id ? { ...prev, ...updated } : prev);
+  };
+
+  const renderCompactItem = (a: Ann) => {
+    const eff = computeEffectiveStatus(a, now);
+    const isSelected = selectedAnnId === a.id;
+    const candCount = counts[a.id] ?? 0;
+    return (
+      <button
+        type="button"
+        key={a.id}
+        onClick={() => setSelectedAnnId((cur) => (cur === a.id ? null : a.id))}
+        aria-pressed={isSelected}
+        className={`group w-full text-left rounded-xl border p-3 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+          isSelected
+            ? "border-primary bg-primary/10 ring-1 ring-primary/40 shadow-[0_0_30px_-15px_oklch(var(--primary)/0.6)]"
+            : "border-border bg-card hover:border-primary/40 hover:bg-primary/[0.04]"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-foreground">
+              {a.professional_profile?.trim() || "Ruolo non specificato"}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              <span className="truncate">{formatRange(a)}</span>
+            </div>
+          </div>
+          <span className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 font-medium ${STATUS_CLS[eff.kind] ?? "bg-muted text-muted-foreground"}`}>
+            {STATUS_LABEL[eff.kind] ?? eff.kind}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${candCount > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+            <Users className="h-3 w-3" />
+            {candCount} candidat{candCount === 1 ? "o" : "i"}
+          </span>
+          {eff.countdown && (eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned") && (
+            <span className="truncate text-muted-foreground">{eff.countdown}</span>
+          )}
+        </div>
+      </button>
+    );
   };
 
   const renderCard = (a: Ann) => {
@@ -464,7 +523,10 @@ function AnnouncementsPage() {
                 <span>{stateLabel}</span>
               </div>
               <div className="mt-1 text-sm text-foreground">
-                Lavoratore: <span className="font-medium">{info.full_name || "Lavoratore"}</span>
+                Lavoratore: <span className="font-medium">{formatCandidateName(info.full_name, collaboratedWorkerIds.has(info.worker_id))}</span>
+                {collaboratedWorkerIds.has(info.worker_id) && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
+                )}
               </div>
               {hasReview && (
                 <div className="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
@@ -660,8 +722,11 @@ function AnnouncementsPage() {
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-sm font-semibold text-foreground truncate">
-                                  {c.full_name || "Lavoratore"}
+                                  {formatCandidateName(c.full_name, collaboratedWorkerIds.has(c.worker_id))}
                                 </span>
+                                {collaboratedWorkerIds.has(c.worker_id) && (
+                                  <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
+                                )}
                                 {c.rating_avg != null && (
                                   <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
                                     <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
@@ -748,7 +813,10 @@ function AnnouncementsPage() {
                         className={`flex flex-col items-start gap-0.5 ${msgDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${isAssigned ? "bg-green-50 dark:bg-green-950/30" : ""}`}
                       >
                         <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                          {c.full_name || "Lavoratore"}
+                          {formatCandidateName(c.full_name, collaboratedWorkerIds.has(c.worker_id))}
+                          {collaboratedWorkerIds.has(c.worker_id) && (
+                            <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
+                          )}
                           {isAssigned && (
                             <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 text-green-800 px-1.5 py-0.5 text-[10px] font-medium">
                               Assegnato
@@ -810,6 +878,68 @@ function AnnouncementsPage() {
         <div className="rounded-2xl border bg-card p-12 text-center">
           <p className="text-muted-foreground">Nessun annuncio.</p>
           {role === "restaurant" && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
+        </div>
+      ) : role === "restaurant" ? (
+        <div className="md:grid md:grid-cols-[320px_minmax(0,1fr)] md:gap-5 md:items-start">
+          {/* LEFT: compact list of announcements */}
+          <aside className="md:sticky md:top-4 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto md:pr-1">
+            {statusFilter === "all" ? (
+              <div className="space-y-5">
+                {upcoming.length > 0 && (
+                  <div>
+                    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-foreground">Attivi / in arrivo</h2>
+                    <div className="space-y-2">
+                      {upcoming.map((a) => (
+                        <Fragment key={a.id}>
+                          {renderCompactItem(a)}
+                          {selectedAnnId === a.id && (
+                            <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {past.length > 0 && (
+                  <div>
+                    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Scaduti / completati</h2>
+                    <div className="space-y-2">
+                      {past.map((a) => (
+                        <Fragment key={a.id}>
+                          {renderCompactItem(a)}
+                          {selectedAnnId === a.id && (
+                            <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {upcoming.map((a) => (
+                  <Fragment key={a.id}>
+                    {renderCompactItem(a)}
+                    {selectedAnnId === a.id && (
+                      <div className="md:hidden mt-2 mb-3">{renderCard(a)}</div>
+                    )}
+                  </Fragment>
+                ))}
+              </div>
+            )}
+          </aside>
+
+          {/* RIGHT: full detail (desktop only) */}
+          <section className="hidden md:block">
+            {selectedAnn ? (
+              renderCard(selectedAnn)
+            ) : (
+              <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
+                Seleziona un annuncio dalla lista per vederne i dettagli.
+              </div>
+            )}
+          </section>
         </div>
       ) : (
         <div className="space-y-6">
@@ -878,7 +1008,7 @@ function AnnouncementsPage() {
                   <div><span className="text-muted-foreground">Locale:</span> <span className="font-medium">{(profile as any).business_name}</span></div>
                 )}
                 <div><span className="text-muted-foreground">Indirizzo:</span> <span className="font-medium">{closeTarget.location_address || "—"}</span></div>
-                <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{info?.full_name || "Lavoratore"}</span></div>
+                <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{info ? formatCandidateName(info.full_name, collaboratedWorkerIds.has(info.worker_id)) : "Lavoratore"}</span></div>
                 <div><span className="text-muted-foreground">Stato:</span> <span className="font-medium">Da chiudere</span></div>
               </div>
             );
