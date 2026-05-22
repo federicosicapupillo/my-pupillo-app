@@ -1083,7 +1083,8 @@ function Thread() {
       if (app.restaurant_id) {
         try {
           // Privacy: notify the restaurant using the worker's first name only.
-          const firstName = (profile?.first_name && String(profile.first_name).trim())
+          const fn = (profile as any)?.first_name;
+          const firstName = (fn && String(fn).trim())
             || (profile?.full_name ? String(profile.full_name).trim().split(/\s+/)[0] : "")
             || "Un lavoratore";
           const workerName = firstName;
