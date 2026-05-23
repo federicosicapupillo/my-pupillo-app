@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import {
   Dialog,
@@ -54,21 +54,16 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
   const openGate = useCallback(() => setOpen(true), []);
 
   // Global route guard: when the user lands on an operative route with an
-  // incomplete profile, auto-open the dialog. The blocking placeholder is
-  // rendered by the per-route guard wrapper if needed; this just nudges.
+  // incomplete profile, auto-open the dialog and render a blocking overlay.
   const shouldGate =
     extrasLoaded &&
     (role === "worker" || role === "restaurant") &&
     !completion.isComplete &&
     isOperativePath(loc.pathname);
 
-  // Auto-open whenever shouldGate flips on (and route changes).
-  // Using a derived effect via key in state isn't necessary; render-time set is fine
-  // because setOpen only triggers an extra render when actually changing.
-  if (shouldGate && !open) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    queueMicrotask(() => setOpen(true));
-  }
+  useEffect(() => {
+    if (shouldGate) setOpen(true);
+  }, [shouldGate, loc.pathname]);
 
   const goComplete = () => {
     setOpen(false);
