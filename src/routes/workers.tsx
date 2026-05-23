@@ -4,6 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useProfileGate } from "@/lib/profile-gate";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -196,6 +197,7 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 function WorkersPage() {
   const { user, role, profile } = useAuth();
+  const gate = useProfileGate();
   const nav = useNavigate();
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
@@ -386,6 +388,7 @@ function WorkersPage() {
   // Esegue l'invio della proposta dopo la conferma esplicita del ristoratore.
   const sendProposal = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
+    if (!gate.requireComplete()) return;
     setSendingProposal(true);
     try {
       let applicationId: string | null = null;
