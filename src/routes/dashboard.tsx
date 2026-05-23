@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart, Store, BadgeCheck, CalendarDays } from "lucide-react";
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
+import { ProfileCompletionBanner } from "@/components/ProfileCompletionBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
@@ -61,7 +62,10 @@ function DashboardInner() {
 
   useEffect(() => {
     if (!user || !role) return;
-    if (profile && !profile.profile_completed) nav({ to: "/onboarding" });
+    // Profilo incompleto: NON forziamo più il redirect a /onboarding.
+    // L'utente deve poter restare sulla dashboard per vedere il banner
+    // "Profilo incompleto", l'avanzamento e l'elenco dei dati mancanti.
+    // Le funzioni operative sono gate-ate altrove (ProfileGateProvider).
   }, [user, role, profile, nav]);
 
   // Promemoria: toast una volta per sessione (dedup centralizzato).
@@ -255,6 +259,7 @@ function DashboardInner() {
 
       {role === "restaurant" && <PayOnHireBox className="mb-6" />}
 
+      <ProfileCompletionBanner />
       <ProfileStatusBanner />
       {role === "restaurant" && <RequiredReviewsBanner />}
 
@@ -289,16 +294,9 @@ function DashboardInner() {
         </div>
       )}
 
-      {profile && !profile.profile_completed && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-yellow-300 bg-yellow-50 p-4">
-          <AlertCircle className="h-5 w-5 text-yellow-700" />
-          <div className="flex-1">
-            <div className="font-medium text-yellow-900">Profilo incompleto</div>
-            <div className="text-sm text-yellow-800">Completa il profilo per usare tutte le funzionalità.</div>
-          </div>
-          <Link to="/onboarding"><Button size="sm">Completa</Button></Link>
-        </div>
-      )}
+      {/* Vecchio mini-box "Profilo incompleto" rimosso:
+          ora gestito da <ProfileCompletionBanner /> con barra di
+          avanzamento ed elenco dinamico dei dati mancanti. */}
 
       <div className={`grid gap-4 ${role === "restaurant" ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
         <StatCard icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? stats.active : stats.applications} />
