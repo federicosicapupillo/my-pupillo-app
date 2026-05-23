@@ -6,7 +6,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart, Store, BadgeCheck, CalendarDays } from "lucide-react";
+import { Briefcase, Plus, Users, MessageSquare, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart, Store, BadgeCheck, CalendarDays } from "lucide-react";
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { ProfileCompletionBanner } from "@/components/ProfileCompletionBanner";
 import { toastOnce } from "@/lib/toast-dedup";
