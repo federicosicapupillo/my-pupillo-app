@@ -603,6 +603,7 @@ function NewRestaurantJobRequest() {
 
   const requestSave = (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
+    if (status === "pubblicato" && !gate.requireComplete()) return;
     if (saveAsDefault) {
       pendingStatusRef.current = status;
       setConfirmDefaultsOpen(true);

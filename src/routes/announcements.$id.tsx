@@ -269,6 +269,7 @@ function AnnouncementDetail() {
   const [applying, setApplying] = useState(false);
   const applyAsWorker = async () => {
     if (!user || !ann) return;
+    if (!gate.requireComplete()) return;
     setApplying(true);
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
