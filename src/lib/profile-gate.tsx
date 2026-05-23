@@ -82,8 +82,18 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
       {shouldGate ? (
         <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm" aria-hidden />
       ) : null}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="z-50">
+      <Dialog
+        open={open || shouldGate}
+        onOpenChange={(v) => {
+          // When the route itself is gated, the dialog cannot be dismissed
+          // by clicking outside or pressing Escape — the user must choose
+          // "Completa profilo" or "Torna alla dashboard". For per-action
+          // calls (requireComplete) the dialog stays freely dismissible.
+          if (shouldGate) return;
+          setOpen(v);
+        }}
+      >
+        <DialogContent className="z-50" onInteractOutside={(e) => { if (shouldGate) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (shouldGate) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle>Completa il profilo per continuare</DialogTitle>
             <DialogDescription>
