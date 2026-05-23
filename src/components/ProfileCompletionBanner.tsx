@@ -55,10 +55,15 @@ export function ProfileCompletionBanner() {
                 Completa profilo <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild size="sm" variant="outline" className="gap-2">
-              <Link to="/notifications">
-                <LifeBuoy className="h-4 w-4" /> Assistenza
-              </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("pupillo:open-assistant"))
+              }
+            >
+              <LifeBuoy className="h-4 w-4" /> Assistenza
             </Button>
           </div>
         </div>
