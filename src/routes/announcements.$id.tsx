@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useProfileGate } from "@/lib/profile-gate";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -142,7 +141,6 @@ function AnnouncementDetail() {
   const { id } = Route.useParams();
   const { section } = Route.useSearch();
   const { user, role } = useAuth();
-  const gate = useProfileGate();
   const nav = useNavigate();
   const candidatesRef = useRef<HTMLElement | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
@@ -271,7 +269,6 @@ function AnnouncementDetail() {
   const [applying, setApplying] = useState(false);
   const applyAsWorker = async () => {
     if (!user || !ann) return;
-    if (!gate.requireComplete()) return;
     setApplying(true);
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: ann.id,

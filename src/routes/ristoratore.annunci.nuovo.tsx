@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useProfileGate } from "@/lib/profile-gate";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -150,7 +149,6 @@ function splitLanguages(values: string[]) {
 
 function NewRestaurantJobRequest() {
   const { user, role, profile } = useAuth();
-  const gate = useProfileGate();
   const nav = useNavigate();
   const { reuse } = Route.useSearch();
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -605,7 +603,6 @@ function NewRestaurantJobRequest() {
 
   const requestSave = (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
-    if (status === "pubblicato" && !gate.requireComplete()) return;
     if (saveAsDefault) {
       pendingStatusRef.current = status;
       setConfirmDefaultsOpen(true);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { HelpCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
@@ -6,13 +6,6 @@ import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 export function AssistantFab() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  // Allow any component (e.g. ProfileCompletionBanner) to open the
-  // assistant panel via a global event, without prop drilling.
-  useEffect(() => {
-    const handler = () => setOpen(true);
-    window.addEventListener("pupillo:open-assistant", handler);
-    return () => window.removeEventListener("pupillo:open-assistant", handler);
-  }, []);
   if (!user) return null;
   return (
     <>
