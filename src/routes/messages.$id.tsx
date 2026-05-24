@@ -2158,7 +2158,11 @@ function Thread() {
           }}
           selected={selectedTpl}
           setSelected={setSelectedTpl}
-          onSend={requireComplete(sendTemplate)}
+          onSend={requireComplete(() => {
+            // Blocca l'invio se il TARGET ha profilo incompleto.
+            if (!ensureTargetComplete(other?.profile_completed)) return;
+            void sendTemplate();
+          })}
           sending={sending}
           ann={ann}
           otherName={other?.name ?? null}
