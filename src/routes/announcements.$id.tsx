@@ -544,10 +544,10 @@ function AnnouncementDetail() {
           <div className="rounded-2xl border bg-card p-5 space-y-3">
             <div className="text-sm font-medium">Azioni</div>
             {ann.status === "draft" && (
-              <Button className="w-full" onClick={publishDraft}>Pubblica annuncio</Button>
+              <Button className="w-full" onClick={requireComplete(publishDraft)}>Pubblica annuncio</Button>
             )}
             {(ann.status === "active" || ann.status === "assigned") && (
-              <Button variant="outline" className="w-full text-destructive hover:text-destructive" onClick={cancelAnnouncement}>
+              <Button variant="outline" className="w-full text-destructive hover:text-destructive" onClick={requireComplete(cancelAnnouncement)}>
                 Annulla annuncio
               </Button>
             )}
@@ -578,7 +578,11 @@ function AnnouncementDetail() {
               <Button disabled className="w-full">Candidature chiuse</Button>
             ) : (
               <>
-                <Button className="w-full gap-2" disabled={applying} onClick={applyAsWorker}>
+                <Button
+                  className={`w-full gap-2 ${!canPerformOperationalAction ? "opacity-70" : ""}`}
+                  disabled={applying}
+                  onClick={requireComplete(applyAsWorker)}
+                >
                   <CheckCircle2 className="h-4 w-4" />Candidati
                 </Button>
                 <p className="text-[11px] text-muted-foreground leading-snug">
@@ -685,11 +689,22 @@ function AnnouncementDetail() {
                       </Button>
                       {canAct && (
                         <>
-                          <Button size="sm" className="gap-1" disabled={busyId === a.id} onClick={() => accept(a)}>
+                          <Button
+                            size="sm"
+                            className={`gap-1 ${!canPerformOperationalAction ? "opacity-70" : ""}`}
+                            disabled={busyId === a.id}
+                            onClick={requireComplete(() => accept(a))}
+                          >
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             {hasCounter ? `Accetta €${a.proposed_tariff}` : "Assegna"}
                           </Button>
-                          <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" disabled={busyId === a.id} onClick={() => reject(a)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className={`gap-1 text-destructive hover:text-destructive ${!canPerformOperationalAction ? "opacity-70" : ""}`}
+                            disabled={busyId === a.id}
+                            onClick={requireComplete(() => reject(a))}
+                          >
                             <XCircle className="h-3.5 w-3.5" />Rifiuta
                           </Button>
                         </>
