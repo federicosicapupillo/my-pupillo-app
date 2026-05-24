@@ -350,7 +350,7 @@ function buildTimeline(status?: string, opts?: { slotTakenByOther?: boolean }): 
 function Thread() {
   const { id } = Route.useParams();
   const { user, role, profile } = useAuth();
-  const { requireComplete } = useProfileGate();
+  const { requireComplete, ensureTargetComplete } = useProfileGate();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
@@ -2158,7 +2158,14 @@ function Thread() {
           }}
           selected={selectedTpl}
           setSelected={setSelectedTpl}
-          onSend={requireComplete(sendTemplate)}
+          onSend={requireComplete(() => {
+            // Blocca l'invio se il TARGET ha profilo incompleto.
+            // Se `other` non è ancora caricato, evitiamo di mostrare il popup
+            // per non confondere l'utente: l'invio resta bloccato sotto da
+            // altri stati (es. sending/disabled).
+            if (other && !ensureTargetComplete(other.profile_completed)) return;
+            void sendTemplate();
+          })}
           sending={sending}
           ann={ann}
           otherName={other?.name ?? null}
