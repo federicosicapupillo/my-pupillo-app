@@ -41,7 +41,7 @@ export const populateTestUsers = createServerFn({ method: "POST" })
       { restaurants: data.restaurants, workers: data.workers },
     );
 
-    const complete = await completeDemoProfiles();
+    const complete = await completeDemoProfiles(context.userId);
 
     try {
       await supabaseAdmin.from("activity_logs").insert({
