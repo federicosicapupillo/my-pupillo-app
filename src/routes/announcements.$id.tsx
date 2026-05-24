@@ -23,7 +23,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { getShiftEndDate, getShiftStartDate } from "@/lib/announcement-time";
-import { ensureProfileComplete } from "@/lib/form-field-validation";
+import { useProfileGate } from "@/components/ProfileGate";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -142,6 +142,7 @@ function AnnouncementDetail() {
   const { id } = Route.useParams();
   const { section } = Route.useSearch();
   const { user, role, profile } = useAuth();
+  const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const nav = useNavigate();
   const candidatesRef = useRef<HTMLElement | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
@@ -270,17 +271,6 @@ function AnnouncementDetail() {
   const [applying, setApplying] = useState(false);
   const applyAsWorker = async () => {
     if (!user || !ann) return;
-    // Gate: il lavoratore deve avere il profilo completo per candidarsi.
-    // Se manca anche solo un dato obbligatorio lo portiamo all'onboarding.
-    if (
-      !ensureProfileComplete(profile, nav, {
-        toast: (m) => toast.error(m),
-        message:
-          "Completa il tuo profilo prima di candidarti. Ti portiamo ai dati mancanti.",
-      })
-    ) {
-      return;
-    }
     setApplying(true);
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
