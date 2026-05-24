@@ -429,7 +429,7 @@ function NewAnn() {
       </div>
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <div>
+          <div data-field="service_date" className="scroll-mt-24">
             <Label>Data servizio</Label>
             <DateField value={f.service_date} onChange={(v) => setF({ ...f, service_date: v })} required />
           </div>
@@ -456,7 +456,7 @@ function NewAnn() {
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div data-field="tariff_amount" className="scroll-mt-24">
             <Label>{f.tariff_type === "hourly" ? "Tariffa oraria" : "Importo (€)"}</Label>
             {f.tariff_type === "hourly" ? (
               <HourlyRateInput value={f.tariff_amount} onChange={(v) => setF({ ...f, tariff_amount: v })} required />
@@ -477,7 +477,7 @@ function NewAnn() {
           <div className="grid gap-3 md:grid-cols-3">
             <div><Label>Città</Label><Input value={f.job_city} onChange={e => setF({ ...f, job_city: e.target.value, job_postal_code: "" })} /></div>
             <div><Label>Provincia</Label><Input maxLength={3} value={f.job_province} onChange={e => setF({ ...f, job_province: e.target.value.toUpperCase(), job_city: "", job_postal_code: "" })} /></div>
-            <div>
+            <div data-field="job_postal_code" className="scroll-mt-24">
               <Label>CAP</Label>
               <CapField
                 province={f.job_province}
@@ -487,8 +487,8 @@ function NewAnn() {
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Anticipo richiesto all'ingresso</Label>
+          <div className="space-y-2" data-field="access_choice">
+            <Label className="scroll-mt-24">Anticipo richiesto all'ingresso</Label>
             <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
               <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
               <SelectContent>
@@ -497,7 +497,7 @@ function NewAnn() {
               </SelectContent>
             </Select>
             {accessChoice === "over15" && (
-              <div>
+              <div data-field="access_reason" className="scroll-mt-24">
                 <Label className="text-xs">Motivazione (obbligatoria)</Label>
                 <Textarea rows={2} required placeholder="Spiega perché serve un anticipo superiore ai 15 minuti (es. accredito, briefing, vestizione)…" value={accessReason} onChange={e => setAccessReason(e.target.value)} />
               </div>
