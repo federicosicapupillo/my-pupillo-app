@@ -198,6 +198,7 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
   const [workers, setWorkers] = useState<W[]>([]);
