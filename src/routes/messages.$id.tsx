@@ -2160,7 +2160,10 @@ function Thread() {
           setSelected={setSelectedTpl}
           onSend={requireComplete(() => {
             // Blocca l'invio se il TARGET ha profilo incompleto.
-            if (!ensureTargetComplete(other?.profile_completed)) return;
+            // Se `other` non è ancora caricato, evitiamo di mostrare il popup
+            // per non confondere l'utente: l'invio resta bloccato sotto da
+            // altri stati (es. sending/disabled).
+            if (other && !ensureTargetComplete(other.profile_completed)) return;
             void sendTemplate();
           })}
           sending={sending}
