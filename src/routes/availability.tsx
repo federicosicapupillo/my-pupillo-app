@@ -468,7 +468,7 @@ function AvailabilityPage() {
         title="Le mie disponibilità"
         subtitle="Indica quando e dove sei disponibile a ricevere proposte di lavoro."
         action={
-          <Button onClick={save} disabled={saving || loading} className="gap-2">
+          <Button onClick={saveGated} disabled={saving || loading} className={`gap-2 ${gatedOpacity}`}>
             <Save className="h-4 w-4" /> {saving ? "Salvataggio..." : "Salva disponibilità settimanale"}
           </Button>
         }
@@ -501,7 +501,7 @@ function AvailabilityPage() {
               <SelectItem value="tonight">Questa sera</SelectItem>
             </SelectContent>
           </Select>
-          <Switch checked={availableNow} onCheckedChange={toggleAvailableNow} aria-label="Disponibile ora" />
+          <Switch checked={availableNow} onCheckedChange={toggleAvailableNowGated} aria-label="Disponibile ora" />
         </CardContent>
       </Card>
 
@@ -677,7 +677,7 @@ function AvailabilityPage() {
       </div>
 
       <div className="mt-6 flex justify-end">
-        <Button onClick={save} disabled={saving || loading} className="gap-2">
+        <Button onClick={saveGated} disabled={saving || loading} className={`gap-2 ${gatedOpacity}`}>
           <Save className="h-4 w-4" /> {saving ? "Salvataggio..." : "Salva disponibilità settimanale"}
         </Button>
       </div>
@@ -823,7 +823,7 @@ function AvailabilityPage() {
               <Input value={newExc.notes} onChange={(e) => setNewExc({ ...newExc, notes: e.target.value })} placeholder="Es. Sono a Milano per il weekend" />
             </div>
             <div className="md:col-span-6 flex justify-end">
-              <Button onClick={addException} className="gap-2">
+              <Button onClick={addExceptionGated} className={`gap-2 ${gatedOpacity}`}>
                 <Plus className="h-4 w-4" /> Aggiungi disponibilità speciale
               </Button>
             </div>
@@ -862,7 +862,7 @@ function AvailabilityPage() {
                 variant="ghost"
                 size="icon"
                 className="ml-auto"
-                onClick={() => removeException(e.id)}
+                onClick={() => removeExceptionGated(e.id)}
                 aria-label="Rimuovi disponibilità speciale"
               >
                 <Trash2 className="h-4 w-4" />
