@@ -1,0 +1,28 @@
+-- Reset totale dati Pupillo. Mantiene struttura, RLS, funzioni e trigger.
+TRUNCATE TABLE
+  public.messages,
+  public.proposal_responses,
+  public.reviews,
+  public.required_reviews,
+  public.worker_incidents,
+  public.worker_badges,
+  public.shifts,
+  public.applications,
+  public.favorites,
+  public.restaurant_worker_favorites,
+  public.job_requests,
+  public.announcements,
+  public.notifications,
+  public.worker_availability,
+  public.worker_availability_exceptions,
+  public.phone_verifications,
+  public.credit_transactions,
+  public.discount_redemptions,
+  public.referral_invites,
+  public.subscriptions,
+  public.support_tickets,
+  public.activity_logs,
+  public.backup_logs,
+  public.user_roles,
+  public.profiles
+RESTART IDENTITY CASCADE;
