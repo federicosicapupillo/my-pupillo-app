@@ -28,10 +28,8 @@ import { isValidCapForCity } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DateField } from "@/components/DateField";
 import { HourlyRateInput } from "@/components/HourlyRateInput";
-import {
-  ensureProfileComplete,
-  scrollToField,
-} from "@/lib/form-field-validation";
+import { scrollToField } from "@/lib/form-field-validation";
+import { useProfileGate } from "@/components/ProfileGate";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -224,17 +222,6 @@ function NewAnn() {
 
   const save = async (asDraft: boolean) => {
     if (!user) return;
-    // Gate: prima di pubblicare/salvare l'annuncio il ristoratore deve
-    // avere il profilo completo (dati aziendali, indirizzo, referente, ecc.).
-    if (
-      !ensureProfileComplete(profile, nav, {
-        toast: (m) => toast.error(m),
-        message:
-          "Completa il profilo del locale prima di pubblicare un annuncio. Ti portiamo ai dati mancanti.",
-      })
-    ) {
-      return;
-    }
     if (!f.service_date) {
       toast.error("Inserisci la data del servizio");
       scrollToField("service_date");
