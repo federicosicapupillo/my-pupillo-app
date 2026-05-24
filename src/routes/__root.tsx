@@ -12,6 +12,7 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "sonner";
 import { PhoneVerificationGate } from "@/components/PhoneVerificationGate";
+import { ProfileGateProvider } from "@/components/ProfileGate";
 import { StalePreviewOverlay } from "@/components/StalePreviewOverlay";
 import { installServerFnAuthFetch } from "@/lib/server-fn-auth";
 import { DevLoopMonitor } from "@/lib/dev-loop-monitor";
@@ -132,7 +133,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <PhoneVerificationGate>
-          <Outlet />
+          <ProfileGateProvider>
+            <Outlet />
+          </ProfileGateProvider>
         </PhoneVerificationGate>
         <Toaster richColors position="top-right" />
         <StalePreviewOverlay />

@@ -73,6 +73,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useProfileGate } from "@/components/ProfileGate";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -349,6 +350,7 @@ function buildTimeline(status?: string, opts?: { slotTakenByOther?: boolean }): 
 function Thread() {
   const { id } = Route.useParams();
   const { user, role, profile } = useAuth();
+  const { requireComplete } = useProfileGate();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
@@ -2156,7 +2158,7 @@ function Thread() {
           }}
           selected={selectedTpl}
           setSelected={setSelectedTpl}
-          onSend={sendTemplate}
+          onSend={requireComplete(sendTemplate)}
           sending={sending}
           ann={ann}
           otherName={other?.name ?? null}

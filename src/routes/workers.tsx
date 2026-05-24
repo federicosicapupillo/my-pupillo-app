@@ -21,7 +21,7 @@ import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 import { sendShiftProposal, hasUnansweredProposal } from "@/lib/shift-proposal";
-import { ensureProfileComplete } from "@/lib/form-field-validation";
+import { useProfileGate } from "@/components/ProfileGate";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
@@ -198,6 +198,7 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
   const [workers, setWorkers] = useState<W[]>([]);
@@ -387,17 +388,6 @@ function WorkersPage() {
   // Esegue l'invio della proposta dopo la conferma esplicita del ristoratore.
   const sendProposal = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
-    // Gate: il ristoratore deve avere il profilo completo per inviare una proposta.
-    if (
-      !ensureProfileComplete(profile, nav, {
-        toast: (m) => toast.error(m),
-        message:
-          "Completa il profilo del locale prima di inviare proposte. Ti portiamo ai dati mancanti.",
-      })
-    ) {
-      setProposalWorker(null);
-      return;
-    }
     setSendingProposal(true);
     try {
       let applicationId: string | null = null;
@@ -799,7 +789,7 @@ function WorkersPage() {
               ? [selectedAnn.location_lat as number, selectedAnn.location_lng as number]
               : [41.9028, 12.4964]
           }
-          onInvite={(workerId) => { const w = workers.find((x) => x.id === workerId); if (w) openProposalDialog(w); }}
+          onInvite={requireComplete((workerId: string) => { const w = workers.find((x) => x.id === workerId); if (w) openProposalDialog(w); })}
           inviteDisabled={!selected}
           inviteLabel={selected ? "Invia proposta" : "Seleziona annuncio"}
         />
@@ -922,7 +912,7 @@ function WorkersPage() {
             <Button
               size="sm"
               className="mt-4 w-full gap-1"
-              onClick={() => openProposalDialog(w)}
+              onClick={requireComplete(() => openProposalDialog(w))}
               title={!selected ? "Scegli un annuncio prima di proporre un turno" : undefined}
             >
               <MessageSquare className="h-3.5 w-3.5" />

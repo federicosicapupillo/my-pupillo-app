@@ -23,7 +23,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { getShiftEndDate, getShiftStartDate } from "@/lib/announcement-time";
-import { ensureProfileComplete } from "@/lib/form-field-validation";
+import { useProfileGate } from "@/components/ProfileGate";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -142,6 +142,7 @@ function AnnouncementDetail() {
   const { id } = Route.useParams();
   const { section } = Route.useSearch();
   const { user, role, profile } = useAuth();
+  const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const nav = useNavigate();
   const candidatesRef = useRef<HTMLElement | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
@@ -270,17 +271,6 @@ function AnnouncementDetail() {
   const [applying, setApplying] = useState(false);
   const applyAsWorker = async () => {
     if (!user || !ann) return;
-    // Gate: il lavoratore deve avere il profilo completo per candidarsi.
-    // Se manca anche solo un dato obbligatorio lo portiamo all'onboarding.
-    if (
-      !ensureProfileComplete(profile, nav, {
-        toast: (m) => toast.error(m),
-        message:
-          "Completa il tuo profilo prima di candidarti. Ti portiamo ai dati mancanti.",
-      })
-    ) {
-      return;
-    }
     setApplying(true);
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
@@ -554,10 +544,10 @@ function AnnouncementDetail() {
           <div className="rounded-2xl border bg-card p-5 space-y-3">
             <div className="text-sm font-medium">Azioni</div>
             {ann.status === "draft" && (
-              <Button className="w-full" onClick={publishDraft}>Pubblica annuncio</Button>
+              <Button className="w-full" onClick={requireComplete(publishDraft)}>Pubblica annuncio</Button>
             )}
             {(ann.status === "active" || ann.status === "assigned") && (
-              <Button variant="outline" className="w-full text-destructive hover:text-destructive" onClick={cancelAnnouncement}>
+              <Button variant="outline" className="w-full text-destructive hover:text-destructive" onClick={requireComplete(cancelAnnouncement)}>
                 Annulla annuncio
               </Button>
             )}
@@ -588,7 +578,11 @@ function AnnouncementDetail() {
               <Button disabled className="w-full">Candidature chiuse</Button>
             ) : (
               <>
-                <Button className="w-full gap-2" disabled={applying} onClick={applyAsWorker}>
+                <Button
+                  className={`w-full gap-2 ${!canPerformOperationalAction ? "opacity-70" : ""}`}
+                  disabled={applying}
+                  onClick={requireComplete(applyAsWorker)}
+                >
                   <CheckCircle2 className="h-4 w-4" />Candidati
                 </Button>
                 <p className="text-[11px] text-muted-foreground leading-snug">
@@ -695,11 +689,22 @@ function AnnouncementDetail() {
                       </Button>
                       {canAct && (
                         <>
-                          <Button size="sm" className="gap-1" disabled={busyId === a.id} onClick={() => accept(a)}>
+                          <Button
+                            size="sm"
+                            className={`gap-1 ${!canPerformOperationalAction ? "opacity-70" : ""}`}
+                            disabled={busyId === a.id}
+                            onClick={requireComplete(() => accept(a))}
+                          >
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             {hasCounter ? `Accetta €${a.proposed_tariff}` : "Assegna"}
                           </Button>
-                          <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" disabled={busyId === a.id} onClick={() => reject(a)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className={`gap-1 text-destructive hover:text-destructive ${!canPerformOperationalAction ? "opacity-70" : ""}`}
+                            disabled={busyId === a.id}
+                            onClick={requireComplete(() => reject(a))}
+                          >
                             <XCircle className="h-3.5 w-3.5" />Rifiuta
                           </Button>
                         </>
