@@ -416,6 +416,14 @@ function Thread() {
   const oldestRef = useRef<string | null>(null); // ISO created_at of oldest loaded msg
   const pendingPrependHeightRef = useRef<number | null>(null);
 
+  // Worker-side reminder to acknowledge the operational instructions after
+  // the restaurant has confirmed the shift. Shown once per conversation
+  // until the worker either confirms or dismisses; reopens automatically if
+  // they navigate back and still haven't acknowledged.
+  const [instructionsReminderOpen, setInstructionsReminderOpen] = useState(false);
+  const [ackDialogBusy, setAckDialogBusy] = useState(false);
+  const reminderShownForRef = useRef<string | null>(null);
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -730,6 +738,75 @@ function Thread() {
   const pushMessage = (message: Msg) => {
     setMsgs(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
   };
+
+  // Hoisted so both the in-chat ConfirmationCard button and the reminder
+  // popup can trigger the same flow.
+  const acknowledgeInstructions = async () => {
+    if (!user || !app) return;
+    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+    if (!receiverId) return;
+    const body = "Hai confermato di aver letto le istruzioni del servizio.";
+    const createdAt = new Date().toISOString();
+    const { data, error } = await supabase.from("messages").insert({
+      application_id: app.id,
+      sender_id: user.id,
+      receiver_id: receiverId,
+      body,
+      created_at: createdAt,
+      read_at: null,
+      template_id: null,
+      message_type: "template",
+      action_type: "instructions_acknowledged",
+    } as never).select("*").single();
+    if (error) {
+      toast.error("Impossibile registrare la presa visione.");
+      return;
+    }
+    if (data) pushMessage(data as Msg);
+    await supabase.from("applications").update({
+      last_message_preview: body,
+      last_message_at: createdAt,
+    } as never).eq("id", app.id);
+    toast.success("Istruzioni confermate");
+    setInstructionsReminderOpen(false);
+    try {
+      await supabase.from("notifications").insert({
+        user_id: receiverId,
+        title: "Istruzioni confermate",
+        body: "Il lavoratore ha confermato la lettura delle istruzioni del servizio.",
+        link: `/messages/${app.id}`,
+      } as never);
+    } catch (e) {
+      console.error("[ack] notify restaurant failed", e);
+    }
+  };
+
+  // Open the instructions reminder popup for the worker when the chat is for
+  // a confirmed shift, the operational instructions card is in chat, and the
+  // worker hasn't acknowledged yet. Only fires once per conversation per
+  // mount to avoid being noisy.
+  useEffect(() => {
+    if (role !== "worker") return;
+    if (!app || app.status !== "accepted") return;
+    const confirmationMsg = msgs.find(m => m.template_id === CONFIRMATION_TEMPLATE_ID);
+    if (!confirmationMsg) return;
+    const hasAck = msgs.some(m => m.action_type === "instructions_acknowledged" && m.application_id === id);
+    if (hasAck) return;
+    // Skip if the shift has already ended.
+    if (ann?.service_date) {
+      const d = new Date(ann.service_date);
+      if (ann.end_time) {
+        const [h, mn] = String(ann.end_time).split(":").map(Number);
+        d.setHours(h || 0, mn || 0, 0, 0);
+      } else {
+        d.setHours(23, 59, 59, 999);
+      }
+      if (d.getTime() < Date.now()) return;
+    }
+    if (reminderShownForRef.current === id) return;
+    reminderShownForRef.current = id;
+    setInstructionsReminderOpen(true);
+  }, [role, app, msgs, ann, id]);
 
   const insertSystemMessage = async (text: string, actionType?: TemplateAction) => {
     if (!user || !app) return;
@@ -1856,55 +1933,18 @@ function Thread() {
                 mm => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
               );
               return (
-                <ConfirmationCard
-                  key={m.id}
-                  ann={ann}
-                  venueName={venueName}
-                  applicationId={id}
-                  announcementId={app?.announcement_id ?? null}
-                  isWorker={role === "worker"}
-                  acknowledged={hasAcknowledged}
-                  arrivalAdvanceMinutes={restaurantArrivalAdvance}
-                  onAcknowledge={async () => {
-                    if (!user || !app) return;
-                    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
-                    if (!receiverId) return;
-                    const body = "Hai confermato di aver letto le istruzioni del servizio.";
-                    const createdAt = new Date().toISOString();
-                    const { data, error } = await supabase.from("messages").insert({
-                      application_id: app.id,
-                      sender_id: user.id,
-                      receiver_id: receiverId,
-                      body,
-                      created_at: createdAt,
-                      read_at: null,
-                      template_id: null,
-                      message_type: "template",
-                      action_type: "instructions_acknowledged",
-                    } as never).select("*").single();
-                    if (error) {
-                      toast.error("Impossibile registrare la presa visione.");
-                      return;
-                    }
-                    if (data) pushMessage(data as Msg);
-                    await supabase.from("applications").update({
-                      last_message_preview: body,
-                      last_message_at: createdAt,
-                    } as never).eq("id", app.id);
-                    toast.success("Istruzioni confermate");
-                    // Notify the restaurant that the worker has read the instructions.
-                    try {
-                      await supabase.from("notifications").insert({
-                        user_id: receiverId,
-                        title: "Istruzioni confermate",
-                        body: "Il lavoratore ha confermato la lettura delle istruzioni del servizio.",
-                        link: `/messages/${app.id}`,
-                      } as never);
-                    } catch (e) {
-                      console.error("[ack] notify restaurant failed", e);
-                    }
-                  }}
-                />
+                <div key={m.id} id="instructions-card" data-instructions-card>
+                  <ConfirmationCard
+                    ann={ann}
+                    venueName={venueName}
+                    applicationId={id}
+                    announcementId={app?.announcement_id ?? null}
+                    isWorker={role === "worker"}
+                    acknowledged={hasAcknowledged}
+                    arrivalAdvanceMinutes={restaurantArrivalAdvance}
+                    onAcknowledge={acknowledgeInstructions}
+                  />
+                </div>
               );
             }
             if (m.template_id === PROPOSAL_TEMPLATE_ID) {
@@ -2308,6 +2348,61 @@ function Thread() {
             </div>
           </SheetContent>
         </Sheet>
+        <AlertDialog open={instructionsReminderOpen} onOpenChange={setInstructionsReminderOpen}>
+          <AlertDialogContent className="bg-background border-2 border-primary/50 shadow-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-lg font-bold">
+                Conferma le istruzioni del turno
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>
+                    Prima di iniziare il servizio devi leggere e confermare le istruzioni ricevute dal ristoratore.
+                  </p>
+                  <p>Controlla con attenzione:</p>
+                  <ul className="list-disc pl-5 space-y-0.5">
+                    <li>orario di arrivo</li>
+                    <li>indirizzo</li>
+                    <li>dress code</li>
+                    <li>referente sul posto</li>
+                    <li>note operative</li>
+                  </ul>
+                  <p>
+                    Dopo aver letto tutto, clicca su "Ho letto e confermo le istruzioni".
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2">
+              <AlertDialogCancel
+                onClick={() => {
+                  setInstructionsReminderOpen(false);
+                  requestAnimationFrame(() => {
+                    const el = document.getElementById("instructions-card");
+                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  });
+                }}
+              >
+                Vai alle istruzioni
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={ackDialogBusy}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (ackDialogBusy) return;
+                  setAckDialogBusy(true);
+                  try {
+                    await acknowledgeInstructions();
+                  } finally {
+                    setAckDialogBusy(false);
+                  }
+                }}
+              >
+                {ackDialogBusy ? "Conferma in corso…" : "Confermo ora"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
   );
 }
