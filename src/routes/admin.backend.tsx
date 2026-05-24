@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Database, HardDrive, Lock, Trash2, Loader2 } from "lucide-react";
+import { Database, HardDrive, Lock, Trash2, Loader2, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { cleanupTestProfiles, type CleanupReport } from "@/lib/cleanup-test-profiles.functions";
+import { populateTestUsers, countExistingTestProfiles, type PopulateReport } from "@/lib/populate-test-users.functions";
 
 export const Route = createFileRoute("/admin/backend")({
   head: () => ({ meta: [{ title: "Backend — Admin Pupillo" }] }),
@@ -204,6 +205,8 @@ function TestDataCleanupSection() {
         <Button variant="destructive" onClick={() => setOpen(true)}>
           <Trash2 className="h-4 w-4 mr-2" /> Ripulisci profili di test
         </Button>
+
+        <PopulateTestUsersBlock />
 
         {report && (
           <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-1">
