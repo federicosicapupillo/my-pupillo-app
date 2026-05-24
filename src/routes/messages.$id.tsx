@@ -1864,55 +1864,18 @@ function Thread() {
                 mm => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
               );
               return (
-                <ConfirmationCard
-                  key={m.id}
-                  ann={ann}
-                  venueName={venueName}
-                  applicationId={id}
-                  announcementId={app?.announcement_id ?? null}
-                  isWorker={role === "worker"}
-                  acknowledged={hasAcknowledged}
-                  arrivalAdvanceMinutes={restaurantArrivalAdvance}
-                  onAcknowledge={async () => {
-                    if (!user || !app) return;
-                    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
-                    if (!receiverId) return;
-                    const body = "Hai confermato di aver letto le istruzioni del servizio.";
-                    const createdAt = new Date().toISOString();
-                    const { data, error } = await supabase.from("messages").insert({
-                      application_id: app.id,
-                      sender_id: user.id,
-                      receiver_id: receiverId,
-                      body,
-                      created_at: createdAt,
-                      read_at: null,
-                      template_id: null,
-                      message_type: "template",
-                      action_type: "instructions_acknowledged",
-                    } as never).select("*").single();
-                    if (error) {
-                      toast.error("Impossibile registrare la presa visione.");
-                      return;
-                    }
-                    if (data) pushMessage(data as Msg);
-                    await supabase.from("applications").update({
-                      last_message_preview: body,
-                      last_message_at: createdAt,
-                    } as never).eq("id", app.id);
-                    toast.success("Istruzioni confermate");
-                    // Notify the restaurant that the worker has read the instructions.
-                    try {
-                      await supabase.from("notifications").insert({
-                        user_id: receiverId,
-                        title: "Istruzioni confermate",
-                        body: "Il lavoratore ha confermato la lettura delle istruzioni del servizio.",
-                        link: `/messages/${app.id}`,
-                      } as never);
-                    } catch (e) {
-                      console.error("[ack] notify restaurant failed", e);
-                    }
-                  }}
-                />
+                <div key={m.id} id="instructions-card" data-instructions-card>
+                  <ConfirmationCard
+                    ann={ann}
+                    venueName={venueName}
+                    applicationId={id}
+                    announcementId={app?.announcement_id ?? null}
+                    isWorker={role === "worker"}
+                    acknowledged={hasAcknowledged}
+                    arrivalAdvanceMinutes={restaurantArrivalAdvance}
+                    onAcknowledge={acknowledgeInstructions}
+                  />
+                </div>
               );
             }
             if (m.template_id === PROPOSAL_TEMPLATE_ID) {
