@@ -1822,6 +1822,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_worker_restaurant_relationship: {
+        Args: { _restaurant: string; _worker: string }
+        Returns: boolean
+      }
       log_profile_date_validation_failure: {
         Args: { _payload: Json; _reason: string }
         Returns: string
