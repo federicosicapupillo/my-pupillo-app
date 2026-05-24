@@ -739,6 +739,48 @@ function Thread() {
     setMsgs(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
   };
 
+  // Hoisted so both the in-chat ConfirmationCard button and the reminder
+  // popup can trigger the same flow.
+  const acknowledgeInstructions = async () => {
+    if (!user || !app) return;
+    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+    if (!receiverId) return;
+    const body = "Hai confermato di aver letto le istruzioni del servizio.";
+    const createdAt = new Date().toISOString();
+    const { data, error } = await supabase.from("messages").insert({
+      application_id: app.id,
+      sender_id: user.id,
+      receiver_id: receiverId,
+      body,
+      created_at: createdAt,
+      read_at: null,
+      template_id: null,
+      message_type: "template",
+      action_type: "instructions_acknowledged",
+    } as never).select("*").single();
+    if (error) {
+      toast.error("Impossibile registrare la presa visione.");
+      return;
+    }
+    if (data) pushMessage(data as Msg);
+    await supabase.from("applications").update({
+      last_message_preview: body,
+      last_message_at: createdAt,
+    } as never).eq("id", app.id);
+    toast.success("Istruzioni confermate");
+    setInstructionsReminderOpen(false);
+    try {
+      await supabase.from("notifications").insert({
+        user_id: receiverId,
+        title: "Istruzioni confermate",
+        body: "Il lavoratore ha confermato la lettura delle istruzioni del servizio.",
+        link: `/messages/${app.id}`,
+      } as never);
+    } catch (e) {
+      console.error("[ack] notify restaurant failed", e);
+    }
+  };
+
   const insertSystemMessage = async (text: string, actionType?: TemplateAction) => {
     if (!user || !app) return;
     const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
