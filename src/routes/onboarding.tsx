@@ -1186,7 +1186,7 @@ function Onboarding() {
             <Label>Nome completo</Label>
             <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
           </div>
-          <div>
+          <div data-field="phone" className="scroll-mt-24">
             <Label>Telefono *</Label>
             <PhoneInput
               required
@@ -1195,7 +1195,6 @@ function Onboarding() {
               onCodeChange={(c) => setForm({ ...form, phone_code: c })}
               onNumberChange={(n) => setForm({ ...form, phone_number: n })}
               disabled={!!profile?.phone_verified}
-              data-field="phone"
             />
             {profile?.phone_verified ? (
               <div className="mt-1.5 space-y-1">
