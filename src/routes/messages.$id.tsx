@@ -781,6 +781,33 @@ function Thread() {
     }
   };
 
+  // Open the instructions reminder popup for the worker when the chat is for
+  // a confirmed shift, the operational instructions card is in chat, and the
+  // worker hasn't acknowledged yet. Only fires once per conversation per
+  // mount to avoid being noisy.
+  useEffect(() => {
+    if (role !== "worker") return;
+    if (!app || app.status !== "accepted") return;
+    const confirmationMsg = msgs.find(m => m.template_id === CONFIRMATION_TEMPLATE_ID);
+    if (!confirmationMsg) return;
+    const hasAck = msgs.some(m => m.action_type === "instructions_acknowledged" && m.application_id === id);
+    if (hasAck) return;
+    // Skip if the shift has already ended.
+    if (ann?.service_date) {
+      const d = new Date(ann.service_date);
+      if (ann.end_time) {
+        const [h, mn] = String(ann.end_time).split(":").map(Number);
+        d.setHours(h || 0, mn || 0, 0, 0);
+      } else {
+        d.setHours(23, 59, 59, 999);
+      }
+      if (d.getTime() < Date.now()) return;
+    }
+    if (reminderShownForRef.current === id) return;
+    reminderShownForRef.current = id;
+    setInstructionsReminderOpen(true);
+  }, [role, app, msgs, ann, id]);
+
   const insertSystemMessage = async (text: string, actionType?: TemplateAction) => {
     if (!user || !app) return;
     const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
