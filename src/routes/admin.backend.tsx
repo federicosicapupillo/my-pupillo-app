@@ -4,7 +4,22 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Database, HardDrive, Lock } from "lucide-react";
+import { Database, HardDrive, Lock, Trash2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { cleanupTestProfiles, type CleanupReport } from "@/lib/cleanup-test-profiles.functions";
 
 export const Route = createFileRoute("/admin/backend")({
   head: () => ({ meta: [{ title: "Backend — Admin Pupillo" }] }),
@@ -143,6 +158,115 @@ function BackendInfo() {
           </ul>
         </CardContent>
       </Card>
+
+      <TestDataCleanupSection />
     </AppShell>
+  );
+}
+
+function TestDataCleanupSection() {
+  const run = useServerFn(cleanupTestProfiles);
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [running, setRunning] = useState(false);
+  const [report, setReport] = useState<CleanupReport | null>(null);
+
+  const canConfirm = confirm === "CANCELLA TEST" && !running;
+
+  async function execute() {
+    if (!canConfirm) return;
+    setRunning(true);
+    try {
+      const r = await run({ data: { confirm: "CANCELLA TEST" } });
+      setReport(r);
+      setOpen(false);
+      setConfirm("");
+      toast.success("Pulizia completata");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Errore durante la pulizia");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <Card className="mt-6 border-destructive/40">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Trash2 className="h-4 w-4 text-destructive" /> Gestione dati di test
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Usa questa funzione per ripulire il database dai profili lavoratore e ristoratore
+          creati durante i test. Gli account admin verranno mantenuti.
+        </p>
+        <Button variant="destructive" onClick={() => setOpen(true)}>
+          <Trash2 className="h-4 w-4 mr-2" /> Ripulisci profili di test
+        </Button>
+
+        {report && (
+          <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-1">
+            <div className="font-medium mb-1">Pulizia completata</div>
+            <p className="text-muted-foreground mb-2">
+              La pulizia dei profili di test è stata completata. Gli account admin sono stati mantenuti.
+            </p>
+            <div>Profili lavoratore cancellati: <strong>{report.workersDeleted}</strong></div>
+            <div>Profili ristoratore cancellati: <strong>{report.restaurantsDeleted}</strong></div>
+            <div>Altri profili cancellati: <strong>{report.otherProfilesDeleted}</strong></div>
+            <div>Account auth cancellati: <strong>{report.authUsersDeleted}</strong></div>
+            <div>File storage cancellati: <strong>{report.storageFilesDeleted}</strong></div>
+            <div>Annunci cancellati: <strong>{report.perTable["announcements"] ?? 0}</strong></div>
+            <div>Candidature cancellate: <strong>{report.perTable["applications"] ?? 0}</strong></div>
+            <div>Messaggi cancellati: <strong>{report.perTable["messages"] ?? 0}</strong></div>
+            <div>Notifiche cancellate: <strong>{report.perTable["notifications"] ?? 0}</strong></div>
+            <div>Recensioni cancellate: <strong>{report.perTable["reviews"] ?? 0}</strong></div>
+            <div>Disponibilità cancellate: <strong>{(report.perTable["worker_availability"] ?? 0) + (report.perTable["worker_availability_exceptions"] ?? 0)}</strong></div>
+            <div>Admin mantenuti: <strong>{report.adminsKept}</strong></div>
+            <div className="text-xs text-muted-foreground pt-1">Durata: {(report.durationMs / 1000).toFixed(1)}s</div>
+            {report.errors.length > 0 && (
+              <details className="text-xs text-destructive pt-2">
+                <summary>Errori ({report.errors.length})</summary>
+                <ul className="max-h-40 overflow-y-auto mt-1">
+                  {report.errors.map((e, i) => <li key={i}>• {e}</li>)}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog open={open} onOpenChange={(v) => { if (!running) { setOpen(v); if (!v) setConfirm(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Conferma cancellazione profili di test</DialogTitle>
+            <DialogDescription>
+              Questa operazione cancellerà definitivamente tutti i profili lavoratore e ristoratore
+              di test, comprese foto profilo, annunci, candidature, messaggi, notifiche, recensioni,
+              disponibilità e dati collegati. Gli account admin verranno mantenuti.
+              L'operazione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="cleanup-confirm">Scrivi <code>CANCELLA TEST</code> per continuare</Label>
+            <Input
+              id="cleanup-confirm"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="CANCELLA TEST"
+              autoComplete="off"
+              disabled={running}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={running}>Annulla</Button>
+            <Button variant="destructive" onClick={execute} disabled={!canConfirm}>
+              {running ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Cancella profili di test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 }
