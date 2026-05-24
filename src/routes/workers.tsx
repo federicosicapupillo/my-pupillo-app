@@ -789,7 +789,7 @@ function WorkersPage() {
               ? [selectedAnn.location_lat as number, selectedAnn.location_lng as number]
               : [41.9028, 12.4964]
           }
-          onInvite={(workerId) => { const w = workers.find((x) => x.id === workerId); if (w) openProposalDialog(w); }}
+          onInvite={requireComplete((workerId: string) => { const w = workers.find((x) => x.id === workerId); if (w) openProposalDialog(w); })}
           inviteDisabled={!selected}
           inviteLabel={selected ? "Invia proposta" : "Seleziona annuncio"}
         />
@@ -912,7 +912,7 @@ function WorkersPage() {
             <Button
               size="sm"
               className="mt-4 w-full gap-1"
-              onClick={() => openProposalDialog(w)}
+              onClick={requireComplete(() => openProposalDialog(w))}
               title={!selected ? "Scegli un annuncio prima di proporre un turno" : undefined}
             >
               <MessageSquare className="h-3.5 w-3.5" />
