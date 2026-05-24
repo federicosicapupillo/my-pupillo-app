@@ -454,6 +454,14 @@ function AvailabilityPage() {
 
   const isEmpty = !loading && summary.active === 0 && exceptions.length === 0;
 
+  // Gate: profili non completi al 100% non possono modificare la disponibilità.
+  // I tasti restano visibili ma al click apre il popup dedicato.
+  const saveGated = requireCompleteForAvailability(save);
+  const addExceptionGated = requireCompleteForAvailability(addException);
+  const removeExceptionGated = requireCompleteForAvailability(removeException);
+  const toggleAvailableNowGated = requireCompleteForAvailability(toggleAvailableNow);
+  const gatedOpacity = canPerformOperationalAction ? "" : "opacity-70";
+
   return (
     <AppShell>
       <PageHeader
