@@ -76,6 +76,7 @@ import {
 } from "@/lib/id-document-format";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton";
+import { scrollToField } from "@/lib/form-field-validation";
 
 /**
  * Compute per-field error messages for the three worker date inputs.
@@ -640,79 +641,98 @@ function Onboarding() {
     }
     if (!isValidPhone(form.phone_code, form.phone_number)) {
       toast.error("Inserisci un numero di telefono valido.");
+      scrollToField("phone");
       return;
     }
     if (role === "restaurant") {
       if (!vatValid) {
         toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
+        scrollToField("vat_number");
         return;
       }
       if (!form.business_name.trim()) {
         toast.error("Inserisci il nome del locale.");
+        scrollToField("business_name");
         return;
       }
       if (!form.venue_type) {
         toast.error("Seleziona la tipologia del locale.");
+        scrollToField("venue_type");
         return;
       }
       if (form.venue_type === "Altro" && !form.venue_type_other.trim()) {
         toast.error("Specifica la tipologia del locale.");
+        scrollToField("venue_type_other");
         return;
       }
       if (!form.price_range) {
         toast.error("Seleziona la fascia di prezzo del locale.");
+        scrollToField("price_range");
         return;
       }
       if (!form.address.trim()) {
         toast.error("Inserisci l'indirizzo del locale.");
+        scrollToField("address");
         return;
       }
       if (!form.province) {
         toast.error("Seleziona una provincia.");
+        scrollToField("province");
         return;
       }
       if (!form.city) {
         toast.error("Seleziona una città.");
+        scrollToField("city");
         return;
       }
       if (!isCityInProvince(form.city, form.province)) {
         toast.error("La città selezionata non appartiene alla provincia scelta.");
+        scrollToField("city");
         return;
       }
       if (!form.postal_code.trim()) {
         toast.error("Inserisci il CAP.");
+        scrollToField("postal_code");
         return;
       }
       if (!isValidCapForCity(form.province, form.city, form.postal_code.trim())) {
         toast.error("Il CAP non appartiene alla città selezionata.");
+        scrollToField("postal_code");
         return;
       }
       if (!form.district.trim()) {
         toast.error("Seleziona la zona/quartiere del locale.");
+        scrollToField("district");
         return;
       }
       if (!isValidCapForDistrict(form.province, form.city, form.district, form.postal_code.trim())) {
         toast.error("Il CAP selezionato non appartiene alla zona indicata.");
+        scrollToField("postal_code");
         return;
       }
       if (!form.contact_person_first_name.trim() || !form.contact_person_last_name.trim()) {
         toast.error("Inserisci nome e cognome del referente.");
+        scrollToField("contact_person_first_name");
         return;
       }
       if (!form.contact_person_role) {
         toast.error("Seleziona il ruolo del referente.");
+        scrollToField("contact_person_role");
         return;
       }
       if (form.contact_person_role === "Altro" && !form.contact_person_role_other.trim()) {
         toast.error("Specifica il ruolo del referente.");
+        scrollToField("contact_person_role_other");
         return;
       }
       if (!isValidPhone(form.contact_person_phone_code, form.contact_person_phone_number)) {
         toast.error("Inserisci un numero di telefono valido per il referente.");
+        scrollToField("contact_person_phone");
         return;
       }
       if (!form.contact_person_email.trim() || !isValidEmail(form.contact_person_email)) {
         toast.error("Inserisci un indirizzo email valido.");
+        scrollToField("contact_person_email");
         return;
       }
     }
