@@ -31,7 +31,6 @@ import { HourlyRateInput } from "@/components/HourlyRateInput";
 import {
   ensureProfileComplete,
   scrollToField,
-  FILL_REQUIRED_TOAST,
 } from "@/lib/form-field-validation";
 
 export const Route = createFileRoute("/announcements/new")({
