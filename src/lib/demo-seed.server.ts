@@ -666,7 +666,7 @@ export async function completeDemoProfiles(
         primary_role: p.primary_role ?? pickByHash(DEMO_WORKER_ROLES, p.id),
         secondary_roles: p.secondary_roles && p.secondary_roles.length > 0 ? p.secondary_roles : [pickByHash(DEMO_WORKER_ROLES, p.id + "s")],
         experience_years: p.experience_years ?? ((p.id.charCodeAt(0) % 12)),
-        experience_level: p.experience_level ?? pickByHash(["junior", "middle", "senior"], p.id),
+        experience_level: p.experience_level ?? pickByHash(["junior", "intermediate", "senior"], p.id),
         hourly_rate: p.hourly_rate ?? 10 + (p.id.charCodeAt(2) % 9),
         is_motorized: p.is_motorized ?? ((p.id.charCodeAt(3) % 2) === 0),
         short_bio: p.short_bio ?? "Profilo demo per test della piattaforma.",
