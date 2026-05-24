@@ -416,6 +416,14 @@ function Thread() {
   const oldestRef = useRef<string | null>(null); // ISO created_at of oldest loaded msg
   const pendingPrependHeightRef = useRef<number | null>(null);
 
+  // Worker-side reminder to acknowledge the operational instructions after
+  // the restaurant has confirmed the shift. Shown once per conversation
+  // until the worker either confirms or dismisses; reopens automatically if
+  // they navigate back and still haven't acknowledged.
+  const [instructionsReminderOpen, setInstructionsReminderOpen] = useState(false);
+  const [ackDialogBusy, setAckDialogBusy] = useState(false);
+  const reminderShownForRef = useRef<string | null>(null);
+
   useEffect(() => {
     (async () => {
       setLoading(true);
