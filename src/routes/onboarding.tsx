@@ -1195,6 +1195,7 @@ function Onboarding() {
               onCodeChange={(c) => setForm({ ...form, phone_code: c })}
               onNumberChange={(n) => setForm({ ...form, phone_number: n })}
               disabled={!!profile?.phone_verified}
+              data-field="phone"
             />
             {profile?.phone_verified ? (
               <div className="mt-1.5 space-y-1">
@@ -1224,6 +1225,7 @@ function Onboarding() {
                   required
                   value={form.business_name}
                   onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                  data-field="business_name"
                 />
               </div>
               <div id="sec-vat" className="md:col-span-1 scroll-mt-24">
@@ -1241,6 +1243,7 @@ function Onboarding() {
                       setForm({ ...form, vat_number: v });
                       setVatResult(null);
                     }}
+                    data-field="vat_number"
                   />
                   <Button type="button" variant="outline" disabled={!vatValid || vatChecking} onClick={handleVerifyVat}>
                     {vatChecking ? "Verifico…" : "Verifica"}
@@ -1258,7 +1261,7 @@ function Onboarding() {
                   </p>
                 )}
               </div>
-              <div>
+              <div data-field="venue_type" className="scroll-mt-24">
                 <Label>Tipologia locale *</Label>
                 <select
                   required
@@ -1286,10 +1289,11 @@ function Onboarding() {
                     placeholder="Specifica tipologia locale"
                     value={form.venue_type_other}
                     onChange={(e) => setForm({ ...form, venue_type_other: e.target.value })}
+                    data-field="venue_type_other"
                   />
                 )}
               </div>
-              <div>
+              <div data-field="price_range" className="scroll-mt-24">
                 <Label>Fascia di prezzo *</Label>
                 <select
                   required
@@ -1309,7 +1313,7 @@ function Onboarding() {
             <div id="sec-location" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
               <div>
                 <Label>Indirizzo *</Label>
-                <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} data-field="address" />
               </div>
               <div>
                 <Label>N. civico</Label>
@@ -1320,7 +1324,7 @@ function Onboarding() {
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <div>
+              <div data-field="province" className="scroll-mt-24">
                 <Label>Provincia *</Label>
                 <select
                   required
@@ -1336,7 +1340,7 @@ function Onboarding() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div data-field="city" className="scroll-mt-24">
                 <Label>Città *</Label>
                 <select
                   required
@@ -1355,7 +1359,7 @@ function Onboarding() {
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
-              <div>
+              <div data-field="district" className="scroll-mt-24">
                  <Label>Zona / quartiere</Label>
                  <DistrictField
                    province={form.province}
@@ -1365,7 +1369,7 @@ function Onboarding() {
                    onChange={(v) => setForm({ ...form, district: v, postal_code: "" })}
                  />
               </div>
-              <div>
+              <div data-field="postal_code" className="scroll-mt-24">
                 <Label>CAP</Label>
                 <CapField
                   province={form.province}
@@ -1392,6 +1396,7 @@ function Onboarding() {
                     <Input
                       value={form.contact_person_first_name}
                       onChange={(e) => setForm({ ...form, contact_person_first_name: e.target.value })}
+                      data-field="contact_person_first_name"
                     />
                   </div>
                   <div>
@@ -1399,9 +1404,10 @@ function Onboarding() {
                     <Input
                       value={form.contact_person_last_name}
                       onChange={(e) => setForm({ ...form, contact_person_last_name: e.target.value })}
+                      data-field="contact_person_last_name"
                     />
                   </div>
-                  <div>
+                  <div data-field="contact_person_role" className="scroll-mt-24">
                     <Label className="text-xs">Ruolo</Label>
                     <Select
                       value={form.contact_person_role}
@@ -1424,10 +1430,11 @@ function Onboarding() {
                         placeholder="Specifica ruolo referente"
                         value={form.contact_person_role_other}
                         onChange={(e) => setForm({ ...form, contact_person_role_other: e.target.value })}
+                        data-field="contact_person_role_other"
                       />
                     )}
                   </div>
-                  <div>
+                  <div data-field="contact_person_phone" className="scroll-mt-24">
                     <Label className="text-xs">Telefono</Label>
                     <PhoneInput
                       code={form.contact_person_phone_code}
@@ -1436,7 +1443,7 @@ function Onboarding() {
                       onNumberChange={(n) => setForm({ ...form, contact_person_phone_number: n })}
                     />
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2" data-field="contact_person_email">
                     <Label className="text-xs">Email</Label>
                     <Input
                       type="email"
