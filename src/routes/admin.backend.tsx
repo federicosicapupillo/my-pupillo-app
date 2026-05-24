@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Database, HardDrive, Lock, Trash2, Loader2 } from "lucide-react";
+import { Database, HardDrive, Lock, Trash2, Loader2, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { cleanupTestProfiles, type CleanupReport } from "@/lib/cleanup-test-profiles.functions";
+import { populateTestUsers, countExistingTestProfiles, type PopulateReport } from "@/lib/populate-test-users.functions";
 
 export const Route = createFileRoute("/admin/backend")({
   head: () => ({ meta: [{ title: "Backend — Admin Pupillo" }] }),
@@ -205,6 +206,8 @@ function TestDataCleanupSection() {
           <Trash2 className="h-4 w-4 mr-2" /> Ripulisci profili di test
         </Button>
 
+        <PopulateTestUsersBlock />
+
         {report && (
           <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-1">
             <div className="font-medium mb-1">Pulizia completata</div>
@@ -268,5 +271,128 @@ function TestDataCleanupSection() {
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+function PopulateTestUsersBlock() {
+  const run = useServerFn(populateTestUsers);
+  const checkExisting = useServerFn(countExistingTestProfiles);
+  const [open, setOpen] = useState(false);
+  const [workers, setWorkers] = useState(300);
+  const [restaurants, setRestaurants] = useState(100);
+  const [running, setRunning] = useState(false);
+  const [existing, setExisting] = useState<number | null>(null);
+  const [warned, setWarned] = useState(false);
+  const [report, setReport] = useState<PopulateReport | null>(null);
+
+  async function openDialog() {
+    setReport(null);
+    setWarned(false);
+    setExisting(null);
+    try {
+      const r = await checkExisting();
+      setExisting(r.existing);
+    } catch {/* non bloccante */}
+    setOpen(true);
+  }
+
+  const needsWarning = (existing ?? 0) > 0 && !warned;
+
+  async function execute() {
+    if (running) return;
+    if (needsWarning) { setWarned(true); return; }
+    setRunning(true);
+    try {
+      const r = await run({ data: { workers, restaurants } });
+      setReport(r);
+      setOpen(false);
+      toast.success("Utenti di test creati");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Errore durante la creazione");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="pt-4 border-t">
+      <Button variant="secondary" onClick={openDialog}>
+        <UsersRound className="h-4 w-4 mr-2" /> Popola utenti di test
+      </Button>
+      <p className="text-xs text-muted-foreground mt-2">
+        Crea automaticamente profili lavoratore e ristoratore completi al 100% per testare la piattaforma.
+      </p>
+
+      {report && (
+        <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-1 mt-4">
+          <div className="font-medium">Utenti di test creati</div>
+          <p className="text-muted-foreground mb-2">
+            La piattaforma è stata popolata con nuovi profili lavoratore e ristoratore completi al 100%.
+          </p>
+          <div>Lavoratori creati: <strong>{report.seed.createdPerTable.workers ?? 0}</strong></div>
+          <div>Ristoratori creati: <strong>{report.seed.createdPerTable.restaurants ?? 0}</strong></div>
+          <div>Annunci creati: <strong>{report.seed.createdPerTable.announcements ?? 0}</strong></div>
+          <div>Candidature create: <strong>{report.seed.createdPerTable.applications ?? 0}</strong></div>
+          <div>Turni creati: <strong>{report.seed.createdPerTable.shifts ?? 0}</strong></div>
+          <div>Recensioni create: <strong>{report.seed.createdPerTable.reviews ?? 0}</strong></div>
+          <div>Profili completati al 100%: <strong>{report.complete.updatedWorkers + report.complete.updatedRestaurants}</strong></div>
+          <div className="pt-2 border-t mt-2">
+            <div className="font-medium">Password utenti test: <code>{report.password}</code></div>
+            <div className="text-xs text-muted-foreground mt-1">Esempi accesso:</div>
+            <ul className="text-xs">
+              {report.sampleAccounts.map((a) => <li key={a}><code>{a}</code></li>)}
+            </ul>
+          </div>
+          {(report.seed.errors.length + report.complete.errors.length) > 0 && (
+            <details className="text-xs text-destructive pt-2">
+              <summary>Errori ({report.seed.errors.length + report.complete.errors.length})</summary>
+              <ul className="max-h-40 overflow-y-auto mt-1">
+                {[...report.seed.errors, ...report.complete.errors].map((e, i) => <li key={i}>• {e}</li>)}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={(v) => { if (!running) setOpen(v); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {needsWarning ? "Profili di test già presenti" : "Conferma creazione utenti di test"}
+            </DialogTitle>
+            <DialogDescription>
+              {needsWarning
+                ? `Sono già presenti ${existing} profili di test nel database. Puoi continuare e aggiungerne altri, oppure annullare e usare prima la funzione di pulizia.`
+                : "Questa operazione creerà nuovi profili lavoratore e ristoratore di test completi al 100%, con dati fittizi, foto profilo di test, ruoli, disponibilità e informazioni operative. Gli utenti creati saranno utilizzabili per simulare il funzionamento della piattaforma."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!needsWarning && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="pop-workers">Numero lavoratori (1-500)</Label>
+                <Input id="pop-workers" type="number" min={1} max={500} value={workers}
+                  onChange={(e) => setWorkers(Math.max(1, Math.min(500, Number(e.target.value) || 0)))}
+                  disabled={running} />
+              </div>
+              <div>
+                <Label htmlFor="pop-restaurants">Numero ristoratori (1-200)</Label>
+                <Input id="pop-restaurants" type="number" min={1} max={200} value={restaurants}
+                  onChange={(e) => setRestaurants(Math.max(1, Math.min(200, Number(e.target.value) || 0)))}
+                  disabled={running} />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={running}>Annulla</Button>
+            <Button onClick={execute} disabled={running}>
+              {running ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UsersRound className="h-4 w-4 mr-2" />}
+              {needsWarning ? "Continua comunque" : "Crea utenti di test"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
