@@ -76,6 +76,7 @@ import {
 } from "@/lib/id-document-format";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton";
+import { scrollToField } from "@/lib/form-field-validation";
 
 /**
  * Compute per-field error messages for the three worker date inputs.
@@ -640,79 +641,98 @@ function Onboarding() {
     }
     if (!isValidPhone(form.phone_code, form.phone_number)) {
       toast.error("Inserisci un numero di telefono valido.");
+      scrollToField("phone");
       return;
     }
     if (role === "restaurant") {
       if (!vatValid) {
         toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
+        scrollToField("vat_number");
         return;
       }
       if (!form.business_name.trim()) {
         toast.error("Inserisci il nome del locale.");
+        scrollToField("business_name");
         return;
       }
       if (!form.venue_type) {
         toast.error("Seleziona la tipologia del locale.");
+        scrollToField("venue_type");
         return;
       }
       if (form.venue_type === "Altro" && !form.venue_type_other.trim()) {
         toast.error("Specifica la tipologia del locale.");
+        scrollToField("venue_type_other");
         return;
       }
       if (!form.price_range) {
         toast.error("Seleziona la fascia di prezzo del locale.");
+        scrollToField("price_range");
         return;
       }
       if (!form.address.trim()) {
         toast.error("Inserisci l'indirizzo del locale.");
+        scrollToField("address");
         return;
       }
       if (!form.province) {
         toast.error("Seleziona una provincia.");
+        scrollToField("province");
         return;
       }
       if (!form.city) {
         toast.error("Seleziona una città.");
+        scrollToField("city");
         return;
       }
       if (!isCityInProvince(form.city, form.province)) {
         toast.error("La città selezionata non appartiene alla provincia scelta.");
+        scrollToField("city");
         return;
       }
       if (!form.postal_code.trim()) {
         toast.error("Inserisci il CAP.");
+        scrollToField("postal_code");
         return;
       }
       if (!isValidCapForCity(form.province, form.city, form.postal_code.trim())) {
         toast.error("Il CAP non appartiene alla città selezionata.");
+        scrollToField("postal_code");
         return;
       }
       if (!form.district.trim()) {
         toast.error("Seleziona la zona/quartiere del locale.");
+        scrollToField("district");
         return;
       }
       if (!isValidCapForDistrict(form.province, form.city, form.district, form.postal_code.trim())) {
         toast.error("Il CAP selezionato non appartiene alla zona indicata.");
+        scrollToField("postal_code");
         return;
       }
       if (!form.contact_person_first_name.trim() || !form.contact_person_last_name.trim()) {
         toast.error("Inserisci nome e cognome del referente.");
+        scrollToField("contact_person_first_name");
         return;
       }
       if (!form.contact_person_role) {
         toast.error("Seleziona il ruolo del referente.");
+        scrollToField("contact_person_role");
         return;
       }
       if (form.contact_person_role === "Altro" && !form.contact_person_role_other.trim()) {
         toast.error("Specifica il ruolo del referente.");
+        scrollToField("contact_person_role_other");
         return;
       }
       if (!isValidPhone(form.contact_person_phone_code, form.contact_person_phone_number)) {
         toast.error("Inserisci un numero di telefono valido per il referente.");
+        scrollToField("contact_person_phone");
         return;
       }
       if (!form.contact_person_email.trim() || !isValidEmail(form.contact_person_email)) {
         toast.error("Inserisci un indirizzo email valido.");
+        scrollToField("contact_person_email");
         return;
       }
     }
@@ -1166,7 +1186,7 @@ function Onboarding() {
             <Label>Nome completo</Label>
             <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
           </div>
-          <div>
+          <div data-field="phone" className="scroll-mt-24">
             <Label>Telefono *</Label>
             <PhoneInput
               required
@@ -1204,6 +1224,7 @@ function Onboarding() {
                   required
                   value={form.business_name}
                   onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                  data-field="business_name"
                 />
               </div>
               <div id="sec-vat" className="md:col-span-1 scroll-mt-24">
@@ -1221,6 +1242,7 @@ function Onboarding() {
                       setForm({ ...form, vat_number: v });
                       setVatResult(null);
                     }}
+                    data-field="vat_number"
                   />
                   <Button type="button" variant="outline" disabled={!vatValid || vatChecking} onClick={handleVerifyVat}>
                     {vatChecking ? "Verifico…" : "Verifica"}
@@ -1238,7 +1260,7 @@ function Onboarding() {
                   </p>
                 )}
               </div>
-              <div>
+              <div data-field="venue_type" className="scroll-mt-24">
                 <Label>Tipologia locale *</Label>
                 <select
                   required
@@ -1266,10 +1288,11 @@ function Onboarding() {
                     placeholder="Specifica tipologia locale"
                     value={form.venue_type_other}
                     onChange={(e) => setForm({ ...form, venue_type_other: e.target.value })}
+                    data-field="venue_type_other"
                   />
                 )}
               </div>
-              <div>
+              <div data-field="price_range" className="scroll-mt-24">
                 <Label>Fascia di prezzo *</Label>
                 <select
                   required
@@ -1289,7 +1312,7 @@ function Onboarding() {
             <div id="sec-location" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
               <div>
                 <Label>Indirizzo *</Label>
-                <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} data-field="address" />
               </div>
               <div>
                 <Label>N. civico</Label>
@@ -1300,7 +1323,7 @@ function Onboarding() {
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <div>
+              <div data-field="province" className="scroll-mt-24">
                 <Label>Provincia *</Label>
                 <select
                   required
@@ -1316,7 +1339,7 @@ function Onboarding() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div data-field="city" className="scroll-mt-24">
                 <Label>Città *</Label>
                 <select
                   required
@@ -1335,7 +1358,7 @@ function Onboarding() {
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
-              <div>
+              <div data-field="district" className="scroll-mt-24">
                  <Label>Zona / quartiere</Label>
                  <DistrictField
                    province={form.province}
@@ -1345,7 +1368,7 @@ function Onboarding() {
                    onChange={(v) => setForm({ ...form, district: v, postal_code: "" })}
                  />
               </div>
-              <div>
+              <div data-field="postal_code" className="scroll-mt-24">
                 <Label>CAP</Label>
                 <CapField
                   province={form.province}
@@ -1372,6 +1395,7 @@ function Onboarding() {
                     <Input
                       value={form.contact_person_first_name}
                       onChange={(e) => setForm({ ...form, contact_person_first_name: e.target.value })}
+                      data-field="contact_person_first_name"
                     />
                   </div>
                   <div>
@@ -1379,9 +1403,10 @@ function Onboarding() {
                     <Input
                       value={form.contact_person_last_name}
                       onChange={(e) => setForm({ ...form, contact_person_last_name: e.target.value })}
+                      data-field="contact_person_last_name"
                     />
                   </div>
-                  <div>
+                  <div data-field="contact_person_role" className="scroll-mt-24">
                     <Label className="text-xs">Ruolo</Label>
                     <Select
                       value={form.contact_person_role}
@@ -1404,10 +1429,11 @@ function Onboarding() {
                         placeholder="Specifica ruolo referente"
                         value={form.contact_person_role_other}
                         onChange={(e) => setForm({ ...form, contact_person_role_other: e.target.value })}
+                        data-field="contact_person_role_other"
                       />
                     )}
                   </div>
-                  <div>
+                  <div data-field="contact_person_phone" className="scroll-mt-24">
                     <Label className="text-xs">Telefono</Label>
                     <PhoneInput
                       code={form.contact_person_phone_code}
@@ -1416,7 +1442,7 @@ function Onboarding() {
                       onNumberChange={(n) => setForm({ ...form, contact_person_phone_number: n })}
                     />
                   </div>
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2" data-field="contact_person_email">
                     <Label className="text-xs">Email</Label>
                     <Input
                       type="email"

@@ -1,59 +1,80 @@
-## Chat di assistenza IA in Pupillo
+## Obiettivo
 
-Aggiungo un assistente in-app accessibile da un pulsante flottante "Serve aiuto?" in basso a destra su tutte le pagine autenticate. Prima versione: assistente guidato con FAQ + risposte AI dinamiche tramite Lovable AI Gateway (google/gemini-2.5-flash) e segnalazione problemi salvata in DB.
+Sostituire i toast generici con una validazione che porta l'utente al primo campo mancante, lo evidenzia con bordo rosso, mostra un messaggio sotto, e pulisce errore appena compilato. Funzionante su mobile, tema chiaro/scuro, riutilizzabile.
 
-### 1. Database (1 migrazione)
+## Approccio
 
-Nuova tabella `support_tickets`:
-- `id`, `user_id`, `user_role`, `category` (text), `message` (text), `page_url` (text), `status` (`aperto`|`in_lavorazione`|`risolto`|`chiuso`, default `aperto`), `created_at`, `updated_at`
-- RLS: utenti creano e leggono i propri ticket; admin (via `has_role`) leggono/modificano tutti.
+Creare un'utility riutilizzabile + applicarla ai due form più critici dove oggi compaiono errori generici:
 
-### 2. Base conoscenza (file statico)
+1. **`src/lib/form-field-validation.ts`** — nuova utility:
+   - `registerField(name, ref)` per registrare i ref dei campi (input/section)
+   - `focusFirstMissing(errors, refs)` — scroll smooth + focus al primo campo con errore, con `block: "center"`
+   - Hook `useFieldErrors()` che restituisce `{ errors, setErrors, clearError, fieldProps(name) }` dove `fieldProps` ritorna `{ ref, "aria-invalid", className }` da spreddare sui campi.
+   - Helper `FieldError({ name })` che renderizza `<p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle/> {message}</p>`.
+   - Classe errore: `"border-destructive focus-visible:ring-destructive/40"` (già nel token system).
 
-`src/lib/assistant-kb.ts` — esporta:
-- `WORKER_FAQS` e `RESTAURANT_FAQS`: array `{ id, question, answer, cta?: { label, to } }` con tutte le domande elencate nel brief.
-- `ERROR_FAQS` comuni a entrambi i ruoli.
-- `KB_SYSTEM_PROMPT`: contesto sintetico per l'IA (cosa fa Pupillo, rotte principali, regole privacy: niente nome locale/cognome/telefono/indirizzo prima di assegnazione, mai inventare dati).
-- `getContextualFaqs(pathname, role)`: ordina le FAQ pertinenti per prime in base alla rotta corrente (`/availability`, `/messages`, `/announcements/new`, ecc.).
+2. **`src/routes/onboarding.tsx`** (worker + restaurant):
+   - Sostituire la sequenza di `toast.error(...)` nella `saveProfile` con `setErrors({...})` + `focusFirstMissing`.
+   - Aggiungere `ref` ai campi chiave (telefono, partita IVA, nome locale, indirizzo, città, CAP, referente, data nascita, documenti, foto profilo, mansioni, zone).
+   - Mostrare `<FieldError name="..."/>` sotto ogni campo.
+   - Mantenere tutti i testi esistenti dei toast come messaggi di errore inline + tenere un toast riassuntivo breve ("Completa i campi evidenziati").
+   - Pulizia automatica: handler `onChange` esistenti chiamano `clearError(name)`.
 
-### 3. Server function IA
+3. **`src/routes/profile.tsx`** — stesso pattern dove esistono salvataggi con campi obbligatori.
 
-`src/lib/assistant.functions.ts`:
-- `askAssistant({ message, history, role, pathname })` con `requireSupabaseAuth`.
-- Chiama Lovable AI Gateway (`google/gemini-2.5-flash`, endpoint `https://ai.gateway.lovable.dev/v1/chat/completions`, `LOVABLE_API_KEY`) con system prompt + KB.
-- Risponde `{ reply: string, cta?: { label, to } }`. Se non sa: messaggio fisso "Non riesco a verificarlo automaticamente…".
-- `createSupportTicket({ category, message, pageUrl })` → insert su `support_tickets`.
+4. **Gating operativo (candidature / pubblicazione annunci / proposte)**:
+   - In `src/routes/announcements.$id.tsx` (candidatura worker), `src/routes/ristoratore.annunci.nuovo.tsx` (pubblica annuncio), `src/routes/workers.tsx` (invia proposta): prima dell'azione, controllare `profile.profile_completed`. Se false, mostrare toast "Completa il profilo per continuare" + `navigate({ to: "/onboarding" })`. L'onboarding al mount legge un eventuale `?focus=<fieldName>` (o semplicemente esegue la validazione iniziale silenziosa) e fa scroll al primo campo mancante.
 
-### 4. UI componenti
+5. **Accessibilità sezioni libere**: il `PhoneVerificationGate` e `RequireAuth` non vengono toccati; `/onboarding`, `/profile`, `/terms`, ecc. restano accessibili come ora.
 
-- `src/components/assistant/AssistantFab.tsx` — pulsante flottante fixed bottom-right (z-index alto, nascosto se non autenticato, offset su mobile per non coprire bottom nav).
-- `src/components/assistant/AssistantPanel.tsx` — `Sheet` lateral su desktop, bottom sheet (`Drawer`) su mobile. Contiene:
-  - Header con titolo + chiudi.
-  - Messaggio di benvenuto per ruolo.
-  - Chip con domande rapide contestuali (max 6 visibili, "mostra altre").
-  - Lista messaggi (utente + assistente) con CTA inline (`<Link>` alle rotte esistenti).
-  - Input + invio (usa `askAssistant`).
-  - Bottone "Segnala un problema" → apre `ReportProblemDialog`.
-- `src/components/assistant/ReportProblemDialog.tsx` — form con categoria (select), descrizione (textarea), `page_url` auto-prefilled, submit → `createSupportTicket`.
+## Dettagli tecnici
 
-Montaggio: in `AppShell.tsx` (già presente come shell autenticata) aggiungo `<AssistantFab />` + `<AssistantPanel />` controllati da stato locale.
+**Utility file:**
+```ts
+// src/lib/form-field-validation.ts
+export function useFieldErrors<T extends string>() {
+  const refs = useRef<Record<string, HTMLElement|null>>({});
+  const [errors, setErrors] = useState<Partial<Record<T,string>>>({});
+  const register = (name:T) => (el:HTMLElement|null) => { refs.current[name]=el; };
+  const clearError = (name:T) => setErrors(e => { const n={...e}; delete n[name]; return n; });
+  const focusFirst = (order:T[]) => {
+    for (const k of order) if (errors[k]) {
+      const el = refs.current[k];
+      el?.scrollIntoView({ behavior:"smooth", block:"center" });
+      requestAnimationFrame(()=> (el as HTMLInputElement|null)?.focus?.());
+      return;
+    }
+  };
+  return { errors, setErrors, clearError, register, focusFirst };
+}
 
-### 5. Admin
+export const errorFieldClass = "border-destructive focus-visible:ring-destructive/40 aria-[invalid=true]:border-destructive";
 
-Nuova sezione `src/components/AdminSupportTicketsSection.tsx` montata in `src/routes/admin.tsx`:
-- Lista ticket con filtri stato.
-- Per riga: utente, ruolo, categoria, messaggio (troncato + expand), pagina, stato, data.
-- Select per cambiare stato (aggiorna riga + `updated_at`).
+export function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p role="alert" className="mt-1 flex items-center gap-1 text-xs font-medium text-destructive">
+    <AlertCircle className="h-3.5 w-3.5"/>{message}
+  </p>;
+}
+```
 
-### 6. Cose che NON cambio
+**Integrazione `onboarding.tsx`:**
+sostituire blocco `if (...) { toast.error(...); return; }` con costruzione `const errs: Record<string,string> = {}; if(!field) errs.field="Campo obbligatorio"; ... if (Object.keys(errs).length) { setErrors(errs); focusFirst(ORDER); toast.error("Completa i campi evidenziati"); return; }`.
 
-Rotte esistenti, logica chat/offerte/mappa/privacy/crediti, tabelle esistenti, `client.ts`, `types.ts`. Aggiungo solo nuovi file + 1 migrazione + 1 punto di mount in `AppShell.tsx` + 1 sezione in `admin.tsx`.
+Su ogni `<Input>` o componente: `ref={register("fieldName")} aria-invalid={!!errors.fieldName} className={cn(base, errors.fieldName && errorFieldClass)} onChange={e => { setField(...); clearError("fieldName"); }}`.
+Sotto: `<FieldError message={errors.fieldName}/>`.
 
-### Note tecniche
+## Scope file
 
-- IA chiamata server-side via `createServerFn` (mai esporre `LOVABLE_API_KEY` al client). Se il modello non è raggiungibile, fallback alle FAQ statiche (mostro messaggio "modalità guidata").
-- Privacy: il prompt di sistema istruisce esplicitamente l'IA a non inventare dati personali e a indirizzare alla segnalazione quando non sa.
-- Mobile: FAB `bottom-20 right-4` per non coprire la barra di navigazione, panel come `Drawer` di vaul (già in shadcn).
-- A11y: `aria-label` sul FAB, focus trap dal componente shadcn, Esc per chiudere.
+- create: `src/lib/form-field-validation.tsx`
+- edit: `src/routes/onboarding.tsx` (entrambi i flussi worker/restaurant)
+- edit: `src/routes/profile.tsx` (se ha validazioni di salvataggio)
+- edit: `src/routes/announcements.$id.tsx` — gate candidatura worker
+- edit: `src/routes/ristoratore.annunci.nuovo.tsx` — gate pubblicazione + sostituire validazione interna con stesso pattern
+- edit: `src/routes/workers.tsx` — gate "Invia proposta"
 
-Approvi questo piano? Se sì procedo con migrazione + codice.
+## Fuori scope (non tocco)
+
+- logica candidatura/accettazione/chat/crediti/pagamenti/routing/permessi
+- testi UI esistenti (oltre ai messaggi errore inline)
+- layout generale
