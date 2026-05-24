@@ -40,6 +40,7 @@ export const Route = createFileRoute("/announcements/new")({
 function NewAnn() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const { requireComplete } = useProfileGate();
   const { reuse } = Route.useSearch();
   const [busy, setBusy] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -414,7 +415,7 @@ function NewAnn() {
           <Link to="/billing"><Button size="sm" variant="outline" type="button" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
         )}
       </div>
-      <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
+      <form onSubmit={requireComplete(submit)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-2">
           <div data-field="service_date" className="scroll-mt-24">
             <Label>Data servizio</Label>
@@ -615,7 +616,7 @@ function NewAnn() {
           <Link to="/announcements" className="sm:w-auto w-full">
             <Button type="button" variant="ghost" disabled={busy} className="w-full">Annulla</Button>
           </Link>
-          <Button type="button" variant="outline" disabled={busy} onClick={()=>save(true)} className="sm:w-auto w-full">
+          <Button type="button" variant="outline" disabled={busy} onClick={requireComplete(()=>save(true))} className="sm:w-auto w-full">
             Salva come bozza
           </Button>
           <Button type="submit" disabled={busy || !canAfford} className="flex-1 gap-1">
@@ -654,7 +655,7 @@ function NewAnn() {
             {!isPaid && !canAfford ? (
               <Link to="/billing"><Button>Acquista crediti</Button></Link>
             ) : (
-              <AlertDialogAction disabled={busy} onClick={async () => { await save(false); setConfirmOpen(false); }}>
+              <AlertDialogAction disabled={busy} onClick={requireComplete(async () => { await save(false); setConfirmOpen(false); })}>
                 {busy ? "Pubblicazione…" : "Conferma e pubblica"}
               </AlertDialogAction>
             )}
