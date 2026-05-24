@@ -21,7 +21,7 @@ import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 import { sendShiftProposal, hasUnansweredProposal } from "@/lib/shift-proposal";
-import { ensureProfileComplete } from "@/lib/form-field-validation";
+import { useProfileGate } from "@/components/ProfileGate";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
@@ -387,17 +387,6 @@ function WorkersPage() {
   // Esegue l'invio della proposta dopo la conferma esplicita del ristoratore.
   const sendProposal = async (workerId: string) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
-    // Gate: il ristoratore deve avere il profilo completo per inviare una proposta.
-    if (
-      !ensureProfileComplete(profile, nav, {
-        toast: (m) => toast.error(m),
-        message:
-          "Completa il profilo del locale prima di inviare proposte. Ti portiamo ai dati mancanti.",
-      })
-    ) {
-      setProposalWorker(null);
-      return;
-    }
     setSendingProposal(true);
     try {
       let applicationId: string | null = null;
