@@ -135,6 +135,7 @@ function AvailabilityPage() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { requireCompleteForAvailability, canPerformOperationalAction } = useProfileGate();
 
   // Defaults from worker profile
   const defaults = useMemo(() => {
