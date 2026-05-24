@@ -141,7 +141,7 @@ const SLOT_TAKEN_CLS = "bg-muted text-muted-foreground border-border";
 function AnnouncementDetail() {
   const { id } = Route.useParams();
   const { section } = Route.useSearch();
-  const { user, role } = useAuth();
+  const { user, role, profile } = useAuth();
   const nav = useNavigate();
   const candidatesRef = useRef<HTMLElement | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
