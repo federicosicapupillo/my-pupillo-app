@@ -415,7 +415,13 @@ function NewAnn() {
           <Link to="/billing"><Button size="sm" variant="outline" type="button" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
         )}
       </div>
-      <form onSubmit={requireComplete(submit)} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          requireComplete(submit)(e);
+        }}
+        className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6"
+      >
         <div className="grid gap-4 md:grid-cols-2">
           <div data-field="service_date" className="scroll-mt-24">
             <Label>Data servizio</Label>
