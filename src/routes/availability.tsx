@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy } from "lucide-react";
+import { useProfileGate } from "@/components/ProfileGate";
 import {
   DAY_LABELS,
   SLOT_LABELS,
