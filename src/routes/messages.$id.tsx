@@ -2156,7 +2156,7 @@ function Thread() {
           }}
           selected={selectedTpl}
           setSelected={setSelectedTpl}
-          onSend={sendTemplate}
+          onSend={requireComplete(sendTemplate)}
           sending={sending}
           ann={ann}
           otherName={other?.name ?? null}
