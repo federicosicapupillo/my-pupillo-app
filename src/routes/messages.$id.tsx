@@ -2348,6 +2348,61 @@ function Thread() {
             </div>
           </SheetContent>
         </Sheet>
+        <AlertDialog open={instructionsReminderOpen} onOpenChange={setInstructionsReminderOpen}>
+          <AlertDialogContent className="bg-background border-2 border-primary/50 shadow-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-lg font-bold">
+                Conferma le istruzioni del turno
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>
+                    Prima di iniziare il servizio devi leggere e confermare le istruzioni ricevute dal ristoratore.
+                  </p>
+                  <p>Controlla con attenzione:</p>
+                  <ul className="list-disc pl-5 space-y-0.5">
+                    <li>orario di arrivo</li>
+                    <li>indirizzo</li>
+                    <li>dress code</li>
+                    <li>referente sul posto</li>
+                    <li>note operative</li>
+                  </ul>
+                  <p>
+                    Dopo aver letto tutto, clicca su "Ho letto e confermo le istruzioni".
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2">
+              <AlertDialogCancel
+                onClick={() => {
+                  setInstructionsReminderOpen(false);
+                  requestAnimationFrame(() => {
+                    const el = document.getElementById("instructions-card");
+                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  });
+                }}
+              >
+                Vai alle istruzioni
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={ackDialogBusy}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (ackDialogBusy) return;
+                  setAckDialogBusy(true);
+                  try {
+                    await acknowledgeInstructions();
+                  } finally {
+                    setAckDialogBusy(false);
+                  }
+                }}
+              >
+                {ackDialogBusy ? "Conferma in corso…" : "Confermo ora"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
   );
 }
