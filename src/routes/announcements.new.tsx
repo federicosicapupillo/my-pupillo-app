@@ -28,6 +28,11 @@ import { isValidCapForCity } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DateField } from "@/components/DateField";
 import { HourlyRateInput } from "@/components/HourlyRateInput";
+import {
+  ensureProfileComplete,
+  scrollToField,
+  FILL_REQUIRED_TOAST,
+} from "@/lib/form-field-validation";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
@@ -220,19 +225,41 @@ function NewAnn() {
 
   const save = async (asDraft: boolean) => {
     if (!user) return;
-    if (!f.service_date) { toast.error("Inserisci la data del servizio"); return; }
+    // Gate: prima di pubblicare/salvare l'annuncio il ristoratore deve
+    // avere il profilo completo (dati aziendali, indirizzo, referente, ecc.).
+    if (
+      !ensureProfileComplete(profile, nav, {
+        toast: (m) => toast.error(m),
+        message:
+          "Completa il profilo del locale prima di pubblicare un annuncio. Ti portiamo ai dati mancanti.",
+      })
+    ) {
+      return;
+    }
+    if (!f.service_date) {
+      toast.error("Inserisci la data del servizio");
+      scrollToField("service_date");
+      return;
+    }
     const tariffNum = parseFloat(f.tariff_amount);
     if (!Number.isFinite(tariffNum) || tariffNum <= 0) {
       toast.error("Inserisci una tariffa oraria valida.");
+      scrollToField("tariff_amount");
       return;
     }
-    if (!accessChoice) { toast.error("Seleziona l'anticipo richiesto all'ingresso."); return; }
+    if (!accessChoice) {
+      toast.error("Seleziona l'anticipo richiesto all'ingresso.");
+      scrollToField("access_choice");
+      return;
+    }
     if (accessChoice === "over15" && accessReason.trim().length < 10) {
       toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
+      scrollToField("access_reason");
       return;
     }
     if (f.job_province && f.job_city && f.job_postal_code && !isValidCapForCity(f.job_province, f.job_city, f.job_postal_code)) {
       toast.error("Il CAP non appartiene alla città selezionata.");
+      scrollToField("job_postal_code");
       return;
     }
     const accessText = accessChoice === "15"
