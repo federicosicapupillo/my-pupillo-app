@@ -779,7 +779,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         <div className="mt-3 space-y-1 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
-            {canSeePrecise ? a.location_address : zoneLabel}
+            {canSeePrecise ? formatAnnouncementLocation(a) : zoneLabel}
           </div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
           <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {a.service_time?.slice(0,5) ?? "—"}</div>
@@ -1177,7 +1177,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                 {(profile as any)?.business_name && (
                   <div><span className="text-muted-foreground">Locale:</span> <span className="font-medium">{(profile as any).business_name}</span></div>
                 )}
-                <div><span className="text-muted-foreground">Indirizzo:</span> <span className="font-medium">{closeTarget.location_address || "—"}</span></div>
+                <div><span className="text-muted-foreground">Indirizzo:</span> <span className="font-medium">{formatAnnouncementLocation(closeTarget)}</span></div>
                 <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{info ? formatCandidateName(info.full_name, collaboratedWorkerIds.has(info.worker_id)) : "Lavoratore"}</span></div>
                 <div><span className="text-muted-foreground">Stato:</span> <span className="font-medium">Da chiudere</span></div>
               </div>
@@ -1272,7 +1272,7 @@ function RepublishDialog({
           <SummaryRow icon={Calendar} label="Data e ora" value={dateRange} />
           <SummaryRow icon={Clock} label="Durata" value={`${ann.shift_duration_hours ?? ann.duration_hours} ore`} />
           <SummaryRow icon={Euro} label="Tariffa" value={formatTariff(ann.tariff_amount, ann.tariff_type)} />
-          <SummaryRow icon={MapPin} label="Indirizzo" value={ann.location_address} />
+          <SummaryRow icon={MapPin} label="Indirizzo" value={formatAnnouncementLocation(ann)} />
           {ann.professional_profile && (
             <SummaryRow icon={Users} label="Ruolo richiesto" value={ann.professional_profile} />
           )}
@@ -1480,7 +1480,7 @@ function AnnouncementDetailsDialog({
 
             <Section title="2. Luogo">
               <SummaryRow icon={Briefcase} label="Nome locale" value={venueName || "—"} />
-              <SummaryRow icon={MapPin} label="Indirizzo" value={ann.location_address || "—"} />
+              <SummaryRow icon={MapPin} label="Indirizzo" value={formatAnnouncementLocation(ann)} />
               {(ann.location_lat != null && ann.location_lng != null) && (
                 <div className="overflow-hidden rounded-xl">
                   <AnnouncementMap key={`det-${ann.id}`} lat={ann.location_lat} lng={ann.location_lng} address={ann.location_address ?? undefined} height={200} />
@@ -1555,7 +1555,7 @@ function AnnouncementDetailsDialog({
               <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Nome locale</Label><Input value={venueName ?? ""} disabled /></div>
               <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Data del turno</Label><Input value={dateLabel} disabled /></div>
               <div><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Orario</Label><Input value={`${ann.service_time?.slice(0,5) ?? "—"}${ann.end_time ? ` – ${ann.end_time.slice(0,5)}` : ""}`} disabled /></div>
-              <div className="md:col-span-2"><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Indirizzo</Label><Input value={ann.location_address ?? ""} disabled /></div>
+              <div className="md:col-span-2"><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Indirizzo</Label><Input value={formatAnnouncementLocation(ann) ?? ""} disabled /></div>
               <div className="md:col-span-2"><Label className="flex items-center gap-1"><Lock className="h-3 w-3" />Compenso</Label><Input value={formatTariff(ann.tariff_amount, ann.tariff_type)} disabled /></div>
             </div>
 
@@ -1780,7 +1780,7 @@ function ProposalConfirmDialog({
 
           <Section title="2. Luogo">
             <SummaryRow icon={Briefcase} label="Nome locale" value={venueName || "—"} />
-            <SummaryRow icon={MapPin} label="Indirizzo" value={ann.location_address || "—"} />
+            <SummaryRow icon={MapPin} label="Indirizzo" value={formatAnnouncementLocation(ann)} />
           </Section>
 
           <Section title="3. Compenso">
