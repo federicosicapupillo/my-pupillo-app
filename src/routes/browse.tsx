@@ -306,6 +306,8 @@ function Browse() {
         <div className="grid gap-4 md:grid-cols-2">
           {filtered.map(a => {
             const applied = appliedIds.has(a.id);
+            const appStatus = appStatusById[a.id];
+            const rejected = appStatus === "rejected" || appStatus === "not_interested";
             const fav = favIds.has(a.id);
             const role = a.professional_profile || "ruolo";
             const loc = publicLocationLabel({
@@ -395,7 +397,12 @@ function Browse() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
-                  {applied ? (
+                  {rejected ? (
+                    <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-destructive bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+                      <XCircle className="h-4 w-4" />
+                      Candidatura rifiutata
+                    </div>
+                  ) : applied ? (
                     <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary">
                       <CheckCircle2 className="h-4 w-4" />
                       Candidatura inviata
