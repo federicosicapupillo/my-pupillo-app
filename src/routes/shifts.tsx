@@ -701,7 +701,7 @@ function ShiftsPage() {
                   </Badge>
                 </div>
                 {role === "restaurant" && s.worker_id && s.status !== "cancelled" && profiles[s.worker_id] && (
-                  <div className="mt-2 inline-flex flex-col rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
+                  <div className="mt-2 flex flex-col rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 shadow-sm">
                     <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
                       <CheckCircle2 className="h-4 w-4 shrink-0" />
                       Turno assegnato
