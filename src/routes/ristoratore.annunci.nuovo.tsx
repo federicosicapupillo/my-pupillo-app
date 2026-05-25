@@ -573,6 +573,8 @@ function NewRestaurantJobRequest() {
           contact_person_name: f.contact_person_name,
           contact_person_phone: f.contact_person_phone,
           contact_person_email: f.contact_person_email,
+          contact_person_role: f.contact_person_role,
+          contact_person_role_other: f.contact_person_role_other,
           arrival_advance_minutes:
             accessChoice === "15" ? 15 : accessChoice === "over15" ? 30 : null,
           arrival_advance_reason: accessChoice === "over15" ? accessReason : null,
