@@ -28,6 +28,7 @@ import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { formatDateIT, formatTariff } from "@/lib/format";
 import { firstNameOf } from "@/lib/public-location";
+import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -456,7 +457,11 @@ function WorkersPage() {
   };
 
   const fieldsOf = (w: W) => {
-    const fullName = (w.full_name ?? "").toLowerCase();
+    // Privacy: per i lavoratori che NON hanno mai lavorato con questo
+    // ristoratore non esponiamo il nome reale nemmeno alla ricerca testuale —
+    // altrimenti il ristoratore potrebbe inferire l'identità tramite query.
+    const workedTogether = !!rel[w.id]?.workedWith;
+    const fullName = workedTogether ? (w.full_name ?? "").toLowerCase() : "";
     const [first = "", ...rest] = fullName.split(" ");
     return {
       fullName,
@@ -787,6 +792,7 @@ function WorkersPage() {
       {view === "map" ? (
         <WorkersMapSection
           workers={sorted}
+          rel={rel}
           fallbackCenter={
             selectedAnn?.location_lat != null && selectedAnn?.location_lng != null
               ? [selectedAnn.location_lat as number, selectedAnn.location_lng as number]
@@ -826,9 +832,9 @@ function WorkersPage() {
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
-              <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
+              <UserAvatar userId={w.id} name={displayWorkerName(w, !!r?.workedWith)} className="h-12 w-12" />
               <div>
-                <div className="font-semibold">{w.full_name || "Lavoratore"}</div>
+                <div className="font-semibold">{displayWorkerName(w, !!r?.workedWith)}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
                   {w.primary_role && <span className="capitalize">{w.primary_role}</span>}
                   {w.rating_avg != null && Number(w.rating_avg) > 0 && (
@@ -1016,9 +1022,7 @@ function ProposalConfirmDialog({
   // Privacy: prima dell'assegnazione mostra solo il nome (no cognome), salvo
   // aver già lavorato insieme.
   const workedTogether = !!rel?.workedWith;
-  const displayWorkerName = workedTogether
-    ? (worker.full_name || firstNameOf(worker.full_name) || "Lavoratore")
-    : (firstNameOf(worker.full_name) || "Lavoratore");
+  const displayName = displayWorkerName(worker, workedTogether);
   const ann = announcement;
   const role = ann?.professional_profile?.trim() || "Da definire";
   const start = ann?.service_time ? ann.service_time.slice(0, 5) : null;
@@ -1043,7 +1047,7 @@ function ProposalConfirmDialog({
   const contactName = ann?.job_contact_person_name?.trim() || defaults.contact_name || "";
   // Anteprima del messaggio inviato in chat (privacy: locale = "Ristorante partner")
   const lines: string[] = [];
-  lines.push(`Ciao ${displayWorkerName}, ti proponiamo un turno come ${role}.`);
+  lines.push(`Ciao ${displayName}, ti proponiamo un turno come ${role}.`);
   lines.push("");
   lines.push("Dettagli turno:");
   if (ann?.service_date) lines.push(`Data: ${formatDateIT(ann.service_date)}`);
@@ -1073,7 +1077,7 @@ function ProposalConfirmDialog({
         </DialogHeader>
         <div className="space-y-4 text-sm">
           <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
-            <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{displayWorkerName}</span></div>
+            <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{displayName}</span></div>
             <div><span className="text-muted-foreground">Ruolo:</span> <span className="font-medium">{role}</span></div>
             {ann?.service_date && <div><span className="text-muted-foreground">Data:</span> {formatDateIT(ann.service_date)}</div>}
             {start && <div><span className="text-muted-foreground">Orario:</span> {start}{end ? ` - ${end}` : ""}</div>}
@@ -1151,12 +1155,14 @@ function WorkersMapSection({
   onInvite,
   inviteDisabled,
   inviteLabel,
+  rel,
 }: {
   workers: W[];
   fallbackCenter: [number, number];
   onInvite: (workerId: string) => void;
   inviteDisabled: boolean;
   inviteLabel: string;
+  rel: Record<string, WorkerRel>;
 }) {
   // Resolve a position for each worker:
   // 1) service_area_lat/lng (precise approx area set by the worker)
@@ -1178,13 +1184,13 @@ function WorkersMapSection({
     id: w.id,
     lat: pos[0],
     lng: pos[1],
-    name: w.full_name,
+    name: displayWorkerName(w, !!rel[w.id]?.workedWith),
     role: w.primary_role,
     city: w.city ?? w.neighborhood ?? null,
     rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
     badge: w.badge,
     avatarUrl: avatars[w.id] ?? null,
-    initials: initialsOf(w.full_name),
+    initials: initialsOf(displayWorkerName(w, !!rel[w.id]?.workedWith)),
     link: `/workers_/${w.id}`,
   }));
   // Center on the average position of located workers so the map frames them.

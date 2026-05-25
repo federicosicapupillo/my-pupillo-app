@@ -11,6 +11,7 @@ import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/Spok
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
+import { displayWorkerName } from "@/lib/worker-display";
 
 export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
@@ -69,6 +70,7 @@ function WorkerDetailPage() {
   const [w, setW] = useState<Worker | null>(null);
   const [loading, setLoading] = useState(true);
   const [contactAllowed, setContactAllowed] = useState(false);
+  const [workedTogether, setWorkedTogether] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +85,9 @@ function WorkerDetailPage() {
         const { data: ax } = await supabase.from("applications")
           .select("id").eq("restaurant_id", user.id).eq("worker_id", id).eq("status", "accepted").limit(1);
         if (!cancelled) setContactAllowed(!!(ax && ax.length > 0));
+        const { data: sx } = await supabase.from("shifts")
+          .select("id").eq("restaurant_id", user.id).eq("worker_id", id).eq("status", "completed").limit(1);
+        if (!cancelled) setWorkedTogether(!!(sx && sx.length > 0));
       }
       setLoading(false);
     })();
@@ -95,6 +100,8 @@ function WorkerDetailPage() {
   const cityLine = [w.city, w.neighborhood, w.province].filter(Boolean).join(" · ");
   const roleLine = [w.professional_profile || w.primary_role, ...(w.secondary_roles ?? [])].filter(Boolean).join(" · ");
   const langsJson = normalizeSpokenLanguages(w.spoken_languages);
+  const isRestaurantViewer = role === "restaurant";
+  const shownName = isRestaurantViewer ? displayWorkerName(w, workedTogether) : (w.full_name || "Lavoratore");
 
   return (
     <AppShell>
@@ -104,12 +111,12 @@ function WorkerDetailPage() {
         </Link>
       </div>
 
-      <PageHeader title={w.full_name || "Lavoratore"} subtitle={roleLine || "—"} />
+      <PageHeader title={shownName} subtitle={roleLine || "—"} />
 
       <div className="grid gap-4 md:grid-cols-[280px_1fr]">
         <div className="rounded-2xl border bg-card p-5 flex flex-col items-center text-center">
-          <UserAvatar userId={w.id} name={w.full_name} className="h-24 w-24 text-2xl mb-3" />
-          <div className="font-semibold">{w.full_name || "—"}</div>
+          <UserAvatar userId={w.id} name={shownName} className="h-24 w-24 text-2xl mb-3" />
+          <div className="font-semibold">{shownName}</div>
           {w.age != null && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
           <div className="mt-2">
             <WorkerReputationBadge profile={w} />

@@ -20,6 +20,7 @@ import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
+import { displayWorkerName } from "@/lib/worker-display";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
@@ -304,12 +305,15 @@ function MapPage() {
       // (candidatura accettata o turno assegnato) per cui possiamo mostrare
       // nome e cognome completi sulla mappa.
       if (user && isRestaurant) {
-        const [{ data: acceptedApps }, { data: myShifts }] = await Promise.all([
-          supabase.from("applications").select("worker_id").eq("restaurant_id", user.id).eq("status", "accepted"),
-          supabase.from("shifts").select("worker_id").eq("restaurant_id", user.id),
-        ]);
+        // Privacy: il ristoratore può vedere Nome e Cognome del lavoratore
+        // SOLO se ha già completato almeno un turno con lui. Candidature
+        // accettate o turni semplicemente programmati non bastano.
+        const { data: myShifts } = await supabase
+          .from("shifts")
+          .select("worker_id")
+          .eq("restaurant_id", user.id)
+          .eq("status", "completed");
         const known = new Set<string>();
-        (acceptedApps || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
         (myShifts || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
         setKnownWorkerIds(known);
       } else {
@@ -410,7 +414,7 @@ function MapPage() {
       // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
       // (no cognome). Dopo una candidatura accettata o un turno assegnato
       // mostriamo invece nome e cognome completi.
-      name: isRestaurant && !knownWorkerIds.has(w.id) ? firstNameOnly(w.full_name) : w.full_name,
+      name: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : w.full_name,
       role: w.primary_role,
       city: w.city ?? w.neighborhood ?? null,
       rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
@@ -462,7 +466,7 @@ function MapPage() {
           lat: w.service_area_lat,
           lng: w.service_area_lng,
           category: "worker",
-          title: w.full_name || "Lavoratore",
+          title: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : (w.full_name || "Lavoratore"),
           subtitle: [w.primary_role, w.badge ? `· ${w.badge}` : null].filter(Boolean).join(" "),
           city: [w.neighborhood, w.city].filter(Boolean).join(", ") || w.city,
           status: w.account_status,
@@ -847,8 +851,8 @@ function MapPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="font-semibold truncate">
-                            {isRestaurant && !knownWorkerIds.has(w.id)
-                              ? firstNameOnly(w.full_name)
+                            {isRestaurant
+                              ? displayWorkerName(w, knownWorkerIds.has(w.id))
                               : (w.full_name || "Lavoratore")}
                           </div>
                           <div className="text-xs text-muted-foreground capitalize">{w.primary_role || "—"}</div>
