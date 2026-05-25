@@ -1021,9 +1021,7 @@ function ProposalConfirmDialog({
   // Privacy: prima dell'assegnazione mostra solo il nome (no cognome), salvo
   // aver già lavorato insieme.
   const workedTogether = !!rel?.workedWith;
-  const displayWorkerName = workedTogether
-    ? (worker.full_name || firstNameOf(worker.full_name) || "Lavoratore")
-    : (firstNameOf(worker.full_name) || "Lavoratore");
+  const displayName = displayWorkerName(worker, workedTogether);
   const ann = announcement;
   const role = ann?.professional_profile?.trim() || "Da definire";
   const start = ann?.service_time ? ann.service_time.slice(0, 5) : null;
@@ -1048,7 +1046,7 @@ function ProposalConfirmDialog({
   const contactName = ann?.job_contact_person_name?.trim() || defaults.contact_name || "";
   // Anteprima del messaggio inviato in chat (privacy: locale = "Ristorante partner")
   const lines: string[] = [];
-  lines.push(`Ciao ${displayWorkerName}, ti proponiamo un turno come ${role}.`);
+  lines.push(`Ciao ${displayName}, ti proponiamo un turno come ${role}.`);
   lines.push("");
   lines.push("Dettagli turno:");
   if (ann?.service_date) lines.push(`Data: ${formatDateIT(ann.service_date)}`);
@@ -1078,7 +1076,7 @@ function ProposalConfirmDialog({
         </DialogHeader>
         <div className="space-y-4 text-sm">
           <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
-            <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{displayWorkerName}</span></div>
+            <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{displayName}</span></div>
             <div><span className="text-muted-foreground">Ruolo:</span> <span className="font-medium">{role}</span></div>
             {ann?.service_date && <div><span className="text-muted-foreground">Data:</span> {formatDateIT(ann.service_date)}</div>}
             {start && <div><span className="text-muted-foreground">Orario:</span> {start}{end ? ` - ${end}` : ""}</div>}
