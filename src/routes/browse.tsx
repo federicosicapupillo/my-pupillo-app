@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User, CheckCircle2, Moon, Hourglass, Loader2 } from "lucide-react";
+import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User, CheckCircle2, Moon, Hourglass, Loader2, XCircle } from "lucide-react";
 import { formatTariff, formatTotalService } from "@/lib/format";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { toast } from "sonner";
@@ -77,6 +77,7 @@ function Browse() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Ann[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [appStatusById, setAppStatusById] = useState<Record<string, string>>({});
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list"|"map">("list");
@@ -123,10 +124,15 @@ function Browse() {
     }
     if (user) {
       const [{data:apps},{data:favs}] = await Promise.all([
-        supabase.from("applications").select("announcement_id").eq("worker_id",user.id),
+        supabase.from("applications").select("announcement_id,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}),
         supabase.from("favorites").select("announcement_id").eq("user_id",user.id),
       ]);
       setAppliedIds(new Set((apps??[]).map((a:any)=>a.announcement_id)));
+      const statusMap: Record<string, string> = {};
+      for (const a of (apps ?? []) as any[]) {
+        if (!statusMap[a.announcement_id]) statusMap[a.announcement_id] = a.status;
+      }
+      setAppStatusById(statusMap);
       setFavIds(new Set((favs??[]).map((f:any)=>f.announcement_id)));
     }
     setLoading(false);
