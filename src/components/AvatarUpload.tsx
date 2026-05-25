@@ -28,7 +28,7 @@ async function processImage(file: File): Promise<{ file: File; preview: string }
     i.src = dataUrl;
   });
   if (img.naturalWidth < MIN_DIM || img.naturalHeight < MIN_DIM) {
-    throw new Error(`Immagine troppo piccola: minimo ${MIN_DIM}x${MIN_DIM} px.`);
+    throw new Error("La foto deve essere almeno 500x500 px.");
   }
   const side = Math.min(img.naturalWidth, img.naturalHeight);
   const sx = (img.naturalWidth - side) / 2;
@@ -56,11 +56,11 @@ export function AvatarUpload({ value, onPickFile }: Props) {
   const handleFile = async (f: File | undefined | null) => {
     if (!f) return;
     if (!ACCEPT.split(",").includes(f.type)) {
-      toast.error("Formato non supportato. Usa JPG, PNG o WEBP.");
+      toast.error("Formato non supportato. Carica una foto JPG, PNG o WEBP.");
       return;
     }
     if (f.size > MAX_BYTES) {
-      toast.error("File troppo grande. Massimo 5MB.");
+      toast.error("La foto supera il limite massimo di 5 MB.");
       return;
     }
     setBusy(true);
@@ -109,7 +109,7 @@ export function AvatarUpload({ value, onPickFile }: Props) {
             onClick={() => inputRef.current?.click()}
             disabled={busy}
           >
-            {display ? "Sostituisci foto" : "Carica foto"}
+            {display ? "Cambia foto" : "Carica foto"}
           </Button>
           {hasLocal && (
             <Button type="button" variant="ghost" size="sm" onClick={handleRemove} disabled={busy}>
