@@ -1476,19 +1476,43 @@ function Thread() {
               <div className="font-semibold">{displayOtherName}</div>
             )}
             {ann && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                <Link to="/announcements/$id" params={{ id: ann.id }} className="text-primary hover:underline underline-offset-2">
-                  Annuncio del {new Date(ann.service_date).toLocaleDateString("it-IT")}
-                </Link>
-                {ann.service_time && <> · {ann.service_time.slice(0, 5)}</>}
-                {displayAddress && <> · {displayAddress}</>}
-              </div>
-            )}
-            {currentTariff != null && (
-              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                <Euro className="h-3 w-3" />
-                Tariffa attuale: €{currentTariff} {ann?.tariff_type === "hourly" ? "/ora" : "a servizio"}
-                {app?.proposed_tariff != null && <span className="ml-1 text-primary">(controfferta)</span>}
+            {ann && (
+              <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                <div>
+                  <Link to="/announcements/$id" params={{ id: ann.id }} className="text-primary hover:underline underline-offset-2 font-medium">
+                    Annuncio del{" "}
+                    {formatOfferDateTime({
+                      service_date: ann.service_date,
+                      service_time: ann.service_time,
+                      end_date: ann.end_date,
+                      end_time: ann.end_time,
+                    })}
+                  </Link>
+                </div>
+                {ann.professional_profile && (
+                  <div>
+                    <span className="text-foreground/80">Mansione:</span>{" "}
+                    {ann.professional_profile}
+                  </div>
+                )}
+                {displayAddress && (
+                  <div className="break-words">
+                    <span className="text-foreground/80">Luogo:</span> {displayAddress}
+                  </div>
+                )}
+                {currentTariff != null && (
+                  <div className="flex items-center gap-1">
+                    <Euro className="h-3 w-3 shrink-0" />
+                    <span className="whitespace-nowrap">
+                      <span className="text-foreground/80">Tariffa:</span>{" "}
+                      €{currentTariff}
+                      {ann?.tariff_type === "hourly" ? "/ora" : " a servizio"}
+                    </span>
+                    {app?.proposed_tariff != null && (
+                      <span className="ml-1 text-primary">(controfferta)</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             </div>
