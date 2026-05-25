@@ -79,6 +79,41 @@ function workerDraftFromProfile(profile: any): WorkerDraft {
   };
 }
 
+type RestaurantDraft = {
+  access_restrictions: string;
+  additional_directions: string;
+  location_notes: string;
+  contact_person_first_name: string;
+  contact_person_last_name: string;
+  contact_person_role: string;
+  contact_person_role_other: string;
+  contact_person_phone: string;
+  contact_person_email: string;
+  arrival_advance_minutes: string;
+  arrival_advance_reason: string;
+  requirements: RestaurantRequirements;
+};
+
+function restaurantDraftFromProfile(profile: any): RestaurantDraft {
+  return {
+    access_restrictions: profile?.access_restrictions ?? "",
+    additional_directions: profile?.additional_directions ?? "",
+    location_notes: profile?.location_notes ?? "",
+    contact_person_first_name: profile?.contact_person_first_name ?? "",
+    contact_person_last_name: profile?.contact_person_last_name ?? "",
+    contact_person_role: profile?.contact_person_role ?? "",
+    contact_person_role_other: profile?.contact_person_role_other ?? "",
+    contact_person_phone: profile?.contact_person_phone ?? "",
+    contact_person_email: profile?.contact_person_email ?? "",
+    arrival_advance_minutes:
+      profile?.default_arrival_advance_minutes != null
+        ? String(profile.default_arrival_advance_minutes)
+        : "",
+    arrival_advance_reason: profile?.default_arrival_advance_reason ?? "",
+    requirements: profile ? reqFromProfile(profile) : EMPTY_REQ,
+  };
+}
+
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
   component: () => <RequireAuth><Profile /></RequireAuth>,
