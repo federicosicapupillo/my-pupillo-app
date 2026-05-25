@@ -1,5 +1,53 @@
 // Shared formatting helpers for tariffs and dates (Italian locale).
 
+/** Format an announcement label for dropdown display:
+ *  "25/05/2026 · 19:00-23:00 · Torino · Centro · Cameriere"
+ *  Skips address, postal code, country. Deduplicates city/province.
+ */
+export function formatAnnouncementLabel(a: {
+  service_date: string;
+  service_time?: string | null;
+  end_time?: string | null;
+  job_city?: string | null;
+  job_province?: string | null;
+  professional_profile?: string | null;
+}): string {
+  const parts: string[] = [];
+
+  // Date
+  const date = formatDateIT(a.service_date);
+  if (date) parts.push(date);
+
+  // Time range
+  const start = (a.service_time ?? "").trim();
+  const end = (a.end_time ?? "").trim();
+  const startShort = start.length >= 5 ? start.slice(0, 5) : start;
+  const endShort = end.length >= 5 ? end.slice(0, 5) : end;
+  if (startShort && endShort) {
+    parts.push(`${startShort}-${endShort}`);
+  } else if (startShort) {
+    parts.push(startShort);
+  }
+
+  // City (deduplicate province if identical)
+  const city = (a.job_city ?? "").trim();
+  const province = (a.job_province ?? "").trim();
+  if (city && province && city.toLowerCase() !== province.toLowerCase()) {
+    parts.push(`${city}`);
+  } else if (city) {
+    parts.push(city);
+  } else if (province) {
+    parts.push(province);
+  }
+
+  // Role
+  const role = (a.professional_profile ?? "").trim();
+  parts.push(role || "Ruolo non specificato");
+
+  return parts.join(" · ");
+}
+
+
 /** Format an announcement tariff for display: "12 EUR/h" or "12 EUR (a servizio)". */
 export function formatTariff(
   amount: number | string | null | undefined,
