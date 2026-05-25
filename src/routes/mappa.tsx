@@ -414,7 +414,7 @@ function MapPage() {
       // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
       // (no cognome). Dopo una candidatura accettata o un turno assegnato
       // mostriamo invece nome e cognome completi.
-      name: isRestaurant && !knownWorkerIds.has(w.id) ? firstNameOnly(w.full_name) : w.full_name,
+      name: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : w.full_name,
       role: w.primary_role,
       city: w.city ?? w.neighborhood ?? null,
       rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
@@ -851,8 +851,8 @@ function MapPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="font-semibold truncate">
-                            {isRestaurant && !knownWorkerIds.has(w.id)
-                              ? firstNameOnly(w.full_name)
+                            {isRestaurant
+                              ? displayWorkerName(w, knownWorkerIds.has(w.id))
                               : (w.full_name || "Lavoratore")}
                           </div>
                           <div className="text-xs text-muted-foreground capitalize">{w.primary_role || "—"}</div>
