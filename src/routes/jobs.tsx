@@ -51,6 +51,7 @@ type Announcement = {
   service_date: string;
   service_time: string;
   end_time: string | null;
+  end_date: string | null;
   duration_hours: number;
   tariff_amount: number;
   tariff_type: string;
@@ -319,7 +320,7 @@ function Jobs() {
         ? supabase
             .from("announcements")
             .select(
-              "id, service_date, service_time, end_time, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id, professional_profile, notes, required_skills, dress_code_items, dress_code_notes",
+              "id, service_date, service_time, end_time, end_date, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id, professional_profile, notes, required_skills, dress_code_items, dress_code_notes",
             )
             .in("id", annIds)
         : Promise.resolve({ data: [] as any[] }),
@@ -597,11 +598,27 @@ function OfferCard({
     neighborhood: r.restaurant?.neighborhood ?? null,
   });
   const role = r.announcement?.professional_profile || "Ruolo non specificato";
-  const dateStr = r.announcement?.service_date
-    ? new Date(r.announcement.service_date).toLocaleDateString("it-IT")
-    : "—";
+  const formatItDate = (s: string | null | undefined) => {
+    if (!s) return "";
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : new Date(s).toLocaleDateString("it-IT");
+  };
+  const startDateStr = formatItDate(r.announcement?.service_date);
   const startTime = r.announcement?.service_time?.slice(0, 5);
   const endTime = r.announcement?.end_time?.slice(0, 5);
+  const endDateRaw = r.announcement?.end_date || null;
+  const endDateDiffers =
+    !!endDateRaw && !!r.announcement?.service_date && endDateRaw !== r.announcement.service_date;
+  const endDateStr = endDateDiffers ? formatItDate(endDateRaw) : "";
+  const scheduleStr = startDateStr
+    ? `${startDateStr}${startTime ? ` · ${startTime}` : ""}${
+        endTime
+          ? endDateDiffers
+            ? ` - ${endDateStr} · ${endTime}`
+            : ` - ${endTime}`
+          : ""
+      }`
+    : "—";
   const duration = r.announcement?.duration_hours;
   const totalDisplay = r.announcement
     ? formatTotalService(
@@ -653,11 +670,7 @@ function OfferCard({
         <div className="space-y-1.5 text-sm">
           <div className="flex items-center gap-2 text-foreground">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="font-semibold">
-              {dateStr}
-              {startTime ? ` · ${startTime}` : ""}
-              {endTime ? `–${endTime}` : ""}
-            </span>
+            <span className="font-semibold">{scheduleStr}</span>
             {duration ? (
               <span className="text-xs text-muted-foreground">({duration}h)</span>
             ) : null}
