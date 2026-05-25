@@ -434,6 +434,8 @@ function Browse() {
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
           {selected && (() => {
             const applied = appliedIds.has(selected.id);
+            const appStatus = appStatusById[selected.id];
+            const rejected = appStatus === "rejected" || appStatus === "not_interested";
             const fav = favIds.has(selected.id);
             const dist = (profile?.service_area_lat != null && profile?.service_area_lng != null && selected.location_lat != null && selected.location_lng != null)
               ? distKm(profile.service_area_lat, profile.service_area_lng, selected.location_lat, selected.location_lng) : null;
@@ -475,7 +477,12 @@ function Browse() {
                   <Button variant="outline" size="icon" onClick={()=>toggleFav(selected.id)} aria-label="Preferiti">
                     <Heart className={`h-5 w-5 ${fav?"fill-primary text-primary":""}`} />
                   </Button>
-                  {applied ? (
+                  {rejected ? (
+                    <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-destructive bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+                      <XCircle className="h-4 w-4" />
+                      Candidatura rifiutata
+                    </div>
+                  ) : applied ? (
                     <Button disabled variant="secondary" className="flex-1">Candidatura già inviata</Button>
                   ) : (
                     <Button className="flex-1 gap-2" onClick={()=>apply(selected)}><Send className="h-4 w-4" />Candidati ora</Button>
