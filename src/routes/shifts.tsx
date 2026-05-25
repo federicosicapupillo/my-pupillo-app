@@ -700,6 +700,17 @@ function ShiftsPage() {
                     {filter === "assigned" && s.status === "scheduled" ? (acceptedAppMap[s.announcement_id || ""]?.status === "confirmed" ? "Confermato" : "Assegnato") : meta.label}
                   </Badge>
                 </div>
+                {role === "restaurant" && s.worker_id && s.status !== "cancelled" && profiles[s.worker_id] && (
+                  <div className="mt-2 inline-flex flex-col rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
+                    <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      Turno assegnato
+                    </div>
+                    <div className="text-xs text-emerald-700/80">
+                      Assegnato a: {profiles[s.worker_id]?.full_name || "Lavoratore"}
+                    </div>
+                  </div>
+                )}
                 {(() => {
                   const ann = announcementsMap[s.announcement_id || ""];
                   return ann ? (
