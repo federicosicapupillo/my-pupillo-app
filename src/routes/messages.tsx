@@ -67,6 +67,23 @@ const STATUS_CLS: Record<string, string> = {
   expired: "bg-muted text-muted-foreground",
 };
 
+const STATUS_BTN_ACTIVE: Record<string, string> = {
+  pending: "bg-amber-500 text-white border-amber-400 shadow-[0_0_0_1px_rgba(245,158,11,0.35),0_10px_40px_-10px_rgba(245,158,11,0.45)]",
+  interested: "bg-sky-500 text-white border-sky-400 shadow-[0_0_0_1px_rgba(14,165,233,0.35),0_10px_40px_-10px_rgba(14,165,233,0.45)]",
+  counter_offer: "bg-indigo-500 text-white border-indigo-400 shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_10px_40px_-10px_rgba(99,102,241,0.45)]",
+  accepted: "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_0_1px_rgba(16,185,129,0.35),0_10px_40px_-10px_rgba(16,185,129,0.45)]",
+  rejected: "bg-red-500 text-white border-red-400 shadow-[0_0_0_1px_rgba(239,68,68,0.35),0_10px_40px_-10px_rgba(239,68,68,0.45)]",
+  expired: "bg-muted text-muted-foreground border-border",
+};
+const STATUS_BTN_INACTIVE: Record<string, string> = {
+  pending: "bg-amber-500/10 text-amber-300 border-amber-500/20 hover:opacity-80",
+  interested: "bg-sky-500/10 text-sky-300 border-sky-500/20 hover:opacity-80",
+  counter_offer: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20 hover:opacity-80",
+  accepted: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:opacity-80",
+  rejected: "bg-red-500/10 text-red-300 border-red-500/20 hover:opacity-80",
+  expired: "bg-muted text-muted-foreground border-border hover:opacity-80",
+};
+
 function formatWhen(iso: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
