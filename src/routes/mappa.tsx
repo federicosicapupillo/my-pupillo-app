@@ -304,12 +304,15 @@ function MapPage() {
       // (candidatura accettata o turno assegnato) per cui possiamo mostrare
       // nome e cognome completi sulla mappa.
       if (user && isRestaurant) {
-        const [{ data: acceptedApps }, { data: myShifts }] = await Promise.all([
-          supabase.from("applications").select("worker_id").eq("restaurant_id", user.id).eq("status", "accepted"),
-          supabase.from("shifts").select("worker_id").eq("restaurant_id", user.id),
-        ]);
+        // Privacy: il ristoratore può vedere Nome e Cognome del lavoratore
+        // SOLO se ha già completato almeno un turno con lui. Candidature
+        // accettate o turni semplicemente programmati non bastano.
+        const { data: myShifts } = await supabase
+          .from("shifts")
+          .select("worker_id")
+          .eq("restaurant_id", user.id)
+          .eq("status", "completed");
         const known = new Set<string>();
-        (acceptedApps || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
         (myShifts || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
         setKnownWorkerIds(known);
       } else {
