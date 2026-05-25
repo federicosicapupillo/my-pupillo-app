@@ -33,7 +33,7 @@ import { ITALIAN_LOCATIONS, citiesForProvince, isCityInProvince, isValidCapForCi
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { DateField } from "@/components/DateField";
-import { HourlyRateInput } from "@/components/HourlyRateInput";
+
 import { formatTariff } from "@/lib/format";
 import { LanguagesMultiSelect } from "@/components/RestaurantRequirements";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
@@ -60,6 +60,13 @@ const ROLE_OPTIONS = [
   "Addetto catering",
   "Receptionist",
 ];
+
+const HOURLY_RATE_OPTIONS = Array.from({ length: 17 }, (_, i) => 9 + i); // 9..25
+const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
+  const h = Math.floor(i / 4);
+  const m = (i % 4) * 15;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
 
 type FormState = {
   title: string;
@@ -397,7 +404,7 @@ function NewRestaurantJobRequest() {
         return false;
       }
     }
-    if (durationHours <= 0) { toast.error("La fine del turno deve essere successiva all'inizio."); return false; }
+    if (durationHours <= 0) { toast.error("L'orario di fine turno deve essere successivo all'orario di inizio."); return false; }
     if (longReasonError) { toast.error(longReasonError); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
     if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
