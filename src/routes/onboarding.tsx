@@ -1796,7 +1796,11 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.id_document_expires_at}
-                    min={personal.id_document_issued_at || todayISORome}
+                    min={
+                      personal.id_document_issued_at && personal.id_document_issued_at > todayISORome
+                        ? personal.id_document_issued_at
+                        : todayISORome
+                    }
                     error={dateFieldErrors.id_document_expires_at}
                     onChange={(iso) => {
                       clearDateError("id_document_expires_at");
