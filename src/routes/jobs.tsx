@@ -240,7 +240,7 @@ function Jobs() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"tutte" | Bucket>("tutte");
+  const [tab, setTab] = useState<Bucket>("nuove");
   const [sortMode, setSortMode] = useState<SortMode>("service_date");
   const [lastSeenAt] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
@@ -362,17 +362,12 @@ function Jobs() {
 
   // ---- counts & filtering ----
   const counts = useMemo(() => {
-    const c: Record<Bucket | "tutte", number> = {
-      tutte: rows.length,
+    const c: Record<Bucket, number> = {
       nuove: 0,
       da_rispondere: 0,
-      accettate_da_me: 0,
-      in_attesa_conferma: 0,
-      confermate: 0,
-      completate: 0,
+      accettate: 0,
       rifiutate: 0,
       scadute: 0,
-      annullate: 0,
       da_recensire: 0,
     };
     for (const r of rows) for (const b of bucketsFor(r, lastSeenAt)) c[b] += 1;
@@ -380,7 +375,7 @@ function Jobs() {
   }, [rows, lastSeenAt]);
 
   const filtered = useMemo(() => {
-    const list = tab === "tutte" ? rows.slice() : rows.filter((r) => bucketsFor(r, lastSeenAt).includes(tab));
+    const list = rows.filter((r) => bucketsFor(r, lastSeenAt).includes(tab));
     list.sort((a, b) => {
       if (sortMode === "service_date") {
         return (a.announcement?.service_date ?? "9999").localeCompare(b.announcement?.service_date ?? "9999");
@@ -401,16 +396,6 @@ function Jobs() {
       const isNewB = b.status === "pending" && new Date(b.created_at).getTime() > lastSeenAt;
       return priorityFor(a, isNewA) - priorityFor(b, isNewB);
     });
-    if (tab === "tutte") {
-      // Default "Tutte" view: workflow priority first, then service date
-      list.sort((a, b) => {
-        const isNewA = a.status === "pending" && new Date(a.created_at).getTime() > lastSeenAt;
-        const isNewB = b.status === "pending" && new Date(b.created_at).getTime() > lastSeenAt;
-        const p = priorityFor(a, isNewA) - priorityFor(b, isNewB);
-        if (p !== 0) return p;
-        return (a.announcement?.service_date ?? "9999").localeCompare(b.announcement?.service_date ?? "9999");
-      });
-    }
     return list;
   }, [rows, tab, sortMode, lastSeenAt]);
 
@@ -421,38 +406,6 @@ function Jobs() {
       </AppShell>
     );
 
-  const stats: { label: string; value: number; tone: string; tab: "tutte" | Bucket }[] = [
-    {
-      label: "Nuove",
-      value: counts.nuove,
-      tone: "bg-primary/10 text-primary border-primary/30",
-      tab: "nuove",
-    },
-    {
-      label: "Da rispondere",
-      value: counts.da_rispondere,
-      tone: "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
-      tab: "da_rispondere",
-    },
-    {
-      label: "Accettate",
-      value: counts.confermate + counts.accettate_da_me,
-      tone: "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
-      tab: "confermate",
-    },
-    {
-      label: "Rifiutate",
-      value: counts.rifiutate,
-      tone: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
-      tab: "rifiutate",
-    },
-    {
-      label: "Scadute",
-      value: counts.scadute,
-      tone: "bg-muted text-muted-foreground border-border",
-      tab: "scadute",
-    },
-  ];
 
   return (
     <AppShell>
