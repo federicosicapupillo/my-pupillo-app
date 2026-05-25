@@ -4,10 +4,11 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { KeyRound, Trash2, FileText, Coins, Star, MapPin, ExternalLink, Eye, EyeOff } from "lucide-react";
@@ -23,6 +24,20 @@ import { ReferralCard } from "@/components/ReferralCard";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
+import { AvatarUpload } from "@/components/AvatarUpload";
+import { uploadAvatar } from "@/lib/avatar-upload.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { updateAvatarUrlCache, useAvatarUrl } from "@/hooks/use-avatar-urls";
+import { SearchableSelect } from "@/components/SearchableSelect";
+import { WORKER_CITIES } from "@/lib/worker-cities";
+import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
+
+const NATIONALITIES = [
+  "Italiana", "Albanese", "Rumena", "Marocchina", "Egiziana", "Tunisina",
+  "Francese", "Spagnola", "Tedesca", "Inglese", "Ucraina", "Moldava",
+  "Peruviana", "Brasiliana", "Argentina", "Cinese", "Indiana", "Pakistana",
+  "Bangladese", "Filippina",
+];
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -30,13 +45,87 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
-  const { profile, role, user, signOut } = useAuth();
+  const { profile, role, user, signOut, refresh } = useAuth();
   const nav = useNavigate();
+  const uploadAvatarFn = useServerFn(uploadAvatar);
+  const currentAvatarUrl = useAvatarUrl(role === "worker" ? user?.id : null);
   const [pwd, setPwd] = useState("");
   const [pwdConfirm, setPwdConfirm] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [editingWorker, setEditingWorker] = useState(false);
+  const [savingWorker, setSavingWorker] = useState(false);
+  const [workerDraft, setWorkerDraft] = useState(() => workerDraftFromProfile(profile));
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (role !== "worker" || editingWorker) return;
+    setWorkerDraft(workerDraftFromProfile(profile));
+    setAvatarFile(null);
+    setAvatarPreview(null);
+  }, [profile, role, editingWorker]);
+
+  const startWorkerEdit = () => {
+    setWorkerDraft(workerDraftFromProfile(profile));
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setEditingWorker(true);
+  };
+
+  const cancelWorkerEdit = () => {
+    if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+    setWorkerDraft(workerDraftFromProfile(profile));
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setEditingWorker(false);
+  };
+
+  const saveWorkerProfile = async () => {
+    if (!user) return;
+    setSavingWorker(true);
+    try {
+      let uploadedAvatarPath: string | undefined;
+      let signedAvatarUrl: string | null = null;
+      if (avatarFile) {
+        const fd = new FormData();
+        fd.append("file", avatarFile);
+        const res = await uploadAvatarFn({ data: fd });
+        if (!res.ok) {
+          toast.error(res.error);
+          setSavingWorker(false);
+          return;
+        }
+        uploadedAvatarPath = res.path;
+        const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(res.path, 60 * 60);
+        signedAvatarUrl = signed?.signedUrl ?? null;
+      }
+      const update: Record<string, unknown> = {
+        nationality: workerDraft.nationality.trim() || null,
+        residence_address: workerDraft.residence_address.trim() || null,
+        residence_city: workerDraft.residence_city.trim() || null,
+        residence_province: workerDraft.residence_province.trim().toUpperCase() || null,
+        service_area_city: workerDraft.service_area_city.trim() || null,
+        professional_profile: workerDraft.professional_profile.trim() || null,
+        primary_role: workerDraft.roles[0] ?? null,
+        secondary_roles: workerDraft.roles,
+      };
+      if (uploadedAvatarPath) update.avatar_url = uploadedAvatarPath;
+      const { error } = await supabase.from("profiles").update(update as any).eq("id", user.id);
+      if (error) throw error;
+      if (signedAvatarUrl) updateAvatarUrlCache(user.id, signedAvatarUrl, profile?.full_name ?? null);
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      setEditingWorker(false);
+      toast.success("Profilo aggiornato correttamente.");
+      await refresh();
+    } catch {
+      toast.error("Errore durante il salvataggio. Riprova.");
+    } finally {
+      setSavingWorker(false);
+    }
+  };
 
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
