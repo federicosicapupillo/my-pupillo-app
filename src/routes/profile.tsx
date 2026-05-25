@@ -68,7 +68,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
-  const { profile, role, user, signOut } = useAuth();
+  const { profile, role, user, signOut, refresh } = useAuth();
   const nav = useNavigate();
   const uploadAvatarFn = useServerFn(uploadAvatar);
   const currentAvatarUrl = useAvatarUrl(role === "worker" ? user?.id : null);
@@ -546,122 +546,11 @@ function RestaurantLocationEditor({
   draft,
   onChange,
 }: {
-  draft: RestaurantDraft;
-  onChange: (next: RestaurantDraft) => void;
+  draft: any;
+  onChange: (next: any) => void;
 }) {
-  const set = (patch: Partial<RestaurantDraft>) => onChange({ ...draft, ...patch });
-  return (
-    <div className="space-y-4">
-      <div>
-        <Label>Restrizioni all'ingresso</Label>
-        <Textarea
-          rows={2}
-          value={draft.access_restrictions}
-          onChange={(e) => set({ access_restrictions: e.target.value })}
-          placeholder="Es. Citofono al primo piano, ingresso laterale…"
-        />
-      </div>
-      <div>
-        <Label>Indicazioni aggiuntive / punto di ingresso</Label>
-        <Textarea
-          rows={2}
-          value={draft.additional_directions}
-          onChange={(e) => set({ additional_directions: e.target.value })}
-          placeholder="Es. Entrata sul retro, parcheggio interno…"
-        />
-      </div>
-      <div>
-        <Label>Note operative per il lavoratore</Label>
-        <Textarea
-          rows={2}
-          value={draft.location_notes}
-          onChange={(e) => set({ location_notes: e.target.value })}
-          placeholder="Es. Chiedere di Marco al banco…"
-        />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <Label>Nome referente</Label>
-          <Input
-            value={draft.contact_person_first_name}
-            onChange={(e) => set({ contact_person_first_name: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Cognome referente</Label>
-          <Input
-            value={draft.contact_person_last_name}
-            onChange={(e) => set({ contact_person_last_name: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Ruolo del referente</Label>
-          <Select
-            value={draft.contact_person_role || undefined}
-            onValueChange={(v) => set({ contact_person_role: v })}
-          >
-            <SelectTrigger><SelectValue placeholder="Seleziona ruolo" /></SelectTrigger>
-            <SelectContent>
-              {CONTACT_ROLES.map((r) => (
-                <SelectItem key={r} value={r}>{r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {draft.contact_person_role === "Altro" && (
-          <div>
-            <Label>Specifica ruolo</Label>
-            <Input
-              value={draft.contact_person_role_other}
-              onChange={(e) => set({ contact_person_role_other: e.target.value })}
-            />
-          </div>
-        )}
-        <div>
-          <Label>Telefono referente</Label>
-          <Input
-            value={draft.contact_person_phone}
-            onChange={(e) => set({ contact_person_phone: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Email referente</Label>
-          <Input
-            type="email"
-            value={draft.contact_person_email}
-            onChange={(e) => set({ contact_person_email: e.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Anticipo richiesto (minuti)</Label>
-          <Input
-            type="number"
-            min={0}
-            value={draft.arrival_advance_minutes}
-            onChange={(e) => set({ arrival_advance_minutes: e.target.value })}
-            placeholder="Es. 15"
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Motivo dell'anticipo</Label>
-          <Input
-            value={draft.arrival_advance_reason}
-            onChange={(e) => set({ arrival_advance_reason: e.target.value })}
-            placeholder="Es. Briefing pre-servizio, cambio uniforme…"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div>
-      <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">{label}</div>
-      <p className="text-sm">{value || <span className="text-muted-foreground">—</span>}</p>
-    </div>
-  );
+  void draft; void onChange;
+  return null;
 }
 
 function vatStatusLabel(s?: string | null) {
@@ -672,102 +561,113 @@ function vatStatusLabel(s?: string | null) {
   return "Verifica non disponibile";
 }
 
-function DefaultsSection({ profile, userId, onCleared }: { profile: any; userId?: string; onCleared?: () => void }) {
-  const has = hasSavedDefaults(profile);
-  const updatedAt = profile?.default_settings_updated_at
-    ? new Date(profile.default_settings_updated_at).toLocaleString("it-IT")
-    : null;
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [clearing, setClearing] = useState(false);
+function InfoRow({
+  label,
+  value,
+  locked,
+  badge,
+}: {
+  label: string;
+  value?: string | null;
+  locked?: boolean;
+  badge?: string | null;
+}) {
+  return (
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-2.5 border-b last:border-0">
+      <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+        {locked && <Lock className="h-3 w-3" />}
+        {label}
+      </span>
+      <span className="text-sm font-medium text-right break-words">
+        {value || <span className="text-muted-foreground">—</span>}
+        {badge && <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium dark:bg-emerald-900/30 dark:text-emerald-300">{badge}</span>}
+      </span>
+    </div>
+  );
+}
 
-  const clearDefaults = async () => {
-    if (!userId) return;
-    setClearing(true);
-    const { error } = await supabase.from("profiles").update({
-      access_restrictions: null,
-      additional_directions: null,
-      location_notes: null,
-      contact_person_first_name: null,
-      contact_person_last_name: null,
-      contact_person_role: null,
-      contact_person_role_other: null,
-      contact_person_phone: null,
-      contact_person_email: null,
-      default_arrival_advance_minutes: null,
-      default_arrival_advance_reason: null,
-      default_license_requirement: null,
-      default_language_requirements: [],
-      default_tattoos_allowed: null,
-      default_piercings_allowed: null,
-      default_beard_allowed: null,
-      default_required_skills: [],
-      default_dress_code_items: [],
-      default_dress_code_notes: null,
-      default_settings_updated_at: null,
-    } as any).eq("id", userId);
-    setClearing(false);
-    setConfirmOpen(false);
-    if (error) {
-      toast.error("Errore durante la cancellazione. Riprova.");
-    } else {
-      toast.success("Impostazioni predefinite cancellate correttamente.");
-      onCleared?.();
-    }
-  };
+function RestaurantProfileView({ profile, email }: { profile: any; email: string | null }) {
+  const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.full_name;
+  const phone = profile?.phone_full || profile?.phone;
+  const provLabel = profile?.province
+    ? `${profile.province}${profile?.province_code || provinceCode(profile.province) ? ` (${profile?.province_code || provinceCode(profile.province)})` : ""}`
+    : null;
+  const vatBadge = profile?.vat_status === "valid" ? "Verificata" : null;
 
   return (
-    <div className="mt-6 max-w-4xl rounded-2xl border bg-card p-6">
-      <div className="mb-4">
-        <div>
-          <h2 className="font-semibold text-lg flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" />Impostazioni predefinite annunci</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {has
-              ? `Queste impostazioni vengono caricate automaticamente quando crei un nuovo annuncio.${updatedAt ? ` Ultimo aggiornamento: ${updatedAt}.` : ""}`
-              : "Non hai ancora salvato impostazioni predefinite. Compila un annuncio e seleziona “Salva come predefinite” per crearle."}
-          </p>
+    <div className="space-y-6 max-w-2xl">
+      {/* Informazioni account */}
+      <section className="rounded-2xl border bg-card p-6 shadow-sm">
+        <header className="mb-4 flex items-center gap-2">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary"><User className="h-4 w-4" /></div>
+          <h2 className="font-semibold text-base">Informazioni account</h2>
+        </header>
+        <div className="space-y-1">
+          <InfoRow label="Nome e cognome" value={fullName} locked />
+          <InfoRow label="Email" value={email ?? profile?.email} locked />
+          <InfoRow label="Ruolo" value="Ristoratore" />
         </div>
-      </div>
-      {has && (
-        <div className="space-y-3 text-sm">
-          <Field label="Luogo predefinito" value={[profile?.address, profile?.neighborhood, profile?.city, profile?.province, profile?.postal_code, profile?.country].filter(Boolean).join(", ")} />
-          <Field label="Referente predefinito" value={[
-            [profile?.contact_person_first_name, profile?.contact_person_last_name].filter(Boolean).join(" "),
-            profile?.contact_person_phone,
-            profile?.contact_person_email,
-          ].filter(Boolean).join(" · ")} />
-          <Field label="Tipologia locale" value={venueTypeLabel(profile?.venue_type, profile?.venue_type_other)} />
-          <Field label="Fascia di prezzo" value={priceRangeLabel(profile?.price_range)} />
-          <Field label="Lingue richieste" value={(profile?.default_language_requirements || []).join(", ")} />
-          <Field label="Patente richiesta" value={profile?.default_license_requirement} />
-          <Field label="Competenze richieste" value={(profile?.default_required_skills || []).join(", ")} />
-          <Field label="Dress code" value={(profile?.default_dress_code_items || []).join(", ")} />
-          <Field label="Note dress code" value={profile?.default_dress_code_notes} />
-        </div>
-      )}
-      <div className="mt-4">
-        {has && (
-          <Button size="sm" variant="destructive" onClick={() => setConfirmOpen(true)} disabled={clearing}>
-            Cancella impostazioni predefinite
-          </Button>
-        )}
-      </div>
+      </section>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancella impostazioni predefinite</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sei sicuro di voler cancellare le impostazioni predefinite? Questa azione eliminerà i dati salvati per i prossimi annunci e non potrà essere annullata.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setConfirmOpen(false)}>No, annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={clearDefaults} disabled={clearing}>
-              {clearing ? "Cancellazione in corso…" : "Sì, cancella impostazioni"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Informazioni locale */}
+      <section className="rounded-2xl border bg-card p-6 shadow-sm">
+        <header className="mb-4 flex items-center gap-2">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary"><Building2 className="h-4 w-4" /></div>
+          <h2 className="font-semibold text-base">Informazioni locale</h2>
+        </header>
+        <div className="space-y-1">
+          <InfoRow label="Nome locale" value={profile?.business_name} locked />
+          <InfoRow label="Partita IVA" value={profile?.vat_number} locked badge={vatBadge} />
+          {profile?.vat_company_name && (
+            <InfoRow label="Ragione sociale (VIES)" value={profile.vat_company_name} locked />
+          )}
+          <InfoRow label="Tipologia locale" value={venueTypeLabel(profile?.venue_type, profile?.venue_type_other)} />
+          <InfoRow label="Fascia di prezzo" value={priceRangeLabel(profile?.price_range)} />
+          <InfoRow label="Paese" value={profile?.country} />
+          <InfoRow label="Provincia" value={provLabel} />
+          <InfoRow label="Città" value={profile?.city} />
+          <InfoRow label="Indirizzo" value={profile?.address} />
+        </div>
+      </section>
+
+      {/* Contatti verificati */}
+      <section className="rounded-2xl border bg-card p-6 shadow-sm">
+        <header className="mb-4 flex items-center gap-2">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary"><BadgeCheck className="h-4 w-4" /></div>
+          <h2 className="font-semibold text-base">Contatti verificati</h2>
+        </header>
+        <div className="space-y-1">
+          <InfoRow
+            label="Telefono"
+            value={phone}
+            locked
+            badge={profile?.phone_verified ? "Verificato" : null}
+          />
+          <InfoRow
+            label="Email"
+            value={email ?? profile?.email}
+            locked
+            badge={profile?.email ? "Verificata" : null}
+          />
+        </div>
+      </section>
+
+      {/* Stato profilo */}
+      <section className="rounded-2xl border bg-card p-6 shadow-sm">
+        <header className="mb-4 flex items-center gap-2">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary"><ShieldCheck className="h-4 w-4" /></div>
+          <h2 className="font-semibold text-base">Stato profilo</h2>
+        </header>
+        <div className="space-y-1">
+          <InfoRow label="Profilo completato" value={profile?.profile_completed ? "Sì" : "No"} />
+          <InfoRow label="Stato P.IVA" value={vatStatusLabel(profile?.vat_status)} />
+        </div>
+      </section>
+
+      <p className="text-xs text-muted-foreground flex items-start gap-1.5 px-1">
+        <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <span>I dati verificati sono bloccati. Per modificarli contatta il servizio clienti.</span>
+      </p>
     </div>
   );
 }
