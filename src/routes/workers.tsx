@@ -792,6 +792,7 @@ function WorkersPage() {
       {view === "map" ? (
         <WorkersMapSection
           workers={sorted}
+          rel={rel}
           fallbackCenter={
             selectedAnn?.location_lat != null && selectedAnn?.location_lng != null
               ? [selectedAnn.location_lat as number, selectedAnn.location_lng as number]
