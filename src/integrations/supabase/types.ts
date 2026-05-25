@@ -1797,6 +1797,239 @@ export type Database = {
         Returns: boolean
       }
       generate_referral_code: { Args: never; Returns: string }
+      get_announcement_contact: {
+        Args: { _announcement_id: string }
+        Returns: {
+          job_contact_person_email: string
+          job_contact_person_name: string
+          job_contact_person_phone: string
+        }[]
+      }
+      get_my_job_request: {
+        Args: { _announcement_id: string }
+        Returns: {
+          access_restrictions: string | null
+          additional_directions: string | null
+          address: string
+          announcement_id: string | null
+          beard_allowed: string | null
+          break_included: boolean
+          city: string | null
+          contact_person_email: string | null
+          contact_person_name: string | null
+          contact_person_phone: string | null
+          contact_person_role: string | null
+          contact_person_role_other: string | null
+          country: string | null
+          created_at: string
+          description: string | null
+          district: string | null
+          dress_code_items: string[]
+          dress_code_notes: string | null
+          end_date: string | null
+          end_time: string
+          hourly_rate: number
+          id: string
+          is_demo: boolean
+          is_long_shift: boolean
+          language_requirements: string[]
+          latitude: number | null
+          license_requirement: string | null
+          long_shift_reason: string | null
+          longitude: number | null
+          operational_notes: string | null
+          piercings_allowed: string | null
+          postal_code: string | null
+          province: string | null
+          required_skills: string[]
+          restaurant_id: string
+          restaurant_name: string | null
+          restaurant_profile_id: string
+          role_required: string
+          seed_batch_id: string | null
+          shift_date: string
+          shift_duration_hours: number | null
+          start_time: string
+          status: string
+          tasks: string | null
+          tattoos_allowed: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          worker_notes: string | null
+          workers_needed: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "job_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          access_restrictions: string | null
+          account_status: Database["public"]["Enums"]["account_status"] | null
+          additional_directions: string | null
+          address: string | null
+          age: number | null
+          age_verified: boolean
+          age_verified_at: string | null
+          all_zones: boolean
+          available_now_until: string | null
+          avatar_url: string | null
+          avg_competence: number
+          avg_professionalism: number
+          avg_punctuality: number
+          avg_reliability: number
+          avg_response_minutes: number | null
+          avg_teamwork: number
+          badge: Database["public"]["Enums"]["worker_badge"] | null
+          birth_date: string | null
+          birth_place: string | null
+          business_name: string | null
+          business_status: string | null
+          busy_days: string[] | null
+          city: string | null
+          city_code: string | null
+          company_tax_code: string | null
+          completed_shifts: number | null
+          completion_pct: number
+          contact_person_email: string | null
+          contact_person_first_name: string | null
+          contact_person_last_name: string | null
+          contact_person_phone: string | null
+          contact_person_role: string | null
+          contact_person_role_other: string | null
+          country: string | null
+          created_at: string
+          credits: number | null
+          default_arrival_advance_minutes: number | null
+          default_arrival_advance_reason: string | null
+          default_beard_allowed: string | null
+          default_contact_person_name: string | null
+          default_dress_code_items: string[] | null
+          default_dress_code_notes: string | null
+          default_language_requirements: string[] | null
+          default_license_requirement: string | null
+          default_piercings_allowed: string | null
+          default_required_skills: string[] | null
+          default_settings_updated_at: string | null
+          default_tattoos_allowed: string | null
+          distinct_restaurants_count: number
+          email: string | null
+          email_summary_sent_at: string | null
+          email_summary_status: string | null
+          employees_count: number | null
+          experience_level:
+            | Database["public"]["Enums"]["experience_level"]
+            | null
+          experience_years: number | null
+          first_name: string | null
+          full_name: string | null
+          hourly_availability: string | null
+          hourly_rate: number | null
+          id: string
+          id_document_back_path: string | null
+          id_document_expires_at: string | null
+          id_document_issued_at: string | null
+          id_document_issuer: string | null
+          id_document_number: string | null
+          id_document_path: string | null
+          id_document_type: string | null
+          is_demo: boolean
+          is_motorized: boolean | null
+          languages: string[] | null
+          last_active_at: string | null
+          last_name: string | null
+          last_review_at: string | null
+          last_review_reminder_at: string | null
+          late_cancel_count: number
+          latitude: number | null
+          location_notes: string | null
+          longitude: number | null
+          nationality: string | null
+          neighborhood: string | null
+          no_show_count: number
+          no_shows: number | null
+          opening_hours: string | null
+          overdue_reviews_count: number
+          pec_email: string | null
+          phone: string | null
+          phone_country_code: string | null
+          phone_full: string | null
+          phone_number: string | null
+          phone_verified: boolean
+          phone_verified_at: string | null
+          plan: Database["public"]["Enums"]["user_plan"] | null
+          postal_code: string | null
+          price_range: string | null
+          primary_role: string | null
+          professional_profile: string | null
+          profile_completed: boolean | null
+          province: string | null
+          province_code: string | null
+          punctuality_pct: number
+          rating_avg: number | null
+          referral_code: string | null
+          referral_credits_earned: number
+          referred_by_user_id: string | null
+          registered_office_address: string | null
+          registered_office_city: string | null
+          registered_office_postal_code: string | null
+          registered_office_province: string | null
+          rehire_restaurants_count: number
+          rehire_total_answers: number
+          rehire_yes_count: number
+          reliability_pct: number | null
+          representative_age: number | null
+          reputation_level: string
+          reputation_score: number
+          reputation_updated_at: string | null
+          residence_address: string | null
+          residence_city: string | null
+          residence_postal_code: string | null
+          residence_province: string | null
+          review_blocked: boolean
+          review_blocked_at: string | null
+          reviews_count: number | null
+          sdi_code: string | null
+          secondary_roles: string[] | null
+          seed_batch_id: string | null
+          selected_zones: string[]
+          service_area_city: string | null
+          service_area_district: string | null
+          service_area_lat: number | null
+          service_area_lng: number | null
+          service_area_radius_m: number | null
+          short_bio: string | null
+          spoken_languages: Json
+          street: string | null
+          street_number: string | null
+          stripe_customer_id: string | null
+          tax_code: string | null
+          terms_accepted: boolean | null
+          updated_at: string
+          vat_company_name: string | null
+          vat_number: string | null
+          vat_status: Database["public"]["Enums"]["vat_status"] | null
+          vat_verified_at: string | null
+          venue_type: string | null
+          venue_type_other: string | null
+          weekly_availability: string[] | null
+          whatsapp_confirmation_sent_at: string | null
+          whatsapp_confirmation_status: string | null
+          whatsapp_connected: boolean | null
+          work_area_mode: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
