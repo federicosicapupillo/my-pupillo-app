@@ -641,16 +641,29 @@ function vatStatusLabel(s?: string | null) {
   return "Verifica non disponibile";
 }
 
-function DefaultsSection({ profile, userId }: { profile: any; userId?: string }) {
+function DefaultsSection({ profile, userId, onCleared }: { profile: any; userId?: string; onCleared?: () => void }) {
   const has = hasSavedDefaults(profile);
   const updatedAt = profile?.default_settings_updated_at
     ? new Date(profile.default_settings_updated_at).toLocaleString("it-IT")
     : null;
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const clearDefaults = async () => {
     if (!userId) return;
-    if (!confirm("Cancellare le impostazioni predefinite degli annunci?")) return;
+    setClearing(true);
     const { error } = await supabase.from("profiles").update({
+      access_restrictions: null,
+      additional_directions: null,
+      location_notes: null,
+      contact_person_first_name: null,
+      contact_person_last_name: null,
+      contact_person_role: null,
+      contact_person_role_other: null,
+      contact_person_phone: null,
+      contact_person_email: null,
+      default_arrival_advance_minutes: null,
+      default_arrival_advance_reason: null,
       default_license_requirement: null,
       default_language_requirements: [],
       default_tattoos_allowed: null,
@@ -661,23 +674,19 @@ function DefaultsSection({ profile, userId }: { profile: any; userId?: string })
       default_dress_code_notes: null,
       default_settings_updated_at: null,
     } as any).eq("id", userId);
-    if (error) toast.error(error.message);
-    else { toast.success("Impostazioni predefinite cancellate"); window.location.reload(); }
-  };
-
-  const restoreFromProfile = async () => {
-    if (!userId || !profile) return;
-    const update: any = {
-      default_settings_updated_at: new Date().toISOString(),
-    };
-    const { error } = await supabase.from("profiles").update(update).eq("id", userId);
-    if (error) toast.error(error.message);
-    else { toast.success("Impostazioni ripristinate dai dati del profilo"); window.location.reload(); }
+    setClearing(false);
+    setConfirmOpen(false);
+    if (error) {
+      toast.error("Errore durante la cancellazione. Riprova.");
+    } else {
+      toast.success("Impostazioni predefinite cancellate correttamente.");
+      onCleared?.();
+    }
   };
 
   return (
     <div className="mt-6 max-w-4xl rounded-2xl border bg-card p-6">
-      <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="mb-4">
         <div>
           <h2 className="font-semibold text-lg flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" />Impostazioni predefinite annunci</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -704,11 +713,30 @@ function DefaultsSection({ profile, userId }: { profile: any; userId?: string })
           <Field label="Note dress code" value={profile?.default_dress_code_notes} />
         </div>
       )}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link to="/onboarding"><Button size="sm" variant="outline">Modifica impostazioni predefinite</Button></Link>
-        {has && <Button size="sm" variant="outline" onClick={restoreFromProfile}>Ripristina dai dati del profilo</Button>}
-        {has && <Button size="sm" variant="destructive" onClick={clearDefaults}>Cancella impostazioni predefinite</Button>}
+      <div className="mt-4">
+        {has && (
+          <Button size="sm" variant="destructive" onClick={() => setConfirmOpen(true)} disabled={clearing}>
+            Cancella impostazioni predefinite
+          </Button>
+        )}
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancella impostazioni predefinite</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler cancellare le impostazioni predefinite? Questa azione eliminerà i dati salvati per i prossimi annunci e non potrà essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmOpen(false)}>No, annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={clearDefaults} disabled={clearing}>
+              {clearing ? "Cancellazione in corso…" : "Sì, cancella impostazioni"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
