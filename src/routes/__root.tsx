@@ -16,6 +16,7 @@ import { ProfileGateProvider } from "@/components/ProfileGate";
 import { StalePreviewOverlay } from "@/components/StalePreviewOverlay";
 import { installServerFnAuthFetch } from "@/lib/server-fn-auth";
 import { DevLoopMonitor } from "@/lib/dev-loop-monitor";
+import { SiteAccessGate } from "@/components/SiteAccessGate";
 
 installServerFnAuthFetch();
 
@@ -131,16 +132,18 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PhoneVerificationGate>
-          <ProfileGateProvider>
-            <Outlet />
-          </ProfileGateProvider>
-        </PhoneVerificationGate>
-        <Toaster richColors position="top-right" />
-        <StalePreviewOverlay />
-        {import.meta.env.DEV ? <DevLoopMonitor /> : null}
-      </AuthProvider>
+      <SiteAccessGate>
+        <AuthProvider>
+          <PhoneVerificationGate>
+            <ProfileGateProvider>
+              <Outlet />
+            </ProfileGateProvider>
+          </PhoneVerificationGate>
+          <Toaster richColors position="top-right" />
+          <StalePreviewOverlay />
+          {import.meta.env.DEV ? <DevLoopMonitor /> : null}
+        </AuthProvider>
+      </SiteAccessGate>
     </QueryClientProvider>
   );
 }
