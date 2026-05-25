@@ -1278,7 +1278,12 @@ function Thread() {
     ? null
     : { city: other?.city ?? null, neighborhood: other?.neighborhood ?? null };
   const displayAddress = canSeeAddress
-    ? (ann?.location_address ?? null)
+    ? (formatJobLocation({
+        address: ann?.location_address ?? ann?.job_address ?? null,
+        city: ann?.job_city ?? null,
+        neighborhood: restaurantHints?.neighborhood ?? null,
+        province: ann?.job_province ?? null,
+      }) || ann?.location_address || null)
     : publicLocationLabel({
         job_city: ann?.job_city ?? null,
         city: restaurantHints?.city ?? null,
