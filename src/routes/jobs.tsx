@@ -414,27 +414,6 @@ function Jobs() {
         subtitle="Proposte ricevute dai ristoratori"
       />
 
-      {/* Riepilogo numerico — KPI chiari in alto */}
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {stats.map((s) => (
-          <button
-            key={s.label}
-            type="button"
-            onClick={() => setTab(s.tab)}
-            className={
-              "rounded-2xl border px-4 py-3 text-left shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring " +
-              (tab === s.tab ? "ring-2 ring-foreground/40 " : "") +
-              s.tone
-            }
-          >
-            <div className="text-[11px] font-semibold uppercase tracking-wide opacity-80">
-              {s.label}
-            </div>
-            <div className="mt-1 text-2xl font-bold tabular-nums">{s.value}</div>
-          </button>
-        ))}
-      </div>
-
       {/* Privacy hint */}
       <div className="mt-5 flex items-start gap-2 rounded-2xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
