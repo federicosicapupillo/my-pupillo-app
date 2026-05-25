@@ -155,7 +155,7 @@ function splitLanguages(values: string[]) {
 }
 
 function NewRestaurantJobRequest() {
-  const { user, role, profile } = useAuth();
+  const { user, role, profile, refresh } = useAuth();
   const nav = useNavigate();
   const { reuse } = Route.useSearch();
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -164,6 +164,16 @@ function NewRestaurantJobRequest() {
   const [previewVisible, setPreviewVisible] = useState(true);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [defaultsLoaded, setDefaultsLoaded] = useState(false);
+  // Fetch fresh defaults from DB on mount so changes saved on the Profile
+  // page (or in another tab) appear immediately, without a manual refresh.
+  const refreshedOnMountRef = useRef(false);
+  useEffect(() => {
+    if (refreshedOnMountRef.current) return;
+    if (!user) return;
+    refreshedOnMountRef.current = true;
+    refresh().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
   const [confirmDefaultsOpen, setConfirmDefaultsOpen] = useState(false);
   const pendingStatusRef = useRef<"bozza" | "pubblicato" | null>(null);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
