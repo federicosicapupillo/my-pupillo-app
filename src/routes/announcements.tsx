@@ -432,6 +432,13 @@ function AnnouncementsPage() {
   }, [user, role]);
 
   const filtered = items.filter(a => a.status === statusFilter);
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { active: 0, draft: 0, assigned: 0, completed: 0, expired: 0, cancelled: 0 };
+    items.forEach((a) => {
+      if (counts[a.status] !== undefined) counts[a.status]++;
+    });
+    return counts;
+  }, [items]);
 
   // Default-select the first item so the right pane is never empty on desktop.
   useEffect(() => {
