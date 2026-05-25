@@ -360,13 +360,62 @@ function AuthPage() {
             </TabsContent>
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
-                <div>
-                  <Label>Nome completo</Label>
-                  <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Nome</Label>
+                    <Input
+                      required
+                      autoComplete="given-name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                    {firstName.length > 0 && !firstNameOk && (
+                      <p className="text-xs text-destructive mt-1">
+                        Il nome deve contenere almeno 2 caratteri
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Cognome</Label>
+                    <Input
+                      required
+                      autoComplete="family-name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
+                    {lastName.length > 0 && !lastNameOk && (
+                      <p className="text-xs text-destructive mt-1">
+                        Il cognome deve contenere almeno 2 caratteri
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label>Email</Label>
-                  <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <Input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  {email.length > 0 && !emailValid && (
+                    <p className="text-xs text-destructive mt-1">Inserisci un indirizzo email valido</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Conferma email</Label>
+                  <Input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    onPaste={(e) => e.preventDefault()}
+                  />
+                  {confirmEmail.length > 0 && !emailsMatch && (
+                    <p className="text-xs text-destructive mt-1">Le email non coincidono</p>
+                  )}
                 </div>
                 <div>
                   <Label>Password</Label>
