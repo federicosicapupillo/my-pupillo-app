@@ -17,6 +17,7 @@ import {
   Star,
   ShieldCheck,
   Info,
+  X,
 } from "lucide-react";
 import { formatTariff, formatTotalService } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
