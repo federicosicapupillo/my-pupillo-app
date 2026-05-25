@@ -701,6 +701,25 @@ function OfferCard({
         </div>
       )}
 
+      {r.status === "rejected" && (
+        <div
+          role="status"
+          className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-rose-400/70 bg-rose-50 p-4 text-rose-900 shadow-sm dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-100"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white">
+            <X className="h-5 w-5" strokeWidth={3} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-base font-bold leading-tight sm:text-lg">
+              Candidatura rifiutata
+            </div>
+            <div className="mt-0.5 text-xs text-rose-800/90 dark:text-rose-200/90 sm:text-sm">
+              Il ristoratore ha scelto un altro candidato per questo turno.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" /> Ricevuta il {receivedAt}
