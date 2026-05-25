@@ -291,12 +291,11 @@ function Profile() {
 
       {role === "restaurant" && (
         <div className="mt-6 max-w-4xl rounded-2xl border bg-card p-6">
-          <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="mb-4">
             <div>
               <h2 className="font-semibold text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary" />Requisiti e Competenze</h2>
               <p className="text-sm text-muted-foreground mt-1">Impostazioni standard del locale, precompilate in ogni nuovo annuncio.</p>
             </div>
-            <Link to="/onboarding"><Button size="sm" variant="outline">Modifica requisiti</Button></Link>
           </div>
           <RestaurantRequirementsView value={reqFromProfile(profile)} />
         </div>
