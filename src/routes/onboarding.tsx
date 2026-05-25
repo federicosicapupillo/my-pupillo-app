@@ -610,9 +610,13 @@ function Onboarding() {
     if (profile) {
       const p = profile as any;
       const split = splitAddressAndCivic(p.residence_address);
+      const metaFirst = (user as any)?.user_metadata?.first_name as string | undefined;
+      const metaLast = (user as any)?.user_metadata?.last_name as string | undefined;
+      const resolvedFirst = (p.first_name ?? metaFirst ?? "").trim();
+      const resolvedLast = (p.last_name ?? metaLast ?? "").trim();
       setPersonal((s) => ({
-        first_name: p.first_name ?? s.first_name,
-        last_name: p.last_name ?? s.last_name,
+        first_name: resolvedFirst || s.first_name,
+        last_name: resolvedLast || s.last_name,
         birth_date: p.birth_date ?? s.birth_date,
         birth_place: p.birth_place ?? s.birth_place,
         tax_code: p.tax_code ?? s.tax_code,
@@ -1099,7 +1103,11 @@ function Onboarding() {
             ...reqToProfileUpdate(requirements),
           }
         : {
-            full_name: form.full_name,
+            full_name:
+              `${personal.first_name ?? ""} ${personal.last_name ?? ""}`.trim() ||
+              form.full_name ||
+              (profile as any)?.full_name ||
+              null,
             phone: phoneFull,
             phone_country_code: form.phone_code,
             phone_number: form.phone_number,
@@ -1127,8 +1135,8 @@ function Onboarding() {
             id_document_path: uploadedPath,
             id_document_back_path: uploadedBackPath,
             avatar_url: uploadedAvatarUrl,
-            first_name: personal.first_name.trim(),
-            last_name: personal.last_name.trim(),
+            first_name: personal.first_name.trim() || (profile as any)?.first_name || null,
+            last_name: personal.last_name.trim() || (profile as any)?.last_name || null,
             birth_date: personal.birth_date,
             birth_place: personal.birth_place.trim(),
             tax_code: personal.tax_code.trim().toUpperCase(),
@@ -1184,7 +1192,32 @@ function Onboarding() {
         <div id="sec-personal" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
           <div>
             <Label>Nome completo</Label>
-            <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+            {role === "worker" ? (() => {
+              const computed = `${personal.first_name ?? ""} ${personal.last_name ?? ""}`.trim();
+              const display = computed || (form.full_name ?? "").trim();
+              const missing = !display;
+              return (
+                <>
+                  <Input
+                    readOnly
+                    value={display}
+                    className="bg-muted/50 cursor-not-allowed"
+                    aria-readonly="true"
+                    placeholder={missing ? "—" : undefined}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Nome e cognome inseriti in fase di registrazione. Per modificarli contatta il supporto clienti.
+                  </p>
+                  {missing ? (
+                    <p className="text-xs text-destructive mt-1">
+                      Nome o cognome mancanti sul profilo. Contatta il supporto clienti per completarli.
+                    </p>
+                  ) : null}
+                </>
+              );
+            })() : (
+              <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+            )}
           </div>
           <div data-field="phone" className="scroll-mt-24">
             <Label>Telefono *</Label>
