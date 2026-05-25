@@ -26,7 +26,7 @@ import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announc
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { formatDateIT, formatTariff } from "@/lib/format";
+import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/format";
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
 
@@ -669,11 +669,10 @@ function WorkersPage() {
             onChange={(e) => { setSelected(e.target.value); setLastAnnouncementId(user?.id, e.target.value); }}
             className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="">Nessun annuncio attivo</option>
+            <option value="" disabled={anns.length > 0}>Nessun annuncio attivo</option>
             {anns.map((a) => (
               <option key={a.id} value={a.id}>
-                {new Date(a.service_date).toLocaleDateString("it-IT")}
-                {a.location_address ? ` · ${a.location_address}` : ""}
+                {formatAnnouncementLabel(a)}
               </option>
             ))}
           </select>
