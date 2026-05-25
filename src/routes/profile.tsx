@@ -39,6 +39,32 @@ const NATIONALITIES = [
   "Bangladese", "Filippina",
 ];
 
+type WorkerDraft = {
+  nationality: string;
+  residence_address: string;
+  residence_city: string;
+  residence_province: string;
+  service_area_city: string;
+  professional_profile: string;
+  roles: string[];
+};
+
+function workerDraftFromProfile(profile: any): WorkerDraft {
+  const roles = [
+    ...((profile?.secondary_roles as string[] | null | undefined) ?? []),
+    ...(profile?.primary_role ? [profile.primary_role] : []),
+  ].filter(Boolean);
+  return {
+    nationality: profile?.nationality ?? "",
+    residence_address: profile?.residence_address ?? "",
+    residence_city: profile?.residence_city ?? profile?.city ?? "",
+    residence_province: profile?.residence_province ?? profile?.province ?? "",
+    service_area_city: profile?.service_area_city ?? "",
+    professional_profile: profile?.professional_profile ?? "",
+    roles: Array.from(new Set(roles)),
+  };
+}
+
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
   component: () => <RequireAuth><Profile /></RequireAuth>,
