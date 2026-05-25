@@ -1,5 +1,5 @@
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -78,7 +78,66 @@ import { useProfileGate } from "@/components/ProfileGate";
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
   component: () => <RequireAuth><Thread /></RequireAuth>,
+  // Fallback friendly se il caricamento della conversazione fallisce
+  // (link rotto, RLS, errore di rete). Niente più "This page didn't load":
+  // mostriamo un messaggio chiaro e un bottone per tornare alla lista.
+  errorComponent: ConversationErrorFallback,
+  notFoundComponent: ConversationNotFoundFallback,
 });
+
+function ConversationErrorFallback({ error, reset }: { error: Error; reset: () => void }) {
+  // Logga in console per debug ma non mostra dettagli tecnici all'utente.
+  console.error("[messages/$id] errorComponent:", error);
+  const router = useRouter();
+  return (
+    <div className="mx-auto max-w-md p-6">
+      <div className="rounded-2xl border bg-card p-6 text-center">
+        <h1 className="text-base font-semibold">Conversazione non disponibile</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Non è stato possibile aprire direttamente la conversazione. Seleziona
+          il messaggio dalla lista.
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Link
+            to="/messages"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Vai ai messaggi
+          </Link>
+          <button
+            type="button"
+            onClick={() => { router.invalidate(); reset(); }}
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+          >
+            Riprova
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConversationNotFoundFallback() {
+  return (
+    <div className="mx-auto max-w-md p-6">
+      <div className="rounded-2xl border bg-card p-6 text-center">
+        <h1 className="text-base font-semibold">Conversazione non trovata</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Non è stato possibile aprire direttamente la conversazione. Seleziona
+          il messaggio dalla lista.
+        </p>
+        <div className="mt-4">
+          <Link
+            to="/messages"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Vai ai messaggi
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type Msg = {
   id: string;
