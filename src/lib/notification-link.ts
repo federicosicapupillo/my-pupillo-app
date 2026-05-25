@@ -52,12 +52,12 @@ export async function navigateFromNotificationLink(
     if (role === "worker") return navigate({ to: "/jobs" });
     return navigate({ to: "/messages" });
   };
-  // For workers, the safest fallback for shift/application notifications is
-  // "I miei turni" — never a 404 / "page didn't load" screen.
-  const fallback = () => {
-    if (role === "worker") return navigate({ to: "/shifts" });
-    return navigate({ to: "/messages" });
-  };
+  // Per le notifiche di candidatura/proposta/chat la destinazione di
+  // ripiego corretta è SEMPRE la lista messaggi: così il lavoratore può
+  // selezionare manualmente la conversazione invece di vedere una pagina
+  // di errore o di finire in una sezione (es. "I miei turni") che non
+  // contiene il messaggio del ristoratore.
+  const fallback = () => navigate({ to: "/messages" });
 
   if (!isValidId(link)) return fallback();
   const raw = String(link).trim();
@@ -89,12 +89,16 @@ export async function navigateFromNotificationLink(
             .select("id")
             .eq("id", id)
             .maybeSingle();
-          if (!appRow) return navigate({ to: "/shifts" });
+          if (!appRow) return fallback();
         } catch {
-          return navigate({ to: "/shifts" });
+          return fallback();
         }
       }
-      return navigate({ to: "/messages/$id", params: { id } });
+      try {
+        return navigate({ to: "/messages/$id", params: { id } });
+      } catch {
+        return fallback();
+      }
     }
     // /reviews/<reviewId> — dedicated popup route for the worker.
     // For restaurants we resolve to the related chat/shift instead.
