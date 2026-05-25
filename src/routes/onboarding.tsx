@@ -1190,35 +1190,12 @@ function Onboarding() {
       />
       <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
         <div id="sec-personal" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
-          <div>
-            <Label>Nome completo</Label>
-            {role === "worker" ? (() => {
-              const computed = `${personal.first_name ?? ""} ${personal.last_name ?? ""}`.trim();
-              const display = computed || (form.full_name ?? "").trim();
-              const missing = !display;
-              return (
-                <>
-                  <Input
-                    readOnly
-                    value={display}
-                    className="bg-muted/50 cursor-not-allowed"
-                    aria-readonly="true"
-                    placeholder={missing ? "—" : undefined}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Nome e cognome inseriti in fase di registrazione. Per modificarli contatta il supporto clienti.
-                  </p>
-                  {missing ? (
-                    <p className="text-xs text-destructive mt-1">
-                      Nome o cognome mancanti sul profilo. Contatta il supporto clienti per completarli.
-                    </p>
-                  ) : null}
-                </>
-              );
-            })() : (
+          {role !== "worker" ? (
+            <div>
+              <Label>Nome completo</Label>
               <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
-            )}
-          </div>
+            </div>
+          ) : null}
           <div data-field="phone" className="scroll-mt-24">
             <Label>Telefono *</Label>
             <PhoneInput
