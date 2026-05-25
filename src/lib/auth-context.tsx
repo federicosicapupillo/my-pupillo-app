@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       : allRoles.includes("worker") ? "worker"
       : undefined;
     setRole(r ?? null);
-    setProfile((prof as Profile) ?? null);
+    setProfile((prof as unknown as Profile) ?? null);
     // Apply per-user theme preference. Default restaurants to light.
     const saved = readUserTheme(uid);
     if (saved) {
