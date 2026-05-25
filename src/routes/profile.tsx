@@ -204,7 +204,7 @@ function Profile() {
             saving={savingWorker}
             draft={workerDraft}
             onDraftChange={setWorkerDraft}
-            onPickAvatar={(file, preview) => {
+            onPickAvatar={(file: File | null, preview: string | null) => {
               setAvatarFile(file);
               setAvatarPreview(preview);
             }}
@@ -437,6 +437,173 @@ function Profile() {
         <Button variant="destructive" className="mt-3" onClick={deleteAccount}>Cancella il mio account</Button>
       </div>
     </AppShell>
+  );
+}
+
+function WorkerProfileEditor({
+  profile,
+  email,
+  avatarUrl,
+  editing,
+  saving,
+  draft,
+  onDraftChange,
+  onPickAvatar,
+  onEdit,
+  onCancel,
+  onSave,
+}: {
+  profile: any;
+  email: string | null;
+  avatarUrl: string | null;
+  editing: boolean;
+  saving: boolean;
+  draft: WorkerDraft;
+  onDraftChange: (next: WorkerDraft) => void;
+  onPickAvatar: (file: File | null, preview: string | null) => void;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.full_name;
+  const avatarInitials = fullName
+    ? fullName.split(/\s+/).slice(0, 2).map((p: string) => p[0]?.toUpperCase()).join("")
+    : "";
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          {editing ? (
+            <AvatarUpload value={avatarUrl} onPickFile={onPickAvatar} />
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border bg-muted flex items-center justify-center">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Foto profilo" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-lg font-semibold text-muted-foreground">{avatarInitials || "—"}</span>
+                )}
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Foto profilo</div>
+                <p className="text-sm text-muted-foreground">{avatarUrl ? "Foto caricata" : "Nessuna foto caricata"}</p>
+              </div>
+            </div>
+          )}
+        </div>
+        {!editing && <Button variant="outline" onClick={onEdit}>Modifica</Button>}
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <LockedInput label="Nome" value={profile?.first_name ?? ""} />
+        <LockedInput label="Cognome" value={profile?.last_name ?? ""} />
+        <LockedInput label="Email" value={email ?? profile?.email ?? ""} />
+        <LockedInput label="Telefono" value={profile?.phone_full ?? profile?.phone ?? ""} />
+        <EditableInput
+          label="Nazionalità"
+          editing={editing}
+          value={draft.nationality}
+          onChange={(nationality) => onDraftChange({ ...draft, nationality })}
+          options={NATIONALITIES}
+        />
+        <EditableInput
+          label="Città di residenza"
+          editing={editing}
+          value={draft.residence_city}
+          onChange={(residence_city) => onDraftChange({ ...draft, residence_city })}
+        />
+        <EditableInput
+          label="Provincia"
+          editing={editing}
+          value={draft.residence_province}
+          onChange={(residence_province) => onDraftChange({ ...draft, residence_province })}
+        />
+        <EditableInput
+          label="Città di partenza"
+          editing={editing}
+          value={draft.service_area_city}
+          onChange={(service_area_city) => onDraftChange({ ...draft, service_area_city })}
+          options={WORKER_CITIES as unknown as string[]}
+        />
+        <div className="md:col-span-2">
+          <Label>Indirizzo di residenza</Label>
+          <Input
+            value={draft.residence_address}
+            readOnly={!editing}
+            onChange={(e) => onDraftChange({ ...draft, residence_address: e.target.value })}
+            className={!editing ? "bg-muted/50" : undefined}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <Label>Esperienze</Label>
+          <Textarea
+            value={draft.professional_profile}
+            readOnly={!editing}
+            onChange={(e) => onDraftChange({ ...draft, professional_profile: e.target.value })}
+            className={!editing ? "bg-muted/50" : undefined}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <Label>Competenze / ruoli</Label>
+          {editing ? (
+            <WorkerRolesMultiSelect value={draft.roles} onChange={(roles) => onDraftChange({ ...draft, roles })} />
+          ) : (
+            <p className="mt-1 text-sm font-medium">{draft.roles.join(", ") || "—"}</p>
+          )}
+        </div>
+        <div className="md:col-span-2">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Lingue parlate</div>
+          <SpokenLanguagesView value={normalizeSpokenLanguages(profile?.spoken_languages)} />
+        </div>
+      </div>
+
+      {editing && (
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Button onClick={onSave} disabled={saving}>{saving ? "Salvataggio in corso…" : "Salva modifiche"}</Button>
+          <Button variant="outline" onClick={onCancel} disabled={saving}>Annulla</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LockedInput({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <Input value={value} readOnly aria-readonly="true" className="bg-muted/50 cursor-not-allowed" />
+    </div>
+  );
+}
+
+function EditableInput({
+  label,
+  value,
+  editing,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  editing: boolean;
+  onChange: (next: string) => void;
+  options?: readonly string[] | string[];
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      {editing && options ? (
+        <SearchableSelect options={options} value={value} onChange={onChange} placeholder="Seleziona" />
+      ) : (
+        <Input
+          value={value}
+          readOnly={!editing}
+          onChange={(e) => onChange(e.target.value)}
+          className={!editing ? "bg-muted/50" : undefined}
+        />
+      )}
+    </div>
   );
 }
 
