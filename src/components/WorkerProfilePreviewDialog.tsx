@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, ExternalLink, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { displayWorkerName } from "@/lib/worker-display";
 
 type WorkerProfile = {
   id: string;
@@ -48,12 +49,6 @@ type Review = {
   tags: string[] | null;
 };
 
-function firstName(name: string | null | undefined) {
-  if (!name) return "Lavoratore";
-  const t = name.trim();
-  return t ? t.split(/\s+/)[0] : "Lavoratore";
-}
-
 function langsLabel(spoken: any, langs: string[] | null) {
   try {
     if (Array.isArray(spoken) && spoken.length > 0) {
@@ -76,7 +71,7 @@ export function WorkerProfilePreviewDialog({
   const [w, setW] = useState<WorkerProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
-  const [assigned, setAssigned] = useState(false);
+  const [workedTogether, setWorkedTogether] = useState(false);
 
   useEffect(() => {
     if (!open || !workerId) return;
@@ -84,7 +79,7 @@ export function WorkerProfilePreviewDialog({
     setLoading(true);
     setW(null);
     setReviews([]);
-    setAssigned(false);
+    setWorkedTogether(false);
     (async () => {
       const [{ data: profile }, { data: revs }] = await Promise.all([
         supabase.from("profiles").select(
@@ -97,21 +92,25 @@ export function WorkerProfilePreviewDialog({
       if (cancelled) return;
       setW((profile as WorkerProfile | null) ?? null);
       setReviews((revs as Review[] | null) ?? []);
-      // Check if the viewer (restaurant) already has an accepted application with this worker
+      // Privacy: il ristoratore vede Nome e Cognome solo se ha già avuto
+      // almeno un turno COMPLETATO con questo lavoratore.
       if (user && role === "restaurant") {
-        const { data: ax } = await supabase.from("applications")
-          .select("id").eq("restaurant_id", user.id).eq("worker_id", workerId).eq("status", "accepted").limit(1);
-        if (!cancelled) setAssigned(!!(ax && ax.length > 0));
+        const { data: sx } = await supabase.from("shifts")
+          .select("id").eq("restaurant_id", user.id).eq("worker_id", workerId).eq("status", "completed").limit(1);
+        if (!cancelled) setWorkedTogether(!!(sx && sx.length > 0));
       }
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [open, workerId, user?.id, role]);
 
-  // Privacy: prima dell'assegnazione mostriamo solo il nome (senza cognome).
+  // Privacy: mostra Nome e Cognome solo se ristoratore ↔ lavoratore hanno
+  // già completato almeno un turno. Altrimenti label anonima "ruolo verificato".
   const isRestaurantViewer = role === "restaurant";
   const displayName = w
-    ? (isRestaurantViewer && !assigned ? firstName(w.full_name) : (w.full_name || "Lavoratore"))
+    ? (isRestaurantViewer
+        ? displayWorkerName(w, workedTogether)
+        : (w.full_name || "Lavoratore"))
     : "Lavoratore";
   const zone = w ? [w.neighborhood, w.city].filter(Boolean).join(", ") || w.city || "—" : "—";
   const roleLine = w ? [w.primary_role, ...(w.secondary_roles ?? [])].filter(Boolean).join(" · ") : "";
