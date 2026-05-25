@@ -101,11 +101,13 @@ type Ann = {
   service_date: string;
   service_time: string;
   end_time?: string | null;
+  end_date?: string | null;
   duration_hours?: number | null;
   location_address: string;
   tariff_amount: number;
   tariff_type: string;
   job_city?: string | null;
+  job_province?: string | null;
   restaurant_id?: string;
   status?: string | null;
   assigned_worker_id?: string | null;
