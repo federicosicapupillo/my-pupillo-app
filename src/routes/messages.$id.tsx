@@ -825,7 +825,7 @@ function Thread() {
     if (!user || !app) return;
     const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
     if (!receiverId) return;
-    const body = "Hai confermato di aver letto le istruzioni del servizio.";
+    const body = "Ho confermato di aver letto le istruzioni del servizio.";
     const createdAt = new Date().toISOString();
     const { data, error } = await supabase.from("messages").insert({
       application_id: app.id,
