@@ -656,16 +656,41 @@ function NewRestaurantJobRequest() {
             </Field>
             <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
             <Field label="Tariffa oraria">
-              <HourlyRateInput value={f.hourly_rate} onChange={(v) => setField("hourly_rate", v)} required />
+              <Select value={f.hourly_rate} onValueChange={v => setField("hourly_rate", v)}>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona tariffa" /></SelectTrigger>
+                <SelectContent>
+                  {HOURLY_RATE_OPTIONS.map(rate => (
+                    <SelectItem key={rate} value={String(rate)}>{rate} €/h</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="Data inizio turno">
               <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} min={todayISO} required />
             </Field>
-            <Field label="Ora inizio turno"><Input type="time" required min={startTimeMin} value={f.start_time} onChange={e => setField("start_time", e.target.value)} /></Field>
+            <Field label="Ora inizio turno">
+              <Select value={f.start_time} onValueChange={v => setField("start_time", v)}>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {TIME_OPTIONS.map(t => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Data fine turno">
               <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || todayISO} required />
             </Field>
-            <Field label="Ora fine turno"><Input type="time" required min={endTimeMin} value={f.end_time} onChange={e => setField("end_time", e.target.value)} /></Field>
+            <Field label="Ora fine turno">
+              <Select value={f.end_time} onValueChange={v => setField("end_time", v)}>
+                <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {TIME_OPTIONS.map(t => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
           </div>
           <p className="text-xs text-muted-foreground">
             Se il turno termina dopo la mezzanotte, seleziona come data fine il giorno successivo.
