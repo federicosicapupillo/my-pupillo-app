@@ -506,7 +506,7 @@ function Jobs() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
-            Nessuna offerta in questa categoria.
+            Nessuna offerta in questa sezione.
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
