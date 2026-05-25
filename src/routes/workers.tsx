@@ -1184,13 +1184,13 @@ function WorkersMapSection({
     id: w.id,
     lat: pos[0],
     lng: pos[1],
-    name: w.full_name,
+    name: displayWorkerName(w, !!rel[w.id]?.workedWith),
     role: w.primary_role,
     city: w.city ?? w.neighborhood ?? null,
     rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
     badge: w.badge,
     avatarUrl: avatars[w.id] ?? null,
-    initials: initialsOf(w.full_name),
+    initials: initialsOf(displayWorkerName(w, !!rel[w.id]?.workedWith)),
     link: `/workers_/${w.id}`,
   }));
   // Center on the average position of located workers so the map frames them.
