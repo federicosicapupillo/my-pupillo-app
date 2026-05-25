@@ -1154,12 +1154,14 @@ function WorkersMapSection({
   onInvite,
   inviteDisabled,
   inviteLabel,
+  rel,
 }: {
   workers: W[];
   fallbackCenter: [number, number];
   onInvite: (workerId: string) => void;
   inviteDisabled: boolean;
   inviteLabel: string;
+  rel: Record<string, WorkerRel>;
 }) {
   // Resolve a position for each worker:
   // 1) service_area_lat/lng (precise approx area set by the worker)
