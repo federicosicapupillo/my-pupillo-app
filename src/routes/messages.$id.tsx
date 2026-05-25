@@ -1476,7 +1476,6 @@ function Thread() {
               <div className="font-semibold">{displayOtherName}</div>
             )}
             {ann && (
-            {ann && (
               <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
                 <div>
                   <Link to="/announcements/$id" params={{ id: ann.id }} className="text-primary hover:underline underline-offset-2 font-medium">
