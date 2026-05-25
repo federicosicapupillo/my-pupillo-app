@@ -756,6 +756,130 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+function SensitiveRow({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="flex justify-between gap-4 py-2 border-b last:border-0">
+      <span className="text-sm text-muted-foreground flex items-center gap-1">
+        <Lock className="h-3 w-3" />{label}
+      </span>
+      <span className="text-sm font-medium text-right">{value || "—"}</span>
+    </div>
+  );
+}
+
+function RestaurantLocationEditor({
+  draft,
+  onChange,
+}: {
+  draft: RestaurantDraft;
+  onChange: (next: RestaurantDraft) => void;
+}) {
+  const set = (patch: Partial<RestaurantDraft>) => onChange({ ...draft, ...patch });
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label>Restrizioni all'ingresso</Label>
+        <Textarea
+          rows={2}
+          value={draft.access_restrictions}
+          onChange={(e) => set({ access_restrictions: e.target.value })}
+          placeholder="Es. Citofono al primo piano, ingresso laterale…"
+        />
+      </div>
+      <div>
+        <Label>Indicazioni aggiuntive / punto di ingresso</Label>
+        <Textarea
+          rows={2}
+          value={draft.additional_directions}
+          onChange={(e) => set({ additional_directions: e.target.value })}
+          placeholder="Es. Entrata sul retro, parcheggio interno…"
+        />
+      </div>
+      <div>
+        <Label>Note operative per il lavoratore</Label>
+        <Textarea
+          rows={2}
+          value={draft.location_notes}
+          onChange={(e) => set({ location_notes: e.target.value })}
+          placeholder="Es. Chiedere di Marco al banco…"
+        />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Nome referente</Label>
+          <Input
+            value={draft.contact_person_first_name}
+            onChange={(e) => set({ contact_person_first_name: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Cognome referente</Label>
+          <Input
+            value={draft.contact_person_last_name}
+            onChange={(e) => set({ contact_person_last_name: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Ruolo del referente</Label>
+          <Select
+            value={draft.contact_person_role || undefined}
+            onValueChange={(v) => set({ contact_person_role: v })}
+          >
+            <SelectTrigger><SelectValue placeholder="Seleziona ruolo" /></SelectTrigger>
+            <SelectContent>
+              {CONTACT_ROLES.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {draft.contact_person_role === "Altro" && (
+          <div>
+            <Label>Specifica ruolo</Label>
+            <Input
+              value={draft.contact_person_role_other}
+              onChange={(e) => set({ contact_person_role_other: e.target.value })}
+            />
+          </div>
+        )}
+        <div>
+          <Label>Telefono referente</Label>
+          <Input
+            value={draft.contact_person_phone}
+            onChange={(e) => set({ contact_person_phone: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Email referente</Label>
+          <Input
+            type="email"
+            value={draft.contact_person_email}
+            onChange={(e) => set({ contact_person_email: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Anticipo richiesto (minuti)</Label>
+          <Input
+            type="number"
+            min={0}
+            value={draft.arrival_advance_minutes}
+            onChange={(e) => set({ arrival_advance_minutes: e.target.value })}
+            placeholder="Es. 15"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <Label>Motivo dell'anticipo</Label>
+          <Input
+            value={draft.arrival_advance_reason}
+            onChange={(e) => set({ arrival_advance_reason: e.target.value })}
+            placeholder="Es. Briefing pre-servizio, cambio uniforme…"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
