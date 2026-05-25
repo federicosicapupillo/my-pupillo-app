@@ -18,6 +18,8 @@ export type LocationDefaults = {
   contact_person_name?: string | null;
   contact_person_phone?: string | null;
   contact_person_email?: string | null;
+  contact_person_role?: string | null;
+  contact_person_role_other?: string | null;
   arrival_advance_minutes?: number | null;
   arrival_advance_reason?: string | null;
 };
@@ -58,6 +60,31 @@ export function buildDefaultsUpdate(opts: {
     arrivalFields.default_arrival_advance_reason =
       (location.arrival_advance_reason || "").trim() || null;
   }
+  // Non sovrascrivere con stringhe vuote: persisti solo i campi testuali realmente compilati.
+  const textIfPresent = (v: string | null | undefined): Record<string, unknown> | null => {
+    const t = (v || "").trim();
+    return t.length > 0 ? { value: t } : null;
+  };
+  const accessFields: Record<string, unknown> = {};
+  const ar = textIfPresent(location.access_restrictions);
+  if (ar) accessFields.access_restrictions = ar.value;
+  const ad = textIfPresent(location.additional_directions);
+  if (ad) accessFields.additional_directions = ad.value;
+  const ln = textIfPresent(location.location_notes);
+  if (ln) accessFields.location_notes = ln.value;
+  const roleFields: Record<string, unknown> = {};
+  if ((location.contact_person_role || "").trim().length > 0) {
+    roleFields.contact_person_role = location.contact_person_role!.trim();
+    roleFields.contact_person_role_other =
+      location.contact_person_role === "Altro"
+        ? (location.contact_person_role_other || "").trim() || null
+        : null;
+  }
+  // Per i requisiti, evita di azzerare le note dress code se l'utente non le ha compilate.
+  const reqUpdate = reqToProfileUpdate(requirements) as Record<string, unknown>;
+  if (!(requirements.dress_code_notes && requirements.dress_code_notes.trim().length > 0)) {
+    delete reqUpdate.default_dress_code_notes;
+  }
   return {
     // Luogo (riusa colonne profilo esistenti)
     address: location.address || null,
@@ -68,13 +95,12 @@ export function buildDefaultsUpdate(opts: {
     country: location.country || null,
     latitude: location.latitude ?? null,
     longitude: location.longitude ?? null,
-    access_restrictions: location.access_restrictions || null,
-    additional_directions: location.additional_directions || null,
-    location_notes: location.location_notes || null,
+    ...accessFields,
+    ...roleFields,
     ...contactFields,
     ...arrivalFields,
     // Requisiti / dress code
-    ...reqToProfileUpdate(requirements),
+    ...reqUpdate,
     // Tipologia / fascia
     venue_type: venue.venue_type ?? null,
     venue_type_other: venue.venue_type_other ?? null,
