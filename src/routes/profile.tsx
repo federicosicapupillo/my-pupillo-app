@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
+import { RestaurantRequirementsEditor, reqToProfileUpdate, type RestaurantRequirements, EMPTY_REQ } from "@/components/RestaurantRequirements";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
@@ -41,6 +42,9 @@ import { updateAvatarUrlCache, useAvatarUrl } from "@/hooks/use-avatar-urls";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { WORKER_CITIES } from "@/lib/worker-cities";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
+import { CONTACT_ROLES } from "@/lib/contact-roles";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Lock } from "lucide-react";
 
 const NATIONALITIES = [
   "Italiana", "Albanese", "Rumena", "Marocchina", "Egiziana", "Tunisina",
@@ -95,6 +99,66 @@ function Profile() {
   const [workerDraft, setWorkerDraft] = useState(() => workerDraftFromProfile(profile));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // ===== Restaurant edit mode =====
+  const [editingRest, setEditingRest] = useState(false);
+  const [savingRest, setSavingRest] = useState(false);
+  const [restDraft, setRestDraft] = useState(() => restaurantDraftFromProfile(profile));
+
+  useEffect(() => {
+    if (role !== "restaurant" || editingRest) return;
+    setRestDraft(restaurantDraftFromProfile(profile));
+  }, [profile, role, editingRest]);
+
+  const startRestEdit = () => {
+    setRestDraft(restaurantDraftFromProfile(profile));
+    setEditingRest(true);
+  };
+  const cancelRestEdit = () => {
+    setRestDraft(restaurantDraftFromProfile(profile));
+    setEditingRest(false);
+  };
+  const saveRestProfile = async () => {
+    if (!user) return;
+    setSavingRest(true);
+    try {
+      const d = restDraft;
+      const trimOrNull = (v: string) => {
+        const t = (v ?? "").trim();
+        return t.length > 0 ? t : null;
+      };
+      const adv = d.arrival_advance_minutes.trim();
+      const advNum = adv === "" ? null : Math.max(0, Math.floor(Number(adv)));
+      const update: Record<string, unknown> = {
+        // Luogo e accesso
+        access_restrictions: trimOrNull(d.access_restrictions),
+        additional_directions: trimOrNull(d.additional_directions),
+        location_notes: trimOrNull(d.location_notes),
+        contact_person_first_name: trimOrNull(d.contact_person_first_name),
+        contact_person_last_name: trimOrNull(d.contact_person_last_name),
+        contact_person_role: trimOrNull(d.contact_person_role),
+        contact_person_role_other:
+          d.contact_person_role === "Altro" ? trimOrNull(d.contact_person_role_other) : null,
+        contact_person_phone: trimOrNull(d.contact_person_phone),
+        contact_person_email: trimOrNull(d.contact_person_email),
+        default_arrival_advance_minutes:
+          advNum != null && Number.isFinite(advNum) ? advNum : null,
+        default_arrival_advance_reason: trimOrNull(d.arrival_advance_reason),
+        // Requisiti e competenze (impostazioni predefinite)
+        ...reqToProfileUpdate(d.requirements),
+        default_settings_updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("profiles").update(update as any).eq("id", user.id);
+      if (error) throw error;
+      setEditingRest(false);
+      toast.success("Profilo aggiornato correttamente.");
+      await refresh();
+    } catch {
+      toast.error("Errore durante il salvataggio. Riprova.");
+    } finally {
+      setSavingRest(false);
+    }
+  };
 
   useEffect(() => {
     if (role !== "worker" || editingWorker) return;
@@ -198,9 +262,18 @@ function Profile() {
         action={
           role === "worker" ? (
             editingWorker ? null : <Button onClick={startWorkerEdit}>Modifica</Button>
-          ) : (
-            <Link to="/onboarding"><Button>Modifica</Button></Link>
-          )
+          ) : role === "restaurant" ? (
+            editingRest ? (
+              <div className="flex gap-2">
+                <Button onClick={saveRestProfile} disabled={savingRest}>
+                  {savingRest ? "Salvataggio…" : "Salva modifiche"}
+                </Button>
+                <Button variant="outline" onClick={cancelRestEdit} disabled={savingRest}>Annulla</Button>
+              </div>
+            ) : (
+              <Button onClick={startRestEdit}>Modifica</Button>
+            )
+          ) : null
         }
       />
       {role === "restaurant" && <PayOnHireBox className="mb-6 max-w-2xl" />}
@@ -223,20 +296,24 @@ function Profile() {
             onSave={saveWorkerProfile}
           />
         ) : (<>
-        <Row label="Email" value={user?.email} />
+        <SensitiveRow label="Email" value={user?.email} />
         <Row label="Ruolo" value={role} />
-        <Row label="Nome e cognome" value={[(profile as any)?.first_name, (profile as any)?.last_name].filter(Boolean).join(" ") || profile?.full_name} />
-        <Row label="Telefono" value={(profile as any)?.phone_full || profile?.phone} />
+        <SensitiveRow label="Nome e cognome" value={[(profile as any)?.first_name, (profile as any)?.last_name].filter(Boolean).join(" ") || profile?.full_name} />
+        <SensitiveRow label="Telefono" value={(profile as any)?.phone_full || profile?.phone} />
         {role === "restaurant" && (<>
-          <Row label="Nome locale" value={profile?.business_name} />
-          <Row label="Partita IVA" value={profile?.vat_number} />
+          <SensitiveRow label="Nome locale" value={profile?.business_name} />
+          <SensitiveRow label="Partita IVA" value={profile?.vat_number} />
           <Row label="Stato verifica P.IVA" value={vatStatusLabel(profile?.vat_status)} />
-          {profile?.vat_company_name && <Row label="Ragione sociale (VIES)" value={profile.vat_company_name} />}
+          {profile?.vat_company_name && <SensitiveRow label="Ragione sociale (VIES)" value={profile.vat_company_name} />}
           <Row label="Tipologia locale" value={venueTypeLabel(profile?.venue_type, (profile as any)?.venue_type_other)} />
           <Row label="Provincia" value={(profile as any)?.province ? `${(profile as any).province}${(profile as any)?.province_code || provinceCode((profile as any).province) ? ` (${(profile as any)?.province_code || provinceCode((profile as any).province)})` : ""}` : null} />
           <Row label="Città" value={(profile as any)?.city} />
           <Row label="Indirizzo" value={profile?.address} />
           <Row label="Fascia di prezzo" value={priceRangeLabel(profile?.price_range)} />
+          <p className="text-xs text-muted-foreground pt-2 flex items-start gap-1.5">
+            <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>I dati verificati (nome, contatti, P.IVA, ragione sociale) sono bloccati. Per modificarli contatta il servizio clienti.</span>
+          </p>
         </>)}
         </>)}
       </div>
@@ -249,6 +326,9 @@ function Profile() {
               <p className="text-sm text-muted-foreground mt-1">Informazioni operative usate negli annunci e mostrate ai lavoratori.</p>
             </div>
           </div>
+          {editingRest ? (
+            <RestaurantLocationEditor draft={restDraft} onChange={setRestDraft} />
+          ) : (
           <div className="space-y-3">
             <div>
               <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Indirizzo</div>
@@ -286,6 +366,7 @@ function Profile() {
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 
@@ -297,12 +378,28 @@ function Profile() {
               <p className="text-sm text-muted-foreground mt-1">Impostazioni standard del locale, precompilate in ogni nuovo annuncio.</p>
             </div>
           </div>
-          <RestaurantRequirementsView value={reqFromProfile(profile)} />
+          {editingRest ? (
+            <RestaurantRequirementsEditor
+              value={restDraft.requirements}
+              onChange={(requirements) => setRestDraft({ ...restDraft, requirements })}
+            />
+          ) : (
+            <RestaurantRequirementsView value={reqFromProfile(profile)} />
+          )}
         </div>
       )}
 
       {role === "restaurant" && (
         <DefaultsSection profile={profile} userId={user?.id} onCleared={refresh} />
+      )}
+
+      {role === "restaurant" && editingRest && (
+        <div className="mt-6 max-w-4xl flex flex-wrap gap-2">
+          <Button onClick={saveRestProfile} disabled={savingRest}>
+            {savingRest ? "Salvataggio in corso…" : "Salva modifiche"}
+          </Button>
+          <Button variant="outline" onClick={cancelRestEdit} disabled={savingRest}>Annulla</Button>
+        </div>
       )}
 
       <div className="mt-6 max-w-4xl">
