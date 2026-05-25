@@ -286,6 +286,15 @@ const STATUS_CLS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-800",
 };
 
+const STATUS_TABS: { key: "active" | "draft" | "assigned" | "completed" | "expired" | "cancelled"; label: string; activeClass: string; inactiveClass: string; badgeClass: string }[] = [
+  { key: "active", label: "Pubblicati", activeClass: "bg-sky-500/25 text-sky-100 border-sky-400/60 shadow-[0_0_12px_-2px_rgba(56,189,248,0.25)]", inactiveClass: "bg-transparent text-sky-300 border-sky-500/30 hover:bg-sky-500/10", badgeClass: "bg-sky-400 text-sky-950" },
+  { key: "draft", label: "In attesa", activeClass: "bg-amber-500/25 text-amber-100 border-amber-400/60 shadow-[0_0_12px_-2px_rgba(251,191,36,0.25)]", inactiveClass: "bg-transparent text-amber-300 border-amber-500/30 hover:bg-amber-500/10", badgeClass: "bg-amber-400 text-amber-950" },
+  { key: "assigned", label: "Assegnati", activeClass: "bg-emerald-500/25 text-emerald-100 border-emerald-400/60 shadow-[0_0_12px_-2px_rgba(52,211,153,0.25)]", inactiveClass: "bg-transparent text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/10", badgeClass: "bg-emerald-400 text-emerald-950" },
+  { key: "completed", label: "Completati", activeClass: "bg-lime-500/25 text-lime-100 border-lime-400/60 shadow-[0_0_12px_-2px_rgba(163,230,53,0.25)]", inactiveClass: "bg-transparent text-lime-300 border-lime-500/30 hover:bg-lime-500/10", badgeClass: "bg-lime-400 text-lime-950" },
+  { key: "expired", label: "Scaduti", activeClass: "bg-slate-500/25 text-slate-100 border-slate-400/60 shadow-[0_0_12px_-2px_rgba(148,163,184,0.25)]", inactiveClass: "bg-transparent text-slate-300 border-slate-500/30 hover:bg-slate-500/10", badgeClass: "bg-slate-400 text-slate-950" },
+  { key: "cancelled", label: "Annullati", activeClass: "bg-red-500/25 text-red-100 border-red-400/60 shadow-[0_0_12px_-2px_rgba(248,113,113,0.25)]", inactiveClass: "bg-transparent text-red-300 border-red-500/30 hover:bg-red-500/10", badgeClass: "bg-red-400 text-red-950" },
+];
+
 function AnnouncementsPage() {
   const { user, role, profile } = useAuth();
   const navigate = useNavigate();
