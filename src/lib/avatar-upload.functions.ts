@@ -10,10 +10,10 @@ const MIN_DIM = 500;
 
 export const AVATAR_ERRORS = {
   missing: "Nessun file ricevuto.",
-  format: "Formato non supportato. Usa JPG, PNG o WEBP.",
-  size: "File troppo grande. Massimo 5MB.",
+  format: "Formato non supportato. Carica una foto JPG, PNG o WEBP.",
+  size: "La foto supera il limite massimo di 5 MB.",
   corrupt: "Immagine non valida o corrotta.",
-  dim: `Immagine troppo piccola: minimo ${MIN_DIM}×${MIN_DIM} px.`,
+  dim: "La foto deve essere almeno 500x500 px.",
   upload: "Caricamento foto profilo non riuscito.",
 } as const;
 
