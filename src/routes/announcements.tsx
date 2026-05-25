@@ -963,18 +963,36 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         action={role === "restaurant" && (<Link to="/ristoratore/annunci/nuovo"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>)}
       />
       {role === "restaurant" && (
-        <div className="flex gap-2 mb-4 overflow-x-auto">
-          {(["active","draft","assigned","completed","expired","cancelled"] as const).map(f => (
-            <Button key={f} size="sm" variant={statusFilter === f ? "default" : "outline"} onClick={() => setStatusFilter(f)}>
-              {f === "active" ? "Pubblicati" : f === "draft" ? "In attesa" : f === "assigned" ? "Assegnati" : f === "completed" ? "Completati" : f === "expired" ? "Scaduti" : "Annullati"}
-            </Button>
-          ))}
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-1">
+          {STATUS_TABS.map(({ key, label, activeClass, inactiveClass, badgeClass }) => {
+            const isActive = statusFilter === key;
+            const count = statusCounts[key] ?? 0;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setStatusFilter(key)}
+                className={cn(
+                  "relative flex items-center gap-2.5 rounded-xl border px-5 py-3 text-sm font-semibold transition whitespace-nowrap select-none min-h-[48px]",
+                  isActive ? activeClass : inactiveClass
+                )}
+              >
+                <span>{label}</span>
+                <span className={cn(
+                  "inline-flex items-center justify-center rounded-lg text-xs font-bold min-w-[24px] h-6 px-1.5",
+                  isActive ? badgeClass : "bg-white/10 text-current"
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center">
-          <p className="text-muted-foreground">Nessun annuncio.</p>
-          {role === "restaurant" && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
+          <p className="text-muted-foreground">Nessun annuncio in questa sezione.</p>
+          {role === "restaurant" && items.length === 0 && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
         </div>
       ) : role === "restaurant" ? (
         <div className="md:grid md:grid-cols-[320px_minmax(0,1fr)] md:gap-5 md:items-start">
