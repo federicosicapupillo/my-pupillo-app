@@ -1488,11 +1488,29 @@ function Onboarding() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Nome *</Label>
-                  <Input required value={personal.first_name} onChange={(e) => setPersonal({ ...personal, first_name: e.target.value })} />
+                  <Input
+                    required
+                    readOnly
+                    value={personal.first_name}
+                    className="bg-muted/50 cursor-not-allowed"
+                    aria-readonly="true"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                  </p>
                 </div>
                 <div>
                   <Label>Cognome *</Label>
-                  <Input required value={personal.last_name} onChange={(e) => setPersonal({ ...personal, last_name: e.target.value })} />
+                  <Input
+                    required
+                    readOnly
+                    value={personal.last_name}
+                    className="bg-muted/50 cursor-not-allowed"
+                    aria-readonly="true"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                  </p>
                 </div>
                 <div>
                   <Label>Data di nascita *</Label>
