@@ -19,7 +19,7 @@ import {
   Info,
   X,
 } from "lucide-react";
-import { formatTariff, formatTotalService } from "@/lib/format";
+import { formatTariff, formatTotalService, formatOfferDateTime } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
 import { venueTypeLabel } from "@/lib/venue-types";
 
@@ -598,26 +598,13 @@ function OfferCard({
     neighborhood: r.restaurant?.neighborhood ?? null,
   });
   const role = r.announcement?.professional_profile || "Ruolo non specificato";
-  const formatItDate = (s: string | null | undefined) => {
-    if (!s) return "";
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-    return m ? `${m[3]}/${m[2]}/${m[1]}` : new Date(s).toLocaleDateString("it-IT");
-  };
-  const startDateStr = formatItDate(r.announcement?.service_date);
-  const startTime = r.announcement?.service_time?.slice(0, 5);
-  const endTime = r.announcement?.end_time?.slice(0, 5);
-  const endDateRaw = r.announcement?.end_date || null;
-  const endDateDiffers =
-    !!endDateRaw && !!r.announcement?.service_date && endDateRaw !== r.announcement.service_date;
-  const endDateStr = endDateDiffers ? formatItDate(endDateRaw) : "";
-  const scheduleStr = startDateStr
-    ? `${startDateStr}${startTime ? ` · ${startTime}` : ""}${
-        endTime
-          ? endDateDiffers
-            ? ` - ${endDateStr} · ${endTime}`
-            : ` - ${endTime}`
-          : ""
-      }`
+  const scheduleStr = r.announcement
+    ? formatOfferDateTime({
+        service_date: r.announcement.service_date,
+        service_time: r.announcement.service_time,
+        end_date: r.announcement.end_date,
+        end_time: r.announcement.end_time,
+      })
     : "—";
   const duration = r.announcement?.duration_hours;
   const totalDisplay = r.announcement

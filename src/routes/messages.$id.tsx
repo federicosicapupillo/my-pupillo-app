@@ -39,7 +39,7 @@ import {
   DEFAULT_ARRIVAL_ADVANCE_MINUTES,
 } from "@/lib/shift-confirmation";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
-import { formatDateIT, formatTariff } from "@/lib/format";
+import { formatDateIT, formatTariff, formatOfferDateTime, formatJobLocation } from "@/lib/format";
 import { getShiftEndDate } from "@/lib/announcement-time";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock, Phone, User as UserIcon, Navigation, ExternalLink } from "lucide-react";
@@ -101,11 +101,13 @@ type Ann = {
   service_date: string;
   service_time: string;
   end_time?: string | null;
+  end_date?: string | null;
   duration_hours?: number | null;
   location_address: string;
   tariff_amount: number;
   tariff_type: string;
   job_city?: string | null;
+  job_province?: string | null;
   restaurant_id?: string;
   status?: string | null;
   assigned_worker_id?: string | null;
@@ -442,7 +444,7 @@ function Thread() {
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
           supabase.from("profiles").select("full_name, first_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, default_arrival_advance_minutes").eq("id", otherId).maybeSingle(),
-          supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, status, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address").eq("id", a.announcement_id).maybeSingle(),
+          supabase.from("announcements").select("id, service_date, service_time, end_time, end_date, duration_hours, location_address, tariff_amount, tariff_type, job_city, job_province, restaurant_id, status, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address").eq("id", a.announcement_id).maybeSingle(),
         ]);
         // Contact person is restricted at the DB level. Fetch via the
         // SECURITY DEFINER RPC: it returns the row only if the caller is
@@ -1276,7 +1278,12 @@ function Thread() {
     ? null
     : { city: other?.city ?? null, neighborhood: other?.neighborhood ?? null };
   const displayAddress = canSeeAddress
-    ? (ann?.location_address ?? null)
+    ? (formatJobLocation({
+        address: ann?.location_address ?? ann?.job_address ?? null,
+        city: ann?.job_city ?? null,
+        neighborhood: restaurantHints?.neighborhood ?? null,
+        province: ann?.job_province ?? null,
+      }) || ann?.location_address || null)
     : publicLocationLabel({
         job_city: ann?.job_city ?? null,
         city: restaurantHints?.city ?? null,
@@ -1469,19 +1476,42 @@ function Thread() {
               <div className="font-semibold">{displayOtherName}</div>
             )}
             {ann && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                <Link to="/announcements/$id" params={{ id: ann.id }} className="text-primary hover:underline underline-offset-2">
-                  Annuncio del {new Date(ann.service_date).toLocaleDateString("it-IT")}
-                </Link>
-                {ann.service_time && <> · {ann.service_time.slice(0, 5)}</>}
-                {displayAddress && <> · {displayAddress}</>}
-              </div>
-            )}
-            {currentTariff != null && (
-              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                <Euro className="h-3 w-3" />
-                Tariffa attuale: €{currentTariff} {ann?.tariff_type === "hourly" ? "/ora" : "a servizio"}
-                {app?.proposed_tariff != null && <span className="ml-1 text-primary">(controfferta)</span>}
+              <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                <div>
+                  <Link to="/announcements/$id" params={{ id: ann.id }} className="text-primary hover:underline underline-offset-2 font-medium">
+                    Annuncio del{" "}
+                    {formatOfferDateTime({
+                      service_date: ann.service_date,
+                      service_time: ann.service_time,
+                      end_date: ann.end_date,
+                      end_time: ann.end_time,
+                    })}
+                  </Link>
+                </div>
+                {ann.professional_profile && (
+                  <div>
+                    <span className="text-foreground/80">Mansione:</span>{" "}
+                    {ann.professional_profile}
+                  </div>
+                )}
+                {displayAddress && (
+                  <div className="break-words">
+                    <span className="text-foreground/80">Luogo:</span> {displayAddress}
+                  </div>
+                )}
+                {currentTariff != null && (
+                  <div className="flex items-center gap-1">
+                    <Euro className="h-3 w-3 shrink-0" />
+                    <span className="whitespace-nowrap">
+                      <span className="text-foreground/80">Tariffa:</span>{" "}
+                      €{currentTariff}
+                      {ann?.tariff_type === "hourly" ? "/ora" : " a servizio"}
+                    </span>
+                    {app?.proposed_tariff != null && (
+                      <span className="ml-1 text-primary">(controfferta)</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             </div>

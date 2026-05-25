@@ -1,5 +1,83 @@
 // Shared formatting helpers for tariffs and dates (Italian locale).
 
+/**
+ * Pulisce un indirizzo testuale rimuovendo CAP, nazione (Italia),
+ * duplicati di città/provincia e virgole inutili.
+ * Esempio: "via roma, Centro, Torino, Torino, 10121, Italia"
+ *   →     "via Roma · Centro · Torino"
+ */
+export function formatJobLocation(input: {
+  address?: string | null;
+  city?: string | null;
+  neighborhood?: string | null;
+  province?: string | null;
+}): string {
+  const isCap = (s: string) => /^\d{4,5}$/.test(s);
+  const isCountry = (s: string) =>
+    /^(italia|italy|it)$/i.test(s.trim());
+  const cap = (s: string) =>
+    s
+      .toLowerCase()
+      .split(/\s+/)
+      .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+      .join(" ");
+
+  const raw = (input.address ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const city = (input.city ?? "").trim();
+  const neighborhood = (input.neighborhood ?? "").trim();
+  const province = (input.province ?? "").trim();
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const push = (s: string) => {
+    if (!s) return;
+    if (isCap(s) || isCountry(s)) return;
+    const k = s.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(cap(s));
+  };
+
+  for (const p of raw) push(p);
+  push(neighborhood);
+  push(city);
+  // Provincia mostrata solo se diversa dalla città già aggiunta.
+  if (province && !seen.has(province.toLowerCase())) push(province);
+
+  return out.join(" · ");
+}
+
+/**
+ * Formatta data + orario di un turno per la UI:
+ *   "28/05/2026 · 19:00 - 23:00"
+ *   "28/05/2026 · 22:00 - 29/05/2026 · 02:00"  (turno oltre mezzanotte)
+ */
+export function formatOfferDateTime(input: {
+  service_date?: string | null;
+  service_time?: string | null;
+  end_date?: string | null;
+  end_time?: string | null;
+}): string {
+  const startDate = formatDateIT(input.service_date ?? null);
+  if (!startDate) return "—";
+  const start = (input.service_time ?? "").slice(0, 5);
+  const end = (input.end_time ?? "").slice(0, 5);
+  const endDateRaw = input.end_date ?? null;
+  const endDiffers =
+    !!endDateRaw && !!input.service_date && endDateRaw !== input.service_date;
+  let out = startDate;
+  if (start) out += ` · ${start}`;
+  if (end) {
+    if (endDiffers) {
+      const endDate = formatDateIT(endDateRaw);
+      out += ` - ${endDate} · ${end}`;
+    } else {
+      out += ` - ${end}`;
+    }
+  }
+  return out;
+}
+
 /** Format an announcement label for dropdown display:
  *  "25/05/2026 · 19:00-23:00 · Torino · Centro · Cameriere"
  *  Skips address, postal code, country. Deduplicates city/province.
