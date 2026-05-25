@@ -70,7 +70,13 @@ function RestaurantDetailPage() {
     (async () => {
       setLoading(true);
       const [{ data: prof, error }, { data: a }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+        supabase
+          .from("profiles")
+          .select(
+            "id, business_name, full_name, avatar_url, city, province, neighborhood, venue_type, venue_type_other, price_range, employees_count, opening_hours, busy_days, rating_avg, reviews_count, plan, badge, primary_role, short_bio, default_dress_code_items, default_dress_code_notes, default_required_skills, default_language_requirements, default_license_requirement",
+          )
+          .eq("id", id)
+          .maybeSingle(),
         supabase.from("announcements")
           .select("id, professional_profile, location_address, status, service_date, service_time, duration_hours, tariff_amount, tariff_type, created_at")
           .eq("restaurant_id", id)

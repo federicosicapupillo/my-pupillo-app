@@ -169,7 +169,7 @@ function AnnouncementDetail() {
     setApps(list);
     const { data: jr } = await (supabase as any)
       .from("job_requests")
-      .select("title,role_required,workers_needed,description,tasks,shift_date,end_date,start_time,end_time,hourly_rate,break_included,operational_notes,restaurant_name,district,worker_notes")
+      .select("title,role_required,workers_needed,description,tasks,shift_date,end_date,start_time,end_time,hourly_rate,break_included,restaurant_name")
       .eq("announcement_id", id)
       .maybeSingle();
     setJobRequest((jr as JobRequest) ?? null);

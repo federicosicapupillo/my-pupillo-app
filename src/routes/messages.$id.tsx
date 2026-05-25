@@ -441,9 +441,24 @@ function Thread() {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
-          supabase.from("profiles").select("full_name, first_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, id_document_path, default_arrival_advance_minutes").eq("id", otherId).maybeSingle(),
-          supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, status, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address, job_contact_person_name, job_contact_person_phone").eq("id", a.announcement_id).maybeSingle(),
+          supabase.from("profiles").select("full_name, first_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, default_arrival_advance_minutes").eq("id", otherId).maybeSingle(),
+          supabase.from("announcements").select("id, service_date, service_time, end_time, duration_hours, location_address, tariff_amount, tariff_type, job_city, restaurant_id, status, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address").eq("id", a.announcement_id).maybeSingle(),
         ]);
+        // Contact person is restricted at the DB level. Fetch via the
+        // SECURITY DEFINER RPC: it returns the row only if the caller is
+        // the owning restaurant or the assigned worker.
+        try {
+          const { data: contactRows } = await supabase.rpc("get_announcement_contact", {
+            _announcement_id: a.announcement_id,
+          });
+          const contact = Array.isArray(contactRows) ? contactRows[0] : contactRows;
+          if (an && contact) {
+            (an as any).job_contact_person_name = (contact as any).job_contact_person_name ?? null;
+            (an as any).job_contact_person_phone = (contact as any).job_contact_person_phone ?? null;
+          }
+        } catch {
+          // Non-owner / non-assigned: contact stays hidden.
+        }
         setOther({
           name: p?.business_name || p?.full_name || "Utente",
           city: (p as any)?.city ?? null,

@@ -84,7 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setExtrasLoaded(false);
     const [{ data: roles }, { data: prof }] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", uid),
-      supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+      // Use a SECURITY DEFINER RPC so the owner can read their own sensitive
+      // PII columns (email, phone, tax code, document fields, etc.). Direct
+      // SELECT on those columns is revoked for the `authenticated` role.
+      supabase.rpc("get_my_profile").maybeSingle(),
     ]);
     const allRoles = (roles ?? []).map((x: { role: Role }) => x.role);
     const r: Role | undefined =
@@ -93,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       : allRoles.includes("worker") ? "worker"
       : undefined;
     setRole(r ?? null);
-    setProfile((prof as Profile) ?? null);
+    setProfile((prof as unknown as Profile) ?? null);
     // Apply per-user theme preference. Default restaurants to light.
     const saved = readUserTheme(uid);
     if (saved) {
