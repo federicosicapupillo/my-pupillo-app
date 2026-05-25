@@ -133,7 +133,12 @@ export function useAvatarUrls(userIds: Array<string | null | undefined>) {
         }
         return changed ? next : prev;
       });
-      return;
+      return () => {
+        cancelled = true;
+        if (typeof window !== "undefined") {
+          window.removeEventListener(AVATAR_UPDATED_EVENT, onAvatarUpdated);
+        }
+      };
     }
     Promise.all(waits).then(() => {
       if (cancelled) return;
