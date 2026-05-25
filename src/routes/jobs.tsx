@@ -485,36 +485,40 @@ function Jobs() {
         </span>
       </div>
 
-      {/* Filtri — pill scrollabili orizzontalmente su mobile */}
-      <div className="mt-5 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex gap-2 whitespace-nowrap pb-1">
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            const count = counts[t.key];
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+      {/* Filtri — tab colorate, grandi, scrollabili su mobile e a griglia su desktop */}
+      <div
+        role="tablist"
+        aria-label="Filtra offerte"
+        className="mt-5 -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          const count = counts[t.key];
+          return (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.key)}
+              className={
+                "group flex shrink-0 items-center justify-between gap-2 rounded-2xl border-2 px-4 py-3 text-sm font-semibold tracking-tight transition-all duration-150 active:scale-[0.98] sm:px-4 sm:py-3.5 " +
+                (active
+                  ? `${t.activeCls} scale-[1.01]`
+                  : t.inactiveCls)
+              }
+            >
+              <span className="truncate">{t.label}</span>
+              <span
                 className={
-                  "shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition " +
-                  (active
-                    ? "border-foreground bg-foreground text-background shadow-sm"
-                    : "border-border bg-card text-foreground hover:bg-accent")
+                  "inline-flex min-w-[1.75rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums " +
+                  (active ? t.badgeActiveCls : t.badgeInactiveCls)
                 }
               >
-                {t.label}
-                <span
-                  className={
-                    "ml-2 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums " +
-                    (active ? "bg-background/20 text-background" : "bg-muted text-muted-foreground")
-                  }
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Ordina per */}
