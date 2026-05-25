@@ -48,6 +48,84 @@ export function formatJobLocation(input: {
 }
 
 /**
+ * Formatta l'indirizzo di un annuncio per le schede UI:
+ * mostra solo via/indirizzo, città e zona (quando presente).
+ * Esclude CAP, nazione, provincia duplicata e valori vuoti.
+ * Esempio: "via roma, Centro, Torino, Torino, 10121, Italia" → "via Roma · Torino · Centro"
+ */
+export function formatAnnouncementLocation(a: {
+  location_address?: string | null;
+  job_address?: string | null;
+  job_city?: string | null;
+  job_province?: string | null;
+  job_postal_code?: string | null;
+  job_country?: string | null;
+}): string {
+  const street = (a.job_address || "").trim();
+  const city = (a.job_city || "").trim();
+
+  if (!a.location_address && !street && !city) return "—";
+
+  // Determine display street
+  let displayStreet = street;
+  if (!displayStreet && a.location_address) {
+    const firstPart = a.location_address.split(",")[1]?.trim();
+    if (firstPart) displayStreet = firstPart;
+  }
+
+  // Try to extract zone from location_address
+  let zone = "";
+  if (a.location_address && city) {
+    const parts = a.location_address.split(",").map((p) => p.trim()).filter(Boolean);
+
+    // Find city in the parts (case-insensitive)
+    const cityIdx = parts.findIndex((p) => p.toLowerCase() === city.toLowerCase());
+
+    if (cityIdx > 1) {
+      const provinceLC = (a.job_province || "").trim().toLowerCase();
+      const countryLC = (a.job_country || "").trim().toLowerCase();
+
+      // Collect candidates between street (index 0) and city
+      const candidates = parts.slice(1, cityIdx).filter((p) => {
+        const pl = p.toLowerCase();
+        // Must look like a zone (not just numbers)
+        if (!/[a-zA-Z]{2,}/.test(p)) return false;
+        // Skip known parts
+        if (pl === city.toLowerCase()) return false;
+        if (pl === provinceLC) return false;
+        if (/^\d{5}$/.test(p)) return false; // postal code
+        if (pl === "italia") return false;
+        if (pl === countryLC) return false;
+        // Skip street if already known
+        if (displayStreet && pl === displayStreet.toLowerCase()) return false;
+        return true;
+      });
+
+      if (candidates.length > 1) {
+        // Take the last candidate (closest to city = most likely zone)
+        zone = candidates[candidates.length - 1];
+      }
+    }
+  }
+
+  const out: string[] = [];
+  if (displayStreet) out.push(displayStreet);
+  if (city) out.push(city);
+  if (zone) out.push(zone);
+
+  // Deduplicate case-insensitively
+  const seen = new Set<string>();
+  const clean = out.filter((p) => {
+    const k = p.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  return clean.length > 1 ? clean.join(" · ") : clean.length === 1 ? clean[0] : "—";
+}
+
+/**
  * Formatta data + orario di un turno per la UI:
  *   "28/05/2026 · 19:00 - 23:00"
  *   "28/05/2026 · 22:00 - 29/05/2026 · 02:00"  (turno oltre mezzanotte)
