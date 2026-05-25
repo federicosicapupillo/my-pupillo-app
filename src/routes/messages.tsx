@@ -429,21 +429,8 @@ function MessagesLayout() {
           </div>
         </div>
       )}
-      <div className="grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]">
-        <section className={`${selectedId ? "hidden lg:block" : "block"} min-w-0`} aria-label="Lista conversazioni">
-          {withUser && (
-            <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
-              <span>
-                Conversazioni con <span className="font-semibold">{focusedName ?? "questo utente"}</span>
-                {visible.length > 0 && <span className="ml-1 text-muted-foreground">({visible.length})</span>}
-              </span>
-              <Link to="/messages" search={{ with: "" }} className="text-xs text-primary hover:underline">
-                Mostra tutte
-              </Link>
-            </div>
-          )}
-          <div className="mb-4">
-            <div className="flex flex-wrap gap-2 pb-1">
+      <div className={`${selectedId ? "hidden lg:block" : "block"} mb-4`} aria-label="Filtri conversazioni">
+        <div className="flex flex-wrap gap-2 pb-1">
               {/* Tutte */}
               <button
                 type="button"
@@ -504,8 +491,21 @@ function MessagesLayout() {
                   </button>
                 );
               })}
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]">
+        <section className={`${selectedId ? "hidden lg:block" : "block"} min-w-0`} aria-label="Lista conversazioni">
+          {withUser && (
+            <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
+              <span>
+                Conversazioni con <span className="font-semibold">{focusedName ?? "questo utente"}</span>
+                {visible.length > 0 && <span className="ml-1 text-muted-foreground">({visible.length})</span>}
+              </span>
+              <Link to="/messages" search={{ with: "" }} className="text-xs text-primary hover:underline">
+                Mostra tutte
+              </Link>
             </div>
-          </div>
+          )}
           {loading ? (
             <p className="text-muted-foreground">Caricamento…</p>
           ) : threads.length === 0 ? (
