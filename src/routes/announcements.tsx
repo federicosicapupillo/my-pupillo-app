@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send, ChevronDown, ChevronUp } from "lucide-react";
@@ -285,6 +286,15 @@ const STATUS_CLS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-800",
 };
 
+const STATUS_TABS: { key: "active" | "draft" | "assigned" | "completed" | "expired" | "cancelled"; label: string; activeClass: string; inactiveClass: string; badgeClass: string }[] = [
+  { key: "active", label: "Pubblicati", activeClass: "bg-sky-500/25 text-sky-100 border-sky-400/60 shadow-[0_0_12px_-2px_rgba(56,189,248,0.25)]", inactiveClass: "bg-transparent text-sky-300 border-sky-500/30 hover:bg-sky-500/10", badgeClass: "bg-sky-400 text-sky-950" },
+  { key: "draft", label: "In attesa", activeClass: "bg-amber-500/25 text-amber-100 border-amber-400/60 shadow-[0_0_12px_-2px_rgba(251,191,36,0.25)]", inactiveClass: "bg-transparent text-amber-300 border-amber-500/30 hover:bg-amber-500/10", badgeClass: "bg-amber-400 text-amber-950" },
+  { key: "assigned", label: "Assegnati", activeClass: "bg-emerald-500/25 text-emerald-100 border-emerald-400/60 shadow-[0_0_12px_-2px_rgba(52,211,153,0.25)]", inactiveClass: "bg-transparent text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/10", badgeClass: "bg-emerald-400 text-emerald-950" },
+  { key: "completed", label: "Completati", activeClass: "bg-lime-500/25 text-lime-100 border-lime-400/60 shadow-[0_0_12px_-2px_rgba(163,230,53,0.25)]", inactiveClass: "bg-transparent text-lime-300 border-lime-500/30 hover:bg-lime-500/10", badgeClass: "bg-lime-400 text-lime-950" },
+  { key: "expired", label: "Scaduti", activeClass: "bg-slate-500/25 text-slate-100 border-slate-400/60 shadow-[0_0_12px_-2px_rgba(148,163,184,0.25)]", inactiveClass: "bg-transparent text-slate-300 border-slate-500/30 hover:bg-slate-500/10", badgeClass: "bg-slate-400 text-slate-950" },
+  { key: "cancelled", label: "Annullati", activeClass: "bg-red-500/25 text-red-100 border-red-400/60 shadow-[0_0_12px_-2px_rgba(248,113,113,0.25)]", inactiveClass: "bg-transparent text-red-300 border-red-500/30 hover:bg-red-500/10", badgeClass: "bg-red-400 text-red-950" },
+];
+
 function AnnouncementsPage() {
   const { user, role, profile } = useAuth();
   const navigate = useNavigate();
@@ -422,6 +432,13 @@ function AnnouncementsPage() {
   }, [user, role]);
 
   const filtered = items.filter(a => a.status === statusFilter);
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { active: 0, draft: 0, assigned: 0, completed: 0, expired: 0, cancelled: 0 };
+    items.forEach((a) => {
+      if (counts[a.status] !== undefined) counts[a.status]++;
+    });
+    return counts;
+  }, [items]);
 
   // Default-select the first item so the right pane is never empty on desktop.
   useEffect(() => {
@@ -946,18 +963,36 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         action={role === "restaurant" && (<Link to="/ristoratore/annunci/nuovo"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>)}
       />
       {role === "restaurant" && (
-        <div className="flex gap-2 mb-4 overflow-x-auto">
-          {(["active","draft","assigned","completed","expired","cancelled"] as const).map(f => (
-            <Button key={f} size="sm" variant={statusFilter === f ? "default" : "outline"} onClick={() => setStatusFilter(f)}>
-              {f === "active" ? "Pubblicati" : f === "draft" ? "In attesa" : f === "assigned" ? "Assegnati" : f === "completed" ? "Completati" : f === "expired" ? "Scaduti" : "Annullati"}
-            </Button>
-          ))}
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-1">
+          {STATUS_TABS.map(({ key, label, activeClass, inactiveClass, badgeClass }) => {
+            const isActive = statusFilter === key;
+            const count = statusCounts[key] ?? 0;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setStatusFilter(key)}
+                className={cn(
+                  "relative flex items-center gap-2.5 rounded-xl border px-5 py-3 text-sm font-semibold transition whitespace-nowrap select-none min-h-[48px]",
+                  isActive ? activeClass : inactiveClass
+                )}
+              >
+                <span>{label}</span>
+                <span className={cn(
+                  "inline-flex items-center justify-center rounded-lg text-xs font-bold min-w-[24px] h-6 px-1.5",
+                  isActive ? badgeClass : "bg-white/10 text-current"
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center">
-          <p className="text-muted-foreground">Nessun annuncio.</p>
-          {role === "restaurant" && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
+          <p className="text-muted-foreground">Nessun annuncio in questa sezione.</p>
+          {role === "restaurant" && items.length === 0 && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
         </div>
       ) : role === "restaurant" ? (
         <div className="md:grid md:grid-cols-[320px_minmax(0,1fr)] md:gap-5 md:items-start">
