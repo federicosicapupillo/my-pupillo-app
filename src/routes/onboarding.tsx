@@ -610,9 +610,13 @@ function Onboarding() {
     if (profile) {
       const p = profile as any;
       const split = splitAddressAndCivic(p.residence_address);
+      const metaFirst = (user as any)?.user_metadata?.first_name as string | undefined;
+      const metaLast = (user as any)?.user_metadata?.last_name as string | undefined;
+      const resolvedFirst = (p.first_name ?? metaFirst ?? "").trim();
+      const resolvedLast = (p.last_name ?? metaLast ?? "").trim();
       setPersonal((s) => ({
-        first_name: p.first_name ?? s.first_name,
-        last_name: p.last_name ?? s.last_name,
+        first_name: resolvedFirst || s.first_name,
+        last_name: resolvedLast || s.last_name,
         birth_date: p.birth_date ?? s.birth_date,
         birth_place: p.birth_place ?? s.birth_place,
         tax_code: p.tax_code ?? s.tax_code,
