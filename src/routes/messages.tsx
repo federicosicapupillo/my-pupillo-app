@@ -67,6 +67,23 @@ const STATUS_CLS: Record<string, string> = {
   expired: "bg-muted text-muted-foreground",
 };
 
+const STATUS_BTN_ACTIVE: Record<string, string> = {
+  pending: "bg-amber-500 text-white border-amber-400 shadow-[0_0_0_1px_rgba(245,158,11,0.35),0_10px_40px_-10px_rgba(245,158,11,0.45)]",
+  interested: "bg-sky-500 text-white border-sky-400 shadow-[0_0_0_1px_rgba(14,165,233,0.35),0_10px_40px_-10px_rgba(14,165,233,0.45)]",
+  counter_offer: "bg-indigo-500 text-white border-indigo-400 shadow-[0_0_0_1px_rgba(99,102,241,0.35),0_10px_40px_-10px_rgba(99,102,241,0.45)]",
+  accepted: "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_0_1px_rgba(16,185,129,0.35),0_10px_40px_-10px_rgba(16,185,129,0.45)]",
+  rejected: "bg-red-500 text-white border-red-400 shadow-[0_0_0_1px_rgba(239,68,68,0.35),0_10px_40px_-10px_rgba(239,68,68,0.45)]",
+  expired: "bg-muted text-muted-foreground border-border",
+};
+const STATUS_BTN_INACTIVE: Record<string, string> = {
+  pending: "bg-amber-500/10 text-amber-300 border-amber-500/20 hover:opacity-80",
+  interested: "bg-sky-500/10 text-sky-300 border-sky-500/20 hover:opacity-80",
+  counter_offer: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20 hover:opacity-80",
+  accepted: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:opacity-80",
+  rejected: "bg-red-500/10 text-red-300 border-red-500/20 hover:opacity-80",
+  expired: "bg-muted text-muted-foreground border-border hover:opacity-80",
+};
+
 function formatWhen(iso: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -425,43 +442,65 @@ function MessagesLayout() {
               </Link>
             </div>
           )}
-          <div className="mb-4 flex flex-col gap-2">
-            <div className="flex flex-wrap gap-2">
+          <div className="mb-4">
+            <div className="flex flex-nowrap gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {/* Tutte */}
               <button
                 type="button"
                 onClick={() => setFilter("all")}
-                className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
+                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${filter === "all" ? "bg-primary text-primary-foreground border-primary shadow-neon" : "bg-card text-foreground border-border hover:bg-accent"}`}
               >
-                Tutte ({threads.length})
+                Tutte
+                <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${filter === "all" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                  {threads.length}
+                </span>
               </button>
+
+              {/* Non lette */}
               <button
                 type="button"
                 onClick={() => setFilter("unread")}
-                className={`text-xs rounded-full px-3 py-1.5 border transition ${filter === "unread" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"}`}
+                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${filter === "unread" ? "bg-accent text-accent-foreground border-accent neon-glow-violet" : "bg-card text-foreground border-border hover:bg-accent"}`}
               >
-                Non lette ({totalUnread})
+                Non lette
+                <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${filter === "unread" ? "bg-accent-foreground/20 text-accent-foreground" : "bg-accent/10 text-accent"}`}>
+                  {totalUnread}
+                </span>
               </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
+
+              {/* Tutti gli stati */}
               <button
                 type="button"
                 onClick={() => setStatusFilter("all")}
-                className={`text-xs rounded-full px-3 py-1.5 border transition ${statusFilter === "all" ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent"}`}
+                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${statusFilter === "all" ? "bg-foreground text-background border-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.15)]" : "bg-card text-foreground border-border hover:bg-accent"}`}
               >
                 Tutti gli stati
+                <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${statusFilter === "all" ? "bg-background/15 text-background" : "bg-muted text-muted-foreground"}`}>
+                  {filter === "all" ? threads.length : totalUnread}
+                </span>
               </button>
+
+              {/* Status specifici */}
               {Object.keys(STATUS_LABELS).map((s) => {
                 const count = statusCounts[s] ?? 0;
                 if (count === 0) return null;
                 const active = statusFilter === s;
+                const baseCls = "flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-1";
+                const stateCls = active ? STATUS_BTN_ACTIVE[s] : STATUS_BTN_INACTIVE[s];
+                const badgeCls = active
+                  ? (s === "expired" ? "bg-foreground/10 text-foreground" : "bg-white/20 text-white")
+                  : "bg-foreground/10 text-foreground";
                 return (
                   <button
                     key={s}
                     type="button"
                     onClick={() => setStatusFilter(s)}
-                    className={`text-xs rounded-full px-3 py-1.5 border transition ${active ? "bg-foreground text-background border-foreground" : `${STATUS_CLS[s]} border-transparent hover:opacity-80`}`}
+                    className={`${baseCls} ${stateCls}`}
                   >
-                    {STATUS_LABELS[s]} ({count})
+                    {STATUS_LABELS[s]}
+                    <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${badgeCls}`}>
+                      {count}
+                    </span>
                   </button>
                 );
               })}
