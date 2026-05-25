@@ -831,9 +831,9 @@ function WorkersPage() {
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
-              <UserAvatar userId={w.id} name={w.full_name} className="h-12 w-12" />
+              <UserAvatar userId={w.id} name={displayWorkerName(w, !!r?.workedWith)} className="h-12 w-12" />
               <div>
-                <div className="font-semibold">{w.full_name || "Lavoratore"}</div>
+                <div className="font-semibold">{displayWorkerName(w, !!r?.workedWith)}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
                   {w.primary_role && <span className="capitalize">{w.primary_role}</span>}
                   {w.rating_avg != null && Number(w.rating_avg) > 0 && (
