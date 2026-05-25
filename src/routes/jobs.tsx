@@ -51,6 +51,7 @@ type Announcement = {
   service_date: string;
   service_time: string;
   end_time: string | null;
+  end_date: string | null;
   duration_hours: number;
   tariff_amount: number;
   tariff_type: string;
@@ -319,7 +320,7 @@ function Jobs() {
         ? supabase
             .from("announcements")
             .select(
-              "id, service_date, service_time, end_time, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id, professional_profile, notes, required_skills, dress_code_items, dress_code_notes",
+              "id, service_date, service_time, end_time, end_date, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id, professional_profile, notes, required_skills, dress_code_items, dress_code_notes",
             )
             .in("id", annIds)
         : Promise.resolve({ data: [] as any[] }),
