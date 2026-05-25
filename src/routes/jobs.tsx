@@ -17,6 +17,7 @@ import {
   Star,
   ShieldCheck,
   Info,
+  X,
 } from "lucide-react";
 import { formatTariff, formatTotalService } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
@@ -183,17 +184,8 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   if (r.status === "accepted")
     return { label: "Confermata da entrambi", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
   if (r.status === "rejected") {
-    // If the slot was simply taken by another candidate, soften the label —
-    // the worker was not personally rejected.
-    const assignedTo = r.announcement?.assigned_worker_id ?? null;
-    if (assignedTo) {
-      return {
-        label: "Turno assegnato ad altri",
-        cls: "bg-muted text-muted-foreground border-border",
-      };
-    }
     return {
-      label: "Non selezionato",
+      label: "Candidatura rifiutata",
       cls: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
     };
   }
@@ -707,6 +699,25 @@ function OfferCard({
         <div className="mt-4 rounded-xl border border-border/60 bg-background/40 p-3 text-xs text-muted-foreground line-clamp-2">
           <span className="font-medium text-foreground">Messaggio: </span>
           {r.lastMessage}
+        </div>
+      )}
+
+      {r.status === "rejected" && (
+        <div
+          role="status"
+          className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-rose-400/70 bg-rose-50 p-4 text-rose-900 shadow-sm dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-100"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white">
+            <X className="h-5 w-5" strokeWidth={3} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-base font-bold leading-tight sm:text-lg">
+              Candidatura rifiutata
+            </div>
+            <div className="mt-0.5 text-xs text-rose-800/90 dark:text-rose-200/90 sm:text-sm">
+              Il ristoratore ha scelto un altro candidato per questo turno.
+            </div>
+          </div>
         </div>
       )}
 
