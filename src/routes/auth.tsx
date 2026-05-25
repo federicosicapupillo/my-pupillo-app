@@ -40,7 +40,9 @@ function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
   const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -53,6 +55,16 @@ function AuthPage() {
   const passwordStrongEnough = isPasswordStrongEnough(password);
   const passwordsMatch = doPasswordsMatch(password, confirmPassword);
   const phoneOk = isValidPhone(phoneCode, phoneNumber);
+  const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ' \-]+$/;
+  const firstNameTrim = firstName.trim();
+  const lastNameTrim = lastName.trim();
+  const firstNameOk = firstNameTrim.length >= 2 && NAME_REGEX.test(firstNameTrim);
+  const lastNameOk = lastNameTrim.length >= 2 && NAME_REGEX.test(lastNameTrim);
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailTrim = email.trim();
+  const confirmEmailTrim = confirmEmail.trim();
+  const emailValid = EMAIL_REGEX.test(emailTrim);
+  const emailsMatch = emailTrim.toLowerCase() === confirmEmailTrim.toLowerCase() && emailTrim.length > 0;
 
   useEffect(() => {
     if (loading || !user) return;
@@ -87,6 +99,38 @@ function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firstNameTrim) {
+      toast.error("Inserisci il tuo nome");
+      return;
+    }
+    if (firstNameTrim.length < 2 || !NAME_REGEX.test(firstNameTrim)) {
+      toast.error("Il nome deve contenere almeno 2 caratteri");
+      return;
+    }
+    if (!lastNameTrim) {
+      toast.error("Inserisci il tuo cognome");
+      return;
+    }
+    if (lastNameTrim.length < 2 || !NAME_REGEX.test(lastNameTrim)) {
+      toast.error("Il cognome deve contenere almeno 2 caratteri");
+      return;
+    }
+    if (!emailTrim) {
+      toast.error("Inserisci la tua email");
+      return;
+    }
+    if (!emailValid) {
+      toast.error("Inserisci un indirizzo email valido");
+      return;
+    }
+    if (!confirmEmailTrim) {
+      toast.error("Conferma la tua email");
+      return;
+    }
+    if (!emailsMatch) {
+      toast.error("Le email non coincidono");
+      return;
+    }
     if (role === "restaurant") {
       const age = Number(repAge);
       if (!repAge || isNaN(age) || age < 18 || age > 99) {
@@ -106,32 +150,36 @@ function AuthPage() {
       toast.error("Inserisci un numero WhatsApp valido (prefisso + cifre).");
       return;
     }
-    if (!fullName.trim()) {
-      toast.error("Inserisci nome e cognome.");
-      return;
-    }
-    if (!email.trim()) {
-      toast.error("Inserisci un'email valida.");
-      return;
-    }
+    const fullName = `${firstNameTrim} ${lastNameTrim}`;
     setBusy(true);
     justSignedUpRef.current = true;
     const { error } = await supabase.auth.signUp({
-      email,
+      email: emailTrim,
       password,
       options: {
         emailRedirectTo: window.location.origin + "/registration-success",
-        data: { full_name: fullName, role, representative_age: role === "restaurant" ? Number(repAge) : null },
+        data: {
+          full_name: fullName,
+          first_name: firstNameTrim,
+          last_name: lastNameTrim,
+          role,
+          representative_age: role === "restaurant" ? Number(repAge) : null,
+        },
       },
     });
     if (error) {
       setBusy(false);
       justSignedUpRef.current = false;
-      toast.error(error.message);
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already")) {
+        toast.error("Questa email è già registrata. Accedi oppure usa un'altra email.");
+      } else {
+        toast.error(error.message);
+      }
       return;
     }
     // Auto-confirm is enabled, so we can sign in immediately
-    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: emailTrim, password });
     if (signInErr) {
       setBusy(false);
       justSignedUpRef.current = false;
@@ -145,6 +193,9 @@ function AuthPage() {
       await supabase
         .from("profiles")
         .update({
+          first_name: firstNameTrim,
+          last_name: lastNameTrim,
+          full_name: fullName,
           phone_country_code: phoneCode,
           phone_number: phoneNumber,
           phone_full: phoneFull,
@@ -309,13 +360,62 @@ function AuthPage() {
             </TabsContent>
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
-                <div>
-                  <Label>Nome completo</Label>
-                  <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Nome</Label>
+                    <Input
+                      required
+                      autoComplete="given-name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                    {firstName.length > 0 && !firstNameOk && (
+                      <p className="text-xs text-destructive mt-1">
+                        Il nome deve contenere almeno 2 caratteri
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Cognome</Label>
+                    <Input
+                      required
+                      autoComplete="family-name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
+                    {lastName.length > 0 && !lastNameOk && (
+                      <p className="text-xs text-destructive mt-1">
+                        Il cognome deve contenere almeno 2 caratteri
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label>Email</Label>
-                  <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <Input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  {email.length > 0 && !emailValid && (
+                    <p className="text-xs text-destructive mt-1">Inserisci un indirizzo email valido</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Conferma email</Label>
+                  <Input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    onPaste={(e) => e.preventDefault()}
+                  />
+                  {confirmEmail.length > 0 && !emailsMatch && (
+                    <p className="text-xs text-destructive mt-1">Le email non coincidono</p>
+                  )}
                 </div>
                 <div>
                   <Label>Password</Label>
@@ -430,7 +530,17 @@ function AuthPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={busy || !restaurantAgeOk || !passwordStrongEnough || !passwordsMatch || !phoneOk}
+                  disabled={
+                    busy ||
+                    !firstNameOk ||
+                    !lastNameOk ||
+                    !emailValid ||
+                    !emailsMatch ||
+                    !restaurantAgeOk ||
+                    !passwordStrongEnough ||
+                    !passwordsMatch ||
+                    !phoneOk
+                  }
                 >
                   {busy ? "Attendi..." : "Crea profilo"}
                 </Button>
