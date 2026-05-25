@@ -1192,8 +1192,31 @@ function Onboarding() {
         <div id="sec-personal" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
           {role !== "worker" ? (
             <div>
-              <Label>Nome completo</Label>
-              <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+              <Label>Nome e cognome</Label>
+              {(() => {
+                const metaFirst = ((user as any)?.user_metadata?.first_name as string | undefined) ?? "";
+                const metaLast = ((user as any)?.user_metadata?.last_name as string | undefined) ?? "";
+                const first = ((profile as any)?.first_name ?? metaFirst ?? "").trim();
+                const last = ((profile as any)?.last_name ?? metaLast ?? "").trim();
+                const display =
+                  `${first} ${last}`.trim() ||
+                  ((profile as any)?.full_name ?? "").trim() ||
+                  form.full_name ||
+                  "—";
+                return (
+                  <>
+                    <div
+                      className="flex h-10 w-full items-center rounded-lg border border-input bg-muted/40 px-3 text-sm text-foreground"
+                      aria-readonly="true"
+                    >
+                      {display}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Nome e cognome inseriti in fase di registrazione. Per modificarli contatta il supporto clienti.
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           ) : null}
           <div data-field="phone" className="scroll-mt-24">
