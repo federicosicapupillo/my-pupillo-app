@@ -249,7 +249,7 @@ function MapPage() {
           .not("primary_role", "is", null)
           .limit(2000),
         supabase.from("announcements")
-          .select("id, professional_profile, location_address, location_lat, location_lng, job_latitude, job_longitude, job_address, job_contact_person_name, job_contact_person_phone, job_contact_person_email, status, restaurant_id, service_date, service_time, duration_hours, tariff_amount, tariff_type, notes, required_skills, dress_code_items, language_requirements")
+          .select("id, professional_profile, location_address, location_lat, location_lng, job_latitude, job_longitude, job_address, status, restaurant_id, service_date, service_time, duration_hours, tariff_amount, tariff_type, notes, required_skills, dress_code_items, language_requirements")
           .eq("status", "active")
           .limit(1000),
       ]);
