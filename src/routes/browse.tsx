@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User, CheckCircle2, Moon, Hourglass, Loader2 } from "lucide-react";
+import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User, CheckCircle2, Moon, Hourglass, Loader2, XCircle } from "lucide-react";
 import { formatTariff, formatTotalService } from "@/lib/format";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { toast } from "sonner";
@@ -77,6 +77,7 @@ function Browse() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Ann[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [appStatusById, setAppStatusById] = useState<Record<string, string>>({});
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list"|"map">("list");
@@ -123,10 +124,15 @@ function Browse() {
     }
     if (user) {
       const [{data:apps},{data:favs}] = await Promise.all([
-        supabase.from("applications").select("announcement_id").eq("worker_id",user.id),
+        supabase.from("applications").select("announcement_id,status,created_at").eq("worker_id",user.id).order("created_at",{ascending:false}),
         supabase.from("favorites").select("announcement_id").eq("user_id",user.id),
       ]);
       setAppliedIds(new Set((apps??[]).map((a:any)=>a.announcement_id)));
+      const statusMap: Record<string, string> = {};
+      for (const a of (apps ?? []) as any[]) {
+        if (!statusMap[a.announcement_id]) statusMap[a.announcement_id] = a.status;
+      }
+      setAppStatusById(statusMap);
       setFavIds(new Set((favs??[]).map((f:any)=>f.announcement_id)));
     }
     setLoading(false);
@@ -300,6 +306,8 @@ function Browse() {
         <div className="grid gap-4 md:grid-cols-2">
           {filtered.map(a => {
             const applied = appliedIds.has(a.id);
+            const appStatus = appStatusById[a.id];
+            const rejected = appStatus === "rejected" || appStatus === "not_interested";
             const fav = favIds.has(a.id);
             const role = a.professional_profile || "ruolo";
             const loc = publicLocationLabel({
@@ -389,7 +397,12 @@ function Browse() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
-                  {applied ? (
+                  {rejected ? (
+                    <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-destructive bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+                      <XCircle className="h-4 w-4" />
+                      Candidatura rifiutata
+                    </div>
+                  ) : applied ? (
                     <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary">
                       <CheckCircle2 className="h-4 w-4" />
                       Candidatura inviata
@@ -421,6 +434,8 @@ function Browse() {
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
           {selected && (() => {
             const applied = appliedIds.has(selected.id);
+            const appStatus = appStatusById[selected.id];
+            const rejected = appStatus === "rejected" || appStatus === "not_interested";
             const fav = favIds.has(selected.id);
             const dist = (profile?.service_area_lat != null && profile?.service_area_lng != null && selected.location_lat != null && selected.location_lng != null)
               ? distKm(profile.service_area_lat, profile.service_area_lng, selected.location_lat, selected.location_lng) : null;
@@ -462,7 +477,12 @@ function Browse() {
                   <Button variant="outline" size="icon" onClick={()=>toggleFav(selected.id)} aria-label="Preferiti">
                     <Heart className={`h-5 w-5 ${fav?"fill-primary text-primary":""}`} />
                   </Button>
-                  {applied ? (
+                  {rejected ? (
+                    <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-destructive bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+                      <XCircle className="h-4 w-4" />
+                      Candidatura rifiutata
+                    </div>
+                  ) : applied ? (
                     <Button disabled variant="secondary" className="flex-1">Candidatura già inviata</Button>
                   ) : (
                     <Button className="flex-1 gap-2" onClick={()=>apply(selected)}><Send className="h-4 w-4" />Candidati ora</Button>
