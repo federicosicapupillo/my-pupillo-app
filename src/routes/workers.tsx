@@ -457,7 +457,11 @@ function WorkersPage() {
   };
 
   const fieldsOf = (w: W) => {
-    const fullName = (w.full_name ?? "").toLowerCase();
+    // Privacy: per i lavoratori che NON hanno mai lavorato con questo
+    // ristoratore non esponiamo il nome reale nemmeno alla ricerca testuale —
+    // altrimenti il ristoratore potrebbe inferire l'identità tramite query.
+    const workedTogether = !!rel[w.id]?.workedWith;
+    const fullName = workedTogether ? (w.full_name ?? "").toLowerCase() : "";
     const [first = "", ...rest] = fullName.split(" ");
     return {
       fullName,
