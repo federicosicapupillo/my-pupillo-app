@@ -12,6 +12,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { KeyRound, Trash2, FileText, Coins, Star, MapPin, ExternalLink, Eye, EyeOff } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { RestaurantRequirementsView, reqFromProfile } from "@/components/RestaurantRequirements";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
