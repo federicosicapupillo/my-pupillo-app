@@ -19,19 +19,21 @@ export function verifiedRoleLabel(role: string | null | undefined): string {
 
 /**
  * Return the worker name the restaurant is allowed to see.
- * - hasWorkedTogether === true → first name only (never the surname).
- * - otherwise → role-based "verificato" label.
+ * - hasWorkedTogether === true → full name (first + last).
+ * - otherwise → first name only (never the surname).
  */
 export function displayWorkerName(
   w: { full_name: string | null; primary_role: string | null },
   hasWorkedTogether: boolean,
 ): string {
+  const n = (w.full_name ?? "").trim();
   if (hasWorkedTogether) {
-    const n = (w.full_name ?? "").trim();
-    if (n) {
-      const first = n.split(/\s+/)[0];
-      if (first) return first;
-    }
+    if (n) return n;
+    return verifiedRoleLabel(w.primary_role);
+  }
+  if (n) {
+    const first = n.split(/\s+/)[0];
+    if (first) return first;
   }
   return verifiedRoleLabel(w.primary_role);
 }
