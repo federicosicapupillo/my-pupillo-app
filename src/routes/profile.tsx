@@ -243,12 +243,11 @@ function Profile() {
 
       {role === "restaurant" && (
         <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
-          <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="mb-4">
             <div>
               <h2 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" />Luogo e Accesso</h2>
               <p className="text-sm text-muted-foreground mt-1">Informazioni operative usate negli annunci e mostrate ai lavoratori.</p>
             </div>
-            <Link to="/onboarding"><Button size="sm" variant="outline">Modifica</Button></Link>
           </div>
           <div className="space-y-3">
             <div>
