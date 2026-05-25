@@ -1488,11 +1488,29 @@ function Onboarding() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Nome *</Label>
-                  <Input required value={personal.first_name} onChange={(e) => setPersonal({ ...personal, first_name: e.target.value })} />
+                  <Input
+                    required
+                    readOnly
+                    value={personal.first_name}
+                    className="bg-muted/50 cursor-not-allowed"
+                    aria-readonly="true"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                  </p>
                 </div>
                 <div>
                   <Label>Cognome *</Label>
-                  <Input required value={personal.last_name} onChange={(e) => setPersonal({ ...personal, last_name: e.target.value })} />
+                  <Input
+                    required
+                    readOnly
+                    value={personal.last_name}
+                    className="bg-muted/50 cursor-not-allowed"
+                    aria-readonly="true"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                  </p>
                 </div>
                 <div>
                   <Label>Data di nascita *</Label>
@@ -1523,7 +1541,47 @@ function Onboarding() {
                 </div>
                 <div>
                   <Label>Nazionalità *</Label>
-                  <Input required value={personal.nationality} onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })} />
+                  {(() => {
+                    const NATIONALITIES = [
+                      "Italiana","Albanese","Rumena","Marocchina","Egiziana","Tunisina",
+                      "Francese","Spagnola","Tedesca","Inglese","Ucraina","Moldava",
+                      "Peruviana","Brasiliana","Argentina","Cinese","Indiana","Pakistana",
+                      "Bangladese","Filippina",
+                    ];
+                    const current = personal.nationality?.trim() || "";
+                    const isPreset = NATIONALITIES.includes(current);
+                    const selectValue = current === "" ? "" : isPreset ? current : "Altro";
+                    return (
+                      <>
+                        <Select
+                          value={selectValue}
+                          onValueChange={(v) => {
+                            if (v === "Altro") {
+                              setPersonal({ ...personal, nationality: isPreset ? "" : current });
+                            } else {
+                              setPersonal({ ...personal, nationality: v });
+                            }
+                          }}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Seleziona nazionalità" /></SelectTrigger>
+                          <SelectContent>
+                            {NATIONALITIES.map((n) => (
+                              <SelectItem key={n} value={n}>{n}</SelectItem>
+                            ))}
+                            <SelectItem value="Altro">Altro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {selectValue === "Altro" && (
+                          <Input
+                            className="mt-2"
+                            placeholder="Specifica nazionalità"
+                            value={isPreset ? "" : current}
+                            onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })}
+                          />
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <Label>Città di residenza *</Label>
@@ -1738,7 +1796,11 @@ function Onboarding() {
                   <DateField
                     required
                     value={personal.id_document_expires_at}
-                    min={personal.id_document_issued_at || todayISORome}
+                    min={
+                      personal.id_document_issued_at && personal.id_document_issued_at > todayISORome
+                        ? personal.id_document_issued_at
+                        : todayISORome
+                    }
                     error={dateFieldErrors.id_document_expires_at}
                     onChange={(iso) => {
                       clearDateError("id_document_expires_at");
