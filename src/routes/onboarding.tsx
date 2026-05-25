@@ -1541,7 +1541,47 @@ function Onboarding() {
                 </div>
                 <div>
                   <Label>Nazionalità *</Label>
-                  <Input required value={personal.nationality} onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })} />
+                  {(() => {
+                    const NATIONALITIES = [
+                      "Italiana","Albanese","Rumena","Marocchina","Egiziana","Tunisina",
+                      "Francese","Spagnola","Tedesca","Inglese","Ucraina","Moldava",
+                      "Peruviana","Brasiliana","Argentina","Cinese","Indiana","Pakistana",
+                      "Bangladese","Filippina",
+                    ];
+                    const current = personal.nationality?.trim() || "";
+                    const isPreset = NATIONALITIES.includes(current);
+                    const selectValue = current === "" ? "" : isPreset ? current : "Altro";
+                    return (
+                      <>
+                        <Select
+                          value={selectValue}
+                          onValueChange={(v) => {
+                            if (v === "Altro") {
+                              setPersonal({ ...personal, nationality: isPreset ? "" : current });
+                            } else {
+                              setPersonal({ ...personal, nationality: v });
+                            }
+                          }}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Seleziona nazionalità" /></SelectTrigger>
+                          <SelectContent>
+                            {NATIONALITIES.map((n) => (
+                              <SelectItem key={n} value={n}>{n}</SelectItem>
+                            ))}
+                            <SelectItem value="Altro">Altro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {selectValue === "Altro" && (
+                          <Input
+                            className="mt-2"
+                            placeholder="Specifica nazionalità"
+                            value={isPreset ? "" : current}
+                            onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })}
+                          />
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <Label>Città di residenza *</Label>
