@@ -122,7 +122,7 @@ export function formatAnnouncementLocation(a: {
     return true;
   });
 
-  return clean.length > 1 ? clean.join(" · ") : clean.length === 1 ? clean[1] : "—";
+  return clean.length > 1 ? clean.join(" · ") : clean.length === 1 ? clean[0] : "—";
 }
 
 /**
