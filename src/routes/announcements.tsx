@@ -1,8 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Component, Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -127,7 +127,80 @@ export const Route = createFileRoute("/announcements")({
     status: typeof s.status === "string" ? s.status : undefined,
   }),
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
+  errorComponent: AnnouncementsErrorFallback,
+  notFoundComponent: () => <AnnouncementsErrorFallback />,
 });
+
+function AnnouncementsErrorFallback({ error, reset }: { error?: Error; reset?: () => void }) {
+  if (error) console.error("[announcements] errorComponent:", error);
+  const router = useRouter();
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-md py-16 text-center">
+        <h1 className="text-xl font-semibold">Annuncio non trovato o non più disponibile.</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Si è verificato un problema durante il caricamento del riepilogo annuncio.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Button
+            onClick={() => {
+              router.invalidate();
+              reset?.();
+            }}
+          >
+            Riprova
+          </Button>
+          <Link to="/announcements">
+            <Button variant="outline">Torna a I miei annunci</Button>
+          </Link>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+class DialogErrorBoundary extends Component<{ onReset: () => void; children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: unknown) {
+    console.error("[AnnouncementDetailsDialog] render error:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Dialog
+          open
+          onOpenChange={(v) => {
+            if (!v) {
+              this.setState({ hasError: false });
+              this.props.onReset();
+            }
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Annuncio non trovato o non più disponibile.</DialogTitle>
+              <DialogDescription>
+                Non è stato possibile aprire il riepilogo di questo annuncio. Torna a "I miei annunci" e riprova.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  this.setState({ hasError: false });
+                  this.props.onReset();
+                }}
+              >
+                Torna a I miei annunci
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 type Ann = { id: string; service_date: string; service_time: string; end_date: string | null; end_time: string | null; duration_hours: number; speed: string; tariff_type: string; tariff_amount: number; location_address: string; location_lat: number | null; location_lng: number | null; status: string; expires_at: string; professional_profile: string | null; is_long_shift?: boolean | null; long_shift_reason?: string | null; shift_duration_hours?: number | null; assigned_worker_id?: string | null; license_requirement?: string | null; language_requirements?: string[] | null; tattoos_allowed?: string | null; piercings_allowed?: string | null; beard_allowed?: string | null; required_skills?: string[] | null; dress_code_items?: string[] | null; dress_code_notes?: string | null; job_city?: string | null; }
 
@@ -1034,17 +1107,19 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         onOpenChange={setRepublishOpen}
         ann={republishAnn}
       />
-      <AnnouncementDetailsDialog
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        ann={detailsAnn}
-        candidatesCount={detailsAnn ? (counts[detailsAnn.id] ?? 0) : 0}
-        assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
-        venueName={(profile as any)?.business_name ?? null}
-        statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
-        onUpdated={handleAnnUpdated}
-        onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
-      />
+      <DialogErrorBoundary onReset={() => { setDetailsOpen(false); setDetailsAnn(null); }}>
+        <AnnouncementDetailsDialog
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          ann={detailsAnn}
+          candidatesCount={detailsAnn ? (counts[detailsAnn.id] ?? 0) : 0}
+          assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
+          venueName={(profile as any)?.business_name ?? null}
+          statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
+          onUpdated={handleAnnUpdated}
+          onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
+        />
+      </DialogErrorBoundary>
       <ProposalConfirmDialog
         target={proposalTarget}
         venueName={(profile as any)?.business_name ?? (profile as any)?.full_name ?? null}
