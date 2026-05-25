@@ -476,7 +476,7 @@ function MessagesLayout() {
               >
                 Tutti gli stati
                 <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${statusFilter === "all" ? "bg-background/15 text-background" : "bg-muted text-muted-foreground"}`}>
-                  {threads.length}
+                  {filter === "all" ? threads.length : totalUnread}
                 </span>
               </button>
 
