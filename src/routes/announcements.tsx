@@ -1107,17 +1107,19 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         onOpenChange={setRepublishOpen}
         ann={republishAnn}
       />
-      <AnnouncementDetailsDialog
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        ann={detailsAnn}
-        candidatesCount={detailsAnn ? (counts[detailsAnn.id] ?? 0) : 0}
-        assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
-        venueName={(profile as any)?.business_name ?? null}
-        statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
-        onUpdated={handleAnnUpdated}
-        onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
-      />
+      <DialogErrorBoundary onReset={() => { setDetailsOpen(false); setDetailsAnn(null); }}>
+        <AnnouncementDetailsDialog
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          ann={detailsAnn}
+          candidatesCount={detailsAnn ? (counts[detailsAnn.id] ?? 0) : 0}
+          assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
+          venueName={(profile as any)?.business_name ?? null}
+          statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
+          onUpdated={handleAnnUpdated}
+          onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
+        />
+      </DialogErrorBoundary>
       <ProposalConfirmDialog
         target={proposalTarget}
         venueName={(profile as any)?.business_name ?? (profile as any)?.full_name ?? null}
