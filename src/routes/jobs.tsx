@@ -215,13 +215,75 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   return { label: r.status, cls: "bg-secondary text-foreground border-border" };
 }
 
-const TABS: { key: Bucket; label: string }[] = [
-  { key: "nuove", label: "Nuove" },
-  { key: "da_rispondere", label: "Da rispondere" },
-  { key: "accettate", label: "Accettate" },
-  { key: "rifiutate", label: "Rifiutate" },
-  { key: "scadute", label: "Scadute" },
-  { key: "da_recensire", label: "Da recensire" },
+const TABS: {
+  key: Bucket;
+  label: string;
+  // Tailwind classes for active and inactive states (light + dark friendly).
+  activeCls: string;
+  inactiveCls: string;
+  badgeActiveCls: string;
+  badgeInactiveCls: string;
+}[] = [
+  {
+    key: "nuove",
+    label: "Nuove",
+    activeCls:
+      "bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-500/30",
+    inactiveCls:
+      "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 dark:bg-sky-500/10 dark:text-sky-200 dark:border-sky-500/30 dark:hover:bg-sky-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-sky-500/20 text-sky-900 dark:bg-sky-400/20 dark:text-sky-100",
+  },
+  {
+    key: "da_rispondere",
+    label: "Da rispondere",
+    activeCls:
+      "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/30",
+    inactiveCls:
+      "bg-orange-50 text-orange-800 border-orange-200 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-200 dark:border-orange-500/30 dark:hover:bg-orange-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-orange-500/20 text-orange-900 dark:bg-orange-400/20 dark:text-orange-100",
+  },
+  {
+    key: "accettate",
+    label: "Accettate",
+    activeCls:
+      "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/30",
+    inactiveCls:
+      "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-500/30 dark:hover:bg-emerald-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-emerald-500/20 text-emerald-900 dark:bg-emerald-400/20 dark:text-emerald-100",
+  },
+  {
+    key: "rifiutate",
+    label: "Rifiutate",
+    activeCls:
+      "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/30",
+    inactiveCls:
+      "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-500/30 dark:hover:bg-rose-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-rose-500/20 text-rose-900 dark:bg-rose-400/20 dark:text-rose-100",
+  },
+  {
+    key: "scadute",
+    label: "Scadute",
+    activeCls:
+      "bg-slate-600 text-white border-slate-600 shadow-md shadow-slate-600/30",
+    inactiveCls:
+      "bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200 dark:bg-slate-500/10 dark:text-slate-200 dark:border-slate-500/30 dark:hover:bg-slate-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-slate-500/20 text-slate-900 dark:bg-slate-400/20 dark:text-slate-100",
+  },
+  {
+    key: "da_recensire",
+    label: "Da recensire",
+    activeCls:
+      "bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-500/30",
+    inactiveCls:
+      "bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100 dark:bg-violet-500/10 dark:text-violet-200 dark:border-violet-500/30 dark:hover:bg-violet-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-violet-500/20 text-violet-900 dark:bg-violet-400/20 dark:text-violet-100",
+  },
 ];
 
 function priorityFor(r: Row, isNew: boolean): number {
