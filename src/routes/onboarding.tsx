@@ -1103,7 +1103,11 @@ function Onboarding() {
             ...reqToProfileUpdate(requirements),
           }
         : {
-            full_name: form.full_name,
+            full_name:
+              `${personal.first_name ?? ""} ${personal.last_name ?? ""}`.trim() ||
+              form.full_name ||
+              (profile as any)?.full_name ||
+              null,
             phone: phoneFull,
             phone_country_code: form.phone_code,
             phone_number: form.phone_number,
