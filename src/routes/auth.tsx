@@ -530,7 +530,17 @@ function AuthPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={busy || !restaurantAgeOk || !passwordStrongEnough || !passwordsMatch || !phoneOk}
+                  disabled={
+                    busy ||
+                    !firstNameOk ||
+                    !lastNameOk ||
+                    !emailValid ||
+                    !emailsMatch ||
+                    !restaurantAgeOk ||
+                    !passwordStrongEnough ||
+                    !passwordsMatch ||
+                    !phoneOk
+                  }
                 >
                   {busy ? "Attendi..." : "Crea profilo"}
                 </Button>
