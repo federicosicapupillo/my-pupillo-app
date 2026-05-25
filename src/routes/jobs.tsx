@@ -215,13 +215,75 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   return { label: r.status, cls: "bg-secondary text-foreground border-border" };
 }
 
-const TABS: { key: Bucket; label: string }[] = [
-  { key: "nuove", label: "Nuove" },
-  { key: "da_rispondere", label: "Da rispondere" },
-  { key: "accettate", label: "Accettate" },
-  { key: "rifiutate", label: "Rifiutate" },
-  { key: "scadute", label: "Scadute" },
-  { key: "da_recensire", label: "Da recensire" },
+const TABS: {
+  key: Bucket;
+  label: string;
+  // Tailwind classes for active and inactive states (light + dark friendly).
+  activeCls: string;
+  inactiveCls: string;
+  badgeActiveCls: string;
+  badgeInactiveCls: string;
+}[] = [
+  {
+    key: "nuove",
+    label: "Nuove",
+    activeCls:
+      "bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-500/30",
+    inactiveCls:
+      "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 dark:bg-sky-500/10 dark:text-sky-200 dark:border-sky-500/30 dark:hover:bg-sky-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-sky-500/20 text-sky-900 dark:bg-sky-400/20 dark:text-sky-100",
+  },
+  {
+    key: "da_rispondere",
+    label: "Da rispondere",
+    activeCls:
+      "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/30",
+    inactiveCls:
+      "bg-orange-50 text-orange-800 border-orange-200 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-200 dark:border-orange-500/30 dark:hover:bg-orange-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-orange-500/20 text-orange-900 dark:bg-orange-400/20 dark:text-orange-100",
+  },
+  {
+    key: "accettate",
+    label: "Accettate",
+    activeCls:
+      "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/30",
+    inactiveCls:
+      "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-500/30 dark:hover:bg-emerald-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-emerald-500/20 text-emerald-900 dark:bg-emerald-400/20 dark:text-emerald-100",
+  },
+  {
+    key: "rifiutate",
+    label: "Rifiutate",
+    activeCls:
+      "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/30",
+    inactiveCls:
+      "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-500/30 dark:hover:bg-rose-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-rose-500/20 text-rose-900 dark:bg-rose-400/20 dark:text-rose-100",
+  },
+  {
+    key: "scadute",
+    label: "Scadute",
+    activeCls:
+      "bg-slate-600 text-white border-slate-600 shadow-md shadow-slate-600/30",
+    inactiveCls:
+      "bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200 dark:bg-slate-500/10 dark:text-slate-200 dark:border-slate-500/30 dark:hover:bg-slate-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-slate-500/20 text-slate-900 dark:bg-slate-400/20 dark:text-slate-100",
+  },
+  {
+    key: "da_recensire",
+    label: "Da recensire",
+    activeCls:
+      "bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-500/30",
+    inactiveCls:
+      "bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100 dark:bg-violet-500/10 dark:text-violet-200 dark:border-violet-500/30 dark:hover:bg-violet-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-violet-500/20 text-violet-900 dark:bg-violet-400/20 dark:text-violet-100",
+  },
 ];
 
 function priorityFor(r: Row, isNew: boolean): number {
@@ -423,36 +485,40 @@ function Jobs() {
         </span>
       </div>
 
-      {/* Filtri — pill scrollabili orizzontalmente su mobile */}
-      <div className="mt-5 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex gap-2 whitespace-nowrap pb-1">
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            const count = counts[t.key];
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+      {/* Filtri — tab colorate, grandi, scrollabili su mobile e a griglia su desktop */}
+      <div
+        role="tablist"
+        aria-label="Filtra offerte"
+        className="mt-5 -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          const count = counts[t.key];
+          return (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.key)}
+              className={
+                "group flex shrink-0 items-center justify-between gap-2 rounded-2xl border-2 px-4 py-3 text-sm font-semibold tracking-tight transition-all duration-150 active:scale-[0.98] sm:px-4 sm:py-3.5 " +
+                (active
+                  ? `${t.activeCls} scale-[1.01]`
+                  : t.inactiveCls)
+              }
+            >
+              <span className="truncate">{t.label}</span>
+              <span
                 className={
-                  "shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition " +
-                  (active
-                    ? "border-foreground bg-foreground text-background shadow-sm"
-                    : "border-border bg-card text-foreground hover:bg-accent")
+                  "inline-flex min-w-[1.75rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums " +
+                  (active ? t.badgeActiveCls : t.badgeInactiveCls)
                 }
               >
-                {t.label}
-                <span
-                  className={
-                    "ml-2 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums " +
-                    (active ? "bg-background/20 text-background" : "bg-muted text-muted-foreground")
-                  }
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Ordina per */}
