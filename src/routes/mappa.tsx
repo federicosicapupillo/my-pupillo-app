@@ -466,7 +466,7 @@ function MapPage() {
           lat: w.service_area_lat,
           lng: w.service_area_lng,
           category: "worker",
-          title: w.full_name || "Lavoratore",
+          title: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : (w.full_name || "Lavoratore"),
           subtitle: [w.primary_role, w.badge ? `· ${w.badge}` : null].filter(Boolean).join(" "),
           city: [w.neighborhood, w.city].filter(Boolean).join(", ") || w.city,
           status: w.account_status,
