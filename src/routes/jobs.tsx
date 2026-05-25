@@ -107,13 +107,9 @@ type Row = {
 type Bucket =
   | "nuove"
   | "da_rispondere"
-  | "accettate_da_me"
-  | "in_attesa_conferma"
-  | "confermate"
-  | "completate"
+  | "accettate"
   | "rifiutate"
   | "scadute"
-  | "annullate"
   | "da_recensire";
 
 type SortMode = "service_date" | "received" | "tariff" | "role" | "status";
@@ -143,18 +139,19 @@ function isCancelled(r: Row): boolean {
 function bucketsFor(r: Row, lastSeenAt: number): Bucket[] {
   const out: Bucket[] = [];
   if (isCompleted(r)) {
-    out.push("completate");
     if (!r.hasWorkerReview) out.push("da_recensire");
+    else out.push("accettate");
     return out;
   }
   if (isCancelled(r)) {
-    if (r.status === "expired") out.push("scadute");
+    if (r.status === "expired" || r.status === "cancelled" || r.shift?.status === "cancelled")
+      out.push("scadute");
     else if (r.status === "rejected" || r.status === "not_interested") out.push("rifiutate");
-    else out.push("annullate");
+    else out.push("scadute");
     return out;
   }
   if (isMutuallyConfirmed(r)) {
-    out.push("confermate");
+    out.push("accettate");
     return out;
   }
   if (r.status === "pending") {
@@ -163,12 +160,11 @@ function bucketsFor(r: Row, lastSeenAt: number): Bucket[] {
     return out;
   }
   if (r.status === "interested") {
-    out.push("accettate_da_me");
-    out.push("in_attesa_conferma");
+    out.push("accettate");
     return out;
   }
   if (r.status === "counter_offer") {
-    out.push("in_attesa_conferma");
+    out.push("accettate");
     return out;
   }
   return out;
@@ -219,18 +215,13 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   return { label: r.status, cls: "bg-secondary text-foreground border-border" };
 }
 
-const TABS: { key: "tutte" | Bucket; label: string }[] = [
-  { key: "tutte", label: "Tutte" },
+const TABS: { key: Bucket; label: string }[] = [
   { key: "nuove", label: "Nuove" },
   { key: "da_rispondere", label: "Da rispondere" },
-  { key: "accettate_da_me", label: "Accettate" },
-  { key: "in_attesa_conferma", label: "In attesa conferma" },
-  { key: "confermate", label: "Confermate" },
-  { key: "completate", label: "Completate" },
-  { key: "da_recensire", label: "Da recensire" },
+  { key: "accettate", label: "Accettate" },
   { key: "rifiutate", label: "Rifiutate" },
   { key: "scadute", label: "Scadute" },
-  { key: "annullate", label: "Annullate" },
+  { key: "da_recensire", label: "Da recensire" },
 ];
 
 function priorityFor(r: Row, isNew: boolean): number {
