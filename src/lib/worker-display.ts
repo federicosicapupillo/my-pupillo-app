@@ -19,7 +19,7 @@ export function verifiedRoleLabel(role: string | null | undefined): string {
 
 /**
  * Return the worker name the restaurant is allowed to see.
- * - hasWorkedTogether === true → real full_name (or first name only if missing).
+ * - hasWorkedTogether === true → first name only (never the surname).
  * - otherwise → role-based "verificato" label.
  */
 export function displayWorkerName(
@@ -28,7 +28,10 @@ export function displayWorkerName(
 ): string {
   if (hasWorkedTogether) {
     const n = (w.full_name ?? "").trim();
-    if (n) return n;
+    if (n) {
+      const first = n.split(/\s+/)[0];
+      if (first) return first;
+    }
   }
   return verifiedRoleLabel(w.primary_role);
 }
