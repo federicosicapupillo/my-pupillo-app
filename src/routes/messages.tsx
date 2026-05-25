@@ -443,12 +443,12 @@ function MessagesLayout() {
             </div>
           )}
           <div className="mb-4">
-            <div className="flex flex-nowrap gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex flex-wrap gap-2 pb-1">
               {/* Tutte */}
               <button
                 type="button"
                 onClick={() => setFilter("all")}
-                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${filter === "all" ? "bg-primary text-primary-foreground border-primary shadow-neon" : "bg-card text-foreground border-border hover:bg-accent"}`}
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition whitespace-nowrap ${filter === "all" ? "bg-primary text-primary-foreground border-primary shadow-neon" : "bg-card text-foreground border-border hover:bg-accent"}`}
               >
                 Tutte
                 <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${filter === "all" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"}`}>
@@ -460,7 +460,7 @@ function MessagesLayout() {
               <button
                 type="button"
                 onClick={() => setFilter("unread")}
-                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${filter === "unread" ? "bg-accent text-accent-foreground border-accent neon-glow-violet" : "bg-card text-foreground border-border hover:bg-accent"}`}
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition whitespace-nowrap ${filter === "unread" ? "bg-accent text-accent-foreground border-accent neon-glow-violet" : "bg-card text-foreground border-border hover:bg-accent"}`}
               >
                 Non lette
                 <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${filter === "unread" ? "bg-accent-foreground/20 text-accent-foreground" : "bg-accent/10 text-accent"}`}>
@@ -472,7 +472,7 @@ function MessagesLayout() {
               <button
                 type="button"
                 onClick={() => setStatusFilter("all")}
-                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${statusFilter === "all" ? "bg-foreground text-background border-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.15)]" : "bg-card text-foreground border-border hover:bg-accent"}`}
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition whitespace-nowrap ${statusFilter === "all" ? "bg-foreground text-background border-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.15)]" : "bg-card text-foreground border-border hover:bg-accent"}`}
               >
                 Tutti gli stati
                 <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${statusFilter === "all" ? "bg-background/15 text-background" : "bg-muted text-muted-foreground"}`}>
@@ -485,7 +485,7 @@ function MessagesLayout() {
                 const count = statusCounts[s] ?? 0;
                 if (count === 0) return null;
                 const active = statusFilter === s;
-                const baseCls = "flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-1";
+                const baseCls = "flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition whitespace-nowrap";
                 const stateCls = active ? STATUS_BTN_ACTIVE[s] : STATUS_BTN_INACTIVE[s];
                 const badgeCls = active
                   ? (s === "expired" ? "bg-foreground/10 text-foreground" : "bg-white/20 text-white")
