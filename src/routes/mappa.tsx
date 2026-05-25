@@ -20,6 +20,7 @@ import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
+import { displayWorkerName } from "@/lib/worker-display";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
