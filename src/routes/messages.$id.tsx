@@ -694,8 +694,12 @@ function Thread() {
           setProposalStatuses(prev => prev[r.message_id] === r.status ? prev : { ...prev, [r.message_id]: r.status });
         })
       .subscribe((status) => {
-        // On disconnect / error, trigger a refetch when the channel comes back.
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        // On transient error / timeout, trigger a refetch. NOTE: do NOT trigger
+        // on "CLOSED" — removeChannel() in the effect cleanup emits CLOSED,
+        // which would bump refetchSeq, re-run this effect, remove the new
+        // channel, fire CLOSED again, and so on — causing the chat to
+        // continuously reload/flicker.
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setTimeout(() => setRefetchSeq((s) => s + 1), 1500);
         }
       });
