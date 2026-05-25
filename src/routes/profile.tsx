@@ -302,7 +302,7 @@ function Profile() {
       )}
 
       {role === "restaurant" && (
-        <DefaultsSection profile={profile} userId={user?.id} />
+        <DefaultsSection profile={profile} userId={user?.id} onCleared={refresh} />
       )}
 
       <div className="mt-6 max-w-4xl">
