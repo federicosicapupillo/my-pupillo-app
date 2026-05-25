@@ -5,9 +5,18 @@ import { getAvatarUrls } from "@/lib/avatars.functions";
 // Signed URLs expire after 1h server-side; refresh cache after 50min.
 const TTL_MS = 50 * 60 * 1000;
 const STORAGE_KEY = "avatar-url-cache:v1";
+const AVATAR_UPDATED_EVENT = "pupillo:avatar-updated";
 type Entry = { url: string | null; name?: string | null; at: number };
 const cache = new Map<string, Entry>();
 const inflight = new Map<string, Promise<void>>();
+
+export function updateAvatarUrlCache(userId: string, url: string | null, name?: string | null) {
+  cache.set(userId, { url, name: name ?? cache.get(userId)?.name ?? null, at: Date.now() });
+  schedulePersist();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(AVATAR_UPDATED_EVENT, { detail: { userId, url } }));
+  }
+}
 
 // Hydrate cache from sessionStorage so SPA reloads don't re-fetch.
 if (typeof window !== "undefined") {
@@ -61,6 +70,14 @@ export function useAvatarUrls(userIds: Array<string | null | undefined>) {
   useEffect(() => {
     const ids = Array.from(new Set(userIds.filter((x): x is string => !!x)));
     let cancelled = false;
+    const onAvatarUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ userId?: string; url?: string | null }>).detail;
+      if (!detail?.userId || !ids.includes(detail.userId)) return;
+      setUrls((prev) => ({ ...prev, [detail.userId as string]: detail.url ?? null }));
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener(AVATAR_UPDATED_EVENT, onAvatarUpdated);
+    }
     const missing = ids.filter((id) => !isFresh(cache.get(id)));
     const toFetch = missing.filter((id) => !inflight.has(id));
     const waits: Promise<void>[] = [];
@@ -116,7 +133,12 @@ export function useAvatarUrls(userIds: Array<string | null | undefined>) {
         }
         return changed ? next : prev;
       });
-      return;
+      return () => {
+        cancelled = true;
+        if (typeof window !== "undefined") {
+          window.removeEventListener(AVATAR_UPDATED_EVENT, onAvatarUpdated);
+        }
+      };
     }
     Promise.all(waits).then(() => {
       if (cancelled) return;
@@ -128,6 +150,9 @@ export function useAvatarUrls(userIds: Array<string | null | undefined>) {
     });
     return () => {
       cancelled = true;
+      if (typeof window !== "undefined") {
+        window.removeEventListener(AVATAR_UPDATED_EVENT, onAvatarUpdated);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
