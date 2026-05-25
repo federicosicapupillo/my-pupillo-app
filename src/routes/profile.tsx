@@ -182,9 +182,37 @@ function Profile() {
 
   return (
     <AppShell>
-      <PageHeader title="Il tuo profilo" subtitle="Visualizza e modifica le tue informazioni" action={<Link to="/onboarding"><Button>Modifica</Button></Link>} />
+      <PageHeader
+        title="Il tuo profilo"
+        subtitle="Visualizza e modifica le tue informazioni"
+        action={
+          role === "worker" ? (
+            editingWorker ? null : <Button onClick={startWorkerEdit}>Modifica</Button>
+          ) : (
+            <Link to="/onboarding"><Button>Modifica</Button></Link>
+          )
+        }
+      />
       {role === "restaurant" && <PayOnHireBox className="mb-6 max-w-2xl" />}
       <div className="rounded-2xl border bg-card p-6 max-w-2xl space-y-3">
+        {role === "worker" ? (
+          <WorkerProfileEditor
+            profile={profile as any}
+            email={user?.email ?? null}
+            avatarUrl={(profile as any)?.avatar_url ? (avatarPreview ?? currentAvatarUrl ?? null) : (avatarPreview ?? null)}
+            editing={editingWorker}
+            saving={savingWorker}
+            draft={workerDraft}
+            onDraftChange={setWorkerDraft}
+            onPickAvatar={(file, preview) => {
+              setAvatarFile(file);
+              setAvatarPreview(preview);
+            }}
+            onEdit={startWorkerEdit}
+            onCancel={cancelWorkerEdit}
+            onSave={saveWorkerProfile}
+          />
+        ) : (<>
         <Row label="Email" value={user?.email} />
         <Row label="Ruolo" value={role} />
         <Row label="Nome e cognome" value={[(profile as any)?.first_name, (profile as any)?.last_name].filter(Boolean).join(" ") || profile?.full_name} />
@@ -200,13 +228,6 @@ function Profile() {
           <Row label="Indirizzo" value={profile?.address} />
           <Row label="Fascia di prezzo" value={priceRangeLabel(profile?.price_range)} />
         </>)}
-        {role === "worker" && (<>
-          <Row label="Età" value={profile?.age?.toString()} />
-          <Row label="Profilo professionale" value={profile?.professional_profile} />
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">Lingue parlate</div>
-            <SpokenLanguagesView value={normalizeSpokenLanguages((profile as any)?.spoken_languages)} />
-          </div>
         </>)}
       </div>
 
