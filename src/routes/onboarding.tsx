@@ -1413,7 +1413,35 @@ function Onboarding() {
               </div>
               <div>
                 <Label>Paese</Label>
-                <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
+                <Select
+                  value={form.country || "Italia"}
+                  onValueChange={(v) => setForm({ ...form, country: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona paese" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      "Italia",
+                      "Francia",
+                      "Spagna",
+                      "Germania",
+                      "Svizzera",
+                      "Austria",
+                      "Regno Unito",
+                      "Albania",
+                      "Romania",
+                      "Marocco",
+                      "Egitto",
+                      "Tunisia",
+                      "Altro",
+                    ].map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
