@@ -163,6 +163,11 @@ type WorkerRel = {
   lastReviewRating: number | null;
   latestResponseAt: number;
   latestResponseStatus: "accepted" | "rejected" | null;
+  lastAppId: string | null;
+  lastAppCreatedAt: number;
+  hasShiftScheduled: boolean;
+  shiftAnnouncementIds: Set<string>;
+  workerLastReview: { rating: number | null; comment: string | null; created_at: string } | null;
 };
 const emptyRel = (): WorkerRel => ({
   workedWith: false,
