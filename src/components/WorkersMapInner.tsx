@@ -17,6 +17,13 @@ export type WorkerMapPoint = {
   avatarUrl: string | null;
   initials: string;
   link?: string;
+  known?: boolean;
+  completedShifts?: number | null;
+  reliabilityPct?: number | null;
+  punctualityPct?: number | null;
+  professionalismAvg?: number | null;
+  lastReviewComment?: string | null;
+  lastReviewRating?: number | null;
 };
 
 function avatarIcon(p: WorkerMapPoint) {
