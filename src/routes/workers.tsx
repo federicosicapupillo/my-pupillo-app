@@ -1252,3 +1252,109 @@ function WorkersMapSection({
     </div>
   );
 }
+
+function AvailabilityBlock({
+  weekly,
+  onDetails,
+}: {
+  weekly: string[] | null;
+  onDetails: () => void;
+}) {
+  const summary = summarizeWeeklyAvailability(weekly, null, new Date());
+  return (
+    <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Disponibilità
+        </div>
+        {(summary.kind === "wide" ||
+          (summary.kind === "lines" && summary.truncated)) && (
+          <button
+            type="button"
+            onClick={onDetails}
+            className="text-[11px] font-medium text-primary hover:underline"
+          >
+            Vedi dettagli
+          </button>
+        )}
+      </div>
+      <div className="mt-1 text-xs text-foreground">
+        {summary.kind === "none" && (
+          <span className="text-muted-foreground">Disponibilità non indicata</span>
+        )}
+        {summary.kind === "today" && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[11px] font-medium">
+              Disponibile oggi
+            </span>
+            {summary.hours && <span className="text-muted-foreground">{summary.hours}</span>}
+          </div>
+        )}
+        {summary.kind === "all_week" && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-medium">Tutta la settimana</span>
+            {summary.hours && <span className="text-muted-foreground">· {summary.hours}</span>}
+          </div>
+        )}
+        {summary.kind === "wide" && (
+          <span className="font-medium">
+            {summary.totalDays} giorni disponibili · Disponibilità ampia
+          </span>
+        )}
+        {summary.kind === "lines" && (
+          <div className="space-y-0.5">
+            {summary.lines.map((l) => (
+              <div key={l}>{l}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AvailabilityDetailsDialog({
+  worker,
+  workedTogether,
+  onClose,
+}: {
+  worker: W | null;
+  workedTogether: boolean;
+  onClose: () => void;
+}) {
+  const open = !!worker;
+  const days = worker ? formatAvailabilitySlotsForDay(worker.weekly_availability) : [];
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Disponibilità completa</DialogTitle>
+          <DialogDescription>
+            {worker ? displayWorkerName(worker, workedTogether) : ""}
+          </DialogDescription>
+        </DialogHeader>
+        {days.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Disponibilità non indicata.</p>
+        ) : (
+          <div className="space-y-2">
+            {days.map((d) => (
+              <div key={d.day} className="flex items-start gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                <div className="w-12 font-medium">{d.day}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {d.slots.map((s) => (
+                    <span key={s.label} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">
+                      {s.label} · {s.hours}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Chiudi</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
