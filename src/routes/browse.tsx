@@ -230,15 +230,13 @@ function Browse() {
       toast.error("Turno non valido.");
       return;
     }
-    const { data: existingApp } = await supabase
-      .from("applications")
-      .select("id")
-      .eq("announcement_id", confirmAnn.id)
-      .eq("worker_id", workerProfile.id)
-      .maybeSingle();
-    if (existingApp?.id) {
-      toast.info("Hai già inviato la candidatura per questo turno.");
+    const contact = await checkExistingContact({
+      announcementId: confirmAnn.id,
+      workerId: workerProfile.id,
+    });
+    if (contact.existing) {
       setConfirmAnn(null);
+      setAlreadyContactAppId(contact.applicationId);
       return;
     }
     const needed = Math.max(1, Number(availability.workers_needed ?? workersNeededById[confirmAnn.id] ?? 1) || 1);
