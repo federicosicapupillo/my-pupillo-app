@@ -372,7 +372,8 @@ function NewRestaurantJobRequest() {
   }, [reuse]);
 
   const runGeocode = async () => {
-    const address = [f.address, f.city, f.province, f.country].filter(Boolean).join(", ");
+    const streetWithNumber = [f.address, f.street_number].map((s) => s.trim()).filter(Boolean).join(" ");
+    const address = [streetWithNumber, f.city, f.province, f.country].filter(Boolean).join(", ");
     if (address.trim().length < 5) return;
     abortRef.current?.abort();
     const ctrl = new AbortController();
@@ -395,12 +396,13 @@ function NewRestaurantJobRequest() {
   // Auto-geocode silently when address fields change (debounced).
   // Replaces the manual "Trova coordinate" button.
   useEffect(() => {
-    const address = [f.address, f.city, f.province, f.country].filter(Boolean).join(", ");
+    const streetWithNumber = [f.address, f.street_number].map((s) => s.trim()).filter(Boolean).join(" ");
+    const address = [streetWithNumber, f.city, f.province, f.country].filter(Boolean).join(", ");
     if (address.trim().length < 5) return;
     const t = setTimeout(() => { void runGeocode(); }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.address, f.city, f.province, f.country]);
+  }, [f.address, f.street_number, f.city, f.province, f.country]);
 
   const validate = () => {
     if (!user) return false;
