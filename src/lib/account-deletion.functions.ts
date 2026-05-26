@@ -45,9 +45,13 @@ export const deleteAccount = createServerFn({ method: "POST" })
     const result = (deletionResult as DeleteAccountResult | null) ?? null;
     if (!result?.ok) return result ?? { ok: false, error_code: "delete_failed" };
 
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (authError) {
-      console.error("[deleteAccount] auth user deletion failed", authError);
+    try {
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (authError) {
+        console.error("[deleteAccount] auth user deletion failed", authError);
+      }
+    } catch (authError) {
+      console.error("[deleteAccount] auth user deletion unavailable", authError);
     }
 
     return { ok: true };
