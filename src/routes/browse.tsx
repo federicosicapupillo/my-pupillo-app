@@ -216,6 +216,44 @@ function Browse() {
       setConfirmAnn(null);
       return;
     }
+    const workerProfile = profile?.id === user.id
+      ? profile
+      : (await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle()).data;
+    if (!workerProfile?.id) {
+      toast.error("Profilo lavoratore non trovato.");
+      return;
+    }
+    const { data: jobRequest } = await supabase
+      .from("job_requests")
+      .select("id, announcement_id, workers_needed")
+      .eq("announcement_id", confirmAnn.id)
+      .maybeSingle();
+    if (!jobRequest?.announcement_id) {
+      toast.error("Turno non valido.");
+      return;
+    }
+    const { data: existingApp } = await supabase
+      .from("applications")
+      .select("id")
+      .eq("announcement_id", confirmAnn.id)
+      .eq("worker_id", workerProfile.id)
+      .maybeSingle();
+    if (existingApp?.id) {
+      toast.info("Hai già inviato la candidatura per questo turno.");
+      setConfirmAnn(null);
+      return;
+    }
+    const needed = Math.max(1, Number(jobRequest.workers_needed ?? workersNeededById[confirmAnn.id] ?? 1) || 1);
+    const { count: acceptedCount } = await supabase
+      .from("applications")
+      .select("id", { count: "exact", head: true })
+      .eq("announcement_id", confirmAnn.id)
+      .eq("status", "accepted");
+    if ((acceptedCount ?? 0) >= needed) {
+      toast.error("Turno già assegnato. Questo turno non è più disponibile perché tutte le posizioni sono già state assegnate.");
+      setConfirmAnn(null);
+      return;
+    }
     // Validazione contro-offerta lato client
     let counterValueNum: number | null = null;
     if (applyMode === "counter") {
@@ -236,13 +274,19 @@ function Browse() {
     }
     setSubmitting(true);
     const insertPayload: any = {
-      announcement_id: confirmAnn.id, worker_id: user.id, restaurant_id: confirmAnn.restaurant_id,
+      announcement_id: confirmAnn.id,
+      worker_id: workerProfile.id,
+      restaurant_id: confirmAnn.restaurant_id,
+      status: "pending",
     };
     if (counterValueNum != null) {
-      insertPayload.status = "counter_offer";
       insertPayload.proposed_tariff = counterValueNum;
       insertPayload.worker_response_at = new Date().toISOString();
     }
+    console.log("auth user id", user.id);
+    console.log("worker profile id", workerProfile.id);
+    console.log("worker profile user_id", (workerProfile as any).user_id);
+    console.log("application payload", insertPayload);
     const { data: app, error } = await supabase.from("applications").insert(insertPayload).select("id").single();
     if (error) {
       setSubmitting(false);
@@ -250,9 +294,11 @@ function Browse() {
       if (msg.includes("duplicate") || msg.includes("unique")) {
         return toast.info("Hai già inviato la candidatura per questo turno.");
       }
+      if (msg.includes("row-level security") || msg.includes("violates row-level")) {
+        return toast.error("Errore autorizzazione candidatura. Controlla le policy Supabase della tabella applications.");
+      }
       // Only claim the shift is full after confirming with fresh data — never
       // infer it from a generic RLS error.
-      const needed = Math.max(1, Number(workersNeededById[confirmAnn.id] ?? 1) || 1);
       const { count: acceptedCount } = await supabase
         .from("applications")
         .select("id", { count: "exact", head: true })
