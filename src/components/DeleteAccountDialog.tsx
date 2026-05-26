@@ -53,8 +53,8 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
 
   const submit = async () => {
     setBusy(true);
-    const payloadReason = reason || null;
-    const payloadCustom = reason === "altro" ? customReason.trim().slice(0, 500) || null : null;
+    const payloadReason = reason || undefined;
+    const payloadCustom = reason === "altro" ? (customReason.trim().slice(0, 500) || undefined) : undefined;
     const { data, error } = await supabase.rpc("delete_my_account", {
       _reason: payloadReason,
       _custom_reason: payloadCustom,
