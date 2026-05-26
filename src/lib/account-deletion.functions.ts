@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { deleteAuthUserSafely } from "@/lib/account-deletion.server";
+import { softDeleteAccount } from "@/lib/account-deletion.server";
 
 const DeleteAccountInput = z.object({
   reason: z.enum([
@@ -26,33 +26,11 @@ export const deleteAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => DeleteAccountInput.parse(input))
   .handler(async ({ data, context }): Promise<DeleteAccountResult> => {
-    const { supabase, userId } = context;
+    const { userId } = context;
 
     if (data.reason === "altro" && !data.customReason?.trim()) {
       return { ok: false, error_code: "missing_custom_reason" };
     }
 
-    const { data: deletionResult, error } = await supabase.rpc("delete_my_account", {
-      _reason: data.reason,
-      _custom_reason: data.reason === "altro" ? data.customReason?.trim() : undefined,
-    });
-
-    if (error) {
-      console.error("[deleteAccount] profile anonymization failed", error);
-      return { ok: false, error_code: "delete_failed" };
-    }
-
-    const result = (deletionResult as DeleteAccountResult | null) ?? null;
-    if (!result?.ok) return result ?? { ok: false, error_code: "delete_failed" };
-
-    try {
-      const { error: authError } = await deleteAuthUserSafely(userId);
-      if (authError) {
-        console.error("[deleteAccount] auth user deletion failed", authError);
-      }
-    } catch (authError) {
-      console.error("[deleteAccount] auth user deletion unavailable", authError);
-    }
-
-    return { ok: true };
+    return softDeleteAccount(userId, data.reason, data.customReason);
   });
