@@ -883,6 +883,17 @@ function WorkersPage() {
                 {g.items.map((w) => {
                   const near = inRange(w);
                   const r = rel[w.id];
+                  if (g.key === "contacted") {
+                    return (
+                      <ContactedWorkerCard
+                        key={w.id}
+                        worker={w}
+                        rel={r}
+                        selectedAnnouncementId={selected || null}
+                        onOpenChat={(appId) => nav({ to: "/messages/$id", params: { id: appId } })}
+                      />
+                    );
+                  }
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
