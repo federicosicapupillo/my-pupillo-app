@@ -1772,6 +1772,12 @@ function ProposalConfirmDialog({
   };
 
   return (
+    <>
+    <AlreadyInContactDialog
+      open={!!alreadyContactAppId}
+      applicationId={alreadyContactAppId}
+      onClose={() => { setAlreadyContactAppId(null); onClose(); }}
+    />
     <Dialog open={!!target} onOpenChange={(v) => { if (!v && !sending) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1834,6 +1840,7 @@ function ProposalConfirmDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
 
