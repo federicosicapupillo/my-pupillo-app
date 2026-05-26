@@ -459,16 +459,21 @@ function WorkersPage() {
   };
 
   const fieldsOf = (w: W) => {
-    // Privacy: per i lavoratori che NON hanno mai lavorato con questo
-    // ristoratore non esponiamo il nome reale nemmeno alla ricerca testuale —
-    // altrimenti il ristoratore potrebbe inferire l'identità tramite query.
-    const workedTogether = !!rel[w.id]?.workedWith;
-    const fullName = workedTogether ? (w.full_name ?? "").toLowerCase() : "";
-    const [first = "", ...rest] = fullName.split(" ");
+    // Per la RICERCA (filtro) usiamo i campi reali del profilo (case-insensitive).
+    // La PRIVACY è gestita a livello di VISUALIZZAZIONE da `displayWorkerName`:
+    // il ristoratore può filtrare per nome ma vedrà comunque solo il nome
+    // pubblico finché non c'è una relazione confermata.
+    const first = (w.first_name ?? "").toLowerCase().trim();
+    const last = (w.last_name ?? "").toLowerCase().trim();
+    const fullName = (
+      (w.full_name && w.full_name.trim()) ||
+      [w.first_name, w.last_name].filter(Boolean).join(" ")
+    ).toLowerCase().trim();
+    const [fnFirst = "", ...fnRest] = fullName.split(/\s+/);
     return {
       fullName,
-      first,
-      last: rest.join(" "),
+      first: first || fnFirst,
+      last: last || fnRest.join(" "),
       title: (w.professional_profile ?? "").toLowerCase(),
       description: (w.short_bio ?? "").toLowerCase(),
       roles: [w.primary_role ?? "", ...(w.secondary_roles ?? [])].join(" ").toLowerCase(),
