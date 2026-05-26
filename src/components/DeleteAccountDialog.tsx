@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertTriangle } from "lucide-react";
+import { deleteAccount } from "@/lib/account-deletion.functions";
 
 const REASONS: { value: string; label: string }[] = [
   { value: "non_uso_piu", label: "Non uso più Pupillo" },
@@ -26,6 +27,7 @@ type Step = "confirm" | "reason" | "final" | "blocked" | "done";
 export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { signOut } = useAuth();
   const nav = useNavigate();
+  const deleteAccountFn = useServerFn(deleteAccount);
   const [step, setStep] = useState<Step>("confirm");
   const [reason, setReason] = useState<string>("");
   const [customReason, setCustomReason] = useState("");
@@ -70,16 +72,16 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
     setBusy(true);
     const payloadReason = reason || undefined;
     const payloadCustom = reason === "altro" ? (customReason.trim().slice(0, 500) || undefined) : undefined;
-    const { data, error } = await supabase.rpc("delete_my_account", {
-      _reason: payloadReason,
-      _custom_reason: payloadCustom,
-    });
-    if (error) {
+    let res: { ok: boolean; error_code?: string; message?: string } | null = null;
+    try {
+      res = await deleteAccountFn({
+        data: { reason: payloadReason as Exclude<typeof reason, "">, customReason: payloadCustom },
+      });
+    } catch {
       setBusy(false);
       toast.error("Non è stato possibile eliminare l'account. Riprova o contatta l'assistenza.");
       return;
     }
-    const res = (data as { ok: boolean; error_code?: string; message?: string } | null) ?? null;
     if (!res?.ok) {
       setBusy(false);
       if (res?.error_code === "active_shifts") {
