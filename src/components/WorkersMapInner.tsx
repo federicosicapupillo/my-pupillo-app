@@ -29,10 +29,11 @@ export type WorkerMapPoint = {
 function avatarIcon(p: WorkerMapPoint) {
   const size = 44;
   const fallback = (p.initials || (p.name ? p.name.slice(0, 2) : "?")).toUpperCase().slice(0, 2);
+  const borderColor = p.known ? "#10b981" : "#FF2EA8";
   const inner = `
     <div style="
       width:${size}px;height:${size}px;border-radius:50%;
-      background:#fff;border:3px solid #FF2EA8;
+      background:#fff;border:3px solid ${borderColor};
       box-shadow:0 4px 12px rgba(0,0,0,.35);
       overflow:hidden;display:flex;align-items:center;justify-content:center;
       font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;color:#111;
@@ -52,6 +53,17 @@ function avatarIcon(p: WorkerMapPoint) {
             font-family:Inter,system-ui,sans-serif;line-height:1.2;
             display:flex;align-items:center;gap:2px;
           ">★ ${Number(p.rating).toFixed(1)}</div>`
+        : ""
+    }
+    ${
+      p.known
+        ? `<div style="
+            position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+            background:#10b981;color:#fff;border:1px solid #fff;
+            border-radius:9999px;padding:1px 6px;font-size:9px;font-weight:700;
+            font-family:Inter,system-ui,sans-serif;line-height:1.2;white-space:nowrap;
+            box-shadow:0 2px 4px rgba(0,0,0,.2);
+          ">✓ Già collaborato</div>`
         : ""
     }
   `;
