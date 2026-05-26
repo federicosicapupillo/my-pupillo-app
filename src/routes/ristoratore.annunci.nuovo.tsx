@@ -545,7 +545,7 @@ function NewRestaurantJobRequest() {
       long_shift_reason: isLongShift ? longReasonTrimmed : null,
       status,
       restaurant_name: f.restaurant_name || null,
-      address: f.address,
+      address: streetWithNumber || f.address,
       city: f.city || null,
       district: f.district || null,
       province: f.province || null,
