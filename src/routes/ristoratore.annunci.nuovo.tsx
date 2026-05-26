@@ -421,6 +421,7 @@ function NewRestaurantJobRequest() {
     if (longReasonError) { toast.error(longReasonError); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
     if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
+    if (!f.street_number.trim()) { toast.error("Inserisci il numero civico"); return false; }
     if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
       toast.error("La città selezionata non appartiene alla provincia scelta.");
       return false;
