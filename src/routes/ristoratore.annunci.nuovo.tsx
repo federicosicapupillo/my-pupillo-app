@@ -767,9 +767,23 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="2" title="Luogo e accesso" subtitle="Precompilato dal profilo ristoratore, modificabile per questo singolo annuncio." />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nome locale"><Input value={f.restaurant_name} onChange={e => setField("restaurant_name", e.target.value)} /></Field>
-            <Field label="Indirizzo"><Input required value={f.address} onChange={e => setField("address", e.target.value)} /></Field>
-            <Field label="Provincia">
+            <Field label="Nome locale" required>
+              <Input required value={f.restaurant_name} onChange={e => setField("restaurant_name", e.target.value)} />
+            </Field>
+            <Field label="Via / Indirizzo" required>
+              <Input required placeholder="Es. Via Roma" value={f.address} onChange={e => setField("address", e.target.value)} />
+            </Field>
+            <Field label="Numero civico" required>
+              <Input
+                required
+                inputMode="text"
+                placeholder="Es. 12"
+                maxLength={10}
+                value={f.street_number}
+                onChange={e => setField("street_number", e.target.value)}
+              />
+            </Field>
+            <Field label="Provincia" required>
               <select
                 value={f.province}
                 onChange={(e) => { setField("province", e.target.value); setField("city", ""); setField("postal_code", ""); setField("district", ""); }}
@@ -779,7 +793,7 @@ function NewRestaurantJobRequest() {
                 {ITALIAN_LOCATIONS.map((p) => <option key={p.province_code} value={p.province}>{p.province} ({p.province_code})</option>)}
               </select>
             </Field>
-            <Field label="Città">
+            <Field label="Città" required>
               <select
                 value={f.city}
                 disabled={!f.province}
@@ -790,7 +804,7 @@ function NewRestaurantJobRequest() {
                 {citiesForProvince(f.province).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            <Field label="Zona/quartiere">
+            <Field label="Zona/quartiere" required>
               <DistrictField
                 province={f.province}
                 city={f.city}
