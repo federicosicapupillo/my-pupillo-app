@@ -317,7 +317,7 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
 
     if (new Date(row.expires_at).getTime() < Date.now()) {
       await supabaseAdmin.from("phone_verifications").update({ status: "expired" }).eq("id", row.id);
-      return { ok: false, error: "Codice scaduto. Richiedine uno nuovo.", expired: true };
+      return { ok: false, error: "Codice scaduto. Richiedi un nuovo codice.", expired: true };
     }
 
     if ((row.attempts_count ?? 0) >= MAX_ATTEMPTS) {
@@ -335,7 +335,7 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
         .eq("id", row.id);
       return {
         ok: false,
-        error: attempts >= MAX_ATTEMPTS ? "Hai superato il numero massimo di tentativi." : "Codice non valido. Riprova.",
+        error: attempts >= MAX_ATTEMPTS ? "Hai superato il numero massimo di tentativi." : "Codice non valido. Controlla il codice ricevuto e riprova.",
         attemptsLeft: Math.max(0, MAX_ATTEMPTS - attempts),
       };
     }
