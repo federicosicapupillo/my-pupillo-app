@@ -250,8 +250,20 @@ function Browse() {
       if (msg.includes("duplicate") || msg.includes("unique")) {
         return toast.info("Hai già inviato la candidatura per questo turno.");
       }
-      if (msg.includes("row-level security") || msg.includes("violates row-level")) {
-        return toast.error("Turno già assegnato. Questo turno non è più disponibile perché tutte le posizioni sono già state assegnate.");
+      // Only claim the shift is full after confirming with fresh data — never
+      // infer it from a generic RLS error.
+      const needed = Math.max(1, Number(workersNeededById[confirmAnn.id] ?? 1) || 1);
+      const { count: acceptedCount } = await supabase
+        .from("applications")
+        .select("id", { count: "exact", head: true })
+        .eq("announcement_id", confirmAnn.id)
+        .eq("status", "accepted");
+      if ((acceptedCount ?? 0) >= needed) {
+        return toast.error(
+          needed > 1
+            ? "Turno completo. Tutte le posizioni sono già state assegnate."
+            : "Turno già assegnato. Questo turno non è più disponibile perché tutte le posizioni sono già state assegnate.",
+        );
       }
       return toast.error(error.message);
     }
