@@ -12,7 +12,16 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertTriangle } from "lucide-react";
 import { deleteAccount } from "@/lib/account-deletion.functions";
 
-const REASONS: { value: string; label: string }[] = [
+type DeletionReason =
+  | "non_uso_piu"
+  | "lavoro_altro_modo"
+  | "problemi_piattaforma"
+  | "problemi_notifiche_chat"
+  | "problemi_pagamenti_crediti"
+  | "cancellare_dati"
+  | "altro";
+
+const REASONS: { value: DeletionReason; label: string }[] = [
   { value: "non_uso_piu", label: "Non uso più Pupillo" },
   { value: "lavoro_altro_modo", label: "Ho trovato lavoro / collaboratori in altro modo" },
   { value: "problemi_piattaforma", label: "Ho avuto problemi con la piattaforma" },
@@ -29,7 +38,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   const nav = useNavigate();
   const deleteAccountFn = useServerFn(deleteAccount);
   const [step, setStep] = useState<Step>("confirm");
-  const [reason, setReason] = useState<string>("");
+  const [reason, setReason] = useState<DeletionReason | "">("");
   const [customReason, setCustomReason] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -70,12 +79,12 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
       return;
     }
     setBusy(true);
-    const payloadReason = reason || undefined;
+    const payloadReason = reason;
     const payloadCustom = reason === "altro" ? (customReason.trim().slice(0, 500) || undefined) : undefined;
     let res: { ok: boolean; error_code?: string; message?: string } | null = null;
     try {
       res = await deleteAccountFn({
-        data: { reason: payloadReason as Exclude<typeof reason, "">, customReason: payloadCustom },
+        data: { reason: payloadReason, customReason: payloadCustom },
       });
     } catch {
       setBusy(false);
@@ -137,7 +146,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[50vh] overflow-y-auto">
-              <RadioGroup value={reason} onValueChange={setReason} className="space-y-2">
+              <RadioGroup value={reason} onValueChange={(value) => setReason(value as DeletionReason)} className="space-y-2">
                 {REASONS.map((r) => (
                   <div key={r.value} className="flex items-center gap-2">
                     <RadioGroupItem value={r.value} id={`reason-${r.value}`} />
