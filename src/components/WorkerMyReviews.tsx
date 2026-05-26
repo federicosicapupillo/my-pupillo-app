@@ -16,7 +16,7 @@ type ReviewRow = {
   is_visible_to_worker: boolean | null;
 };
 
-type AuthorInfo = { id: string; business_name: string | null; full_name: string | null; city: string | null };
+type AuthorInfo = { id: string; business_name: string | null; full_name: string | null; city: string | null; is_deleted?: boolean | null };
 type ShiftInfo = { id: string; restaurant_id: string | null };
 type AnnInfo = { id: string; professional_profile: string | null; job_city: string | null };
 type AppInfo = { id: string; announcement_id: string | null; status: string | null };
@@ -70,7 +70,7 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
 
       const [au, sh, ap] = await Promise.all([
         authorIds.length
-          ? supabase.from("profiles").select("id,business_name,full_name,city").in("id", authorIds)
+          ? supabase.from("profiles").select("id,business_name,full_name,city,is_deleted").in("id", authorIds)
           : Promise.resolve({ data: [] as any[] }),
         shiftIds.length
           ? supabase.from("shifts").select("id,restaurant_id").in("id", shiftIds)
