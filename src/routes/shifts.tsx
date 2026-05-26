@@ -875,15 +875,46 @@ function ShiftsPage() {
                             ))}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1">
-                            {[1,2,3,4,5].map(n => (
-                              <button key={n} type="button" onClick={() => setRating(n)} className="p-1 disabled:opacity-50" disabled={submittingReview === s.id}>
-                                <Star className={`h-6 w-6 transition ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
-                              </button>
+                          <div className="space-y-2">
+                            {([
+                              ["overall", "Valutazione generale"],
+                              ["communication", "Comunicazione"],
+                              ["clarity", "Chiarezza delle istruzioni"],
+                              ["payment_fairness", "Puntualità nei pagamenti / correttezza"],
+                              ["work_environment", "Ambiente di lavoro"],
+                            ] as const).map(([key, label]) => (
+                              <div key={key} className="flex items-center justify-between gap-3">
+                                <span className="text-sm">{label}</span>
+                                <div className="flex items-center gap-0.5">
+                                  {[1,2,3,4,5].map(n => (
+                                    <button
+                                      key={n}
+                                      type="button"
+                                      onClick={() => setWorkerCriteria(c => ({ ...c, [key]: n }))}
+                                      className="p-0.5 disabled:opacity-50"
+                                      disabled={submittingReview === s.id}
+                                    >
+                                      <Star className={`h-5 w-5 transition ${n <= (workerCriteria as any)[key] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             ))}
                           </div>
                         )}
-                        <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} disabled={submittingReview === s.id} />
+                        <Textarea
+                          placeholder={role === "worker"
+                            ? "Scrivi una breve recensione sulla tua esperienza..."
+                            : "Commento (opzionale)"}
+                          value={comment}
+                          onChange={e => setComment(e.target.value.slice(0, 500))}
+                          rows={3}
+                          maxLength={500}
+                          disabled={submittingReview === s.id}
+                        />
+                        {role === "worker" && (
+                          <div className="text-[11px] text-muted-foreground text-right">{comment.length}/500</div>
+                        )}
                         {role === "restaurant" && (
                           <ReviewLabelsPicker
                             positive={positiveLabels}
@@ -917,8 +948,27 @@ function ShiftsPage() {
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 }); setPositiveLabels([]); setNegativeLabels([]); setWouldRehire(null); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
-                          <Star className="h-4 w-4" /> Lascia recensione
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => {
+                            if (role === "worker" && isShiftNotEnded(s)) {
+                              setReviewNotAvailableOpen(true);
+                              return;
+                            }
+                            setReviewOpen(s.id);
+                            setRating(5);
+                            setComment("");
+                            setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+                            setWorkerCriteria({ overall: 5, communication: 5, clarity: 5, payment_fairness: 5, work_environment: 5 });
+                            setPositiveLabels([]);
+                            setNegativeLabels([]);
+                            setWouldRehire(null);
+                            setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
+                          }}
+                          disabled={submittingReview === s.id}
+                        >
+                          <Star className="h-4 w-4" /> {role === "worker" ? "Recensisci ristoratore" : "Lascia recensione"}
                         </Button>
                         {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (
                           <span className="text-xs text-muted-foreground">Obbligatoria per contattare nuovi lavoratori</span>
