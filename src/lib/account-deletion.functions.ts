@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { deleteAuthUserSafely } from "@/lib/account-deletion.server";
 
 const DeleteAccountInput = z.object({
   reason: z.enum([
@@ -46,7 +46,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
     if (!result?.ok) return result ?? { ok: false, error_code: "delete_failed" };
 
     try {
-      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      const { error: authError } = await deleteAuthUserSafely(userId);
       if (authError) {
         console.error("[deleteAccount] auth user deletion failed", authError);
       }
