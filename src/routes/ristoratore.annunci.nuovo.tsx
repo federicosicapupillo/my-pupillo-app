@@ -81,6 +81,7 @@ type FormState = {
   operational_notes: string;
   restaurant_name: string;
   address: string;
+  street_number: string;
   city: string;
   district: string;
   province: string;
