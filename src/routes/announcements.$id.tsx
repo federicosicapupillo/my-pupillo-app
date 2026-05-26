@@ -336,9 +336,15 @@ function AnnouncementDetail() {
     const becameFull = newFilled >= workersNeeded;
     // Track the latest assigned worker on the announcement; mark as `assigned`
     // only when the last slot is taken (multi-position aware).
-    const annPatch: Record<string, unknown> = { assigned_worker_id: app.worker_id };
-    if (becameFull) annPatch.status = "assigned";
-    await supabase.from("announcements").update(annPatch).eq("id", id);
+    if (becameFull) {
+      await supabase.from("announcements")
+        .update({ status: "assigned", assigned_worker_id: app.worker_id })
+        .eq("id", id);
+    } else {
+      await supabase.from("announcements")
+        .update({ assigned_worker_id: app.worker_id })
+        .eq("id", id);
+    }
     // When the announcement becomes fully covered, auto-close every still-open
     // application with a neutral notice — no rejection wording, no info about
     // who was picked. If positions are still open, leave other candidates open.
