@@ -118,6 +118,27 @@ function Browse() {
     const { data: anns } = await (supabase as any).from("announcements_public").select("*").eq("status","active").order("created_at",{ascending:false}).limit(200);
     const list = (anns as Ann[]) ?? [];
     setItems(list);
+    // Multi-position: load workers_needed per announcement and accepted count.
+    const annIds = list.map(a => a.id);
+    if (annIds.length) {
+      const [{ data: jr }, { data: accepted }] = await Promise.all([
+        supabase.from("job_requests").select("announcement_id, workers_needed").in("announcement_id", annIds),
+        supabase.from("applications").select("announcement_id").in("announcement_id", annIds).eq("status", "accepted"),
+      ]);
+      const needMap: Record<string, number> = {};
+      (jr ?? []).forEach((r: any) => {
+        if (!r.announcement_id) return;
+        const n = Math.max(1, Number(r.workers_needed ?? 1) || 1);
+        needMap[r.announcement_id] = Math.max(needMap[r.announcement_id] ?? 0, n);
+      });
+      const fillMap: Record<string, number> = {};
+      (accepted ?? []).forEach((r: any) => {
+        if (!r.announcement_id) return;
+        fillMap[r.announcement_id] = (fillMap[r.announcement_id] ?? 0) + 1;
+      });
+      setWorkersNeededById(needMap);
+      setFilledById(fillMap);
+    }
     const restIds = Array.from(new Set(list.map(a => a.restaurant_id)));
     if (restIds.length) {
       const { data: rs } = await supabase.from("profiles")
