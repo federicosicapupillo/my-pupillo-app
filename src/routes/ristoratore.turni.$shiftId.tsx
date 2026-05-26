@@ -633,6 +633,16 @@ function ShiftDetailPage() {
                   "{workerReview.comment}"
                 </blockquote>
               )}
+              <div className="pt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRevisionOpen(true)}
+                  className="gap-1 text-muted-foreground hover:text-destructive"
+                >
+                  <Flag className="h-4 w-4" /> Richiedi revisione
+                </Button>
+              </div>
             </div>
           )}
         </div>
