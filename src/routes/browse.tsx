@@ -619,6 +619,11 @@ function Browse() {
         onClose={() => setSuccessApp(null)}
         onGoToApplications={() => { const id = successApp?.id; setSuccessApp(null); if (id) navigate({ to: "/messages/$id", params: { id } }); }}
       />
+      <AlreadyInContactDialog
+        open={!!alreadyContactAppId}
+        applicationId={alreadyContactAppId}
+        onClose={() => setAlreadyContactAppId(null)}
+      />
     </AppShell>
   );
 }
