@@ -16,6 +16,8 @@ import { setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -54,6 +56,7 @@ function Page() {
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
+  const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -207,21 +210,35 @@ function Page() {
     if (!inviteFor || !user) return;
     setInviteSubmitting(true);
     try {
-      // Avoid duplicate active applications for same announcement+worker
-      const { data: existing } = await supabase.from("applications")
-        .select("id").eq("announcement_id", annId).eq("worker_id", inviteFor.worker_id).maybeSingle();
-      let appId = existing?.id as string | undefined;
-      if (!appId) {
-        const { data: ins, error } = await supabase.from("applications")
-          .insert({
-            announcement_id: annId,
-            worker_id: inviteFor.worker_id,
-            restaurant_id: user.id,
-            status: "pending",
-          }).select("id").single();
-        if (error) throw error;
-        appId = ins!.id;
+      // Blocca se esiste già una candidatura/proposta attiva per questo annuncio.
+      const contact = await checkExistingContact({
+        announcementId: annId,
+        workerId: inviteFor.worker_id,
+      });
+      if (contact.existing) {
+        setInviteFor(null);
+        setAlreadyContactAppId(contact.applicationId);
+        setInviteSubmitting(false);
+        return;
       }
+      const { data: ins, error } = await supabase.from("applications")
+        .insert({
+          announcement_id: annId,
+          worker_id: inviteFor.worker_id,
+          restaurant_id: user.id,
+          status: "pending",
+        }).select("id").single();
+      if (error) {
+        if (isDuplicateContactError(error)) {
+          const c = await checkExistingContact({ announcementId: annId, workerId: inviteFor.worker_id });
+          setInviteFor(null);
+          setAlreadyContactAppId(c.existing ? c.applicationId : null);
+          setInviteSubmitting(false);
+          return;
+        }
+        throw error;
+      }
+      const appId = ins!.id as string;
       // Auto-message: graphical shift proposal pre-filled with announcement details.
       await sendShiftProposal({
         applicationId: appId,
@@ -511,6 +528,11 @@ function Page() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlreadyInContactDialog
+        open={!!alreadyContactAppId}
+        applicationId={alreadyContactAppId}
+        onClose={() => setAlreadyContactAppId(null)}
+      />
     </AppShell>
   );
 }

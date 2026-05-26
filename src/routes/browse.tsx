@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -99,6 +101,7 @@ function Browse() {
   const [successApp, setSuccessApp] = useState<{ id: string; ann: Ann } | null>(null);
   const [applyMode, setApplyMode] = useState<"accept" | "counter">("accept");
   const [counterAmount, setCounterAmount] = useState<string>("");
+  const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
@@ -227,15 +230,13 @@ function Browse() {
       toast.error("Turno non valido.");
       return;
     }
-    const { data: existingApp } = await supabase
-      .from("applications")
-      .select("id")
-      .eq("announcement_id", confirmAnn.id)
-      .eq("worker_id", workerProfile.id)
-      .maybeSingle();
-    if (existingApp?.id) {
-      toast.info("Hai già inviato la candidatura per questo turno.");
+    const contact = await checkExistingContact({
+      announcementId: confirmAnn.id,
+      workerId: workerProfile.id,
+    });
+    if (contact.existing) {
       setConfirmAnn(null);
+      setAlreadyContactAppId(contact.applicationId);
       return;
     }
     const needed = Math.max(1, Number(availability.workers_needed ?? workersNeededById[confirmAnn.id] ?? 1) || 1);
@@ -282,8 +283,13 @@ function Browse() {
     if (error) {
       setSubmitting(false);
       const msg = (error.message || "").toLowerCase();
-      if (msg.includes("duplicate") || msg.includes("unique")) {
-        return toast.info("Hai già inviato la candidatura per questo turno.");
+      if (isDuplicateContactError(error) || msg.includes("duplicate") || msg.includes("unique")) {
+        const contact = await checkExistingContact({
+          announcementId: confirmAnn.id,
+          workerId: workerProfile.id,
+        });
+        setAlreadyContactAppId(contact.existing ? contact.applicationId : null);
+        return;
       }
       // Only claim the shift is full after confirming with fresh data — never
       // infer it from a generic RLS error.
@@ -612,6 +618,11 @@ function Browse() {
         open={!!successApp}
         onClose={() => setSuccessApp(null)}
         onGoToApplications={() => { const id = successApp?.id; setSuccessApp(null); if (id) navigate({ to: "/messages/$id", params: { id } }); }}
+      />
+      <AlreadyInContactDialog
+        open={!!alreadyContactAppId}
+        applicationId={alreadyContactAppId}
+        onClose={() => setAlreadyContactAppId(null)}
       />
     </AppShell>
   );

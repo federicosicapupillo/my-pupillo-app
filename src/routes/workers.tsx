@@ -20,7 +20,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
-import { sendShiftProposal, hasUnansweredProposal } from "@/lib/shift-proposal";
+import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useProfileGate } from "@/components/ProfileGate";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
@@ -30,6 +30,8 @@ import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/forma
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
 import { summarizeWeeklyAvailability, formatAvailabilitySlotsForDay } from "@/lib/availability-summary";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -233,6 +235,7 @@ function WorkersPage() {
   const [detailsWorker, setDetailsWorker] = useState<W | null>(null);
   const [missingAnnOpen, setMissingAnnOpen] = useState(false);
   const [sendingProposal, setSendingProposal] = useState(false);
+  const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const [restaurantDefaults, setRestaurantDefaults] = useState<{
     contact_name: string | null;
     arrival_minutes: number | null;
@@ -434,50 +437,36 @@ function WorkersPage() {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
     setSendingProposal(true);
     try {
-      let applicationId: string | null = null;
-      const { data: existing } = await supabase
-        .from("applications")
-        .select("id")
-        .eq("announcement_id", selected)
-        .eq("worker_id", workerId)
-        .eq("restaurant_id", user.id)
-        .maybeSingle();
-      if (existing?.id) {
-        applicationId = existing.id;
-      } else {
-        const { data: created, error } = await supabase
-          .from("applications")
-          .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
-          .select("id")
-          .single();
-        if (error || !created) { toast.error(error?.message ?? "Errore"); setSendingProposal(false); return; }
-        applicationId = created.id;
-      }
-      if (!applicationId) { toast.error("Errore nella creazione della conversazione."); setSendingProposal(false); return; }
-      // Anti-duplicato: se esiste già una proposta per questo annuncio + lavoratore
-      // ancora senza risposta del lavoratore, non crearne un'altra: riapri la chat.
-      const { data: existingProposals } = await supabase
-        .from("messages")
-        .select("id")
-        .eq("application_id", applicationId)
-        .eq("template_id", "shift_proposal")
-        .eq("sender_id", user.id);
-      const proposalIds = ((existingProposals ?? []) as { id: string }[]).map((p) => p.id);
-      let answeredIds: string[] = [];
-      if (proposalIds.length > 0) {
-        const { data: responses } = await supabase
-          .from("proposal_responses")
-          .select("message_id")
-          .in("message_id", proposalIds);
-        answeredIds = ((responses ?? []) as { message_id: string }[]).map((r) => r.message_id);
-      }
-      const hasUnanswered = hasUnansweredProposal(proposalIds, answeredIds);
-      if (hasUnanswered) {
-        toast.info("Hai già inviato una proposta a questo lavoratore per questo annuncio.");
+      // Anti-doppio contatto: blocca se esiste già una candidatura/proposta
+      // attiva tra questo ristoratore e questo lavoratore per lo stesso annuncio.
+      const contact = await checkExistingContact({
+        announcementId: selected,
+        workerId,
+      });
+      if (contact.existing) {
         setProposalWorker(null);
-        nav({ to: "/messages/$id", params: { id: applicationId } });
+        setAlreadyContactAppId(contact.applicationId);
+        setSendingProposal(false);
         return;
       }
+      const { data: created, error } = await supabase
+        .from("applications")
+        .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
+        .select("id")
+        .single();
+      if (error || !created) {
+        if (error && isDuplicateContactError(error)) {
+          const c = await checkExistingContact({ announcementId: selected, workerId });
+          setProposalWorker(null);
+          setAlreadyContactAppId(c.existing ? c.applicationId : null);
+          setSendingProposal(false);
+          return;
+        }
+        toast.error(error?.message ?? "Errore");
+        setSendingProposal(false);
+        return;
+      }
+      const applicationId = created.id;
       await sendShiftProposal({
         applicationId,
         announcementId: selected,
@@ -1051,6 +1040,11 @@ function WorkersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlreadyInContactDialog
+        open={!!alreadyContactAppId}
+        applicationId={alreadyContactAppId}
+        onClose={() => setAlreadyContactAppId(null)}
+      />
     </AppShell>
   );
 }

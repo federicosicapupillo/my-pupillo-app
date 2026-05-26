@@ -26,6 +26,8 @@ import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/anno
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
   Dialog,
@@ -1701,6 +1703,7 @@ function ProposalConfirmDialog({
 }) {
   const navigate = useNavigate();
   const [sending, setSending] = useState(false);
+  const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
 
   if (!target) return null;
   const { ann, candidate } = target;
@@ -1716,27 +1719,35 @@ function ProposalConfirmDialog({
     if (!restaurantId) { toast.error("Sessione non valida"); return; }
     setSending(true);
     try {
-      const { data: existing } = await supabase
-        .from("applications")
-        .select("id")
-        .eq("announcement_id", ann.id)
-        .eq("worker_id", candidate.worker_id)
-        .maybeSingle();
-      let appId = (existing as any)?.id as string | undefined;
-      if (!appId) {
-        const { data: ins, error } = await supabase
-          .from("applications")
-          .insert({
-            announcement_id: ann.id,
-            worker_id: candidate.worker_id,
-            restaurant_id: restaurantId,
-            status: "pending",
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        appId = (ins as any).id as string;
+      const contact = await checkExistingContact({
+        announcementId: ann.id,
+        workerId: candidate.worker_id,
+      });
+      if (contact.existing) {
+        setAlreadyContactAppId(contact.applicationId);
+        setSending(false);
+        return;
       }
+      const { data: ins, error } = await supabase
+        .from("applications")
+        .insert({
+          announcement_id: ann.id,
+          worker_id: candidate.worker_id,
+          restaurant_id: restaurantId,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+      if (error) {
+        if (isDuplicateContactError(error)) {
+          const c = await checkExistingContact({ announcementId: ann.id, workerId: candidate.worker_id });
+          setAlreadyContactAppId(c.existing ? c.applicationId : null);
+          setSending(false);
+          return;
+        }
+        throw error;
+      }
+      const appId = (ins as any).id as string;
       await sendShiftProposal({
         applicationId: appId!,
         announcementId: ann.id,
@@ -1761,6 +1772,12 @@ function ProposalConfirmDialog({
   };
 
   return (
+    <>
+    <AlreadyInContactDialog
+      open={!!alreadyContactAppId}
+      applicationId={alreadyContactAppId}
+      onClose={() => { setAlreadyContactAppId(null); onClose(); }}
+    />
     <Dialog open={!!target} onOpenChange={(v) => { if (!v && !sending) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1823,6 +1840,7 @@ function ProposalConfirmDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
 

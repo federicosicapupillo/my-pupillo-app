@@ -28,6 +28,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -298,16 +300,34 @@ function AnnouncementDetail() {
   }, [ann]);
 
   const [applying, setApplying] = useState(false);
+  const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const applyAsWorker = async () => {
     if (!user || !ann) return;
     setApplying(true);
+    const contact = await checkExistingContact({
+      announcementId: ann.id,
+      workerId: user.id,
+    });
+    if (contact.existing) {
+      setApplying(false);
+      setAlreadyContactAppId(contact.applicationId);
+      return;
+    }
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
       worker_id: user.id,
       restaurant_id: ann.restaurant_id,
     }).select("id").single();
     setApplying(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      if (isDuplicateContactError(error)) {
+        const c = await checkExistingContact({ announcementId: ann.id, workerId: user.id });
+        setAlreadyContactAppId(c.existing ? c.applicationId : null);
+        return;
+      }
+      toast.error(error.message);
+      return;
+    }
     if (app?.id) {
       await supabase.from("notifications").insert({
         user_id: ann.restaurant_id,
@@ -483,6 +503,11 @@ function AnnouncementDetail() {
 
   return (
     <AppShell>
+      <AlreadyInContactDialog
+        open={!!alreadyContactAppId}
+        applicationId={alreadyContactAppId}
+        onClose={() => setAlreadyContactAppId(null)}
+      />
       <Dialog open={fullDialogOpen} onOpenChange={setFullDialogOpen}>
         <DialogContent>
           <DialogHeader>
