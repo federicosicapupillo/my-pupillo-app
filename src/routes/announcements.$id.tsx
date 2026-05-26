@@ -24,6 +24,8 @@ import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from 
 import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { getShiftEndDate, getShiftStartDate } from "@/lib/announcement-time";
 import { useProfileGate } from "@/components/ProfileGate";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -152,6 +154,7 @@ function AnnouncementDetail() {
   const [jobRequest, setJobRequest] = useState<JobRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [fullDialogOpen, setFullDialogOpen] = useState(false);
 
   const load = async () => {
     // Try the base table first — succeeds for the owning restaurant, the
@@ -258,6 +261,16 @@ function AnnouncementDetail() {
     () => (user && apps.length ? apps.find(a => a.worker_id === user.id) ?? null : null),
     [apps, user],
   );
+  const workersNeeded = Math.max(1, Number(jobRequest?.workers_needed ?? 1) || 1);
+  const acceptedApps = useMemo(() => apps.filter(a => a.status === "accepted"), [apps]);
+  const acceptedWorkerIds = useMemo(() => acceptedApps.map(a => a.worker_id), [acceptedApps]);
+  const filledCount = acceptedApps.length;
+  const isFull = isAnnouncementFull(workersNeeded, filledCount);
+  const positionsBadge = positionsLabel(workersNeeded, filledCount);
+  const assignedNames = useMemo(
+    () => acceptedApps.map(a => workers[a.worker_id]?.full_name || "Lavoratore"),
+    [acceptedApps, workers],
+  );
   const canSeeAddress = canSeePreciseAddress({
     isOwner,
     isAdmin: role === "admin",
@@ -303,17 +316,33 @@ function AnnouncementDetail() {
   };
 
   const accept = async (app: App) => {
+    if (isFull) {
+      setFullDialogOpen(true);
+      return;
+    }
     setBusyId(app.id);
     const { error } = await supabase.from("applications").update({ status: "accepted" }).eq("id", app.id);
     setBusyId(null);
-    if (error) { toast.error(error.message); return; }
-    await supabase.from("announcements")
-      .update({ status: "assigned", assigned_worker_id: app.worker_id })
-      .eq("id", id);
-    // The slot is now covered (Pupillo's announcement model is single-worker):
-    // auto-close every still-open application for this announcement with a
-    // neutral notice — no rejection wording, no info about who was picked.
-    try {
+    if (error) {
+      // DB trigger may reject with announcement_full when concurrent accepts race past the limit.
+      if (String(error.message || "").toLowerCase().includes("announcement_full")) {
+        setFullDialogOpen(true);
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
+    const newFilled = filledCount + 1;
+    const becameFull = newFilled >= workersNeeded;
+    // Track the latest assigned worker on the announcement; mark as `assigned`
+    // only when the last slot is taken (multi-position aware).
+    const annPatch: Record<string, unknown> = { assigned_worker_id: app.worker_id };
+    if (becameFull) annPatch.status = "assigned";
+    await supabase.from("announcements").update(annPatch).eq("id", id);
+    // When the announcement becomes fully covered, auto-close every still-open
+    // application with a neutral notice — no rejection wording, no info about
+    // who was picked. If positions are still open, leave other candidates open.
+    if (becameFull) try {
       const { data: others } = await supabase
         .from("applications")
         .select("id, worker_id")
@@ -352,7 +381,7 @@ function AnnouncementDetail() {
         }));
       }
     } catch (e) { console.error("[accept] auto-close failed", e); }
-    toast.success("Lavoratore assegnato!");
+    toast.success(becameFull ? "Turno completo: tutte le posizioni sono state assegnate." : "Lavoratore assegnato!");
     load();
   };
   const reject = async (app: App) => {
