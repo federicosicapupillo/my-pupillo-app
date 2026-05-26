@@ -1178,6 +1178,20 @@ function ShiftsPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={reviewNotAvailableOpen} onOpenChange={(open) => { if (!open) setReviewNotAvailableOpen(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recensione non ancora disponibile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>Potrai lasciare la recensione al ristoratore solo dopo la fine del turno.</p>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => setReviewNotAvailableOpen(false)}>Ho capito</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={!!cancelDialog}
         onOpenChange={(open) => {
