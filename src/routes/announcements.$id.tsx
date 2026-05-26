@@ -794,6 +794,7 @@ function AnnouncementDetail() {
         </section>
       )}
     </AppShell>
+    {/* unreachable: anchor for editor — replaced below */}
   );
 }
 
