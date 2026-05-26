@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_feedback: {
+        Row: {
+          created_at: string
+          custom_reason: string | null
+          id: string
+          profile_id: string | null
+          reason: string | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          custom_reason?: string | null
+          id?: string
+          profile_id?: string | null
+          reason?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          custom_reason?: string | null
+          id?: string
+          profile_id?: string | null
+          reason?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       activity_logs: {
         Row: {
           action: string
@@ -788,6 +818,7 @@ export type Database = {
           default_required_skills: string[] | null
           default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
+          deleted_at: string | null
           distinct_restaurants_count: number
           email: string | null
           email_summary_sent_at: string | null
@@ -809,6 +840,7 @@ export type Database = {
           id_document_number: string | null
           id_document_path: string | null
           id_document_type: string | null
+          is_deleted: boolean
           is_demo: boolean
           is_motorized: boolean | null
           languages: string[] | null
@@ -943,6 +975,7 @@ export type Database = {
           default_required_skills?: string[] | null
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
+          deleted_at?: string | null
           distinct_restaurants_count?: number
           email?: string | null
           email_summary_sent_at?: string | null
@@ -964,6 +997,7 @@ export type Database = {
           id_document_number?: string | null
           id_document_path?: string | null
           id_document_type?: string | null
+          is_deleted?: boolean
           is_demo?: boolean
           is_motorized?: boolean | null
           languages?: string[] | null
@@ -1098,6 +1132,7 @@ export type Database = {
           default_required_skills?: string[] | null
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
+          deleted_at?: string | null
           distinct_restaurants_count?: number
           email?: string | null
           email_summary_sent_at?: string | null
@@ -1119,6 +1154,7 @@ export type Database = {
           id_document_number?: string | null
           id_document_path?: string | null
           id_document_type?: string | null
+          is_deleted?: boolean
           is_demo?: boolean
           is_motorized?: boolean | null
           languages?: string[] | null
@@ -2134,6 +2170,10 @@ export type Database = {
         Args: { _amount: number; _reason: string; _reference_id?: string }
         Returns: boolean
       }
+      delete_my_account: {
+        Args: { _custom_reason?: string; _reason?: string }
+        Returns: Json
+      }
       generate_referral_code: { Args: never; Returns: string }
       get_announcement_contact: {
         Args: { _announcement_id: string }
@@ -2264,6 +2304,7 @@ export type Database = {
           default_required_skills: string[] | null
           default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
+          deleted_at: string | null
           distinct_restaurants_count: number
           email: string | null
           email_summary_sent_at: string | null
@@ -2285,6 +2326,7 @@ export type Database = {
           id_document_number: string | null
           id_document_path: string | null
           id_document_type: string | null
+          is_deleted: boolean
           is_demo: boolean
           is_motorized: boolean | null
           languages: string[] | null

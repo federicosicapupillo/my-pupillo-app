@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { useNavigate } from "@tanstack/react-router";
 import { KeyRound, Trash2, FileText, Coins, Star, Eye, EyeOff, User, Building2, BadgeCheck, ShieldCheck } from "lucide-react";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
@@ -28,6 +27,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { WORKER_CITIES } from "@/lib/worker-cities";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { Lock } from "lucide-react";
+import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 
 const NATIONALITIES = [
   "Italiana", "Albanese", "Rumena", "Marocchina", "Egiziana", "Tunisina",
@@ -68,8 +68,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
-  const { profile, role, user, signOut, refresh } = useAuth();
-  const nav = useNavigate();
+  const { profile, role, user, refresh } = useAuth();
   const uploadAvatarFn = useServerFn(uploadAvatar);
   const currentAvatarUrl = useAvatarUrl(role === "worker" ? user?.id : null);
   const [pwd, setPwd] = useState("");
@@ -82,6 +81,7 @@ function Profile() {
   const [workerDraft, setWorkerDraft] = useState(() => workerDraftFromProfile(profile));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (role !== "worker" || editingWorker) return;
@@ -162,20 +162,7 @@ function Profile() {
     else { toast.success("Password aggiornata correttamente."); setPwd(""); setPwdConfirm(""); }
   };
 
-  const deleteAccount = async () => {
-    if (!user) return;
-    if (!confirm("Sei sicuro di voler cancellare definitivamente il tuo account? L'operazione è irreversibile.")) return;
-    // Soft delete: clear personal data + sign out (hard delete needs admin)
-    const { error } = await supabase.from("profiles").update({
-      full_name: null, phone: null, address: null, business_name: null, vat_number: null,
-      venue_type: null, price_range: null, professional_profile: null, age: null,
-      languages: [], profile_completed: false, terms_accepted: false,
-    }).eq("id", user.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Profilo cancellato. Contatta il supporto per la rimozione completa dei dati.");
-    await signOut();
-    nav({ to: "/" });
-  };
+  // Account deletion is handled by DeleteAccountDialog (multi-step flow + RPC).
 
   return (
     <AppShell>
@@ -349,8 +336,9 @@ function Profile() {
       <div className="mt-6 max-w-2xl rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
         <h2 className="font-semibold flex items-center gap-2 text-destructive"><Trash2 className="h-4 w-4" />Cancella account</h2>
         <p className="text-sm text-muted-foreground mt-1">Cancella i tuoi dati personali dalla piattaforma. L'operazione è irreversibile.</p>
-        <Button variant="destructive" className="mt-3" onClick={deleteAccount}>Cancella il mio account</Button>
+        <Button variant="destructive" className="mt-3" onClick={() => setDeleteOpen(true)}>Elimina account</Button>
       </div>
+      <DeleteAccountDialog open={deleteOpen} onOpenChange={setDeleteOpen} />
     </AppShell>
   );
 }

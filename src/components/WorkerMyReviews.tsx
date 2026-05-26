@@ -16,7 +16,7 @@ type ReviewRow = {
   is_visible_to_worker: boolean | null;
 };
 
-type AuthorInfo = { id: string; business_name: string | null; full_name: string | null; city: string | null };
+type AuthorInfo = { id: string; business_name: string | null; full_name: string | null; city: string | null; is_deleted?: boolean | null };
 type ShiftInfo = { id: string; restaurant_id: string | null };
 type AnnInfo = { id: string; professional_profile: string | null; job_city: string | null };
 type AppInfo = { id: string; announcement_id: string | null; status: string | null };
@@ -70,7 +70,7 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
 
       const [au, sh, ap] = await Promise.all([
         authorIds.length
-          ? supabase.from("profiles").select("id,business_name,full_name,city").in("id", authorIds)
+          ? supabase.from("profiles").select("id,business_name,full_name,city,is_deleted").in("id", authorIds)
           : Promise.resolve({ data: [] as any[] }),
         shiftIds.length
           ? supabase.from("shifts").select("id,restaurant_id").in("id", shiftIds)
@@ -141,9 +141,12 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
         const app = r.application_id ? apps[r.application_id] : null;
         const ann = app?.announcement_id ? anns[app.announcement_id] : null;
         // Show restaurant name only if worker actually performed a shift, or the application was accepted.
+        const isDeleted = !!author?.is_deleted;
         const canShowName = !!shift || app?.status === "accepted";
         const realName = author?.business_name || author?.full_name || null;
-        const restaurantLabel = canShowName && realName ? realName : "Ristorante partner";
+        const restaurantLabel = isDeleted
+          ? "Ristoratore eliminato"
+          : (canShowName && realName ? realName : "Ristorante partner");
         const roleLabel = ann?.professional_profile || null;
         const cityLabel = ann?.job_city || author?.city || null;
         return (
