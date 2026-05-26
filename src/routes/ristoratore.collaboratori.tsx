@@ -528,6 +528,11 @@ function Page() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlreadyInContactDialog
+        open={!!alreadyContactAppId}
+        applicationId={alreadyContactAppId}
+        onClose={() => setAlreadyContactAppId(null)}
+      />
     </AppShell>
   );
 }
