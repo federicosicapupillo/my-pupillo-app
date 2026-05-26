@@ -123,20 +123,17 @@ function Browse() {
     // Multi-position: load workers_needed per announcement and accepted count.
     const annIds = list.map(a => a.id);
     if (annIds.length) {
-      const [{ data: jr }, { data: accepted }] = await Promise.all([
-        supabase.from("job_requests").select("announcement_id, workers_needed").in("announcement_id", annIds),
-        supabase.from("applications").select("announcement_id").in("announcement_id", annIds).eq("status", "accepted"),
-      ]);
+      const availability = await Promise.all(
+        annIds.map(async (id) => {
+          const { data } = await (supabase as any).rpc("get_application_availability", { _announcement_id: id }).maybeSingle();
+          return { id, data };
+        }),
+      );
       const needMap: Record<string, number> = {};
-      (jr ?? []).forEach((r: any) => {
-        if (!r.announcement_id) return;
-        const n = Math.max(1, Number(r.workers_needed ?? 1) || 1);
-        needMap[r.announcement_id] = Math.max(needMap[r.announcement_id] ?? 0, n);
-      });
       const fillMap: Record<string, number> = {};
-      (accepted ?? []).forEach((r: any) => {
-        if (!r.announcement_id) return;
-        fillMap[r.announcement_id] = (fillMap[r.announcement_id] ?? 0) + 1;
+      availability.forEach(({ id, data }) => {
+        needMap[id] = Math.max(1, Number(data?.workers_needed ?? 1) || 1);
+        fillMap[id] = Math.max(0, Number(data?.accepted_count ?? 0) || 0);
       });
       setWorkersNeededById(needMap);
       setFilledById(fillMap);
@@ -223,13 +220,10 @@ function Browse() {
       toast.error("Profilo lavoratore non trovato.");
       return;
     }
-    const { data: jobRequest } = await supabase
-      .from("job_requests")
-      .select("id, announcement_id, workers_needed")
-      .eq("announcement_id", confirmAnn.id)
-      .limit(1)
+    const { data: availability } = await (supabase as any)
+      .rpc("get_application_availability", { _announcement_id: confirmAnn.id })
       .maybeSingle();
-    if (!jobRequest?.announcement_id) {
+    if (!availability?.restaurant_id) {
       toast.error("Turno non valido.");
       return;
     }
@@ -244,13 +238,9 @@ function Browse() {
       setConfirmAnn(null);
       return;
     }
-    const needed = Math.max(1, Number(jobRequest.workers_needed ?? workersNeededById[confirmAnn.id] ?? 1) || 1);
-    const { count: acceptedCount } = await supabase
-      .from("applications")
-      .select("id", { count: "exact", head: true })
-      .eq("announcement_id", confirmAnn.id)
-      .eq("status", "accepted");
-    if ((acceptedCount ?? 0) >= needed) {
+    const needed = Math.max(1, Number(availability.workers_needed ?? workersNeededById[confirmAnn.id] ?? 1) || 1);
+    const acceptedCount = Math.max(0, Number(availability.accepted_count ?? 0) || 0);
+    if (acceptedCount >= needed) {
       toast.error("Turno già assegnato. Questo turno non è più disponibile perché tutte le posizioni sono già state assegnate.");
       setConfirmAnn(null);
       return;
@@ -297,14 +287,14 @@ function Browse() {
       }
       // Only claim the shift is full after confirming with fresh data — never
       // infer it from a generic RLS error.
-      const { count: acceptedCount } = await supabase
-        .from("applications")
-        .select("id", { count: "exact", head: true })
-        .eq("announcement_id", confirmAnn.id)
-        .eq("status", "accepted");
-      if ((acceptedCount ?? 0) >= needed) {
+      const { data: freshAvailability } = await (supabase as any)
+        .rpc("get_application_availability", { _announcement_id: confirmAnn.id })
+        .maybeSingle();
+      const freshNeeded = Math.max(1, Number(freshAvailability?.workers_needed ?? needed) || 1);
+      const freshAcceptedCount = Math.max(0, Number(freshAvailability?.accepted_count ?? 0) || 0);
+      if (freshAcceptedCount >= freshNeeded) {
         return toast.error(
-          needed > 1
+          freshNeeded > 1
             ? "Turno completo. Tutte le posizioni sono già state assegnate."
             : "Turno già assegnato. Questo turno non è più disponibile perché tutte le posizioni sono già state assegnate.",
         );
