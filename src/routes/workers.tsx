@@ -30,6 +30,8 @@ import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/forma
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
 import { summarizeWeeklyAvailability, formatAvailabilitySlotsForDay } from "@/lib/availability-summary";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -233,6 +235,7 @@ function WorkersPage() {
   const [detailsWorker, setDetailsWorker] = useState<W | null>(null);
   const [missingAnnOpen, setMissingAnnOpen] = useState(false);
   const [sendingProposal, setSendingProposal] = useState(false);
+  const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const [restaurantDefaults, setRestaurantDefaults] = useState<{
     contact_name: string | null;
     arrival_minutes: number | null;
