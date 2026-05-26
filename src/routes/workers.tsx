@@ -547,21 +547,30 @@ function WorkersPage() {
 
   const matchesText = (w: W, term: string, cat: Category, sub: string): boolean => {
     if (!term) return true;
-    const t = term.toLowerCase().trim();
+    const t = term.toLowerCase().trim().replace(/\s+/g, " ");
     const f = fieldsOf(w);
     const allText = [f.fullName, f.title, f.description, f.roles, f.langs, f.city, f.zone, f.province, f.badge, f.availability].join(" ");
+    // Helper: ricerca nome multi-token. "Mar Ros" deve trovare "Mario Rossi".
+    // Ogni token deve matchare almeno un campo nome (first / last / fullName).
+    const matchesNameTokens = (): boolean => {
+      const tokens = t.split(" ").filter(Boolean);
+      if (tokens.length === 0) return true;
+      return tokens.every((tok) =>
+        f.first.includes(tok) || f.last.includes(tok) || f.fullName.includes(tok)
+      );
+    };
     if (cat === "name_profile") {
       switch (sub) {
         case "Nome": return f.first.includes(t);
         case "Cognome": return f.last.includes(t);
-        case "Nome completo": return f.fullName.includes(t);
+        case "Nome completo": return matchesNameTokens();
         case "Titolo profilo": return f.title.includes(t);
         case "Descrizione profilo": return f.description.includes(t);
-        default: return (f.fullName + " " + f.title + " " + f.description).includes(t);
+        default: return matchesNameTokens() || f.title.includes(t) || f.description.includes(t);
       }
     }
-    if (cat === "role") return (f.roles + " " + f.fullName).includes(t);
-    if (cat === "skill") return (f.title + " " + f.description + " " + f.fullName + " " + f.city).includes(t);
+    if (cat === "role") return (f.roles).includes(t) || matchesNameTokens();
+    if (cat === "skill") return (f.title + " " + f.description + " " + f.city).includes(t) || matchesNameTokens();
     if (cat === "language") return (f.langs + " " + f.city + " " + f.title).includes(t);
     if (cat === "location") {
       switch (sub) {
@@ -571,9 +580,10 @@ function WorkersPage() {
         default: return (f.city + " " + f.zone + " " + f.province).includes(t);
       }
     }
-    if (cat === "badge") return (f.badge + " " + f.fullName + " " + f.roles).includes(t);
-    if (cat === "availability") return (f.availability + " " + f.fullName + " " + f.roles).includes(t);
-    return allText.includes(t); // all + custom
+    if (cat === "badge") return (f.badge + " " + f.roles).includes(t) || matchesNameTokens();
+    if (cat === "availability") return (f.availability + " " + f.roles).includes(t) || matchesNameTokens();
+    // all + custom: include il fullName per default
+    return allText.includes(t) || matchesNameTokens();
   };
 
   const q = qInput.trim();
