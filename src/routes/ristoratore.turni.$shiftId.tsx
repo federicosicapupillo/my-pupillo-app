@@ -141,6 +141,16 @@ function ShiftDetailPage() {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [lastReview, setLastReview] = useState<ConfirmedWorkerLastReview | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [workerReview, setWorkerReview] = useState<{
+    id: string;
+    rating: number;
+    comment: string | null;
+    communication: number | null;
+    professionalism: number | null;
+    reliability: number | null;
+    staff_collaboration: number | null;
+    created_at: string;
+  } | null>(null);
   const [jobReq, setJobReq] = useState<JobReq | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
   const [appCount, setAppCount] = useState<number>(0);
