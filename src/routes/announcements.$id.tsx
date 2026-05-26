@@ -26,6 +26,8 @@ import { getShiftEndDate, getShiftStartDate } from "@/lib/announcement-time";
 import { useProfileGate } from "@/components/ProfileGate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
+import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
+import { CREDITS_PER_HIRE } from "@/lib/pricing";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
