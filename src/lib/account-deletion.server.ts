@@ -176,10 +176,10 @@ export async function softDeleteAccount(userId: string, reason: AccountDeletionR
     ]);
 
     let authAction: "deleted" | "disabled" | "failed" = "failed";
-    const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(userId, true);
+    const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (!deleteUserError) {
       authAction = "deleted";
-      console.info("[deleteAccount] Auth user deleted/soft-deleted", { userId });
+      console.info("[deleteAccount] Auth user deleted", { userId });
     } else {
       console.error("[deleteAccount] Auth user deletion failed; trying to disable user", {
         userId,
