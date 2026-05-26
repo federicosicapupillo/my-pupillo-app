@@ -756,6 +756,36 @@ function AnnouncementDetail() {
 
       <RequirementsSection ann={ann} isOwner={isOwner} />
 
+      {isOwner && acceptedApps.length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            {acceptedApps.length === 1 && workersNeeded === 1
+              ? "Lavoratore confermato"
+              : `Lavoratori confermati ${acceptedApps.length}/${workersNeeded}`}
+          </h2>
+          {workersNeeded - acceptedApps.length > 0 && (
+            <p className="mb-3 text-sm text-muted-foreground">
+              {workersNeeded - acceptedApps.length} posizion{workersNeeded - acceptedApps.length === 1 ? "e" : "i"} ancora disponibil{workersNeeded - acceptedApps.length === 1 ? "e" : "i"}
+            </p>
+          )}
+          <div className="grid gap-3 md:grid-cols-2">
+            {acceptedApps.map(a => {
+              const w = workers[a.worker_id];
+              if (!w) return null;
+              return (
+                <ConfirmedWorkerCard
+                  key={a.id}
+                  worker={w as any}
+                  applicationId={a.id}
+                  lastReview={lastReviews[a.worker_id] ?? null}
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <LocationAccessSection ann={ann} restaurant={restaurant} isOwner={isOwner} canSeeAddress={canSeeAddress} />
 
       {isOwner && (
