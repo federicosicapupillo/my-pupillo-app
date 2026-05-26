@@ -683,6 +683,7 @@ function AnnouncementDetail() {
                 const isAccepted = a.status === "accepted";
                 const isRejected = ["rejected","not_interested","expired"].includes(a.status);
                 const canAct = !isAnnInactive && (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
+                const acceptBlocked = isFull && !isAccepted;
                 return (
                   <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -759,7 +760,8 @@ function AnnouncementDetail() {
                           <Button
                             size="sm"
                             className={`gap-1 ${!canPerformOperationalAction ? "opacity-70" : ""}`}
-                            disabled={busyId === a.id}
+                            disabled={busyId === a.id || acceptBlocked}
+                            title={acceptBlocked ? "Turno già completo" : undefined}
                             onClick={requireComplete(() => accept(a))}
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
