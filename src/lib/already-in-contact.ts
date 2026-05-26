@@ -32,7 +32,7 @@ export async function checkExistingContact(params: {
     .select("id, status")
     .eq("announcement_id", announcementId)
     .eq("worker_id", workerId)
-    .in("status", ACTIVE_CONTACT_STATUSES as unknown as string[])
+    .in("status", ACTIVE_CONTACT_STATUSES as unknown as ActiveContactStatus[])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
