@@ -690,6 +690,17 @@ function ShiftDetailPage() {
         )}
       </div>
 
+      {workerReview && user && shift && (
+        <RequestReviewRevisionDialog
+          open={revisionOpen}
+          onOpenChange={setRevisionOpen}
+          reviewId={workerReview.id}
+          targetId={shift.restaurant_id}
+          authorId={shift.worker_id}
+          reviewSummary={`Recensione del lavoratore ${worker?.full_name ?? ""} del ${new Date(workerReview.created_at).toLocaleDateString("it-IT")} — valutazione ${workerReview.rating}/5`}
+        />
+      )}
+
       <AlertDialog open={confirmOpen} onOpenChange={(o) => !closing && setConfirmOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
