@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/format";
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
+import { summarizeWeeklyAvailability, formatAvailabilitySlotsForDay } from "@/lib/availability-summary";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -38,6 +39,8 @@ export const Route = createFileRoute("/workers")({
 type W = {
   id: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   age: number | null;
   languages: string[] | null;
   spoken_languages: any;
@@ -217,6 +220,7 @@ function WorkersPage() {
   const [rel, setRel] = useState<Record<string, WorkerRel>>({});
   // Dialog "Invia proposta di lavoro"
   const [proposalWorker, setProposalWorker] = useState<W | null>(null);
+  const [detailsWorker, setDetailsWorker] = useState<W | null>(null);
   const [missingAnnOpen, setMissingAnnOpen] = useState(false);
   const [sendingProposal, setSendingProposal] = useState(false);
   const [restaurantDefaults, setRestaurantDefaults] = useState<{
@@ -231,7 +235,7 @@ function WorkersPage() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count")
+        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count")
         .eq("account_status", "active")
         // Profili non completi al 100% non sono operativi:
         // non devono comparire come disponibili/online/contattabili.
@@ -457,16 +461,21 @@ function WorkersPage() {
   };
 
   const fieldsOf = (w: W) => {
-    // Privacy: per i lavoratori che NON hanno mai lavorato con questo
-    // ristoratore non esponiamo il nome reale nemmeno alla ricerca testuale —
-    // altrimenti il ristoratore potrebbe inferire l'identità tramite query.
-    const workedTogether = !!rel[w.id]?.workedWith;
-    const fullName = workedTogether ? (w.full_name ?? "").toLowerCase() : "";
-    const [first = "", ...rest] = fullName.split(" ");
+    // Per la RICERCA (filtro) usiamo i campi reali del profilo (case-insensitive).
+    // La PRIVACY è gestita a livello di VISUALIZZAZIONE da `displayWorkerName`:
+    // il ristoratore può filtrare per nome ma vedrà comunque solo il nome
+    // pubblico finché non c'è una relazione confermata.
+    const first = (w.first_name ?? "").toLowerCase().trim();
+    const last = (w.last_name ?? "").toLowerCase().trim();
+    const fullName = (
+      (w.full_name && w.full_name.trim()) ||
+      [w.first_name, w.last_name].filter(Boolean).join(" ")
+    ).toLowerCase().trim();
+    const [fnFirst = "", ...fnRest] = fullName.split(/\s+/);
     return {
       fullName,
-      first,
-      last: rest.join(" "),
+      first: first || fnFirst,
+      last: last || fnRest.join(" "),
       title: (w.professional_profile ?? "").toLowerCase(),
       description: (w.short_bio ?? "").toLowerCase(),
       roles: [w.primary_role ?? "", ...(w.secondary_roles ?? [])].join(" ").toLowerCase(),
@@ -540,21 +549,30 @@ function WorkersPage() {
 
   const matchesText = (w: W, term: string, cat: Category, sub: string): boolean => {
     if (!term) return true;
-    const t = term.toLowerCase().trim();
+    const t = term.toLowerCase().trim().replace(/\s+/g, " ");
     const f = fieldsOf(w);
     const allText = [f.fullName, f.title, f.description, f.roles, f.langs, f.city, f.zone, f.province, f.badge, f.availability].join(" ");
+    // Helper: ricerca nome multi-token. "Mar Ros" deve trovare "Mario Rossi".
+    // Ogni token deve matchare almeno un campo nome (first / last / fullName).
+    const matchesNameTokens = (): boolean => {
+      const tokens = t.split(" ").filter(Boolean);
+      if (tokens.length === 0) return true;
+      return tokens.every((tok) =>
+        f.first.includes(tok) || f.last.includes(tok) || f.fullName.includes(tok)
+      );
+    };
     if (cat === "name_profile") {
       switch (sub) {
         case "Nome": return f.first.includes(t);
         case "Cognome": return f.last.includes(t);
-        case "Nome completo": return f.fullName.includes(t);
+        case "Nome completo": return matchesNameTokens();
         case "Titolo profilo": return f.title.includes(t);
         case "Descrizione profilo": return f.description.includes(t);
-        default: return (f.fullName + " " + f.title + " " + f.description).includes(t);
+        default: return matchesNameTokens() || f.title.includes(t) || f.description.includes(t);
       }
     }
-    if (cat === "role") return (f.roles + " " + f.fullName).includes(t);
-    if (cat === "skill") return (f.title + " " + f.description + " " + f.fullName + " " + f.city).includes(t);
+    if (cat === "role") return (f.roles).includes(t) || matchesNameTokens();
+    if (cat === "skill") return (f.title + " " + f.description + " " + f.city).includes(t) || matchesNameTokens();
     if (cat === "language") return (f.langs + " " + f.city + " " + f.title).includes(t);
     if (cat === "location") {
       switch (sub) {
@@ -564,9 +582,10 @@ function WorkersPage() {
         default: return (f.city + " " + f.zone + " " + f.province).includes(t);
       }
     }
-    if (cat === "badge") return (f.badge + " " + f.fullName + " " + f.roles).includes(t);
-    if (cat === "availability") return (f.availability + " " + f.fullName + " " + f.roles).includes(t);
-    return allText.includes(t); // all + custom
+    if (cat === "badge") return (f.badge + " " + f.roles).includes(t) || matchesNameTokens();
+    if (cat === "availability") return (f.availability + " " + f.roles).includes(t) || matchesNameTokens();
+    // all + custom: include il fullName per default
+    return allText.includes(t) || matchesNameTokens();
   };
 
   const q = qInput.trim();
@@ -917,6 +936,7 @@ function WorkersPage() {
                 <div className="mt-2"><SpokenLanguagesView value={legacy} /></div>
               ) : null;
             })()}
+            <AvailabilityBlock weekly={w.weekly_availability} onDetails={() => setDetailsWorker(w)} />
             <Button
               size="sm"
               className="mt-4 w-full gap-1"
@@ -962,6 +982,11 @@ function WorkersPage() {
         sending={sendingProposal}
         onCancel={() => setProposalWorker(null)}
         onConfirm={() => proposalWorker && sendProposal(proposalWorker.id)}
+      />
+      <AvailabilityDetailsDialog
+        worker={detailsWorker}
+        onClose={() => setDetailsWorker(null)}
+        workedTogether={detailsWorker ? !!rel[detailsWorker.id]?.workedWith : false}
       />
       <Dialog open={missingAnnOpen} onOpenChange={setMissingAnnOpen}>
         <DialogContent>
@@ -1225,5 +1250,111 @@ function WorkersMapSection({
       </>
       )}
     </div>
+  );
+}
+
+function AvailabilityBlock({
+  weekly,
+  onDetails,
+}: {
+  weekly: string[] | null;
+  onDetails: () => void;
+}) {
+  const summary = summarizeWeeklyAvailability(weekly, null, new Date());
+  return (
+    <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Disponibilità
+        </div>
+        {(summary.kind === "wide" ||
+          (summary.kind === "lines" && summary.truncated)) && (
+          <button
+            type="button"
+            onClick={onDetails}
+            className="text-[11px] font-medium text-primary hover:underline"
+          >
+            Vedi dettagli
+          </button>
+        )}
+      </div>
+      <div className="mt-1 text-xs text-foreground">
+        {summary.kind === "none" && (
+          <span className="text-muted-foreground">Disponibilità non indicata</span>
+        )}
+        {summary.kind === "today" && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[11px] font-medium">
+              Disponibile oggi
+            </span>
+            {summary.hours && <span className="text-muted-foreground">{summary.hours}</span>}
+          </div>
+        )}
+        {summary.kind === "all_week" && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-medium">Tutta la settimana</span>
+            {summary.hours && <span className="text-muted-foreground">· {summary.hours}</span>}
+          </div>
+        )}
+        {summary.kind === "wide" && (
+          <span className="font-medium">
+            {summary.totalDays} giorni disponibili · Disponibilità ampia
+          </span>
+        )}
+        {summary.kind === "lines" && (
+          <div className="space-y-0.5">
+            {summary.lines.map((l) => (
+              <div key={l}>{l}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AvailabilityDetailsDialog({
+  worker,
+  workedTogether,
+  onClose,
+}: {
+  worker: W | null;
+  workedTogether: boolean;
+  onClose: () => void;
+}) {
+  const open = !!worker;
+  const days = worker ? formatAvailabilitySlotsForDay(worker.weekly_availability) : [];
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Disponibilità completa</DialogTitle>
+          <DialogDescription>
+            {worker ? displayWorkerName(worker, workedTogether) : ""}
+          </DialogDescription>
+        </DialogHeader>
+        {days.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Disponibilità non indicata.</p>
+        ) : (
+          <div className="space-y-2">
+            {days.map((d) => (
+              <div key={d.day} className="flex items-start gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                <div className="w-12 font-medium">{d.day}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {d.slots.map((s) => (
+                    <span key={s.label} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">
+                      {s.label} · {s.hours}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Chiudi</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
