@@ -282,7 +282,8 @@ function NewRestaurantJobRequest() {
     setF(prev => ({
       ...prev,
       restaurant_name: prev.restaurant_name || p.business_name || p.full_name || "",
-      address: prev.address || p.address || [p.street, p.street_number].filter(Boolean).join(" ") || "",
+      address: prev.address || p.street || p.address || "",
+      street_number: prev.street_number || (p.street_number ? String(p.street_number) : ""),
       city: prev.city || p.city || "",
       district: prev.district || p.neighborhood || "",
       province: prev.province || p.province || "",
