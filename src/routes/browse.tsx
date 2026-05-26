@@ -111,7 +111,10 @@ function Browse() {
 
   const load = async () => {
     setLoading(true);
-    const { data: anns } = await supabase.from("announcements").select("*").eq("status","active").order("created_at",{ascending:false}).limit(200);
+    // Use the PII-safe view for public browsing (excludes job contact details
+    // and exact GPS). Workers only see full row via base table once they have
+    // an application/shift on the announcement (enforced by RLS).
+    const { data: anns } = await (supabase as any).from("announcements_public").select("*").eq("status","active").order("created_at",{ascending:false}).limit(200);
     const list = (anns as Ann[]) ?? [];
     setItems(list);
     const restIds = Array.from(new Set(list.map(a => a.restaurant_id)));

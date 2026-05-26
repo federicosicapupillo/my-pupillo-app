@@ -77,7 +77,9 @@ function RestaurantDetailPage() {
           )
           .eq("id", id)
           .maybeSingle(),
-        supabase.from("announcements")
+        // Public restaurant page: use PII-safe view so non-applicants don't
+        // hit RLS while still being kept away from contact details / exact GPS.
+        (supabase as any).from("announcements_public")
           .select("id, professional_profile, location_address, status, service_date, service_time, duration_hours, tariff_amount, tariff_type, created_at")
           .eq("restaurant_id", id)
           .order("created_at", { ascending: false })
