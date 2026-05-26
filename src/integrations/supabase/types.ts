@@ -1781,7 +1781,278 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      announcements_public: {
+        Row: {
+          assigned_worker_id: string | null
+          beard_allowed: string | null
+          created_at: string | null
+          deposit_paid: boolean | null
+          dress_code_items: string[] | null
+          dress_code_notes: string | null
+          duration_hours: number | null
+          end_date: string | null
+          end_time: string | null
+          expires_at: string | null
+          id: string | null
+          is_demo: boolean | null
+          is_long_shift: boolean | null
+          job_city: string | null
+          job_country: string | null
+          job_location_notes: string | null
+          job_postal_code: string | null
+          job_province: string | null
+          language_requirements: string[] | null
+          languages: string[] | null
+          license_requirement: string | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
+          long_shift_reason: string | null
+          notes: string | null
+          piercings_allowed: string | null
+          professional_profile: string | null
+          required_skills: string[] | null
+          restaurant_id: string | null
+          reused_from_announcement_id: string | null
+          seed_batch_id: string | null
+          service_date: string | null
+          service_time: string | null
+          shift_duration_hours: number | null
+          speed: Database["public"]["Enums"]["service_speed"] | null
+          status: Database["public"]["Enums"]["announcement_status"] | null
+          tariff_amount: number | null
+          tariff_type: Database["public"]["Enums"]["tariff_type"] | null
+          tattoos_allowed: string | null
+        }
+        Insert: {
+          assigned_worker_id?: string | null
+          beard_allowed?: string | null
+          created_at?: string | null
+          deposit_paid?: boolean | null
+          dress_code_items?: string[] | null
+          dress_code_notes?: string | null
+          duration_hours?: number | null
+          end_date?: string | null
+          end_time?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_demo?: boolean | null
+          is_long_shift?: boolean | null
+          job_city?: string | null
+          job_country?: string | null
+          job_location_notes?: string | null
+          job_postal_code?: string | null
+          job_province?: string | null
+          language_requirements?: string[] | null
+          languages?: string[] | null
+          license_requirement?: string | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          long_shift_reason?: string | null
+          notes?: string | null
+          piercings_allowed?: string | null
+          professional_profile?: string | null
+          required_skills?: string[] | null
+          restaurant_id?: string | null
+          reused_from_announcement_id?: string | null
+          seed_batch_id?: string | null
+          service_date?: string | null
+          service_time?: string | null
+          shift_duration_hours?: number | null
+          speed?: Database["public"]["Enums"]["service_speed"] | null
+          status?: Database["public"]["Enums"]["announcement_status"] | null
+          tariff_amount?: number | null
+          tariff_type?: Database["public"]["Enums"]["tariff_type"] | null
+          tattoos_allowed?: string | null
+        }
+        Update: {
+          assigned_worker_id?: string | null
+          beard_allowed?: string | null
+          created_at?: string | null
+          deposit_paid?: boolean | null
+          dress_code_items?: string[] | null
+          dress_code_notes?: string | null
+          duration_hours?: number | null
+          end_date?: string | null
+          end_time?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_demo?: boolean | null
+          is_long_shift?: boolean | null
+          job_city?: string | null
+          job_country?: string | null
+          job_location_notes?: string | null
+          job_postal_code?: string | null
+          job_province?: string | null
+          language_requirements?: string[] | null
+          languages?: string[] | null
+          license_requirement?: string | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          long_shift_reason?: string | null
+          notes?: string | null
+          piercings_allowed?: string | null
+          professional_profile?: string | null
+          required_skills?: string[] | null
+          restaurant_id?: string | null
+          reused_from_announcement_id?: string | null
+          seed_batch_id?: string | null
+          service_date?: string | null
+          service_time?: string | null
+          shift_duration_hours?: number | null
+          speed?: Database["public"]["Enums"]["service_speed"] | null
+          status?: Database["public"]["Enums"]["announcement_status"] | null
+          tariff_amount?: number | null
+          tariff_type?: Database["public"]["Enums"]["tariff_type"] | null
+          tattoos_allowed?: string | null
+        }
+        Relationships: []
+      }
+      job_requests_public: {
+        Row: {
+          announcement_id: string | null
+          beard_allowed: string | null
+          break_included: boolean | null
+          city: string | null
+          contact_person_role: string | null
+          contact_person_role_other: string | null
+          country: string | null
+          created_at: string | null
+          description: string | null
+          district: string | null
+          dress_code_items: string[] | null
+          dress_code_notes: string | null
+          end_date: string | null
+          end_time: string | null
+          hourly_rate: number | null
+          id: string | null
+          is_demo: boolean | null
+          is_long_shift: boolean | null
+          language_requirements: string[] | null
+          license_requirement: string | null
+          long_shift_reason: string | null
+          operational_notes: string | null
+          piercings_allowed: string | null
+          postal_code: string | null
+          province: string | null
+          required_skills: string[] | null
+          restaurant_id: string | null
+          restaurant_name: string | null
+          restaurant_profile_id: string | null
+          role_required: string | null
+          seed_batch_id: string | null
+          shift_date: string | null
+          shift_duration_hours: number | null
+          start_time: string | null
+          status: string | null
+          tasks: string | null
+          tattoos_allowed: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string | null
+          worker_notes: string | null
+          workers_needed: number | null
+        }
+        Insert: {
+          announcement_id?: string | null
+          beard_allowed?: string | null
+          break_included?: boolean | null
+          city?: string | null
+          contact_person_role?: string | null
+          contact_person_role_other?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          district?: string | null
+          dress_code_items?: string[] | null
+          dress_code_notes?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          hourly_rate?: number | null
+          id?: string | null
+          is_demo?: boolean | null
+          is_long_shift?: boolean | null
+          language_requirements?: string[] | null
+          license_requirement?: string | null
+          long_shift_reason?: string | null
+          operational_notes?: string | null
+          piercings_allowed?: string | null
+          postal_code?: string | null
+          province?: string | null
+          required_skills?: string[] | null
+          restaurant_id?: string | null
+          restaurant_name?: string | null
+          restaurant_profile_id?: string | null
+          role_required?: string | null
+          seed_batch_id?: string | null
+          shift_date?: string | null
+          shift_duration_hours?: number | null
+          start_time?: string | null
+          status?: string | null
+          tasks?: string | null
+          tattoos_allowed?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          worker_notes?: string | null
+          workers_needed?: number | null
+        }
+        Update: {
+          announcement_id?: string | null
+          beard_allowed?: string | null
+          break_included?: boolean | null
+          city?: string | null
+          contact_person_role?: string | null
+          contact_person_role_other?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          district?: string | null
+          dress_code_items?: string[] | null
+          dress_code_notes?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          hourly_rate?: number | null
+          id?: string | null
+          is_demo?: boolean | null
+          is_long_shift?: boolean | null
+          language_requirements?: string[] | null
+          license_requirement?: string | null
+          long_shift_reason?: string | null
+          operational_notes?: string | null
+          piercings_allowed?: string | null
+          postal_code?: string | null
+          province?: string | null
+          required_skills?: string[] | null
+          restaurant_id?: string | null
+          restaurant_name?: string | null
+          restaurant_profile_id?: string | null
+          role_required?: string | null
+          seed_batch_id?: string | null
+          shift_date?: string | null
+          shift_duration_hours?: number | null
+          start_time?: string | null
+          status?: string | null
+          tasks?: string | null
+          tattoos_allowed?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          worker_notes?: string | null
+          workers_needed?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_requests_restaurant_profile_id_fkey"
+            columns: ["restaurant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       announcement_effective_end: {
