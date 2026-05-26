@@ -227,6 +227,7 @@ function Browse() {
       .from("job_requests")
       .select("id, announcement_id, workers_needed")
       .eq("announcement_id", confirmAnn.id)
+      .limit(1)
       .maybeSingle();
     if (!jobRequest?.announcement_id) {
       toast.error("Turno non valido.");
