@@ -309,13 +309,22 @@ function ShiftsPage() {
     if (!user) return;
     if (submittingReview) return;
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
+    // Guard: il lavoratore può recensire SOLO dopo la fine effettiva del turno.
+    if (role === "worker" && isShiftNotEnded(s)) {
+      setReviewNotAvailableOpen(true);
+      return;
+    }
     if (role === "restaurant" && !wouldRehire) {
       setReviewError(prev => ({ ...prev, [s.id]: "Indica se richiameresti questo lavoratore." }));
       toast.error("Indica se richiameresti questo lavoratore.");
       return;
     }
-    const avg = (criteria.punctuality + criteria.professionalism + criteria.competence + criteria.reliability + criteria.teamwork) / 5;
-    const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
+    const submittedRating =
+      role === "worker"
+        ? Math.max(1, Math.min(5, Math.round(Number(workerCriteria.overall) || 0)))
+        : Math.max(1, Math.min(5, Math.round(
+            (criteria.punctuality + criteria.professionalism + criteria.competence + criteria.reliability + criteria.teamwork) / 5,
+          )));
     setSubmittingReview(s.id);
     setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
     const tId = toast.loading("Invio recensione in corso…");
@@ -336,20 +345,46 @@ function ShiftsPage() {
       } as never).then(() => {}, () => {});
     };
     try {
-      const { error } = await supabase.from("reviews").insert({
-        author_id: user.id, target_id: targetId, shift_id: s.id,
-        rating: submittedRating, comment: comment.trim() || null,
-        punctuality: criteria.punctuality,
-        professionalism: criteria.professionalism,
-        competence: criteria.competence,
-        reliability: criteria.reliability,
-        teamwork: criteria.teamwork,
-        positive_tags: positiveLabels,
-        negative_tags: negativeLabels,
-        ...(role === "restaurant" ? { would_rehire: wouldRehire } : {}),
-      } as any);
+      const payload: any = role === "worker"
+        ? {
+            // Worker → Restaurant. Mappiamo i criteri ai campi esistenti:
+            //   communication       → communication
+            //   chiarezza istruzioni → professionalism
+            //   puntualità pagamenti → reliability
+            //   ambiente di lavoro  → staff_collaboration
+            author_id: user.id,
+            target_id: targetId,
+            shift_id: s.id,
+            announcement_id: s.announcement_id,
+            application_id: s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null,
+            rating: submittedRating,
+            comment: (comment || "").trim().slice(0, 500) || null,
+            communication: workerCriteria.communication,
+            professionalism: workerCriteria.clarity,
+            reliability: workerCriteria.payment_fairness,
+            staff_collaboration: workerCriteria.work_environment,
+          }
+        : {
+            author_id: user.id,
+            target_id: targetId,
+            shift_id: s.id,
+            rating: submittedRating,
+            comment: comment.trim() || null,
+            punctuality: criteria.punctuality,
+            professionalism: criteria.professionalism,
+            competence: criteria.competence,
+            reliability: criteria.reliability,
+            teamwork: criteria.teamwork,
+            positive_tags: positiveLabels,
+            negative_tags: negativeLabels,
+            would_rehire: wouldRehire,
+          };
+      const { error } = await supabase.from("reviews").insert(payload);
       if (error) {
-        const msg = error.message || "Errore sconosciuto";
+        const isDup = (error as any)?.code === "23505" || /duplicate|unique/i.test(error.message || "");
+        const msg = isDup
+          ? "Hai già lasciato una recensione per questo turno."
+          : (error.message || "Errore sconosciuto");
         toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
         setReviewError(prev => ({ ...prev, [s.id]: msg }));
         logActivity("review_submit_failed", { reason: "db_error", error_message: msg, error_code: (error as any)?.code ?? null });
