@@ -18,6 +18,7 @@ import {
   Flag, ThumbsUp, ThumbsDown, HelpCircle,
 } from "lucide-react";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
+import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
@@ -162,6 +163,7 @@ function ShiftDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
   const reviewRef = useRef<HTMLDivElement | null>(null);
+  const [revisionOpen, setRevisionOpen] = useState(false);
 
   const toggleFavorite = async () => {
     if (!user || !shift?.worker_id) return;
