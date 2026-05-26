@@ -452,6 +452,19 @@ function AnnouncementDetail() {
 
   return (
     <AppShell>
+      <Dialog open={fullDialogOpen} onOpenChange={setFullDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Turno già assegnato</DialogTitle>
+            <DialogDescription>
+              Questo annuncio ha già raggiunto il numero massimo di lavoratori richiesti. Non puoi assegnare altri candidati a questo turno.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setFullDialogOpen(false)}>Ho capito</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="mb-4">
         <Link to="/announcements"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Torna agli annunci</Button></Link>
       </div>
