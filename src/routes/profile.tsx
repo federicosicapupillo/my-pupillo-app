@@ -69,8 +69,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
-  const { profile, role, user, signOut, refresh } = useAuth();
-  const nav = useNavigate();
+  const { profile, role, user, refresh } = useAuth();
   const uploadAvatarFn = useServerFn(uploadAvatar);
   const currentAvatarUrl = useAvatarUrl(role === "worker" ? user?.id : null);
   const [pwd, setPwd] = useState("");
