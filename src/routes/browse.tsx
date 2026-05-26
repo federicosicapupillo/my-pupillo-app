@@ -92,6 +92,8 @@ function Browse() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [restaurant, setRestaurant] = useState<RestaurantInfo>(null);
   const [restaurantsById, setRestaurantsById] = useState<Record<string, { city: string | null; neighborhood: string | null }>>({});
+  const [workersNeededById, setWorkersNeededById] = useState<Record<string, number>>({});
+  const [filledById, setFilledById] = useState<Record<string, number>>({});
   const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successApp, setSuccessApp] = useState<{ id: string; ann: Ann } | null>(null);
