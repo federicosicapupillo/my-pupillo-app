@@ -56,6 +56,7 @@ function RestaurantDetailPage() {
   const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const [bookingResult, setBookingResult] = useState<null | {
     applicationId: string;
     annTitle: string;
@@ -107,12 +108,31 @@ function RestaurantDetailPage() {
   const submitBooking = async () => {
     if (!user || !confirmAnn) return;
     setSubmitting(true);
+    const contact = await checkExistingContact({
+      announcementId: confirmAnn.id,
+      workerId: user.id,
+    });
+    if (contact.existing) {
+      setSubmitting(false);
+      setConfirmAnn(null);
+      setAlreadyContactAppId(contact.applicationId);
+      return;
+    }
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: confirmAnn.id,
       worker_id: user.id,
       restaurant_id: id,
     }).select("id").single();
-    if (error) { setSubmitting(false); return toast.error(error.message); }
+    if (error) {
+      setSubmitting(false);
+      if (isDuplicateContactError(error)) {
+        const c = await checkExistingContact({ announcementId: confirmAnn.id, workerId: user.id });
+        setConfirmAnn(null);
+        setAlreadyContactAppId(c.existing ? c.applicationId : null);
+        return;
+      }
+      return toast.error(error.message);
+    }
     if (app?.id) {
       const autoBody =
         "Ciao! Ho inviato la mia candidatura per il turno pubblicato.\n" +
