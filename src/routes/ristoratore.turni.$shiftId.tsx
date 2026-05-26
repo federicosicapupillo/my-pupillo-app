@@ -573,6 +573,70 @@ function ShiftDetailPage() {
       )}
 
       {/* Card 4 — Azioni turno */}
+      {shift.status === "completed" && (
+        <div className="mt-4 rounded-2xl border bg-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-semibold">Recensione del lavoratore</div>
+            {workerReview && (
+              <span className="text-[11px] text-muted-foreground">
+                {new Date(workerReview.created_at).toLocaleDateString("it-IT")}
+              </span>
+            )}
+          </div>
+          {!workerReview ? (
+            <p className="text-sm text-muted-foreground">
+              Il lavoratore non ha ancora lasciato una recensione per questo turno.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5" aria-label={`Valutazione ${workerReview.rating} su 5`}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={`h-4 w-4 ${n <= (workerReview.rating ?? 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/40"}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm font-medium">{workerReview.rating}/5</span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                {workerReview.communication != null && (
+                  <div className="flex justify-between rounded-md bg-muted/40 px-2 py-1">
+                    <span className="text-muted-foreground">Comunicazione</span>
+                    <span className="font-medium">{workerReview.communication}/5</span>
+                  </div>
+                )}
+                {workerReview.professionalism != null && (
+                  <div className="flex justify-between rounded-md bg-muted/40 px-2 py-1">
+                    <span className="text-muted-foreground">Chiarezza istruzioni</span>
+                    <span className="font-medium">{workerReview.professionalism}/5</span>
+                  </div>
+                )}
+                {workerReview.reliability != null && (
+                  <div className="flex justify-between rounded-md bg-muted/40 px-2 py-1">
+                    <span className="text-muted-foreground">Puntualità pagamenti</span>
+                    <span className="font-medium">{workerReview.reliability}/5</span>
+                  </div>
+                )}
+                {workerReview.staff_collaboration != null && (
+                  <div className="flex justify-between rounded-md bg-muted/40 px-2 py-1">
+                    <span className="text-muted-foreground">Ambiente di lavoro</span>
+                    <span className="font-medium">{workerReview.staff_collaboration}/5</span>
+                  </div>
+                )}
+              </div>
+              {workerReview.comment && (
+                <blockquote className="border-l-2 border-primary/40 pl-3 text-sm italic text-muted-foreground">
+                  "{workerReview.comment}"
+                </blockquote>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Card 5 — Azioni turno */}
       <div ref={reviewRef} className={`mt-4 rounded-2xl border bg-card p-5 ${search.section === "recensione" ? "ring-2 ring-primary/40" : ""}`}>
         <div className="text-sm font-semibold mb-3">Azioni turno</div>
         <div className="flex flex-wrap gap-2">
