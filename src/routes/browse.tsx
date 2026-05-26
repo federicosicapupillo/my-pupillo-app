@@ -429,6 +429,17 @@ function Browse() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
+                  {(() => {
+                    const need = workersNeededById[a.id] ?? 1;
+                    const filled = filledById[a.id] ?? 0;
+                    if (need <= 1) return null;
+                    const remaining = Math.max(0, need - filled);
+                    return (
+                      <span className="absolute left-4 top-4 inline-flex items-center rounded-full bg-primary/15 text-primary text-[10px] font-semibold px-2 py-0.5">
+                        {remaining > 0 ? `${remaining}/${need} posti disponibili` : "Turno completo"}
+                      </span>
+                    );
+                  })()}
                   {rejected ? (
                     <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-destructive bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
                       <XCircle className="h-4 w-4" />
