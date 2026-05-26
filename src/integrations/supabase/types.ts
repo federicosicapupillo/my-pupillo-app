@@ -819,6 +819,7 @@ export type Database = {
           default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
           deleted_at: string | null
+          deletion_reason: string | null
           distinct_restaurants_count: number
           email: string | null
           email_summary_sent_at: string | null
@@ -976,6 +977,7 @@ export type Database = {
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
           deleted_at?: string | null
+          deletion_reason?: string | null
           distinct_restaurants_count?: number
           email?: string | null
           email_summary_sent_at?: string | null
@@ -1133,6 +1135,7 @@ export type Database = {
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
           deleted_at?: string | null
+          deletion_reason?: string | null
           distinct_restaurants_count?: number
           email?: string | null
           email_summary_sent_at?: string | null
@@ -2305,6 +2308,7 @@ export type Database = {
           default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
           deleted_at: string | null
+          deletion_reason: string | null
           distinct_restaurants_count: number
           email: string | null
           email_summary_sent_at: string | null
