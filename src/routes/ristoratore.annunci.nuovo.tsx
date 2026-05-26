@@ -81,6 +81,7 @@ type FormState = {
   operational_notes: string;
   restaurant_name: string;
   address: string;
+  street_number: string;
   city: string;
   district: string;
   province: string;
@@ -195,6 +196,7 @@ function NewRestaurantJobRequest() {
     operational_notes: "",
     restaurant_name: "",
     address: "",
+    street_number: "",
     city: "",
     district: "",
     province: "",
@@ -280,7 +282,8 @@ function NewRestaurantJobRequest() {
     setF(prev => ({
       ...prev,
       restaurant_name: prev.restaurant_name || p.business_name || p.full_name || "",
-      address: prev.address || p.address || [p.street, p.street_number].filter(Boolean).join(" ") || "",
+      address: prev.address || p.street || p.address || "",
+      street_number: prev.street_number || (p.street_number ? String(p.street_number) : ""),
       city: prev.city || p.city || "",
       district: prev.district || p.neighborhood || "",
       province: prev.province || p.province || "",
@@ -369,7 +372,8 @@ function NewRestaurantJobRequest() {
   }, [reuse]);
 
   const runGeocode = async () => {
-    const address = [f.address, f.city, f.province, f.country].filter(Boolean).join(", ");
+    const streetWithNumber = [f.address, f.street_number].map((s) => s.trim()).filter(Boolean).join(" ");
+    const address = [streetWithNumber, f.city, f.province, f.country].filter(Boolean).join(", ");
     if (address.trim().length < 5) return;
     abortRef.current?.abort();
     const ctrl = new AbortController();
@@ -392,12 +396,13 @@ function NewRestaurantJobRequest() {
   // Auto-geocode silently when address fields change (debounced).
   // Replaces the manual "Trova coordinate" button.
   useEffect(() => {
-    const address = [f.address, f.city, f.province, f.country].filter(Boolean).join(", ");
+    const streetWithNumber = [f.address, f.street_number].map((s) => s.trim()).filter(Boolean).join(" ");
+    const address = [streetWithNumber, f.city, f.province, f.country].filter(Boolean).join(", ");
     if (address.trim().length < 5) return;
     const t = setTimeout(() => { void runGeocode(); }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.address, f.city, f.province, f.country]);
+  }, [f.address, f.street_number, f.city, f.province, f.country]);
 
   const validate = () => {
     if (!user) return false;
@@ -418,6 +423,7 @@ function NewRestaurantJobRequest() {
     if (longReasonError) { toast.error(longReasonError); return false; }
     if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
     if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
+    if (!f.street_number.trim()) { toast.error("Inserisci il numero civico"); return false; }
     if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
       toast.error("La città selezionata non appartiene alla provincia scelta.");
       return false;
@@ -462,7 +468,8 @@ function NewRestaurantJobRequest() {
       ? "Presentarsi almeno 15 minuti prima del turno."
       : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
     const announcementStatus = status === "pubblicato" ? "active" : "draft";
-    const locationAddress = [f.address, f.district, f.city, f.province, f.postal_code, f.country].filter(Boolean).join(", ");
+    const streetWithNumber = [f.address, f.street_number].map((s) => s.trim()).filter(Boolean).join(" ");
+    const locationAddress = [streetWithNumber, f.district, f.city, f.province, f.postal_code, f.country].filter(Boolean).join(", ");
     const announcementPayload = {
       restaurant_id: user.id,
       service_date: f.shift_date,
@@ -491,7 +498,7 @@ function NewRestaurantJobRequest() {
       required_skills: skills,
       dress_code_items: dressItems,
       dress_code_notes: f.dress_code_notes || null,
-      job_address: f.address,
+      job_address: streetWithNumber || f.address,
       job_city: f.city || null,
       job_province: f.province || null,
       job_postal_code: f.postal_code || null,
@@ -540,7 +547,7 @@ function NewRestaurantJobRequest() {
       long_shift_reason: isLongShift ? longReasonTrimmed : null,
       status,
       restaurant_name: f.restaurant_name || null,
-      address: f.address,
+      address: streetWithNumber || f.address,
       city: f.city || null,
       district: f.district || null,
       province: f.province || null,
@@ -658,14 +665,14 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="1" title="Informazioni principali" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Ruolo cercato">
+            <Field label="Ruolo cercato" required>
               <Select value={f.role_required} onValueChange={v => { setField("role_required", v); setField("title", v); }}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo" /></SelectTrigger>
                 <SelectContent>{ROLE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
-            <Field label="Tariffa oraria">
+            <Field label="Tariffa oraria" required>
               <Select value={f.hourly_rate} onValueChange={v => setField("hourly_rate", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona tariffa" /></SelectTrigger>
                 <SelectContent>
@@ -675,10 +682,10 @@ function NewRestaurantJobRequest() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Data inizio turno">
+            <Field label="Data inizio turno" required>
               <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} min={todayISO} required />
             </Field>
-            <Field label="Ora inizio turno">
+            <Field label="Ora inizio turno" required>
               <Select value={f.start_time} onValueChange={v => setField("start_time", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -688,10 +695,10 @@ function NewRestaurantJobRequest() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Data fine turno">
+            <Field label="Data fine turno" required>
               <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || todayISO} required />
             </Field>
-            <Field label="Ora fine turno">
+            <Field label="Ora fine turno" required>
               <Select value={f.end_time} onValueChange={v => setField("end_time", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -760,9 +767,23 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="2" title="Luogo e accesso" subtitle="Precompilato dal profilo ristoratore, modificabile per questo singolo annuncio." />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nome locale"><Input value={f.restaurant_name} onChange={e => setField("restaurant_name", e.target.value)} /></Field>
-            <Field label="Indirizzo"><Input required value={f.address} onChange={e => setField("address", e.target.value)} /></Field>
-            <Field label="Provincia">
+            <Field label="Nome locale" required>
+              <Input required value={f.restaurant_name} onChange={e => setField("restaurant_name", e.target.value)} />
+            </Field>
+            <Field label="Via / Indirizzo" required>
+              <Input required placeholder="Es. Via Roma" value={f.address} onChange={e => setField("address", e.target.value)} />
+            </Field>
+            <Field label="Numero civico" required>
+              <Input
+                required
+                inputMode="text"
+                placeholder="Es. 12"
+                maxLength={10}
+                value={f.street_number}
+                onChange={e => setField("street_number", e.target.value)}
+              />
+            </Field>
+            <Field label="Provincia" required>
               <select
                 value={f.province}
                 onChange={(e) => { setField("province", e.target.value); setField("city", ""); setField("postal_code", ""); setField("district", ""); }}
@@ -772,7 +793,7 @@ function NewRestaurantJobRequest() {
                 {ITALIAN_LOCATIONS.map((p) => <option key={p.province_code} value={p.province}>{p.province} ({p.province_code})</option>)}
               </select>
             </Field>
-            <Field label="Città">
+            <Field label="Città" required>
               <select
                 value={f.city}
                 disabled={!f.province}
@@ -783,7 +804,7 @@ function NewRestaurantJobRequest() {
                 {citiesForProvince(f.province).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            <Field label="Zona/quartiere">
+            <Field label="Zona/quartiere" required>
               <DistrictField
                 province={f.province}
                 city={f.city}
@@ -815,7 +836,7 @@ function NewRestaurantJobRequest() {
             )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Anticipo richiesto all'ingresso">
+            <Field label="Anticipo richiesto all'ingresso" required>
               <div className="space-y-2">
                 <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
                   <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
@@ -831,7 +852,7 @@ function NewRestaurantJobRequest() {
             </Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
             <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
-            <Field label="Ruolo del referente">
+            <Field label="Ruolo del referente" required>
               <Select value={f.contact_person_role} onValueChange={(v) => setField("contact_person_role", v)}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo referente" /></SelectTrigger>
                 <SelectContent>
@@ -1005,8 +1026,19 @@ function SectionTitle({ number, title, subtitle }: { number: string; title: stri
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
+function Field({ label, children, required, error }: { label: string; children: ReactNode; required?: boolean; error?: string | null }) {
+  return (
+    <div className="space-y-1.5">
+      <Label>
+        {label}
+        {required && (
+          <span className="ml-0.5 text-destructive" aria-hidden="true" title="Campo obbligatorio">*</span>
+        )}
+      </Label>
+      {children}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
 }
 
 function ChoiceGroup({ title, items, selected, onToggle }: { title: string; items: readonly { value: string; label: string }[]; selected: string[]; onToggle: (value: string) => void }) {
