@@ -106,6 +106,15 @@ function ShiftsPage() {
   const [noShowNotes, setNoShowNotes] = useState("");
   const [noShowSubmitting, setNoShowSubmitting] = useState(false);
   const [notEndedDialog, setNotEndedDialog] = useState<Shift | null>(null);
+  const [reviewNotAvailableOpen, setReviewNotAvailableOpen] = useState(false);
+  // Criteri recensione lavoratore → ristoratore (form inline)
+  const [workerCriteria, setWorkerCriteria] = useState({
+    overall: 5,
+    communication: 5,
+    clarity: 5,
+    payment_fairness: 5,
+    work_environment: 5,
+  });
   const [cancelDialog, setCancelDialog] = useState<Shift | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
@@ -300,13 +309,22 @@ function ShiftsPage() {
     if (!user) return;
     if (submittingReview) return;
     const targetId = role === "restaurant" ? s.worker_id : s.restaurant_id;
+    // Guard: il lavoratore può recensire SOLO dopo la fine effettiva del turno.
+    if (role === "worker" && isShiftNotEnded(s)) {
+      setReviewNotAvailableOpen(true);
+      return;
+    }
     if (role === "restaurant" && !wouldRehire) {
       setReviewError(prev => ({ ...prev, [s.id]: "Indica se richiameresti questo lavoratore." }));
       toast.error("Indica se richiameresti questo lavoratore.");
       return;
     }
-    const avg = (criteria.punctuality + criteria.professionalism + criteria.competence + criteria.reliability + criteria.teamwork) / 5;
-    const submittedRating = Math.max(1, Math.min(5, Math.round(avg)));
+    const submittedRating =
+      role === "worker"
+        ? Math.max(1, Math.min(5, Math.round(Number(workerCriteria.overall) || 0)))
+        : Math.max(1, Math.min(5, Math.round(
+            (criteria.punctuality + criteria.professionalism + criteria.competence + criteria.reliability + criteria.teamwork) / 5,
+          )));
     setSubmittingReview(s.id);
     setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
     const tId = toast.loading("Invio recensione in corso…");
@@ -327,20 +345,46 @@ function ShiftsPage() {
       } as never).then(() => {}, () => {});
     };
     try {
-      const { error } = await supabase.from("reviews").insert({
-        author_id: user.id, target_id: targetId, shift_id: s.id,
-        rating: submittedRating, comment: comment.trim() || null,
-        punctuality: criteria.punctuality,
-        professionalism: criteria.professionalism,
-        competence: criteria.competence,
-        reliability: criteria.reliability,
-        teamwork: criteria.teamwork,
-        positive_tags: positiveLabels,
-        negative_tags: negativeLabels,
-        ...(role === "restaurant" ? { would_rehire: wouldRehire } : {}),
-      } as any);
+      const payload: any = role === "worker"
+        ? {
+            // Worker → Restaurant. Mappiamo i criteri ai campi esistenti:
+            //   communication       → communication
+            //   chiarezza istruzioni → professionalism
+            //   puntualità pagamenti → reliability
+            //   ambiente di lavoro  → staff_collaboration
+            author_id: user.id,
+            target_id: targetId,
+            shift_id: s.id,
+            announcement_id: s.announcement_id,
+            application_id: s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null,
+            rating: submittedRating,
+            comment: (comment || "").trim().slice(0, 500) || null,
+            communication: workerCriteria.communication,
+            professionalism: workerCriteria.clarity,
+            reliability: workerCriteria.payment_fairness,
+            staff_collaboration: workerCriteria.work_environment,
+          }
+        : {
+            author_id: user.id,
+            target_id: targetId,
+            shift_id: s.id,
+            rating: submittedRating,
+            comment: comment.trim() || null,
+            punctuality: criteria.punctuality,
+            professionalism: criteria.professionalism,
+            competence: criteria.competence,
+            reliability: criteria.reliability,
+            teamwork: criteria.teamwork,
+            positive_tags: positiveLabels,
+            negative_tags: negativeLabels,
+            would_rehire: wouldRehire,
+          };
+      const { error } = await supabase.from("reviews").insert(payload);
       if (error) {
-        const msg = error.message || "Errore sconosciuto";
+        const isDup = (error as any)?.code === "23505" || /duplicate|unique/i.test(error.message || "");
+        const msg = isDup
+          ? "Hai già lasciato una recensione per questo turno."
+          : (error.message || "Errore sconosciuto");
         toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
         setReviewError(prev => ({ ...prev, [s.id]: msg }));
         logActivity("review_submit_failed", { reason: "db_error", error_message: msg, error_code: (error as any)?.code ?? null });
@@ -491,20 +535,27 @@ function ShiftsPage() {
     if (filter === "assigned") return shifts.filter(s => s.status === "scheduled" && s.shift_date >= today);
     if (filter === "completed") return shifts.filter(s => s.status === "completed");
     if (filter === "past") return shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled");
-    if (filter === "to-review") return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
+    if (filter === "to-review") {
+      if (role === "worker") {
+        return shifts.filter(s => s.status === "completed" && !reviewMap[s.id]);
+      }
+      return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
+    }
     if (filter === "no_show") return shifts.filter(s => s.status === "no_show");
     return shifts;
-  }, [shifts, filter, reqByShift, today]);
+  }, [shifts, filter, reqByShift, today, role, reviewMap]);
 
   const counts = useMemo(() => {
     const assigned = shifts.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
     const past = shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled").length;
     const completed = shifts.filter(s => s.status === "completed").length;
-    const toReview = shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
+    const toReview = role === "worker"
+      ? shifts.filter(s => s.status === "completed" && !reviewMap[s.id]).length
+      : shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
     const noShow = shifts.filter(s => s.status === "no_show").length;
     const pending = role === "restaurant" ? pendingApps.length : 0;
     return { pending, assigned, completed, past, toReview, noShow };
-  }, [shifts, pendingApps, reqByShift, role, today]);
+  }, [shifts, pendingApps, reqByShift, role, today, reviewMap]);
 
   const displayShifts = useMemo(() => {
     const list = [...filtered];
@@ -824,15 +875,46 @@ function ShiftsPage() {
                             ))}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1">
-                            {[1,2,3,4,5].map(n => (
-                              <button key={n} type="button" onClick={() => setRating(n)} className="p-1 disabled:opacity-50" disabled={submittingReview === s.id}>
-                                <Star className={`h-6 w-6 transition ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
-                              </button>
+                          <div className="space-y-2">
+                            {([
+                              ["overall", "Valutazione generale"],
+                              ["communication", "Comunicazione"],
+                              ["clarity", "Chiarezza delle istruzioni"],
+                              ["payment_fairness", "Puntualità nei pagamenti / correttezza"],
+                              ["work_environment", "Ambiente di lavoro"],
+                            ] as const).map(([key, label]) => (
+                              <div key={key} className="flex items-center justify-between gap-3">
+                                <span className="text-sm">{label}</span>
+                                <div className="flex items-center gap-0.5">
+                                  {[1,2,3,4,5].map(n => (
+                                    <button
+                                      key={n}
+                                      type="button"
+                                      onClick={() => setWorkerCriteria(c => ({ ...c, [key]: n }))}
+                                      className="p-0.5 disabled:opacity-50"
+                                      disabled={submittingReview === s.id}
+                                    >
+                                      <Star className={`h-5 w-5 transition ${n <= (workerCriteria as any)[key] ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             ))}
                           </div>
                         )}
-                        <Textarea placeholder="Commento (opzionale)" value={comment} onChange={e => setComment(e.target.value)} rows={2} disabled={submittingReview === s.id} />
+                        <Textarea
+                          placeholder={role === "worker"
+                            ? "Scrivi una breve recensione sulla tua esperienza..."
+                            : "Commento (opzionale)"}
+                          value={comment}
+                          onChange={e => setComment(e.target.value.slice(0, 500))}
+                          rows={3}
+                          maxLength={500}
+                          disabled={submittingReview === s.id}
+                        />
+                        {role === "worker" && (
+                          <div className="text-[11px] text-muted-foreground text-right">{comment.length}/500</div>
+                        )}
                         {role === "restaurant" && (
                           <ReviewLabelsPicker
                             positive={positiveLabels}
@@ -866,8 +948,27 @@ function ShiftsPage() {
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button size="sm" className="gap-1.5" onClick={() => { setReviewOpen(s.id); setRating(5); setComment(""); setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 }); setPositiveLabels([]); setNegativeLabels([]); setWouldRehire(null); setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; }); }} disabled={submittingReview === s.id}>
-                          <Star className="h-4 w-4" /> Lascia recensione
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => {
+                            if (role === "worker" && isShiftNotEnded(s)) {
+                              setReviewNotAvailableOpen(true);
+                              return;
+                            }
+                            setReviewOpen(s.id);
+                            setRating(5);
+                            setComment("");
+                            setCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+                            setWorkerCriteria({ overall: 5, communication: 5, clarity: 5, payment_fairness: 5, work_environment: 5 });
+                            setPositiveLabels([]);
+                            setNegativeLabels([]);
+                            setWouldRehire(null);
+                            setReviewError(prev => { const { [s.id]: _, ...rest } = prev; return rest; });
+                          }}
+                          disabled={submittingReview === s.id}
+                        >
+                          <Star className="h-4 w-4" /> {role === "worker" ? "Recensisci ristoratore" : "Lascia recensione"}
                         </Button>
                         {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (
                           <span className="text-xs text-muted-foreground">Obbligatoria per contattare nuovi lavoratori</span>
@@ -1073,6 +1174,20 @@ function ShiftsPage() {
           </div>
           <div className="flex justify-end pt-2">
             <Button onClick={() => setNotEndedDialog(null)}>Ho capito</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reviewNotAvailableOpen} onOpenChange={(open) => { if (!open) setReviewNotAvailableOpen(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recensione non ancora disponibile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>Potrai lasciare la recensione al ristoratore solo dopo la fine del turno.</p>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => setReviewNotAvailableOpen(false)}>Ho capito</Button>
           </div>
         </DialogContent>
       </Dialog>
