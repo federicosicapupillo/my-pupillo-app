@@ -496,6 +496,12 @@ function AnnouncementDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <InsufficientCreditsDialog
+        open={insufficientOpen}
+        onOpenChange={setInsufficientOpen}
+        currentCredits={creditsAvailable}
+        returnTo={`/announcements/${id}`}
+      />
       <div className="mb-4">
         <Link to="/announcements"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Torna agli annunci</Button></Link>
       </div>
