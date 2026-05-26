@@ -177,6 +177,11 @@ const emptyRel = (): WorkerRel => ({
   lastReviewRating: null,
   latestResponseAt: 0,
   latestResponseStatus: null,
+  lastAppId: null,
+  lastAppCreatedAt: 0,
+  hasShiftScheduled: false,
+  shiftAnnouncementIds: new Set<string>(),
+  workerLastReview: null,
 });
 
 type Tier = 0 | 1 | 2 | 3 | 4 | 5 | 6;
