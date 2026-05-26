@@ -220,6 +220,7 @@ function WorkersPage() {
   const [rel, setRel] = useState<Record<string, WorkerRel>>({});
   // Dialog "Invia proposta di lavoro"
   const [proposalWorker, setProposalWorker] = useState<W | null>(null);
+  const [detailsWorker, setDetailsWorker] = useState<W | null>(null);
   const [missingAnnOpen, setMissingAnnOpen] = useState(false);
   const [sendingProposal, setSendingProposal] = useState(false);
   const [restaurantDefaults, setRestaurantDefaults] = useState<{
