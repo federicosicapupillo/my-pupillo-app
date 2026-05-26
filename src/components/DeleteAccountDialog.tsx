@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,19 +10,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertTriangle } from "lucide-react";
+import { deleteAccount } from "@/lib/account-deletion.functions";
 
-const REASONS: { value: string; label: string }[] = [
+type DeletionReason =
+  | "non_uso_piu"
+  | "lavoro_altro_modo"
+  | "problemi_piattaforma"
+  | "problemi_notifiche_chat"
+  | "problemi_pagamenti_crediti"
+  | "cancellare_dati"
+  | "altro";
+
+const REASONS: { value: DeletionReason; label: string }[] = [
   { value: "non_uso_piu", label: "Non uso più Pupillo" },
-  { value: "poche_offerte", label: "Ho trovato poche offerte / pochi lavoratori" },
-  { value: "problemi_turno", label: "Ho avuto problemi con un turno" },
-  { value: "problemi_utente", label: "Ho avuto problemi con un utente" },
-  { value: "difficile_usare", label: "La piattaforma è difficile da usare" },
-  { value: "problemi_notifiche", label: "Problemi con notifiche, chat o candidatura" },
-  { value: "problemi_pagamenti", label: "Problemi con pagamenti o crediti" },
-  { value: "proteggere_dati", label: "Voglio proteggere meglio i miei dati" },
-  { value: "altro_account", label: "Ho creato un altro account" },
+  { value: "lavoro_altro_modo", label: "Ho trovato lavoro / collaboratori in altro modo" },
+  { value: "problemi_piattaforma", label: "Ho avuto problemi con la piattaforma" },
+  { value: "problemi_notifiche_chat", label: "Ho problemi con notifiche o chat" },
+  { value: "problemi_pagamenti_crediti", label: "Ho problemi con pagamenti o crediti" },
+  { value: "cancellare_dati", label: "Voglio cancellare i miei dati" },
   { value: "altro", label: "Altro" },
-  { value: "non_rispondo", label: "Preferisco non rispondere" },
 ];
 
 type Step = "confirm" | "reason" | "final" | "blocked" | "done";
@@ -30,12 +36,20 @@ type Step = "confirm" | "reason" | "final" | "blocked" | "done";
 export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { signOut } = useAuth();
   const nav = useNavigate();
+  const deleteAccountFn = useServerFn(deleteAccount);
   const [step, setStep] = useState<Step>("confirm");
-  const [reason, setReason] = useState<string>("");
+  const [reason, setReason] = useState<DeletionReason | "">("");
   const [customReason, setCustomReason] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
   const [blockedMessage, setBlockedMessage] = useState<string>("");
+  const logoutTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (logoutTimerRef.current) window.clearTimeout(logoutTimerRef.current);
+    };
+  }, []);
 
   const reset = () => {
     setStep("confirm");
@@ -52,19 +66,31 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   };
 
   const submit = async () => {
-    setBusy(true);
-    const payloadReason = reason || undefined;
-    const payloadCustom = reason === "altro" ? (customReason.trim().slice(0, 500) || undefined) : undefined;
-    const { data, error } = await supabase.rpc("delete_my_account", {
-      _reason: payloadReason,
-      _custom_reason: payloadCustom,
-    });
-    if (error) {
-      setBusy(false);
-      toast.error(error.message || "Errore durante l'eliminazione dell'account.");
+    if (!reason) {
+      toast.error("Seleziona il motivo della cancellazione.");
       return;
     }
-    const res = (data as { ok: boolean; error_code?: string; message?: string } | null) ?? null;
+    if (reason === "altro" && !customReason.trim()) {
+      toast.error("Inserisci il motivo della cancellazione.");
+      return;
+    }
+    if (confirmText !== "ELIMINA") {
+      toast.error("Per confermare devi scrivere ELIMINA");
+      return;
+    }
+    setBusy(true);
+    const payloadReason = reason;
+    const payloadCustom = reason === "altro" ? (customReason.trim().slice(0, 500) || undefined) : undefined;
+    let res: { ok: boolean; error_code?: string; message?: string } | null = null;
+    try {
+      res = await deleteAccountFn({
+        data: { reason: payloadReason, customReason: payloadCustom },
+      });
+    } catch {
+      setBusy(false);
+      toast.error("Non è stato possibile eliminare l'account. Riprova o contatta l'assistenza.");
+      return;
+    }
     if (!res?.ok) {
       setBusy(false);
       if (res?.error_code === "active_shifts") {
@@ -72,17 +98,26 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
         setStep("blocked");
         return;
       }
-      toast.error(res?.message || "Impossibile eliminare l'account adesso.");
+      if (res?.error_code === "missing_reason") toast.error("Seleziona il motivo della cancellazione.");
+      else if (res?.error_code === "missing_custom_reason") toast.error("Inserisci il motivo della cancellazione.");
+      else toast.error("Non è stato possibile eliminare l'account. Riprova o contatta l'assistenza.");
       return;
     }
     setStep("done");
+    toast.success("Account eliminato correttamente.");
     setBusy(false);
+    logoutTimerRef.current = window.setTimeout(() => {
+      void finishAndExit();
+    }, 1200);
   };
 
   const finishAndExit = async () => {
-    await signOut();
-    onOpenChange(false);
-    nav({ to: "/" });
+    try {
+      await signOut();
+    } finally {
+      onOpenChange(false);
+      nav({ to: "/" });
+    }
   };
 
   return (
@@ -110,11 +145,11 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
             <DialogHeader>
               <DialogTitle>Perché vuoi eliminare il tuo account?</DialogTitle>
               <DialogDescription>
-                La tua risposta ci aiuta a migliorare Pupillo. Puoi anche scegliere di non rispondere.
+                La tua risposta ci aiuta a migliorare Pupillo. Seleziona un motivo per continuare.
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[50vh] overflow-y-auto">
-              <RadioGroup value={reason} onValueChange={setReason} className="space-y-2">
+              <RadioGroup value={reason} onValueChange={(value) => setReason(value as DeletionReason)} className="space-y-2">
                 {REASONS.map((r) => (
                   <div key={r.value} className="flex items-center gap-2">
                     <RadioGroupItem value={r.value} id={`reason-${r.value}`} />
@@ -138,7 +173,13 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
             </div>
             <DialogFooter className="gap-2 sm:gap-2">
               <Button variant="outline" onClick={() => setStep("confirm")}>Indietro</Button>
-              <Button variant="destructive" onClick={() => setStep("final")}>Continua</Button>
+              <Button
+                variant="destructive"
+                disabled={!reason || (reason === "altro" && !customReason.trim())}
+                onClick={() => setStep("final")}
+              >
+                Continua
+              </Button>
             </DialogFooter>
           </>
         )}
@@ -164,7 +205,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
                 disabled={busy || confirmText !== "ELIMINA"}
                 onClick={submit}
               >
-                {busy ? "Eliminazione…" : "Elimina definitivamente"}
+                {busy ? "Eliminazione in corso…" : "Elimina definitivamente"}
               </Button>
             </DialogFooter>
           </>
@@ -187,7 +228,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
             <DialogHeader>
               <DialogTitle>Account eliminato</DialogTitle>
               <DialogDescription>
-                Il tuo account è stato eliminato correttamente. Le recensioni già inviate resteranno visibili in forma anonima, come previsto dalle regole della piattaforma.
+                Account eliminato correttamente. Le recensioni già inviate resteranno visibili in forma anonima, come previsto dalle regole della piattaforma.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

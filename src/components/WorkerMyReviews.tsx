@@ -145,7 +145,7 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
         const canShowName = !!shift || app?.status === "accepted";
         const realName = author?.business_name || author?.full_name || null;
         const restaurantLabel = isDeleted
-          ? "Ristoratore eliminato"
+          ? "Utente eliminato"
           : (canShowName && realName ? realName : "Ristorante partner");
         const roleLabel = ann?.professional_profile || null;
         const cityLabel = ann?.job_city || author?.city || null;

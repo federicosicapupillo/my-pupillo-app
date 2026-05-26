@@ -18,6 +18,7 @@ export type ConfirmedWorkerProfile = {
   phone_verified?: boolean | null;
   profile_completed?: boolean | null;
   id_document_path?: string | null;
+  is_deleted?: boolean | null;
 };
 
 export type ConfirmedWorkerLastReview = {
@@ -40,6 +41,7 @@ interface Props {
  */
 export function ConfirmedWorkerCard({ worker, applicationId, lastReview }: Props) {
   const fullName =
+    worker.is_deleted ? "Utente eliminato" :
     worker.full_name ||
     [worker.first_name, worker.last_name].filter(Boolean).join(" ") ||
     "Lavoratore";
