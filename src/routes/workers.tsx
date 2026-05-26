@@ -1065,6 +1065,145 @@ function initialsOf(name: string | null | undefined): string {
     .join("");
 }
 
+function ContactedWorkerCard({
+  worker: w,
+  rel: r,
+  selectedAnnouncementId,
+  onOpenChat,
+}: {
+  worker: W;
+  rel: WorkerRel | undefined;
+  selectedAnnouncementId: string | null;
+  onOpenChat: (applicationId: string) => void;
+}) {
+  const workedTogether = !!r?.workedWith;
+  const displayName = displayWorkerName(w, workedTogether);
+  // Stato del rapporto
+  const assignedToSelected =
+    !!selectedAnnouncementId && !!r?.shiftAnnouncementIds.has(selectedAnnouncementId);
+  let statusLabel: string | null = null;
+  let statusTone: "emerald" | "primary" | "muted" = "muted";
+  if (assignedToSelected) {
+    statusLabel = "Assegnato a questo turno";
+    statusTone = "primary";
+  } else if (r?.workedWith) {
+    statusLabel = "Collaboratore confermato";
+    statusTone = "emerald";
+  } else if (r?.hasShiftScheduled) {
+    statusLabel = "Turno assegnato";
+    statusTone = "emerald";
+  } else if (r?.hasAccepted) {
+    statusLabel = "Candidatura accettata";
+    statusTone = "primary";
+  } else if (r?.hasPending) {
+    statusLabel = "Candidatura in attesa";
+    statusTone = "muted";
+  } else if (r?.contacted) {
+    statusLabel = "Già contattato";
+    statusTone = "muted";
+  }
+  const statusClass =
+    statusTone === "emerald"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+      : statusTone === "primary"
+      ? "bg-primary/15 text-primary"
+      : "bg-muted text-foreground/80";
+  // Turni completati: valore reale dal profilo (aggiornato dai trigger sui turni).
+  const completedShifts = w.completed_shifts ?? 0;
+  // Ultima recensione ricevuta dal lavoratore.
+  const review = r?.workerLastReview ?? null;
+  const reviewComment = (review?.comment ?? "").trim();
+  const reviewCommentShort =
+    reviewComment.length > 120 ? reviewComment.slice(0, 120).trimEnd() + "…" : reviewComment;
+  const reviewRating = review?.rating ?? null;
+  const reviewDate = review?.created_at ? new Date(review.created_at) : null;
+  // Apri chat: usa l'applicazione più recente con questo lavoratore.
+  const appId = r?.lastAppId ?? null;
+  return (
+    <div className="rounded-2xl border bg-card p-5">
+      <div className="flex items-center gap-3">
+        <UserAvatar userId={w.id} name={displayName} className="h-12 w-12" />
+        <div className="min-w-0">
+          <div className="truncate font-semibold">{displayName}</div>
+          <div className="text-xs text-muted-foreground flex items-center gap-2">
+            {w.primary_role && <span className="capitalize">{w.primary_role}</span>}
+            {w.rating_avg != null && Number(w.rating_avg) > 0 && (
+              <span className="inline-flex items-center gap-0.5 text-amber-600">
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                <span className="tabular-nums font-medium">{Number(w.rating_avg).toFixed(1)}</span>
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      {statusLabel && (
+        <div className="mt-3">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${statusClass}`}>
+            <CheckCircle2 className="h-3 w-3" />
+            {statusLabel}
+          </span>
+        </div>
+      )}
+      <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+        <div className="text-xs font-medium text-muted-foreground">Turni svolti</div>
+        <div className="mt-0.5 font-semibold tabular-nums">
+          {completedShifts} {completedShifts === 1 ? "turno completato" : "turni completati"}
+        </div>
+      </div>
+      <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+        <div className="text-xs font-medium text-muted-foreground">Ultima recensione</div>
+        {review ? (
+          <div className="mt-1 space-y-1">
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star
+                  key={i}
+                  className={`h-3.5 w-3.5 ${
+                    reviewRating != null && i <= Math.round(reviewRating)
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "text-muted-foreground/30"
+                  }`}
+                />
+              ))}
+              {reviewRating != null && (
+                <span className="ml-1 text-xs tabular-nums font-medium">
+                  {reviewRating.toFixed(1)}
+                </span>
+              )}
+            </div>
+            {reviewCommentShort && (
+              <p className="text-sm text-foreground/90 italic">"{reviewCommentShort}"</p>
+            )}
+            {reviewDate && (
+              <p className="text-[11px] text-muted-foreground">
+                Recensione del{" "}
+                {reviewDate.toLocaleDateString("it-IT", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">Nessuna recensione disponibile</p>
+        )}
+      </div>
+      <Button
+        size="sm"
+        variant="default"
+        className="mt-4 w-full gap-1"
+        disabled={!appId}
+        onClick={() => appId && onOpenChat(appId)}
+        title={!appId ? "Chat non ancora disponibile" : undefined}
+      >
+        <MessageSquare className="h-3.5 w-3.5" />
+        Apri chat
+      </Button>
+    </div>
+  );
+}
+
 function ProposalConfirmDialog({
   worker,
   announcement,
