@@ -503,6 +503,11 @@ function AnnouncementDetail() {
 
   return (
     <AppShell>
+      <AlreadyInContactDialog
+        open={!!alreadyContactAppId}
+        applicationId={alreadyContactAppId}
+        onClose={() => setAlreadyContactAppId(null)}
+      />
       <Dialog open={fullDialogOpen} onOpenChange={setFullDialogOpen}>
         <DialogContent>
           <DialogHeader>
