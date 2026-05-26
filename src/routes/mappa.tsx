@@ -152,7 +152,13 @@ function MapPage() {
   // Worker_ids con cui il ristoratore loggato ha una candidatura accettata o
   // un turno confermato: per questi mostriamo nome e cognome completi.
   const [knownWorkerIds, setKnownWorkerIds] = useState<Set<string>>(new Set());
+  // Ultima recensione pubblicata dal ristoratore loggato per ciascun worker
+  // già collaborato. Usata nel popup della mappa.
+  const [lastReviewByWorker, setLastReviewByWorker] = useState<
+    Record<string, { comment: string | null; rating: number | null }>
+  >({});
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // search & filters
   const [query, setQuery] = useState("");
@@ -322,8 +328,29 @@ function MapPage() {
         const known = new Set<string>();
         (myShifts || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
         setKnownWorkerIds(known);
+        // Ultima recensione (visibile ai ristoratori) per ciascun lavoratore
+        // con cui c'è stato un turno completato.
+        if (known.size > 0) {
+          const { data: revs } = await supabase
+            .from("reviews")
+            .select("target_id, comment, rating, created_at")
+            .in("target_id", Array.from(known))
+            .eq("is_visible_to_restaurants", true)
+            .order("created_at", { ascending: false })
+            .limit(500);
+          const map: Record<string, { comment: string | null; rating: number | null }> = {};
+          for (const r of (revs || []) as any[]) {
+            if (!map[r.target_id]) {
+              map[r.target_id] = { comment: r.comment ?? null, rating: r.rating ?? null };
+            }
+          }
+          setLastReviewByWorker(map);
+        } else {
+          setLastReviewByWorker({});
+        }
       } else {
         setKnownWorkerIds(new Set());
+        setLastReviewByWorker({});
       }
       setLoading(false);
     })();
