@@ -1,8 +1,10 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Coins, Sparkles, AlertTriangle } from "lucide-react";
-import { CREDITS_PER_HIRE, CREDIT_PACKS } from "@/lib/pricing";
+import { Sparkles, AlertTriangle, Loader2 } from "lucide-react";
+import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
 
 type Props = {
   open: boolean;
@@ -15,16 +17,48 @@ type Props = {
 
 export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, needed = CREDITS_PER_HIRE, returnTo }: Props) {
   const navigate = useNavigate();
-  // Recommended pack: SMART (best value entry pack)
-  const recommended = CREDIT_PACKS.pack_smart_49;
+  const [activatingBasic, setActivatingBasic] = useState(false);
+  const [viewingPlans, setViewingPlans] = useState(false);
 
-  const goToBilling = () => {
-    onOpenChange(false);
-    const params = new URLSearchParams();
-    if (returnTo) params.set("returnTo", returnTo);
-    params.set("action", "confirm-worker");
-    const search = params.toString();
-    navigate({ to: "/billing", search: search ? Object.fromEntries(params) as any : undefined });
+  const buildSearch = (extra: Record<string, string>) => {
+    const params: Record<string, string> = { ...extra };
+    if (returnTo) params.returnTo = returnTo;
+    return params;
+  };
+
+  const activateBasic = async () => {
+    if (activatingBasic) return; // evita doppio click / doppio checkout
+    setActivatingBasic(true);
+    try {
+      // PLACEHOLDER CHECKOUT — sostituire con la chiamata reale al provider
+      // di pagamento per aprire direttamente il checkout del piano Basic
+      // (es. Stripe Checkout Session per priceId del piano "basic").
+      // Per ora reindirizziamo al billing con un parametro che indica
+      // l'intento di avviare il checkout del piano Basic.
+      onOpenChange(false);
+      await navigate({
+        to: "/billing",
+        search: buildSearch({ action: "confirm-worker", checkout: "basic" }) as any,
+      });
+    } catch (e) {
+      toast.error("Non siamo riusciti ad aprire il pagamento. Riprova tra qualche secondo.");
+    } finally {
+      setActivatingBasic(false);
+    }
+  };
+
+  const viewAllPlans = async () => {
+    if (viewingPlans) return;
+    setViewingPlans(true);
+    try {
+      onOpenChange(false);
+      await navigate({
+        to: "/billing",
+        search: buildSearch({ action: "confirm-worker" }) as any,
+      });
+    } finally {
+      setViewingPlans(false);
+    }
   };
 
   return (
@@ -37,46 +71,29 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
           <DialogHeader className="text-center sm:text-center">
             <DialogTitle className="text-2xl font-bold text-center">Crediti insufficienti</DialogTitle>
             <DialogDescription className="text-center text-base">
-              Per confermare un lavoratore servono <strong className="text-foreground">{needed} crediti</strong>.
-              <br />Acquista nuovi crediti per continuare.
+              Hai terminato i crediti disponibili. Per continuare puoi attivare subito il piano <strong className="text-foreground">Basic</strong> oppure confrontare tutti i piani Pupillo.
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="px-6 pb-2 space-y-3">
-          <div className="rounded-xl border bg-muted/30 p-4 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-xs text-muted-foreground">Crediti disponibili</div>
-              <div className="text-2xl font-bold tabular-nums flex items-center gap-1">
-                <Coins className="h-4 w-4 text-muted-foreground" />{currentCredits}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Crediti necessari</div>
-              <div className="text-2xl font-bold tabular-nums text-primary">{needed}</div>
-            </div>
-          </div>
-
           <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-card p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-primary font-semibold">
-              <Sparkles className="h-3.5 w-3.5" />Consigliato
+              <Sparkles className="h-3.5 w-3.5" />Piano consigliato
             </div>
-            <div className="mt-1 flex items-baseline justify-between">
-              <div>
-                <div className="text-lg font-bold">{recommended.label} — {recommended.credits} crediti</div>
-                <div className="text-xs text-muted-foreground">≈ {recommended.hires} conferme lavoratore</div>
-              </div>
-              <div className="text-2xl font-bold">€{recommended.priceEur}</div>
-            </div>
+            <div className="mt-1 text-lg font-bold">Basic</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Ideale per iniziare a usare Pupillo con continuità e sbloccare nuove opportunità di contatto.
+            </p>
           </div>
         </div>
 
         <DialogFooter className="p-6 pt-4 gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="sm:flex-1">
-            Annulla
+          <Button variant="outline" onClick={viewAllPlans} disabled={viewingPlans || activatingBasic} className="sm:flex-1">
+            {viewingPlans ? <Loader2 className="h-4 w-4 animate-spin" /> : "Vedi tutti i piani"}
           </Button>
-          <Button onClick={goToBilling} className="sm:flex-1 gap-2 shadow-lg shadow-primary/30">
-            <Coins className="h-4 w-4" />Acquista crediti
+          <Button onClick={activateBasic} disabled={activatingBasic} className="sm:flex-1 gap-2 shadow-lg shadow-primary/30">
+            {activatingBasic ? (<><Loader2 className="h-4 w-4 animate-spin" />Apertura…</>) : "Attiva Basic"}
           </Button>
         </DialogFooter>
       </DialogContent>
