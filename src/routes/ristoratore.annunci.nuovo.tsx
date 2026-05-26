@@ -836,7 +836,7 @@ function NewRestaurantJobRequest() {
             )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Anticipo richiesto all'ingresso">
+            <Field label="Anticipo richiesto all'ingresso" required>
               <div className="space-y-2">
                 <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
                   <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
@@ -852,7 +852,7 @@ function NewRestaurantJobRequest() {
             </Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
             <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
-            <Field label="Ruolo del referente">
+            <Field label="Ruolo del referente" required>
               <Select value={f.contact_person_role} onValueChange={(v) => setField("contact_person_role", v)}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo referente" /></SelectTrigger>
                 <SelectContent>
