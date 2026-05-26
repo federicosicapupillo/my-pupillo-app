@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { useAuth } from "@/lib/auth-context";
+import { DELETED_ACCOUNT_MESSAGE, useAuth } from "@/lib/auth-context";
 
 const ALLOWED_PATHS = new Set([
   "/",
@@ -24,6 +24,12 @@ export function PhoneVerificationGate({ children }: { children: ReactNode }) {
     if (loading) return;
     if (!user) return;
     if (!extrasLoaded) return;
+    if (profile && (profile.is_deleted || profile.deleted_at)) {
+      console.info("[auth] phone verification blocked for deleted account", { userId: user.id });
+      sessionStorage.setItem("pupillo-auth-message", DELETED_ACCOUNT_MESSAGE);
+      nav({ to: "/auth", search: { deleted: "1" } as never });
+      return;
+    }
     // API and public routes pass through
     if (loc.pathname.startsWith("/api/")) return;
     if (ALLOWED_PATHS.has(loc.pathname)) return;
