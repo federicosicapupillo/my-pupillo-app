@@ -466,7 +466,8 @@ function NewRestaurantJobRequest() {
       ? "Presentarsi almeno 15 minuti prima del turno."
       : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
     const announcementStatus = status === "pubblicato" ? "active" : "draft";
-    const locationAddress = [f.address, f.district, f.city, f.province, f.postal_code, f.country].filter(Boolean).join(", ");
+    const streetWithNumber = [f.address, f.street_number].map((s) => s.trim()).filter(Boolean).join(" ");
+    const locationAddress = [streetWithNumber, f.district, f.city, f.province, f.postal_code, f.country].filter(Boolean).join(", ");
     const announcementPayload = {
       restaurant_id: user.id,
       service_date: f.shift_date,
