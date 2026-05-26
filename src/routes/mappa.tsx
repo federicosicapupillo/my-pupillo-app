@@ -1027,6 +1027,21 @@ function MapPage() {
                   focusId={focusWorkerId}
                   focusNonce={focusWorkerNonce}
                   onViewProfile={(id) => setPreviewWorkerId(id)}
+                  onOpenChat={async (workerId) => {
+                    if (!user) return;
+                    const { data, error } = await supabase
+                      .from("applications")
+                      .select("id, updated_at")
+                      .eq("restaurant_id", user.id)
+                      .eq("worker_id", workerId)
+                      .order("updated_at", { ascending: false })
+                      .limit(1);
+                    if (error || !data || data.length === 0) {
+                      toast.error("Nessuna chat disponibile con questo lavoratore.");
+                      return;
+                    }
+                    navigate({ to: "/messages/$id", params: { id: data[0].id as string } });
+                  }}
                 />
                 <div className="mt-2 text-xs text-muted-foreground">
                   {workerMapPoints.length} lavorator{workerMapPoints.length === 1 ? "e" : "i"} sulla mappa · posizione approssimativa per tutela privacy · OpenStreetMap
