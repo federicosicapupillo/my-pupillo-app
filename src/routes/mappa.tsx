@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -76,6 +76,8 @@ type Worker = {
   experience_level: string | null;
   weekly_availability: string[] | null;
   account_status: string | null;
+  punctuality_pct?: number | null;
+  avg_professionalism?: number | null;
 };
 
 type Ann = {
