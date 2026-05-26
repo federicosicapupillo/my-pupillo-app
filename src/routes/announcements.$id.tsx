@@ -154,7 +154,19 @@ function AnnouncementDetail() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = async () => {
-    const { data: a } = await supabase.from("announcements").select("*").eq("id", id).maybeSingle();
+    // Try the base table first — succeeds for the owning restaurant, the
+    // worker who applied, and admins (they get full row incl. PII). Workers
+    // who have not applied yet are blocked by RLS, so we fall back to the
+    // PII-safe view to render the public detail page.
+    let { data: a } = await supabase.from("announcements").select("*").eq("id", id).maybeSingle();
+    if (!a) {
+      const { data: pub } = await (supabase as any)
+        .from("announcements_public")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      a = pub ?? null;
+    }
     setAnn(a as Ann | null);
     if (!a) { setLoading(false); return; }
     const { data: r } = await supabase.from("profiles")
@@ -168,7 +180,7 @@ function AnnouncementDetail() {
     const list = (ax as App[]) ?? [];
     setApps(list);
     const { data: jr } = await (supabase as any)
-      .from("job_requests")
+      .from("job_requests_public")
       .select("title,role_required,workers_needed,description,tasks,shift_date,end_date,start_time,end_time,hourly_rate,break_included,restaurant_name")
       .eq("announcement_id", id)
       .maybeSingle();
