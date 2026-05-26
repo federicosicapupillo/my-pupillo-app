@@ -243,6 +243,17 @@ function ShiftDetailPage() {
     } else {
       setLastReview(null);
     }
+    // Recensione lasciata dal lavoratore al ristoratore per questo turno
+    {
+      const { data: wrev } = await supabase
+        .from("reviews")
+        .select("id, rating, comment, communication, professionalism, reliability, staff_collaboration, created_at")
+        .eq("shift_id", s.id)
+        .eq("author_id", s.worker_id)
+        .eq("target_id", s.restaurant_id)
+        .maybeSingle();
+      setWorkerReview((wrev as any) ?? null);
+    }
     setRestaurant((restRes.data as Restaurant) ?? null);
     const apps = (appsRes.data ?? []) as any[];
     setAppCount(apps.length);
