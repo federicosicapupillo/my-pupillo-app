@@ -18,6 +18,7 @@ import {
   Flag, ThumbsUp, ThumbsDown, HelpCircle,
 } from "lucide-react";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
+import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
@@ -162,6 +163,7 @@ function ShiftDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
   const reviewRef = useRef<HTMLDivElement | null>(null);
+  const [revisionOpen, setRevisionOpen] = useState(false);
 
   const toggleFavorite = async () => {
     if (!user || !shift?.worker_id) return;
@@ -631,6 +633,16 @@ function ShiftDetailPage() {
                   "{workerReview.comment}"
                 </blockquote>
               )}
+              <div className="pt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRevisionOpen(true)}
+                  className="gap-1 text-muted-foreground hover:text-destructive"
+                >
+                  <Flag className="h-4 w-4" /> Richiedi revisione
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -677,6 +689,17 @@ function ShiftDetailPage() {
           </div>
         )}
       </div>
+
+      {workerReview && user && shift && (
+        <RequestReviewRevisionDialog
+          open={revisionOpen}
+          onOpenChange={setRevisionOpen}
+          reviewId={workerReview.id}
+          targetId={shift.restaurant_id}
+          authorId={shift.worker_id}
+          reviewSummary={`Recensione del lavoratore ${worker?.full_name ?? ""} del ${new Date(workerReview.created_at).toLocaleDateString("it-IT")} — valutazione ${workerReview.rating}/5`}
+        />
+      )}
 
       <AlertDialog open={confirmOpen} onOpenChange={(o) => !closing && setConfirmOpen(o)}>
         <AlertDialogContent>
