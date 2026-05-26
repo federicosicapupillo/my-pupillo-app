@@ -106,6 +106,15 @@ function ShiftsPage() {
   const [noShowNotes, setNoShowNotes] = useState("");
   const [noShowSubmitting, setNoShowSubmitting] = useState(false);
   const [notEndedDialog, setNotEndedDialog] = useState<Shift | null>(null);
+  const [reviewNotAvailableOpen, setReviewNotAvailableOpen] = useState(false);
+  // Criteri recensione lavoratore → ristoratore (form inline)
+  const [workerCriteria, setWorkerCriteria] = useState({
+    overall: 5,
+    communication: 5,
+    clarity: 5,
+    payment_fairness: 5,
+    work_environment: 5,
+  });
   const [cancelDialog, setCancelDialog] = useState<Shift | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
