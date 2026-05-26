@@ -935,6 +935,7 @@ function WorkersPage() {
                 <div className="mt-2"><SpokenLanguagesView value={legacy} /></div>
               ) : null;
             })()}
+            <AvailabilityBlock weekly={w.weekly_availability} onDetails={() => setDetailsWorker(w)} />
             <Button
               size="sm"
               className="mt-4 w-full gap-1"
