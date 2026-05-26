@@ -247,7 +247,7 @@ function MapPage() {
         // primary_role del lavoratore.
         supabase
           .from("profiles")
-          .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name")
+          .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name, punctuality_pct, avg_professionalism")
           .is("business_name", null)
           .not("primary_role", "is", null)
           .limit(2000),
