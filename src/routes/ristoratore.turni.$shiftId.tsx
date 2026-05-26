@@ -483,46 +483,20 @@ function ShiftDetailPage() {
 
       {/* Card 2 — Lavoratore */}
       <div className="mt-4 rounded-2xl border bg-card p-5">
-        <div className="text-sm font-semibold mb-3">Lavoratore assegnato</div>
+        <div className="text-sm font-semibold mb-3">Lavoratore confermato</div>
         {!worker ? (
           <p className="text-sm text-muted-foreground">Nessun lavoratore assegnato a questo turno.</p>
+        ) : shift.status === "cancelled" ? (
+          <p className="text-sm text-muted-foreground">Turno annullato — i dati del lavoratore non sono più visibili.</p>
         ) : (
           <>
-            <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <User className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium">{worker.full_name ?? "—"}</div>
-                <div className="text-sm text-muted-foreground">{worker.primary_role ?? roleLabel}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                  {worker.badge && <span className="rounded-full border px-2 py-0.5 capitalize">{worker.badge}</span>}
-                  {worker.rating_avg != null && (
-                    <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{Number(worker.rating_avg).toFixed(1)}</span>
-                  )}
-                  {worker.reliability_pct != null && <span className="text-muted-foreground">Affidabilità {worker.reliability_pct}%</span>}
-                  {worker.completed_shifts != null && <span className="text-muted-foreground">{worker.completed_shifts} turni</span>}
-                </div>
-                {((worker.languages && worker.languages.length > 0) || (Array.isArray(worker.spoken_languages) && worker.spoken_languages.length > 0)) && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    Lingue: {(worker.languages ?? []).concat(
-                      Array.isArray(worker.spoken_languages) ? worker.spoken_languages.map((l: any) => typeof l === "string" ? l : l.name ?? l.code ?? "").filter(Boolean) : []
-                    ).filter((v, i, arr) => arr.indexOf(v) === i).join(", ") || "—"}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/restaurants/$id" params={{ id: worker.id }}>
-                <Button size="sm" variant="outline" className="gap-1"><User className="h-4 w-4" /> Vedi profilo</Button>
-              </Link>
-              {appId && (
-                <Link to="/messages/$id" params={{ id: appId }}>
-                  <Button size="sm" variant="outline" className="gap-1"><MessageSquare className="h-4 w-4" /> Messaggia</Button>
-                </Link>
-              )}
-              {shift.status === "completed" && (
+            <ConfirmedWorkerCard
+              worker={worker as any}
+              applicationId={appId}
+              lastReview={lastReview}
+            />
+            {shift.status === "completed" && (
+              <div className="mt-3">
                 <Button
                   size="sm"
                   variant={isFavorite ? "default" : "outline"}
@@ -534,8 +508,8 @@ function ShiftDetailPage() {
                   <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
                   {isFavorite ? "Preferito" : "Aggiungi ai preferiti"}
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
       </div>
