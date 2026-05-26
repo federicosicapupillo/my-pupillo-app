@@ -496,7 +496,7 @@ function NewRestaurantJobRequest() {
       required_skills: skills,
       dress_code_items: dressItems,
       dress_code_notes: f.dress_code_notes || null,
-      job_address: f.address,
+      job_address: streetWithNumber || f.address,
       job_city: f.city || null,
       job_province: f.province || null,
       job_postal_code: f.postal_code || null,
