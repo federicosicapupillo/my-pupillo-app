@@ -249,8 +249,12 @@ function MapPage() {
           .is("business_name", null)
           .not("primary_role", "is", null)
           .limit(2000),
-        supabase.from("announcements")
-          .select("id, professional_profile, location_address, location_lat, location_lng, job_latitude, job_longitude, job_address, status, restaurant_id, service_date, service_time, duration_hours, tariff_amount, tariff_type, notes, required_skills, dress_code_items, language_requirements")
+        // PII-safe view: contact name/phone/email and precise job_latitude/
+        // job_longitude/job_address are intentionally not selected here.
+        // Workers with an accepted application read those via the base table
+        // (allowed by RLS) elsewhere in the app.
+        (supabase as any).from("announcements_public")
+          .select("id, professional_profile, location_address, location_lat, location_lng, status, restaurant_id, service_date, service_time, duration_hours, tariff_amount, tariff_type, notes, required_skills, dress_code_items, language_requirements")
           .eq("status", "active")
           .limit(1000),
       ]);
