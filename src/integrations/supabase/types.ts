@@ -2063,6 +2063,31 @@ export type Database = {
         Args: { _referred_user_id: string }
         Returns: undefined
       }
+      can_read_application: {
+        Args: {
+          _announcement_id: string
+          _restaurant_id: string
+          _worker_id: string
+        }
+        Returns: boolean
+      }
+      can_update_application: {
+        Args: {
+          _announcement_id: string
+          _restaurant_id: string
+          _worker_id: string
+        }
+        Returns: boolean
+      }
+      can_worker_insert_application: {
+        Args: {
+          _announcement_id: string
+          _restaurant_id: string
+          _status: Database["public"]["Enums"]["application_status"]
+          _worker_id: string
+        }
+        Returns: boolean
+      }
       consume_credits: {
         Args: { _amount: number; _reason: string; _reference_id?: string }
         Returns: boolean
