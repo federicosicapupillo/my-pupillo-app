@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User, CheckCircle2, Moon, Hourglass, Loader2, XCircle } from "lucide-react";
-import { formatTariff, formatTotalService } from "@/lib/format";
+import { formatTariff, formatTotalService, formatOfferDateTime } from "@/lib/format";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/browse")({
 
 type Ann = {
   id: string; restaurant_id: string; service_date: string; service_time: string;
+  end_time?: string | null; end_date?: string | null;
   duration_hours: number; speed: string; tariff_type: string; tariff_amount: number;
   location_address: string; location_lat: number | null; location_lng: number | null;
   professional_profile: string | null; status: string; created_at: string;
@@ -363,7 +364,12 @@ function Browse() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 shrink-0 text-primary/80" />
                       <span className="text-foreground/90">
-                        {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}
+                        {formatOfferDateTime({
+                          service_date: a.service_date,
+                          service_time: a.service_time,
+                          end_date: a.end_date,
+                          end_time: a.end_time,
+                        })}
                       </span>
                       <span className="text-muted-foreground">· Durata {a.duration_hours}h</span>
                     </div>
