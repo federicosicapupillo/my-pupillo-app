@@ -555,7 +555,7 @@ function ShiftsPage() {
     const noShow = shifts.filter(s => s.status === "no_show").length;
     const pending = role === "restaurant" ? pendingApps.length : 0;
     return { pending, assigned, completed, past, toReview, noShow };
-  }, [shifts, pendingApps, reqByShift, role, today]);
+  }, [shifts, pendingApps, reqByShift, role, today, reviewMap]);
 
   const displayShifts = useMemo(() => {
     const list = [...filtered];
