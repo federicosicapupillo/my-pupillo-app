@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,8 @@ import { DEFAULT_PHONE_PREFIX, isValidPhone, splitPhone } from "@/lib/phone-pref
 import { startPhoneVerification, verifyPhoneOtp, resendPhoneOtp } from "@/lib/phone-verification.functions";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Mail } from "lucide-react";
 
 const TEST_OTP_ENABLED = import.meta.env.VITE_ENABLE_TEST_OTP === "true" && import.meta.env.PROD !== true;
 
@@ -35,6 +38,11 @@ function VerifyPhonePage() {
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
   const userChangedPhoneRef = useRef(false);
+  // Popup di conferma email mostrato DOPO la verifica WhatsApp OTP.
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  // Destinazione post-popup, calcolata al momento della verifica OTP.
+  const pendingNavRef = useRef<string | null>(null);
 
 
   useEffect(() => {
@@ -113,7 +121,29 @@ function VerifyPhonePage() {
         : profile?.profile_completed
           ? "/dashboard"
           : "/onboarding";
-      nav({ to: dest as any });
+      pendingNavRef.current = dest;
+      // Invio reale della mail di conferma SUBITO dopo la verifica WhatsApp.
+      // Solo in caso di invio riuscito mostriamo il popup informativo.
+      const email = user?.email ?? null;
+      if (!email) {
+        // Senza email non possiamo confermare nulla: vai direttamente alla
+        // destinazione e non mostrare il popup.
+        nav({ to: dest as any });
+        return;
+      }
+      const { error: resendErr } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: window.location.origin + "/registration-success" },
+      });
+      if (resendErr) {
+        toast.error("Non siamo riusciti a inviare la mail di conferma. Riprova tra qualche secondo.");
+        // L'utente può comunque proseguire: la verifica WhatsApp è andata
+        // a buon fine. Le funzioni operative restano gated da profile_completed.
+        nav({ to: dest as any });
+        return;
+      }
+      setEmailDialogOpen(true);
     } finally {
       setBusy(false);
     }
@@ -134,6 +164,39 @@ function VerifyPhonePage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Reinvia la mail di conferma dal popup. Anti-doppio-click via stato locale.
+  const handleResendEmail = async () => {
+    if (resendingEmail) return;
+    const email = user?.email;
+    if (!email) {
+      toast.error("Email non disponibile. Effettua di nuovo l'accesso.");
+      return;
+    }
+    setResendingEmail(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: window.location.origin + "/registration-success" },
+      });
+      if (error) {
+        toast.error("Non siamo riusciti a inviare la mail di conferma. Riprova tra qualche secondo.");
+        return;
+      }
+      toast.success("Mail di conferma reinviata.");
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
+  // Chiude il popup e prosegue verso la destinazione calcolata in OTP success.
+  const handleAcknowledgeEmail = () => {
+    setEmailDialogOpen(false);
+    const dest = pendingNavRef.current;
+    pendingNavRef.current = null;
+    if (dest) nav({ to: dest as any });
   };
 
   if (loading || !user) {
@@ -233,6 +296,40 @@ function VerifyPhonePage() {
           )}
         </div>
       </div>
+      <Dialog
+        open={emailDialogOpen}
+        onOpenChange={(v) => {
+          // Evita la chiusura accidentale senza azione esplicita
+          if (!v && !resendingEmail) handleAcknowledgeEmail();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Conferma la tua email
+            </DialogTitle>
+            <DialogDescription>
+              Ti abbiamo inviato una mail di conferma. Apri la tua casella email e clicca sul link ricevuto per completare la registrazione.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Se non trovi la mail, controlla anche nella cartella spam o posta indesiderata.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={handleResendEmail}
+              disabled={resendingEmail}
+            >
+              {resendingEmail ? "Invio…" : "Reinvia email"}
+            </Button>
+            <Button onClick={handleAcknowledgeEmail} disabled={resendingEmail}>
+              Ho capito
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
