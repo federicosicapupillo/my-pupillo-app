@@ -17,6 +17,7 @@ import {
   XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check, Heart,
   Flag, ThumbsUp, ThumbsDown, HelpCircle,
 } from "lucide-react";
+import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
@@ -71,6 +72,11 @@ type Worker = {
   completed_shifts: number | null;
   languages: string[] | null;
   spoken_languages: any;
+  reviews_count?: number | null;
+  professional_profile?: string | null;
+  phone_verified?: boolean | null;
+  profile_completed?: boolean | null;
+  id_document_path?: string | null;
 };
 
 type JobReq = {
@@ -133,6 +139,7 @@ function ShiftDetailPage() {
   const [shift, setShift] = useState<Shift | null>(null);
   const [ann, setAnn] = useState<Announcement | null>(null);
   const [worker, setWorker] = useState<Worker | null>(null);
+  const [lastReview, setLastReview] = useState<ConfirmedWorkerLastReview | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [jobReq, setJobReq] = useState<JobReq | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
