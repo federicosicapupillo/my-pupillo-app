@@ -665,14 +665,14 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="1" title="Informazioni principali" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Ruolo cercato">
+            <Field label="Ruolo cercato" required>
               <Select value={f.role_required} onValueChange={v => { setField("role_required", v); setField("title", v); }}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo" /></SelectTrigger>
                 <SelectContent>{ROLE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
-            <Field label="Tariffa oraria">
+            <Field label="Tariffa oraria" required>
               <Select value={f.hourly_rate} onValueChange={v => setField("hourly_rate", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona tariffa" /></SelectTrigger>
                 <SelectContent>
@@ -682,10 +682,10 @@ function NewRestaurantJobRequest() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Data inizio turno">
+            <Field label="Data inizio turno" required>
               <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} min={todayISO} required />
             </Field>
-            <Field label="Ora inizio turno">
+            <Field label="Ora inizio turno" required>
               <Select value={f.start_time} onValueChange={v => setField("start_time", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -695,10 +695,10 @@ function NewRestaurantJobRequest() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Data fine turno">
+            <Field label="Data fine turno" required>
               <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || todayISO} required />
             </Field>
-            <Field label="Ora fine turno">
+            <Field label="Ora fine turno" required>
               <Select value={f.end_time} onValueChange={v => setField("end_time", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
                 <SelectContent className="max-h-64">
