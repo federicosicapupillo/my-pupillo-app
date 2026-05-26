@@ -326,7 +326,7 @@ function WorkersPage() {
           .eq("restaurant_id", user.id),
         supabase
           .from("shifts")
-          .select("worker_id, status, shift_date")
+          .select("worker_id, status, shift_date, announcement_id")
           .eq("restaurant_id", user.id),
         supabase
           .from("reviews")
@@ -334,7 +334,7 @@ function WorkersPage() {
           .eq("author_id", user.id),
       ]);
       const apps = (appsRes.data as Array<{ id: string; worker_id: string; status: string | null; last_message_at: string | null; created_at: string }>) ?? [];
-      const shifts = (shiftsRes.data as Array<{ worker_id: string; status: string | null; shift_date: string | null }>) ?? [];
+      const shifts = (shiftsRes.data as Array<{ worker_id: string; status: string | null; shift_date: string | null; announcement_id: string | null }>) ?? [];
       const reviews = (reviewsRes.data as Array<{ target_id: string; created_at: string; rating: number | null }>) ?? [];
 
       // Ultima proposta + risposta per ogni candidatura
@@ -360,6 +360,11 @@ function WorkersPage() {
         const ts = a.last_message_at ?? a.created_at;
         r.lastContactAt = Math.max(r.lastContactAt, ts ? new Date(ts).getTime() : 0);
         if (a.last_message_at) r.hasOpenChat = true;
+        const createdTs = a.created_at ? new Date(a.created_at).getTime() : 0;
+        if (createdTs >= r.lastAppCreatedAt) {
+          r.lastAppCreatedAt = createdTs;
+          r.lastAppId = a.id;
+        }
         const resp = respByApp[a.id];
         if (resp) {
           if (resp.status === "accepted") r.hasAccepted = true;
@@ -375,6 +380,8 @@ function WorkersPage() {
       for (const s of shifts) {
         const r = map[s.worker_id] ?? emptyRel();
         if (s.status === "completed") r.workedWith = true;
+        if (s.status === "scheduled") r.hasShiftScheduled = true;
+        if (s.announcement_id) r.shiftAnnouncementIds.add(s.announcement_id);
         if (s.shift_date) r.lastContactAt = Math.max(r.lastContactAt, new Date(s.shift_date).getTime());
         r.contacted = true;
         map[s.worker_id] = r;
@@ -389,6 +396,25 @@ function WorkersPage() {
           r.lastReviewRating = rv.rating ?? null;
         }
         map[rv.target_id] = r;
+      }
+      // Ultima recensione PUBBLICA ricevuta dal lavoratore (da qualsiasi autore),
+      // limitata ai lavoratori già contattati da questo ristoratore.
+      const contactedIds = Object.keys(map).filter((id) => map[id].contacted);
+      if (contactedIds.length) {
+        const { data: wReviews } = await supabase
+          .from("reviews")
+          .select("target_id, rating, comment, created_at")
+          .in("target_id", contactedIds)
+          .eq("is_visible_to_restaurants", true)
+          .order("created_at", { ascending: false });
+        const seen = new Set<string>();
+        for (const rv of ((wReviews ?? []) as Array<{ target_id: string; rating: number | null; comment: string | null; created_at: string }>)) {
+          if (seen.has(rv.target_id)) continue;
+          seen.add(rv.target_id);
+          const r = map[rv.target_id];
+          if (!r) continue;
+          r.workerLastReview = { rating: rv.rating, comment: rv.comment, created_at: rv.created_at };
+        }
       }
       if (!cancelled) setRel(map);
     })();
