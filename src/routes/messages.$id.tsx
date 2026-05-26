@@ -1101,9 +1101,49 @@ function Thread() {
     const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
     const { error } = await supabase.from("applications").update(patch).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      if (String(error.message || "").toLowerCase().includes("announcement_full")) {
+        toast.error("Questo annuncio ha già raggiunto il numero massimo di lavoratori richiesti.");
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
     if (next === "accepted" && app.announcement_id) {
-      await supabase.from("announcements").update({ status: "assigned", assigned_worker_id: app.worker_id }).eq("id", app.announcement_id);
+      // Multi-position aware: only mark the announcement as `assigned` (which
+      // closes it) when the last open slot is taken. Always record this worker
+      // as the most recent assigned_worker_id for chat-side display.
+      try {
+        const { data: jr } = await supabase
+          .from("job_requests")
+          .select("workers_needed")
+          .eq("announcement_id", app.announcement_id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const needed = Math.max(1, Number((jr as any)?.workers_needed ?? 1) || 1);
+        const { count } = await supabase
+          .from("applications")
+          .select("id", { count: "exact", head: true })
+          .eq("announcement_id", app.announcement_id)
+          .eq("status", "accepted");
+        const filled = count ?? 0;
+        const becameFull = filled >= needed;
+        if (becameFull) {
+          await supabase.from("announcements")
+            .update({ status: "assigned", assigned_worker_id: app.worker_id })
+            .eq("id", app.announcement_id);
+        } else {
+          await supabase.from("announcements")
+            .update({ assigned_worker_id: app.worker_id })
+            .eq("id", app.announcement_id);
+        }
+      } catch (e) {
+        console.error("[transition] multi-position update failed", e);
+        await supabase.from("announcements")
+          .update({ assigned_worker_id: app.worker_id })
+          .eq("id", app.announcement_id);
+      }
     }
     // Quando il ristoratore accetta la candidatura, invia automaticamente al
     // lavoratore una "Conferma turno" con tutti i dettagli operativi in chiaro.

@@ -24,6 +24,8 @@ import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from 
 import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { getShiftEndDate, getShiftStartDate } from "@/lib/announcement-time";
 import { useProfileGate } from "@/components/ProfileGate";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -152,6 +154,7 @@ function AnnouncementDetail() {
   const [jobRequest, setJobRequest] = useState<JobRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [fullDialogOpen, setFullDialogOpen] = useState(false);
 
   const load = async () => {
     // Try the base table first — succeeds for the owning restaurant, the
@@ -258,6 +261,16 @@ function AnnouncementDetail() {
     () => (user && apps.length ? apps.find(a => a.worker_id === user.id) ?? null : null),
     [apps, user],
   );
+  const workersNeeded = Math.max(1, Number(jobRequest?.workers_needed ?? 1) || 1);
+  const acceptedApps = useMemo(() => apps.filter(a => a.status === "accepted"), [apps]);
+  const acceptedWorkerIds = useMemo(() => acceptedApps.map(a => a.worker_id), [acceptedApps]);
+  const filledCount = acceptedApps.length;
+  const isFull = isAnnouncementFull(workersNeeded, filledCount);
+  const positionsBadge = positionsLabel(workersNeeded, filledCount);
+  const assignedNames = useMemo(
+    () => acceptedApps.map(a => workers[a.worker_id]?.full_name || "Lavoratore"),
+    [acceptedApps, workers],
+  );
   const canSeeAddress = canSeePreciseAddress({
     isOwner,
     isAdmin: role === "admin",
@@ -303,17 +316,39 @@ function AnnouncementDetail() {
   };
 
   const accept = async (app: App) => {
+    if (isFull) {
+      setFullDialogOpen(true);
+      return;
+    }
     setBusyId(app.id);
     const { error } = await supabase.from("applications").update({ status: "accepted" }).eq("id", app.id);
     setBusyId(null);
-    if (error) { toast.error(error.message); return; }
-    await supabase.from("announcements")
-      .update({ status: "assigned", assigned_worker_id: app.worker_id })
-      .eq("id", id);
-    // The slot is now covered (Pupillo's announcement model is single-worker):
-    // auto-close every still-open application for this announcement with a
-    // neutral notice — no rejection wording, no info about who was picked.
-    try {
+    if (error) {
+      // DB trigger may reject with announcement_full when concurrent accepts race past the limit.
+      if (String(error.message || "").toLowerCase().includes("announcement_full")) {
+        setFullDialogOpen(true);
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
+    const newFilled = filledCount + 1;
+    const becameFull = newFilled >= workersNeeded;
+    // Track the latest assigned worker on the announcement; mark as `assigned`
+    // only when the last slot is taken (multi-position aware).
+    if (becameFull) {
+      await supabase.from("announcements")
+        .update({ status: "assigned", assigned_worker_id: app.worker_id })
+        .eq("id", id);
+    } else {
+      await supabase.from("announcements")
+        .update({ assigned_worker_id: app.worker_id })
+        .eq("id", id);
+    }
+    // When the announcement becomes fully covered, auto-close every still-open
+    // application with a neutral notice — no rejection wording, no info about
+    // who was picked. If positions are still open, leave other candidates open.
+    if (becameFull) try {
       const { data: others } = await supabase
         .from("applications")
         .select("id, worker_id")
@@ -352,7 +387,7 @@ function AnnouncementDetail() {
         }));
       }
     } catch (e) { console.error("[accept] auto-close failed", e); }
-    toast.success("Lavoratore assegnato!");
+    toast.success(becameFull ? "Turno completo: tutte le posizioni sono state assegnate." : "Lavoratore assegnato!");
     load();
   };
   const reject = async (app: App) => {
@@ -417,6 +452,19 @@ function AnnouncementDetail() {
 
   return (
     <AppShell>
+      <Dialog open={fullDialogOpen} onOpenChange={setFullDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Turno già assegnato</DialogTitle>
+            <DialogDescription>
+              Questo annuncio ha già raggiunto il numero massimo di lavoratori richiesti. Non puoi assegnare altri candidati a questo turno.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setFullDialogOpen(false)}>Ho capito</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="mb-4">
         <Link to="/announcements"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Torna agli annunci</Button></Link>
       </div>
@@ -586,6 +634,14 @@ function AnnouncementDetail() {
                   </Button>
                 </Link>
               </div>
+            ) : isFull ? (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs">
+                  <div className="font-semibold text-amber-900">Turno già assegnato</div>
+                  <div className="text-amber-800 mt-0.5">Questo turno è già stato assegnato. Non è più disponibile per nuove candidature.</div>
+                </div>
+                <Button disabled className="w-full">Non più disponibile</Button>
+              </div>
             ) : isAnnInactive ? (
               <Button disabled className="w-full">Candidature chiuse</Button>
             ) : (
@@ -597,6 +653,11 @@ function AnnouncementDetail() {
                 >
                   <CheckCircle2 className="h-4 w-4" />Candidati
                 </Button>
+                {workersNeeded > 1 && (
+                  <p className="text-[11px] text-primary font-medium">
+                    {workersNeeded - filledCount} di {workersNeeded} posizion{workersNeeded - filledCount === 1 ? "e" : "i"} ancora disponibil{workersNeeded - filledCount === 1 ? "e" : "i"}
+                  </p>
+                )}
                 <p className="text-[11px] text-muted-foreground leading-snug">
                   Confermando dichiari di aver letto requisiti, dress code e note del turno.
                 </p>
@@ -615,6 +676,13 @@ function AnnouncementDetail() {
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <Users className="h-5 w-5" /> Candidati ({counts.total})
           </h2>
+          <div className={`mb-3 rounded-xl border p-3 text-sm ${isFull ? "border-blue-300 bg-blue-50 text-blue-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
+            <div className="font-semibold">{isFull ? "Turno completo" : "Stato assegnazione"}</div>
+            <div className="mt-0.5">{positionsBadge}</div>
+            {assignedNames.length > 0 && (
+              <div className="mt-1 text-[13px]"><span className="font-medium">Assegnato a:</span> {assignedNames.join(", ")}</div>
+            )}
+          </div>
           {apps.length === 0 ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
               Nessuna candidatura ricevuta per questo annuncio.
@@ -628,6 +696,7 @@ function AnnouncementDetail() {
                 const isAccepted = a.status === "accepted";
                 const isRejected = ["rejected","not_interested","expired"].includes(a.status);
                 const canAct = !isAnnInactive && (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
+                const acceptBlocked = isFull && !isAccepted;
                 return (
                   <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -704,7 +773,8 @@ function AnnouncementDetail() {
                           <Button
                             size="sm"
                             className={`gap-1 ${!canPerformOperationalAction ? "opacity-70" : ""}`}
-                            disabled={busyId === a.id}
+                            disabled={busyId === a.id || acceptBlocked}
+                            title={acceptBlocked ? "Turno già completo" : undefined}
                             onClick={requireComplete(() => accept(a))}
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />

@@ -92,6 +92,8 @@ function Browse() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [restaurant, setRestaurant] = useState<RestaurantInfo>(null);
   const [restaurantsById, setRestaurantsById] = useState<Record<string, { city: string | null; neighborhood: string | null }>>({});
+  const [workersNeededById, setWorkersNeededById] = useState<Record<string, number>>({});
+  const [filledById, setFilledById] = useState<Record<string, number>>({});
   const [confirmAnn, setConfirmAnn] = useState<Ann | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successApp, setSuccessApp] = useState<{ id: string; ann: Ann } | null>(null);
@@ -118,6 +120,27 @@ function Browse() {
     const { data: anns } = await (supabase as any).from("announcements_public").select("*").eq("status","active").order("created_at",{ascending:false}).limit(200);
     const list = (anns as Ann[]) ?? [];
     setItems(list);
+    // Multi-position: load workers_needed per announcement and accepted count.
+    const annIds = list.map(a => a.id);
+    if (annIds.length) {
+      const [{ data: jr }, { data: accepted }] = await Promise.all([
+        supabase.from("job_requests").select("announcement_id, workers_needed").in("announcement_id", annIds),
+        supabase.from("applications").select("announcement_id").in("announcement_id", annIds).eq("status", "accepted"),
+      ]);
+      const needMap: Record<string, number> = {};
+      (jr ?? []).forEach((r: any) => {
+        if (!r.announcement_id) return;
+        const n = Math.max(1, Number(r.workers_needed ?? 1) || 1);
+        needMap[r.announcement_id] = Math.max(needMap[r.announcement_id] ?? 0, n);
+      });
+      const fillMap: Record<string, number> = {};
+      (accepted ?? []).forEach((r: any) => {
+        if (!r.announcement_id) return;
+        fillMap[r.announcement_id] = (fillMap[r.announcement_id] ?? 0) + 1;
+      });
+      setWorkersNeededById(needMap);
+      setFilledById(fillMap);
+    }
     const restIds = Array.from(new Set(list.map(a => a.restaurant_id)));
     if (restIds.length) {
       const { data: rs } = await supabase.from("profiles")
@@ -406,6 +429,17 @@ function Browse() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
+                  {(() => {
+                    const need = workersNeededById[a.id] ?? 1;
+                    const filled = filledById[a.id] ?? 0;
+                    if (need <= 1) return null;
+                    const remaining = Math.max(0, need - filled);
+                    return (
+                      <span className="absolute left-4 top-4 inline-flex items-center rounded-full bg-primary/15 text-primary text-[10px] font-semibold px-2 py-0.5">
+                        {remaining > 0 ? `${remaining}/${need} posti disponibili` : "Turno completo"}
+                      </span>
+                    );
+                  })()}
                   {rejected ? (
                     <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-destructive bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
                       <XCircle className="h-4 w-4" />
