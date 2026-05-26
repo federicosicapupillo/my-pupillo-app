@@ -13,6 +13,8 @@ import { RestaurantRequirementsView, reqFromProfile } from "@/components/Restaur
 import { ClipboardList } from "lucide-react";
 import { priceRangeLabel } from "@/lib/price-range";
 import { formatTariff } from "@/lib/format";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
 export const Route = createFileRoute("/restaurants/$id")({
   head: () => ({ meta: [{ title: "Dettaglio ristoratore — Pupillo" }] }),
