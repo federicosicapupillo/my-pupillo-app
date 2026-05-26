@@ -2101,6 +2101,15 @@ export type Database = {
           job_contact_person_phone: string
         }[]
       }
+      get_application_availability: {
+        Args: { _announcement_id: string }
+        Returns: {
+          accepted_count: number
+          is_full: boolean
+          restaurant_id: string
+          workers_needed: number
+        }[]
+      }
       get_my_job_request: {
         Args: { _announcement_id: string }
         Returns: {
