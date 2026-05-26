@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
-import { AuthProvider } from "@/lib/auth-context";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { Toaster } from "sonner";
 import { PhoneVerificationGate } from "@/components/PhoneVerificationGate";
 import { ProfileGateProvider } from "@/components/ProfileGate";
@@ -134,11 +134,13 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <SiteAccessGate>
         <AuthProvider>
-          <PhoneVerificationGate>
-            <ProfileGateProvider>
-              <Outlet />
-            </ProfileGateProvider>
-          </PhoneVerificationGate>
+          <AccountAccessGate>
+            <PhoneVerificationGate>
+              <ProfileGateProvider>
+                <Outlet />
+              </ProfileGateProvider>
+            </PhoneVerificationGate>
+          </AccountAccessGate>
           <Toaster richColors position="top-right" />
           <StalePreviewOverlay />
           {import.meta.env.DEV ? <DevLoopMonitor /> : null}
@@ -146,4 +148,17 @@ function RootComponent() {
       </SiteAccessGate>
     </QueryClientProvider>
   );
+}
+
+function AccountAccessGate({ children }: { children: React.ReactNode }) {
+  const { user, profile, loading, extrasLoaded } = useAuth();
+  const isDeleted = Boolean(profile?.is_deleted || profile?.deleted_at);
+  if (loading || (user && (!extrasLoaded || isDeleted))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
+        Caricamento…
+      </div>
+    );
+  }
+  return <>{children}</>;
 }

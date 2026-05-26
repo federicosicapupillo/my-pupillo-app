@@ -38,6 +38,13 @@ async function removeStoredFiles(paths: { bucket: string; path: string | null | 
 
 export async function softDeleteAccount(userId: string, reason: AccountDeletionReason, customReason?: string): Promise<DeletionResult> {
   try {
+    const { data: authBefore, error: authBeforeError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    console.info("[deleteAccount] Auth user status before deletion", {
+      userId,
+      authUserActive: Boolean(authBefore?.user),
+      error: authBeforeError?.message ?? null,
+    });
+
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select(PROFILE_SELECT)
@@ -160,12 +167,48 @@ export async function softDeleteAccount(userId: string, reason: AccountDeletionR
       .eq("id", userId);
 
     if (updateError) throw updateError;
+    console.info("[deleteAccount] profile marked as deleted", { userId, is_deleted: true });
 
     await removeStoredFiles([
       { bucket: "avatars", path: profile.avatar_url },
       { bucket: "worker-documents", path: profile.id_document_path },
       { bucket: "worker-documents", path: profile.id_document_back_path },
     ]);
+
+    let authAction: "deleted" | "disabled" | "failed" = "failed";
+    const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (!deleteUserError) {
+      authAction = "deleted";
+      console.info("[deleteAccount] Auth user deleted", { userId });
+    } else {
+      console.error("[deleteAccount] Auth user deletion failed; trying to disable user", {
+        userId,
+        error: deleteUserError.message,
+      });
+      const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        ban_duration: "876000h",
+      } as never);
+      if (!banError) {
+        authAction = "disabled";
+        console.info("[deleteAccount] Auth user disabled/banned", { userId });
+      } else {
+        console.error("[deleteAccount] Auth user disable failed; frontend deleted-account guard remains active", {
+          userId,
+          error: banError.message,
+        });
+      }
+    }
+
+    const { data: authAfter, error: authAfterError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const afterUser = authAfter?.user as { deleted_at?: string | null; banned_until?: string | null } | undefined;
+    console.info("[deleteAccount] Auth user status after cleanup", {
+      userId,
+      authAction,
+      authUserStillReadable: Boolean(authAfter?.user),
+      deletedAt: afterUser?.deleted_at ?? null,
+      bannedUntil: afterUser?.banned_until ?? null,
+      error: authAfterError?.message ?? null,
+    });
 
     return { ok: true };
   } catch (error) {

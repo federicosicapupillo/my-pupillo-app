@@ -57,6 +57,8 @@ type Worker = {
   phone_verified: boolean | null;
   profile_completed: boolean | null;
   id_document_path: string | null;
+  is_deleted: boolean | null;
+  deleted_at: string | null;
 };
 
 function initials(name: string | null) {
@@ -76,10 +78,11 @@ function WorkerDetailPage() {
     let cancelled = false;
     (async () => {
       const { data } = await supabase.from("profiles")
-        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,short_bio,age,phone,email,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,id_document_path")
+        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,short_bio,age,phone,email,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,id_document_path,is_deleted,deleted_at")
         .eq("id", id).maybeSingle();
       if (cancelled) return;
-      setW((data as any) ?? null);
+      const worker = data as Worker | null;
+      setW(worker && !worker.is_deleted && !worker.deleted_at ? worker : null);
       // Show contacts only if the viewer (restaurant) has an accepted application with this worker
       if (user && role === "restaurant") {
         const { data: ax } = await supabase.from("applications")

@@ -183,6 +183,7 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
       .select("id")
       .eq("phone_full", phoneFull)
       .eq("phone_verified", true)
+      .eq("is_deleted", false)
       .neq("id", userId)
       .maybeSingle();
     if (dup) {
@@ -191,9 +192,13 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
 
     const { data: startProfile } = await supabaseAdmin
       .from("profiles")
-      .select("email, is_demo")
+      .select("email, is_demo, is_deleted, deleted_at")
       .eq("id", userId)
       .maybeSingle();
+    if (startProfile?.is_deleted || startProfile?.deleted_at) {
+      console.info("[auth] phone verification start blocked for deleted account", { userId });
+      return { ok: false, error: "Questo account è stato eliminato e non può più essere utilizzato." };
+    }
     const code = isTestOtpAllowedFor(startProfile, phoneFull) ? TEST_OTP_CODE : genOtp();
     const codeHash = hashOtp(code, userId);
     const expires = new Date(Date.now() + OTP_TTL_MINUTES * 60_000).toISOString();
@@ -288,9 +293,13 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
     // TEST MODE: accept fixed code without an active OTP row (test/demo users only)
     const { data: verifyProfile } = await supabaseAdmin
       .from("profiles")
-      .select("email, is_demo, phone_full")
+      .select("email, is_demo, phone_full, is_deleted, deleted_at")
       .eq("id", userId)
       .maybeSingle();
+    if (verifyProfile?.is_deleted || verifyProfile?.deleted_at) {
+      console.info("[auth] phone verification confirm blocked for deleted account", { userId });
+      return { ok: false, error: "Questo account è stato eliminato e non può più essere utilizzato." };
+    }
     if (
       data.code === TEST_OTP_CODE &&
       isTestOtpAllowedFor(verifyProfile, verifyProfile?.phone_full ?? null)
@@ -370,9 +379,13 @@ export const resendPhoneOtp = createServerFn({ method: "POST" })
     try {
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("phone_country_code, phone_number")
+      .select("phone_country_code, phone_number, is_deleted, deleted_at")
       .eq("id", userId)
       .maybeSingle();
+    if (profile?.is_deleted || profile?.deleted_at) {
+      console.info("[auth] phone verification resend blocked for deleted account", { userId });
+      return { ok: false, error: "Questo account è stato eliminato e non può più essere utilizzato." };
+    }
     if (!profile?.phone_country_code || !profile?.phone_number) {
       return { ok: false, error: "Nessun numero salvato. Inseriscilo prima." };
     }

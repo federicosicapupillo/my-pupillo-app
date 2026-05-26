@@ -4,6 +4,8 @@ import type { Session, User } from "@supabase/supabase-js";
 import { applyTheme, persistTheme, readUserTheme } from "@/lib/theme";
 import { clearKnownRestaurantsCache } from "@/lib/known-restaurants-cache";
 
+export const DELETED_ACCOUNT_MESSAGE = "Questo account è stato eliminato e non può più essere utilizzato.";
+
 type Role = "admin" | "restaurant" | "worker";
 type Profile = {
   id: string;
@@ -53,6 +55,8 @@ type Profile = {
   phone_full: string | null;
   phone_country_code: string | null;
   phone_number: string | null;
+  is_deleted: boolean | null;
+  deleted_at: string | null;
   whatsapp_confirmation_sent_at: string | null;
   whatsapp_confirmation_status: string | null;
   email_summary_sent_at: string | null;
@@ -67,7 +71,7 @@ type Ctx = {
   loading: boolean;
   extrasLoaded: boolean;
   refresh: () => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: (options?: { redirectTo?: string | false }) => Promise<void>;
 };
 
 const AuthContext = createContext<Ctx | undefined>(undefined);
@@ -80,15 +84,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [extrasLoaded, setExtrasLoaded] = useState(false);
 
+  const blockDeletedAccount = async (uid: string) => {
+    console.info("[auth] deleted account login blocked", { userId: uid });
+    try {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("pupillo-auth-message", DELETED_ACCOUNT_MESSAGE);
+      }
+      clearKnownRestaurantsCache();
+      await supabase.auth.signOut();
+    } finally {
+      setSession(null);
+      setUser(null);
+      setRole(null);
+      setProfile(null);
+      setExtrasLoaded(false);
+      setLoading(false);
+      if (typeof window !== "undefined") {
+        window.location.replace("/auth?deleted=1");
+      }
+    }
+  };
+
   const loadExtras = async (uid: string) => {
     setExtrasLoaded(false);
-    const [{ data: roles }, { data: prof }] = await Promise.all([
+    const [{ data: roles, error: rolesError }, { data: prof, error: profileError }] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", uid),
       // Use a SECURITY DEFINER RPC so the owner can read their own sensitive
       // PII columns (email, phone, tax code, document fields, etc.). Direct
       // SELECT on those columns is revoked for the `authenticated` role.
       supabase.rpc("get_my_profile").maybeSingle(),
     ]);
+    if (rolesError) console.error("[auth] role load failed", rolesError);
+    if (profileError) console.error("[auth] profile load failed", profileError);
+    const loadedProfile = (prof as unknown as Profile) ?? null;
+    if (loadedProfile?.is_deleted || loadedProfile?.deleted_at) {
+      await blockDeletedAccount(uid);
+      return;
+    }
     const allRoles = (roles ?? []).map((x: { role: Role }) => x.role);
     const r: Role | undefined =
       allRoles.includes("admin") ? "admin"
@@ -96,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       : allRoles.includes("worker") ? "worker"
       : undefined;
     setRole(r ?? null);
-    setProfile((prof as unknown as Profile) ?? null);
+    setProfile(loadedProfile);
     // Apply per-user theme preference. Default restaurants to light.
     const saved = readUserTheme(uid);
     if (saved) {
@@ -124,22 +156,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setExtrasLoaded(false);
       }
     });
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
-      if (data.session?.user) loadExtras(data.session.user.id);
+      if (data.session?.user) await loadExtras(data.session.user.id);
       setLoading(false);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
+  const signOut = async (options?: { redirectTo?: string | false }) => {
     clearKnownRestaurantsCache();
     await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
+    setRole(null);
+    setProfile(null);
+    setExtrasLoaded(false);
     if (typeof window !== "undefined") {
       // Hard redirect to public Home, replacing history so back button
       // cannot return to protected pages after logout.
-      window.location.replace("/");
+      const redirectTo = options?.redirectTo === undefined ? "/" : options.redirectTo;
+      if (redirectTo !== false) window.location.replace(redirectTo);
     }
   };
 
