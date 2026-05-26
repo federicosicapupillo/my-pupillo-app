@@ -1344,6 +1344,48 @@ export type Database = {
         }
         Relationships: []
       }
+      review_revision_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          reason: string
+          requester_id: string
+          resolved_at: string | null
+          review_id: string
+          status: string
+          support_ticket_id: string | null
+          target_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+          requester_id: string
+          resolved_at?: string | null
+          review_id: string
+          status?: string
+          support_ticket_id?: string | null
+          target_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+          requester_id?: string
+          resolved_at?: string | null
+          review_id?: string
+          status?: string
+          support_ticket_id?: string | null
+          target_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           announcement_id: string | null
