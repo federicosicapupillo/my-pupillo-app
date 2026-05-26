@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useNavigate } from "@tanstack/react-router";
@@ -13,16 +13,12 @@ import { AlertTriangle } from "lucide-react";
 
 const REASONS: { value: string; label: string }[] = [
   { value: "non_uso_piu", label: "Non uso più Pupillo" },
-  { value: "poche_offerte", label: "Ho trovato poche offerte / pochi lavoratori" },
-  { value: "problemi_turno", label: "Ho avuto problemi con un turno" },
-  { value: "problemi_utente", label: "Ho avuto problemi con un utente" },
-  { value: "difficile_usare", label: "La piattaforma è difficile da usare" },
-  { value: "problemi_notifiche", label: "Problemi con notifiche, chat o candidatura" },
-  { value: "problemi_pagamenti", label: "Problemi con pagamenti o crediti" },
-  { value: "proteggere_dati", label: "Voglio proteggere meglio i miei dati" },
-  { value: "altro_account", label: "Ho creato un altro account" },
+  { value: "lavoro_altro_modo", label: "Ho trovato lavoro / collaboratori in altro modo" },
+  { value: "problemi_piattaforma", label: "Ho avuto problemi con la piattaforma" },
+  { value: "problemi_notifiche_chat", label: "Ho problemi con notifiche o chat" },
+  { value: "problemi_pagamenti_crediti", label: "Ho problemi con pagamenti o crediti" },
+  { value: "cancellare_dati", label: "Voglio cancellare i miei dati" },
   { value: "altro", label: "Altro" },
-  { value: "non_rispondo", label: "Preferisco non rispondere" },
 ];
 
 type Step = "confirm" | "reason" | "final" | "blocked" | "done";
@@ -36,6 +32,13 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
   const [blockedMessage, setBlockedMessage] = useState<string>("");
+  const logoutTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (logoutTimerRef.current) window.clearTimeout(logoutTimerRef.current);
+    };
+  }, []);
 
   const reset = () => {
     setStep("confirm");
@@ -52,6 +55,18 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   };
 
   const submit = async () => {
+    if (!reason) {
+      toast.error("Seleziona il motivo della cancellazione.");
+      return;
+    }
+    if (reason === "altro" && !customReason.trim()) {
+      toast.error("Inserisci il motivo della cancellazione.");
+      return;
+    }
+    if (confirmText !== "ELIMINA") {
+      toast.error("Per confermare devi scrivere ELIMINA");
+      return;
+    }
     setBusy(true);
     const payloadReason = reason || undefined;
     const payloadCustom = reason === "altro" ? (customReason.trim().slice(0, 500) || undefined) : undefined;
@@ -61,7 +76,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
     });
     if (error) {
       setBusy(false);
-      toast.error(error.message || "Errore durante l'eliminazione dell'account.");
+      toast.error("Non è stato possibile eliminare l'account. Riprova o contatta l'assistenza.");
       return;
     }
     const res = (data as { ok: boolean; error_code?: string; message?: string } | null) ?? null;
@@ -72,11 +87,17 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
         setStep("blocked");
         return;
       }
-      toast.error(res?.message || "Impossibile eliminare l'account adesso.");
+      if (res?.error_code === "missing_reason") toast.error("Seleziona il motivo della cancellazione.");
+      else if (res?.error_code === "missing_custom_reason") toast.error("Inserisci il motivo della cancellazione.");
+      else toast.error("Non è stato possibile eliminare l'account. Riprova o contatta l'assistenza.");
       return;
     }
     setStep("done");
+    toast.success("Account eliminato correttamente.");
     setBusy(false);
+    logoutTimerRef.current = window.setTimeout(() => {
+      void finishAndExit();
+    }, 1200);
   };
 
   const finishAndExit = async () => {
