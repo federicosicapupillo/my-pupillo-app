@@ -131,7 +131,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
             <DialogHeader>
               <DialogTitle>Perché vuoi eliminare il tuo account?</DialogTitle>
               <DialogDescription>
-                La tua risposta ci aiuta a migliorare Pupillo. Puoi anche scegliere di non rispondere.
+                La tua risposta ci aiuta a migliorare Pupillo. Seleziona un motivo per continuare.
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[50vh] overflow-y-auto">
@@ -159,7 +159,13 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
             </div>
             <DialogFooter className="gap-2 sm:gap-2">
               <Button variant="outline" onClick={() => setStep("confirm")}>Indietro</Button>
-              <Button variant="destructive" onClick={() => setStep("final")}>Continua</Button>
+              <Button
+                variant="destructive"
+                disabled={!reason || (reason === "altro" && !customReason.trim())}
+                onClick={() => setStep("final")}
+              >
+                Continua
+              </Button>
             </DialogFooter>
           </>
         )}
@@ -185,7 +191,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
                 disabled={busy || confirmText !== "ELIMINA"}
                 onClick={submit}
               >
-                {busy ? "Eliminazione…" : "Elimina definitivamente"}
+                {busy ? "Eliminazione in corso…" : "Elimina definitivamente"}
               </Button>
             </DialogFooter>
           </>
@@ -208,7 +214,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
             <DialogHeader>
               <DialogTitle>Account eliminato</DialogTitle>
               <DialogDescription>
-                Il tuo account è stato eliminato correttamente. Le recensioni già inviate resteranno visibili in forma anonima, come previsto dalle regole della piattaforma.
+                Account eliminato correttamente. Le recensioni già inviate resteranno visibili in forma anonima, come previsto dalle regole della piattaforma.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
