@@ -112,9 +112,12 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   };
 
   const finishAndExit = async () => {
-    await signOut();
-    onOpenChange(false);
-    nav({ to: "/" });
+    try {
+      await signOut();
+    } finally {
+      onOpenChange(false);
+      nav({ to: "/" });
+    }
   };
 
   return (
