@@ -397,8 +397,8 @@ function NewAnn() {
   return (
     <AppShell>
       <PageHeader title="Nuovo annuncio" subtitle="Pubblica una richiesta di personale extra" />
-      <PayOnHireBox className="mb-4 max-w-2xl" compact />
-      <div className={`mb-4 max-w-2xl flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
+      <PayOnHireBox className="mb-4 w-full max-w-5xl" compact />
+      <div className={`mb-4 w-full max-w-5xl flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-primary" />
           {isPaid ? (
@@ -420,7 +420,7 @@ function NewAnn() {
           e.preventDefault();
           requireComplete(submit)(e);
         }}
-        className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6"
+        className="w-full max-w-5xl space-y-5 rounded-2xl border bg-card p-6"
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div data-field="service_date" className="scroll-mt-24">
