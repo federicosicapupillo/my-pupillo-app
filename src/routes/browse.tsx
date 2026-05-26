@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
