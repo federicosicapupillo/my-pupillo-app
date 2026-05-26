@@ -440,23 +440,35 @@ function MapPage() {
   const workerAvatars = useAvatarUrls(workerAvatarIds);
 
   const workerMapPoints: WorkerMapPoint[] = useMemo(
-    () => locatedWorkers.map(({ w, pos }) => ({
-      id: w.id,
-      lat: pos[0],
-      lng: pos[1],
-      // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
-      // (no cognome). Dopo una candidatura accettata o un turno assegnato
-      // mostriamo invece nome e cognome completi.
-      name: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : w.full_name,
-      role: w.primary_role,
-      city: w.city ?? w.neighborhood ?? null,
-      rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
-      badge: w.badge,
-      avatarUrl: workerAvatars[w.id] ?? null,
-      initials: mapInitials(w.full_name),
-      link: `/workers_/${w.id}`,
-    })),
-    [locatedWorkers, workerAvatars, isRestaurant, knownWorkerIds],
+    () => locatedWorkers.map(({ w, pos }) => {
+      const known = isRestaurant && knownWorkerIds.has(w.id);
+      const lastRev = known ? lastReviewByWorker[w.id] : undefined;
+      const profAvg = w.avg_professionalism != null ? Number(w.avg_professionalism) : null;
+      return {
+        id: w.id,
+        lat: pos[0],
+        lng: pos[1],
+        // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
+        // (no cognome). Dopo una candidatura accettata o un turno assegnato
+        // mostriamo invece nome e cognome completi.
+        name: isRestaurant ? displayWorkerName(w, known) : w.full_name,
+        role: w.primary_role,
+        city: w.city ?? w.neighborhood ?? null,
+        rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
+        badge: w.badge,
+        avatarUrl: workerAvatars[w.id] ?? null,
+        initials: mapInitials(w.full_name),
+        link: `/workers_/${w.id}`,
+        known,
+        completedShifts: known && w.completed_shifts != null ? Number(w.completed_shifts) : null,
+        reliabilityPct: known && w.reliability_pct != null ? Number(w.reliability_pct) : null,
+        punctualityPct: known && w.punctuality_pct != null ? Number(w.punctuality_pct) : null,
+        professionalismAvg: known && profAvg != null && profAvg > 0 ? profAvg : null,
+        lastReviewComment: lastRev?.comment ?? null,
+        lastReviewRating: lastRev?.rating ?? null,
+      };
+    }),
+    [locatedWorkers, workerAvatars, isRestaurant, knownWorkerIds, lastReviewByWorker],
   );
 
   const { points, coordSourceStats, coordSourceById } = useMemo(() => {
