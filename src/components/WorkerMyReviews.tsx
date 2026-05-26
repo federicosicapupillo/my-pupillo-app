@@ -141,9 +141,12 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
         const app = r.application_id ? apps[r.application_id] : null;
         const ann = app?.announcement_id ? anns[app.announcement_id] : null;
         // Show restaurant name only if worker actually performed a shift, or the application was accepted.
+        const isDeleted = !!author?.is_deleted;
         const canShowName = !!shift || app?.status === "accepted";
         const realName = author?.business_name || author?.full_name || null;
-        const restaurantLabel = canShowName && realName ? realName : "Ristorante partner";
+        const restaurantLabel = isDeleted
+          ? "Ristoratore eliminato"
+          : (canShowName && realName ? realName : "Ristorante partner");
         const roleLabel = ann?.professional_profile || null;
         const cityLabel = ann?.job_city || author?.city || null;
         return (
