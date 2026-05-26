@@ -78,6 +78,7 @@ type Worker = {
   phone_verified?: boolean | null;
   profile_completed?: boolean | null;
   id_document_path?: string | null;
+  is_deleted?: boolean | null;
 };
 
 type JobReq = {
@@ -214,7 +215,7 @@ function ShiftDetailPage() {
         ? supabase.from("announcements").select("*").eq("id", s.announcement_id).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from("profiles")
-        .select("id, full_name, primary_role, professional_profile, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, languages, spoken_languages, phone_verified, profile_completed, id_document_path")
+        .select("id, full_name, primary_role, professional_profile, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, languages, spoken_languages, phone_verified, profile_completed, id_document_path, is_deleted")
         .eq("id", s.worker_id).maybeSingle(),
       supabase.from("profiles").select("id, business_name, full_name").eq("id", s.restaurant_id).maybeSingle(),
       s.announcement_id
@@ -680,7 +681,7 @@ function ShiftDetailPage() {
           <div className="mt-5 border-t pt-5">
             <ReviewSection
               existing={existingReview}
-              workerName={worker?.full_name ?? null}
+              workerName={worker?.is_deleted ? "Utente eliminato" : worker?.full_name ?? null}
               isOverdue={isOverdue}
               dueDate={requiredReview?.due_date ?? null}
               onSubmit={submitFullReview}
@@ -697,7 +698,7 @@ function ShiftDetailPage() {
           reviewId={workerReview.id}
           targetId={shift.restaurant_id}
           authorId={shift.worker_id}
-          reviewSummary={`Recensione del lavoratore ${worker?.full_name ?? ""} del ${new Date(workerReview.created_at).toLocaleDateString("it-IT")} — valutazione ${workerReview.rating}/5`}
+          reviewSummary={`Recensione del lavoratore ${worker?.is_deleted ? "Utente eliminato" : worker?.full_name ?? ""} del ${new Date(workerReview.created_at).toLocaleDateString("it-IT")} — valutazione ${workerReview.rating}/5`}
         />
       )}
 
