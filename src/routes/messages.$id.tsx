@@ -1094,8 +1094,10 @@ function Thread() {
         setInsufficientOpen(true);
         return;
       }
+      // Use the application id as the idempotency key: one application
+      // == one worker assignment, so the same shift can never be charged twice.
       const { consumeCredits } = await import("@/lib/credits");
-      const ok = await consumeCredits(CREDITS_PER_HIRE, "assign_worker", app.announcement_id ?? id);
+      const ok = await consumeCredits(CREDITS_PER_HIRE, "assign_worker", app.id);
       if (!ok) return;
     }
     const patch: any = { status: next, ...extra };

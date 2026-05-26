@@ -26,6 +26,8 @@ import { getShiftEndDate, getShiftStartDate } from "@/lib/announcement-time";
 import { useProfileGate } from "@/components/ProfileGate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
+import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
+import { CREDITS_PER_HIRE } from "@/lib/pricing";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -155,6 +157,8 @@ function AnnouncementDetail() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [fullDialogOpen, setFullDialogOpen] = useState(false);
+  const [insufficientOpen, setInsufficientOpen] = useState(false);
+  const [creditsAvailable, setCreditsAvailable] = useState(0);
 
   const load = async () => {
     // Try the base table first — succeeds for the owning restaurant, the
@@ -320,7 +324,34 @@ function AnnouncementDetail() {
       setFullDialogOpen(true);
       return;
     }
+    if (!user) return;
+    // Pre-check credits: Pro/Business bypass; otherwise must have >= CREDITS_PER_HIRE.
+    try {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("credits, plan")
+        .eq("id", user.id)
+        .maybeSingle();
+      const balance = (prof as any)?.credits ?? profile?.credits ?? 0;
+      const planNow = (prof as any)?.plan ?? profile?.plan;
+      const isPaid = planNow === "pro" || planNow === "business";
+      if (!isPaid && balance < CREDITS_PER_HIRE) {
+        setCreditsAvailable(balance);
+        setInsufficientOpen(true);
+        return;
+      }
+    } catch (e) {
+      console.error("[accept] credits precheck failed", e);
+    }
     setBusyId(app.id);
+    // Consume credits BEFORE flipping the status: the RPC is idempotent on
+    // (user, reason, application_id), so a retry can't double-charge.
+    const { consumeCredits } = await import("@/lib/credits");
+    const creditsOk = await consumeCredits(CREDITS_PER_HIRE, "assign_worker", app.id);
+    if (!creditsOk) {
+      setBusyId(null);
+      return;
+    }
     const { error } = await supabase.from("applications").update({ status: "accepted" }).eq("id", app.id);
     setBusyId(null);
     if (error) {
@@ -465,6 +496,12 @@ function AnnouncementDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <InsufficientCreditsDialog
+        open={insufficientOpen}
+        onOpenChange={setInsufficientOpen}
+        currentCredits={creditsAvailable}
+        returnTo={`/announcements/${id}`}
+      />
       <div className="mb-4">
         <Link to="/announcements"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Torna agli annunci</Button></Link>
       </div>
