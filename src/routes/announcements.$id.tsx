@@ -324,7 +324,34 @@ function AnnouncementDetail() {
       setFullDialogOpen(true);
       return;
     }
+    if (!user) return;
+    // Pre-check credits: Pro/Business bypass; otherwise must have >= CREDITS_PER_HIRE.
+    try {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("credits, plan")
+        .eq("id", user.id)
+        .maybeSingle();
+      const balance = (prof as any)?.credits ?? profile?.credits ?? 0;
+      const planNow = (prof as any)?.plan ?? profile?.plan;
+      const isPaid = planNow === "pro" || planNow === "business";
+      if (!isPaid && balance < CREDITS_PER_HIRE) {
+        setCreditsAvailable(balance);
+        setInsufficientOpen(true);
+        return;
+      }
+    } catch (e) {
+      console.error("[accept] credits precheck failed", e);
+    }
     setBusyId(app.id);
+    // Consume credits BEFORE flipping the status: the RPC is idempotent on
+    // (user, reason, application_id), so a retry can't double-charge.
+    const { consumeCredits } = await import("@/lib/credits");
+    const creditsOk = await consumeCredits(CREDITS_PER_HIRE, "assign_worker", app.id);
+    if (!creditsOk) {
+      setBusyId(null);
+      return;
+    }
     const { error } = await supabase.from("applications").update({ status: "accepted" }).eq("id", app.id);
     setBusyId(null);
     if (error) {
