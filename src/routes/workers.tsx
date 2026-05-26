@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/format";
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
+import { summarizeWeeklyAvailability, formatAvailabilitySlotsForDay } from "@/lib/availability-summary";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
