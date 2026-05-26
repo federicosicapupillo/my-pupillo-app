@@ -983,6 +983,11 @@ function WorkersPage() {
         onCancel={() => setProposalWorker(null)}
         onConfirm={() => proposalWorker && sendProposal(proposalWorker.id)}
       />
+      <AvailabilityDetailsDialog
+        worker={detailsWorker}
+        onClose={() => setDetailsWorker(null)}
+        workedTogether={detailsWorker ? !!rel[detailsWorker.id]?.workedWith : false}
+      />
       <Dialog open={missingAnnOpen} onOpenChange={setMissingAnnOpen}>
         <DialogContent>
           <DialogHeader>
