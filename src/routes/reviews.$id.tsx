@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { RequireAuth } from "@/components/RequireAuth";
 import { ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
+import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
+import { Flag } from "lucide-react";
 
 export const Route = createFileRoute("/reviews/$id")({
   head: () => ({ meta: [{ title: "Recensione ricevuta — Pupillo" }] }),
@@ -29,6 +31,8 @@ type ReviewRow = {
   reliability: number | null;
   positive_tags: string[] | null;
   negative_tags: string[] | null;
+  author_id?: string;
+  target_id?: string;
 };
 
 type AnnouncementLite = {
@@ -78,13 +82,14 @@ function ReviewPopupPage() {
   const [ann, setAnn] = useState<AnnouncementLite | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [revisionOpen, setRevisionOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase
         .from("reviews")
-        .select("id, rating, comment, created_at, shift_id, announcement_id, punctuality, professionalism, competence, reliability, positive_tags, negative_tags")
+        .select("id, rating, comment, created_at, shift_id, announcement_id, punctuality, professionalism, competence, reliability, positive_tags, negative_tags, author_id, target_id")
         .eq("id", id)
         .maybeSingle();
       if (cancelled) return;
@@ -190,10 +195,30 @@ function ReviewPopupPage() {
         )}
 
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          {review && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setRevisionOpen(true)}
+              className="gap-1 text-muted-foreground hover:text-destructive sm:mr-auto"
+            >
+              <Flag className="h-4 w-4" /> Richiedi revisione
+            </Button>
+          )}
           <Button variant="outline" onClick={handleClose}>Ho capito</Button>
           <Button onClick={handleGoReputation}>Vai alla mia reputazione</Button>
         </DialogFooter>
       </DialogContent>
+      {review && review.author_id && review.target_id && (
+        <RequestReviewRevisionDialog
+          open={revisionOpen}
+          onOpenChange={setRevisionOpen}
+          reviewId={review.id}
+          targetId={review.target_id}
+          authorId={review.author_id}
+          reviewSummary={`Recensione del ${new Date(review.created_at).toLocaleDateString("it-IT")} — valutazione ${review.rating}/5`}
+        />
+      )}
     </Dialog>
   );
 }
