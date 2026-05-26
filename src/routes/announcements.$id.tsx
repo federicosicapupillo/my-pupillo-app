@@ -621,6 +621,14 @@ function AnnouncementDetail() {
                   </Button>
                 </Link>
               </div>
+            ) : isFull ? (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs">
+                  <div className="font-semibold text-amber-900">Turno già assegnato</div>
+                  <div className="text-amber-800 mt-0.5">Questo turno è già stato assegnato. Non è più disponibile per nuove candidature.</div>
+                </div>
+                <Button disabled className="w-full">Non più disponibile</Button>
+              </div>
             ) : isAnnInactive ? (
               <Button disabled className="w-full">Candidature chiuse</Button>
             ) : (
@@ -632,6 +640,11 @@ function AnnouncementDetail() {
                 >
                   <CheckCircle2 className="h-4 w-4" />Candidati
                 </Button>
+                {workersNeeded > 1 && (
+                  <p className="text-[11px] text-primary font-medium">
+                    {workersNeeded - filledCount} di {workersNeeded} posizion{workersNeeded - filledCount === 1 ? "e" : "i"} ancora disponibil{workersNeeded - filledCount === 1 ? "e" : "i"}
+                  </p>
+                )}
                 <p className="text-[11px] text-muted-foreground leading-snug">
                   Confermando dichiari di aver letto requisiti, dress code e note del turno.
                 </p>
@@ -650,6 +663,13 @@ function AnnouncementDetail() {
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <Users className="h-5 w-5" /> Candidati ({counts.total})
           </h2>
+          <div className={`mb-3 rounded-xl border p-3 text-sm ${isFull ? "border-blue-300 bg-blue-50 text-blue-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
+            <div className="font-semibold">{isFull ? "Turno completo" : "Stato assegnazione"}</div>
+            <div className="mt-0.5">{positionsBadge}</div>
+            {assignedNames.length > 0 && (
+              <div className="mt-1 text-[13px]"><span className="font-medium">Assegnato a:</span> {assignedNames.join(", ")}</div>
+            )}
+          </div>
           {apps.length === 0 ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
               Nessuna candidatura ricevuta per questo annuncio.
