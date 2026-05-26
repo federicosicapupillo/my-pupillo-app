@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 
-import { useAuth } from "@/lib/auth-context";
+import { DELETED_ACCOUNT_MESSAGE, useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
 import { lovable } from "@/integrations/lovable";
 import pupilloLogo from "@/assets/pupillo-logo.png";
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({
     role: s.role === "worker" || s.role === "restaurant" ? s.role : undefined,
     ref: typeof s.ref === "string" ? s.ref : undefined,
+    deleted: s.deleted === "1" ? "1" : undefined,
   }),
   component: AuthPage,
 });
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { user, role: userRole, profile, loading, extrasLoaded, refresh } = useAuth();
-  const { role: roleParam, ref: refParam } = Route.useSearch();
+  const { role: roleParam, ref: refParam, deleted: deletedParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,6 +68,14 @@ function AuthPage() {
   const emailsMatch = emailTrim.toLowerCase() === confirmEmailTrim.toLowerCase() && emailTrim.length > 0;
 
   useEffect(() => {
+    const storedMessage = typeof window !== "undefined" ? sessionStorage.getItem("pupillo-auth-message") : null;
+    if (storedMessage) sessionStorage.removeItem("pupillo-auth-message");
+    if (deletedParam === "1" || storedMessage === DELETED_ACCOUNT_MESSAGE) {
+      toast.error(DELETED_ACCOUNT_MESSAGE);
+    }
+  }, [deletedParam]);
+
+  useEffect(() => {
     if (loading || !user) return;
     // Wait until role+profile have actually finished loading from the DB
     // before deciding anything. Otherwise role is momentarily null right
@@ -75,6 +84,7 @@ function AuthPage() {
     // If the user just submitted the signup form, skip auto-redirects
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
+    if (profile?.is_deleted || profile?.deleted_at) return;
     // If phone not yet verified, send to OTP page — UNLESS the user
     // explicitly came back from the OTP page via the "Torna alla
     // registrazione" link (URL carries ?role=...). In that case, let
@@ -238,7 +248,9 @@ function AuthPage() {
     setBusy(false);
     if (error) {
       const msg = (error.message || "").toLowerCase();
-      if (msg.includes("invalid login") || msg.includes("invalid credentials")) {
+      if (msg.includes("banned") || msg.includes("disabled") || msg.includes("deleted")) {
+        toast.error(DELETED_ACCOUNT_MESSAGE);
+      } else if (msg.includes("invalid login") || msg.includes("invalid credentials")) {
         toast.error("Email o password non corretti.");
       } else if (msg.includes("not found") || msg.includes("user not")) {
         toast.error("Account non trovato.");
@@ -250,7 +262,6 @@ function AuthPage() {
       return;
     }
     toast.dismiss();
-    toast.success("Bentornato!");
     // Redirect handled by useEffect once profile/role are loaded.
   };
 
