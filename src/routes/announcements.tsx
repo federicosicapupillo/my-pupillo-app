@@ -26,6 +26,8 @@ import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/anno
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
+import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
+import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
   Dialog,
