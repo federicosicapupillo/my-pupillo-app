@@ -30,6 +30,7 @@ import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialo
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -83,6 +84,10 @@ type WorkerProfile = {
   rating_avg: number | null; reviews_count: number | null; badge: string | null;
   reliability_pct: number | null; experience_years: number | null;
   completed_shifts: number | null;
+  primary_role?: string | null;
+  phone_verified?: boolean | null;
+  profile_completed?: boolean | null;
+  id_document_path?: string | null;
 };
 type Restaurant = {
   id: string; full_name: string | null; business_name: string | null;
@@ -154,6 +159,7 @@ function AnnouncementDetail() {
   const [ann, setAnn] = useState<Ann | null>(null);
   const [apps, setApps] = useState<App[]>([]);
   const [workers, setWorkers] = useState<Record<string, WorkerProfile>>({});
+  const [lastReviews, setLastReviews] = useState<Record<string, ConfirmedWorkerLastReview>>({});
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [jobRequest, setJobRequest] = useState<JobRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -197,11 +203,30 @@ function AnnouncementDetail() {
     const ids = Array.from(new Set(list.map(x => x.worker_id)));
     if (ids.length) {
       const { data: ps } = await supabase.from("profiles")
-        .select("id,full_name,age,city,professional_profile,languages,rating_avg,reviews_count,badge,reliability_pct,experience_years,completed_shifts")
+        .select("id,full_name,age,city,professional_profile,primary_role,languages,rating_avg,reviews_count,badge,reliability_pct,experience_years,completed_shifts,phone_verified,profile_completed,id_document_path")
         .in("id", ids);
       const map: Record<string, WorkerProfile> = {};
       (ps ?? []).forEach((p: any) => { map[p.id] = p; });
       setWorkers(map);
+      // Last public review per accepted worker (operational summary only).
+      const acceptedIds = list.filter(x => x.status === "accepted").map(x => x.worker_id);
+      if (acceptedIds.length) {
+        const { data: revs } = await supabase
+          .from("reviews")
+          .select("target_id,rating,comment,created_at,is_visible_to_restaurants")
+          .in("target_id", acceptedIds)
+          .eq("is_visible_to_restaurants", true)
+          .order("created_at", { ascending: false });
+        const rmap: Record<string, ConfirmedWorkerLastReview> = {};
+        (revs ?? []).forEach((r: any) => {
+          if (!rmap[r.target_id]) {
+            rmap[r.target_id] = { rating: r.rating, comment: r.comment, created_at: r.created_at };
+          }
+        });
+        setLastReviews(rmap);
+      } else {
+        setLastReviews({});
+      }
     }
     setLoading(false);
   };
