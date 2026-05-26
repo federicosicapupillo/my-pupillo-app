@@ -202,7 +202,7 @@ function ShiftDetailPage() {
         ? supabase.from("announcements").select("*").eq("id", s.announcement_id).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from("profiles")
-        .select("id, full_name, primary_role, badge, rating_avg, reliability_pct, completed_shifts, languages, spoken_languages")
+        .select("id, full_name, primary_role, professional_profile, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, languages, spoken_languages, phone_verified, profile_completed, id_document_path")
         .eq("id", s.worker_id).maybeSingle(),
       supabase.from("profiles").select("id, business_name, full_name").eq("id", s.restaurant_id).maybeSingle(),
       s.announcement_id
@@ -220,6 +220,19 @@ function ShiftDetailPage() {
     ]);
     setAnn((annRes.data as Announcement) ?? null);
     setWorker((workerRes.data as Worker) ?? null);
+    if (s.worker_id) {
+      const { data: rev } = await supabase
+        .from("reviews")
+        .select("rating, comment, created_at, is_visible_to_restaurants")
+        .eq("target_id", s.worker_id)
+        .eq("is_visible_to_restaurants", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setLastReview(rev ? { rating: (rev as any).rating, comment: (rev as any).comment, created_at: (rev as any).created_at } : null);
+    } else {
+      setLastReview(null);
+    }
     setRestaurant((restRes.data as Restaurant) ?? null);
     const apps = (appsRes.data ?? []) as any[];
     setAppCount(apps.length);
