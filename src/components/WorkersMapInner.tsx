@@ -122,9 +122,14 @@ export default function WorkersMapInner({
             ref={(ref) => {
               markerRefs.current[p.id] = ref;
             }}
+            eventHandlers={{
+              mouseover: (e) => {
+                (e.target as L.Marker).openPopup();
+              },
+            }}
           >
             <Popup>
-              <div style={{ minWidth: 200, fontFamily: "Inter, system-ui, sans-serif" }}>
+              <div style={{ minWidth: 220, maxWidth: 280, fontFamily: "Inter, system-ui, sans-serif" }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
                 <UserAvatar userId={p.id} name={p.name} className="h-11 w-11 flex-shrink-0" />
                   <div style={{ minWidth: 0 }}>
@@ -134,6 +139,19 @@ export default function WorkersMapInner({
                     )}
                   </div>
                 </div>
+                {p.known && (
+                  <div style={{
+                    display: "inline-block",
+                    background: "#d1fae5",
+                    color: "#065f46",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    padding: "2px 6px",
+                    borderRadius: 9999,
+                    marginBottom: 8,
+                  }}>✓ Ha già lavorato con te</div>
+                )}
                 {p.city && (
                   <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>📍 {p.city}</div>
                 )}
@@ -159,7 +177,52 @@ export default function WorkersMapInner({
                     </span>
                   )}
                 </div>
+                {p.known && (
+                  <div style={{
+                    borderTop: "1px solid #e5e7eb",
+                    paddingTop: 8,
+                    marginBottom: 8,
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 4,
+                    fontSize: 11,
+                    color: "#374151",
+                  }}>
+                    <div><b>Turni:</b> {p.completedShifts != null ? p.completedShifts : "Dato non disponibile"}</div>
+                    <div><b>Affidabilità:</b> {p.reliabilityPct != null ? `${p.reliabilityPct}%` : "Dato non disponibile"}</div>
+                    <div><b>Puntualità:</b> {p.punctualityPct != null ? `${p.punctualityPct}%` : "Dato non disponibile"}</div>
+                    <div><b>Professionalità:</b> {p.professionalismAvg != null ? `${p.professionalismAvg.toFixed(1)}/5` : "Dato non disponibile"}</div>
+                    {p.lastReviewComment ? (
+                      <div style={{ gridColumn: "1 / -1", marginTop: 4, fontStyle: "italic", color: "#4b5563" }}>
+                        “{p.lastReviewComment.length > 120 ? p.lastReviewComment.slice(0, 117) + "…" : p.lastReviewComment}”
+                      </div>
+                    ) : (
+                      <div style={{ gridColumn: "1 / -1", marginTop: 4, color: "#6b7280" }}>
+                        Nessuna recensione disponibile
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 6 }}>
+                  {p.known && onOpenChat && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenChat(p.id)}
+                      style={{
+                        flex: 1,
+                        background: "#10b981",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 8,
+                        padding: "6px 10px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Apri chat
+                    </button>
+                  )}
                   {onInvite && (
                     <button
                       type="button"
