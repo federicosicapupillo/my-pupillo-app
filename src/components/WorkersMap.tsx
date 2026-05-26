@@ -15,6 +15,7 @@ export function WorkersMap(props: {
   focusId?: string | null;
   focusNonce?: number;
   onViewProfile?: (workerId: string) => void;
+  onOpenChat?: (workerId: string) => void;
 }) {
   const height = props.height ?? 480;
   if (typeof window === "undefined") {

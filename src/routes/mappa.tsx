@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -76,6 +76,8 @@ type Worker = {
   experience_level: string | null;
   weekly_availability: string[] | null;
   account_status: string | null;
+  punctuality_pct?: number | null;
+  avg_professionalism?: number | null;
 };
 
 type Ann = {
@@ -150,7 +152,13 @@ function MapPage() {
   // Worker_ids con cui il ristoratore loggato ha una candidatura accettata o
   // un turno confermato: per questi mostriamo nome e cognome completi.
   const [knownWorkerIds, setKnownWorkerIds] = useState<Set<string>>(new Set());
+  // Ultima recensione pubblicata dal ristoratore loggato per ciascun worker
+  // già collaborato. Usata nel popup della mappa.
+  const [lastReviewByWorker, setLastReviewByWorker] = useState<
+    Record<string, { comment: string | null; rating: number | null }>
+  >({});
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // search & filters
   const [query, setQuery] = useState("");
@@ -245,7 +253,7 @@ function MapPage() {
         // primary_role del lavoratore.
         supabase
           .from("profiles")
-          .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name")
+          .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name, punctuality_pct, avg_professionalism")
           .is("business_name", null)
           .not("primary_role", "is", null)
           .limit(2000),
@@ -320,8 +328,29 @@ function MapPage() {
         const known = new Set<string>();
         (myShifts || []).forEach((x: any) => x.worker_id && known.add(x.worker_id));
         setKnownWorkerIds(known);
+        // Ultima recensione (visibile ai ristoratori) per ciascun lavoratore
+        // con cui c'è stato un turno completato.
+        if (known.size > 0) {
+          const { data: revs } = await supabase
+            .from("reviews")
+            .select("target_id, comment, rating, created_at")
+            .in("target_id", Array.from(known))
+            .eq("is_visible_to_restaurants", true)
+            .order("created_at", { ascending: false })
+            .limit(500);
+          const map: Record<string, { comment: string | null; rating: number | null }> = {};
+          for (const r of (revs || []) as any[]) {
+            if (!map[r.target_id]) {
+              map[r.target_id] = { comment: r.comment ?? null, rating: r.rating ?? null };
+            }
+          }
+          setLastReviewByWorker(map);
+        } else {
+          setLastReviewByWorker({});
+        }
       } else {
         setKnownWorkerIds(new Set());
+        setLastReviewByWorker({});
       }
       setLoading(false);
     })();
@@ -411,23 +440,35 @@ function MapPage() {
   const workerAvatars = useAvatarUrls(workerAvatarIds);
 
   const workerMapPoints: WorkerMapPoint[] = useMemo(
-    () => locatedWorkers.map(({ w, pos }) => ({
-      id: w.id,
-      lat: pos[0],
-      lng: pos[1],
-      // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
-      // (no cognome). Dopo una candidatura accettata o un turno assegnato
-      // mostriamo invece nome e cognome completi.
-      name: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : w.full_name,
-      role: w.primary_role,
-      city: w.city ?? w.neighborhood ?? null,
-      rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
-      badge: w.badge,
-      avatarUrl: workerAvatars[w.id] ?? null,
-      initials: mapInitials(w.full_name),
-      link: `/workers_/${w.id}`,
-    })),
-    [locatedWorkers, workerAvatars, isRestaurant, knownWorkerIds],
+    () => locatedWorkers.map(({ w, pos }) => {
+      const known = isRestaurant && knownWorkerIds.has(w.id);
+      const lastRev = known ? lastReviewByWorker[w.id] : undefined;
+      const profAvg = w.avg_professionalism != null ? Number(w.avg_professionalism) : null;
+      return {
+        id: w.id,
+        lat: pos[0],
+        lng: pos[1],
+        // Privacy: prima dell'assegnazione il ristoratore vede solo il nome
+        // (no cognome). Dopo una candidatura accettata o un turno assegnato
+        // mostriamo invece nome e cognome completi.
+        name: isRestaurant ? displayWorkerName(w, known) : w.full_name,
+        role: w.primary_role,
+        city: w.city ?? w.neighborhood ?? null,
+        rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
+        badge: w.badge,
+        avatarUrl: workerAvatars[w.id] ?? null,
+        initials: mapInitials(w.full_name),
+        link: `/workers_/${w.id}`,
+        known,
+        completedShifts: known && w.completed_shifts != null ? Number(w.completed_shifts) : null,
+        reliabilityPct: known && w.reliability_pct != null ? Number(w.reliability_pct) : null,
+        punctualityPct: known && w.punctuality_pct != null ? Number(w.punctuality_pct) : null,
+        professionalismAvg: known && profAvg != null && profAvg > 0 ? profAvg : null,
+        lastReviewComment: lastRev?.comment ?? null,
+        lastReviewRating: lastRev?.rating ?? null,
+      };
+    }),
+    [locatedWorkers, workerAvatars, isRestaurant, knownWorkerIds, lastReviewByWorker],
   );
 
   const { points, coordSourceStats, coordSourceById } = useMemo(() => {
@@ -986,6 +1027,21 @@ function MapPage() {
                   focusId={focusWorkerId}
                   focusNonce={focusWorkerNonce}
                   onViewProfile={(id) => setPreviewWorkerId(id)}
+                  onOpenChat={async (workerId) => {
+                    if (!user) return;
+                    const { data, error } = await supabase
+                      .from("applications")
+                      .select("id, updated_at")
+                      .eq("restaurant_id", user.id)
+                      .eq("worker_id", workerId)
+                      .order("updated_at", { ascending: false })
+                      .limit(1);
+                    if (error || !data || data.length === 0) {
+                      toast.error("Nessuna chat disponibile con questo lavoratore.");
+                      return;
+                    }
+                    navigate({ to: "/messages/$id", params: { id: data[0].id as string } });
+                  }}
                 />
                 <div className="mt-2 text-xs text-muted-foreground">
                   {workerMapPoints.length} lavorator{workerMapPoints.length === 1 ? "e" : "i"} sulla mappa · posizione approssimativa per tutela privacy · OpenStreetMap
