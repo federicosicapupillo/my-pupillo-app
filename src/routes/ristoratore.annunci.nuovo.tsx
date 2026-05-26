@@ -196,6 +196,7 @@ function NewRestaurantJobRequest() {
     operational_notes: "",
     restaurant_name: "",
     address: "",
+    street_number: "",
     city: "",
     district: "",
     province: "",
