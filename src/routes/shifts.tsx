@@ -535,16 +535,23 @@ function ShiftsPage() {
     if (filter === "assigned") return shifts.filter(s => s.status === "scheduled" && s.shift_date >= today);
     if (filter === "completed") return shifts.filter(s => s.status === "completed");
     if (filter === "past") return shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled");
-    if (filter === "to-review") return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
+    if (filter === "to-review") {
+      if (role === "worker") {
+        return shifts.filter(s => s.status === "completed" && !reviewMap[s.id]);
+      }
+      return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
+    }
     if (filter === "no_show") return shifts.filter(s => s.status === "no_show");
     return shifts;
-  }, [shifts, filter, reqByShift, today]);
+  }, [shifts, filter, reqByShift, today, role, reviewMap]);
 
   const counts = useMemo(() => {
     const assigned = shifts.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
     const past = shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled").length;
     const completed = shifts.filter(s => s.status === "completed").length;
-    const toReview = shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
+    const toReview = role === "worker"
+      ? shifts.filter(s => s.status === "completed" && !reviewMap[s.id]).length
+      : shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
     const noShow = shifts.filter(s => s.status === "no_show").length;
     const pending = role === "restaurant" ? pendingApps.length : 0;
     return { pending, assigned, completed, past, toReview, noShow };
