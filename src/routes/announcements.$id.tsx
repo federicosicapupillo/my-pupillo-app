@@ -157,6 +157,8 @@ function AnnouncementDetail() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [fullDialogOpen, setFullDialogOpen] = useState(false);
+  const [insufficientOpen, setInsufficientOpen] = useState(false);
+  const [creditsAvailable, setCreditsAvailable] = useState(0);
 
   const load = async () => {
     // Try the base table first — succeeds for the owning restaurant, the
