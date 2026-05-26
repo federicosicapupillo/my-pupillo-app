@@ -86,6 +86,7 @@ export default function WorkersMapInner({
   focusId,
   focusNonce,
   onViewProfile,
+  onOpenChat,
 }: {
   points: WorkerMapPoint[];
   height: number;
@@ -96,6 +97,7 @@ export default function WorkersMapInner({
   focusId?: string | null;
   focusNonce?: number;
   onViewProfile?: (workerId: string) => void;
+  onOpenChat?: (workerId: string) => void;
 }) {
   const zoom = points.length > 0 ? 11 : 6;
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
