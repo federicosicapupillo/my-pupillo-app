@@ -1012,8 +1012,19 @@ function SectionTitle({ number, title, subtitle }: { number: string; title: stri
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
+function Field({ label, children, required, error }: { label: string; children: ReactNode; required?: boolean; error?: string | null }) {
+  return (
+    <div className="space-y-1.5">
+      <Label>
+        {label}
+        {required && (
+          <span className="ml-0.5 text-destructive" aria-hidden="true" title="Campo obbligatorio">*</span>
+        )}
+      </Label>
+      {children}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
 }
 
 function ChoiceGroup({ title, items, selected, onToggle }: { title: string; items: readonly { value: string; label: string }[]; selected: string[]; onToggle: (value: string) => void }) {
