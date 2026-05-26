@@ -23,6 +23,7 @@ export const Route = createFileRoute("/browse")({
 
 type Ann = {
   id: string; restaurant_id: string; service_date: string; service_time: string;
+  end_time?: string | null; end_date?: string | null;
   duration_hours: number; speed: string; tariff_type: string; tariff_amount: number;
   location_address: string; location_lat: number | null; location_lng: number | null;
   professional_profile: string | null; status: string; created_at: string;
