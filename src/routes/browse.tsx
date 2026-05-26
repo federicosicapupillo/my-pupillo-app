@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, MapPin, Euro, Heart, List, Map as MapIcon, Search, Send, Clock, Zap, User, CheckCircle2, Moon, Hourglass, Loader2, XCircle } from "lucide-react";
-import { formatTariff, formatTotalService } from "@/lib/format";
+import { formatTariff, formatTotalService, formatOfferDateTime } from "@/lib/format";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
