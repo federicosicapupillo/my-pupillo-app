@@ -244,7 +244,17 @@ function Browse() {
       insertPayload.worker_response_at = new Date().toISOString();
     }
     const { data: app, error } = await supabase.from("applications").insert(insertPayload).select("id").single();
-    if (error) { setSubmitting(false); return toast.error(error.message); }
+    if (error) {
+      setSubmitting(false);
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("duplicate") || msg.includes("unique")) {
+        return toast.info("Hai già inviato la candidatura per questo turno.");
+      }
+      if (msg.includes("row-level security") || msg.includes("violates row-level")) {
+        return toast.error("Turno già assegnato. Questo turno non è più disponibile perché tutte le posizioni sono già state assegnate.");
+      }
+      return toast.error(error.message);
+    }
     // Notifica al ristoratore (best-effort)
     if (app?.id) {
       await supabase.from("notifications").insert({
