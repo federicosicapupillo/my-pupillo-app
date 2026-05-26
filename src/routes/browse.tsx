@@ -283,8 +283,13 @@ function Browse() {
     if (error) {
       setSubmitting(false);
       const msg = (error.message || "").toLowerCase();
-      if (msg.includes("duplicate") || msg.includes("unique")) {
-        return toast.info("Hai già inviato la candidatura per questo turno.");
+      if (isDuplicateContactError(error) || msg.includes("duplicate") || msg.includes("unique")) {
+        const contact = await checkExistingContact({
+          announcementId: confirmAnn.id,
+          workerId: workerProfile.id,
+        });
+        setAlreadyContactAppId(contact.existing ? contact.applicationId : null);
+        return;
       }
       // Only claim the shift is full after confirming with fresh data — never
       // infer it from a generic RLS error.
