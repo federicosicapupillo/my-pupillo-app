@@ -364,7 +364,12 @@ function Browse() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 shrink-0 text-primary/80" />
                       <span className="text-foreground/90">
-                        {new Date(a.service_date).toLocaleDateString("it-IT")} · {a.service_time?.slice(0,5)}
+                        {formatOfferDateTime({
+                          service_date: a.service_date,
+                          service_time: a.service_time,
+                          end_date: a.end_date,
+                          end_time: a.end_time,
+                        })}
                       </span>
                       <span className="text-muted-foreground">· Durata {a.duration_hours}h</span>
                     </div>
