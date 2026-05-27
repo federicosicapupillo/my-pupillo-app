@@ -1520,8 +1520,7 @@ function AvailabilityBlock({
         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Disponibilità
         </div>
-        {(hasReal && (realSummary.kind === "wide" ||
-          (realSummary.kind === "lines" && realSummary.truncated))) && (
+        {hasReal && realSummary.kind === "lines" && realSummary.truncated && (
           <button
             type="button"
             onClick={onDetails}
@@ -1532,37 +1531,32 @@ function AvailabilityBlock({
         )}
       </div>
       <div className="mt-1 text-xs text-foreground">
-        {hasReal ? (
-          <>
-            {realSummary.kind === "today" && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[11px] font-medium">
-                  Disponibile oggi
+        {hasReal && realSummary.kind === "lines" ? (
+          <div className="space-y-1">
+            {realSummary.lines.map((l, i) => (
+              <div key={`${l.days}-${l.hours}-${i}`} className="flex flex-wrap items-center gap-1.5">
+                <span className={l.includesToday ? "font-semibold text-foreground" : "font-medium text-foreground"}>
+                  {l.days}
                 </span>
-                {realSummary.slotLabels.length > 0 && (
-                  <span className="text-muted-foreground">{realSummary.slotLabels.join(", ")}</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-foreground">{l.hours}</span>
+                {l.includesToday && (
+                  <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                    Oggi
+                  </span>
                 )}
               </div>
+            ))}
+            {realSummary.truncated && (
+              <button
+                type="button"
+                onClick={onDetails}
+                className="text-[11px] font-medium text-primary hover:underline"
+              >
+                + altre {realSummary.extraCount} disponibilità
+              </button>
             )}
-            {realSummary.kind === "all_week" && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="font-medium">Tutta la settimana</span>
-                <span className="text-muted-foreground">· {realSummary.slotLabel}</span>
-              </div>
-            )}
-            {realSummary.kind === "wide" && (
-              <span className="font-medium">
-                {realSummary.totalDays} giorni disponibili · Disponibilità ampia
-              </span>
-            )}
-            {realSummary.kind === "lines" && (
-              <div className="space-y-0.5">
-                {realSummary.lines.map((l) => (
-                  <div key={l}>{l}</div>
-                ))}
-              </div>
-            )}
-          </>
+          </div>
         ) : legacySummary.kind === "none" ? (
           <span className="text-muted-foreground">Disponibilità non indicata</span>
         ) : null}
