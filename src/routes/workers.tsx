@@ -755,7 +755,14 @@ function WorkersPage() {
 
   const q = qInput.trim();
   const hasActiveFilters = category !== "all" || !!subcategory || !!q || !!lang;
+  // Default behaviour: when the restaurant has NOT opened the advanced
+  // search, the list is implicitly scoped to the role of the selected
+  // announcement. As soon as any advanced filter is active the user's
+  // explicit criteria win and the announcement role is ignored.
+  const announcementRole = selectedAnn?.professional_profile ?? null;
+  const applyAnnouncementRoleFilter = !hasActiveFilters && !!announcementRole;
   const filtered = workers.filter((worker) => {
+    if (applyAnnouncementRoleFilter && !workerMatchesRole(worker, announcementRole)) return false;
     if (!matchesSubcategory(worker, category, subcategory)) return false;
     if (!matchesText(worker, q, category, subcategory)) return false;
     if (lang) {
@@ -800,6 +807,29 @@ function WorkersPage() {
     }
     return true;
   });
+
+  // Per-worker compatibility with the selected announcement. `null` means
+  // the worker has no availability rows at all → keep visible but rank
+  // below those with declared availability.
+  const compatByWorker: Record<string, CompatibilityLevel | null> = {};
+  if (selectedAnn) {
+    for (const w of distFiltered) {
+      const rows = availByWorker[w.id];
+      if (!rows || rows.length === 0) {
+        compatByWorker[w.id] = null;
+        continue;
+      }
+      compatByWorker[w.id] = computeCompatibility(
+        rows,
+        [],
+        selectedAnn.service_date,
+        selectedAnn.service_time ?? null,
+        selectedAnn.end_time ?? null,
+        selectedAnn.job_city ?? null,
+      );
+    }
+  }
+
   const sorted = [...distFiltered].sort((a, b) => {
     // Ordinamento personale per ristoratore: priorità a chi è già stato
     // contattato / ha già lavorato con questo ristoratore. I filtri di
@@ -812,7 +842,13 @@ function WorkersPage() {
     const ra = rel[a.id]; const rb = rel[b.id];
     const ta = tierOf(ra, a.rating_avg); const tb = tierOf(rb, b.rating_avg);
     if (ta !== tb) return ta - tb;
-    // dentro lo stesso gruppo: ultimo contatto più recente, poi rating, poi in zona
+    // Inside the same group: prioritise availability for the selected
+    // announcement (when one is selected), then last contact, rating, zone.
+    if (selectedAnn) {
+      const ca = compatTier(compatByWorker[a.id] ?? null);
+      const cb = compatTier(compatByWorker[b.id] ?? null);
+      if (ca !== cb) return ca - cb;
+    }
     const la = ra?.lastContactAt ?? 0; const lb = rb?.lastContactAt ?? 0;
     if (la !== lb) return lb - la;
     const ar = a.rating_avg ?? 0; const br = b.rating_avg ?? 0;
