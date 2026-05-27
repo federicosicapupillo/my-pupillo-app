@@ -79,6 +79,10 @@ type W = {
   punctuality_pct?: number | null;
   rehire_restaurants_count?: number | null;
   reviews_count?: number | null;
+  search_penalty_active?: boolean | null;
+  search_penalty_reason?: string | null;
+  search_penalty_until?: string | null;
+  delay_count?: number | null;
 };
 
 type Category =
@@ -387,7 +391,7 @@ function WorkersPage() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count")
+        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count, search_penalty_active, search_penalty_reason, search_penalty_until, delay_count")
         .eq("is_deleted", false)
         .eq("account_status", "active")
         // Profili non completi al 100% non sono operativi:
