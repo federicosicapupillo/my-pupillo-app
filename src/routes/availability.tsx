@@ -549,26 +549,41 @@ function AvailabilityPage() {
 
   const addException = async () => {
     if (!user) return;
-    if (!newExc.date) { toast.error("Seleziona una data."); return; }
+    const errs: ExcErrors = {};
+    // Date required, not in the past
+    if (!newExc.date) {
+      errs.date = "Seleziona una data valida.";
+    } else {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const picked = new Date(newExc.date + "T00:00:00");
+      if (picked < today) errs.date = "Non puoi inserire una disponibilità speciale in una data passata.";
+    }
     if (newExc.is_available) {
-      if (!newExc.city.trim()) {
-        toast.error("Seleziona la città in cui sei disponibile.");
-        return;
-      }
-      if (!newExc.time_slot) {
-        toast.error("Seleziona una fascia di disponibilità.");
-        return;
-      }
+      if (!newExc.time_slot) errs.time_slot = "Seleziona una fascia oraria.";
+      if (!newExc.city.trim()) errs.city = "Seleziona la città.";
+      if (!newExc.district.trim()) errs.district = "Seleziona la zona o quartiere.";
+      if (newExc.radius_km == null) errs.radius_km = "Seleziona il raggio massimo.";
       if (newExc.time_slot === "personalizzata") {
         if (!newExc.start_time || !newExc.end_time) {
-          toast.error("Inserisci orario di inizio e fine per la fascia personalizzata.");
-          return;
-        }
-        if (!isValidTimeRange(newExc.start_time, newExc.end_time)) {
-          toast.error("L'orario di inizio e fine non possono coincidere.");
-          return;
+          errs.time = "Inserisci orario di inizio e fine.";
+        } else if (!isValidTimeRange(newExc.start_time, newExc.end_time)) {
+          errs.time = "L'orario di inizio e fine non possono coincidere.";
         }
       }
+    }
+    if (Object.keys(errs).length > 0) {
+      setExcErrors(errs);
+      toast.error("Controlla i campi evidenziati.");
+      return;
+    }
+    setExcErrors({});
+    // Duplicate check: same date + same slot
+    const dup = exceptions.find(
+      (e) => e.date === newExc.date && (e.time_slot ?? "") === newExc.time_slot,
+    );
+    if (dup) {
+      toast.error("Hai già inserito una disponibilità speciale per questa data e fascia.");
+      return;
     }
     const start = newExc.time_slot === "personalizzata" ? (newExc.start_time || null) : null;
     const end = newExc.time_slot === "personalizzata" ? (newExc.end_time || null) : null;
@@ -587,15 +602,23 @@ function AvailabilityPage() {
       longitude: null,
       radius_km: newExc.is_available ? newExc.radius_km : null,
     };
-    const { data, error } = await supabase
-      .from("worker_availability_exceptions")
-      .insert(payload as never)
-      .select("*")
-      .single();
-    if (error) { toast.error(error.message); return; }
-    setExceptions((e) => [...e, data as unknown as AvailabilityExceptionRow].sort((a, b) => a.date.localeCompare(b.date)));
-    setNewExc(emptyNewExc(defaults.city, defaults.province, defaults.district, defaults.radius_km));
-    toast.success("Disponibilità speciale aggiunta");
+    setAddingException(true);
+    try {
+      const { data, error } = await supabase
+        .from("worker_availability_exceptions")
+        .insert(payload as never)
+        .select("*")
+        .single();
+      if (error) {
+        toast.error("Non è stato possibile aggiungere la disponibilità speciale. Riprova.");
+        return;
+      }
+      setExceptions((e) => [...e, data as unknown as AvailabilityExceptionRow].sort((a, b) => a.date.localeCompare(b.date)));
+      setNewExc(emptyNewExc(defaults.city, defaults.province, defaults.district, defaults.radius_km));
+      toast.success("Disponibilità speciale aggiunta correttamente.");
+    } finally {
+      setAddingException(false);
+    }
   };
 
   const removeException = async (id: string) => {
