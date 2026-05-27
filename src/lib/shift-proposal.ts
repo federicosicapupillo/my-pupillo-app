@@ -1,6 +1,29 @@
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateIT, formatTariff } from "@/lib/format";
 
+/**
+ * Build a short, unambiguous preview text for the inbox list. Two distinct
+ * applications for the same worker+restaurant must be distinguishable, so the
+ * preview includes role + date + (optional) time, not just a generic label.
+ * Example: "Proposta: Bartender · 27/05 · 19:00 - 23:00".
+ */
+export function buildProposalPreview(ann: ProposalAnnouncement): string {
+  const role = (ann.professional_profile ?? "").trim();
+  const parts: string[] = [];
+  if (role) parts.push(role.charAt(0).toUpperCase() + role.slice(1));
+  if (ann.service_date) {
+    const d = new Date(ann.service_date);
+    if (!Number.isNaN(d.getTime())) {
+      parts.push(d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }));
+    }
+  }
+  const start = ann.service_time ? String(ann.service_time).slice(0, 5) : "";
+  const end = ann.end_time ? String(ann.end_time).slice(0, 5) : "";
+  if (start && end) parts.push(`${start} - ${end}`);
+  else if (start) parts.push(start);
+  return parts.length ? `Proposta: ${parts.join(" · ")}` : "Nuova proposta di lavoro";
+}
+
 export const PROPOSAL_TEMPLATE_ID = "shift_proposal";
 export const PROPOSAL_ACTION = "propose_shift";
 
@@ -99,7 +122,7 @@ export async function sendShiftProposal(params: {
     action_type: PROPOSAL_ACTION,
   } as never);
   await supabase.from("applications").update({
-    last_message_preview: "Nuova proposta di lavoro",
+    last_message_preview: buildProposalPreview((ann as ProposalAnnouncement) ?? { id: announcementId, service_date: null, service_time: null, location_address: null }),
     last_message_at: createdAt,
   } as never).eq("id", applicationId);
 }

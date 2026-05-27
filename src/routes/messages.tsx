@@ -47,6 +47,8 @@ type Thread = {
   unread: number;
   annRole: string | null;
   annDate: string | null;
+  annTime: string | null;
+  annEndTime: string | null;
   hasWorkedTogether: boolean;
 };
 
@@ -144,13 +146,16 @@ function MessagesLayout() {
     timeLabel: string;
   } | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const toggleGroup = (id: string) =>
+  const userToggledRef = useRef<Set<string>>(new Set());
+  const toggleGroup = (id: string) => {
+    userToggledRef.current.add(id);
     setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
 
   const load = async () => {
     if (!user || !role) return;
@@ -183,7 +188,7 @@ function MessagesLayout() {
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
       annIds.length
-        ? supabase.from("announcements").select("id, professional_profile, service_date").in("id", annIds)
+        ? supabase.from("announcements").select("id, professional_profile, service_date, service_time, end_time").in("id", annIds)
         : Promise.resolve({ data: [] as any[] }),
       // "Have I worked with them?" — any shift row (other than cancelled/no_show)
       // between me and any of these partners proves a confirmed past relationship.
@@ -239,6 +244,8 @@ function MessagesLayout() {
         unread: unreadByApp.get(a.id) ?? 0,
         annRole: ann?.professional_profile ?? null,
         annDate: ann?.service_date ?? null,
+        annTime: ann?.service_time ?? null,
+        annEndTime: ann?.end_time ?? null,
         hasWorkedTogether,
       };
     });
@@ -354,6 +361,32 @@ function MessagesLayout() {
     return true;
   });
   const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "");
+  // Build the inbox label so two applications with the same role but
+  // different shift dates are visually distinguishable. Includes role,
+  // shift date and shift time when available, e.g. "Bartender · 27 mag · 19:00 - 23:00".
+  const fmtThreadLabel = (t: Thread): string => {
+    const role = t.annRole ? formatRoleLabel(t.annRole) : "";
+    const date = fmtDate(t.annDate);
+    const time = formatServiceTime(t.annTime, t.annEndTime);
+    const parts = [role || "Annuncio", date, time].filter(Boolean);
+    return parts.join(" · ");
+  };
+
+  // Auto-expand any partner group that contains more than one application,
+  // so two distinct candidatures for the same worker are immediately visible
+  // instead of hidden behind a collapsed row. Honors manual collapse/expand.
+  useEffect(() => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      for (const g of groupThreadsByOther(threads)) {
+        if (g.items.length > 1 && !userToggledRef.current.has(g.id)) {
+          next.add(g.id);
+        }
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threads.length, threads.map((t) => t.id).join("|")]);
 
   // Load last-selected announcement context for restaurant quick-reuse.
   useEffect(() => {
@@ -573,7 +606,7 @@ function MessagesLayout() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
                         <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
-                          {[t.annRole, fmtDate(t.annDate)].filter(Boolean).join(" — ") || t.other.name}
+                          {fmtThreadLabel(t) || t.other.name}
                         </div>
                         <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
                       </div>
@@ -649,8 +682,11 @@ function MessagesLayout() {
                         <div className={`text-xs truncate ${g.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
                           {last?.lastBody ?? "Nessun messaggio"}
                         </div>
-                        <span className="shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 bg-muted text-foreground">
-                          {g.items.length} {g.items.length === 1 ? "chat" : "chat"}
+                        <span
+                          className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 font-semibold ${g.items.length > 1 ? "bg-primary/15 text-primary" : "bg-muted text-foreground"}`}
+                          aria-label={`${g.items.length} candidature in questa conversazione`}
+                        >
+                          {g.items.length} {g.items.length === 1 ? "candidatura" : "candidature"}
                         </span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -692,7 +728,7 @@ function MessagesLayout() {
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className={`min-w-0 truncate text-sm ${isUnread ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>
-                                  {[t.annRole || "Annuncio", fmtDate(t.annDate)].filter(Boolean).join(" — ")}
+                                  {fmtThreadLabel(t)}
                                 </div>
                                 <div className="shrink-0 text-[10px] text-muted-foreground">{formatWhen(t.lastAt)}</div>
                               </div>
