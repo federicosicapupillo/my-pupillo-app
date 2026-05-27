@@ -561,9 +561,28 @@ function MapPage() {
     const byId: Record<string, "job" | "location" | "profile" | "service_area"> = {};
     if (showR) {
       filteredRestaurants.forEach(r => {
-        const lat = r.service_area_lat ?? r.latitude;
-        const lng = r.service_area_lng ?? r.longitude;
-        if (lat == null || lng == null) return;
+        let lat: number | null | undefined;
+        let lng: number | null | undefined;
+        if (isWorker) {
+          // Posizione APPROSSIMATA derivata da zona/città del locale.
+          // Non usiamo mai le coordinate precise del profilo (rule 5/10).
+          // Se città/zona non risolvono, skip (rule 14): meglio nessun
+          // marker che un marker nella città sbagliata.
+          const base = lookupCityCoords(r.neighborhood) || lookupCityCoords(r.city);
+          if (!base) {
+            if (typeof window !== "undefined") {
+              console.debug("[mappa] skip restaurant (no city coords)", { id: r.id, city: r.city, neighborhood: r.neighborhood });
+            }
+            return;
+          }
+          const j = jitterCoords(base, r.id, 1.2);
+          lat = j[0];
+          lng = j[1];
+        } else {
+          lat = r.service_area_lat ?? r.latitude;
+          lng = r.service_area_lng ?? r.longitude;
+          if (lat == null || lng == null) return;
+        }
         const known = !isWorker || knownRestaurantIds.has(r.id);
         const hasActive = (annCounts[r.id] || 0) > 0;
         const maskedTitle = pickMaskedRestaurantLabel(r.id, hasActive);
@@ -575,8 +594,8 @@ function MapPage() {
         ].filter(Boolean).join(" · ");
         pts.push({
           id: r.id,
-          lat: known ? lat : jitterCoords([lat, lng], r.id, 1.2)[0],
-          lng: known ? lng : jitterCoords([lat, lng], r.id, 1.2)[1],
+          lat: isWorker ? lat! : (known ? lat! : jitterCoords([lat!, lng!], r.id, 1.2)[0]),
+          lng: isWorker ? lng! : (known ? lng! : jitterCoords([lat!, lng!], r.id, 1.2)[1]),
           category: "restaurant",
           title: known ? (r.business_name || r.full_name || "Locale") : maskedTitle,
           subtitle: known
