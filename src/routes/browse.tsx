@@ -441,6 +441,8 @@ function Browse() {
             const rejected = appStatus === "rejected" || appStatus === "not_interested";
             const fav = favIds.has(a.id);
             const role = a.professional_profile || "ruolo";
+            const specialBlock = computeSpecialAvailabilityBlock(specialExceptions, a);
+            const incompatibleSpecial = !!specialBlock?.blocked;
             const loc = publicLocationLabel({
               job_city: a.job_city,
               city: restaurantsById[a.restaurant_id]?.city,
@@ -553,6 +555,15 @@ function Browse() {
                     <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary">
                       <CheckCircle2 className="h-4 w-4" />
                       Candidatura inviata
+                    </div>
+                  ) : incompatibleSpecial ? (
+                    <div className="flex-1 rounded-xl border-2 border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                      <div className="font-semibold inline-flex items-center gap-1">
+                        <XCircle className="h-3.5 w-3.5" /> Non compatibile con la tua disponibilità speciale
+                      </div>
+                      {specialBlock?.specials.map((e) => (
+                        <p key={e.id} className="mt-0.5 opacity-90">· {describeSpecialAvailability(e)}</p>
+                      ))}
                     </div>
                   ) : (
                     <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={() => apply(a)}>
