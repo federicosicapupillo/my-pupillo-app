@@ -422,14 +422,16 @@ function MapPage() {
   const workerRoles = useMemo(() => Array.from(new Set(workers.map(w => w.primary_role).filter(Boolean))) as string[], [workers]);
 
   // Insieme effettivo delle città consentite per la mappa lato lavoratore.
-  // Se il lavoratore ha impostato un filtro città manuale, quello vince
-  // (rule 19). Altrimenti si usa la base (profilo + speciali future).
-  // Null = nessun vincolo (vista ristoratore/admin).
+  // Comportamento richiesto: per default il lavoratore vede TUTTI gli annunci
+  // attivi in Italia (rule 1, 20). Solo quando seleziona esplicitamente una
+  // città dal filtro, la mappa viene ristretta a quella città (rule 22-24).
+  // Null = nessun vincolo.
   const workerAllowedCities = useMemo<Set<string> | null>(() => {
     if (!isWorker) return null;
     if (city !== "any") return new Set([normalizeCity(city)]);
-    return workerBaseAllowedCities;
-  }, [isWorker, city, workerBaseAllowedCities]);
+    // Default lato lavoratore: nessun vincolo, mostra tutta Italia.
+    return null;
+  }, [isWorker, city]);
 
   const isWorkerCityAllowed = (c: string | null | undefined) => {
     if (!workerAllowedCities) return true;
