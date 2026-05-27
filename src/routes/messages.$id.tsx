@@ -2407,6 +2407,18 @@ function Thread() {
           </div>
         )}
         <div id="chat-composer">
+        {isConversationClosed ? (
+          <div className="mt-4 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 p-4 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 px-3 py-1 text-xs font-semibold mb-2">
+              <Ban className="h-3.5 w-3.5" />
+              {closureReason === "completed" ? "Turno concluso" : "Turno annullato"}
+            </div>
+            <p className="text-sm text-foreground/90">{closureNoticeText}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Non puoi inviare messaggi perché questo turno è stato chiuso o annullato.
+            </p>
+          </div>
+        ) : (
         <TemplatePicker
           role={role === "restaurant" ? "restaurant" : "worker"}
           category={tplCategory}
@@ -2435,6 +2447,7 @@ function Thread() {
           addressOverride={displayAddress}
           disabled={isConversationClosed}
         />
+        )}
         </div>
 
         {role === "restaurant" && tplCategory === "post_shift" && app && (
