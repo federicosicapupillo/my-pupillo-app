@@ -322,6 +322,28 @@ function compatTier(level: CompatibilityLevel | null): number {
   return 4; // non disponibile
 }
 
+// Quando il lavoratore ha impostato una "disponibilità speciale" per la data
+// dell'annuncio, quella prevale sempre sulla disponibilità abituale: se nessuna
+// delle eccezioni è compatibile con città/zona/orario dell'annuncio (o segna
+// la data come "Non disponibile"), il contatto va bloccato.
+function describeSpecial(e: AvailabilityExceptionRow): string {
+  const where = [e.city, e.district].filter(Boolean).join(" · ");
+  const when = e.start_time && e.end_time ? `${e.start_time}–${e.end_time}` : "";
+  if (!e.is_available) return [where, "Non disponibile"].filter(Boolean).join(" · ");
+  return [where, when].filter(Boolean).join(" · ");
+}
+
+function computeSpecialBlock(
+  specials: AvailabilityExceptionRow[],
+  level: CompatibilityLevel | null,
+): { blocked: boolean; specials: AvailabilityExceptionRow[] } | null {
+  if (!specials || specials.length === 0) return null;
+  // Le specials esistono per quella data → prevalgono. Se computeCompatibility
+  // dice "non_disponibile" il lavoratore non può ricevere proposta per il turno.
+  if (level === "non_disponibile") return { blocked: true, specials };
+  return { blocked: false, specials };
+}
+
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
