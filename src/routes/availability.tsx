@@ -1155,14 +1155,28 @@ function AvailabilityPage() {
       <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancellare tutte le disponibilità?</DialogTitle>
+            <DialogTitle>Cancella tutte le disponibilità</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Verranno azzerati tutti i giorni della settimana. Le disponibilità speciali non saranno toccate. L'operazione diventa definitiva al prossimo salvataggio.
+            Stai per cancellare tutte le disponibilità impostate. Vuoi continuare?
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmClear(false)}>Annulla</Button>
             <Button variant="destructive" onClick={clearAll}>Cancella tutto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preset confirmation dialog */}
+      <Dialog open={!!confirmPreset} onOpenChange={(open) => { if (!open) setConfirmPreset(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmPreset?.title}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{confirmPreset?.message}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmPreset(null)}>Annulla</Button>
+            <Button onClick={applyPreset}>Applica</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
