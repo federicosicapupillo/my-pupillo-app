@@ -15,7 +15,7 @@ import { KeyRound, Trash2, FileText, Coins, Star, Eye, EyeOff, User, Building2, 
 import { SpokenLanguagesView, SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
-import { provinceCode } from "@/lib/italian-locations";
+import { provinceCode, splitAddressAndCivic } from "@/lib/italian-locations";
 import { ReferralCard } from "@/components/ReferralCard";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
@@ -26,7 +26,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { updateAvatarUrlCache, useAvatarUrl } from "@/hooks/use-avatar-urls";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { WORKER_CITIES } from "@/lib/worker-cities";
-import { splitAddressAndCivic } from "@/lib/italian-locations";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { Lock } from "lucide-react";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
