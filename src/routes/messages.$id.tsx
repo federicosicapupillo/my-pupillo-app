@@ -74,6 +74,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useProfileGate } from "@/components/ProfileGate";
+import {
+  computeSpecialAvailabilityBlock,
+  describeSpecialAvailability,
+  fetchSpecialAvailabilityBlock,
+  SPECIAL_ACCEPT_INCOMPATIBLE_MESSAGE,
+  type SpecialAvailabilityBlock,
+} from "@/lib/worker-special-availability";
+import type { AvailabilityExceptionRow } from "@/lib/availability";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -440,6 +448,10 @@ function Thread() {
   const [sending, setSending] = useState(false);
   const [shift, setShift] = useState<Shift | null>(null);
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, "accepted" | "rejected">>({});
+  // Disponibilità speciale del lavoratore per la data dell'annuncio: se
+  // esiste, prevale sulla disponibilità abituale. Se non è compatibile con
+  // città/orario dell'annuncio, "Accetta proposta" deve risultare bloccato.
+  const [workerSpecialExceptions, setWorkerSpecialExceptions] = useState<AvailabilityExceptionRow[]>([]);
   type ProposalDebugInfo = {
     responseId: string | null;
     responseStatus: string | null;
@@ -552,6 +564,20 @@ function Thread() {
         }
         setWorkerRep((p as WorkerReputationInput | null) ?? null);
         setAnn(an as Ann | null);
+        // Se il ruolo è "worker" e l'annuncio ha una data, carico le
+        // disponibilità speciali del lavoratore per quella data. Servono per
+        // bloccare "Accetta proposta" se la disponibilità speciale non è
+        // compatibile con città/orario del turno.
+        if (user?.id === a.worker_id && (an as any)?.service_date) {
+          const { data: excs } = await supabase
+            .from("worker_availability_exceptions")
+            .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
+            .eq("worker_id", a.worker_id)
+            .eq("date", (an as any).service_date);
+          setWorkerSpecialExceptions((excs as AvailabilityExceptionRow[] | null) ?? []);
+        } else {
+          setWorkerSpecialExceptions([]);
+        }
         // Carica recensioni del lavoratore per il ristoratore (privacy: solo
         // recensioni verificate, collegate a turni reali, visibili ai ristoratori).
         const workerTargetId = a.worker_id;
@@ -2176,6 +2202,9 @@ function Thread() {
               // Per-proposal status is authoritative. Legacy proposals (no recorded
               // response anywhere) fall back to the application status once.
               const effectiveStatus = ownStatus ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
+              const specialBlock = role === "worker"
+                ? computeSpecialAvailabilityBlock(workerSpecialExceptions, ann)
+                : null;
               return (
                 <div key={m.id} className="flex flex-col gap-2">
                 <ProposalCard
@@ -2186,6 +2215,7 @@ function Thread() {
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
                   status={effectiveStatus}
+                  specialBlock={specialBlock}
                   lockReason={
                     closureReason === "completed"
                       ? "completed"
@@ -2198,6 +2228,13 @@ function Thread() {
                       console.warn("[proposal] accept blocked: chat closed", { closureReason, shiftStatus: shift?.status, annStatus: ann?.status, appStatus: app?.status });
                       toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
                       return;
+                    }
+                    if (role === "worker" && user) {
+                      const fresh = await fetchSpecialAvailabilityBlock(user.id, ann);
+                      if (fresh?.blocked) {
+                        toast.error(SPECIAL_ACCEPT_INCOMPATIBLE_MESSAGE);
+                        return;
+                      }
                     }
                     if (user) {
                       const { error: respErr } = await supabase.from("proposal_responses").insert({
@@ -3054,11 +3091,14 @@ function ProposalCard(props: {
   isWorker: boolean;
   status: string;
   lockReason?: "completed" | "cancelled" | null;
+  specialBlock?: SpecialAvailabilityBlock | null;
   onAccept: () => Promise<void>;
   onReject: (reason?: string) => Promise<void>;
 }) {
   const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
   const lockReason = props.lockReason ?? null;
+  const specialBlock = props.specialBlock ?? null;
+  const incompatibleSpecial = !!specialBlock?.blocked;
   const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
   const [confirmAccept, setConfirmAccept] = useState(false);
   const [confirmReject, setConfirmReject] = useState(false);
@@ -3112,6 +3152,11 @@ function ProposalCard(props: {
   };
   const doAccept = async () => {
     if (busy) return;
+    if (incompatibleSpecial) {
+      toast.error(SPECIAL_ACCEPT_INCOMPATIBLE_MESSAGE);
+      setConfirmAccept(false);
+      return;
+    }
     if (locked) {
       toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
       setConfirmAccept(false);
@@ -3306,6 +3351,32 @@ function ProposalCard(props: {
               (isWorker ? "Hai rifiutato questa proposta." : "Proposta rifiutata")}
           </div>
         ) : isWorker ? (
+          incompatibleSpecial ? (
+            <div className="px-4 py-3 border-t bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200 text-sm">
+              <div className="font-semibold inline-flex items-center gap-1">
+                <X className="h-4 w-4" />
+                Questa proposta non è compatibile con la disponibilità speciale che hai impostato per questa data.
+              </div>
+              {specialBlock?.specials.map((e) => (
+                <p key={e.id} className="mt-0.5 text-xs opacity-90">· {describeSpecialAvailability(e)}</p>
+              ))}
+              <div className="mt-2 flex gap-2">
+                <Button type="button" disabled className="flex-1 h-11 bg-emerald-600/50 text-white font-semibold gap-2 cursor-not-allowed">
+                  <Check className="h-4 w-4" /> Accetta proposta
+                </Button>
+                <Button
+                  type="button"
+                  onClick={openReject}
+                  disabled={!!busy}
+                  variant="outline"
+                  className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
+                </Button>
+              </div>
+            </div>
+          ) : (
           <div className="px-4 py-3 border-t bg-secondary/30 flex gap-2">
             <Button
               type="button"
@@ -3327,6 +3398,7 @@ function ProposalCard(props: {
               {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
             </Button>
           </div>
+          )
         ) : (
           <div className="px-4 py-3 border-t bg-secondary/20 text-xs text-muted-foreground text-center">
             In attesa di risposta dal lavoratore.

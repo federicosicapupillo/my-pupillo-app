@@ -17,6 +17,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import {
+  computeSpecialAvailabilityBlock,
+  describeSpecialAvailability,
+  fetchSpecialAvailabilityBlock,
+  SPECIAL_INCOMPATIBLE_MESSAGE,
+  type SpecialAvailabilityBlock,
+} from "@/lib/worker-special-availability";
+import type { AvailabilityExceptionRow } from "@/lib/availability";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -102,6 +110,11 @@ function Browse() {
   const [applyMode, setApplyMode] = useState<"accept" | "counter">("accept");
   const [counterAmount, setCounterAmount] = useState<string>("");
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
+  // Disponibilità speciali del lavoratore: se per la data dell'annuncio
+  // esistono entry "speciali", quelle prevalgono sempre sulla disponibilità
+  // abituale. Se nessuna è compatibile con città/orario dell'annuncio,
+  // candidatura bloccata sia lato UI sia lato submit.
+  const [specialExceptions, setSpecialExceptions] = useState<AvailabilityExceptionRow[]>([]);
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
@@ -161,6 +174,19 @@ function Browse() {
       }
       setAppStatusById(statusMap);
       setFavIds(new Set((favs??[]).map((f:any)=>f.announcement_id)));
+      const annDates = Array.from(new Set(list.map(a => a.service_date).filter(Boolean))) as string[];
+      if (annDates.length > 0) {
+        const { data: excs } = await supabase
+          .from("worker_availability_exceptions")
+          .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
+          .eq("worker_id", user.id)
+          .in("date", annDates);
+        setSpecialExceptions((excs as AvailabilityExceptionRow[] | null) ?? []);
+      } else {
+        setSpecialExceptions([]);
+      }
+    } else {
+      setSpecialExceptions([]);
     }
     setLoading(false);
   };
@@ -206,6 +232,11 @@ function Browse() {
       toast.info("Ti sei già candidato a questo turno.");
       return;
     }
+    const block = computeSpecialAvailabilityBlock(specialExceptions, a);
+    if (block?.blocked) {
+      toast.error(SPECIAL_INCOMPATIBLE_MESSAGE);
+      return;
+    }
     setConfirmAnn(a);
   };
 
@@ -213,6 +244,14 @@ function Browse() {
     if (!user || !confirmAnn) return;
     if (appliedIds.has(confirmAnn.id)) {
       toast.info("Ti sei già candidato a questo turno.");
+      setConfirmAnn(null);
+      return;
+    }
+    // Safety re-check lato backend: rileggiamo le eccezioni per quella data
+    // e blocchiamo se incompatibili, indipendentemente dallo stato in UI.
+    const freshBlock = await fetchSpecialAvailabilityBlock(user.id, confirmAnn);
+    if (freshBlock?.blocked) {
+      toast.error(SPECIAL_INCOMPATIBLE_MESSAGE);
       setConfirmAnn(null);
       return;
     }
@@ -402,6 +441,8 @@ function Browse() {
             const rejected = appStatus === "rejected" || appStatus === "not_interested";
             const fav = favIds.has(a.id);
             const role = a.professional_profile || "ruolo";
+            const specialBlock = computeSpecialAvailabilityBlock(specialExceptions, a);
+            const incompatibleSpecial = !!specialBlock?.blocked;
             const loc = publicLocationLabel({
               job_city: a.job_city,
               city: restaurantsById[a.restaurant_id]?.city,
@@ -515,6 +556,15 @@ function Browse() {
                       <CheckCircle2 className="h-4 w-4" />
                       Candidatura inviata
                     </div>
+                  ) : incompatibleSpecial ? (
+                    <div className="flex-1 rounded-xl border-2 border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                      <div className="font-semibold inline-flex items-center gap-1">
+                        <XCircle className="h-3.5 w-3.5" /> Non compatibile con la tua disponibilità speciale
+                      </div>
+                      {specialBlock?.specials.map((e) => (
+                        <p key={e.id} className="mt-0.5 opacity-90">· {describeSpecialAvailability(e)}</p>
+                      ))}
+                    </div>
                   ) : (
                     <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={() => apply(a)}>
                       <Send className="h-4 w-4" />
@@ -545,6 +595,8 @@ function Browse() {
             const appStatus = appStatusById[selected.id];
             const rejected = appStatus === "rejected" || appStatus === "not_interested";
             const fav = favIds.has(selected.id);
+            const selectedBlock = computeSpecialAvailabilityBlock(specialExceptions, selected);
+            const selectedIncompatible = !!selectedBlock?.blocked;
             const dist = (profile?.service_area_lat != null && profile?.service_area_lng != null && selected.location_lat != null && selected.location_lng != null)
               ? distKm(profile.service_area_lat, profile.service_area_lng, selected.location_lat, selected.location_lng) : null;
             const selectedTotal = formatTotalService(
@@ -592,6 +644,15 @@ function Browse() {
                     </div>
                   ) : applied ? (
                     <Button disabled variant="secondary" className="flex-1">Candidatura già inviata</Button>
+                  ) : selectedIncompatible ? (
+                    <div className="flex-1 rounded-xl border-2 border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                      <div className="font-semibold inline-flex items-center gap-1">
+                        <XCircle className="h-3.5 w-3.5" /> Non compatibile con la tua disponibilità speciale
+                      </div>
+                      {selectedBlock?.specials.map((e) => (
+                        <p key={e.id} className="mt-0.5 opacity-90">· {describeSpecialAvailability(e)}</p>
+                      ))}
+                    </div>
                   ) : (
                     <Button className="flex-1 gap-2" onClick={()=>apply(selected)}><Send className="h-4 w-4" />Candidati ora</Button>
                   )}
