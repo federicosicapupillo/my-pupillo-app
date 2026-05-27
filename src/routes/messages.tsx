@@ -185,7 +185,7 @@ function MessagesLayout() {
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
       annIds.length
-        ? supabase.from("announcements").select("id, professional_profile, service_date").in("id", annIds)
+        ? supabase.from("announcements").select("id, professional_profile, service_date, service_time, end_time").in("id", annIds)
         : Promise.resolve({ data: [] as any[] }),
       // "Have I worked with them?" — any shift row (other than cancelled/no_show)
       // between me and any of these partners proves a confirmed past relationship.
@@ -241,6 +241,8 @@ function MessagesLayout() {
         unread: unreadByApp.get(a.id) ?? 0,
         annRole: ann?.professional_profile ?? null,
         annDate: ann?.service_date ?? null,
+        annTime: ann?.service_time ?? null,
+        annEndTime: ann?.end_time ?? null,
         hasWorkedTogether,
       };
     });
