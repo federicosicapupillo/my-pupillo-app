@@ -1282,6 +1282,23 @@ function ShiftsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ReportDelayDialog
+        open={!!delayTarget}
+        target={delayTarget}
+        onClose={() => setDelayTarget(null)}
+        onDone={() => { /* incident persisted; shift status unchanged */ }}
+      />
+      <CancelPresenceDialog
+        open={!!workerCancelTarget}
+        target={workerCancelTarget}
+        onClose={() => setWorkerCancelTarget(null)}
+        onDone={() => {
+          if (workerCancelTarget) {
+            setShifts(prev => prev.map(x => x.id === workerCancelTarget.shiftId ? { ...x, status: "cancelled" as const } : x));
+          }
+        }}
+      />
     </AppShell>
   );
 }
