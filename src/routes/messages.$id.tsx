@@ -75,6 +75,12 @@ import {
 } from "@/components/ui/dialog";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
+  ReportDelayDialog,
+  CancelPresenceDialog,
+  type IncidentTarget,
+} from "@/components/WorkerIncidentDialogs";
+import { Clock as ClockIcon, Ban as BanIcon } from "lucide-react";
+import {
   computeSpecialAvailabilityBlock,
   describeSpecialAvailability,
   fetchSpecialAvailabilityBlock,
