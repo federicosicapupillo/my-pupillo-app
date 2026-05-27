@@ -255,6 +255,14 @@ function AvailabilityPage() {
   const updateDay = (i: number, patch: Partial<DayState>) =>
     setDays((d) => d.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
 
+  const setDayCity = (i: number, city: string) => {
+    const zones = zonesForCity(city);
+    const current = days[i].district;
+    // Keep current zone if still valid, otherwise default to "Tutte le zone".
+    const nextDistrict = current && zones.includes(current) ? current : ALL_ZONES_OPTION;
+    updateDay(i, { city, province: provinceForCity(city), district: nextDistrict });
+  };
+
   const toggleDay = (i: number, on: boolean) => updateDay(i, { is_available: on });
 
   const toggleSlot = (i: number, slot: TimeSlot) => {
