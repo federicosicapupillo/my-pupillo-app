@@ -408,6 +408,7 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
               value={city}
               onChange={(v) => { setCity(v); if (errors.city) setErrors(p => ({ ...p, city: undefined })); }}
               placeholder="Seleziona città"
+              triggerClassName={errors.city ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive" : undefined}
             />
             {errors.city && <p className="mt-1 text-xs text-destructive">{errors.city}</p>}
           </div>
