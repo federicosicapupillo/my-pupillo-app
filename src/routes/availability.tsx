@@ -33,6 +33,25 @@ import {
   crossesMidnight,
   isValidTimeRange,
 } from "@/lib/availability";
+import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity } from "@/lib/worker-cities";
+
+// Province codes for the supported worker cities. Keep aligned with WORKER_CITIES.
+const CITY_PROVINCE_CODE: Record<string, string> = {
+  Milano: "MI",
+  Roma: "RM",
+  Torino: "TO",
+  Bologna: "BO",
+  Firenze: "FI",
+  Napoli: "NA",
+  Genova: "GE",
+  Verona: "VR",
+  Venezia: "VE",
+  Bari: "BA",
+};
+
+function provinceForCity(city: string): string {
+  return CITY_PROVINCE_CODE[city] ?? "";
+}
 
 export const Route = createFileRoute("/availability")({
   head: () => ({
@@ -236,6 +255,14 @@ function AvailabilityPage() {
   const updateDay = (i: number, patch: Partial<DayState>) =>
     setDays((d) => d.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
 
+  const setDayCity = (i: number, city: string) => {
+    const zones = zonesForCity(city);
+    const current = days[i].district;
+    // Keep current zone if still valid, otherwise default to "Tutte le zone".
+    const nextDistrict = current && zones.includes(current) ? current : ALL_ZONES_OPTION;
+    updateDay(i, { city, province: provinceForCity(city), district: nextDistrict });
+  };
+
   const toggleDay = (i: number, on: boolean) => updateDay(i, { is_available: on });
 
   const toggleSlot = (i: number, slot: TimeSlot) => {
@@ -422,8 +449,8 @@ function AvailabilityPage() {
   const validateDay = (i: number): string | null => {
     const d = days[i];
     if (!d.is_available) return null;
-    if (!d.city.trim()) return "Indica la città in cui sei disponibile.";
-    if (!d.district.trim()) return "Indica la zona o il quartiere.";
+    if (!d.city.trim()) return "Seleziona la città.";
+    if (!d.district.trim()) return "Seleziona la zona o quartiere.";
     if (!d.flexible && d.slots.length === 0) return "Seleziona almeno una fascia oraria.";
     for (const s of d.slots) {
       if (s.time_slot === "last_minute") continue;
@@ -785,26 +812,53 @@ function AvailabilityPage() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">Città *</label>
-                    <Input
-                      value={d.city}
-                      placeholder={defaults.city || "Es. Bologna"}
-                      onChange={(e) => updateDay(i, { city: e.target.value })}
-                    />
+                    <Select value={d.city || undefined} onValueChange={(v) => setDayCity(i, v)}>
+                      <SelectTrigger><SelectValue placeholder="Seleziona la città" /></SelectTrigger>
+                      <SelectContent>
+                        {d.city && !WORKER_CITIES.includes(d.city as (typeof WORKER_CITIES)[number]) && (
+                          <SelectItem value={d.city}>{d.city} (attuale)</SelectItem>
+                        )}
+                        {WORKER_CITIES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere</label>
-                    <Input
-                      value={d.district}
-                      placeholder={defaults.district || "Es. Centro, Navigli..."}
-                      onChange={(e) => updateDay(i, { district: e.target.value })}
-                    />
+                    <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere *</label>
+                    {(() => {
+                      const zones = zonesForCity(d.city);
+                      const options = [ALL_ZONES_OPTION, "Centro", ...zones.filter((z) => z !== "Centro")];
+                      const dedup = Array.from(new Set(options));
+                      const showCurrent = d.district && !dedup.includes(d.district);
+                      return (
+                        <Select
+                          value={d.district || undefined}
+                          onValueChange={(v) => updateDay(i, { district: v })}
+                          disabled={!d.city}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={d.city ? "Seleziona la zona" : "Prima seleziona la città"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {showCurrent && (
+                              <SelectItem value={d.district}>{d.district} (attuale)</SelectItem>
+                            )}
+                            {dedup.map((z) => (
+                              <SelectItem key={z} value={z}>{z}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
                   </div>
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
                     <Input
                       value={d.province}
-                      placeholder={defaults.province || "Es. BO"}
-                      onChange={(e) => updateDay(i, { province: e.target.value })}
+                      readOnly
+                      disabled
+                      placeholder="Auto da città"
                     />
                   </div>
                   <div>
