@@ -95,16 +95,29 @@ export function computeCompatibility(
   targetEnd?: string | null,
   targetCity?: string | null,
 ): CompatibilityLevel {
-  // Check exception override first
-  const exc = exceptions.find((e) => e.date === targetDate);
-  if (exc) {
-    if (!exc.is_available) return "non_disponibile";
-    if (targetCity && exc.city && !sameCity(exc.city, targetCity)) return "non_disponibile";
-    if (!targetStart || !targetEnd) return "disponibile";
-    if (exc.start_time && exc.end_time) {
-      return overlapLevel(exc.start_time, exc.end_time, targetStart, targetEnd);
+  // Special availability for that date OVERRIDES the weekly schedule. A
+  // worker can declare multiple slots for the same date (e.g. lunch in
+  // Torino, dinner in Bari) — we must consider every entry, not just the
+  // first one.
+  const dayExc = exceptions.filter((e) => e.date === targetDate);
+  if (dayExc.length > 0) {
+    // If ANY exception explicitly marks the day as "Non disponibile", that
+    // wins (the worker said no for that date).
+    if (dayExc.some((e) => !e.is_available)) return "non_disponibile";
+    let best: CompatibilityLevel = "non_disponibile";
+    for (const exc of dayExc) {
+      if (targetCity && exc.city && !sameCity(exc.city, targetCity)) continue;
+      if (!targetStart || !targetEnd) {
+        best = bestOf(best, "disponibile");
+        continue;
+      }
+      if (exc.start_time && exc.end_time) {
+        best = bestOf(best, overlapLevel(exc.start_time, exc.end_time, targetStart, targetEnd));
+      } else {
+        best = bestOf(best, "compatibile");
+      }
     }
-    return "compatibile";
+    return best;
   }
   const d = new Date(targetDate + "T00:00:00");
   const dow = jsDayToDow(d.getDay());
