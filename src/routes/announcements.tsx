@@ -875,6 +875,27 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                   </Button>
                 );
               })()}
+              {(() => {
+                const eff = computeEffectiveStatus(a, now);
+                const canCancel = eff.kind !== "cancelled" && eff.kind !== "completed" && eff.kind !== "expired";
+                if (!canCancel) return null;
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/5"
+                    onClick={() => setCancelTarget(a)}
+                  >
+                    <Trash2 className="h-3 w-3" /> Annulla annuncio
+                  </Button>
+                );
+              })()}
+              {a.status === "cancelled" && (a as any).cancellation_reason && (
+                <div className="text-[11px] text-muted-foreground italic">
+                  Motivo: {reasonLabel((a as any).cancellation_reason)}
+                  {(a as any).cancellation_note ? ` — ${(a as any).cancellation_note}` : ""}
+                </div>
+              )}
             </div>
             <AnnouncementCostBox ann={a} />
           </div>
