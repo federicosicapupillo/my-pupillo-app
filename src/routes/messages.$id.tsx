@@ -3351,6 +3351,32 @@ function ProposalCard(props: {
               (isWorker ? "Hai rifiutato questa proposta." : "Proposta rifiutata")}
           </div>
         ) : isWorker ? (
+          incompatibleSpecial ? (
+            <div className="px-4 py-3 border-t bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200 text-sm">
+              <div className="font-semibold inline-flex items-center gap-1">
+                <X className="h-4 w-4" />
+                Questa proposta non è compatibile con la disponibilità speciale che hai impostato per questa data.
+              </div>
+              {specialBlock?.specials.map((e) => (
+                <p key={e.id} className="mt-0.5 text-xs opacity-90">· {describeSpecialAvailability(e)}</p>
+              ))}
+              <div className="mt-2 flex gap-2">
+                <Button type="button" disabled className="flex-1 h-11 bg-emerald-600/50 text-white font-semibold gap-2 cursor-not-allowed">
+                  <Check className="h-4 w-4" /> Accetta proposta
+                </Button>
+                <Button
+                  type="button"
+                  onClick={openReject}
+                  disabled={!!busy}
+                  variant="outline"
+                  className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
+                </Button>
+              </div>
+            </div>
+          ) : (
           <div className="px-4 py-3 border-t bg-secondary/30 flex gap-2">
             <Button
               type="button"
@@ -3372,6 +3398,7 @@ function ProposalCard(props: {
               {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
             </Button>
           </div>
+          )
         ) : (
           <div className="px-4 py-3 border-t bg-secondary/20 text-xs text-muted-foreground text-center">
             In attesa di risposta dal lavoratore.
