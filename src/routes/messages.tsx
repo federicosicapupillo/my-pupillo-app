@@ -358,6 +358,33 @@ function MessagesLayout() {
     return true;
   });
   const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "");
+  // Build the inbox label so two applications with the same role but
+  // different shift dates are visually distinguishable. Includes role,
+  // shift date and shift time when available, e.g. "Bartender · 27 mag · 19:00 - 23:00".
+  const fmtThreadLabel = (t: Thread): string => {
+    const role = t.annRole ? formatRoleLabel(t.annRole) : "";
+    const date = fmtDate(t.annDate);
+    const time = formatServiceTime(t.annTime, t.annEndTime);
+    const parts = [role || "Annuncio", date, time].filter(Boolean);
+    return parts.join(" · ");
+  };
+
+  // Auto-expand any partner group that contains more than one application,
+  // so two distinct candidatures for the same worker are immediately visible
+  // instead of hidden behind a collapsed row. Honors manual collapse/expand.
+  const userToggledRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      for (const g of groupThreadsByOther(threads)) {
+        if (g.items.length > 1 && !userToggledRef.current.has(g.id)) {
+          next.add(g.id);
+        }
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threads.length, threads.map((t) => t.id).join("|")]);
 
   // Load last-selected announcement context for restaurant quick-reuse.
   useEffect(() => {
