@@ -20,7 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy, Pencil, ChevronDown, Sparkles } from "lucide-react";
+import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy, Pencil, ChevronDown, Sparkles, Wand2 } from "lucide-react";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
   DAY_LABELS,
@@ -159,6 +159,8 @@ function AvailabilityPage() {
   const [duplicateTargets, setDuplicateTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  type PresetType = "all" | "weekend" | "cena" | "pranzo";
+  const [confirmPreset, setConfirmPreset] = useState<{ type: PresetType; title: string; message: string } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [copying, setCopying] = useState(false);
   const loadedRef = useRef(false);
@@ -314,7 +316,7 @@ function AvailabilityPage() {
       district: x.district || defaults.district,
       radius_km: x.radius_km ?? defaults.radius_km,
     })));
-    toast.success("Tutta la settimana attivata");
+    toast.success("Disponibilità settimana impostata correttamente.");
   };
   const presetWeekend = () => {
     setDays((d) => d.map((x, i) => {
@@ -328,9 +330,9 @@ function AvailabilityPage() {
         radius_km: isW ? (x.radius_km ?? defaults.radius_km) : x.radius_km,
       };
     }));
-    toast.success("Solo weekend impostato");
+    toast.success("Disponibilità weekend impostata correttamente.");
   };
-  const presetSlot = (slot: TimeSlot, label: string) => {
+  const presetSlot = (slot: TimeSlot) => {
     const def = SLOT_DEFAULT_TIMES[slot];
     setDays((d) => {
       const anyOn = d.some((x) => x.is_available);
@@ -355,13 +357,25 @@ function AvailabilityPage() {
         };
       });
     });
-    toast.success(`${label} impostato`);
+    const slotToast = slot === "cena" ? "serale" : slot === "pranzo" ? "pranzo" : SLOT_LABELS[slot];
+    toast.success(`Disponibilità ${slotToast} impostata correttamente.`);
   };
   const clearAll = () => {
     setDays(Array.from({ length: 7 }, () => emptyDay(defaults.city, defaults.province, defaults.district, defaults.radius_km)));
     setEditingDay(null);
     setConfirmClear(false);
-    toast.success("Disponibilità azzerate");
+    toast.success("Tutte le disponibilità sono state cancellate.");
+  };
+
+  const applyPreset = () => {
+    if (!confirmPreset) return;
+    switch (confirmPreset.type) {
+      case "all": presetAll(); break;
+      case "weekend": presetWeekend(); break;
+      case "cena": presetSlot("cena"); break;
+      case "pranzo": presetSlot("pranzo"); break;
+    }
+    setConfirmPreset(null);
   };
 
   const daySummary = (d: DayState): { location: string; hours: string } => {
@@ -686,19 +700,40 @@ function AvailabilityPage() {
         </Card>
       )}
 
-      {/* Quick presets */}
-      <div className="mb-4 rounded-2xl border bg-card p-3 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1 mr-1">
-          <Sparkles className="h-3.5 w-3.5 text-primary" /> Preset rapidi
-        </span>
-        <Button type="button" size="sm" variant="outline" onClick={presetAll} className={gatedOpacity}>Tutta la settimana</Button>
-        <Button type="button" size="sm" variant="outline" onClick={presetWeekend} className={gatedOpacity}>Solo weekend</Button>
-        <Button type="button" size="sm" variant="outline" onClick={() => presetSlot("cena", "Solo sere")} className={gatedOpacity}>Solo sere</Button>
-        <Button type="button" size="sm" variant="outline" onClick={() => presetSlot("pranzo", "Solo pranzo")} className={gatedOpacity}>Solo pranzo</Button>
-        <Button type="button" size="sm" variant="ghost" className="ml-auto text-destructive hover:text-destructive" onClick={() => setConfirmClear(true)}>
-          <Trash2 className="h-3.5 w-3.5 mr-1" /> Cancella tutto
-        </Button>
-      </div>
+      {/* Quick actions */}
+      <Card className="mb-6 border bg-card">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+              <Wand2 className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="font-semibold">Imposta rapidamente la tua disponibilità</div>
+              <p className="text-sm text-muted-foreground">
+                Queste azioni compilano automaticamente più giorni o fasce orarie per aiutarti a impostare la tua disponibilità più velocemente. Non sono filtri.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "all", title: "Imposta tutta la settimana", message: "Questa azione imposterà la disponibilità su tutti i giorni della settimana. Vuoi continuare?" })}>
+              <Wand2 className="h-3.5 w-3.5" /> Imposta tutta la settimana
+            </Button>
+            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "weekend", title: "Imposta solo weekend", message: "Questa azione imposterà la disponibilità su Sabato e Domenica. Vuoi continuare?" })}>
+              <Wand2 className="h-3.5 w-3.5" /> Imposta solo weekend
+            </Button>
+            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "cena", title: "Imposta solo sere", message: "Questa azione imposterà la fascia oraria 'Cena' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
+              <Wand2 className="h-3.5 w-3.5" /> Imposta solo sere
+            </Button>
+            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "pranzo", title: "Imposta solo pranzo", message: "Questa azione imposterà la fascia oraria 'Pranzo' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
+              <Wand2 className="h-3.5 w-3.5" /> Imposta solo pranzo
+            </Button>
+            <div className="flex-1" />
+            <Button type="button" size="sm" variant="outline" className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive" onClick={() => setConfirmClear(true)}>
+              <Trash2 className="h-3.5 w-3.5" /> Cancella tutte le disponibilità
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Weekly grid: compact cards, one editable at a time */}
       <div className="grid gap-3 md:grid-cols-2">
@@ -1120,14 +1155,28 @@ function AvailabilityPage() {
       <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancellare tutte le disponibilità?</DialogTitle>
+            <DialogTitle>Cancella tutte le disponibilità</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Verranno azzerati tutti i giorni della settimana. Le disponibilità speciali non saranno toccate. L'operazione diventa definitiva al prossimo salvataggio.
+            Stai per cancellare tutte le disponibilità impostate. Vuoi continuare?
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmClear(false)}>Annulla</Button>
             <Button variant="destructive" onClick={clearAll}>Cancella tutto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preset confirmation dialog */}
+      <Dialog open={!!confirmPreset} onOpenChange={(open) => { if (!open) setConfirmPreset(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmPreset?.title}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{confirmPreset?.message}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmPreset(null)}>Annulla</Button>
+            <Button onClick={applyPreset}>Applica</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
