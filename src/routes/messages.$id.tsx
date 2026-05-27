@@ -3091,11 +3091,14 @@ function ProposalCard(props: {
   isWorker: boolean;
   status: string;
   lockReason?: "completed" | "cancelled" | null;
+  specialBlock?: SpecialAvailabilityBlock | null;
   onAccept: () => Promise<void>;
   onReject: (reason?: string) => Promise<void>;
 }) {
   const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
   const lockReason = props.lockReason ?? null;
+  const specialBlock = props.specialBlock ?? null;
+  const incompatibleSpecial = !!specialBlock?.blocked;
   const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
   const [confirmAccept, setConfirmAccept] = useState(false);
   const [confirmReject, setConfirmReject] = useState(false);
@@ -3149,6 +3152,11 @@ function ProposalCard(props: {
   };
   const doAccept = async () => {
     if (busy) return;
+    if (incompatibleSpecial) {
+      toast.error(SPECIAL_ACCEPT_INCOMPATIBLE_MESSAGE);
+      setConfirmAccept(false);
+      return;
+    }
     if (locked) {
       toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
       setConfirmAccept(false);
