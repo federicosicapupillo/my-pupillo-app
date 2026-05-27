@@ -174,16 +174,9 @@ export async function cancelPresence(input: CancelPresenceInput): Promise<void> 
   const reasonText = reason === "altro" ? (customReason?.trim() || "Altro") : cancelReasonLabel(reason);
   const descriptor = buildShiftDescriptor(context);
 
-  // 1) Mark the shift as cancelled (RLS allows worker, see "Parties update shifts").
-  const { error: shiftErr } = await supabase
-    .from("shifts")
-    .update({ status: "cancelled" } as never)
-    .eq("id", shiftId)
-    .eq("worker_id", workerId)
-    .eq("status", "scheduled");
-  if (shiftErr) throw new Error(shiftErr.message);
-
-  // 2) Log the incident.
+  // 1) Log the incident FIRST — the RLS WITH CHECK on worker_incidents
+  // requires the shift to still be in 'scheduled' status. If we cancelled
+  // the shift first the insert would be rejected by RLS.
   const { error: incErr } = await supabase.from("worker_incidents").insert({
     worker_id: workerId,
     restaurant_id: restaurantId,
@@ -199,7 +192,22 @@ export async function cancelPresence(input: CancelPresenceInput): Promise<void> 
     affects_reputation: true,
     affects_compensation: true,
   } as never);
-  if (incErr) throw new Error(incErr.message);
+  if (incErr) {
+    console.error("[cancelPresence] worker_incidents insert failed", incErr);
+    throw new Error("Non è stato possibile annullare la presenza. Riprova o contatta l'assistenza.");
+  }
+
+  // 2) Mark the shift as cancelled (RLS allows worker via "Parties update shifts").
+  const { error: shiftErr } = await supabase
+    .from("shifts")
+    .update({ status: "cancelled" } as never)
+    .eq("id", shiftId)
+    .eq("worker_id", workerId)
+    .eq("status", "scheduled");
+  if (shiftErr) {
+    console.error("[cancelPresence] shift update failed", shiftErr);
+    throw new Error("Non è stato possibile annullare la presenza. Riprova o contatta l'assistenza.");
+  }
 
   // 3) Re-open the announcement so the restaurant can search a new worker.
   if (announcementId) {
