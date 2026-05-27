@@ -2,6 +2,7 @@ import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
+import { RestaurantProfileGate } from "@/components/RestaurantProfileGate";
 import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,7 +35,13 @@ import { useProfileGate } from "@/components/ProfileGate";
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
   validateSearch: (s: Record<string, unknown>) => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
-  component: () => <RequireAuth><NewAnn /></RequireAuth>,
+  component: () => (
+    <RequireAuth>
+      <RestaurantProfileGate>
+        <NewAnn />
+      </RestaurantProfileGate>
+    </RequireAuth>
+  ),
 });
 
 function NewAnn() {

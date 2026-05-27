@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
+import { RestaurantProfileGate } from "@/components/RestaurantProfileGate";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +44,13 @@ import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-pr
 export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
   head: () => ({ meta: [{ title: "Crea Nuovo Annuncio — Pupillo" }] }),
   validateSearch: (s: Record<string, unknown>) => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
-  component: () => <RequireAuth><NewRestaurantJobRequest /></RequireAuth>,
+  component: () => (
+    <RequireAuth>
+      <RestaurantProfileGate>
+        <NewRestaurantJobRequest />
+      </RestaurantProfileGate>
+    </RequireAuth>
+  ),
 });
 
 const ROLE_OPTIONS = [
@@ -156,7 +163,7 @@ function splitLanguages(values: string[]) {
 }
 
 function NewRestaurantJobRequest() {
-  const { user, role, profile, refresh } = useAuth();
+  const { user, role, profile } = useAuth();
   const nav = useNavigate();
   const { reuse } = Route.useSearch();
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -165,16 +172,6 @@ function NewRestaurantJobRequest() {
   const [previewVisible, setPreviewVisible] = useState(true);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [defaultsLoaded, setDefaultsLoaded] = useState(false);
-  // Fetch fresh defaults from DB on mount so changes saved on the Profile
-  // page (or in another tab) appear immediately, without a manual refresh.
-  const refreshedOnMountRef = useRef(false);
-  useEffect(() => {
-    if (refreshedOnMountRef.current) return;
-    if (!user) return;
-    refreshedOnMountRef.current = true;
-    refresh().catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
   const [confirmDefaultsOpen, setConfirmDefaultsOpen] = useState(false);
   const pendingStatusRef = useRef<"bozza" | "pubblicato" | null>(null);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
