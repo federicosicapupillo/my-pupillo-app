@@ -2186,7 +2186,19 @@ function Thread() {
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
                   status={effectiveStatus}
+                  lockReason={
+                    closureReason === "completed"
+                      ? "completed"
+                      : closureReason === "cancelled"
+                        ? "cancelled"
+                        : null
+                  }
                   onAccept={async () => {
+                    if (closureReason) {
+                      console.warn("[proposal] accept blocked: chat closed", { closureReason, shiftStatus: shift?.status, annStatus: ann?.status, appStatus: app?.status });
+                      toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
+                      return;
+                    }
                     if (user) {
                       const { error: respErr } = await supabase.from("proposal_responses").insert({
                         message_id: m.id,
@@ -2235,6 +2247,11 @@ function Thread() {
                     }
                   }}
                   onReject={async (reason?: string) => {
+                    if (closureReason) {
+                      console.warn("[proposal] reject blocked: chat closed", { closureReason, shiftStatus: shift?.status, annStatus: ann?.status, appStatus: app?.status });
+                      toast.error("Non puoi rifiutare questa proposta perché il turno è stato annullato.");
+                      return;
+                    }
                     if (user) {
                       const { error: respErr } = await supabase.from("proposal_responses").insert({
                         message_id: m.id,
@@ -3036,10 +3053,12 @@ function ProposalCard(props: {
   canSeePreciseInfo: boolean;
   isWorker: boolean;
   status: string;
+  lockReason?: "completed" | "cancelled" | null;
   onAccept: () => Promise<void>;
   onReject: (reason?: string) => Promise<void>;
 }) {
   const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
+  const lockReason = props.lockReason ?? null;
   const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
   const [confirmAccept, setConfirmAccept] = useState(false);
   const [confirmReject, setConfirmReject] = useState(false);
@@ -3079,7 +3098,8 @@ function ProposalCard(props: {
   const accepted = status === "accepted";
   const rejected = status === "rejected" || status === "not_interested";
   const expired = status === "expired" || (!accepted && !rejected && timeExpired);
-  const decided = accepted || rejected || expired;
+  const locked = lockReason !== null;
+  const decided = accepted || rejected || expired || locked;
 
   const openAccept = () => {
     if (busy || decided) return;
@@ -3092,6 +3112,11 @@ function ProposalCard(props: {
   };
   const doAccept = async () => {
     if (busy) return;
+    if (locked) {
+      toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
+      setConfirmAccept(false);
+      return;
+    }
     if (decided) {
       toast.error("Questa proposta non è più disponibile.");
       setConfirmAccept(false);
@@ -3107,6 +3132,11 @@ function ProposalCard(props: {
   };
   const doReject = async () => {
     if (busy) return;
+    if (locked) {
+      toast.error("Non puoi rifiutare questa proposta perché il turno è stato annullato.");
+      setConfirmReject(false);
+      return;
+    }
     if (decided) {
       toast.error("Questa proposta non è più disponibile.");
       setConfirmReject(false);
@@ -3253,7 +3283,16 @@ function ProposalCard(props: {
           </div>
         )}
 
-        {decided ? (
+        {locked && !accepted && !rejected ? (
+          <div className="px-4 py-3 border-t text-sm font-semibold flex items-center justify-center gap-2 bg-destructive/10 text-destructive border-destructive/30 text-center">
+            <X className="h-4 w-4 shrink-0" />
+            <span>
+              {lockReason === "completed"
+                ? "Questo turno è stato concluso. Non è più possibile accettare o rifiutare la proposta."
+                : "Questo turno è stato annullato. Non è più possibile accettare o rifiutare la proposta."}
+            </span>
+          </div>
+        ) : decided ? (
           <div className={`px-4 py-3 border-t text-sm font-semibold flex items-center justify-center gap-2 ${
             accepted
               ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
