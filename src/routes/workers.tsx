@@ -1418,12 +1418,22 @@ function ContactedWorkerCard({
   selectedAnnouncementId,
   activeRoleContext,
   onOpenChat,
+  availRows,
+  specialForDate,
+  specialDate,
+  compatBadge,
+  onDetails,
 }: {
   worker: W;
   rel: WorkerRel | undefined;
   selectedAnnouncementId: string | null;
   activeRoleContext: string | null;
   onOpenChat: (applicationId: string) => void;
+  availRows: AvailabilityRow[] | null;
+  specialForDate: AvailabilityExceptionRow[];
+  specialDate: string | null;
+  compatBadge: { text: string; cls: string } | null;
+  onDetails: () => void;
 }) {
   const workedTogether = !!r?.workedWith;
   const displayName = displayWorkerName(w, workedTogether);
@@ -1501,51 +1511,88 @@ function ContactedWorkerCard({
           </span>
         </div>
       )}
-      <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-        <div className="text-xs font-medium text-muted-foreground">Turni svolti</div>
-        <div className="mt-0.5 font-semibold tabular-nums">
-          {completedShifts} {completedShifts === 1 ? "turno completato" : "turni completati"}
+      {compatBadge && (
+        <div className="mt-2">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${compatBadge.cls}`}>
+            {compatBadge.text}
+          </span>
         </div>
+      )}
+      <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <MapPin className="h-3.5 w-3.5 shrink-0" />
+        <span>
+          <span className="font-medium text-foreground">Città attuale:</span>{" "}
+          {(() => {
+            const city = w.service_area_city || w.residence_city || w.city;
+            const zone = w.neighborhood || w.service_area_district;
+            return city ? `${city}${zone ? ` · ${zone}` : ""}` : "Città non indicata";
+          })()}
+        </span>
       </div>
-      <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-        <div className="text-xs font-medium text-muted-foreground">Ultima recensione</div>
-        {review ? (
-          <div className="mt-1 space-y-1">
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Star
-                  key={i}
-                  className={`h-3.5 w-3.5 ${
-                    reviewRating != null && i <= Math.round(reviewRating)
-                      ? "fill-yellow-400 text-yellow-400"
-                      : "text-muted-foreground/30"
-                  }`}
-                />
-              ))}
-              {reviewRating != null && (
-                <span className="ml-1 text-xs tabular-nums font-medium">
-                  {reviewRating.toFixed(1)}
-                </span>
-              )}
+      {(() => {
+        const langs: SpokenLanguage[] = normalizeSpokenLanguages(w.spoken_languages);
+        const legacy = langs.length === 0 ? (w.languages ?? []).map((l) => ({ language: l })) : langs;
+        return legacy.length > 0 ? (
+          <div className="mt-2"><SpokenLanguagesView value={legacy} /></div>
+        ) : null;
+      })()}
+      <AvailabilityBlock
+        rows={availRows}
+        specialForDate={specialForDate}
+        specialDate={specialDate}
+        weekly={w.weekly_availability}
+        availableNowUntil={w.available_now_until}
+        onDetails={onDetails}
+      />
+      {workedTogether && (
+        <>
+          <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+            <div className="text-xs font-medium text-muted-foreground">Turni svolti</div>
+            <div className="mt-0.5 font-semibold tabular-nums">
+              {completedShifts} {completedShifts === 1 ? "turno completato" : "turni completati"}
             </div>
-            {reviewCommentShort && (
-              <p className="text-sm text-foreground/90 italic">"{reviewCommentShort}"</p>
-            )}
-            {reviewDate && (
-              <p className="text-[11px] text-muted-foreground">
-                Recensione del{" "}
-                {reviewDate.toLocaleDateString("it-IT", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-              </p>
+          </div>
+          <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+            <div className="text-xs font-medium text-muted-foreground">Ultima recensione</div>
+            {review ? (
+              <div className="mt-1 space-y-1">
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star
+                      key={i}
+                      className={`h-3.5 w-3.5 ${
+                        reviewRating != null && i <= Math.round(reviewRating)
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-muted-foreground/30"
+                      }`}
+                    />
+                  ))}
+                  {reviewRating != null && (
+                    <span className="ml-1 text-xs tabular-nums font-medium">
+                      {reviewRating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+                {reviewCommentShort && (
+                  <p className="text-sm text-foreground/90 italic">"{reviewCommentShort}"</p>
+                )}
+                {reviewDate && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Recensione del{" "}
+                    {reviewDate.toLocaleDateString("it-IT", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">Nessuna recensione disponibile</p>
             )}
           </div>
-        ) : (
-          <p className="mt-1 text-sm text-muted-foreground">Nessuna recensione disponibile</p>
-        )}
-      </div>
+        </>
+      )}
       <Button
         size="sm"
         variant="default"
