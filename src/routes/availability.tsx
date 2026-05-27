@@ -20,7 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy, Pencil, ChevronDown, Sparkles } from "lucide-react";
+import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy, Pencil, ChevronDown, Sparkles, Wand2 } from "lucide-react";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
   DAY_LABELS,
@@ -159,6 +159,8 @@ function AvailabilityPage() {
   const [duplicateTargets, setDuplicateTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  type PresetType = "all" | "weekend" | "cena" | "pranzo";
+  const [confirmPreset, setConfirmPreset] = useState<{ type: PresetType; title: string; message: string } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [copying, setCopying] = useState(false);
   const loadedRef = useRef(false);
