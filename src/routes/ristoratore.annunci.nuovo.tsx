@@ -1035,15 +1035,37 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="3" title="Requisiti e Competenze" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Tipo di patente"><Select value={f.license_requirement} onValueChange={v => setField("license_requirement", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{LICENSE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
-            <Field label="Tatuaggi ammessi"><Select value={f.tattoos_allowed} onValueChange={v => setField("tattoos_allowed", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TATTOO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
-            <Field label="Piercing ammessi"><Select value={f.piercings_allowed} onValueChange={v => setField("piercings_allowed", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PIERCING_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
-            <Field label="Barba ammessa"><Select value={f.beard_allowed} onValueChange={v => setField("beard_allowed", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BEARD_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
+            <Field label="Tipo di patente" required name="license_requirement" error={errors.license_requirement}>
+              <Select value={f.license_requirement} onValueChange={v => setField("license_requirement", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona tipo di patente" /></SelectTrigger>
+                <SelectContent>{LICENSE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Tatuaggi ammessi" required name="tattoos_allowed" error={errors.tattoos_allowed}>
+              <Select value={f.tattoos_allowed} onValueChange={v => setField("tattoos_allowed", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona tatuaggi" /></SelectTrigger>
+                <SelectContent>{TATTOO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Piercing ammessi" required name="piercings_allowed" error={errors.piercings_allowed}>
+              <Select value={f.piercings_allowed} onValueChange={v => setField("piercings_allowed", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona piercing" /></SelectTrigger>
+                <SelectContent>{PIERCING_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Barba ammessa" required name="beard_allowed" error={errors.beard_allowed}>
+              <Select value={f.beard_allowed} onValueChange={v => setField("beard_allowed", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona barba" /></SelectTrigger>
+                <SelectContent>{BEARD_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
           </div>
-          <Field label="Lingue richieste">
-            <LanguagesMultiSelect selected={languageReqs} onChange={setLanguageReqs} />
+          <Field label="Lingue richieste" required name="language_requirements" error={errors.language_requirements}>
+            <LanguagesMultiSelect selected={languageReqs} onChange={(next) => { clearError("language_requirements"); setLanguageReqs(next); }} />
           </Field>
-          <ChoiceGroup title="Competenze richieste" items={SKILL_OPTIONS} selected={skills} onToggle={v => toggleIn(skills, v, setSkills)} />
+          <Field label="Competenze richieste" required name="required_skills" error={errors.required_skills}>
+            <ChoiceGroup items={SKILL_OPTIONS} selected={skills} onToggle={v => { clearError("required_skills"); toggleIn(skills, v, setSkills); }} />
+          </Field>
           <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />
         </section>
 
