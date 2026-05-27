@@ -1138,10 +1138,12 @@ function WorkersPage() {
                         worker={w}
                         rel={r}
                         selectedAnnouncementId={selected || null}
+                        activeRoleContext={activeRoleContext}
                         onOpenChat={(appId) => nav({ to: "/messages/$id", params: { id: appId } })}
                       />
                     );
                   }
+                  const roleInfo = pickDisplayedRole(w, activeRoleContext);
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
@@ -1149,7 +1151,14 @@ function WorkersPage() {
               <div>
                 <div className="font-semibold">{displayWorkerName(w, !!r?.workedWith)}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  {w.primary_role && <span className="capitalize">{w.primary_role}</span>}
+                  {roleInfo.label && (
+                    <span className="capitalize">
+                      {roleInfo.label}
+                      {roleInfo.secondary && (
+                        <span className="text-muted-foreground/80"> · anche {roleInfo.secondary}</span>
+                      )}
+                    </span>
+                  )}
                   {w.rating_avg != null && Number(w.rating_avg) > 0 && (
                     <span className="inline-flex items-center gap-0.5 text-amber-600">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
