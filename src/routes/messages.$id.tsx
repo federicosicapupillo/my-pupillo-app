@@ -3053,10 +3053,12 @@ function ProposalCard(props: {
   canSeePreciseInfo: boolean;
   isWorker: boolean;
   status: string;
+  lockReason?: "completed" | "cancelled" | null;
   onAccept: () => Promise<void>;
   onReject: (reason?: string) => Promise<void>;
 }) {
   const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
+  const lockReason = props.lockReason ?? null;
   const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
   const [confirmAccept, setConfirmAccept] = useState(false);
   const [confirmReject, setConfirmReject] = useState(false);
@@ -3096,7 +3098,8 @@ function ProposalCard(props: {
   const accepted = status === "accepted";
   const rejected = status === "rejected" || status === "not_interested";
   const expired = status === "expired" || (!accepted && !rejected && timeExpired);
-  const decided = accepted || rejected || expired;
+  const locked = lockReason !== null;
+  const decided = accepted || rejected || expired || locked;
 
   const openAccept = () => {
     if (busy || decided) return;
@@ -3109,6 +3112,11 @@ function ProposalCard(props: {
   };
   const doAccept = async () => {
     if (busy) return;
+    if (locked) {
+      toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
+      setConfirmAccept(false);
+      return;
+    }
     if (decided) {
       toast.error("Questa proposta non è più disponibile.");
       setConfirmAccept(false);
@@ -3124,6 +3132,11 @@ function ProposalCard(props: {
   };
   const doReject = async () => {
     if (busy) return;
+    if (locked) {
+      toast.error("Non puoi rifiutare questa proposta perché il turno è stato annullato.");
+      setConfirmReject(false);
+      return;
+    }
     if (decided) {
       toast.error("Questa proposta non è più disponibile.");
       setConfirmReject(false);
