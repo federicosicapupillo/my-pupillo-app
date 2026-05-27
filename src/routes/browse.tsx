@@ -120,6 +120,19 @@ function Browse() {
   // abituale. Se nessuna è compatibile con città/orario dell'annuncio,
   // candidatura bloccata sia lato UI sia lato submit.
   const [specialExceptions, setSpecialExceptions] = useState<AvailabilityExceptionRow[]>([]);
+  // Disponibilità ABITUALE (settimanale) del lavoratore, usata per calcolare
+  // la compatibilità di ogni annuncio quando non c'è una disponibilità
+  // speciale per quella data. Serve a ordinare la lista nazionale per
+  // affinità (rule 5) e a mostrare i badge "Compatibile…" (rule 8-11).
+  const [weeklyAvailability, setWeeklyAvailability] = useState<AvailabilityRow[]>([]);
+  // Filtri aggiuntivi richiesti dal contratto "Trova offerte":
+  // città, data, fascia oraria, tariffa minima, solo compatibili (rule 12).
+  const [cityF, setCityF] = useState<string>("any");
+  const [dateF, setDateF] = useState<string>("");
+  const [timeFromF, setTimeFromF] = useState<string>("");
+  const [timeToF, setTimeToF] = useState<string>("");
+  const [minTariff, setMinTariff] = useState<string>("");
+  const [onlyCompatible, setOnlyCompatible] = useState(false);
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
@@ -190,8 +203,15 @@ function Browse() {
       } else {
         setSpecialExceptions([]);
       }
+      // Disponibilità settimanale (sempre, indipendentemente dalle date).
+      const { data: weekly } = await supabase
+        .from("worker_availability")
+        .select("*")
+        .eq("worker_id", user.id);
+      setWeeklyAvailability((weekly as AvailabilityRow[] | null) ?? []);
     } else {
       setSpecialExceptions([]);
+      setWeeklyAvailability([]);
     }
     setLoading(false);
   };
