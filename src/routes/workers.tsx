@@ -558,7 +558,7 @@ function WorkersPage() {
       const [appsRes, shiftsRes, reviewsRes] = await Promise.all([
         supabase
           .from("applications")
-          .select("id, worker_id, status, last_message_at, created_at")
+          .select("id, worker_id, announcement_id, status, last_message_at, created_at")
           .eq("restaurant_id", user.id),
         supabase
           .from("shifts")
@@ -569,7 +569,7 @@ function WorkersPage() {
           .select("target_id, created_at, rating")
           .eq("author_id", user.id),
       ]);
-      const apps = (appsRes.data as Array<{ id: string; worker_id: string; status: string | null; last_message_at: string | null; created_at: string }>) ?? [];
+      const apps = (appsRes.data as Array<{ id: string; worker_id: string; announcement_id: string | null; status: string | null; last_message_at: string | null; created_at: string }>) ?? [];
       const shifts = (shiftsRes.data as Array<{ worker_id: string; status: string | null; shift_date: string | null; announcement_id: string | null }>) ?? [];
       const reviews = (reviewsRes.data as Array<{ target_id: string; created_at: string; rating: number | null }>) ?? [];
 
