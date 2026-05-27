@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -30,6 +30,7 @@ export function RestaurantProfileGate({ children }: { children: ReactNode }) {
   const [timedOut, setTimedOut] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [completingProfile, setCompletingProfile] = useState(false);
+  const completingProfileRef = useRef(false);
 
   const profileReady = !loading && extrasLoaded && !!profile;
 
@@ -103,6 +104,7 @@ export function RestaurantProfileGate({ children }: { children: ReactNode }) {
       profile_completed: profile?.profile_completed,
       role,
     });
+    completingProfileRef.current = true;
     setCompletingProfile(true);
     goToRestaurantOnboarding(nav);
   };
@@ -111,7 +113,7 @@ export function RestaurantProfileGate({ children }: { children: ReactNode }) {
     <AlertDialog
       open
       onOpenChange={(open) => {
-        if (completingProfile) return;
+        if (completingProfile || completingProfileRef.current) return;
         if (!open) goBack();
       }}
     >
