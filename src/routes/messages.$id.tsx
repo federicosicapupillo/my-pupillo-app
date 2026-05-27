@@ -2503,7 +2503,7 @@ function Thread() {
                   onClick={() => setDelayOpen(true)}
                   className="border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
                 >
-                  <ClockIcon className="h-4 w-4 mr-1.5" />
+                  <Clock className="h-4 w-4 mr-1.5" />
                   Segnala ritardo
                 </Button>
                 <Button
@@ -2512,7 +2512,7 @@ function Thread() {
                   onClick={() => setCancelPresenceOpen(true)}
                   className="border-destructive/40 text-destructive hover:bg-destructive/10"
                 >
-                  <BanIcon className="h-4 w-4 mr-1.5" />
+                  <Ban className="h-4 w-4 mr-1.5" />
                   Annulla presenza
                 </Button>
               </div>
