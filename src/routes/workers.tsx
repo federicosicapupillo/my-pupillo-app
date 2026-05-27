@@ -610,6 +610,15 @@ function WorkersPage() {
         } else if (a.status === "pending") {
           r.hasPending = true;
         }
+        // Un'applicazione è "attiva" se non rifiutata/annullata/scaduta/chiusa.
+        const statusLower = (a.status ?? "").toLowerCase();
+        const isAppActive =
+          !["rejected", "cancelled", "canceled", "expired", "withdrawn", "closed", "completed"].includes(statusLower) &&
+          resp?.status !== "rejected";
+        if (isAppActive && a.announcement_id) {
+          r.hasActiveApp = true;
+          r.activeAppByAnn.set(a.announcement_id, a.id);
+        }
         map[a.worker_id] = r;
       }
       // Turni completati
@@ -617,6 +626,9 @@ function WorkersPage() {
         const r = map[s.worker_id] ?? emptyRel();
         if (s.status === "completed") r.workedWith = true;
         if (s.status === "scheduled") r.hasShiftScheduled = true;
+        if (s.status === "cancelled" || s.status === "canceled" || s.status === "expired") {
+          r.hasCancelledShift = true;
+        }
         if (s.announcement_id) r.shiftAnnouncementIds.add(s.announcement_id);
         if (s.shift_date) r.lastContactAt = Math.max(r.lastContactAt, new Date(s.shift_date).getTime());
         r.contacted = true;
