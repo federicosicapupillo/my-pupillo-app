@@ -253,7 +253,7 @@ function ProfileBox({
   );
 }
 
-function useBoxSave(userId: string | null, onSaved: () => Promise<void> | void) {
+function useBoxSave(userId: string | null, onSaved: () => Promise<void> | void, messages?: { success?: string; error?: string }) {
   const [saving, setSaving] = useState(false);
   const save = async (patch: Record<string, unknown>): Promise<boolean> => {
     if (!userId) return false;
@@ -261,11 +261,11 @@ function useBoxSave(userId: string | null, onSaved: () => Promise<void> | void) 
     try {
       const { error } = await supabase.from("profiles").update(patch as any).eq("id", userId);
       if (error) throw error;
-      toast.success("Profilo aggiornato correttamente.");
+      toast.success(messages?.success ?? "Profilo aggiornato correttamente.");
       await onSaved();
       return true;
     } catch {
-      toast.error("Non è stato possibile aggiornare il profilo. Riprova.");
+      toast.error(messages?.error ?? "Non è stato possibile aggiornare il profilo. Riprova.");
       return false;
     } finally {
       setSaving(false);
@@ -353,19 +353,39 @@ function PersonalDataBox({ profile, email }: { profile: any; email: string | nul
 function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: string | null; onSaved: () => Promise<void> | void }) {
   const [editing, setEditing] = useState(false);
   const [city, setCity] = useState<string>(profile?.residence_city ?? profile?.city ?? "");
-  const [address, setAddress] = useState<string>(profile?.residence_address ?? "");
-  const { saving, save } = useBoxSave(userId, onSaved);
+  const [street, setStreet] = useState<string>(profile?.residence_street ?? "");
+  const [number, setNumber] = useState<string>(profile?.residence_number ?? "");
+  const [errors, setErrors] = useState<Partial<Record<"city" | "street" | "number", string>>>({});
+  const { saving, save } = useBoxSave(userId, onSaved, {
+    success: "Residenza aggiornata correttamente.",
+    error: "Non è stato possibile aggiornare la residenza. Riprova.",
+  });
 
   const start = () => {
     setCity(profile?.residence_city ?? profile?.city ?? "");
-    setAddress(profile?.residence_address ?? "");
+    setStreet(profile?.residence_street ?? profile?.residence_address ?? "");
+    setNumber(profile?.residence_number ?? "");
+    setErrors({});
     setEditing(true);
   };
-  const cancel = () => setEditing(false);
+  const cancel = () => { setEditing(false); setErrors({}); };
+
+  const validate = () => {
+    const next: typeof errors = {};
+    if (!city.trim()) next.city = "Seleziona la città di residenza.";
+    if (!street.trim()) next.street = "Inserisci la via di residenza.";
+    if (!number.trim()) next.number = "Inserisci il numero civico.";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const onSave = async () => {
+    if (!validate()) return;
     const ok = await save({
       residence_city: city.trim() || null,
-      residence_address: address.trim() || null,
+      residence_street: street.trim() || null,
+      residence_number: number.trim() || null,
+      residence_address: null,
     });
     if (ok) setEditing(false);
   };
@@ -374,22 +394,40 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
     <ProfileBox title="Residenza" editing={editing} saving={saving} onEdit={start} onCancel={cancel} onSave={onSave}>
       <div className="grid gap-3 md:grid-cols-2">
         <div>
-          <Label>Città di residenza</Label>
+          <Label>Città di residenza <span className="text-destructive">*</span></Label>
           {editing ? (
-            <SearchableSelect options={WORKER_CITIES as unknown as string[]} value={city} onChange={setCity} placeholder="Seleziona città" />
+            <SearchableSelect
+              options={WORKER_CITIES as unknown as string[]}
+              value={city}
+              onChange={(v) => { setCity(v); if (errors.city) setErrors(p => ({ ...p, city: undefined })); }}
+              placeholder="Seleziona città"
+            />
           ) : (
             <Input value={city} readOnly className="bg-muted/50" />
           )}
+          {errors.city && <p className="mt-1 text-xs text-destructive">{errors.city}</p>}
         </div>
         <div className="md:col-span-2">
-          <Label>Indirizzo di residenza</Label>
+          <Label>Via <span className="text-destructive">*</span></Label>
           <Input
-            value={address}
+            value={street}
             readOnly={!editing}
-            onChange={(e) => setAddress(e.target.value)}
-            className={!editing ? "bg-muted/50" : undefined}
-            placeholder="Via, numero civico…"
+            onChange={(e) => { setStreet(e.target.value); if (errors.street) setErrors(p => ({ ...p, street: undefined })); }}
+            className={cn(!editing && "bg-muted/50", errors.street && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
+            placeholder="Inserisci la via"
           />
+          {errors.street && <p className="mt-1 text-xs text-destructive">{errors.street}</p>}
+        </div>
+        <div>
+          <Label>Numero civico <span className="text-destructive">*</span></Label>
+          <Input
+            value={number}
+            readOnly={!editing}
+            onChange={(e) => { setNumber(e.target.value); if (errors.number) setErrors(p => ({ ...p, number: undefined })); }}
+            className={cn(!editing && "bg-muted/50", errors.number && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
+            placeholder="12, 12/A, 12 bis, SNC…"
+          />
+          {errors.number && <p className="mt-1 text-xs text-destructive">{errors.number}</p>}
         </div>
       </div>
     </ProfileBox>
