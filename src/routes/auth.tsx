@@ -200,6 +200,7 @@ function AuthPage() {
     }
     // Fire WhatsApp OTP + summary email
     const phoneFull = buildPhoneFull(phoneCode, phoneNumber);
+    let otpReady = false;
     try {
       const currentUser = (await supabase.auth.getUser()).data.user;
       if (!currentUser) throw new Error("Sessione non disponibile dopo la registrazione.");
@@ -215,9 +216,11 @@ function AuthPage() {
           phone: phoneFull,
         })
         .eq("id", currentUser.id);
-      savePendingRegistrationOtpState({ phoneCountryCode: phoneCode, phoneNumber, phoneFull });
       const otpResult = await startVerification({ data: { phoneCountryCode: phoneCode, phoneNumber, sendSummary: true } });
-      if (!otpResult.ok && !otpResult.cooldownSeconds) {
+      if (otpResult.ok || otpResult.cooldownSeconds) {
+        savePendingRegistrationOtpState({ phoneCountryCode: phoneCode, phoneNumber, phoneFull });
+        otpReady = true;
+      } else {
         toast.error(otpResult.error ?? "Non siamo riusciti a inviare il codice WhatsApp. Riprova.");
       }
     } catch (err) {
@@ -236,7 +239,7 @@ function AuthPage() {
       }
     }
     setBusy(false);
-    toast.success("Codice WhatsApp inviato correttamente");
+    if (otpReady) toast.success("Codice WhatsApp inviato correttamente");
     navigate({ to: "/verify-phone", search: { phase: "code" } as never, replace: true });
   };
 
