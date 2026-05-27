@@ -23,7 +23,7 @@ export const Route = createFileRoute("/verify-phone")({
 });
 
 function VerifyPhonePage() {
-  const { user, profile, role, loading, refresh } = useAuth();
+  const { user, profile, role, loading, extrasLoaded, refresh } = useAuth();
   const nav = useNavigate();
   const search = Route.useSearch();
   const start = useServerFn(startPhoneVerification);
@@ -53,6 +53,12 @@ function VerifyPhonePage() {
   useEffect(() => {
     if (loading) return;
     if (!user) { nav({ to: "/auth" }); return; }
+    // Aspetta che il profilo sia effettivamente caricato dal DB prima di
+    // decidere quale schermata mostrare. Senza questo controllo, mentre
+    // il profilo è ancora null, cadremmo nel ramo "phone" e mostreremmo
+    // erroneamente il form di reinserimento numero (richiedendo refresh
+    // per vedere la schermata OTP corretta).
+    if (!extrasLoaded || !profile) return;
     if (profile?.phone_verified) {
       if (profile?.profile_completed) {
         nav({ to: "/dashboard" });
@@ -95,12 +101,12 @@ function VerifyPhonePage() {
           }
         })();
       }
-    } else if (!profile?.phone_full) {
+    } else if (profile && !profile.phone_full) {
       // Caso limite: nessun numero salvato sul profilo. Lasciamo che
       // l'utente lo inserisca.
       setPhase("phone");
     }
-  }, [user, profile, loading, nav, start, refresh, cooldown]);
+  }, [user, profile, loading, extrasLoaded, nav, start, refresh, cooldown]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
