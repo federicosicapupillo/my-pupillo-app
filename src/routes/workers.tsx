@@ -1059,6 +1059,13 @@ function WorkersPage() {
                 {g.items.map((w) => {
                   const near = inRange(w);
                   const r = rel[w.id];
+                  const compat = selectedAnn ? (compatByWorker[w.id] ?? null) : null;
+                  const compatBadge =
+                    compat === "disponibile" ? { text: "Disponibile per questo turno", cls: "bg-emerald-500/20 text-emerald-700" }
+                    : compat === "compatibile" ? { text: "Compatibile con il turno", cls: "bg-emerald-500/15 text-emerald-700" }
+                    : compat === "parziale" ? { text: "Disponibilità parziale", cls: "bg-amber-500/15 text-amber-700" }
+                    : compat === null && selectedAnn ? { text: "Disponibilità non indicata", cls: "bg-muted text-foreground/70" }
+                    : null;
                   if (g.key === "contacted") {
                     return (
                       <ContactedWorkerCard
@@ -1090,6 +1097,13 @@ function WorkersPage() {
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
+            {compatBadge && (
+              <div className="mt-2">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${compatBadge.cls}`}>
+                  {compatBadge.text}
+                </span>
+              </div>
+            )}
             {r && (r.workedWith || r.contacted) && (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {r.workedWith && (
