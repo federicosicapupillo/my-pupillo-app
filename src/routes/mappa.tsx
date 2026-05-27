@@ -28,6 +28,29 @@ import {
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
+// --- Worker map helpers --------------------------------------------------
+// Used to ensure that, on the worker-side map, only announcements/restaurants
+// belonging to a city the worker actually targets are shown, AND that markers
+// are placed approximately on that city (never on a different city because of
+// a stale/wrong precise coordinate in the restaurant profile).
+function normalizeCity(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['`]/g, " ")
+    .trim();
+}
+
+function todayIso(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export const Route = createFileRoute("/mappa")({
   head: () => ({ meta: [{ title: "Mappa — Pupillo" }] }),
   component: () => <RequireAuth><MapPage /></RequireAuth>,
@@ -158,6 +181,11 @@ function MapPage() {
     Record<string, { comment: string | null; rating: number | null }>
   >({});
   const [loading, setLoading] = useState(true);
+  // Città consentite per la mappa lato lavoratore. Se non viene impostato un
+  // filtro città manuale, si calcolano da: città del profilo lavoratore,
+  // service_area_city, e disponibilità speciali future (data >= oggi). La
+  // disponibilità speciale prevale sulla disponibilità abituale anche qui.
+  const [workerBaseAllowedCities, setWorkerBaseAllowedCities] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   // search & filters
@@ -283,6 +311,38 @@ function MapPage() {
         (apps || []).forEach((x: any) => { m[x.announcement_id] = x.status; });
         setAppStatusByAnn(m);
 
+        // Calcola l'insieme delle città consentite per la mappa lato
+        // lavoratore: città del profilo + service_area_city + città delle
+        // disponibilità speciali future. La disponibilità speciale prevale
+        // sulla disponibilità abituale (rule 17/18).
+        const [{ data: meProfile }, { data: exc }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("city, service_area_city, neighborhood, service_area_district")
+            .eq("id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("worker_availability_exceptions")
+            .select("city, date, is_available")
+            .eq("worker_id", user.id)
+            .gte("date", todayIso()),
+        ]);
+        const allowed = new Set<string>();
+        const profCity = normalizeCity((meProfile as any)?.city);
+        const profServiceCity = normalizeCity((meProfile as any)?.service_area_city);
+        if (profCity) allowed.add(profCity);
+        if (profServiceCity) allowed.add(profServiceCity);
+        for (const e of (exc || []) as any[]) {
+          if (e?.is_available && e?.city) {
+            const c = normalizeCity(e.city);
+            if (c) allowed.add(c);
+          }
+        }
+        setWorkerBaseAllowedCities(allowed);
+        if (typeof window !== "undefined") {
+          console.debug("[mappa] worker allowed cities (base):", Array.from(allowed));
+        }
+
         // Ristoranti "conosciuti": turni effettuati o candidature accettate.
         // Per ridurre il carico sul DB usiamo una cache locale con TTL: se
         // presente la usiamo subito, altrimenti la popoliamo in background.
@@ -312,6 +372,7 @@ function MapPage() {
       } else {
         setAppStatusByAnn({});
         setKnownRestaurantIds(new Set());
+        setWorkerBaseAllowedCities(new Set());
       }
       // Per il ristoratore loggato: insieme di worker_ids "confermati"
       // (candidatura accettata o turno assegnato) per cui possiamo mostrare
@@ -360,6 +421,22 @@ function MapPage() {
   const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
   const workerRoles = useMemo(() => Array.from(new Set(workers.map(w => w.primary_role).filter(Boolean))) as string[], [workers]);
 
+  // Insieme effettivo delle città consentite per la mappa lato lavoratore.
+  // Se il lavoratore ha impostato un filtro città manuale, quello vince
+  // (rule 19). Altrimenti si usa la base (profilo + speciali future).
+  // Null = nessun vincolo (vista ristoratore/admin).
+  const workerAllowedCities = useMemo<Set<string> | null>(() => {
+    if (!isWorker) return null;
+    if (city !== "any") return new Set([normalizeCity(city)]);
+    return workerBaseAllowedCities;
+  }, [isWorker, city, workerBaseAllowedCities]);
+
+  const isWorkerCityAllowed = (c: string | null | undefined) => {
+    if (!workerAllowedCities) return true;
+    if (workerAllowedCities.size === 0) return true; // nessuna preferenza: non bloccare tutto
+    return workerAllowedCities.has(normalizeCity(c));
+  };
+
   const matchesWorkerQuery = (w: Worker) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
@@ -407,12 +484,19 @@ function MapPage() {
       if (planF !== "any" && r.plan !== planF) return false;
       if (statusF !== "any" && r.account_status !== statusF) return false;
       if (withRequests && !annCounts[r.id]) return false;
+      // Lato lavoratore: mostra SOLO ristoratori della/e città del lavoratore
+      // (rule 1, 4, 12). Inoltre il locale deve avere almeno un annuncio
+      // attivo (rule 1, 25), altrimenti non è di interesse per il lavoratore.
+      if (isWorker) {
+        if (!annCounts[r.id]) return false;
+        if (!isWorkerCityAllowed(r.city)) return false;
+      }
       if (max != null && ref && r.service_area_lat != null && r.service_area_lng != null) {
         if (distKm(ref.lat, ref.lng, r.service_area_lat, r.service_area_lng) > max) return false;
       }
       return true;
     });
-  }, [restaurants, query, city, province, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me]);
+  }, [restaurants, query, city, province, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
@@ -477,9 +561,28 @@ function MapPage() {
     const byId: Record<string, "job" | "location" | "profile" | "service_area"> = {};
     if (showR) {
       filteredRestaurants.forEach(r => {
-        const lat = r.service_area_lat ?? r.latitude;
-        const lng = r.service_area_lng ?? r.longitude;
-        if (lat == null || lng == null) return;
+        let lat: number | null | undefined;
+        let lng: number | null | undefined;
+        if (isWorker) {
+          // Posizione APPROSSIMATA derivata da zona/città del locale.
+          // Non usiamo mai le coordinate precise del profilo (rule 5/10).
+          // Se città/zona non risolvono, skip (rule 14): meglio nessun
+          // marker che un marker nella città sbagliata.
+          const base = lookupCityCoords(r.neighborhood) || lookupCityCoords(r.city);
+          if (!base) {
+            if (typeof window !== "undefined") {
+              console.debug("[mappa] skip restaurant (no city coords)", { id: r.id, city: r.city, neighborhood: r.neighborhood });
+            }
+            return;
+          }
+          const j = jitterCoords(base, r.id, 1.2);
+          lat = j[0];
+          lng = j[1];
+        } else {
+          lat = r.service_area_lat ?? r.latitude;
+          lng = r.service_area_lng ?? r.longitude;
+          if (lat == null || lng == null) return;
+        }
         const known = !isWorker || knownRestaurantIds.has(r.id);
         const hasActive = (annCounts[r.id] || 0) > 0;
         const maskedTitle = pickMaskedRestaurantLabel(r.id, hasActive);
@@ -491,8 +594,8 @@ function MapPage() {
         ].filter(Boolean).join(" · ");
         pts.push({
           id: r.id,
-          lat: known ? lat : jitterCoords([lat, lng], r.id, 1.2)[0],
-          lng: known ? lng : jitterCoords([lat, lng], r.id, 1.2)[1],
+          lat: isWorker ? lat! : (known ? lat! : jitterCoords([lat!, lng!], r.id, 1.2)[0]),
+          lng: isWorker ? lng! : (known ? lng! : jitterCoords([lat!, lng!], r.id, 1.2)[1]),
           category: "restaurant",
           title: known ? (r.business_name || r.full_name || "Locale") : maskedTitle,
           subtitle: known
@@ -532,6 +635,19 @@ function MapPage() {
       const restById = new Map(restaurants.map(r => [r.id, r]));
       anns.forEach(a => {
         const rest = restById.get(a.restaurant_id);
+        // Esclude difensivamente stati non attivi anche se la query li
+        // avesse fatti passare (rule 2, 24).
+        const annStatus = (a.status || "").toLowerCase();
+        if (["cancelled", "annullato", "closed", "completed", "expired", "deleted"].includes(annStatus)) {
+          return;
+        }
+        // Lato lavoratore: filtra per città consentite (rule 1, 4, 12, 15-18).
+        if (isWorker && !isWorkerCityAllowed(rest?.city)) {
+          if (typeof window !== "undefined") {
+            console.debug("[mappa] skip ann (city not allowed for worker)", { ann: a.id, restCity: rest?.city, allowed: workerAllowedCities ? Array.from(workerAllowedCities) : null });
+          }
+          return;
+        }
         // Fallback ordinato: job_latitude/job_longitude (sempre prioritari se presenti)
         // → location_lat/lng dell'annuncio → coordinate del profilo ristoratore → service_area_*
         const candidates: Array<[number | null | undefined, number | null | undefined, string]> = [
@@ -541,16 +657,39 @@ function MapPage() {
           [rest?.service_area_lat, rest?.service_area_lng, "service_area"],
         ];
         const picked = candidates.find(([la, ln]) => la != null && ln != null);
-        if (!picked) { stats.missing++; return; }
-        const [rawLat, rawLng, source] = picked as [number, number, "job" | "location" | "profile" | "service_area"];
-        stats[source]++;
-        byId[a.id] = source;
+        let rawLat: number | null = null;
+        let rawLng: number | null = null;
+        let source: "job" | "location" | "profile" | "service_area" | "city" = "city";
+        if (isWorker) {
+          // Posizione SEMPRE approssimata da zona/città del locale (rule 5/10/30).
+          // Se città/zona non risolvono, skip per non finire in città sbagliata (rule 14).
+          const base = lookupCityCoords(rest?.neighborhood) || lookupCityCoords(rest?.city);
+          if (!base) {
+            stats.missing++;
+            if (typeof window !== "undefined") {
+              console.debug("[mappa] skip ann (no city coords)", { ann: a.id, restCity: rest?.city, neighborhood: rest?.neighborhood });
+            }
+            return;
+          }
+          const j = jitterCoords(base, a.id, 0.9);
+          rawLat = j[0];
+          rawLng = j[1];
+          source = "city";
+          stats["service_area"] = (stats["service_area"] || 0); // keep keys
+          byId[a.id] = "service_area";
+        } else {
+          if (!picked) { stats.missing++; return; }
+          const p = picked as [number, number, "job" | "location" | "profile" | "service_area"];
+          rawLat = p[0]; rawLng = p[1]; source = p[2];
+          stats[source]++;
+          byId[a.id] = source;
+        }
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
         if (query || city !== "any" || district || venue !== "any" || planF !== "any" || statusF !== "any" || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
         }
         const refPoint = searchCenter || me;
-        const distance = refPoint ? distKm(refPoint.lat, refPoint.lng, rawLat, rawLng) : null;
+        const distance = refPoint && rawLat != null && rawLng != null ? distKm(refPoint.lat, refPoint.lng, rawLat, rawLng) : null;
         const contactName = a.job_contact_person_name
           || [rest?.contact_person_first_name, rest?.contact_person_last_name].filter(Boolean).join(" ").trim()
           || null;
@@ -569,7 +708,13 @@ function MapPage() {
         // L'indirizzo completo e i contatti restano nascosti finché il
         // servizio non viene accettato per QUESTO annuncio.
         const usePrivacy = isWorker && !confirmed;
-        const [lat, lng] = usePrivacy ? jitterCoords([rawLat, rawLng], a.id, 0.8) : [rawLat, rawLng];
+        // Per il lavoratore le coordinate sono già "approssimate da città"
+        // (vedi sopra). Per gli altri ruoli applichiamo il vecchio jitter
+        // solo se l'utente è in privacy. Per ristoratore/admin usiamo le
+        // coordinate precise originali.
+        const [lat, lng] = isWorker
+          ? [rawLat!, rawLng!]
+          : (usePrivacy ? jitterCoords([rawLat!, rawLng!], a.id, 0.8) : [rawLat!, rawLng!]);
 
         const zoneLabel = [rest?.neighborhood, rest?.city].filter(Boolean).join(" · ")
           || rest?.city
@@ -626,7 +771,7 @@ function MapPage() {
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
