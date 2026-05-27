@@ -1,5 +1,6 @@
 import type { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation";
 
 type Navigate = ReturnType<typeof useNavigate>;
 
@@ -161,6 +162,7 @@ export async function navigateFromNotificationLink(
     // Flat safe destinations
     const FLAT_SAFE: Record<string, () => void> = {
       "/profile": () => navigate({ to: "/profile" }),
+      "/onboarding": () => role === "restaurant" ? goToRestaurantOnboarding(navigate) : navigate({ to: "/onboarding" }),
       "/dashboard": () => navigate({ to: "/dashboard" }),
       "/notifications": () => navigate({ to: "/notifications" }),
       "/jobs": () => navigate({ to: "/jobs" }),
