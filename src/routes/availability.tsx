@@ -1036,9 +1036,6 @@ function AvailabilityPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="mt-8 text-center">
-      </div>
-
       <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
         <DialogContent>
           <DialogHeader>
