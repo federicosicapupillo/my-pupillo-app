@@ -181,6 +181,12 @@ type WorkerRel = {
   hasShiftScheduled: boolean;
   shiftAnnouncementIds: Set<string>;
   workerLastReview: { rating: number | null; comment: string | null; created_at: string } | null;
+  /** Esiste almeno un'applicazione attiva (non rifiutata/annullata/scaduta) tra ristoratore e lavoratore. */
+  hasActiveApp: boolean;
+  /** Map annuncio_id -> applicationId per le candidature ancora attive. */
+  activeAppByAnn: Map<string, string>;
+  /** Almeno un turno collegato è stato annullato/scaduto (e non concluso). */
+  hasCancelledShift: boolean;
 };
 const emptyRel = (): WorkerRel => ({
   workedWith: false,
@@ -200,6 +206,9 @@ const emptyRel = (): WorkerRel => ({
   hasShiftScheduled: false,
   shiftAnnouncementIds: new Set<string>(),
   workerLastReview: null,
+  hasActiveApp: false,
+  activeAppByAnn: new Map<string, string>(),
+  hasCancelledShift: false,
 });
 
 type Tier = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -549,7 +558,7 @@ function WorkersPage() {
       const [appsRes, shiftsRes, reviewsRes] = await Promise.all([
         supabase
           .from("applications")
-          .select("id, worker_id, status, last_message_at, created_at")
+          .select("id, worker_id, announcement_id, status, last_message_at, created_at")
           .eq("restaurant_id", user.id),
         supabase
           .from("shifts")
@@ -560,7 +569,7 @@ function WorkersPage() {
           .select("target_id, created_at, rating")
           .eq("author_id", user.id),
       ]);
-      const apps = (appsRes.data as Array<{ id: string; worker_id: string; status: string | null; last_message_at: string | null; created_at: string }>) ?? [];
+      const apps = (appsRes.data as Array<{ id: string; worker_id: string; announcement_id: string | null; status: string | null; last_message_at: string | null; created_at: string }>) ?? [];
       const shifts = (shiftsRes.data as Array<{ worker_id: string; status: string | null; shift_date: string | null; announcement_id: string | null }>) ?? [];
       const reviews = (reviewsRes.data as Array<{ target_id: string; created_at: string; rating: number | null }>) ?? [];
 
@@ -601,6 +610,15 @@ function WorkersPage() {
         } else if (a.status === "pending") {
           r.hasPending = true;
         }
+        // Un'applicazione è "attiva" se non rifiutata/annullata/scaduta/chiusa.
+        const statusLower = (a.status ?? "").toLowerCase();
+        const isAppActive =
+          !["rejected", "cancelled", "canceled", "expired", "withdrawn", "closed", "completed"].includes(statusLower) &&
+          resp?.status !== "rejected";
+        if (isAppActive && a.announcement_id) {
+          r.hasActiveApp = true;
+          r.activeAppByAnn.set(a.announcement_id, a.id);
+        }
         map[a.worker_id] = r;
       }
       // Turni completati
@@ -608,6 +626,9 @@ function WorkersPage() {
         const r = map[s.worker_id] ?? emptyRel();
         if (s.status === "completed") r.workedWith = true;
         if (s.status === "scheduled") r.hasShiftScheduled = true;
+        if (s.status === "cancelled" || s.status === "canceled" || s.status === "expired") {
+          r.hasCancelledShift = true;
+        }
         if (s.announcement_id) r.shiftAnnouncementIds.add(s.announcement_id);
         if (s.shift_date) r.lastContactAt = Math.max(r.lastContactAt, new Date(s.shift_date).getTime());
         r.contacted = true;
@@ -1193,6 +1214,13 @@ function WorkersPage() {
                         selectedAnnouncementId={selected || null}
                         activeRoleContext={activeRoleContext}
                         onOpenChat={(appId) => nav({ to: "/messages/$id", params: { id: appId } })}
+                        onSendProposal={requireComplete(() => openProposalDialog(w))}
+                        canSendProposal={!!selected && !isBlocked}
+                        blockedReason={
+                          isBlocked
+                            ? `Hai ${blockedCount} turn${blockedCount > 1 ? "i" : "o"} da recensire prima di poter inviare nuove proposte.`
+                            : (!selected ? "Seleziona un annuncio per inviare una proposta" : null)
+                        }
                         availRows={availByWorker[w.id] ?? null}
                         specialForDate={
                           selectedAnn
@@ -1420,6 +1448,9 @@ function ContactedWorkerCard({
   selectedAnnouncementId,
   activeRoleContext,
   onOpenChat,
+  onSendProposal,
+  canSendProposal,
+  blockedReason,
   availRows,
   specialForDate,
   specialDate,
@@ -1432,6 +1463,9 @@ function ContactedWorkerCard({
   selectedAnnouncementId: string | null;
   activeRoleContext: string | null;
   onOpenChat: (applicationId: string) => void;
+  onSendProposal: () => void;
+  canSendProposal: boolean;
+  blockedReason: string | null;
   availRows: AvailabilityRow[] | null;
   specialForDate: AvailabilityExceptionRow[];
   specialDate: string | null;
@@ -1455,9 +1489,12 @@ function ContactedWorkerCard({
   } else if (r?.hasShiftScheduled) {
     statusLabel = "Turno assegnato";
     statusTone = "emerald";
-  } else if (r?.hasAccepted) {
+  } else if (r?.hasAccepted && r?.hasActiveApp) {
     statusLabel = "Candidatura accettata";
     statusTone = "primary";
+  } else if (r?.hasCancelledShift) {
+    statusLabel = "Turno annullato";
+    statusTone = "muted";
   } else if (r?.hasPending) {
     statusLabel = "Candidatura in attesa";
     statusTone = "muted";
@@ -1598,17 +1635,66 @@ function ContactedWorkerCard({
           </div>
         </>
       )}
-      <Button
-        size="sm"
-        variant="default"
-        className="mt-4 w-full gap-1"
-        disabled={!appId}
-        onClick={() => appId && onOpenChat(appId)}
-        title={!appId ? "Chat non ancora disponibile" : undefined}
-      >
-        <MessageSquare className="h-3.5 w-3.5" />
-        Apri chat
-      </Button>
+      {(() => {
+        // CTA principale: invio nuova proposta per l'annuncio selezionato.
+        // - Se esiste già una candidatura attiva per lo stesso annuncio → disabilitato "Proposta già inviata".
+        // - Se il lavoratore ha almeno un turno realmente concluso → "Ricontatta gratis".
+        // - Altrimenti → "Invia proposta".
+        // La vecchia chat (se esiste) resta accessibile come storico tramite link secondario.
+        const activeAppForSelected =
+          selectedAnnouncementId && r?.activeAppByAnn?.get(selectedAnnouncementId) || null;
+        const ctaLabel = activeAppForSelected
+          ? "Proposta già inviata"
+          : r?.workedWith
+          ? "Ricontatta gratis"
+          : "Invia proposta";
+        const ctaDisabled = !!activeAppForSelected || !canSendProposal;
+        const ctaTitle = activeAppForSelected
+          ? "Esiste già una proposta attiva per questo annuncio"
+          : (blockedReason ?? undefined);
+        return (
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              className="mt-4 w-full gap-1"
+              disabled={ctaDisabled}
+              onClick={() => {
+                if (activeAppForSelected) {
+                  onOpenChat(activeAppForSelected);
+                  return;
+                }
+                onSendProposal();
+              }}
+              title={ctaTitle}
+            >
+              {r?.workedWith && !activeAppForSelected ? (
+                <Gift className="h-3.5 w-3.5" />
+              ) : (
+                <MessageSquare className="h-3.5 w-3.5" />
+              )}
+              {ctaLabel}
+            </Button>
+            {appId && !activeAppForSelected && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-2 w-full gap-1 text-muted-foreground"
+                onClick={() => onOpenChat(appId)}
+                title="Apre la chat precedente in sola lettura come storico"
+              >
+                <History className="h-3.5 w-3.5" />
+                Apri storico chat
+              </Button>
+            )}
+            {blockedReason && !activeAppForSelected && (
+              <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
+                {blockedReason}
+              </p>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
