@@ -1226,10 +1226,9 @@ function Field({
   );
 }
 
-function ChoiceGroup({ title, items, selected, onToggle }: { title: string; items: readonly { value: string; label: string }[]; selected: string[]; onToggle: (value: string) => void }) {
+function ChoiceGroup({ items, selected, onToggle }: { items: readonly { value: string; label: string }[]; selected: string[]; onToggle: (value: string) => void }) {
   return (
-    <div className="space-y-2">
-      <Label>{title}</Label>
+    <div>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {items.map(item => {
           const active = selected.includes(item.value);
