@@ -1832,48 +1832,78 @@ export type Database = {
       }
       worker_incidents: {
         Row: {
+          actual_delay_minutes: number | null
+          affects_compensation: boolean
+          affects_reputation: boolean
           application_id: string | null
+          confirmed_by_restaurant_at: string | null
           created_at: string
-          description: string
+          custom_reason: string | null
+          description: string | null
+          estimated_delay_minutes: number | null
           id: string
+          incident_type: string | null
           is_demo: boolean
+          job_request_id: string | null
           kind: string
+          reason: string | null
           restaurant_id: string
           reviewed_at: string | null
           reviewed_by: string | null
           seed_batch_id: string | null
           shift_id: string | null
           status: string
+          updated_at: string
           worker_id: string
         }
         Insert: {
+          actual_delay_minutes?: number | null
+          affects_compensation?: boolean
+          affects_reputation?: boolean
           application_id?: string | null
+          confirmed_by_restaurant_at?: string | null
           created_at?: string
-          description: string
+          custom_reason?: string | null
+          description?: string | null
+          estimated_delay_minutes?: number | null
           id?: string
+          incident_type?: string | null
           is_demo?: boolean
+          job_request_id?: string | null
           kind: string
+          reason?: string | null
           restaurant_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           seed_batch_id?: string | null
           shift_id?: string | null
           status?: string
+          updated_at?: string
           worker_id: string
         }
         Update: {
+          actual_delay_minutes?: number | null
+          affects_compensation?: boolean
+          affects_reputation?: boolean
           application_id?: string | null
+          confirmed_by_restaurant_at?: string | null
           created_at?: string
-          description?: string
+          custom_reason?: string | null
+          description?: string | null
+          estimated_delay_minutes?: number | null
           id?: string
+          incident_type?: string | null
           is_demo?: boolean
+          job_request_id?: string | null
           kind?: string
+          reason?: string | null
           restaurant_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           seed_batch_id?: string | null
           shift_id?: string | null
           status?: string
+          updated_at?: string
           worker_id?: string
         }
         Relationships: []

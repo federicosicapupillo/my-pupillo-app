@@ -17,6 +17,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
 import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehirePicker";
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
+import { ReportDelayDialog, CancelPresenceDialog, type IncidentTarget } from "@/components/WorkerIncidentDialogs";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -119,6 +120,8 @@ function ShiftsPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [delayTarget, setDelayTarget] = useState<IncidentTarget | null>(null);
+  const [workerCancelTarget, setWorkerCancelTarget] = useState<IncidentTarget | null>(null);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
@@ -727,6 +730,20 @@ function ShiftsPage() {
             const isPast = s.shift_date < new Date().toISOString().slice(0, 10);
             const canRestaurantAct = role === "restaurant" && s.status === "scheduled";
             const canWorkerComplete = role === "worker" && s.status === "scheduled" && isPast;
+            const canWorkerSignal = role === "worker" && s.status === "scheduled" && isShiftNotEnded(s);
+            const ann0 = announcementsMap[s.announcement_id || ""];
+            const incidentTarget: IncidentTarget | null = canWorkerSignal && user ? {
+              shiftId: s.id,
+              workerId: user.id,
+              restaurantId: s.restaurant_id,
+              applicationId: s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null,
+              announcementId: s.announcement_id,
+              context: {
+                role: ann0?.professional_profile ?? null,
+                date: ann0?.service_date ?? s.shift_date,
+                time: ann0?.service_time ?? null,
+              },
+            } : null;
 
             return (
               <div
@@ -786,6 +803,16 @@ function ShiftsPage() {
                       <Button size="sm" onClick={() => updateStatus(s, "completed")} className="gap-1">
                         <CheckCircle2 className="h-4 w-4" /> Segna come completato
                       </Button>
+                    )}
+                    {canWorkerSignal && incidentTarget && (
+                      <>
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => setDelayTarget(incidentTarget)}>
+                          <Clock className="h-4 w-4" /> Segnala ritardo
+                        </Button>
+                        <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" onClick={() => setWorkerCancelTarget(incidentTarget)}>
+                          <XCircle className="h-4 w-4" /> Annulla presenza
+                        </Button>
+                      </>
                     )}
                     {canRestaurantAct && (
                       <>
@@ -1255,6 +1282,23 @@ function ShiftsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ReportDelayDialog
+        open={!!delayTarget}
+        target={delayTarget}
+        onClose={() => setDelayTarget(null)}
+        onDone={() => { /* incident persisted; shift status unchanged */ }}
+      />
+      <CancelPresenceDialog
+        open={!!workerCancelTarget}
+        target={workerCancelTarget}
+        onClose={() => setWorkerCancelTarget(null)}
+        onDone={() => {
+          if (workerCancelTarget) {
+            setShifts(prev => prev.map(x => x.id === workerCancelTarget.shiftId ? { ...x, status: "cancelled" as const } : x));
+          }
+        }}
+      />
     </AppShell>
   );
 }
