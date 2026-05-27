@@ -166,6 +166,20 @@ function splitLanguages(values: string[]) {
   return labelsOf(values, LANGUAGE_OPTIONS);
 }
 
+const optionValues = (items: readonly { value: string }[]) => new Set(items.map((item) => item.value));
+const LICENSE_VALUES = optionValues(LICENSE_OPTIONS);
+const TATTOO_VALUES = optionValues(TATTOO_OPTIONS);
+const PIERCING_VALUES = optionValues(PIERCING_OPTIONS);
+const BEARD_VALUES = optionValues(BEARD_OPTIONS);
+
+function cleanArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+}
+
+function validOption(value: unknown, allowed: Set<string>): string {
+  return typeof value === "string" && allowed.has(value) ? value : "";
+}
+
 function NewRestaurantJobRequest() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
@@ -215,10 +229,10 @@ function NewRestaurantJobRequest() {
     contact_person_role: "",
     contact_person_role_other: "",
     worker_notes: "",
-    license_requirement: "nessuna",
-    tattoos_allowed: "indifferente",
-    piercings_allowed: "indifferente",
-    beard_allowed: "solo_curata",
+    license_requirement: "",
+    tattoos_allowed: "",
+    piercings_allowed: "",
+    beard_allowed: "",
     dress_code_notes: "",
     long_shift_reason: "",
   });
