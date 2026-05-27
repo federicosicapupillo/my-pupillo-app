@@ -1037,6 +1037,24 @@ function AvailabilityPage() {
       </Dialog>
 
       <div className="mt-8 text-center">
+      </div>
+
+      <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancellare tutte le disponibilità?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Verranno azzerati tutti i giorni della settimana. Le disponibilità speciali non saranno toccate. L'operazione diventa definitiva al prossimo salvataggio.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmClear(false)}>Annulla</Button>
+            <Button variant="destructive" onClick={clearAll}>Cancella tutto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="mt-8 text-center">
         <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
           ← Torna alla dashboard
         </Link>
