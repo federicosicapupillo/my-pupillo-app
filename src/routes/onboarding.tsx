@@ -1200,7 +1200,7 @@ function Onboarding() {
             : "Completa il tuo profilo per candidarti agli annunci vicino a te."
         }
       />
-      <form onSubmit={submit} className="max-w-2xl space-y-5 rounded-2xl border bg-card p-6">
+      <form onSubmit={submit} className="w-full max-w-7xl mx-auto space-y-5 rounded-2xl border bg-card p-4 sm:p-6">
         <div id="sec-personal" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
           {role !== "worker" ? (
             <div>
