@@ -478,18 +478,37 @@ function WorkersPage() {
     const ids = workers.map((w) => w.id);
     let cancelled = false;
     const refetch = async () => {
-      const { data, error } = await supabase
-        .from("worker_availability")
-        .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
-        .in("worker_id", ids);
-      if (cancelled || error) return;
-      const map: Record<string, AvailabilityRow[]> = {};
-      for (const r of (data as AvailabilityRow[] | null) ?? []) {
-        const arr = map[r.worker_id] ?? [];
-        arr.push(r);
-        map[r.worker_id] = arr;
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const [{ data, error }, { data: excData, error: excError }] = await Promise.all([
+        supabase
+          .from("worker_availability")
+          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
+          .in("worker_id", ids),
+        supabase
+          .from("worker_availability_exceptions")
+          .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
+          .in("worker_id", ids)
+          .gte("date", todayIso),
+      ]);
+      if (cancelled) return;
+      if (!error) {
+        const map: Record<string, AvailabilityRow[]> = {};
+        for (const r of (data as AvailabilityRow[] | null) ?? []) {
+          const arr = map[r.worker_id] ?? [];
+          arr.push(r);
+          map[r.worker_id] = arr;
+        }
+        setAvailByWorker(map);
       }
-      setAvailByWorker(map);
+      if (!excError) {
+        const exMap: Record<string, AvailabilityExceptionRow[]> = {};
+        for (const r of (excData as AvailabilityExceptionRow[] | null) ?? []) {
+          const arr = exMap[r.worker_id] ?? [];
+          arr.push(r);
+          exMap[r.worker_id] = arr;
+        }
+        setExcByWorker(exMap);
+      }
     };
     const onFocus = () => { void refetch(); };
     const onVisible = () => { if (document.visibilityState === "visible") void refetch(); };
@@ -500,6 +519,14 @@ function WorkersPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "worker_availability" },
+        (payload) => {
+          const wid = (payload.new as any)?.worker_id ?? (payload.old as any)?.worker_id;
+          if (wid && ids.includes(wid)) void refetch();
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "worker_availability_exceptions" },
         (payload) => {
           const wid = (payload.new as any)?.worker_id ?? (payload.old as any)?.worker_id;
           if (wid && ids.includes(wid)) void refetch();
