@@ -355,6 +355,50 @@ function WorkersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
+  // Refetch availabilities when the tab regains focus, so a worker's update
+  // shows up here without a full page reload. Also subscribe to realtime
+  // changes on the `worker_availability` table for the current worker list.
+  useEffect(() => {
+    if (role !== "restaurant" || workers.length === 0) return;
+    const ids = workers.map((w) => w.id);
+    let cancelled = false;
+    const refetch = async () => {
+      const { data, error } = await supabase
+        .from("worker_availability")
+        .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
+        .in("worker_id", ids);
+      if (cancelled || error) return;
+      const map: Record<string, AvailabilityRow[]> = {};
+      for (const r of (data as AvailabilityRow[] | null) ?? []) {
+        const arr = map[r.worker_id] ?? [];
+        arr.push(r);
+        map[r.worker_id] = arr;
+      }
+      setAvailByWorker(map);
+    };
+    const onFocus = () => { void refetch(); };
+    const onVisible = () => { if (document.visibilityState === "visible") void refetch(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    const channel = supabase
+      .channel(`workers-availability-${ids.length}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "worker_availability" },
+        (payload) => {
+          const wid = (payload.new as any)?.worker_id ?? (payload.old as any)?.worker_id;
+          if (wid && ids.includes(wid)) void refetch();
+        },
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, [role, workers]);
+
   // Carica le relazioni ristoratore ↔ lavoratori (turni, candidature, proposte, recensioni)
   useEffect(() => {
     if (role !== "restaurant" || !user) return;
