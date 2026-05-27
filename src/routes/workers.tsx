@@ -35,7 +35,8 @@ import {
   formatWorkerAvailabilityByDay,
   availabilitySearchText,
 } from "@/lib/worker-availability-summary";
-import type { AvailabilityRow } from "@/lib/availability";
+import type { AvailabilityRow, CompatibilityLevel } from "@/lib/availability";
+import { computeCompatibility } from "@/lib/availability";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
