@@ -400,44 +400,53 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
 
   return (
     <ProfileBox title="Residenza" editing={editing} saving={saving} onEdit={start} onCancel={cancel} onSave={onSave}>
-      <div className="grid gap-3 md:grid-cols-2">
-        <div>
-          <Label>Città di residenza <span className="text-destructive">*</span></Label>
-          {editing ? (
+      {editing ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <Label>Città di residenza <span className="text-destructive">*</span></Label>
             <SearchableSelect
               options={WORKER_CITIES as unknown as string[]}
               value={city}
               onChange={(v) => { setCity(v); if (errors.city) setErrors(p => ({ ...p, city: undefined })); }}
               placeholder="Seleziona città"
             />
-          ) : (
-            <Input value={city} readOnly className="bg-muted/50" />
-          )}
-          {errors.city && <p className="mt-1 text-xs text-destructive">{errors.city}</p>}
+            {errors.city && <p className="mt-1 text-xs text-destructive">{errors.city}</p>}
+          </div>
+          <div className="md:col-span-2">
+            <Label>Via <span className="text-destructive">*</span></Label>
+            <Input
+              value={street}
+              onChange={(e) => { setStreet(e.target.value); if (errors.street) setErrors(p => ({ ...p, street: undefined })); }}
+              className={cn(errors.street && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
+              placeholder="Inserisci la via"
+            />
+            {errors.street && <p className="mt-1 text-xs text-destructive">{errors.street}</p>}
+          </div>
+          <div>
+            <Label>Numero civico <span className="text-destructive">*</span></Label>
+            <Input
+              value={number}
+              onChange={(e) => { setNumber(e.target.value); if (errors.number) setErrors(p => ({ ...p, number: undefined })); }}
+              className={cn(errors.number && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
+              placeholder="12, 12/A, 12 bis, SNC…"
+            />
+            {errors.number && <p className="mt-1 text-xs text-destructive">{errors.number}</p>}
+          </div>
         </div>
-        <div className="md:col-span-2">
-          <Label>Via <span className="text-destructive">*</span></Label>
-          <Input
-            value={street}
-            readOnly={!editing}
-            onChange={(e) => { setStreet(e.target.value); if (errors.street) setErrors(p => ({ ...p, street: undefined })); }}
-            className={cn(!editing && "bg-muted/50", errors.street && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
-            placeholder="Inserisci la via"
-          />
-          {errors.street && <p className="mt-1 text-xs text-destructive">{errors.street}</p>}
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Città di residenza</p>
+            <p className="text-sm font-medium">{displayCity || "Città non completata"}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Indirizzo di residenza</p>
+            <p className={cn("text-sm font-medium", !displayAddress && "text-muted-foreground")}>
+              {displayAddress || "Indirizzo non completato"}
+            </p>
+          </div>
         </div>
-        <div>
-          <Label>Numero civico <span className="text-destructive">*</span></Label>
-          <Input
-            value={number}
-            readOnly={!editing}
-            onChange={(e) => { setNumber(e.target.value); if (errors.number) setErrors(p => ({ ...p, number: undefined })); }}
-            className={cn(!editing && "bg-muted/50", errors.number && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
-            placeholder="12, 12/A, 12 bis, SNC…"
-          />
-          {errors.number && <p className="mt-1 text-xs text-destructive">{errors.number}</p>}
-        </div>
-      </div>
+      )}
     </ProfileBox>
   );
 }
