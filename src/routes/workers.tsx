@@ -322,6 +322,28 @@ function compatTier(level: CompatibilityLevel | null): number {
   return 4; // non disponibile
 }
 
+// Quando il lavoratore ha impostato una "disponibilità speciale" per la data
+// dell'annuncio, quella prevale sempre sulla disponibilità abituale: se nessuna
+// delle eccezioni è compatibile con città/zona/orario dell'annuncio (o segna
+// la data come "Non disponibile"), il contatto va bloccato.
+function describeSpecial(e: AvailabilityExceptionRow): string {
+  const where = [e.city, e.district].filter(Boolean).join(" · ");
+  const when = e.start_time && e.end_time ? `${e.start_time}–${e.end_time}` : "";
+  if (!e.is_available) return [where, "Non disponibile"].filter(Boolean).join(" · ");
+  return [where, when].filter(Boolean).join(" · ");
+}
+
+function computeSpecialBlock(
+  specials: AvailabilityExceptionRow[],
+  level: CompatibilityLevel | null,
+): { blocked: boolean; specials: AvailabilityExceptionRow[] } | null {
+  if (!specials || specials.length === 0) return null;
+  // Le specials esistono per quella data → prevalgono. Se computeCompatibility
+  // dice "non_disponibile" il lavoratore non può ricevere proposta per il turno.
+  if (level === "non_disponibile") return { blocked: true, specials };
+  return { blocked: false, specials };
+}
+
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
@@ -682,6 +704,42 @@ function WorkersPage() {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
     setSendingProposal(true);
     try {
+      // BACKEND RECHECK: la disponibilità speciale prevale sempre. Se per la
+      // data dell'annuncio esistono eccezioni e nessuna è compatibile con
+      // città/zona/orario (o segna "Non disponibile"), blocchiamo qui prima
+      // di creare la candidatura → nessuna chat, nessuna notifica, nessun
+      // credito scalato.
+      const ann = anns.find((a) => a.id === selected) ?? selectedAnn;
+      if (ann) {
+        const { data: excRows } = await supabase
+          .from("worker_availability_exceptions")
+          .select("*")
+          .eq("worker_id", workerId)
+          .eq("date", ann.service_date);
+        const excs = (excRows ?? []) as AvailabilityExceptionRow[];
+        if (excs.length > 0) {
+          const { data: avRows } = await supabase
+            .from("worker_availability")
+            .select("*")
+            .eq("worker_id", workerId);
+          const level = computeCompatibility(
+            (avRows ?? []) as AvailabilityRow[],
+            excs,
+            ann.service_date,
+            ann.service_time ?? null,
+            ann.end_time ?? null,
+            ann.job_city ?? null,
+          );
+          if (level === "non_disponibile") {
+            toast.error(
+              "Non puoi inviare questa proposta perché il lavoratore non è disponibile per città, data o orario dell'annuncio.",
+            );
+            setProposalWorker(null);
+            setSendingProposal(false);
+            return;
+          }
+        }
+      }
       // Anti-doppio contatto: blocca se esiste già una candidatura/proposta
       // attiva tra questo ristoratore e questo lavoratore per lo stesso annuncio.
       const contact = await checkExistingContact({
@@ -947,6 +1005,13 @@ function WorkersPage() {
   // the worker has no availability rows at all → keep visible but rank
   // below those with declared availability.
   const compatByWorker: Record<string, CompatibilityLevel | null> = {};
+  // Per-worker hard block: una "disponibilità speciale" esiste per la data
+  // dell'annuncio ma NON è compatibile (città/zona/orario o "Non disponibile").
+  // Quando true, il pulsante "Invia proposta" va disabilitato.
+  const specialBlockByWorker: Record<
+    string,
+    { blocked: boolean; specials: AvailabilityExceptionRow[] } | null
+  > = {};
   if (selectedAnn) {
     for (const w of distFiltered) {
       const rows = availByWorker[w.id];
@@ -955,9 +1020,10 @@ function WorkersPage() {
       );
       if ((!rows || rows.length === 0) && excs.length === 0) {
         compatByWorker[w.id] = null;
+        specialBlockByWorker[w.id] = null;
         continue;
       }
-      compatByWorker[w.id] = computeCompatibility(
+      const level = computeCompatibility(
         rows ?? [],
         excs,
         selectedAnn.service_date,
@@ -965,6 +1031,8 @@ function WorkersPage() {
         selectedAnn.end_time ?? null,
         selectedAnn.job_city ?? null,
       );
+      compatByWorker[w.id] = level;
+      specialBlockByWorker[w.id] = computeSpecialBlock(excs, level);
     }
   }
 
@@ -1230,6 +1298,7 @@ function WorkersPage() {
                         specialDate={selectedAnn?.service_date ?? null}
                         upcomingSpecials={excByWorker[w.id] ?? []}
                         compatBadge={compatBadge}
+                        specialBlock={selectedAnn ? specialBlockByWorker[w.id] ?? null : null}
                         onDetails={() => setDetailsWorker(w)}
                       />
                     );
@@ -1355,15 +1424,41 @@ function WorkersPage() {
               availableNowUntil={w.available_now_until}
               onDetails={() => setDetailsWorker(w)}
             />
-            <Button
-              size="sm"
-              className="mt-4 w-full gap-1"
-              onClick={requireComplete(() => openProposalDialog(w))}
-              title={!selected ? "Scegli un annuncio prima di proporre un turno" : undefined}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              Invia proposta
-            </Button>
+            {(() => {
+              const sb = selectedAnn ? specialBlockByWorker[w.id] : null;
+              const hardBlocked = !!sb?.blocked;
+              return (
+                <>
+                  <Button
+                    size="sm"
+                    className="mt-4 w-full gap-1"
+                    disabled={hardBlocked}
+                    onClick={hardBlocked ? undefined : requireComplete(() => openProposalDialog(w))}
+                    title={
+                      hardBlocked
+                        ? "Il lavoratore ha indicato una disponibilità speciale non compatibile con questo turno"
+                        : !selected
+                        ? "Scegli un annuncio prima di proporre un turno"
+                        : undefined
+                    }
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {hardBlocked ? "Non disponibile per questo turno" : "Invia proposta"}
+                  </Button>
+                  {hardBlocked && (
+                    <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                      <p className="font-medium">Disponibilità speciale in un'altra città / orario</p>
+                      <p className="mt-0.5">
+                        Il lavoratore ha indicato una disponibilità speciale non compatibile con questo turno.
+                      </p>
+                      {sb!.specials.slice(0, 3).map((e) => (
+                        <p key={e.id} className="mt-0.5">· {describeSpecial(e)}</p>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             {isBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
                 Hai {blockedCount} turn{blockedCount > 1 ? "i" : "o"} da recensire prima di poter assegnare nuovi turni.
@@ -1456,6 +1551,7 @@ function ContactedWorkerCard({
   specialDate,
   upcomingSpecials,
   compatBadge,
+  specialBlock,
   onDetails,
 }: {
   worker: W;
@@ -1471,6 +1567,7 @@ function ContactedWorkerCard({
   specialDate: string | null;
   upcomingSpecials: AvailabilityExceptionRow[];
   compatBadge: { text: string; cls: string } | null;
+  specialBlock: { blocked: boolean; specials: AvailabilityExceptionRow[] } | null;
   onDetails: () => void;
 }) {
   const workedTogether = !!r?.workedWith;
@@ -1643,13 +1740,18 @@ function ContactedWorkerCard({
         // La vecchia chat (se esiste) resta accessibile come storico tramite link secondario.
         const activeAppForSelected =
           selectedAnnouncementId && r?.activeAppByAnn?.get(selectedAnnouncementId) || null;
-        const ctaLabel = activeAppForSelected
+        const hardBlocked = !!specialBlock?.blocked;
+        const ctaLabel = hardBlocked
+          ? "Non disponibile per questo turno"
+          : activeAppForSelected
           ? "Proposta già inviata"
           : r?.workedWith
           ? "Ricontatta gratis"
           : "Invia proposta";
-        const ctaDisabled = !!activeAppForSelected || !canSendProposal;
-        const ctaTitle = activeAppForSelected
+        const ctaDisabled = hardBlocked || !!activeAppForSelected || !canSendProposal;
+        const ctaTitle = hardBlocked
+          ? "Il lavoratore ha indicato una disponibilità speciale non compatibile con questo turno"
+          : activeAppForSelected
           ? "Esiste già una proposta attiva per questo annuncio"
           : (blockedReason ?? undefined);
         return (
@@ -1660,6 +1762,7 @@ function ContactedWorkerCard({
               className="mt-4 w-full gap-1"
               disabled={ctaDisabled}
               onClick={() => {
+                if (hardBlocked) return;
                 if (activeAppForSelected) {
                   onOpenChat(activeAppForSelected);
                   return;
@@ -1668,13 +1771,24 @@ function ContactedWorkerCard({
               }}
               title={ctaTitle}
             >
-              {r?.workedWith && !activeAppForSelected ? (
+              {!hardBlocked && r?.workedWith && !activeAppForSelected ? (
                 <Gift className="h-3.5 w-3.5" />
               ) : (
                 <MessageSquare className="h-3.5 w-3.5" />
               )}
               {ctaLabel}
             </Button>
+            {hardBlocked && (
+              <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                <p className="font-medium">Disponibilità speciale in un'altra città / orario</p>
+                <p className="mt-0.5">
+                  Il lavoratore ha indicato una disponibilità speciale non compatibile con questo turno.
+                </p>
+                {specialBlock!.specials.slice(0, 3).map((e) => (
+                  <p key={e.id} className="mt-0.5">· {describeSpecial(e)}</p>
+                ))}
+              </div>
+            )}
             {appId && !activeAppForSelected && (
               <Button
                 size="sm"
@@ -1687,7 +1801,7 @@ function ContactedWorkerCard({
                 Apri storico chat
               </Button>
             )}
-            {blockedReason && !activeAppForSelected && (
+            {blockedReason && !activeAppForSelected && !hardBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
                 {blockedReason}
               </p>
