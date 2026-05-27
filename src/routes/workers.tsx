@@ -1676,6 +1676,16 @@ function ContactedWorkerCard({
           </span>
         </div>
       )}
+      {w.search_penalty_active && (
+        <div className="mt-2">
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium"
+            title="Ritardi ripetuti recenti — il profilo ha priorità ridotta nei risultati."
+          >
+            Affidabilità da verificare
+          </span>
+        </div>
+      )}
       <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
         <MapPin className="h-3.5 w-3.5 shrink-0" />
         <span>
