@@ -353,10 +353,15 @@ function PersonalDataBox({ profile, email }: { profile: any; email: string | nul
 }
 
 function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: string | null; onSaved: () => Promise<void> | void }) {
+  const legacyAddress = splitAddressAndCivic(profile?.residence_address);
+  const displayCity = profile?.residence_city ?? profile?.city ?? "";
+  const displayStreet = profile?.residence_street ?? legacyAddress.street ?? "";
+  const displayNumber = profile?.residence_number ?? legacyAddress.civic ?? "";
+  const displayAddress = displayStreet && displayNumber ? `${displayStreet}, ${displayNumber}` : "";
   const [editing, setEditing] = useState(false);
-  const [city, setCity] = useState<string>(profile?.residence_city ?? profile?.city ?? "");
-  const [street, setStreet] = useState<string>(profile?.residence_street ?? "");
-  const [number, setNumber] = useState<string>(profile?.residence_number ?? "");
+  const [city, setCity] = useState<string>(displayCity);
+  const [street, setStreet] = useState<string>(displayStreet);
+  const [number, setNumber] = useState<string>(displayNumber);
   const [errors, setErrors] = useState<Partial<Record<"city" | "street" | "number", string>>>({});
   const { saving, save } = useBoxSave(userId, onSaved, {
     success: "Residenza aggiornata correttamente.",
@@ -364,9 +369,10 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
   });
 
   const start = () => {
+    const currentLegacyAddress = splitAddressAndCivic(profile?.residence_address);
     setCity(profile?.residence_city ?? profile?.city ?? "");
-    setStreet(profile?.residence_street ?? profile?.residence_address ?? "");
-    setNumber(profile?.residence_number ?? "");
+    setStreet(profile?.residence_street ?? currentLegacyAddress.street ?? "");
+    setNumber(profile?.residence_number ?? currentLegacyAddress.civic ?? "");
     setErrors({});
     setEditing(true);
   };
@@ -387,7 +393,7 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
       residence_city: city.trim() || null,
       residence_street: street.trim() || null,
       residence_number: number.trim() || null,
-      residence_address: null,
+      residence_address: `${street.trim()}, ${number.trim()}`,
     });
     if (ok) setEditing(false);
   };
