@@ -59,10 +59,10 @@ function DashboardInner() {
   const [closingItem, setClosingItem] = useState<AssignedItem | null>(null);
   const [closing, setClosing] = useState(false);
 
-  useEffect(() => {
-    if (!user || !role) return;
-    if (profile && !profile.profile_completed) nav({ to: "/onboarding" });
-  }, [user, role, profile, nav]);
+  // Il redirect forzato a /onboarding per profilo incompleto è stato rimosso
+  // per permettere ai ristoratori di accedere alla dashboard anche con profilo
+  // incompleto. Il box visibile nella dashboard guida l'utente a completare
+  // il profilo quando vuole.
 
   // Promemoria: toast una volta per sessione (dedup centralizzato).
   useEffect(() => {
