@@ -804,8 +804,10 @@ export type Database = {
           business_name: string | null
           business_status: string | null
           busy_days: string[] | null
+          cancellation_count: number
           city: string | null
           city_code: string | null
+          clean_shifts_after_penalty: number
           company_tax_code: string | null
           completed_shifts: number | null
           completion_pct: number
@@ -830,6 +832,7 @@ export type Database = {
           default_required_skills: string[] | null
           default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
+          delay_count: number
           deleted_at: string | null
           deletion_reason: string | null
           distinct_restaurants_count: number
@@ -913,6 +916,10 @@ export type Database = {
           review_blocked_at: string | null
           reviews_count: number | null
           sdi_code: string | null
+          search_penalty_active: boolean
+          search_penalty_reason: string | null
+          search_penalty_started_at: string | null
+          search_penalty_until: string | null
           secondary_roles: string[] | null
           seed_batch_id: string | null
           selected_zones: string[]
@@ -964,8 +971,10 @@ export type Database = {
           business_name?: string | null
           business_status?: string | null
           busy_days?: string[] | null
+          cancellation_count?: number
           city?: string | null
           city_code?: string | null
+          clean_shifts_after_penalty?: number
           company_tax_code?: string | null
           completed_shifts?: number | null
           completion_pct?: number
@@ -990,6 +999,7 @@ export type Database = {
           default_required_skills?: string[] | null
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
+          delay_count?: number
           deleted_at?: string | null
           deletion_reason?: string | null
           distinct_restaurants_count?: number
@@ -1073,6 +1083,10 @@ export type Database = {
           review_blocked_at?: string | null
           reviews_count?: number | null
           sdi_code?: string | null
+          search_penalty_active?: boolean
+          search_penalty_reason?: string | null
+          search_penalty_started_at?: string | null
+          search_penalty_until?: string | null
           secondary_roles?: string[] | null
           seed_batch_id?: string | null
           selected_zones?: string[]
@@ -1124,8 +1138,10 @@ export type Database = {
           business_name?: string | null
           business_status?: string | null
           busy_days?: string[] | null
+          cancellation_count?: number
           city?: string | null
           city_code?: string | null
+          clean_shifts_after_penalty?: number
           company_tax_code?: string | null
           completed_shifts?: number | null
           completion_pct?: number
@@ -1150,6 +1166,7 @@ export type Database = {
           default_required_skills?: string[] | null
           default_settings_updated_at?: string | null
           default_tattoos_allowed?: string | null
+          delay_count?: number
           deleted_at?: string | null
           deletion_reason?: string | null
           distinct_restaurants_count?: number
@@ -1233,6 +1250,10 @@ export type Database = {
           review_blocked_at?: string | null
           reviews_count?: number | null
           sdi_code?: string | null
+          search_penalty_active?: boolean
+          search_penalty_reason?: string | null
+          search_penalty_started_at?: string | null
+          search_penalty_until?: string | null
           secondary_roles?: string[] | null
           seed_batch_id?: string | null
           selected_zones?: string[]
@@ -2329,8 +2350,10 @@ export type Database = {
           business_name: string | null
           business_status: string | null
           busy_days: string[] | null
+          cancellation_count: number
           city: string | null
           city_code: string | null
+          clean_shifts_after_penalty: number
           company_tax_code: string | null
           completed_shifts: number | null
           completion_pct: number
@@ -2355,6 +2378,7 @@ export type Database = {
           default_required_skills: string[] | null
           default_settings_updated_at: string | null
           default_tattoos_allowed: string | null
+          delay_count: number
           deleted_at: string | null
           deletion_reason: string | null
           distinct_restaurants_count: number
@@ -2438,6 +2462,10 @@ export type Database = {
           review_blocked_at: string | null
           reviews_count: number | null
           sdi_code: string | null
+          search_penalty_active: boolean
+          search_penalty_reason: string | null
+          search_penalty_started_at: string | null
+          search_penalty_until: string | null
           secondary_roles: string[] | null
           seed_batch_id: string | null
           selected_zones: string[]
@@ -2502,6 +2530,7 @@ export type Database = {
         Args: { _restaurant: string; _worker: string }
         Returns: boolean
       }
+      is_confirmed_delay: { Args: { _status: string }; Returns: boolean }
       log_profile_date_validation_failure: {
         Args: { _payload: Json; _reason: string }
         Returns: string
@@ -2510,6 +2539,10 @@ export type Database = {
       normalize_vat: { Args: { _v: string }; Returns: string }
       recompute_review_block: {
         Args: { _restaurant_id: string }
+        Returns: undefined
+      }
+      recompute_worker_penalty: {
+        Args: { _worker: string }
         Returns: undefined
       }
       recompute_worker_reputation: {
