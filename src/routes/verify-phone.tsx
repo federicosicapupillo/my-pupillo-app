@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Mail } from "lucide-react";
+import { clearPendingRegistrationOtpState, readPendingRegistrationOtpState, savePendingRegistrationOtpState } from "@/lib/registration-otp-state";
 
 const TEST_OTP_ENABLED = import.meta.env.VITE_ENABLE_TEST_OTP === "true" && import.meta.env.PROD !== true;
 
@@ -43,6 +44,7 @@ function VerifyPhonePage() {
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
   const userChangedPhoneRef = useRef(false);
   const autoSendTriedRef = useRef(false);
+  const [pendingRegistrationOtp, setPendingRegistrationOtp] = useState(() => readPendingRegistrationOtpState());
   // Popup di conferma email mostrato DOPO la verifica WhatsApp OTP.
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [resendingEmail, setResendingEmail] = useState(false);
@@ -53,13 +55,20 @@ function VerifyPhonePage() {
   useEffect(() => {
     if (loading) return;
     if (!user) { nav({ to: "/auth" }); return; }
+    const pendingPhone = pendingRegistrationOtp?.phoneFull ?? "";
+    if ((!extrasLoaded || !profile) && search.phase === "code" && pendingRegistrationOtp) {
+      setPhoneCode(pendingRegistrationOtp.phoneCountryCode);
+      setPhoneNumber(pendingRegistrationOtp.phoneNumber);
+      setPhase("code");
+      return;
+    }
     // Aspetta che il profilo sia effettivamente caricato dal DB prima di
-    // decidere quale schermata mostrare. Senza questo controllo, mentre
-    // il profilo è ancora null, cadremmo nel ramo "phone" e mostreremmo
-    // erroneamente il form di reinserimento numero (richiedendo refresh
-    // per vedere la schermata OTP corretta).
+    // decidere quale schermata mostrare, ma non perdere lo stato OTP appena
+    // creato in registrazione: il profilo in auth-context può essere ancora
+    // quello letto prima dell'update del telefono.
     if (!extrasLoaded || !profile) return;
     if (profile?.phone_verified) {
+      clearPendingRegistrationOtpState();
       if (profile?.profile_completed) {
         nav({ to: "/dashboard" });
       } else {
@@ -67,8 +76,11 @@ function VerifyPhonePage() {
       }
       return;
     }
-    if (profile?.phone_full && !userChangedPhoneRef.current) {
-      const sp = splitPhone(profile.phone_full);
+    const phoneForOtp = profile?.phone_full || pendingPhone;
+    if (phoneForOtp && !userChangedPhoneRef.current) {
+      const sp = pendingRegistrationOtp && phoneForOtp === pendingRegistrationOtp.phoneFull
+        ? { code: pendingRegistrationOtp.phoneCountryCode, number: pendingRegistrationOtp.phoneNumber }
+        : splitPhone(phoneForOtp);
       setPhoneCode(sp.code);
       setPhoneNumber(sp.number);
       // Numero già presente sul profilo → la schermata resta in "code".
@@ -77,7 +89,7 @@ function VerifyPhonePage() {
       // automaticamente l'invio una sola volta. Evita che l'utente debba
       // re-inserire il numero solo per ricevere il codice.
       const status = profile.whatsapp_confirmation_status;
-      const alreadySent = status === "sent" || status === "pending";
+      const alreadySent = status === "sent" || status === "pending" || Boolean(pendingRegistrationOtp);
       if (!alreadySent && !autoSendTriedRef.current && cooldown === 0) {
         autoSendTriedRef.current = true;
         void (async () => {
@@ -101,12 +113,12 @@ function VerifyPhonePage() {
           }
         })();
       }
-    } else if (profile && !profile.phone_full) {
+    } else if (profile && !profile.phone_full && !pendingPhone) {
       // Caso limite: nessun numero salvato sul profilo. Lasciamo che
       // l'utente lo inserisca.
       setPhase("phone");
     }
-  }, [user, profile, loading, extrasLoaded, nav, start, refresh, cooldown]);
+  }, [user, profile, loading, extrasLoaded, nav, start, refresh, cooldown, pendingRegistrationOtp, search.phase]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
