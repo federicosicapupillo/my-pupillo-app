@@ -983,6 +983,18 @@ function WorkersPage() {
                 return `${n} ${n === 1 ? "lavoratore trovato" : "lavoratori trovati"}`;
               })()}
         </p>
+        {hasActiveFilters ? (
+          <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            Ricerca avanzata attiva
+            <button onClick={resetFilters} className="ml-1 inline-flex items-center gap-0.5 underline-offset-2 hover:underline">
+              <RotateCcw className="h-3 w-3" />Cancella filtri
+            </button>
+          </span>
+        ) : announcementRole ? (
+          <span className="text-xs text-muted-foreground">
+            Filtro automatico: <strong className="text-foreground capitalize">{announcementRole}</strong> (dall'annuncio)
+          </span>
+        ) : null}
         <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view==="list"?"secondary":"ghost"} onClick={()=>setView("list")} className="gap-1"><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view==="map"?"secondary":"ghost"} onClick={()=>setView("map")} className="gap-1"><MapIcon className="h-4 w-4" />Mappa</Button>
