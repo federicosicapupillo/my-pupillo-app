@@ -30,7 +30,11 @@ function VerifyPhonePage() {
   const verify = useServerFn(verifyPhoneOtp);
   const resend = useServerFn(resendPhoneOtp);
 
-  const [phase, setPhase] = useState<"phone" | "code">(search.phase === "code" ? "code" : "phone");
+  // Default to "code" phase: il numero è stato già inserito in registrazione.
+  // Mostriamo la schermata di inserimento numero solo se l'utente clicca
+  // esplicitamente su "Cambia numero" oppure se sul profilo non esiste
+  // proprio nessun numero (caso limite).
+  const [phase, setPhase] = useState<"phone" | "code">("code");
   const [code, setCode] = useState("");
   const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -38,6 +42,7 @@ function VerifyPhonePage() {
   const [cooldown, setCooldown] = useState(0);
   const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
   const userChangedPhoneRef = useRef(false);
+  const autoSendTriedRef = useRef(false);
   // Popup di conferma email mostrato DOPO la verifica WhatsApp OTP.
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [resendingEmail, setResendingEmail] = useState(false);
@@ -60,11 +65,42 @@ function VerifyPhonePage() {
       const sp = splitPhone(profile.phone_full);
       setPhoneCode(sp.code);
       setPhoneNumber(sp.number);
-      if (profile.whatsapp_confirmation_status === "sent" || profile.whatsapp_confirmation_status === "pending") {
-        setPhase("code");
+      // Numero già presente sul profilo → la schermata resta in "code".
+      setPhase("code");
+      // Se l'OTP non è ancora stato inviato (status null/altro), avviamo
+      // automaticamente l'invio una sola volta. Evita che l'utente debba
+      // re-inserire il numero solo per ricevere il codice.
+      const status = profile.whatsapp_confirmation_status;
+      const alreadySent = status === "sent" || status === "pending";
+      if (!alreadySent && !autoSendTriedRef.current && cooldown === 0) {
+        autoSendTriedRef.current = true;
+        void (async () => {
+          try {
+            const res = await start({
+              data: {
+                phoneCountryCode: sp.code,
+                phoneNumber: sp.number,
+                sendSummary: !profile?.email_summary_sent_at,
+              },
+            });
+            if (res.ok) {
+              setCooldown(60);
+              toast.success(res.simulated ? "Messaggio WhatsApp simulato correttamente." : "Codice inviato via WhatsApp.");
+              await refresh();
+            } else if (res.cooldownSeconds) {
+              setCooldown(res.cooldownSeconds);
+            }
+          } catch {
+            /* silenzioso: l'utente può usare "Reinvia codice" */
+          }
+        })();
       }
+    } else if (!profile?.phone_full) {
+      // Caso limite: nessun numero salvato sul profilo. Lasciamo che
+      // l'utente lo inserisca.
+      setPhase("phone");
     }
-  }, [user, profile, loading, nav]);
+  }, [user, profile, loading, nav, start, refresh, cooldown]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -73,6 +109,16 @@ function VerifyPhonePage() {
   }, [cooldown]);
 
   const phoneFull = `${phoneCode}${phoneNumber}`;
+  const maskedPhone = (() => {
+    const src = (phoneFull && phoneNumber ? phoneFull : profile?.phone_full) || "";
+    if (!src) return "";
+    const sp = splitPhone(src);
+    const digits = sp.number.replace(/\D/g, "");
+    if (digits.length <= 4) return `${sp.code} ${digits}`;
+    const last = digits.slice(-4);
+    const masked = "•".repeat(Math.max(3, digits.length - 4));
+    return `${sp.code} ${masked} ${last}`;
+  })();
 
   const handleSendCode = async () => {
     if (!isValidPhone(phoneCode, phoneNumber)) {
@@ -230,7 +276,8 @@ function VerifyPhonePage() {
         ) : (
           <>
             <p className="text-sm text-muted-foreground mt-2">
-              Ti abbiamo inviato un codice via WhatsApp al numero <strong>{phoneFull || profile?.phone_full}</strong>.
+              Abbiamo inviato un codice di verifica al numero WhatsApp{" "}
+              <strong>{maskedPhone || profile?.phone_full}</strong>.
             </p>
             <div className="mt-4 space-y-3">
               <Label>Inserisci codice a 6 cifre</Label>
@@ -244,7 +291,7 @@ function VerifyPhonePage() {
                 className="text-center text-2xl tracking-[0.5em]"
               />
               <Button className="w-full" onClick={handleVerify} disabled={busy || code.length !== 6}>
-                {busy ? "Verifica…" : "Conferma codice"}
+                {busy ? "Verifica in corso…" : "Verifica codice"}
               </Button>
               <div className="flex items-center justify-between text-xs">
                 <button
@@ -253,7 +300,7 @@ function VerifyPhonePage() {
                   disabled={busy || cooldown > 0}
                   className="text-muted-foreground hover:text-foreground disabled:opacity-50"
                 >
-                  {cooldown > 0 ? `Reinvia codice (${cooldown}s)` : "Reinvia codice"}
+                  {busy ? "Invio codice…" : cooldown > 0 ? `Reinvia codice (${cooldown}s)` : "Reinvia codice"}
                 </button>
                 <button
                   type="button"
