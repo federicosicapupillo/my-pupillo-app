@@ -488,7 +488,7 @@ function AvailabilityPage() {
     }
   };
 
-  const save = () => persistAll();
+  const save = async (): Promise<void> => { await persistAll(); };
 
   const saveAndClose = async (i: number) => {
     const err = validateDay(i);
