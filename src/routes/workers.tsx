@@ -181,6 +181,12 @@ type WorkerRel = {
   hasShiftScheduled: boolean;
   shiftAnnouncementIds: Set<string>;
   workerLastReview: { rating: number | null; comment: string | null; created_at: string } | null;
+  /** Esiste almeno un'applicazione attiva (non rifiutata/annullata/scaduta) tra ristoratore e lavoratore. */
+  hasActiveApp: boolean;
+  /** Map annuncio_id -> applicationId per le candidature ancora attive. */
+  activeAppByAnn: Map<string, string>;
+  /** Almeno un turno collegato è stato annullato/scaduto (e non concluso). */
+  hasCancelledShift: boolean;
 };
 const emptyRel = (): WorkerRel => ({
   workedWith: false,
@@ -200,6 +206,9 @@ const emptyRel = (): WorkerRel => ({
   hasShiftScheduled: false,
   shiftAnnouncementIds: new Set<string>(),
   workerLastReview: null,
+  hasActiveApp: false,
+  activeAppByAnn: new Map<string, string>(),
+  hasCancelledShift: false,
 });
 
 type Tier = 0 | 1 | 2 | 3 | 4 | 5 | 6;
