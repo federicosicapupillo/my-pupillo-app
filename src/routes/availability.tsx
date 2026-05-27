@@ -185,6 +185,9 @@ function AvailabilityPage() {
   const [confirmPreset, setConfirmPreset] = useState<{ type: PresetType; title: string; message: string } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [addingException, setAddingException] = useState(false);
+  type ExcErrors = Partial<Record<"date" | "is_available" | "time_slot" | "city" | "district" | "radius_km" | "time", string>>;
+  const [excErrors, setExcErrors] = useState<ExcErrors>({});
   const loadedRef = useRef(false);
 
   useEffect(() => {
