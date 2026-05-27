@@ -448,6 +448,10 @@ function Thread() {
   const [sending, setSending] = useState(false);
   const [shift, setShift] = useState<Shift | null>(null);
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, "accepted" | "rejected">>({});
+  // Disponibilità speciale del lavoratore per la data dell'annuncio: se
+  // esiste, prevale sulla disponibilità abituale. Se non è compatibile con
+  // città/orario dell'annuncio, "Accetta proposta" deve risultare bloccato.
+  const [workerSpecialExceptions, setWorkerSpecialExceptions] = useState<AvailabilityExceptionRow[]>([]);
   type ProposalDebugInfo = {
     responseId: string | null;
     responseStatus: string | null;
