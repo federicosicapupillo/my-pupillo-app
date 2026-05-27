@@ -2186,7 +2186,19 @@ function Thread() {
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
                   status={effectiveStatus}
+                  lockReason={
+                    closureReason === "completed"
+                      ? "completed"
+                      : closureReason === "cancelled"
+                        ? "cancelled"
+                        : null
+                  }
                   onAccept={async () => {
+                    if (closureReason) {
+                      console.warn("[proposal] accept blocked: chat closed", { closureReason, shiftStatus: shift?.status, annStatus: ann?.status, appStatus: app?.status });
+                      toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
+                      return;
+                    }
                     if (user) {
                       const { error: respErr } = await supabase.from("proposal_responses").insert({
                         message_id: m.id,
@@ -2235,6 +2247,11 @@ function Thread() {
                     }
                   }}
                   onReject={async (reason?: string) => {
+                    if (closureReason) {
+                      console.warn("[proposal] reject blocked: chat closed", { closureReason, shiftStatus: shift?.status, annStatus: ann?.status, appStatus: app?.status });
+                      toast.error("Non puoi rifiutare questa proposta perché il turno è stato annullato.");
+                      return;
+                    }
                     if (user) {
                       const { error: respErr } = await supabase.from("proposal_responses").insert({
                         message_id: m.id,
