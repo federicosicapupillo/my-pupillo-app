@@ -441,8 +441,8 @@ function AvailabilityPage() {
   const validateDay = (i: number): string | null => {
     const d = days[i];
     if (!d.is_available) return null;
-    if (!d.city.trim()) return "Indica la città in cui sei disponibile.";
-    if (!d.district.trim()) return "Indica la zona o il quartiere.";
+    if (!d.city.trim()) return "Seleziona la città.";
+    if (!d.district.trim()) return "Seleziona la zona o quartiere.";
     if (!d.flexible && d.slots.length === 0) return "Seleziona almeno una fascia oraria.";
     for (const s of d.slots) {
       if (s.time_slot === "last_minute") continue;
