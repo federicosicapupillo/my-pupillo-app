@@ -74,6 +74,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useProfileGate } from "@/components/ProfileGate";
+import {
+  computeSpecialAvailabilityBlock,
+  describeSpecialAvailability,
+  fetchSpecialAvailabilityBlock,
+  SPECIAL_ACCEPT_INCOMPATIBLE_MESSAGE,
+  type SpecialAvailabilityBlock,
+} from "@/lib/worker-special-availability";
+import type { AvailabilityExceptionRow } from "@/lib/availability";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
