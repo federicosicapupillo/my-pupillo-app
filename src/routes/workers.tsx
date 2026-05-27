@@ -813,8 +813,22 @@ function WorkersPage() {
   // explicit criteria win and the announcement role is ignored.
   const announcementRole = selectedAnn?.professional_profile ?? null;
   const applyAnnouncementRoleFilter = !hasActiveFilters && !!announcementRole;
+  // Ruolo "attivo" usato per (a) filtrare i risultati standard e (b) decidere
+  // quale etichetta di ruolo mostrare sotto il nome di ogni lavoratore.
+  // Priorità: ricerca avanzata per ruolo > ruolo dell'annuncio selezionato.
+  const advancedRole =
+    category === "role" && subcategory && subcategory.toLowerCase() !== "altro ruolo"
+      ? subcategory
+      : null;
+  const activeRoleContext: string | null = advancedRole ?? announcementRole ?? null;
   const filtered = workers.filter((worker) => {
     if (applyAnnouncementRoleFilter && !workerMatchesRole(worker, announcementRole)) return false;
+    // Anche in modalità ricerca avanzata, se l'utente ha scelto un ruolo
+    // specifico nel filtro avanzato, scartiamo i lavoratori che non lo
+    // hanno davvero tra primary/secondary roles. `matchesSubcategory` qui
+    // sotto fa già un controllo testuale, ma usiamo la regola stretta
+    // per evitare falsi positivi (es. "sala" che matcha "addetto sala").
+    if (advancedRole && !workerMatchesRole(worker, advancedRole)) return false;
     if (!matchesSubcategory(worker, category, subcategory)) return false;
     if (!matchesText(worker, q, category, subcategory)) return false;
     if (lang) {
