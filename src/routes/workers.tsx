@@ -323,6 +323,9 @@ function WorkersPage() {
   // worker_availability rows grouped by worker id. Card / dialog read here
   // first; profiles.weekly_availability is only used as a legacy fallback.
   const [availByWorker, setAvailByWorker] = useState<Record<string, AvailabilityRow[]>>({});
+  // Special availability (exceptions) grouped by worker id. These override the
+  // weekly schedule for the specific date they cover.
+  const [excByWorker, setExcByWorker] = useState<Record<string, AvailabilityExceptionRow[]>>({});
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
   // Filtri reattivi: ogni cambio aggiorna immediatamente la lista
