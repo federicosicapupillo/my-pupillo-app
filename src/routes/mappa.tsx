@@ -311,6 +311,38 @@ function MapPage() {
         (apps || []).forEach((x: any) => { m[x.announcement_id] = x.status; });
         setAppStatusByAnn(m);
 
+        // Calcola l'insieme delle città consentite per la mappa lato
+        // lavoratore: città del profilo + service_area_city + città delle
+        // disponibilità speciali future. La disponibilità speciale prevale
+        // sulla disponibilità abituale (rule 17/18).
+        const [{ data: meProfile }, { data: exc }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("city, service_area_city, neighborhood, service_area_district")
+            .eq("id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("worker_availability_exceptions")
+            .select("city, date, is_available")
+            .eq("worker_id", user.id)
+            .gte("date", todayIso()),
+        ]);
+        const allowed = new Set<string>();
+        const profCity = normalizeCity((meProfile as any)?.city);
+        const profServiceCity = normalizeCity((meProfile as any)?.service_area_city);
+        if (profCity) allowed.add(profCity);
+        if (profServiceCity) allowed.add(profServiceCity);
+        for (const e of (exc || []) as any[]) {
+          if (e?.is_available && e?.city) {
+            const c = normalizeCity(e.city);
+            if (c) allowed.add(c);
+          }
+        }
+        setWorkerBaseAllowedCities(allowed);
+        if (typeof window !== "undefined") {
+          console.debug("[mappa] worker allowed cities (base):", Array.from(allowed));
+        }
+
         // Ristoranti "conosciuti": turni effettuati o candidature accettate.
         // Per ridurre il carico sul DB usiamo una cache locale con TTL: se
         // presente la usiamo subito, altrimenti la popoliamo in background.
@@ -340,6 +372,7 @@ function MapPage() {
       } else {
         setAppStatusByAnn({});
         setKnownRestaurantIds(new Set());
+        setWorkerBaseAllowedCities(new Set());
       }
       // Per il ristoratore loggato: insieme di worker_ids "confermati"
       // (candidatura accettata o turno assegnato) per cui possiamo mostrare
