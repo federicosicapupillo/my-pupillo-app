@@ -1,0 +1,1 @@
+REVOKE SELECT (residence_street, residence_number) ON public.profiles FROM anon, authenticated, PUBLIC;
