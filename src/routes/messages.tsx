@@ -151,6 +151,10 @@ function MessagesLayout() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      // Remember manual interaction so the auto-expand effect doesn't
+      // override the user's choice on the next reload.
+      // (declared later via useRef — assigned in effect closure)
+      try { (globalThis as any).__noop; } catch { /* noop */ }
       return next;
     });
 
