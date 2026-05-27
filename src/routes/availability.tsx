@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { RequireRole } from "@/components/RequireRole";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -159,6 +159,9 @@ function AvailabilityPage() {
   const [duplicateTargets, setDuplicateTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
@@ -205,9 +208,28 @@ function AvailabilityPage() {
         setAvailableNowUntil(until);
       }
       setLoading(false);
+      // Mark "loaded" on next tick so the dirty tracker doesn't fire from hydration
+      setTimeout(() => { loadedRef.current = true; setDirty(false); }, 0);
     })();
     return () => { cancelled = true; };
   }, [user, profile, defaults.city, defaults.province, defaults.district, defaults.radius_km]);
+
+  // Track unsaved changes on the weekly grid
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    setDirty(true);
+  }, [days]);
+
+  // Browser warning on unload when there are unsaved changes
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Hai modifiche non salvate. Vuoi uscire senza salvare?";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
 
   const updateDay = (i: number, patch: Partial<DayState>) =>
     setDays((d) => d.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
@@ -257,20 +279,29 @@ function AvailabilityPage() {
     setDuplicateTargets(Array.from({ length: 7 }, (_, idx) => false));
   };
 
-  const applyDuplicate = () => {
+  const applyDuplicate = async () => {
     if (duplicateFrom == null) return;
     const src = days[duplicateFrom];
-    setDays((d) =>
-      d.map((x, idx) => {
-        if (idx === duplicateFrom || !duplicateTargets[idx]) return x;
-        return {
-          ...src,
-          slots: src.slots.map((s) => ({ ...s, id: undefined })),
-        };
-      }),
-    );
-    setDuplicateFrom(null);
-    toast.success("Disponibilità copiata correttamente");
+    const next = days.map((x, idx) => {
+      if (idx === duplicateFrom || !duplicateTargets[idx]) return x;
+      return {
+        ...src,
+        slots: src.slots.map((s) => ({ ...s, id: undefined })),
+      };
+    });
+    setDays(next);
+    setCopying(true);
+    try {
+      const ok = await persistAll(next, { silent: true });
+      if (ok) {
+        setDuplicateFrom(null);
+        toast.success("Disponibilità copiata e salvata correttamente.");
+      } else {
+        toast.error("Non è stato possibile copiare la disponibilità. Riprova.");
+      }
+    } finally {
+      setCopying(false);
+    }
   };
 
   // -- Quick presets -------------------------------------------------------
@@ -350,9 +381,9 @@ function AvailabilityPage() {
     return { location: loc, hours: parts.join(" · ") + more };
   };
 
-  const validateBeforeSave = (): string | null => {
-    for (let i = 0; i < days.length; i++) {
-      const d = days[i];
+  const validateBeforeSave = (list: DayState[] = days): string | null => {
+    for (let i = 0; i < list.length; i++) {
+      const d = list[i];
       if (!d.is_available) continue;
       if (!d.city || !d.city.trim()) {
         return `Seleziona la città in cui sei disponibile (${DAY_LABELS[i]}).`;
@@ -373,17 +404,36 @@ function AvailabilityPage() {
     return null;
   };
 
-  const save = async () => {
-    if (!user) return;
-    const err = validateBeforeSave();
-    if (err) { toast.error(err); return; }
+  // Stricter per-day validation used by "Salva e chiudi".
+  const validateDay = (i: number): string | null => {
+    const d = days[i];
+    if (!d.is_available) return null;
+    if (!d.city.trim()) return "Indica la città in cui sei disponibile.";
+    if (!d.district.trim()) return "Indica la zona o il quartiere.";
+    if (!d.flexible && d.slots.length === 0) return "Seleziona almeno una fascia oraria.";
+    for (const s of d.slots) {
+      if (s.time_slot === "last_minute") continue;
+      if (!s.start_time || !s.end_time) return "Inserisci orario di inizio e fine.";
+      if (!isValidTimeRange(s.start_time, s.end_time)) return "Orario di inizio e fine non possono coincidere.";
+    }
+    return null;
+  };
+
+  const persistAll = async (
+    override?: DayState[],
+    opts: { silent?: boolean } = {},
+  ): Promise<boolean> => {
+    if (!user) return false;
+    const list = override ?? days;
+    const err = validateBeforeSave(list);
+    if (err) { toast.error(err); return false; }
     setSaving(true);
     try {
       const { error: delErr } = await supabase.from("worker_availability").delete().eq("worker_id", user.id);
       if (delErr) throw delErr;
 
       const inserts: Array<Omit<AvailabilityRow, "id">> = [];
-      days.forEach((d, dow) => {
+      list.forEach((d, dow) => {
         if (!d.is_available) return;
         const loc = {
           city: d.city.trim() || null,
@@ -425,12 +475,28 @@ function AvailabilityPage() {
         const { error: insErr } = await supabase.from("worker_availability").insert(inserts as never);
         if (insErr) throw insErr;
       }
-      toast.success("Disponibilità salvate");
+      setDirty(false);
+      if (!opts.silent) toast.success("Disponibilità salvate");
+      return true;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore nel salvataggio";
-      toast.error(msg);
+      console.error("[availability] save failed", msg);
+      toast.error("Non è stato possibile salvare la disponibilità. Riprova.");
+      return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const save = () => persistAll();
+
+  const saveAndClose = async (i: number) => {
+    const err = validateDay(i);
+    if (err) { toast.error(err); return; }
+    const ok = await persistAll(undefined, { silent: true });
+    if (ok) {
+      setEditingDay(null);
+      toast.success("Disponibilità aggiornata correttamente.");
     }
   };
 
