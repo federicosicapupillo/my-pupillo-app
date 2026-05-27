@@ -2202,6 +2202,9 @@ function Thread() {
               // Per-proposal status is authoritative. Legacy proposals (no recorded
               // response anywhere) fall back to the application status once.
               const effectiveStatus = ownStatus ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
+              const specialBlock = role === "worker"
+                ? computeSpecialAvailabilityBlock(workerSpecialExceptions, ann)
+                : null;
               return (
                 <div key={m.id} className="flex flex-col gap-2">
                 <ProposalCard
@@ -2212,6 +2215,7 @@ function Thread() {
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
                   status={effectiveStatus}
+                  specialBlock={specialBlock}
                   lockReason={
                     closureReason === "completed"
                       ? "completed"
@@ -2224,6 +2228,13 @@ function Thread() {
                       console.warn("[proposal] accept blocked: chat closed", { closureReason, shiftStatus: shift?.status, annStatus: ann?.status, appStatus: app?.status });
                       toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
                       return;
+                    }
+                    if (role === "worker" && user) {
+                      const fresh = await fetchSpecialAvailabilityBlock(user.id, ann);
+                      if (fresh?.blocked) {
+                        toast.error(SPECIAL_ACCEPT_INCOMPATIBLE_MESSAGE);
+                        return;
+                      }
                     }
                     if (user) {
                       const { error: respErr } = await supabase.from("proposal_responses").insert({
