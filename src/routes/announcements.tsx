@@ -1902,3 +1902,146 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+
+function CancelAnnouncementDialog({
+  ann,
+  restaurantId,
+  venueName,
+  candidatesCount,
+  hasAssigned,
+  onClose,
+  onCancelled,
+}: {
+  ann: Ann | null;
+  restaurantId: string | null;
+  venueName: string | null;
+  candidatesCount: number;
+  hasAssigned: boolean;
+  onClose: () => void;
+  onCancelled: (updated: Ann) => void;
+}) {
+  const [reason, setReason] = useState<CancellationReasonValue | "">("");
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [acknowledgedAssigned, setAcknowledgedAssigned] = useState(false);
+
+  useEffect(() => {
+    if (!ann) return;
+    setReason("");
+    setNote("");
+    setAcknowledgedAssigned(false);
+    setSubmitting(false);
+  }, [ann?.id]);
+
+  if (!ann) return null;
+
+  const open = !!ann;
+  const showAssignedWarning = hasAssigned && !acknowledgedAssigned;
+  const noteRequired = reason === "altro";
+  const canSubmit = !!reason && (!noteRequired || note.trim().length > 0) && !submitting && !!restaurantId;
+
+  const handleSubmit = async () => {
+    if (!canSubmit || !restaurantId) return;
+    setSubmitting(true);
+    try {
+      const { notified } = await cancelAnnouncementWithNotifications({
+        announcementId: ann.id,
+        restaurantId,
+        reason: reason as CancellationReasonValue,
+        note: note.trim() || null,
+        venueName,
+        serviceDate: ann.service_date,
+        serviceTime: ann.service_time,
+        professionalProfile: ann.professional_profile,
+      });
+      const updated: Ann = {
+        ...ann,
+        status: "cancelled",
+        ...( { cancellation_reason: reason, cancellation_note: note.trim() || null, cancelled_at: new Date().toISOString(), cancelled_by: restaurantId } as any ),
+      };
+      toast.success(
+        notified > 0
+          ? `Annuncio annullato correttamente. ${notified} candidat${notified === 1 ? "o avvisato" : "i avvisati"}.`
+          : "Annuncio annullato correttamente."
+      );
+      onCancelled(updated);
+    } catch (e: any) {
+      console.error("[cancelAnnouncement] failed", e);
+      toast.error("Non è stato possibile annullare l'annuncio. Riprova.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !submitting) onClose(); }}>
+      <DialogContent className="max-w-md">
+        {showAssignedWarning ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-amber-700">
+                <AlertTriangle className="h-5 w-5" /> Turno con lavoratore confermato
+              </DialogTitle>
+              <DialogDescription>
+                Questo turno ha già un lavoratore confermato. L'annullamento può avere conseguenze operative. Vuoi procedere?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="ghost" onClick={onClose}>Indietro</Button>
+              <Button variant="destructive" onClick={() => setAcknowledgedAssigned(true)}>
+                Procedi comunque
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Vuoi annullare questo annuncio?</DialogTitle>
+              <DialogDescription>
+                L'annuncio verrà annullato e non sarà più visibile ai lavoratori. Se ci sono candidati in attesa, riceveranno una comunicazione automatica.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm">Motivazione <span className="text-destructive">*</span></Label>
+                <Select value={reason} onValueChange={(v) => setReason(v as CancellationReasonValue)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Seleziona una motivazione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CANCELLATION_REASONS.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {noteRequired && (
+                <div>
+                  <Label className="text-sm">Specifica la motivazione <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    className="mt-1"
+                    rows={3}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Descrivi brevemente il motivo dell'annullamento"
+                  />
+                </div>
+              )}
+              {candidatesCount > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                  Sono presenti {candidatesCount} candidatur{candidatesCount === 1 ? "a" : "e"} collegate. Le candidature in attesa verranno chiuse e i lavoratori riceveranno una notifica.
+                </div>
+              )}
+            </div>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="ghost" onClick={onClose} disabled={submitting}>Indietro</Button>
+              <Button variant="destructive" onClick={handleSubmit} disabled={!canSubmit}>
+                {submitting ? "Annullamento in corso…" : "Conferma annullamento"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
