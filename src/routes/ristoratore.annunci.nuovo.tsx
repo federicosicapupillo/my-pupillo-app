@@ -706,14 +706,14 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="1" title="Informazioni principali" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Ruolo cercato" required>
+            <Field label="Ruolo cercato" required name="role_required" error={errors.role_required}>
               <Select value={f.role_required} onValueChange={v => { setField("role_required", v); setField("title", v); }}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo" /></SelectTrigger>
                 <SelectContent>{ROLE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
-            <Field label="Tariffa oraria" required>
+            <Field label="Tariffa oraria" required name="hourly_rate" error={errors.hourly_rate}>
               <Select value={f.hourly_rate} onValueChange={v => setField("hourly_rate", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona tariffa" /></SelectTrigger>
                 <SelectContent>
@@ -723,10 +723,10 @@ function NewRestaurantJobRequest() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Data inizio turno" required>
+            <Field label="Data inizio turno" required name="shift_date" error={errors.shift_date}>
               <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} min={todayISO} required />
             </Field>
-            <Field label="Ora inizio turno" required>
+            <Field label="Ora inizio turno" required name="start_time" error={errors.start_time}>
               <Select value={f.start_time} onValueChange={v => setField("start_time", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -736,10 +736,10 @@ function NewRestaurantJobRequest() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Data fine turno" required>
+            <Field label="Data fine turno" required name="end_date" error={errors.end_date}>
               <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || todayISO} required />
             </Field>
-            <Field label="Ora fine turno" required>
+            <Field label="Ora fine turno" required name="end_time" error={errors.end_time}>
               <Select value={f.end_time} onValueChange={v => setField("end_time", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -783,7 +783,7 @@ function NewRestaurantJobRequest() {
                 </div>
                 <span className="text-[10px] uppercase font-semibold rounded-full bg-amber-500/20 text-amber-700 px-2 py-1">Turno lungo</span>
               </div>
-              <Field label="Motivazione turno superiore a 8 ore">
+              <Field label="Motivazione turno superiore a 8 ore" required name="long_shift_reason" error={errors.long_shift_reason}>
                 <Textarea
                   rows={3}
                   required
@@ -808,13 +808,13 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="2" title="Luogo e accesso" subtitle="Precompilato dal profilo ristoratore, modificabile per questo singolo annuncio." />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nome locale" required>
+            <Field label="Nome locale" required name="restaurant_name" error={errors.restaurant_name}>
               <Input required value={f.restaurant_name} onChange={e => setField("restaurant_name", e.target.value)} />
             </Field>
-            <Field label="Via / Indirizzo" required>
+            <Field label="Via / Indirizzo" required name="address" error={errors.address}>
               <Input required placeholder="Es. Via Roma" value={f.address} onChange={e => setField("address", e.target.value)} />
             </Field>
-            <Field label="Numero civico" required>
+            <Field label="Numero civico" required name="street_number" error={errors.street_number}>
               <Input
                 required
                 inputMode="text"
@@ -824,7 +824,7 @@ function NewRestaurantJobRequest() {
                 onChange={e => setField("street_number", e.target.value)}
               />
             </Field>
-            <Field label="Provincia" required>
+            <Field label="Provincia" required name="province" error={errors.province}>
               <select
                 value={f.province}
                 onChange={(e) => { setField("province", e.target.value); setField("city", ""); setField("postal_code", ""); setField("district", ""); }}
@@ -834,7 +834,7 @@ function NewRestaurantJobRequest() {
                 {ITALIAN_LOCATIONS.map((p) => <option key={p.province_code} value={p.province}>{p.province} ({p.province_code})</option>)}
               </select>
             </Field>
-            <Field label="Città" required>
+            <Field label="Città" required name="city" error={errors.city}>
               <select
                 value={f.city}
                 disabled={!f.province}
@@ -845,7 +845,7 @@ function NewRestaurantJobRequest() {
                 {citiesForProvince(f.province).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            <Field label="Zona/quartiere" required>
+            <Field label="Zona/quartiere" required name="district" error={errors.district}>
               <DistrictField
                 province={f.province}
                 city={f.city}
@@ -854,7 +854,7 @@ function NewRestaurantJobRequest() {
                 onChange={(v) => { setField("district", v); setField("postal_code", ""); }}
               />
             </Field>
-            <Field label="CAP">
+            <Field label="CAP" name="postal_code" error={errors.postal_code}>
               <CapField
                 province={f.province}
                 city={f.city}
@@ -877,7 +877,7 @@ function NewRestaurantJobRequest() {
             )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Anticipo richiesto all'ingresso" required>
+            <Field label="Anticipo richiesto all'ingresso" required name="accessChoice" error={errors.accessChoice || errors.accessReason}>
               <div className="space-y-2">
                 <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
                   <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
@@ -892,8 +892,10 @@ function NewRestaurantJobRequest() {
               </div>
             </Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
-            <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
-            <Field label="Ruolo del referente" required>
+            <Field label="Referente operativo" required name="contact_person_name" error={errors.contact_person_name}>
+              <Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} />
+            </Field>
+            <Field label="Ruolo del referente" required name="contact_person_role" error={errors.contact_person_role || errors.contact_person_role_other}>
               <Select value={f.contact_person_role} onValueChange={(v) => setField("contact_person_role", v)}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo referente" /></SelectTrigger>
                 <SelectContent>
@@ -922,7 +924,7 @@ function NewRestaurantJobRequest() {
                 );
               })()}
             </Field>
-            <Field label="Email referente">
+            <Field label="Email referente" name="contact_person_email" error={errors.contact_person_email}>
               <Input
                 type="email"
                 placeholder="esempio@email.com"
