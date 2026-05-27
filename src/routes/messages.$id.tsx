@@ -896,15 +896,17 @@ function Thread() {
 
   // Open the instructions reminder popup for the worker when the chat is for
   // a confirmed shift, the operational instructions card is in chat, and the
-  // worker hasn't acknowledged yet. Only fires once per conversation per
-  // mount to avoid being noisy.
+  // worker hasn't acknowledged yet. We check the DB directly (not the
+  // paginated `msgs` list) so the popup stays hidden even if the ack message
+  // is older than the loaded page.
   useEffect(() => {
     if (role !== "worker") return;
     if (!app || app.status !== "accepted") return;
     const confirmationMsg = msgs.find(m => m.template_id === CONFIRMATION_TEMPLATE_ID);
     if (!confirmationMsg) return;
-    const hasAck = msgs.some(m => m.action_type === "instructions_acknowledged" && m.application_id === id);
-    if (hasAck) return;
+    // Skip if the announcement is cancelled / closed / expired.
+    const annStatus = (ann as any)?.status;
+    if (annStatus && annStatus !== "active" && annStatus !== "assigned" && annStatus !== "confirmed") return;
     // Skip if the shift has already ended.
     if (ann?.service_date) {
       const d = new Date(ann.service_date);
@@ -917,8 +919,29 @@ function Thread() {
       if (d.getTime() < Date.now()) return;
     }
     if (reminderShownForRef.current === id) return;
-    reminderShownForRef.current = id;
-    setInstructionsReminderOpen(true);
+    let cancelled = false;
+    (async () => {
+      const { count, error } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("application_id", id)
+        .eq("action_type", "instructions_acknowledged");
+      if (cancelled) return;
+      if (error) {
+        console.error("[ack] check failed", error);
+        return;
+      }
+      if ((count ?? 0) > 0) {
+        // Already acknowledged in DB — never show the popup again.
+        reminderShownForRef.current = id;
+        return;
+      }
+      reminderShownForRef.current = id;
+      setInstructionsReminderOpen(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [role, app, msgs, ann, id]);
 
   const insertSystemMessage = async (text: string, actionType?: TemplateAction) => {
