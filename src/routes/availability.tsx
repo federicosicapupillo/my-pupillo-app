@@ -1011,19 +1011,79 @@ function AvailabilityPage() {
 
       {/* Special dates */}
       <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-2">Disponibilità speciali / spostamenti</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Indica date specifiche in cui sei disponibile in un'altra città o con orari diversi. Queste hanno priorità sulla disponibilità ricorrente.
-        </p>
+        <h2 className="text-xl font-semibold mb-2">Disponibilità speciale</h2>
+
+        {/* Info box */}
+        <Card className="mb-4 border-primary/30 bg-primary/5">
+          <CardContent className="p-4 flex gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Info className="h-4 w-4" />
+            </div>
+            <div className="space-y-1 text-sm">
+              <div className="font-semibold text-foreground">Disponibilità speciale</div>
+              <p className="text-foreground/90">
+                Usa questa sezione per indicare disponibilità diverse dalla tua settimana abituale. Ad esempio, se in una data specifica sei disponibile a pranzo in una città e a cena in un'altra, puoi inserirlo qui.
+              </p>
+              <p className="text-muted-foreground">
+                Le disponibilità speciali aiutano i ristoratori a trovarti meglio per turni specifici.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardContent className="p-4 grid gap-3 md:grid-cols-6">
+            {/* Date picker */}
             <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Data</label>
-              <Input type="date" value={newExc.date} onChange={(e) => setNewExc({ ...newExc, date: e.target.value })} />
+              <label className="block text-xs text-muted-foreground mb-1">Data <span className="text-destructive">*</span></label>
+              {(() => {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const selected = newExc.date ? new Date(newExc.date + "T00:00:00") : undefined;
+                const label = selected
+                  ? selected.toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })
+                  : "Seleziona una data";
+                return (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selected && "text-muted-foreground",
+                          excErrors.date && "border-destructive",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <span className="capitalize">{label}</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selected}
+                        onSelect={(d) => {
+                          if (!d) return;
+                          const yyyy = d.getFullYear();
+                          const mm = String(d.getMonth() + 1).padStart(2, "0");
+                          const dd = String(d.getDate()).padStart(2, "0");
+                          setNewExc({ ...newExc, date: `${yyyy}-${mm}-${dd}` });
+                          setExcErrors((e) => ({ ...e, date: undefined }));
+                        }}
+                        disabled={(d) => d < today}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                );
+              })()}
+              {excErrors.date && <p className="text-xs text-destructive mt-1">{excErrors.date}</p>}
             </div>
+
+            {/* Status */}
             <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Stato</label>
+              <label className="block text-xs text-muted-foreground mb-1">Stato <span className="text-destructive">*</span></label>
               <Select value={newExc.is_available ? "yes" : "no"} onValueChange={(v) => setNewExc({ ...newExc, is_available: v === "yes" })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -1032,64 +1092,107 @@ function AvailabilityPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Slot */}
             <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Fascia</label>
+              <label className="block text-xs text-muted-foreground mb-1">Fascia {newExc.is_available && <span className="text-destructive">*</span>}</label>
               <Select
-                value={newExc.time_slot || "none"}
-                onValueChange={(v) => setNewExc({ ...newExc, time_slot: v === "none" ? "" : (v as TimeSlot) })}
+                value={newExc.time_slot || undefined}
+                onValueChange={(v) => { setNewExc({ ...newExc, time_slot: v as TimeSlot }); setExcErrors((e) => ({ ...e, time_slot: undefined })); }}
                 disabled={!newExc.is_available}
               >
-                <SelectTrigger><SelectValue placeholder="Nessuna" /></SelectTrigger>
+                <SelectTrigger className={cn(excErrors.time_slot && "border-destructive")}>
+                  <SelectValue placeholder="Seleziona una fascia" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Nessuna</SelectItem>
                   {EXC_SLOTS.map((s) => (
                     <SelectItem key={s} value={s}>{SLOT_LABELS[s]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {excErrors.time_slot && <p className="text-xs text-destructive mt-1">{excErrors.time_slot}</p>}
             </div>
+
+            {/* City */}
             <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Città {newExc.is_available ? "*" : ""}</label>
-              <Input
-                disabled={!newExc.is_available}
-                value={newExc.city}
-                placeholder={defaults.city || "Es. Milano"}
-                onChange={(e) => setNewExc({ ...newExc, city: e.target.value })}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere</label>
-              <Input
-                disabled={!newExc.is_available}
-                value={newExc.district}
-                placeholder="Es. Navigli"
-                onChange={(e) => setNewExc({ ...newExc, district: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
-              <Input
-                disabled={!newExc.is_available}
-                value={newExc.province}
-                placeholder="MI"
-                onChange={(e) => setNewExc({ ...newExc, province: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Raggio</label>
+              <label className="block text-xs text-muted-foreground mb-1">Città {newExc.is_available && <span className="text-destructive">*</span>}</label>
               <Select
-                value={newExc.radius_km != null ? String(newExc.radius_km) : "none"}
-                onValueChange={(v) => setNewExc({ ...newExc, radius_km: v === "none" ? null : parseInt(v, 10) })}
+                value={newExc.city || undefined}
+                onValueChange={(v) => {
+                  const zones = zonesForCity(v);
+                  const keepDistrict = newExc.district && zones.includes(newExc.district) ? newExc.district : ALL_ZONES_OPTION;
+                  setNewExc({ ...newExc, city: v, province: provinceForCity(v), district: keepDistrict });
+                  setExcErrors((e) => ({ ...e, city: undefined, district: undefined }));
+                }}
                 disabled={!newExc.is_available}
               >
-                <SelectTrigger><SelectValue placeholder="Nessuno" /></SelectTrigger>
+                <SelectTrigger className={cn(excErrors.city && "border-destructive")}>
+                  <SelectValue placeholder="Seleziona la città" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Nessuno</SelectItem>
+                  {newExc.city && !WORKER_CITIES.includes(newExc.city as (typeof WORKER_CITIES)[number]) && (
+                    <SelectItem value={newExc.city}>{newExc.city} (attuale)</SelectItem>
+                  )}
+                  {WORKER_CITIES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {excErrors.city && <p className="text-xs text-destructive mt-1">{excErrors.city}</p>}
+            </div>
+
+            {/* Zone */}
+            <div className="md:col-span-2">
+              <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere {newExc.is_available && <span className="text-destructive">*</span>}</label>
+              {(() => {
+                const zones = zonesForCity(newExc.city);
+                const dedup = Array.from(new Set([ALL_ZONES_OPTION, "Centro", ...zones.filter((z) => z !== "Centro")]));
+                const showCurrent = newExc.district && !dedup.includes(newExc.district);
+                return (
+                  <Select
+                    value={newExc.district || undefined}
+                    onValueChange={(v) => { setNewExc({ ...newExc, district: v }); setExcErrors((e) => ({ ...e, district: undefined })); }}
+                    disabled={!newExc.is_available || !newExc.city}
+                  >
+                    <SelectTrigger className={cn(excErrors.district && "border-destructive")}>
+                      <SelectValue placeholder={newExc.city ? "Seleziona la zona" : "Prima seleziona la città"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {showCurrent && <SelectItem value={newExc.district}>{newExc.district} (attuale)</SelectItem>}
+                      {dedup.map((z) => (
+                        <SelectItem key={z} value={z}>{z}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
+              {excErrors.district && <p className="text-xs text-destructive mt-1">{excErrors.district}</p>}
+            </div>
+
+            {/* Province */}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
+              <Input value={newExc.province} readOnly disabled placeholder="Auto" />
+            </div>
+
+            {/* Radius */}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Raggio {newExc.is_available && <span className="text-destructive">*</span>}</label>
+              <Select
+                value={newExc.radius_km != null ? String(newExc.radius_km) : undefined}
+                onValueChange={(v) => { setNewExc({ ...newExc, radius_km: parseInt(v, 10) }); setExcErrors((e) => ({ ...e, radius_km: undefined })); }}
+                disabled={!newExc.is_available}
+              >
+                <SelectTrigger className={cn(excErrors.radius_km && "border-destructive")}>
+                  <SelectValue placeholder="Seleziona raggio" />
+                </SelectTrigger>
+                <SelectContent>
                   {RADIUS_OPTIONS.map((r) => (
                     <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {excErrors.radius_km && <p className="text-xs text-destructive mt-1">{excErrors.radius_km}</p>}
             </div>
             {newExc.time_slot === "personalizzata" && (
               <>
@@ -1100,7 +1203,7 @@ function AvailabilityPage() {
                     onValueChange={(v) => setNewExc({ ...newExc, start_time: v })}
                     disabled={!newExc.is_available}
                   >
-                    <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                    <SelectTrigger className={cn(excErrors.time && "border-destructive")}><SelectValue placeholder="Seleziona" /></SelectTrigger>
                     <SelectContent className="max-h-64">
                       {TIME_OPTIONS.map((t) => (
                         <SelectItem key={`s-${t}`} value={t}>{t}</SelectItem>
@@ -1115,7 +1218,7 @@ function AvailabilityPage() {
                     onValueChange={(v) => setNewExc({ ...newExc, end_time: v })}
                     disabled={!newExc.is_available}
                   >
-                    <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                    <SelectTrigger className={cn(excErrors.time && "border-destructive")}><SelectValue placeholder="Seleziona" /></SelectTrigger>
                     <SelectContent className="max-h-64">
                       {TIME_OPTIONS.map((t) => (
                         <SelectItem key={`e-${t}`} value={t}>{t}</SelectItem>
@@ -1126,6 +1229,11 @@ function AvailabilityPage() {
                     <p className="text-[11px] text-muted-foreground mt-1">Termina il giorno successivo</p>
                   )}
                 </div>
+                {excErrors.time && (
+                  <div className="md:col-span-6 -mt-2">
+                    <p className="text-xs text-destructive">{excErrors.time}</p>
+                  </div>
+                )}
                 <div className="md:col-span-6">
                   <label className="block text-xs text-muted-foreground mb-2">Scelte rapide</label>
                   <div className="flex flex-wrap gap-2">
@@ -1150,8 +1258,8 @@ function AvailabilityPage() {
               <Input value={newExc.notes} onChange={(e) => setNewExc({ ...newExc, notes: e.target.value })} placeholder="Es. Sono a Milano per il weekend" />
             </div>
             <div className="md:col-span-6 flex justify-end">
-              <Button onClick={addExceptionGated} className={`gap-2 ${gatedOpacity}`}>
-                <Plus className="h-4 w-4" /> Aggiungi disponibilità speciale
+              <Button onClick={addExceptionGated} disabled={addingException} className={`gap-2 ${gatedOpacity}`}>
+                <Plus className="h-4 w-4" /> {addingException ? "Aggiunta in corso…" : "Aggiungi disponibilità speciale"}
               </Button>
             </div>
           </CardContent>
