@@ -564,6 +564,20 @@ function Thread() {
         }
         setWorkerRep((p as WorkerReputationInput | null) ?? null);
         setAnn(an as Ann | null);
+        // Se il ruolo è "worker" e l'annuncio ha una data, carico le
+        // disponibilità speciali del lavoratore per quella data. Servono per
+        // bloccare "Accetta proposta" se la disponibilità speciale non è
+        // compatibile con città/orario del turno.
+        if (user?.id === a.worker_id && (an as any)?.service_date) {
+          const { data: excs } = await supabase
+            .from("worker_availability_exceptions")
+            .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
+            .eq("worker_id", a.worker_id)
+            .eq("date", (an as any).service_date);
+          setWorkerSpecialExceptions((excs as AvailabilityExceptionRow[] | null) ?? []);
+        } else {
+          setWorkerSpecialExceptions([]);
+        }
         // Carica recensioni del lavoratore per il ristoratore (privacy: solo
         // recensioni verificate, collegate a turni reali, visibili ai ristoratori).
         const workerTargetId = a.worker_id;
