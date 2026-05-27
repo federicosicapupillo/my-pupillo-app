@@ -1109,8 +1109,10 @@ function AvailabilityPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDuplicateFrom(null)}>Annulla</Button>
-            <Button onClick={applyDuplicate} disabled={!duplicateTargets.some(Boolean)}>Duplica</Button>
+            <Button variant="outline" onClick={() => setDuplicateFrom(null)} disabled={copying}>Annulla</Button>
+            <Button onClick={applyDuplicate} disabled={!duplicateTargets.some(Boolean) || copying || saving}>
+              {copying ? "Copia in corso…" : "Applica"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
