@@ -222,6 +222,46 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+// Aliases used both for the subcategory filter and for the implicit
+// "filter by announcement role" behaviour when no advanced search is active.
+const ROLE_ALIASES: Record<string, string[]> = {
+  cameriere: ["cameriere", "camerieri", "cameriera", "commis di sala", "responsabile di sala", "runner", "sala"],
+  bartender: ["bartender", "barman", "barlady", "cocktail"],
+  barista: ["barista", "caffetteria", "banconista"],
+  chef: ["chef", "cuoco", "cucina"],
+  "aiuto cucina": ["aiuto cucina", "commis di cucina", "cucina", "preparazione linea", "lavapiatti"],
+  runner: ["runner", "sala", "cameriere"],
+  lavapiatti: ["lavapiatti", "lavaggio", "aiuto cucina"],
+  pizzaiolo: ["pizzaiolo", "pizzeria"],
+  hostess: ["hostess", "accoglienza"],
+  sommelier: ["sommelier", "vino"],
+};
+
+function workerRolesText(w: W): string {
+  return [w.primary_role ?? "", ...(w.secondary_roles ?? []), w.professional_profile ?? ""]
+    .join(" ")
+    .toLowerCase();
+}
+
+function workerMatchesRole(w: W, role: string | null | undefined): boolean {
+  if (!role) return true;
+  const key = role.trim().toLowerCase();
+  if (!key) return true;
+  const aliases = ROLE_ALIASES[key] ?? [key];
+  const text = workerRolesText(w);
+  return aliases.some((a) => text.includes(a));
+}
+
+// Numeric tier from a compatibility level — lower is better. Workers with
+// no availability indicated remain visible but go below compatible ones.
+function compatTier(level: CompatibilityLevel | null): number {
+  if (level === "disponibile") return 0;
+  if (level === "compatibile") return 1;
+  if (level === "parziale") return 2;
+  if (level === null) return 3; // disponibilità non indicata
+  return 4; // non disponibile
+}
+
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
