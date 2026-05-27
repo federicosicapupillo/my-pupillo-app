@@ -90,7 +90,7 @@ export async function cancelAnnouncementWithNotifications(
     .from("applications")
     .select("id, worker_id, status")
     .eq("announcement_id", announcementId)
-    .in("status", OPEN_APP_STATUSES as unknown as string[]);
+    .in("status", OPEN_APP_STATUSES as unknown as never);
   if (appsErr) throw new Error(appsErr.message);
 
   const apps = (openApps ?? []) as Array<{ id: string; worker_id: string; status: string }>;
