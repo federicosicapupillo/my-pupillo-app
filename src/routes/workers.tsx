@@ -1714,13 +1714,18 @@ function ContactedWorkerCard({
         // La vecchia chat (se esiste) resta accessibile come storico tramite link secondario.
         const activeAppForSelected =
           selectedAnnouncementId && r?.activeAppByAnn?.get(selectedAnnouncementId) || null;
-        const ctaLabel = activeAppForSelected
+        const hardBlocked = !!specialBlock?.blocked;
+        const ctaLabel = hardBlocked
+          ? "Non disponibile per questo turno"
+          : activeAppForSelected
           ? "Proposta già inviata"
           : r?.workedWith
           ? "Ricontatta gratis"
           : "Invia proposta";
-        const ctaDisabled = !!activeAppForSelected || !canSendProposal;
-        const ctaTitle = activeAppForSelected
+        const ctaDisabled = hardBlocked || !!activeAppForSelected || !canSendProposal;
+        const ctaTitle = hardBlocked
+          ? "Il lavoratore ha indicato una disponibilità speciale non compatibile con questo turno"
+          : activeAppForSelected
           ? "Esiste già una proposta attiva per questo annuncio"
           : (blockedReason ?? undefined);
         return (
@@ -1731,6 +1736,7 @@ function ContactedWorkerCard({
               className="mt-4 w-full gap-1"
               disabled={ctaDisabled}
               onClick={() => {
+                if (hardBlocked) return;
                 if (activeAppForSelected) {
                   onOpenChat(activeAppForSelected);
                   return;
@@ -1739,13 +1745,24 @@ function ContactedWorkerCard({
               }}
               title={ctaTitle}
             >
-              {r?.workedWith && !activeAppForSelected ? (
+              {!hardBlocked && r?.workedWith && !activeAppForSelected ? (
                 <Gift className="h-3.5 w-3.5" />
               ) : (
                 <MessageSquare className="h-3.5 w-3.5" />
               )}
               {ctaLabel}
             </Button>
+            {hardBlocked && (
+              <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                <p className="font-medium">Disponibilità speciale in un'altra città / orario</p>
+                <p className="mt-0.5">
+                  Il lavoratore ha indicato una disponibilità speciale non compatibile con questo turno.
+                </p>
+                {specialBlock!.specials.slice(0, 3).map((e) => (
+                  <p key={e.id} className="mt-0.5">· {describeSpecial(e)}</p>
+                ))}
+              </div>
+            )}
             {appId && !activeAppForSelected && (
               <Button
                 size="sm"
@@ -1758,7 +1775,7 @@ function ContactedWorkerCard({
                 Apri storico chat
               </Button>
             )}
-            {blockedReason && !activeAppForSelected && (
+            {blockedReason && !activeAppForSelected && !hardBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
                 {blockedReason}
               </p>
