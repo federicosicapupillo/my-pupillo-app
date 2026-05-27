@@ -700,19 +700,40 @@ function AvailabilityPage() {
         </Card>
       )}
 
-      {/* Quick presets */}
-      <div className="mb-4 rounded-2xl border bg-card p-3 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1 mr-1">
-          <Sparkles className="h-3.5 w-3.5 text-primary" /> Preset rapidi
-        </span>
-        <Button type="button" size="sm" variant="outline" onClick={presetAll} className={gatedOpacity}>Tutta la settimana</Button>
-        <Button type="button" size="sm" variant="outline" onClick={presetWeekend} className={gatedOpacity}>Solo weekend</Button>
-        <Button type="button" size="sm" variant="outline" onClick={() => presetSlot("cena", "Solo sere")} className={gatedOpacity}>Solo sere</Button>
-        <Button type="button" size="sm" variant="outline" onClick={() => presetSlot("pranzo", "Solo pranzo")} className={gatedOpacity}>Solo pranzo</Button>
-        <Button type="button" size="sm" variant="ghost" className="ml-auto text-destructive hover:text-destructive" onClick={() => setConfirmClear(true)}>
-          <Trash2 className="h-3.5 w-3.5 mr-1" /> Cancella tutto
-        </Button>
-      </div>
+      {/* Quick actions */}
+      <Card className="mb-6 border bg-card">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+              <Wand2 className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="font-semibold">Imposta rapidamente la tua disponibilità</div>
+              <p className="text-sm text-muted-foreground">
+                Queste azioni compilano automaticamente più giorni o fasce orarie per aiutarti a impostare la tua disponibilità più velocemente. Non sono filtri.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "all", title: "Imposta tutta la settimana", message: "Questa azione imposterà la disponibilità su tutti i giorni della settimana. Vuoi continuare?" })}>
+              <Wand2 className="h-3.5 w-3.5" /> Imposta tutta la settimana
+            </Button>
+            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "weekend", title: "Imposta solo weekend", message: "Questa azione imposterà la disponibilità su Sabato e Domenica. Vuoi continuare?" })}>
+              <Wand2 className="h-3.5 w-3.5" /> Imposta solo weekend
+            </Button>
+            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "cena", title: "Imposta solo sere", message: "Questa azione imposterà la fascia oraria 'Cena' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
+              <Wand2 className="h-3.5 w-3.5" /> Imposta solo sere
+            </Button>
+            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "pranzo", title: "Imposta solo pranzo", message: "Questa azione imposterà la fascia oraria 'Pranzo' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
+              <Wand2 className="h-3.5 w-3.5" /> Imposta solo pranzo
+            </Button>
+            <div className="flex-1" />
+            <Button type="button" size="sm" variant="outline" className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive" onClick={() => setConfirmClear(true)}>
+              <Trash2 className="h-3.5 w-3.5" /> Cancella tutte le disponibilità
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Weekly grid: compact cards, one editable at a time */}
       <div className="grid gap-3 md:grid-cols-2">
