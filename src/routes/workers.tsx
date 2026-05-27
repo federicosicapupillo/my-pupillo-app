@@ -1847,6 +1847,7 @@ function AvailabilityBlock({
   rows,
   specialForDate,
   specialDate,
+  upcomingSpecials,
   weekly,
   availableNowUntil,
   onDetails,
@@ -1854,6 +1855,7 @@ function AvailabilityBlock({
   rows: AvailabilityRow[] | null;
   specialForDate?: AvailabilityExceptionRow[];
   specialDate?: string | null;
+  upcomingSpecials?: AvailabilityExceptionRow[];
   weekly: string[] | null;
   availableNowUntil: string | null;
   onDetails: () => void;
@@ -1872,6 +1874,15 @@ function AvailabilityBlock({
         month: "2-digit",
       })
     : "";
+  // Quando non c'è un annuncio selezionato, mostriamo le prossime
+  // disponibilità speciali (fino a 3) per non perdere informazione utile.
+  const upcoming = !specialDate
+    ? (upcomingSpecials ?? [])
+        .slice()
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+        .slice(0, 3)
+    : [];
+  const hasUpcoming = upcoming.length > 0;
   return (
     <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2">
       {hasSpecial && (
@@ -1902,9 +1913,40 @@ function AvailabilityBlock({
           </div>
         </div>
       )}
+      {!hasSpecial && hasUpcoming && (
+        <div className="mb-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+            Prossime disponibilità speciali
+          </div>
+          <div className="mt-1 space-y-0.5 text-xs text-foreground">
+            {upcoming.map((e) => {
+              const dLabel = new Date(e.date + "T00:00:00").toLocaleDateString("it-IT", {
+                weekday: "short",
+                day: "2-digit",
+                month: "2-digit",
+              });
+              if (!e.is_available) {
+                return (
+                  <div key={e.id}>{dLabel} · Non disponibile</div>
+                );
+              }
+              const slot = e.time_slot ? SLOT_LABELS[e.time_slot] : null;
+              const hours = e.start_time && e.end_time
+                ? `${e.start_time.slice(0, 5)} - ${e.end_time.slice(0, 5)}`
+                : null;
+              const place = [e.city, e.district].filter(Boolean).join(" · ");
+              return (
+                <div key={e.id}>
+                  {[dLabel, slot, place, hours].filter(Boolean).join(" · ")}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {hasSpecial ? "Disponibilità abituale" : "Disponibilità"}
+          {hasSpecial || hasUpcoming ? "Disponibilità abituale" : "Disponibilità"}
         </div>
         {hasReal && realSummary.kind === "lines" && realSummary.truncated && (
           <button
