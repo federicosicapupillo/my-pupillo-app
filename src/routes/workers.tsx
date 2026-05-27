@@ -1424,15 +1424,41 @@ function WorkersPage() {
               availableNowUntil={w.available_now_until}
               onDetails={() => setDetailsWorker(w)}
             />
-            <Button
-              size="sm"
-              className="mt-4 w-full gap-1"
-              onClick={requireComplete(() => openProposalDialog(w))}
-              title={!selected ? "Scegli un annuncio prima di proporre un turno" : undefined}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              Invia proposta
-            </Button>
+            {(() => {
+              const sb = selectedAnn ? specialBlockByWorker[w.id] : null;
+              const hardBlocked = !!sb?.blocked;
+              return (
+                <>
+                  <Button
+                    size="sm"
+                    className="mt-4 w-full gap-1"
+                    disabled={hardBlocked}
+                    onClick={hardBlocked ? undefined : requireComplete(() => openProposalDialog(w))}
+                    title={
+                      hardBlocked
+                        ? "Il lavoratore ha indicato una disponibilità speciale non compatibile con questo turno"
+                        : !selected
+                        ? "Scegli un annuncio prima di proporre un turno"
+                        : undefined
+                    }
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {hardBlocked ? "Non disponibile per questo turno" : "Invia proposta"}
+                  </Button>
+                  {hardBlocked && (
+                    <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                      <p className="font-medium">Disponibilità speciale in un'altra città / orario</p>
+                      <p className="mt-0.5">
+                        Il lavoratore ha indicato una disponibilità speciale non compatibile con questo turno.
+                      </p>
+                      {sb!.specials.slice(0, 3).map((e) => (
+                        <p key={e.id} className="mt-0.5">· {describeSpecial(e)}</p>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             {isBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
                 Hai {blockedCount} turn{blockedCount > 1 ? "i" : "o"} da recensire prima di poter assegnare nuovi turni.
