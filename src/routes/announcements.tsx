@@ -6,7 +6,7 @@ import { Component, Fragment, useEffect, useMemo, useState, type ReactNode } fro
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   labelOf, labelsOf,
-  LICENSE_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
+  LICENSE_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS, BEARD_OPTIONS,
 } from "@/lib/announcement-requirements";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1513,7 +1513,11 @@ function AnnouncementDetailsDialog({
 
             <Section title="6. Requisiti">
               <SummaryRow icon={UserCheck} label="Patente" value={licenseLabel} />
+              <SummaryRow icon={Sparkles} label="Tatuaggi ammessi" value={labelOf(ann.tattoos_allowed, TATTOO_OPTIONS as any)} />
+              <SummaryRow icon={Sparkles} label="Piercing ammessi" value={labelOf(ann.piercings_allowed, PIERCING_OPTIONS as any)} />
+              <SummaryRow icon={Sparkles} label="Barba ammessa" value={labelOf(ann.beard_allowed, BEARD_OPTIONS as any)} />
               <SummaryRow icon={Languages} label="Lingue richieste" value={langLabels.length ? langLabels.join(", ") : "—"} />
+              <SummaryRow icon={Briefcase} label="Competenze richieste" value={skillLabels.length ? skillLabels.join(", ") : "—"} />
             </Section>
 
             <Section title="7. Note operative">

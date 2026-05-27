@@ -43,6 +43,7 @@ import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-pr
 import {
   useFieldErrors,
   REQUIRED_FIELD_MESSAGE,
+  scrollToField,
 } from "@/lib/form-field-validation";
 
 export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
@@ -166,6 +167,20 @@ function splitLanguages(values: string[]) {
   return labelsOf(values, LANGUAGE_OPTIONS);
 }
 
+const optionValues = (items: readonly { value: string }[]) => new Set(items.map((item) => item.value));
+const LICENSE_VALUES = optionValues(LICENSE_OPTIONS);
+const TATTOO_VALUES = optionValues(TATTOO_OPTIONS);
+const PIERCING_VALUES = optionValues(PIERCING_OPTIONS);
+const BEARD_VALUES = optionValues(BEARD_OPTIONS);
+
+function cleanArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [];
+}
+
+function validOption(value: unknown, allowed: Set<string>): string {
+  return typeof value === "string" && allowed.has(value) ? value : "";
+}
+
 function NewRestaurantJobRequest() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
@@ -177,7 +192,6 @@ function NewRestaurantJobRequest() {
     useFieldErrors<string>();
   const [previewVisible, setPreviewVisible] = useState(true);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
-  const [defaultsLoaded, setDefaultsLoaded] = useState(false);
   const [confirmDefaultsOpen, setConfirmDefaultsOpen] = useState(false);
   const pendingStatusRef = useRef<"bozza" | "pubblicato" | null>(null);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
@@ -215,10 +229,10 @@ function NewRestaurantJobRequest() {
     contact_person_role: "",
     contact_person_role_other: "",
     worker_notes: "",
-    license_requirement: "nessuna",
-    tattoos_allowed: "indifferente",
-    piercings_allowed: "indifferente",
-    beard_allowed: "solo_curata",
+    license_requirement: "",
+    tattoos_allowed: "",
+    piercings_allowed: "",
+    beard_allowed: "",
     dress_code_notes: "",
     long_shift_reason: "",
   });
@@ -262,7 +276,10 @@ function NewRestaurantJobRequest() {
           : null)
     : null;
 
-  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => setF(prev => ({ ...prev, [key]: value }));
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    clearError(key as string);
+    setF(prev => ({ ...prev, [key]: value }));
+  };
   // Auto-fill end_date when start_date is selected/changed (only if empty or same as previous start)
   useEffect(() => {
     if (!f.shift_date) return;
@@ -276,12 +293,38 @@ function NewRestaurantJobRequest() {
   }, [f.shift_date]);
   const toggleIn = (arr: string[], v: string, setter: (v: string[]) => void) => setter(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
 
-  useEffect(() => {
-    if (!profile) return;
-    const p = profile as any;
+  const defaultsToastShownRef = useRef(false);
+
+  const applyRestaurantDefaults = (rawProfile: unknown, source: string) => {
+    if (!rawProfile) return;
+    const p = rawProfile as any;
     const contactName =
       (p.default_contact_person_name && String(p.default_contact_person_name).trim()) ||
       [p.contact_person_first_name, p.contact_person_last_name].filter(Boolean).join(" ");
+    const defaults = {
+      license_requirement: validOption(p.default_license_requirement, LICENSE_VALUES),
+      tattoos_allowed: validOption(p.default_tattoos_allowed, TATTOO_VALUES),
+      piercings_allowed: validOption(p.default_piercings_allowed, PIERCING_VALUES),
+      beard_allowed: validOption(p.default_beard_allowed, BEARD_VALUES),
+      language_requirements: cleanArray(p.default_language_requirements),
+      required_skills: cleanArray(p.default_required_skills),
+      dress_code_items: cleanArray(p.default_dress_code_items),
+      dress_code_notes: typeof p.default_dress_code_notes === "string" ? p.default_dress_code_notes : "",
+    };
+    console.info("[nuovo-annuncio] dati onboarding letti per requisiti", {
+      source,
+      raw: {
+        default_license_requirement: p.default_license_requirement,
+        default_tattoos_allowed: p.default_tattoos_allowed,
+        default_piercings_allowed: p.default_piercings_allowed,
+        default_beard_allowed: p.default_beard_allowed,
+        default_language_requirements: p.default_language_requirements,
+        default_required_skills: p.default_required_skills,
+        default_dress_code_items: p.default_dress_code_items,
+        default_dress_code_notes: p.default_dress_code_notes,
+      },
+      mapped: defaults,
+    });
     setF(prev => ({
       ...prev,
       restaurant_name: prev.restaurant_name || p.business_name || p.full_name || "",
@@ -302,15 +345,15 @@ function NewRestaurantJobRequest() {
       contact_person_role: prev.contact_person_role || p.contact_person_role || "",
       contact_person_role_other: prev.contact_person_role_other || p.contact_person_role_other || "",
       worker_notes: prev.worker_notes || p.location_notes || "",
-      license_requirement: p.default_license_requirement ?? prev.license_requirement,
-      tattoos_allowed: p.default_tattoos_allowed ?? prev.tattoos_allowed,
-      piercings_allowed: p.default_piercings_allowed ?? prev.piercings_allowed,
-      beard_allowed: p.default_beard_allowed ?? prev.beard_allowed,
-      dress_code_notes: prev.dress_code_notes || p.default_dress_code_notes || "",
+      license_requirement: prev.license_requirement || defaults.license_requirement,
+      tattoos_allowed: prev.tattoos_allowed || defaults.tattoos_allowed,
+      piercings_allowed: prev.piercings_allowed || defaults.piercings_allowed,
+      beard_allowed: prev.beard_allowed || defaults.beard_allowed,
+      dress_code_notes: prev.dress_code_notes || defaults.dress_code_notes,
     }));
-    setLanguageReqs(prev => prev.length ? prev : (p.default_language_requirements ?? []));
-    setSkills(prev => prev.length ? prev : (p.default_required_skills ?? []));
-    setDressItems(prev => prev.length ? prev : (p.default_dress_code_items ?? []));
+    setLanguageReqs(prev => prev.length ? prev : defaults.language_requirements);
+    setSkills(prev => prev.length ? prev : defaults.required_skills);
+    setDressItems(prev => prev.length ? prev : defaults.dress_code_items);
     // Precompila l'anticipo richiesto all'ingresso dai default salvati.
     const savedAdvance = p.default_arrival_advance_minutes;
     if (typeof savedAdvance === "number" && Number.isFinite(savedAdvance)) {
@@ -322,23 +365,59 @@ function NewRestaurantJobRequest() {
         setAccessReason(prev => prev || String(p.default_arrival_advance_reason));
       }
     }
-    if (!defaultsLoaded && hasSavedDefaults(p)) {
+    if (!defaultsToastShownRef.current && hasSavedDefaults(p)) {
       toast.info("Abbiamo caricato le tue impostazioni predefinite. Puoi modificarle per questo annuncio.");
+      defaultsToastShownRef.current = true;
     }
-    setDefaultsLoaded(true);
-    // Log tecnico: dati onboarding usati per precompilare il form annuncio.
-    console.info("[nuovo-annuncio] prefill da profilo onboarding", {
-      contact_person_role: p.contact_person_role,
-      default_license_requirement: p.default_license_requirement,
-      default_tattoos_allowed: p.default_tattoos_allowed,
-      default_piercings_allowed: p.default_piercings_allowed,
-      default_beard_allowed: p.default_beard_allowed,
-      default_language_requirements: p.default_language_requirements,
-      default_required_skills: p.default_required_skills,
-      default_dress_code_items: p.default_dress_code_items,
-      default_dress_code_notes: p.default_dress_code_notes,
+    console.info("[nuovo-annuncio] valori onboarding passati al form requisiti", { source, defaults });
+  };
+
+  useEffect(() => {
+    console.info("[nuovo-annuncio] componente reale caricato", {
+      route: "/ristoratore/annunci/nuovo",
+      component: "NewRestaurantJobRequest",
+      section: "Requisiti e Competenze",
     });
+  }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    applyRestaurantDefaults(profile, "auth-context/get_my_profile");
   }, [profile]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.rpc("get_my_profile").maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error("[nuovo-annuncio] errore lettura profilo onboarding da Supabase", error);
+        return;
+      }
+      console.info("[nuovo-annuncio] profilo onboarding letto da Supabase", {
+        user_id: user.id,
+        has_data: !!data,
+      });
+      applyRestaurantDefaults(data, "Supabase RPC get_my_profile");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    console.info("[nuovo-annuncio] valori effettivamente mostrati nei campi requisiti", {
+      license_requirement: f.license_requirement,
+      tattoos_allowed: f.tattoos_allowed,
+      piercings_allowed: f.piercings_allowed,
+      beard_allowed: f.beard_allowed,
+      language_requirements: languageReqs,
+      required_skills: skills,
+      dress_code_items: dressItems,
+      dress_code_notes: f.dress_code_notes,
+    });
+  }, [f.license_requirement, f.tattoos_allowed, f.piercings_allowed, f.beard_allowed, f.dress_code_notes, languageReqs, skills, dressItems]);
 
   useEffect(() => {
     if (!reuse) return;
@@ -443,6 +522,12 @@ function NewRestaurantJobRequest() {
       "contact_person_email",
       "accessChoice",
       "accessReason",
+      "license_requirement",
+      "tattoos_allowed",
+      "piercings_allowed",
+      "beard_allowed",
+      "language_requirements",
+      "required_skills",
     ];
     if (!f.role_required) errs.role_required = "Seleziona il ruolo cercato.";
     if (!f.shift_date) errs.shift_date = "Inserisci la data di inizio turno.";
@@ -477,13 +562,20 @@ function NewRestaurantJobRequest() {
     if (!accessChoice) errs.accessChoice = "Seleziona l'anticipo richiesto.";
     else if (accessChoice === "over15" && accessReason.trim().length < 10)
       errs.accessReason = "Motivazione: minimo 10 caratteri.";
+    if (!f.license_requirement || !LICENSE_VALUES.has(f.license_requirement)) errs.license_requirement = "Seleziona il tipo di patente richiesto.";
+    if (!f.tattoos_allowed || !TATTOO_VALUES.has(f.tattoos_allowed)) errs.tattoos_allowed = "Indica se i tatuaggi sono ammessi.";
+    if (!f.piercings_allowed || !PIERCING_VALUES.has(f.piercings_allowed)) errs.piercings_allowed = "Indica se i piercing sono ammessi.";
+    if (!f.beard_allowed || !BEARD_VALUES.has(f.beard_allowed)) errs.beard_allowed = "Indica se la barba è ammessa.";
+    if (languageReqs.length === 0) errs.language_requirements = "Seleziona almeno una lingua richiesta.";
+    if (skills.length === 0) errs.required_skills = "Seleziona almeno una competenza richiesta.";
 
     setErrors(errs, order);
     const missing = Object.keys(errs).length;
     console.info("[nuovo-annuncio] validate", { missing, errs });
     if (missing > 0) {
       toast.error("Completa tutti i campi obbligatori per pubblicare l'annuncio.");
-      requestAnimationFrame(() => focusFirst(order));
+      const first = order.find((name) => errs[name]);
+      requestAnimationFrame(() => first ? scrollToField(first) : focusFirst(order));
       return false;
     }
     return true;
@@ -618,9 +710,13 @@ function NewRestaurantJobRequest() {
       announcement_id: announcement.id,
       status,
       license_requirement: f.license_requirement,
+      tattoos_allowed: f.tattoos_allowed,
+      piercings_allowed: f.piercings_allowed,
+      beard_allowed: f.beard_allowed,
       language_requirements: languageReqs,
       required_skills: skills,
       dress_code_items: dressItems,
+      dress_code_notes: f.dress_code_notes,
     });
     toast.success(status === "bozza" ? "Bozza salvata correttamente" : "Annuncio pubblicato correttamente");
 
@@ -941,15 +1037,37 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="3" title="Requisiti e Competenze" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Tipo di patente"><Select value={f.license_requirement} onValueChange={v => setField("license_requirement", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{LICENSE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
-            <Field label="Tatuaggi ammessi"><Select value={f.tattoos_allowed} onValueChange={v => setField("tattoos_allowed", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TATTOO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
-            <Field label="Piercing ammessi"><Select value={f.piercings_allowed} onValueChange={v => setField("piercings_allowed", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PIERCING_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
-            <Field label="Barba ammessa"><Select value={f.beard_allowed} onValueChange={v => setField("beard_allowed", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BEARD_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></Field>
+            <Field label="Tipo di patente" required name="license_requirement" error={errors.license_requirement}>
+              <Select value={f.license_requirement} onValueChange={v => setField("license_requirement", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona tipo di patente" /></SelectTrigger>
+                <SelectContent>{LICENSE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Tatuaggi ammessi" required name="tattoos_allowed" error={errors.tattoos_allowed}>
+              <Select value={f.tattoos_allowed} onValueChange={v => setField("tattoos_allowed", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona tatuaggi" /></SelectTrigger>
+                <SelectContent>{TATTOO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Piercing ammessi" required name="piercings_allowed" error={errors.piercings_allowed}>
+              <Select value={f.piercings_allowed} onValueChange={v => setField("piercings_allowed", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona piercing" /></SelectTrigger>
+                <SelectContent>{PIERCING_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Barba ammessa" required name="beard_allowed" error={errors.beard_allowed}>
+              <Select value={f.beard_allowed} onValueChange={v => setField("beard_allowed", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona barba" /></SelectTrigger>
+                <SelectContent>{BEARD_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
           </div>
-          <Field label="Lingue richieste">
-            <LanguagesMultiSelect selected={languageReqs} onChange={setLanguageReqs} />
+          <Field label="Lingue richieste" required name="language_requirements" error={errors.language_requirements}>
+            <LanguagesMultiSelect selected={languageReqs} onChange={(next) => { clearError("language_requirements"); setLanguageReqs(next); }} />
           </Field>
-          <ChoiceGroup title="Competenze richieste" items={SKILL_OPTIONS} selected={skills} onToggle={v => toggleIn(skills, v, setSkills)} />
+          <Field label="Competenze richieste" required name="required_skills" error={errors.required_skills}>
+            <ChoiceGroup items={SKILL_OPTIONS} selected={skills} onToggle={v => { clearError("required_skills"); toggleIn(skills, v, setSkills); }} />
+          </Field>
           <SaveDefaultToggle checked={saveAsDefault} onChange={setSaveAsDefault} />
         </section>
 
@@ -1110,10 +1228,9 @@ function Field({
   );
 }
 
-function ChoiceGroup({ title, items, selected, onToggle }: { title: string; items: readonly { value: string; label: string }[]; selected: string[]; onToggle: (value: string) => void }) {
+function ChoiceGroup({ items, selected, onToggle }: { items: readonly { value: string; label: string }[]; selected: string[]; onToggle: (value: string) => void }) {
   return (
-    <div className="space-y-2">
-      <Label>{title}</Label>
+    <div>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {items.map(item => {
           const active = selected.includes(item.value);
