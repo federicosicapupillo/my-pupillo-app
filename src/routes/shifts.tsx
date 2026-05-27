@@ -120,6 +120,8 @@ function ShiftsPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [delayTarget, setDelayTarget] = useState<IncidentTarget | null>(null);
+  const [workerCancelTarget, setWorkerCancelTarget] = useState<IncidentTarget | null>(null);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
   const reqByShift = useMemo(() => {
     const m: Record<string, { status: string; due_date: string }> = {};
