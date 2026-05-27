@@ -40,6 +40,12 @@ import { LanguagesMultiSelect } from "@/components/RestaurantRequirements";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
+import {
+  useFieldErrors,
+  FieldError,
+  REQUIRED_FIELD_MESSAGE,
+  FILL_REQUIRED_TOAST,
+} from "@/lib/form-field-validation";
 
 export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
   head: () => ({ meta: [{ title: "Crea Nuovo Annuncio — Pupillo" }] }),
@@ -169,6 +175,8 @@ function NewRestaurantJobRequest() {
   const previewRef = useRef<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
+  const { errors, setErrors, clearError, clearAll, focusFirst } =
+    useFieldErrors<string>();
   const [previewVisible, setPreviewVisible] = useState(true);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [defaultsLoaded, setDefaultsLoaded] = useState(false);
@@ -320,6 +328,18 @@ function NewRestaurantJobRequest() {
       toast.info("Abbiamo caricato le tue impostazioni predefinite. Puoi modificarle per questo annuncio.");
     }
     setDefaultsLoaded(true);
+    // Log tecnico: dati onboarding usati per precompilare il form annuncio.
+    console.info("[nuovo-annuncio] prefill da profilo onboarding", {
+      contact_person_role: p.contact_person_role,
+      default_license_requirement: p.default_license_requirement,
+      default_tattoos_allowed: p.default_tattoos_allowed,
+      default_piercings_allowed: p.default_piercings_allowed,
+      default_beard_allowed: p.default_beard_allowed,
+      default_language_requirements: p.default_language_requirements,
+      default_required_skills: p.default_required_skills,
+      default_dress_code_items: p.default_dress_code_items,
+      default_dress_code_notes: p.default_dress_code_notes,
+    });
   }, [profile]);
 
   useEffect(() => {
@@ -403,56 +423,69 @@ function NewRestaurantJobRequest() {
 
   const validate = () => {
     if (!user) return false;
-    if (!f.role_required) { toast.error("Seleziona il ruolo cercato."); return false; }
-    if (!f.shift_date) { toast.error("Inserisci la data di inizio turno."); return false; }
-    if (!f.start_time) { toast.error("Inserisci l'orario di inizio turno."); return false; }
-    if (!f.end_date) { toast.error("Inserisci la data di fine turno."); return false; }
-    if (!f.end_time) { toast.error("Inserisci l'orario di fine turno."); return false; }
-    if (f.shift_date < todayISO) { toast.error("Non puoi selezionare una data passata"); return false; }
-    {
+    const errs: Record<string, string> = {};
+    const order: string[] = [
+      "role_required",
+      "shift_date",
+      "start_time",
+      "end_date",
+      "end_time",
+      "long_shift_reason",
+      "hourly_rate",
+      "restaurant_name",
+      "address",
+      "street_number",
+      "province",
+      "city",
+      "district",
+      "postal_code",
+      "contact_person_name",
+      "contact_person_role",
+      "contact_person_role_other",
+      "contact_person_email",
+      "accessChoice",
+      "accessReason",
+    ];
+    if (!f.role_required) errs.role_required = "Seleziona il ruolo cercato.";
+    if (!f.shift_date) errs.shift_date = "Inserisci la data di inizio turno.";
+    else if (f.shift_date < todayISO) errs.shift_date = "Non puoi selezionare una data passata.";
+    if (!f.start_time) errs.start_time = "Inserisci l'orario di inizio turno.";
+    else if (f.shift_date && f.shift_date === todayISO) {
       const start = buildDateTime(f.shift_date, f.start_time);
-      if (start && start.getTime() < Date.now()) {
-        toast.error(f.shift_date === todayISO ? "Non puoi selezionare un orario già trascorso" : "Non puoi selezionare una data passata");
-        return false;
-      }
+      if (start && start.getTime() < Date.now()) errs.start_time = "Orario già trascorso.";
     }
-    if (durationHours <= 0) { toast.error("L'orario di fine turno deve essere successivo all'orario di inizio."); return false; }
-    if (longReasonError) { toast.error(longReasonError); return false; }
-    if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
-    if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
-    if (!f.street_number.trim()) { toast.error("Inserisci il numero civico"); return false; }
-    if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
-      toast.error("La città selezionata non appartiene alla provincia scelta.");
-      return false;
+    if (!f.end_date) errs.end_date = "Inserisci la data di fine turno.";
+    if (!f.end_time) errs.end_time = "Inserisci l'orario di fine turno.";
+    else if (f.shift_date && f.end_date && durationHours <= 0) {
+      errs.end_time = "L'orario di fine deve essere successivo all'inizio.";
     }
-    if (f.province && f.city && f.postal_code && !isValidCapForCity(f.province, f.city, f.postal_code)) {
-      toast.error("Il CAP non appartiene alla città selezionata.");
-      return false;
-    }
-    if (!f.district || !f.district.trim()) {
-      toast.error("Seleziona la zona/quartiere del locale.");
-      return false;
-    }
-    if (f.city && zonesForCity(f.city).length > 0 && !isValidDistrictForCity(f.city, f.district)) {
-      toast.error("Seleziona una zona/quartiere valida.");
-      return false;
-    }
-    if (f.province && f.city && f.postal_code && !isValidCapForDistrict(f.province, f.city, f.district, f.postal_code)) {
-      toast.error("Il CAP selezionato non appartiene alla zona indicata.");
-      return false;
-    }
-    if (!f.contact_person_role) { toast.error("Seleziona il ruolo del referente."); return false; }
-    if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim()) {
-      toast.error("Specifica il ruolo del referente.");
-      return false;
-    }
-    if (f.contact_person_email && !isValidEmail(f.contact_person_email)) {
-      toast.error("Inserisci un indirizzo email valido.");
-      return false;
-    }
-    if (!accessChoice) { toast.error("Seleziona l'anticipo richiesto all'ingresso."); return false; }
-    if (accessChoice === "over15" && accessReason.trim().length < 10) {
-      toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
+    if (longReasonError) errs.long_shift_reason = longReasonError;
+    if (!f.hourly_rate || Number(f.hourly_rate) <= 0) errs.hourly_rate = "Inserisci la tariffa oraria.";
+    if (!f.restaurant_name.trim()) errs.restaurant_name = REQUIRED_FIELD_MESSAGE;
+    if (!f.address.trim()) errs.address = "Inserisci l'indirizzo del turno.";
+    if (!f.street_number.trim()) errs.street_number = "Inserisci il numero civico.";
+    if (!f.province) errs.province = "Seleziona la provincia.";
+    if (!f.city) errs.city = "Seleziona la città.";
+    else if (f.province && !isCityInProvince(f.city, f.province)) errs.city = "La città non appartiene alla provincia scelta.";
+    if (!f.district || !f.district.trim()) errs.district = "Seleziona la zona/quartiere.";
+    else if (f.city && zonesForCity(f.city).length > 0 && !isValidDistrictForCity(f.city, f.district)) errs.district = "Zona/quartiere non valida.";
+    if (f.province && f.city && f.postal_code && !isValidCapForCity(f.province, f.city, f.postal_code)) errs.postal_code = "Il CAP non appartiene alla città selezionata.";
+    else if (f.province && f.city && f.postal_code && f.district && !isValidCapForDistrict(f.province, f.city, f.district, f.postal_code)) errs.postal_code = "Il CAP non appartiene alla zona indicata.";
+    if (!f.contact_person_name.trim()) errs.contact_person_name = "Inserisci il nome del referente.";
+    if (!f.contact_person_role) errs.contact_person_role = "Seleziona il ruolo del referente.";
+    else if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim())
+      errs.contact_person_role_other = "Specifica il ruolo del referente.";
+    if (f.contact_person_email && !isValidEmail(f.contact_person_email)) errs.contact_person_email = "Email non valida.";
+    if (!accessChoice) errs.accessChoice = "Seleziona l'anticipo richiesto.";
+    else if (accessChoice === "over15" && accessReason.trim().length < 10)
+      errs.accessReason = "Motivazione: minimo 10 caratteri.";
+
+    setErrors(errs, order);
+    const missing = Object.keys(errs).length;
+    console.info("[nuovo-annuncio] validate", { missing, errs });
+    if (missing > 0) {
+      toast.error("Completa tutti i campi obbligatori per pubblicare l'annuncio.");
+      requestAnimationFrame(() => focusFirst(order));
       return false;
     }
     return true;
@@ -461,6 +494,7 @@ function NewRestaurantJobRequest() {
   const save = async (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
     setBusy(true);
+    clearAll();
     const accessText = accessChoice === "15"
       ? "Presentarsi almeno 15 minuti prima del turno."
       : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
@@ -518,6 +552,7 @@ function NewRestaurantJobRequest() {
 
     if (announcementError || !announcement?.id) {
       setBusy(false);
+      console.error("[nuovo-annuncio] errore salvataggio announcement", announcementError);
       toast.error(announcementError?.message || "Impossibile salvare l'annuncio");
       return;
     }
@@ -575,11 +610,20 @@ function NewRestaurantJobRequest() {
     if (jobRequestError) {
       await supabase.from("announcements").delete().eq("id", announcement.id);
       setBusy(false);
+      console.error("[nuovo-annuncio] errore salvataggio job_request", jobRequestError);
       toast.error(jobRequestError.message || "Annuncio non salvato nella tabella job_requests");
       return;
     }
 
     setBusy(false);
+    console.info("[nuovo-annuncio] salvato", {
+      announcement_id: announcement.id,
+      status,
+      license_requirement: f.license_requirement,
+      language_requirements: languageReqs,
+      required_skills: skills,
+      dress_code_items: dressItems,
+    });
     toast.success(status === "bozza" ? "Bozza salvata correttamente" : "Annuncio pubblicato correttamente");
 
     if (saveAsDefault) {
