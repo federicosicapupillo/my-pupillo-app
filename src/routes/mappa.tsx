@@ -28,6 +28,29 @@ import {
 
 const MapViewInner = lazy(() => import("@/components/MapViewInner"));
 
+// --- Worker map helpers --------------------------------------------------
+// Used to ensure that, on the worker-side map, only announcements/restaurants
+// belonging to a city the worker actually targets are shown, AND that markers
+// are placed approximately on that city (never on a different city because of
+// a stale/wrong precise coordinate in the restaurant profile).
+function normalizeCity(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['`]/g, " ")
+    .trim();
+}
+
+function todayIso(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export const Route = createFileRoute("/mappa")({
   head: () => ({ meta: [{ title: "Mappa — Pupillo" }] }),
   component: () => <RequireAuth><MapPage /></RequireAuth>,
