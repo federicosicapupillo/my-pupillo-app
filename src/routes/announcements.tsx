@@ -25,6 +25,7 @@ import { formatCandidateName, loadCollaboratedWorkerIds } from "@/lib/candidate-
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useRequiredReviews } from "@/lib/required-reviews";
+import { CANCELLATION_REASONS, cancelAnnouncementWithNotifications, reasonLabel, type CancellationReasonValue } from "@/lib/announcement-cancel";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
@@ -425,6 +426,7 @@ function AnnouncementsPage() {
   const [blockOpen, setBlockOpen] = useState(false);
   const [closeTarget, setCloseTarget] = useState<Ann | null>(null);
   const [closing, setClosing] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<Ann | null>(null);
   const [statusFilter, setStatusFilter] = useState<"active" | "draft" | "assigned" | "completed" | "expired" | "cancelled">(
     (["active","draft","assigned","completed","expired","cancelled"].includes(initialStatus as string) ? initialStatus : "active") as any
   );
