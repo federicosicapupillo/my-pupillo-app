@@ -78,6 +78,10 @@ export type Database = {
         Row: {
           assigned_worker_id: string | null
           beard_allowed: string | null
+          cancellation_note: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string
           deposit_paid: boolean | null
           dress_code_items: string[] | null
@@ -128,6 +132,10 @@ export type Database = {
         Insert: {
           assigned_worker_id?: string | null
           beard_allowed?: string | null
+          cancellation_note?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
           deposit_paid?: boolean | null
           dress_code_items?: string[] | null
@@ -178,6 +186,10 @@ export type Database = {
         Update: {
           assigned_worker_id?: string | null
           beard_allowed?: string | null
+          cancellation_note?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
           deposit_paid?: boolean | null
           dress_code_items?: string[] | null
