@@ -1067,17 +1067,45 @@ function SectionTitle({ number, title, subtitle }: { number: string; title: stri
   );
 }
 
-function Field({ label, children, required, error }: { label: string; children: ReactNode; required?: boolean; error?: string | null }) {
+function Field({
+  label,
+  children,
+  required,
+  error,
+  name,
+}: {
+  label: string;
+  children: ReactNode;
+  required?: boolean;
+  error?: string | null;
+  name?: string;
+}) {
   return (
-    <div className="space-y-1.5">
+    <div
+      className="space-y-1.5 scroll-mt-24"
+      data-field={name}
+      data-invalid={error ? "true" : undefined}
+    >
       <Label>
         {label}
         {required && (
           <span className="ml-0.5 text-destructive" aria-hidden="true" title="Campo obbligatorio">*</span>
         )}
       </Label>
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      <div
+        className={
+          error
+            ? "rounded-md ring-1 ring-destructive/50 [&_input]:border-destructive [&_textarea]:border-destructive [&_button[role='combobox']]:border-destructive [&_select]:border-destructive"
+            : undefined
+        }
+      >
+        {children}
+      </div>
+      {error && (
+        <p role="alert" className="text-xs font-medium text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
