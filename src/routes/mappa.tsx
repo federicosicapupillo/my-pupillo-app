@@ -484,12 +484,19 @@ function MapPage() {
       if (planF !== "any" && r.plan !== planF) return false;
       if (statusF !== "any" && r.account_status !== statusF) return false;
       if (withRequests && !annCounts[r.id]) return false;
+      // Lato lavoratore: mostra SOLO ristoratori della/e città del lavoratore
+      // (rule 1, 4, 12). Inoltre il locale deve avere almeno un annuncio
+      // attivo (rule 1, 25), altrimenti non è di interesse per il lavoratore.
+      if (isWorker) {
+        if (!annCounts[r.id]) return false;
+        if (!isWorkerCityAllowed(r.city)) return false;
+      }
       if (max != null && ref && r.service_area_lat != null && r.service_area_lng != null) {
         if (distKm(ref.lat, ref.lng, r.service_area_lat, r.service_area_lng) > max) return false;
       }
       return true;
     });
-  }, [restaurants, query, city, province, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me]);
+  }, [restaurants, query, city, province, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
