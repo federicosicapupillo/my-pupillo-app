@@ -20,7 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy } from "lucide-react";
+import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy, Pencil, ChevronDown, Sparkles } from "lucide-react";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
   DAY_LABELS,
@@ -157,6 +157,8 @@ function AvailabilityPage() {
   const [availableNowDuration, setAvailableNowDuration] = useState<"2h" | "today" | "tonight">("2h");
   const [duplicateFrom, setDuplicateFrom] = useState<number | null>(null);
   const [duplicateTargets, setDuplicateTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
+  const [editingDay, setEditingDay] = useState<number | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -268,7 +270,84 @@ function AvailabilityPage() {
       }),
     );
     setDuplicateFrom(null);
-    toast.success("Disponibilità duplicata sui giorni selezionati");
+    toast.success("Disponibilità copiata correttamente");
+  };
+
+  // -- Quick presets -------------------------------------------------------
+  const presetAll = () => {
+    setDays((d) => d.map((x) => ({
+      ...x,
+      is_available: true,
+      city: x.city || defaults.city,
+      province: x.province || defaults.province,
+      district: x.district || defaults.district,
+      radius_km: x.radius_km ?? defaults.radius_km,
+    })));
+    toast.success("Tutta la settimana attivata");
+  };
+  const presetWeekend = () => {
+    setDays((d) => d.map((x, i) => {
+      const isW = i === 5 || i === 6;
+      return {
+        ...x,
+        is_available: isW,
+        city: isW ? (x.city || defaults.city) : x.city,
+        province: isW ? (x.province || defaults.province) : x.province,
+        district: isW ? (x.district || defaults.district) : x.district,
+        radius_km: isW ? (x.radius_km ?? defaults.radius_km) : x.radius_km,
+      };
+    }));
+    toast.success("Solo weekend impostato");
+  };
+  const presetSlot = (slot: TimeSlot, label: string) => {
+    const def = SLOT_DEFAULT_TIMES[slot];
+    setDays((d) => {
+      const anyOn = d.some((x) => x.is_available);
+      return d.map((x) => {
+        const apply = anyOn ? x.is_available : true;
+        if (!apply) return x;
+        return {
+          ...x,
+          is_available: true,
+          city: x.city || defaults.city,
+          province: x.province || defaults.province,
+          district: x.district || defaults.district,
+          radius_km: x.radius_km ?? defaults.radius_km,
+          flexible: false,
+          slots: [{
+            time_slot: slot,
+            start_time: def.start,
+            end_time: def.end,
+            is_flexible: false,
+            is_last_minute: slot === "last_minute",
+          }],
+        };
+      });
+    });
+    toast.success(`${label} impostato`);
+  };
+  const clearAll = () => {
+    setDays(Array.from({ length: 7 }, () => emptyDay(defaults.city, defaults.province, defaults.district, defaults.radius_km)));
+    setEditingDay(null);
+    setConfirmClear(false);
+    toast.success("Disponibilità azzerate");
+  };
+
+  const daySummary = (d: DayState): { location: string; hours: string } => {
+    const loc = d.city
+      ? `${d.city}${d.district ? ` · ${d.district}` : " · Tutte le zone"}`
+      : "Città non indicata";
+    if (d.flexible && d.slots.length === 0) {
+      return { location: loc, hours: "Valuto in base alla proposta" };
+    }
+    if (d.slots.length === 0) return { location: loc, hours: "Nessuna fascia" };
+    const parts = d.slots.slice(0, 2).map((s) => {
+      if (s.time_slot === "last_minute") return "Last minute";
+      if (s.start_time && s.end_time) return `${s.start_time} - ${s.end_time}`;
+      return SLOT_LABELS[s.time_slot];
+    });
+    const more = d.slots.length > 2 ? ` · +${d.slots.length - 2}` : "";
+    return { location: loc, hours: parts.join(" · ") + more };
   };
 
   const validateBeforeSave = (): string | null => {
@@ -541,18 +620,65 @@ function AvailabilityPage() {
         </Card>
       )}
 
-      {/* Weekly grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {days.map((d, i) => (
-          <Card key={i} className={d.is_available ? "" : "opacity-80"}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-base">{DAY_LABELS[i]}</CardTitle>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">{d.is_available ? "Disponibile" : "Non disponibile"}</span>
-                <Switch checked={d.is_available} onCheckedChange={(v) => toggleDay(i, v)} aria-label={`Disponibile ${DAY_LABELS[i]}`} />
+      {/* Quick presets */}
+      <div className="mb-4 rounded-2xl border bg-card p-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1 mr-1">
+          <Sparkles className="h-3.5 w-3.5 text-primary" /> Preset rapidi
+        </span>
+        <Button type="button" size="sm" variant="outline" onClick={presetAll} className={gatedOpacity}>Tutta la settimana</Button>
+        <Button type="button" size="sm" variant="outline" onClick={presetWeekend} className={gatedOpacity}>Solo weekend</Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => presetSlot("cena", "Solo sere")} className={gatedOpacity}>Solo sere</Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => presetSlot("pranzo", "Solo pranzo")} className={gatedOpacity}>Solo pranzo</Button>
+        <Button type="button" size="sm" variant="ghost" className="ml-auto text-destructive hover:text-destructive" onClick={() => setConfirmClear(true)}>
+          <Trash2 className="h-3.5 w-3.5 mr-1" /> Cancella tutto
+        </Button>
+      </div>
+
+      {/* Weekly grid: compact cards, one editable at a time */}
+      <div className="grid gap-3 md:grid-cols-2">
+        {days.map((d, i) => {
+          const isEditing = editingDay === i;
+          const sum = daySummary(d);
+          return (
+          <Card key={i} className={`${d.is_available ? "" : "opacity-90"} ${isEditing ? "ring-1 ring-primary/40" : ""}`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-3">
+              <div className="min-w-0">
+                <CardTitle className="text-base leading-tight">{DAY_LABELS[i]}</CardTitle>
+                <div className={`text-xs mt-0.5 ${d.is_available ? "text-primary" : "text-muted-foreground"}`}>
+                  {d.is_available ? "Disponibile" : "Non disponibile"}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={d.is_available}
+                  onCheckedChange={(v) => { toggleDay(i, v); if (!v && isEditing) setEditingDay(null); }}
+                  aria-label={`Disponibile ${DAY_LABELS[i]}`}
+                />
               </div>
             </CardHeader>
-            {d.is_available && (
+
+            {!isEditing && (
+              <CardContent className="pt-0 pb-3">
+                {d.is_available ? (
+                  <div className="space-y-1 text-sm">
+                    <div className="inline-flex items-center gap-1 text-foreground">
+                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="truncate">{sum.location}</span>
+                    </div>
+                    <div className="text-muted-foreground">{sum.hours}</div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Nessuna disponibilità impostata per questo giorno.</div>
+                )}
+                <div className="mt-3 flex justify-end">
+                  <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditingDay(i); if (!d.is_available) toggleDay(i, true); }}>
+                    <Pencil className="h-3.5 w-3.5" /> Modifica
+                  </Button>
+                </div>
+              </CardContent>
+            )}
+
+            {isEditing && d.is_available && (
               <CardContent className="space-y-4">
                 {/* Location */}
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -665,15 +791,19 @@ function AvailabilityPage() {
                   />
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex flex-wrap justify-end gap-2 pt-1">
                   <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => openDuplicate(i)}>
-                    <Copy className="h-3.5 w-3.5" /> Duplica su altri giorni
+                    <Copy className="h-3.5 w-3.5" /> Copia su altri giorni
+                  </Button>
+                  <Button type="button" size="sm" className="gap-2" onClick={() => { setEditingDay(null); toast.success("Disponibilità aggiornata correttamente"); }}>
+                    <ChevronDown className="h-3.5 w-3.5" /> Chiudi
                   </Button>
                 </div>
               </CardContent>
             )}
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-6 flex justify-end">
@@ -902,6 +1032,21 @@ function AvailabilityPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDuplicateFrom(null)}>Annulla</Button>
             <Button onClick={applyDuplicate} disabled={!duplicateTargets.some(Boolean)}>Duplica</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancellare tutte le disponibilità?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Verranno azzerati tutti i giorni della settimana. Le disponibilità speciali non saranno toccate. L'operazione diventa definitiva al prossimo salvataggio.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmClear(false)}>Annulla</Button>
+            <Button variant="destructive" onClick={clearAll}>Cancella tutto</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
