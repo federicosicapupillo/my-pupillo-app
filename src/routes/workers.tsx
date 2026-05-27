@@ -1789,11 +1789,15 @@ function WorkersMapSection({
 
 function AvailabilityBlock({
   rows,
+  specialForDate,
+  specialDate,
   weekly,
   availableNowUntil,
   onDetails,
 }: {
   rows: AvailabilityRow[] | null;
+  specialForDate?: AvailabilityExceptionRow[];
+  specialDate?: string | null;
   weekly: string[] | null;
   availableNowUntil: string | null;
   onDetails: () => void;
@@ -1803,11 +1807,48 @@ function AvailabilityBlock({
   const hasReal = !!rows && rows.length > 0;
   const realSummary = summarizeWorkerAvailability(rows, new Date());
   const legacySummary = summarizeWeeklyAvailability(weekly, availableNowUntil, new Date());
+  const specials = specialForDate ?? [];
+  const hasSpecial = specials.length > 0;
+  const specialDateLabel = specialDate
+    ? new Date(specialDate + "T00:00:00").toLocaleDateString("it-IT", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+      })
+    : "";
   return (
     <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2">
+      {hasSpecial && (
+        <div className="mb-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+            Disponibilità speciale · {specialDateLabel}
+          </div>
+          <div className="mt-1 space-y-0.5 text-xs text-foreground">
+            {specials.map((e) => {
+              if (!e.is_available) {
+                return (
+                  <div key={e.id} className="text-foreground">
+                    Non disponibile in questa data
+                  </div>
+                );
+              }
+              const slot = e.time_slot ? SLOT_LABELS[e.time_slot] : null;
+              const hours = e.start_time && e.end_time
+                ? `${e.start_time.slice(0, 5)} - ${e.end_time.slice(0, 5)}`
+                : null;
+              const place = [e.city, e.district].filter(Boolean).join(" · ");
+              return (
+                <div key={e.id}>
+                  {[slot, place, hours].filter(Boolean).join(" · ")}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Disponibilità
+          {hasSpecial ? "Disponibilità abituale" : "Disponibilità"}
         </div>
         {hasReal && realSummary.kind === "lines" && realSummary.truncated && (
           <button
