@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -84,7 +85,7 @@ function DashboardInner() {
         variant: "message",
         guard: () => !profile.profile_completed,
         description: "Aggiungi le informazioni mancanti per pubblicare e candidarti.",
-        action: { label: "Completa", onClick: () => nav({ to: "/onboarding" }) },
+        action: { label: "Completa", onClick: () => goToRestaurantOnboarding(nav) },
         duration: 8000,
       });
     }

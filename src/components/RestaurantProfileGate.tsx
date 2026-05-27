@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/AppShell";
+import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation";
 
 /**
  * Gate per le pagine operative del ristoratore (es. crea nuovo annuncio).
@@ -28,6 +29,7 @@ export function RestaurantProfileGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [timedOut, setTimedOut] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [completingProfile, setCompletingProfile] = useState(false);
 
   const profileReady = !loading && extrasLoaded && !!profile;
 
@@ -95,10 +97,21 @@ export function RestaurantProfileGate({ children }: { children: ReactNode }) {
     }
   };
 
+  const completeProfile = () => {
+    console.info("[restaurant-profile-gate] complete profile clicked", {
+      to: "/onboarding",
+      profile_completed: profile?.profile_completed,
+      role,
+    });
+    setCompletingProfile(true);
+    goToRestaurantOnboarding(nav);
+  };
+
   return (
     <AlertDialog
       open
       onOpenChange={(open) => {
+        if (completingProfile) return;
         if (!open) goBack();
       }}
     >
@@ -113,7 +126,7 @@ export function RestaurantProfileGate({ children }: { children: ReactNode }) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={goBack}>Annulla</AlertDialogCancel>
-          <AlertDialogAction onClick={() => nav({ to: "/onboarding" })}>
+          <AlertDialogAction onClick={completeProfile}>
             Completa profilo
           </AlertDialogAction>
         </AlertDialogFooter>
