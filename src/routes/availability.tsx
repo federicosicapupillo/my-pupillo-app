@@ -316,7 +316,7 @@ function AvailabilityPage() {
       district: x.district || defaults.district,
       radius_km: x.radius_km ?? defaults.radius_km,
     })));
-    toast.success("Tutta la settimana attivata");
+    toast.success("Disponibilità settimana impostata correttamente.");
   };
   const presetWeekend = () => {
     setDays((d) => d.map((x, i) => {
@@ -330,9 +330,9 @@ function AvailabilityPage() {
         radius_km: isW ? (x.radius_km ?? defaults.radius_km) : x.radius_km,
       };
     }));
-    toast.success("Solo weekend impostato");
+    toast.success("Disponibilità weekend impostata correttamente.");
   };
-  const presetSlot = (slot: TimeSlot, label: string) => {
+  const presetSlot = (slot: TimeSlot) => {
     const def = SLOT_DEFAULT_TIMES[slot];
     setDays((d) => {
       const anyOn = d.some((x) => x.is_available);
@@ -357,13 +357,25 @@ function AvailabilityPage() {
         };
       });
     });
-    toast.success(`${label} impostato`);
+    const slotToast = slot === "cena" ? "serale" : slot === "pranzo" ? "pranzo" : SLOT_LABELS[slot];
+    toast.success(`Disponibilità ${slotToast} impostata correttamente.`);
   };
   const clearAll = () => {
     setDays(Array.from({ length: 7 }, () => emptyDay(defaults.city, defaults.province, defaults.district, defaults.radius_km)));
     setEditingDay(null);
     setConfirmClear(false);
-    toast.success("Disponibilità azzerate");
+    toast.success("Tutte le disponibilità sono state cancellate.");
+  };
+
+  const applyPreset = () => {
+    if (!confirmPreset) return;
+    switch (confirmPreset.type) {
+      case "all": presetAll(); break;
+      case "weekend": presetWeekend(); break;
+      case "cena": presetSlot("cena"); break;
+      case "pranzo": presetSlot("pranzo"); break;
+    }
+    setConfirmPreset(null);
   };
 
   const daySummary = (d: DayState): { location: string; hours: string } => {
