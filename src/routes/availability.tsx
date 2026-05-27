@@ -620,18 +620,65 @@ function AvailabilityPage() {
         </Card>
       )}
 
-      {/* Weekly grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {days.map((d, i) => (
-          <Card key={i} className={d.is_available ? "" : "opacity-80"}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-base">{DAY_LABELS[i]}</CardTitle>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">{d.is_available ? "Disponibile" : "Non disponibile"}</span>
-                <Switch checked={d.is_available} onCheckedChange={(v) => toggleDay(i, v)} aria-label={`Disponibile ${DAY_LABELS[i]}`} />
+      {/* Quick presets */}
+      <div className="mb-4 rounded-2xl border bg-card p-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1 mr-1">
+          <Sparkles className="h-3.5 w-3.5 text-primary" /> Preset rapidi
+        </span>
+        <Button type="button" size="sm" variant="outline" onClick={presetAll} className={gatedOpacity}>Tutta la settimana</Button>
+        <Button type="button" size="sm" variant="outline" onClick={presetWeekend} className={gatedOpacity}>Solo weekend</Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => presetSlot("cena", "Solo sere")} className={gatedOpacity}>Solo sere</Button>
+        <Button type="button" size="sm" variant="outline" onClick={() => presetSlot("pranzo", "Solo pranzo")} className={gatedOpacity}>Solo pranzo</Button>
+        <Button type="button" size="sm" variant="ghost" className="ml-auto text-destructive hover:text-destructive" onClick={() => setConfirmClear(true)}>
+          <Trash2 className="h-3.5 w-3.5 mr-1" /> Cancella tutto
+        </Button>
+      </div>
+
+      {/* Weekly grid: compact cards, one editable at a time */}
+      <div className="grid gap-3 md:grid-cols-2">
+        {days.map((d, i) => {
+          const isEditing = editingDay === i;
+          const sum = daySummary(d);
+          return (
+          <Card key={i} className={`${d.is_available ? "" : "opacity-90"} ${isEditing ? "ring-1 ring-primary/40" : ""}`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-3">
+              <div className="min-w-0">
+                <CardTitle className="text-base leading-tight">{DAY_LABELS[i]}</CardTitle>
+                <div className={`text-xs mt-0.5 ${d.is_available ? "text-primary" : "text-muted-foreground"}`}>
+                  {d.is_available ? "Disponibile" : "Non disponibile"}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={d.is_available}
+                  onCheckedChange={(v) => { toggleDay(i, v); if (!v && isEditing) setEditingDay(null); }}
+                  aria-label={`Disponibile ${DAY_LABELS[i]}`}
+                />
               </div>
             </CardHeader>
-            {d.is_available && (
+
+            {!isEditing && (
+              <CardContent className="pt-0 pb-3">
+                {d.is_available ? (
+                  <div className="space-y-1 text-sm">
+                    <div className="inline-flex items-center gap-1 text-foreground">
+                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="truncate">{sum.location}</span>
+                    </div>
+                    <div className="text-muted-foreground">{sum.hours}</div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Nessuna disponibilità impostata per questo giorno.</div>
+                )}
+                <div className="mt-3 flex justify-end">
+                  <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditingDay(i); if (!d.is_available) toggleDay(i, true); }}>
+                    <Pencil className="h-3.5 w-3.5" /> Modifica
+                  </Button>
+                </div>
+              </CardContent>
+            )}
+
+            {isEditing && d.is_available && (
               <CardContent className="space-y-4">
                 {/* Location */}
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -744,15 +791,19 @@ function AvailabilityPage() {
                   />
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex flex-wrap justify-end gap-2 pt-1">
                   <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => openDuplicate(i)}>
-                    <Copy className="h-3.5 w-3.5" /> Duplica su altri giorni
+                    <Copy className="h-3.5 w-3.5" /> Copia su altri giorni
+                  </Button>
+                  <Button type="button" size="sm" className="gap-2" onClick={() => { setEditingDay(null); toast.success("Disponibilità aggiornata correttamente"); }}>
+                    <ChevronDown className="h-3.5 w-3.5" /> Chiudi
                   </Button>
                 </div>
               </CardContent>
             )}
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-6 flex justify-end">
