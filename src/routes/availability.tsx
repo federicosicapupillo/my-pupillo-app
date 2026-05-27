@@ -20,7 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy } from "lucide-react";
+import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy, Pencil, ChevronDown, Sparkles } from "lucide-react";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
   DAY_LABELS,
@@ -157,6 +157,8 @@ function AvailabilityPage() {
   const [availableNowDuration, setAvailableNowDuration] = useState<"2h" | "today" | "tonight">("2h");
   const [duplicateFrom, setDuplicateFrom] = useState<number | null>(null);
   const [duplicateTargets, setDuplicateTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
+  const [editingDay, setEditingDay] = useState<number | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -268,7 +270,84 @@ function AvailabilityPage() {
       }),
     );
     setDuplicateFrom(null);
-    toast.success("Disponibilità duplicata sui giorni selezionati");
+    toast.success("Disponibilità copiata correttamente");
+  };
+
+  // -- Quick presets -------------------------------------------------------
+  const presetAll = () => {
+    setDays((d) => d.map((x) => ({
+      ...x,
+      is_available: true,
+      city: x.city || defaults.city,
+      province: x.province || defaults.province,
+      district: x.district || defaults.district,
+      radius_km: x.radius_km ?? defaults.radius_km,
+    })));
+    toast.success("Tutta la settimana attivata");
+  };
+  const presetWeekend = () => {
+    setDays((d) => d.map((x, i) => {
+      const isW = i === 5 || i === 6;
+      return {
+        ...x,
+        is_available: isW,
+        city: isW ? (x.city || defaults.city) : x.city,
+        province: isW ? (x.province || defaults.province) : x.province,
+        district: isW ? (x.district || defaults.district) : x.district,
+        radius_km: isW ? (x.radius_km ?? defaults.radius_km) : x.radius_km,
+      };
+    }));
+    toast.success("Solo weekend impostato");
+  };
+  const presetSlot = (slot: TimeSlot, label: string) => {
+    const def = SLOT_DEFAULT_TIMES[slot];
+    setDays((d) => {
+      const anyOn = d.some((x) => x.is_available);
+      return d.map((x) => {
+        const apply = anyOn ? x.is_available : true;
+        if (!apply) return x;
+        return {
+          ...x,
+          is_available: true,
+          city: x.city || defaults.city,
+          province: x.province || defaults.province,
+          district: x.district || defaults.district,
+          radius_km: x.radius_km ?? defaults.radius_km,
+          flexible: false,
+          slots: [{
+            time_slot: slot,
+            start_time: def.start,
+            end_time: def.end,
+            is_flexible: false,
+            is_last_minute: slot === "last_minute",
+          }],
+        };
+      });
+    });
+    toast.success(`${label} impostato`);
+  };
+  const clearAll = () => {
+    setDays(Array.from({ length: 7 }, () => emptyDay(defaults.city, defaults.province, defaults.district, defaults.radius_km)));
+    setEditingDay(null);
+    setConfirmClear(false);
+    toast.success("Disponibilità azzerate");
+  };
+
+  const daySummary = (d: DayState): { location: string; hours: string } => {
+    const loc = d.city
+      ? `${d.city}${d.district ? ` · ${d.district}` : " · Tutte le zone"}`
+      : "Città non indicata";
+    if (d.flexible && d.slots.length === 0) {
+      return { location: loc, hours: "Valuto in base alla proposta" };
+    }
+    if (d.slots.length === 0) return { location: loc, hours: "Nessuna fascia" };
+    const parts = d.slots.slice(0, 2).map((s) => {
+      if (s.time_slot === "last_minute") return "Last minute";
+      if (s.start_time && s.end_time) return `${s.start_time} - ${s.end_time}`;
+      return SLOT_LABELS[s.time_slot];
+    });
+    const more = d.slots.length > 2 ? ` · +${d.slots.length - 2}` : "";
+    return { location: loc, hours: parts.join(" · ") + more };
   };
 
   const validateBeforeSave = (): string | null => {
