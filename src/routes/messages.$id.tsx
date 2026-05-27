@@ -469,6 +469,8 @@ function Thread() {
   const [serverAssign, setServerAssign] = useState<{ canAssign: boolean; reason: string | null } | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [delayOpen, setDelayOpen] = useState(false);
+  const [cancelPresenceOpen, setCancelPresenceOpen] = useState(false);
   const [workerReviews, setWorkerReviews] = useState<WorkerReview[]>([]);
   const [reviewRoles, setReviewRoles] = useState<Record<string, string | null>>({});
   const [reviewsOpen, setReviewsOpen] = useState(false);
