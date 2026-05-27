@@ -1635,17 +1635,66 @@ function ContactedWorkerCard({
           </div>
         </>
       )}
-      <Button
-        size="sm"
-        variant="default"
-        className="mt-4 w-full gap-1"
-        disabled={!appId}
-        onClick={() => appId && onOpenChat(appId)}
-        title={!appId ? "Chat non ancora disponibile" : undefined}
-      >
-        <MessageSquare className="h-3.5 w-3.5" />
-        Apri chat
-      </Button>
+      {(() => {
+        // CTA principale: invio nuova proposta per l'annuncio selezionato.
+        // - Se esiste già una candidatura attiva per lo stesso annuncio → disabilitato "Proposta già inviata".
+        // - Se il lavoratore ha almeno un turno realmente concluso → "Ricontatta gratis".
+        // - Altrimenti → "Invia proposta".
+        // La vecchia chat (se esiste) resta accessibile come storico tramite link secondario.
+        const activeAppForSelected =
+          selectedAnnouncementId && r?.activeAppByAnn?.get(selectedAnnouncementId) || null;
+        const ctaLabel = activeAppForSelected
+          ? "Proposta già inviata"
+          : r?.workedWith
+          ? "Ricontatta gratis"
+          : "Invia proposta";
+        const ctaDisabled = !!activeAppForSelected || !canSendProposal;
+        const ctaTitle = activeAppForSelected
+          ? "Esiste già una proposta attiva per questo annuncio"
+          : (blockedReason ?? undefined);
+        return (
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              className="mt-4 w-full gap-1"
+              disabled={ctaDisabled}
+              onClick={() => {
+                if (activeAppForSelected) {
+                  onOpenChat(activeAppForSelected);
+                  return;
+                }
+                onSendProposal();
+              }}
+              title={ctaTitle}
+            >
+              {r?.workedWith && !activeAppForSelected ? (
+                <Gift className="h-3.5 w-3.5" />
+              ) : (
+                <MessageSquare className="h-3.5 w-3.5" />
+              )}
+              {ctaLabel}
+            </Button>
+            {appId && !activeAppForSelected && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-2 w-full gap-1 text-muted-foreground"
+                onClick={() => onOpenChat(appId)}
+                title="Apre la chat precedente in sola lettura come storico"
+              >
+                <History className="h-3.5 w-3.5" />
+                Apri storico chat
+              </Button>
+            )}
+            {blockedReason && !activeAppForSelected && (
+              <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
+                {blockedReason}
+              </p>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
