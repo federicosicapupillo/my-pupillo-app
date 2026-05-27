@@ -154,6 +154,8 @@ function VerifyPhonePage() {
       setPhase("code");
       setCooldown(60);
       userChangedPhoneRef.current = false;
+      savePendingRegistrationOtpState({ phoneCountryCode: phoneCode, phoneNumber, phoneFull });
+      setPendingRegistrationOtp({ phoneCountryCode: phoneCode, phoneNumber, phoneFull, createdAt: Date.now() });
       if (res.simulated) {
         toast.success("Messaggio WhatsApp simulato correttamente.");
       } else {
@@ -175,10 +177,12 @@ function VerifyPhonePage() {
       const res = await verify({ data: { code } });
       if (!res.ok) {
         toast.error(res.error ?? "Codice non valido.");
-        if (res.expired || res.maxedOut) setPhase("phone");
+        if ((res.expired || res.maxedOut) && !profile?.phone_full && !pendingRegistrationOtp?.phoneFull) setPhase("phone");
         return;
       }
       toast.success("Codice verificato correttamente.");
+      clearPendingRegistrationOtpState();
+      setPendingRegistrationOtp(null);
       await refresh();
       const dest = role === "admin"
         ? "/admin"
