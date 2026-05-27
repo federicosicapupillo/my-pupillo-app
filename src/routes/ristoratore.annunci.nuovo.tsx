@@ -40,6 +40,10 @@ import { LanguagesMultiSelect } from "@/components/RestaurantRequirements";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
+import {
+  useFieldErrors,
+  REQUIRED_FIELD_MESSAGE,
+} from "@/lib/form-field-validation";
 
 export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
   head: () => ({ meta: [{ title: "Crea Nuovo Annuncio — Pupillo" }] }),
@@ -169,6 +173,8 @@ function NewRestaurantJobRequest() {
   const previewRef = useRef<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
+  const { errors, setErrors, clearError, clearAll, focusFirst } =
+    useFieldErrors<string>();
   const [previewVisible, setPreviewVisible] = useState(true);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [defaultsLoaded, setDefaultsLoaded] = useState(false);
@@ -320,6 +326,18 @@ function NewRestaurantJobRequest() {
       toast.info("Abbiamo caricato le tue impostazioni predefinite. Puoi modificarle per questo annuncio.");
     }
     setDefaultsLoaded(true);
+    // Log tecnico: dati onboarding usati per precompilare il form annuncio.
+    console.info("[nuovo-annuncio] prefill da profilo onboarding", {
+      contact_person_role: p.contact_person_role,
+      default_license_requirement: p.default_license_requirement,
+      default_tattoos_allowed: p.default_tattoos_allowed,
+      default_piercings_allowed: p.default_piercings_allowed,
+      default_beard_allowed: p.default_beard_allowed,
+      default_language_requirements: p.default_language_requirements,
+      default_required_skills: p.default_required_skills,
+      default_dress_code_items: p.default_dress_code_items,
+      default_dress_code_notes: p.default_dress_code_notes,
+    });
   }, [profile]);
 
   useEffect(() => {
@@ -403,56 +421,69 @@ function NewRestaurantJobRequest() {
 
   const validate = () => {
     if (!user) return false;
-    if (!f.role_required) { toast.error("Seleziona il ruolo cercato."); return false; }
-    if (!f.shift_date) { toast.error("Inserisci la data di inizio turno."); return false; }
-    if (!f.start_time) { toast.error("Inserisci l'orario di inizio turno."); return false; }
-    if (!f.end_date) { toast.error("Inserisci la data di fine turno."); return false; }
-    if (!f.end_time) { toast.error("Inserisci l'orario di fine turno."); return false; }
-    if (f.shift_date < todayISO) { toast.error("Non puoi selezionare una data passata"); return false; }
-    {
+    const errs: Record<string, string> = {};
+    const order: string[] = [
+      "role_required",
+      "shift_date",
+      "start_time",
+      "end_date",
+      "end_time",
+      "long_shift_reason",
+      "hourly_rate",
+      "restaurant_name",
+      "address",
+      "street_number",
+      "province",
+      "city",
+      "district",
+      "postal_code",
+      "contact_person_name",
+      "contact_person_role",
+      "contact_person_role_other",
+      "contact_person_email",
+      "accessChoice",
+      "accessReason",
+    ];
+    if (!f.role_required) errs.role_required = "Seleziona il ruolo cercato.";
+    if (!f.shift_date) errs.shift_date = "Inserisci la data di inizio turno.";
+    else if (f.shift_date < todayISO) errs.shift_date = "Non puoi selezionare una data passata.";
+    if (!f.start_time) errs.start_time = "Inserisci l'orario di inizio turno.";
+    else if (f.shift_date && f.shift_date === todayISO) {
       const start = buildDateTime(f.shift_date, f.start_time);
-      if (start && start.getTime() < Date.now()) {
-        toast.error(f.shift_date === todayISO ? "Non puoi selezionare un orario già trascorso" : "Non puoi selezionare una data passata");
-        return false;
-      }
+      if (start && start.getTime() < Date.now()) errs.start_time = "Orario già trascorso.";
     }
-    if (durationHours <= 0) { toast.error("L'orario di fine turno deve essere successivo all'orario di inizio."); return false; }
-    if (longReasonError) { toast.error(longReasonError); return false; }
-    if (!f.hourly_rate || Number(f.hourly_rate) <= 0) { toast.error("Inserisci la tariffa oraria proposta"); return false; }
-    if (!f.address.trim()) { toast.error("Inserisci l'indirizzo del turno"); return false; }
-    if (!f.street_number.trim()) { toast.error("Inserisci il numero civico"); return false; }
-    if (f.province && f.city && !isCityInProvince(f.city, f.province)) {
-      toast.error("La città selezionata non appartiene alla provincia scelta.");
-      return false;
+    if (!f.end_date) errs.end_date = "Inserisci la data di fine turno.";
+    if (!f.end_time) errs.end_time = "Inserisci l'orario di fine turno.";
+    else if (f.shift_date && f.end_date && durationHours <= 0) {
+      errs.end_time = "L'orario di fine deve essere successivo all'inizio.";
     }
-    if (f.province && f.city && f.postal_code && !isValidCapForCity(f.province, f.city, f.postal_code)) {
-      toast.error("Il CAP non appartiene alla città selezionata.");
-      return false;
-    }
-    if (!f.district || !f.district.trim()) {
-      toast.error("Seleziona la zona/quartiere del locale.");
-      return false;
-    }
-    if (f.city && zonesForCity(f.city).length > 0 && !isValidDistrictForCity(f.city, f.district)) {
-      toast.error("Seleziona una zona/quartiere valida.");
-      return false;
-    }
-    if (f.province && f.city && f.postal_code && !isValidCapForDistrict(f.province, f.city, f.district, f.postal_code)) {
-      toast.error("Il CAP selezionato non appartiene alla zona indicata.");
-      return false;
-    }
-    if (!f.contact_person_role) { toast.error("Seleziona il ruolo del referente."); return false; }
-    if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim()) {
-      toast.error("Specifica il ruolo del referente.");
-      return false;
-    }
-    if (f.contact_person_email && !isValidEmail(f.contact_person_email)) {
-      toast.error("Inserisci un indirizzo email valido.");
-      return false;
-    }
-    if (!accessChoice) { toast.error("Seleziona l'anticipo richiesto all'ingresso."); return false; }
-    if (accessChoice === "over15" && accessReason.trim().length < 10) {
-      toast.error("Inserisci una motivazione (minimo 10 caratteri) per l'anticipo oltre i 15 minuti.");
+    if (longReasonError) errs.long_shift_reason = longReasonError;
+    if (!f.hourly_rate || Number(f.hourly_rate) <= 0) errs.hourly_rate = "Inserisci la tariffa oraria.";
+    if (!f.restaurant_name.trim()) errs.restaurant_name = REQUIRED_FIELD_MESSAGE;
+    if (!f.address.trim()) errs.address = "Inserisci l'indirizzo del turno.";
+    if (!f.street_number.trim()) errs.street_number = "Inserisci il numero civico.";
+    if (!f.province) errs.province = "Seleziona la provincia.";
+    if (!f.city) errs.city = "Seleziona la città.";
+    else if (f.province && !isCityInProvince(f.city, f.province)) errs.city = "La città non appartiene alla provincia scelta.";
+    if (!f.district || !f.district.trim()) errs.district = "Seleziona la zona/quartiere.";
+    else if (f.city && zonesForCity(f.city).length > 0 && !isValidDistrictForCity(f.city, f.district)) errs.district = "Zona/quartiere non valida.";
+    if (f.province && f.city && f.postal_code && !isValidCapForCity(f.province, f.city, f.postal_code)) errs.postal_code = "Il CAP non appartiene alla città selezionata.";
+    else if (f.province && f.city && f.postal_code && f.district && !isValidCapForDistrict(f.province, f.city, f.district, f.postal_code)) errs.postal_code = "Il CAP non appartiene alla zona indicata.";
+    if (!f.contact_person_name.trim()) errs.contact_person_name = "Inserisci il nome del referente.";
+    if (!f.contact_person_role) errs.contact_person_role = "Seleziona il ruolo del referente.";
+    else if (f.contact_person_role === "Altro" && !f.contact_person_role_other.trim())
+      errs.contact_person_role_other = "Specifica il ruolo del referente.";
+    if (f.contact_person_email && !isValidEmail(f.contact_person_email)) errs.contact_person_email = "Email non valida.";
+    if (!accessChoice) errs.accessChoice = "Seleziona l'anticipo richiesto.";
+    else if (accessChoice === "over15" && accessReason.trim().length < 10)
+      errs.accessReason = "Motivazione: minimo 10 caratteri.";
+
+    setErrors(errs, order);
+    const missing = Object.keys(errs).length;
+    console.info("[nuovo-annuncio] validate", { missing, errs });
+    if (missing > 0) {
+      toast.error("Completa tutti i campi obbligatori per pubblicare l'annuncio.");
+      requestAnimationFrame(() => focusFirst(order));
       return false;
     }
     return true;
@@ -461,6 +492,7 @@ function NewRestaurantJobRequest() {
   const save = async (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
     setBusy(true);
+    clearAll();
     const accessText = accessChoice === "15"
       ? "Presentarsi almeno 15 minuti prima del turno."
       : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
@@ -518,6 +550,7 @@ function NewRestaurantJobRequest() {
 
     if (announcementError || !announcement?.id) {
       setBusy(false);
+      console.error("[nuovo-annuncio] errore salvataggio announcement", announcementError);
       toast.error(announcementError?.message || "Impossibile salvare l'annuncio");
       return;
     }
@@ -575,11 +608,20 @@ function NewRestaurantJobRequest() {
     if (jobRequestError) {
       await supabase.from("announcements").delete().eq("id", announcement.id);
       setBusy(false);
+      console.error("[nuovo-annuncio] errore salvataggio job_request", jobRequestError);
       toast.error(jobRequestError.message || "Annuncio non salvato nella tabella job_requests");
       return;
     }
 
     setBusy(false);
+    console.info("[nuovo-annuncio] salvato", {
+      announcement_id: announcement.id,
+      status,
+      license_requirement: f.license_requirement,
+      language_requirements: languageReqs,
+      required_skills: skills,
+      dress_code_items: dressItems,
+    });
     toast.success(status === "bozza" ? "Bozza salvata correttamente" : "Annuncio pubblicato correttamente");
 
     if (saveAsDefault) {
@@ -662,14 +704,14 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="1" title="Informazioni principali" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Ruolo cercato" required>
+            <Field label="Ruolo cercato" required name="role_required" error={errors.role_required}>
               <Select value={f.role_required} onValueChange={v => { setField("role_required", v); setField("title", v); }}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo" /></SelectTrigger>
                 <SelectContent>{ROLE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
-            <Field label="Tariffa oraria" required>
+            <Field label="Tariffa oraria" required name="hourly_rate" error={errors.hourly_rate}>
               <Select value={f.hourly_rate} onValueChange={v => setField("hourly_rate", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona tariffa" /></SelectTrigger>
                 <SelectContent>
@@ -679,10 +721,10 @@ function NewRestaurantJobRequest() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Data inizio turno" required>
+            <Field label="Data inizio turno" required name="shift_date" error={errors.shift_date}>
               <DateField value={f.shift_date} onChange={(v) => setField("shift_date", v)} min={todayISO} required />
             </Field>
-            <Field label="Ora inizio turno" required>
+            <Field label="Ora inizio turno" required name="start_time" error={errors.start_time}>
               <Select value={f.start_time} onValueChange={v => setField("start_time", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -692,10 +734,10 @@ function NewRestaurantJobRequest() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Data fine turno" required>
+            <Field label="Data fine turno" required name="end_date" error={errors.end_date}>
               <DateField value={f.end_date} onChange={(v) => setField("end_date", v)} min={f.shift_date || todayISO} required />
             </Field>
-            <Field label="Ora fine turno" required>
+            <Field label="Ora fine turno" required name="end_time" error={errors.end_time}>
               <Select value={f.end_time} onValueChange={v => setField("end_time", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona orario" /></SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -739,7 +781,7 @@ function NewRestaurantJobRequest() {
                 </div>
                 <span className="text-[10px] uppercase font-semibold rounded-full bg-amber-500/20 text-amber-700 px-2 py-1">Turno lungo</span>
               </div>
-              <Field label="Motivazione turno superiore a 8 ore">
+              <Field label="Motivazione turno superiore a 8 ore" required name="long_shift_reason" error={errors.long_shift_reason}>
                 <Textarea
                   rows={3}
                   required
@@ -764,13 +806,13 @@ function NewRestaurantJobRequest() {
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="2" title="Luogo e accesso" subtitle="Precompilato dal profilo ristoratore, modificabile per questo singolo annuncio." />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nome locale" required>
+            <Field label="Nome locale" required name="restaurant_name" error={errors.restaurant_name}>
               <Input required value={f.restaurant_name} onChange={e => setField("restaurant_name", e.target.value)} />
             </Field>
-            <Field label="Via / Indirizzo" required>
+            <Field label="Via / Indirizzo" required name="address" error={errors.address}>
               <Input required placeholder="Es. Via Roma" value={f.address} onChange={e => setField("address", e.target.value)} />
             </Field>
-            <Field label="Numero civico" required>
+            <Field label="Numero civico" required name="street_number" error={errors.street_number}>
               <Input
                 required
                 inputMode="text"
@@ -780,7 +822,7 @@ function NewRestaurantJobRequest() {
                 onChange={e => setField("street_number", e.target.value)}
               />
             </Field>
-            <Field label="Provincia" required>
+            <Field label="Provincia" required name="province" error={errors.province}>
               <select
                 value={f.province}
                 onChange={(e) => { setField("province", e.target.value); setField("city", ""); setField("postal_code", ""); setField("district", ""); }}
@@ -790,7 +832,7 @@ function NewRestaurantJobRequest() {
                 {ITALIAN_LOCATIONS.map((p) => <option key={p.province_code} value={p.province}>{p.province} ({p.province_code})</option>)}
               </select>
             </Field>
-            <Field label="Città" required>
+            <Field label="Città" required name="city" error={errors.city}>
               <select
                 value={f.city}
                 disabled={!f.province}
@@ -801,7 +843,7 @@ function NewRestaurantJobRequest() {
                 {citiesForProvince(f.province).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            <Field label="Zona/quartiere" required>
+            <Field label="Zona/quartiere" required name="district" error={errors.district}>
               <DistrictField
                 province={f.province}
                 city={f.city}
@@ -810,7 +852,7 @@ function NewRestaurantJobRequest() {
                 onChange={(v) => { setField("district", v); setField("postal_code", ""); }}
               />
             </Field>
-            <Field label="CAP">
+            <Field label="CAP" name="postal_code" error={errors.postal_code}>
               <CapField
                 province={f.province}
                 city={f.city}
@@ -833,7 +875,7 @@ function NewRestaurantJobRequest() {
             )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Anticipo richiesto all'ingresso" required>
+            <Field label="Anticipo richiesto all'ingresso" required name="accessChoice" error={errors.accessChoice || errors.accessReason}>
               <div className="space-y-2">
                 <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
                   <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
@@ -848,8 +890,10 @@ function NewRestaurantJobRequest() {
               </div>
             </Field>
             <Field label="Indicazioni aggiuntive"><Textarea rows={2} value={f.additional_directions} onChange={e => setField("additional_directions", e.target.value)} /></Field>
-            <Field label="Referente operativo"><Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} /></Field>
-            <Field label="Ruolo del referente" required>
+            <Field label="Referente operativo" required name="contact_person_name" error={errors.contact_person_name}>
+              <Input value={f.contact_person_name} onChange={e => setField("contact_person_name", e.target.value)} />
+            </Field>
+            <Field label="Ruolo del referente" required name="contact_person_role" error={errors.contact_person_role || errors.contact_person_role_other}>
               <Select value={f.contact_person_role} onValueChange={(v) => setField("contact_person_role", v)}>
                 <SelectTrigger><SelectValue placeholder="Seleziona ruolo referente" /></SelectTrigger>
                 <SelectContent>
@@ -878,7 +922,7 @@ function NewRestaurantJobRequest() {
                 );
               })()}
             </Field>
-            <Field label="Email referente">
+            <Field label="Email referente" name="contact_person_email" error={errors.contact_person_email}>
               <Input
                 type="email"
                 placeholder="esempio@email.com"
@@ -1023,17 +1067,45 @@ function SectionTitle({ number, title, subtitle }: { number: string; title: stri
   );
 }
 
-function Field({ label, children, required, error }: { label: string; children: ReactNode; required?: boolean; error?: string | null }) {
+function Field({
+  label,
+  children,
+  required,
+  error,
+  name,
+}: {
+  label: string;
+  children: ReactNode;
+  required?: boolean;
+  error?: string | null;
+  name?: string;
+}) {
   return (
-    <div className="space-y-1.5">
+    <div
+      className="space-y-1.5 scroll-mt-24"
+      data-field={name}
+      data-invalid={error ? "true" : undefined}
+    >
       <Label>
         {label}
         {required && (
           <span className="ml-0.5 text-destructive" aria-hidden="true" title="Campo obbligatorio">*</span>
         )}
       </Label>
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      <div
+        className={
+          error
+            ? "rounded-md ring-1 ring-destructive/50 [&_input]:border-destructive [&_textarea]:border-destructive [&_button[role='combobox']]:border-destructive [&_select]:border-destructive"
+            : undefined
+        }
+      >
+        {children}
+      </div>
+      {error && (
+        <p role="alert" className="text-xs font-medium text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
