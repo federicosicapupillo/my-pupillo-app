@@ -35,8 +35,8 @@ import {
   formatWorkerAvailabilityByDay,
   availabilitySearchText,
 } from "@/lib/worker-availability-summary";
-import type { AvailabilityRow, CompatibilityLevel } from "@/lib/availability";
-import { computeCompatibility } from "@/lib/availability";
+import type { AvailabilityRow, AvailabilityExceptionRow, CompatibilityLevel } from "@/lib/availability";
+import { computeCompatibility, SLOT_LABELS } from "@/lib/availability";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
@@ -323,6 +323,9 @@ function WorkersPage() {
   // worker_availability rows grouped by worker id. Card / dialog read here
   // first; profiles.weekly_availability is only used as a legacy fallback.
   const [availByWorker, setAvailByWorker] = useState<Record<string, AvailabilityRow[]>>({});
+  // Special availability (exceptions) grouped by worker id. These override the
+  // weekly schedule for the specific date they cover.
+  const [excByWorker, setExcByWorker] = useState<Record<string, AvailabilityExceptionRow[]>>({});
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
   // Filtri reattivi: ogni cambio aggiorna immediatamente la lista
@@ -369,10 +372,18 @@ function WorkersPage() {
       // e nella maggior parte dei casi non viene popolato dall'onboarding.
       const ids = list.map((w) => w.id);
       if (ids.length > 0) {
-        const { data: avRows, error: avErr } = await supabase
-          .from("worker_availability")
-          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
-          .in("worker_id", ids);
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const [{ data: avRows, error: avErr }, { data: excRows, error: excErr }] = await Promise.all([
+          supabase
+            .from("worker_availability")
+            .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
+            .in("worker_id", ids),
+          supabase
+            .from("worker_availability_exceptions")
+            .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
+            .in("worker_id", ids)
+            .gte("date", todayIso),
+        ]);
         if (avErr) {
           console.warn("[workers] availability load error", avErr);
         } else {
@@ -384,8 +395,20 @@ function WorkersPage() {
           }
           setAvailByWorker(map);
         }
+        if (excErr) {
+          console.warn("[workers] exceptions load error", excErr);
+        } else {
+          const exMap: Record<string, AvailabilityExceptionRow[]> = {};
+          for (const r of (excRows as AvailabilityExceptionRow[] | null) ?? []) {
+            const arr = exMap[r.worker_id] ?? [];
+            arr.push(r);
+            exMap[r.worker_id] = arr;
+          }
+          setExcByWorker(exMap);
+        }
       } else {
         setAvailByWorker({});
+        setExcByWorker({});
       }
       setLoaded(true);
     } catch (error) {
@@ -455,18 +478,37 @@ function WorkersPage() {
     const ids = workers.map((w) => w.id);
     let cancelled = false;
     const refetch = async () => {
-      const { data, error } = await supabase
-        .from("worker_availability")
-        .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
-        .in("worker_id", ids);
-      if (cancelled || error) return;
-      const map: Record<string, AvailabilityRow[]> = {};
-      for (const r of (data as AvailabilityRow[] | null) ?? []) {
-        const arr = map[r.worker_id] ?? [];
-        arr.push(r);
-        map[r.worker_id] = arr;
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const [{ data, error }, { data: excData, error: excError }] = await Promise.all([
+        supabase
+          .from("worker_availability")
+          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
+          .in("worker_id", ids),
+        supabase
+          .from("worker_availability_exceptions")
+          .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
+          .in("worker_id", ids)
+          .gte("date", todayIso),
+      ]);
+      if (cancelled) return;
+      if (!error) {
+        const map: Record<string, AvailabilityRow[]> = {};
+        for (const r of (data as AvailabilityRow[] | null) ?? []) {
+          const arr = map[r.worker_id] ?? [];
+          arr.push(r);
+          map[r.worker_id] = arr;
+        }
+        setAvailByWorker(map);
       }
-      setAvailByWorker(map);
+      if (!excError) {
+        const exMap: Record<string, AvailabilityExceptionRow[]> = {};
+        for (const r of (excData as AvailabilityExceptionRow[] | null) ?? []) {
+          const arr = exMap[r.worker_id] ?? [];
+          arr.push(r);
+          exMap[r.worker_id] = arr;
+        }
+        setExcByWorker(exMap);
+      }
     };
     const onFocus = () => { void refetch(); };
     const onVisible = () => { if (document.visibilityState === "visible") void refetch(); };
@@ -477,6 +519,14 @@ function WorkersPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "worker_availability" },
+        (payload) => {
+          const wid = (payload.new as any)?.worker_id ?? (payload.old as any)?.worker_id;
+          if (wid && ids.includes(wid)) void refetch();
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "worker_availability_exceptions" },
         (payload) => {
           const wid = (payload.new as any)?.worker_id ?? (payload.old as any)?.worker_id;
           if (wid && ids.includes(wid)) void refetch();
@@ -879,13 +929,16 @@ function WorkersPage() {
   if (selectedAnn) {
     for (const w of distFiltered) {
       const rows = availByWorker[w.id];
-      if (!rows || rows.length === 0) {
+      const excs = (excByWorker[w.id] ?? []).filter(
+        (e) => e.date === selectedAnn.service_date,
+      );
+      if ((!rows || rows.length === 0) && excs.length === 0) {
         compatByWorker[w.id] = null;
         continue;
       }
       compatByWorker[w.id] = computeCompatibility(
-        rows,
-        [],
+        rows ?? [],
+        excs,
         selectedAnn.service_date,
         selectedAnn.service_time ?? null,
         selectedAnn.end_time ?? null,
@@ -1253,6 +1306,12 @@ function WorkersPage() {
             })()}
             <AvailabilityBlock
               rows={availByWorker[w.id] ?? null}
+              specialForDate={
+                selectedAnn
+                  ? (excByWorker[w.id] ?? []).filter((e) => e.date === selectedAnn.service_date)
+                  : []
+              }
+              specialDate={selectedAnn?.service_date ?? null}
               weekly={w.weekly_availability}
               availableNowUntil={w.available_now_until}
               onDetails={() => setDetailsWorker(w)}
@@ -1730,11 +1789,15 @@ function WorkersMapSection({
 
 function AvailabilityBlock({
   rows,
+  specialForDate,
+  specialDate,
   weekly,
   availableNowUntil,
   onDetails,
 }: {
   rows: AvailabilityRow[] | null;
+  specialForDate?: AvailabilityExceptionRow[];
+  specialDate?: string | null;
   weekly: string[] | null;
   availableNowUntil: string | null;
   onDetails: () => void;
@@ -1744,11 +1807,48 @@ function AvailabilityBlock({
   const hasReal = !!rows && rows.length > 0;
   const realSummary = summarizeWorkerAvailability(rows, new Date());
   const legacySummary = summarizeWeeklyAvailability(weekly, availableNowUntil, new Date());
+  const specials = specialForDate ?? [];
+  const hasSpecial = specials.length > 0;
+  const specialDateLabel = specialDate
+    ? new Date(specialDate + "T00:00:00").toLocaleDateString("it-IT", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+      })
+    : "";
   return (
     <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2">
+      {hasSpecial && (
+        <div className="mb-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+            Disponibilità speciale · {specialDateLabel}
+          </div>
+          <div className="mt-1 space-y-0.5 text-xs text-foreground">
+            {specials.map((e) => {
+              if (!e.is_available) {
+                return (
+                  <div key={e.id} className="text-foreground">
+                    Non disponibile in questa data
+                  </div>
+                );
+              }
+              const slot = e.time_slot ? SLOT_LABELS[e.time_slot] : null;
+              const hours = e.start_time && e.end_time
+                ? `${e.start_time.slice(0, 5)} - ${e.end_time.slice(0, 5)}`
+                : null;
+              const place = [e.city, e.district].filter(Boolean).join(" · ");
+              return (
+                <div key={e.id}>
+                  {[slot, place, hours].filter(Boolean).join(" · ")}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Disponibilità
+          {hasSpecial ? "Disponibilità abituale" : "Disponibilità"}
         </div>
         {hasReal && realSummary.kind === "lines" && realSummary.truncated && (
           <button
