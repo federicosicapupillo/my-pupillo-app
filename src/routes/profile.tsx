@@ -26,6 +26,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { updateAvatarUrlCache, useAvatarUrl } from "@/hooks/use-avatar-urls";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { WORKER_CITIES } from "@/lib/worker-cities";
+import { splitAddressAndCivic } from "@/lib/italian-locations";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { Lock } from "lucide-react";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
@@ -264,7 +265,8 @@ function useBoxSave(userId: string | null, onSaved: () => Promise<void> | void, 
       toast.success(messages?.success ?? "Profilo aggiornato correttamente.");
       await onSaved();
       return true;
-    } catch {
+    } catch (error) {
+      console.error("Profile box save failed", { error, patch });
       toast.error(messages?.error ?? "Non è stato possibile aggiornare il profilo. Riprova.");
       return false;
     } finally {
