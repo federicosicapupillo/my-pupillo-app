@@ -79,6 +79,10 @@ type W = {
   punctuality_pct?: number | null;
   rehire_restaurants_count?: number | null;
   reviews_count?: number | null;
+  search_penalty_active?: boolean | null;
+  search_penalty_reason?: string | null;
+  search_penalty_until?: string | null;
+  delay_count?: number | null;
 };
 
 type Category =
@@ -387,7 +391,7 @@ function WorkersPage() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count")
+        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count, search_penalty_active, search_penalty_reason, search_penalty_until, delay_count")
         .eq("is_deleted", false)
         .eq("account_status", "active")
         // Profili non completi al 100% non sono operativi:
@@ -1045,6 +1049,12 @@ function WorkersPage() {
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
       if (subcategory === "Più affidabili") return (b.reliability_pct ?? 0) - (a.reliability_pct ?? 0);
     }
+    // Penalizzazione affidabilità (3+ ritardi confermati): i lavoratori
+    // penalizzati restano ricercabili ma scendono SEMPRE in fondo, dopo
+    // aver verificato compatibilità minima (filtri già applicati sopra).
+    const pa = a.search_penalty_active ? 1 : 0;
+    const pb = b.search_penalty_active ? 1 : 0;
+    if (pa !== pb) return pa - pb;
     const ra = rel[a.id]; const rb = rel[b.id];
     const ta = tierOf(ra, a.rating_avg); const tb = tierOf(rb, b.rating_avg);
     if (ta !== tb) return ta - tb;
@@ -1335,6 +1345,16 @@ function WorkersPage() {
               <div className="mt-2">
                 <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${compatBadge.cls}`}>
                   {compatBadge.text}
+                </span>
+              </div>
+            )}
+            {w.search_penalty_active && (
+              <div className="mt-2">
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium"
+                  title="Ritardi ripetuti recenti — il profilo ha priorità ridotta nei risultati."
+                >
+                  Affidabilità da verificare
                 </span>
               </div>
             )}
@@ -1653,6 +1673,16 @@ function ContactedWorkerCard({
         <div className="mt-2">
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${compatBadge.cls}`}>
             {compatBadge.text}
+          </span>
+        </div>
+      )}
+      {w.search_penalty_active && (
+        <div className="mt-2">
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium"
+            title="Ritardi ripetuti recenti — il profilo ha priorità ridotta nei risultati."
+          >
+            Affidabilità da verificare
           </span>
         </div>
       )}
