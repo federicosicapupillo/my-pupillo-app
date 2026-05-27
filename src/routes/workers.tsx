@@ -1298,6 +1298,7 @@ function WorkersPage() {
                         specialDate={selectedAnn?.service_date ?? null}
                         upcomingSpecials={excByWorker[w.id] ?? []}
                         compatBadge={compatBadge}
+                        specialBlock={selectedAnn ? specialBlockByWorker[w.id] ?? null : null}
                         onDetails={() => setDetailsWorker(w)}
                       />
                     );
