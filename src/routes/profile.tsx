@@ -4,14 +4,14 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { KeyRound, Trash2, FileText, Coins, Star, Eye, EyeOff, User, Building2, BadgeCheck, ShieldCheck } from "lucide-react";
-import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
+import { SpokenLanguagesView, SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
 import { provinceCode } from "@/lib/italian-locations";
@@ -29,39 +29,6 @@ import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { Lock } from "lucide-react";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 
-const NATIONALITIES = [
-  "Italiana", "Albanese", "Rumena", "Marocchina", "Egiziana", "Tunisina",
-  "Francese", "Spagnola", "Tedesca", "Inglese", "Ucraina", "Moldava",
-  "Peruviana", "Brasiliana", "Argentina", "Cinese", "Indiana", "Pakistana",
-  "Bangladese", "Filippina",
-];
-
-type WorkerDraft = {
-  nationality: string;
-  residence_address: string;
-  residence_city: string;
-  residence_province: string;
-  service_area_city: string;
-  professional_profile: string;
-  roles: string[];
-};
-
-function workerDraftFromProfile(profile: any): WorkerDraft {
-  const roles = [
-    ...((profile?.secondary_roles as string[] | null | undefined) ?? []),
-    ...(profile?.primary_role ? [profile.primary_role] : []),
-  ].filter(Boolean);
-  return {
-    nationality: profile?.nationality ?? "",
-    residence_address: profile?.residence_address ?? "",
-    residence_city: profile?.residence_city ?? profile?.city ?? "",
-    residence_province: profile?.residence_province ?? profile?.province ?? "",
-    service_area_city: profile?.service_area_city ?? "",
-    professional_profile: profile?.professional_profile ?? "",
-    roles: Array.from(new Set(roles)),
-  };
-}
-
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
   component: () => <RequireAuth><Profile /></RequireAuth>,
@@ -69,86 +36,12 @@ export const Route = createFileRoute("/profile")({
 
 function Profile() {
   const { profile, role, user, refresh } = useAuth();
-  const uploadAvatarFn = useServerFn(uploadAvatar);
-  const currentAvatarUrl = useAvatarUrl(role === "worker" ? user?.id : null);
   const [pwd, setPwd] = useState("");
   const [pwdConfirm, setPwdConfirm] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [editingWorker, setEditingWorker] = useState(false);
-  const [savingWorker, setSavingWorker] = useState(false);
-  const [workerDraft, setWorkerDraft] = useState(() => workerDraftFromProfile(profile));
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-
-  useEffect(() => {
-    if (role !== "worker" || editingWorker) return;
-    setWorkerDraft(workerDraftFromProfile(profile));
-    setAvatarFile(null);
-    setAvatarPreview(null);
-  }, [profile, role, editingWorker]);
-
-  const startWorkerEdit = () => {
-    setWorkerDraft(workerDraftFromProfile(profile));
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setEditingWorker(true);
-  };
-
-  const cancelWorkerEdit = () => {
-    if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
-    setWorkerDraft(workerDraftFromProfile(profile));
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setEditingWorker(false);
-  };
-
-  const saveWorkerProfile = async () => {
-    if (!user) return;
-    setSavingWorker(true);
-    try {
-      let uploadedAvatarPath: string | undefined;
-      let signedAvatarUrl: string | null = null;
-      if (avatarFile) {
-        const fd = new FormData();
-        fd.append("file", avatarFile);
-        const res = await uploadAvatarFn({ data: fd });
-        if (!res.ok) {
-          toast.error(res.error);
-          setSavingWorker(false);
-          return;
-        }
-        uploadedAvatarPath = res.path;
-        const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(res.path, 60 * 60);
-        signedAvatarUrl = signed?.signedUrl ?? null;
-      }
-      const update: Record<string, unknown> = {
-        nationality: workerDraft.nationality.trim() || null,
-        residence_address: workerDraft.residence_address.trim() || null,
-        residence_city: workerDraft.residence_city.trim() || null,
-        residence_province: workerDraft.residence_province.trim().toUpperCase() || null,
-        service_area_city: workerDraft.service_area_city.trim() || null,
-        professional_profile: workerDraft.professional_profile.trim() || null,
-        primary_role: workerDraft.roles[0] ?? null,
-        secondary_roles: workerDraft.roles,
-      };
-      if (uploadedAvatarPath) update.avatar_url = uploadedAvatarPath;
-      const { error } = await supabase.from("profiles").update(update as any).eq("id", user.id);
-      if (error) throw error;
-      if (signedAvatarUrl) updateAvatarUrlCache(user.id, signedAvatarUrl, profile?.full_name ?? null);
-      setAvatarFile(null);
-      setAvatarPreview(null);
-      setEditingWorker(false);
-      toast.success("Profilo aggiornato correttamente.");
-      await refresh();
-    } catch {
-      toast.error("Errore durante il salvataggio. Riprova.");
-    } finally {
-      setSavingWorker(false);
-    }
-  };
 
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,32 +62,10 @@ function Profile() {
       <PageHeader
         title="Il tuo profilo"
         subtitle="Visualizza e modifica le tue informazioni"
-        action={
-          role === "worker" ? (
-            editingWorker ? null : <Button onClick={startWorkerEdit}>Modifica</Button>
-          ) : null
-        }
       />
       {role === "restaurant" && <PayOnHireBox className="mb-6 max-w-2xl" />}
       {role === "worker" ? (
-      <div className="rounded-2xl border bg-card p-6 max-w-2xl space-y-3">
-          <WorkerProfileEditor
-            profile={profile as any}
-            email={user?.email ?? null}
-            avatarUrl={(profile as any)?.avatar_url ? (avatarPreview ?? currentAvatarUrl ?? null) : (avatarPreview ?? null)}
-            editing={editingWorker}
-            saving={savingWorker}
-            draft={workerDraft}
-            onDraftChange={setWorkerDraft}
-            onPickAvatar={(file: File | null, preview: string | null) => {
-              setAvatarFile(file);
-              setAvatarPreview(preview);
-            }}
-            onEdit={startWorkerEdit}
-            onCancel={cancelWorkerEdit}
-            onSave={saveWorkerProfile}
-          />
-      </div>
+        <WorkerProfileSections profile={profile as any} email={user?.email ?? null} userId={user?.id ?? null} onSaved={refresh} />
       ) : role === "restaurant" ? (
         <RestaurantProfileView profile={profile as any} email={user?.email ?? null} />
       ) : null}
