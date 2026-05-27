@@ -595,6 +595,8 @@ function Browse() {
             const appStatus = appStatusById[selected.id];
             const rejected = appStatus === "rejected" || appStatus === "not_interested";
             const fav = favIds.has(selected.id);
+            const selectedBlock = computeSpecialAvailabilityBlock(specialExceptions, selected);
+            const selectedIncompatible = !!selectedBlock?.blocked;
             const dist = (profile?.service_area_lat != null && profile?.service_area_lng != null && selected.location_lat != null && selected.location_lng != null)
               ? distKm(profile.service_area_lat, profile.service_area_lng, selected.location_lat, selected.location_lng) : null;
             const selectedTotal = formatTotalService(
@@ -642,6 +644,15 @@ function Browse() {
                     </div>
                   ) : applied ? (
                     <Button disabled variant="secondary" className="flex-1">Candidatura già inviata</Button>
+                  ) : selectedIncompatible ? (
+                    <div className="flex-1 rounded-xl border-2 border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                      <div className="font-semibold inline-flex items-center gap-1">
+                        <XCircle className="h-3.5 w-3.5" /> Non compatibile con la tua disponibilità speciale
+                      </div>
+                      {selectedBlock?.specials.map((e) => (
+                        <p key={e.id} className="mt-0.5 opacity-90">· {describeSpecialAvailability(e)}</p>
+                      ))}
+                    </div>
                   ) : (
                     <Button className="flex-1 gap-2" onClick={()=>apply(selected)}><Send className="h-4 w-4" />Candidati ora</Button>
                   )}
