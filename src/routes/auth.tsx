@@ -20,6 +20,7 @@ import { DEFAULT_PHONE_PREFIX, isValidPhone, buildPhoneFull } from "@/lib/phone-
 import { startPhoneVerification } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { savePendingRegistrationOtpState } from "@/lib/registration-otp-state";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -198,8 +199,11 @@ function AuthPage() {
       return;
     }
     // Fire WhatsApp OTP + summary email
+    const phoneFull = buildPhoneFull(phoneCode, phoneNumber);
+    let otpReady = false;
     try {
-      const phoneFull = buildPhoneFull(phoneCode, phoneNumber);
+      const currentUser = (await supabase.auth.getUser()).data.user;
+      if (!currentUser) throw new Error("Sessione non disponibile dopo la registrazione.");
       await supabase
         .from("profiles")
         .update({
@@ -211,8 +215,14 @@ function AuthPage() {
           phone_full: phoneFull,
           phone: phoneFull,
         })
-        .eq("id", (await supabase.auth.getUser()).data.user!.id);
-      await startVerification({ data: { phoneCountryCode: phoneCode, phoneNumber, sendSummary: true } });
+        .eq("id", currentUser.id);
+      const otpResult = await startVerification({ data: { phoneCountryCode: phoneCode, phoneNumber, sendSummary: true } });
+      if (otpResult.ok || otpResult.cooldownSeconds) {
+        savePendingRegistrationOtpState({ phoneCountryCode: phoneCode, phoneNumber, phoneFull });
+        otpReady = true;
+      } else {
+        toast.error(otpResult.error ?? "Non siamo riusciti a inviare il codice WhatsApp. Riprova.");
+      }
     } catch (err) {
       console.error("OTP/email summary kickoff failed", err);
     }
@@ -229,8 +239,8 @@ function AuthPage() {
       }
     }
     setBusy(false);
-    toast.success("Registrazione ricevuta! Conferma il numero WhatsApp.");
-    navigate({ to: "/verify-phone", search: { phase: "code" } as never });
+    if (otpReady) toast.success("Codice WhatsApp inviato correttamente");
+    navigate({ to: "/verify-phone", search: { phase: "code" } as never, replace: true });
   };
 
   const handleLogin = async (e: React.FormEvent) => {
