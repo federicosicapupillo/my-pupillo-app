@@ -969,6 +969,13 @@ function WorkersPage() {
   // the worker has no availability rows at all → keep visible but rank
   // below those with declared availability.
   const compatByWorker: Record<string, CompatibilityLevel | null> = {};
+  // Per-worker hard block: una "disponibilità speciale" esiste per la data
+  // dell'annuncio ma NON è compatibile (città/zona/orario o "Non disponibile").
+  // Quando true, il pulsante "Invia proposta" va disabilitato.
+  const specialBlockByWorker: Record<
+    string,
+    { blocked: boolean; specials: AvailabilityExceptionRow[] } | null
+  > = {};
   if (selectedAnn) {
     for (const w of distFiltered) {
       const rows = availByWorker[w.id];
@@ -977,9 +984,10 @@ function WorkersPage() {
       );
       if ((!rows || rows.length === 0) && excs.length === 0) {
         compatByWorker[w.id] = null;
+        specialBlockByWorker[w.id] = null;
         continue;
       }
-      compatByWorker[w.id] = computeCompatibility(
+      const level = computeCompatibility(
         rows ?? [],
         excs,
         selectedAnn.service_date,
@@ -987,6 +995,8 @@ function WorkersPage() {
         selectedAnn.end_time ?? null,
         selectedAnn.job_city ?? null,
       );
+      compatByWorker[w.id] = level;
+      specialBlockByWorker[w.id] = computeSpecialBlock(excs, level);
     }
   }
 
