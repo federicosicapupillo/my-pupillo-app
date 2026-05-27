@@ -1423,6 +1423,7 @@ function ContactedWorkerCard({
   availRows,
   specialForDate,
   specialDate,
+  upcomingSpecials,
   compatBadge,
   onDetails,
 }: {
@@ -1434,6 +1435,7 @@ function ContactedWorkerCard({
   availRows: AvailabilityRow[] | null;
   specialForDate: AvailabilityExceptionRow[];
   specialDate: string | null;
+  upcomingSpecials: AvailabilityExceptionRow[];
   compatBadge: { text: string; cls: string } | null;
   onDetails: () => void;
 }) {
@@ -1542,6 +1544,7 @@ function ContactedWorkerCard({
         rows={availRows}
         specialForDate={specialForDate}
         specialDate={specialDate}
+        upcomingSpecials={upcomingSpecials}
         weekly={w.weekly_availability}
         availableNowUntil={w.available_now_until}
         onDetails={onDetails}
