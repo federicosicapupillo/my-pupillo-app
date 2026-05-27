@@ -117,20 +117,20 @@ export function WorkerProfilePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0 gap-0">
+      <DialogContent className="w-[95vw] max-w-[480px] sm:max-w-[480px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0 box-border">
         <DialogHeader className="sr-only">
           <DialogTitle>Profilo lavoratore</DialogTitle>
         </DialogHeader>
 
         {/* Header */}
-        <div className="relative p-5 pb-4 bg-gradient-to-b from-primary/10 to-transparent">
-          <div className="flex items-start gap-4">
-            <UserAvatar userId={workerId ?? undefined} name={displayName} className="h-20 w-20 ring-2 ring-background shadow-md" />
+        <div className="relative p-4 sm:p-5 pb-4 bg-gradient-to-b from-primary/10 to-transparent pr-12">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+            <UserAvatar userId={workerId ?? undefined} name={displayName} className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 ring-2 ring-background shadow-md" />
             <div className="min-w-0 flex-1 pt-1">
-              <h2 className="text-xl font-bold leading-tight truncate">{displayName}</h2>
-              {roleLine && <p className="text-sm text-muted-foreground capitalize mt-0.5 truncate">{roleLine}</p>}
+              <h2 className="text-lg sm:text-xl font-bold leading-tight break-words">{displayName}</h2>
+              {roleLine && <p className="text-sm text-muted-foreground capitalize mt-0.5 break-words">{roleLine}</p>}
               <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" />
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{zone}</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -155,9 +155,9 @@ export function WorkerProfilePreviewDialog({
         </div>
 
         {loading || !w ? (
-          <div className="px-5 pb-5 text-sm text-muted-foreground">Caricamento profilo…</div>
+          <div className="px-4 sm:px-5 pb-5 text-sm text-muted-foreground">Caricamento profilo…</div>
         ) : (
-          <div className="px-5 pb-5 space-y-4">
+          <div className="px-4 sm:px-5 pb-5 space-y-4 min-w-0">
             {/* Stats grid */}
             <div className="grid grid-cols-2 gap-2">
               <StatBox icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Turni completati" value={`${w.completed_shifts ?? 0}`} />
@@ -187,7 +187,7 @@ export function WorkerProfilePreviewDialog({
             {w.short_bio && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Bio</h3>
-                <p className="text-sm text-foreground/90 leading-relaxed">{w.short_bio}</p>
+                <p className="text-sm text-foreground/90 leading-relaxed break-words">{w.short_bio}</p>
               </section>
             )}
 
@@ -220,7 +220,7 @@ export function WorkerProfilePreviewDialog({
                         </div>
                         <span className="text-[11px] text-muted-foreground">{new Date(r.created_at).toLocaleDateString("it-IT")}</span>
                       </div>
-                      {r.comment && <p className="mt-1.5 text-sm text-foreground/90">"{r.comment}"</p>}
+                      {r.comment && <p className="mt-1.5 text-sm text-foreground/90 break-words">"{r.comment}"</p>}
                       {((r.positive_tags?.length ?? 0) > 0 || (r.tags?.length ?? 0) > 0) && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {(r.positive_tags ?? []).slice(0, 4).map(t => (
@@ -239,7 +239,7 @@ export function WorkerProfilePreviewDialog({
           </div>
         )}
 
-        <DialogFooter className="flex-row gap-2 p-4 border-t bg-card">
+        <DialogFooter className="sticky bottom-0 flex-row gap-2 p-3 sm:p-4 border-t bg-card">
           <Button variant="outline" size="sm" className="ml-auto" onClick={() => onOpenChange(false)}>
             Chiudi
           </Button>
