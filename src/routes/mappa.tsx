@@ -181,6 +181,11 @@ function MapPage() {
     Record<string, { comment: string | null; rating: number | null }>
   >({});
   const [loading, setLoading] = useState(true);
+  // Città consentite per la mappa lato lavoratore. Se non viene impostato un
+  // filtro città manuale, si calcolano da: città del profilo lavoratore,
+  // service_area_city, e disponibilità speciali future (data >= oggi). La
+  // disponibilità speciale prevale sulla disponibilità abituale anche qui.
+  const [workerBaseAllowedCities, setWorkerBaseAllowedCities] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   // search & filters
