@@ -290,12 +290,38 @@ function NewRestaurantJobRequest() {
   }, [f.shift_date]);
   const toggleIn = (arr: string[], v: string, setter: (v: string[]) => void) => setter(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
 
-  useEffect(() => {
-    if (!profile) return;
-    const p = profile as any;
+  const defaultsToastShownRef = useRef(false);
+
+  const applyRestaurantDefaults = (rawProfile: unknown, source: string) => {
+    if (!rawProfile) return;
+    const p = rawProfile as any;
     const contactName =
       (p.default_contact_person_name && String(p.default_contact_person_name).trim()) ||
       [p.contact_person_first_name, p.contact_person_last_name].filter(Boolean).join(" ");
+    const defaults = {
+      license_requirement: validOption(p.default_license_requirement, LICENSE_VALUES),
+      tattoos_allowed: validOption(p.default_tattoos_allowed, TATTOO_VALUES),
+      piercings_allowed: validOption(p.default_piercings_allowed, PIERCING_VALUES),
+      beard_allowed: validOption(p.default_beard_allowed, BEARD_VALUES),
+      language_requirements: cleanArray(p.default_language_requirements),
+      required_skills: cleanArray(p.default_required_skills),
+      dress_code_items: cleanArray(p.default_dress_code_items),
+      dress_code_notes: typeof p.default_dress_code_notes === "string" ? p.default_dress_code_notes : "",
+    };
+    console.info("[nuovo-annuncio] dati onboarding letti per requisiti", {
+      source,
+      raw: {
+        default_license_requirement: p.default_license_requirement,
+        default_tattoos_allowed: p.default_tattoos_allowed,
+        default_piercings_allowed: p.default_piercings_allowed,
+        default_beard_allowed: p.default_beard_allowed,
+        default_language_requirements: p.default_language_requirements,
+        default_required_skills: p.default_required_skills,
+        default_dress_code_items: p.default_dress_code_items,
+        default_dress_code_notes: p.default_dress_code_notes,
+      },
+      mapped: defaults,
+    });
     setF(prev => ({
       ...prev,
       restaurant_name: prev.restaurant_name || p.business_name || p.full_name || "",
@@ -316,15 +342,15 @@ function NewRestaurantJobRequest() {
       contact_person_role: prev.contact_person_role || p.contact_person_role || "",
       contact_person_role_other: prev.contact_person_role_other || p.contact_person_role_other || "",
       worker_notes: prev.worker_notes || p.location_notes || "",
-      license_requirement: p.default_license_requirement ?? prev.license_requirement,
-      tattoos_allowed: p.default_tattoos_allowed ?? prev.tattoos_allowed,
-      piercings_allowed: p.default_piercings_allowed ?? prev.piercings_allowed,
-      beard_allowed: p.default_beard_allowed ?? prev.beard_allowed,
-      dress_code_notes: prev.dress_code_notes || p.default_dress_code_notes || "",
+      license_requirement: prev.license_requirement || defaults.license_requirement,
+      tattoos_allowed: prev.tattoos_allowed || defaults.tattoos_allowed,
+      piercings_allowed: prev.piercings_allowed || defaults.piercings_allowed,
+      beard_allowed: prev.beard_allowed || defaults.beard_allowed,
+      dress_code_notes: prev.dress_code_notes || defaults.dress_code_notes,
     }));
-    setLanguageReqs(prev => prev.length ? prev : (p.default_language_requirements ?? []));
-    setSkills(prev => prev.length ? prev : (p.default_required_skills ?? []));
-    setDressItems(prev => prev.length ? prev : (p.default_dress_code_items ?? []));
+    setLanguageReqs(prev => prev.length ? prev : defaults.language_requirements);
+    setSkills(prev => prev.length ? prev : defaults.required_skills);
+    setDressItems(prev => prev.length ? prev : defaults.dress_code_items);
     // Precompila l'anticipo richiesto all'ingresso dai default salvati.
     const savedAdvance = p.default_arrival_advance_minutes;
     if (typeof savedAdvance === "number" && Number.isFinite(savedAdvance)) {
@@ -336,23 +362,60 @@ function NewRestaurantJobRequest() {
         setAccessReason(prev => prev || String(p.default_arrival_advance_reason));
       }
     }
-    if (!defaultsLoaded && hasSavedDefaults(p)) {
+    if (!defaultsToastShownRef.current && hasSavedDefaults(p)) {
       toast.info("Abbiamo caricato le tue impostazioni predefinite. Puoi modificarle per questo annuncio.");
+      defaultsToastShownRef.current = true;
     }
     setDefaultsLoaded(true);
-    // Log tecnico: dati onboarding usati per precompilare il form annuncio.
-    console.info("[nuovo-annuncio] prefill da profilo onboarding", {
-      contact_person_role: p.contact_person_role,
-      default_license_requirement: p.default_license_requirement,
-      default_tattoos_allowed: p.default_tattoos_allowed,
-      default_piercings_allowed: p.default_piercings_allowed,
-      default_beard_allowed: p.default_beard_allowed,
-      default_language_requirements: p.default_language_requirements,
-      default_required_skills: p.default_required_skills,
-      default_dress_code_items: p.default_dress_code_items,
-      default_dress_code_notes: p.default_dress_code_notes,
+    console.info("[nuovo-annuncio] valori onboarding passati al form requisiti", { source, defaults });
+  };
+
+  useEffect(() => {
+    console.info("[nuovo-annuncio] componente reale caricato", {
+      route: "/ristoratore/annunci/nuovo",
+      component: "NewRestaurantJobRequest",
+      section: "Requisiti e Competenze",
     });
+  }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    applyRestaurantDefaults(profile, "auth-context/get_my_profile");
   }, [profile]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.rpc("get_my_profile").maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error("[nuovo-annuncio] errore lettura profilo onboarding da Supabase", error);
+        return;
+      }
+      console.info("[nuovo-annuncio] profilo onboarding letto da Supabase", {
+        user_id: user.id,
+        has_data: !!data,
+      });
+      applyRestaurantDefaults(data, "Supabase RPC get_my_profile");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    console.info("[nuovo-annuncio] valori effettivamente mostrati nei campi requisiti", {
+      license_requirement: f.license_requirement,
+      tattoos_allowed: f.tattoos_allowed,
+      piercings_allowed: f.piercings_allowed,
+      beard_allowed: f.beard_allowed,
+      language_requirements: languageReqs,
+      required_skills: skills,
+      dress_code_items: dressItems,
+      dress_code_notes: f.dress_code_notes,
+    });
+  }, [f.license_requirement, f.tattoos_allowed, f.piercings_allowed, f.beard_allowed, f.dress_code_notes, languageReqs, skills, dressItems]);
 
   useEffect(() => {
     if (!reuse) return;
