@@ -755,6 +755,7 @@ function WorkersPage() {
 
   const q = qInput.trim();
   const hasActiveFilters = category !== "all" || !!subcategory || !!q || !!lang;
+  const selectedAnn = anns.find((a) => a.id === selected);
   // Default behaviour: when the restaurant has NOT opened the advanced
   // search, the list is implicitly scoped to the role of the selected
   // announcement. As soon as any advanced filter is active the user's
@@ -784,8 +785,6 @@ function WorkersPage() {
   const removeQChip = () => setQInput("");
   const removeLangChip = () => setLang("");
 
-
-  const selectedAnn = anns.find((a) => a.id === selected);
   const inRange = (w: W) => {
     if (!selectedAnn?.location_lat || !selectedAnn?.location_lng) return false;
     if (w.service_area_lat == null || w.service_area_lng == null) return false;
