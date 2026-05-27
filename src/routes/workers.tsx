@@ -1601,13 +1601,20 @@ function AvailabilityDetailsDialog({
   worker,
   workedTogether,
   onClose,
+  rows,
 }: {
   worker: W | null;
   workedTogether: boolean;
   onClose: () => void;
+  rows: AvailabilityRow[] | null;
 }) {
   const open = !!worker;
-  const days = worker ? formatAvailabilitySlotsForDay(worker.weekly_availability) : [];
+  // Prefer real availability rows; fall back to the legacy weekly_availability
+  // array on the profile if no rows exist for this worker.
+  const realDays = rows ? formatWorkerAvailabilityByDay(rows) : [];
+  const days = realDays.length > 0
+    ? realDays
+    : (worker ? formatAvailabilitySlotsForDay(worker.weekly_availability) : []);
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-md">
