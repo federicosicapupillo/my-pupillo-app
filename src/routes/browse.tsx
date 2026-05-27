@@ -151,7 +151,9 @@ function Browse() {
     // Use the PII-safe view for public browsing (excludes job contact details
     // and exact GPS). Workers only see full row via base table once they have
     // an application/shift on the announcement (enforced by RLS).
-    const { data: anns } = await (supabase as any).from("announcements_public").select("*").eq("status","active").order("created_at",{ascending:false}).limit(200);
+    // Vista nazionale: carichiamo tutti gli annunci attivi in Italia (rule 1-3).
+    // L'ordinamento per compatibilità avviene client-side nel useMemo.
+    const { data: anns } = await (supabase as any).from("announcements_public").select("*").eq("status","active").order("created_at",{ascending:false}).limit(500);
     const list = (anns as Ann[]) ?? [];
     setItems(list);
     // Multi-position: load workers_needed per announcement and accepted count.
