@@ -576,7 +576,17 @@ function WorkersPage() {
   const matchesText = (w: W, term: string, cat: Category, sub: string): boolean => {
     if (!term) return true;
     const t = term.toLowerCase().trim().replace(/\s+/g, " ");
-    const f = fieldsOf(w);
+    const rawF = fieldsOf(w);
+    // Privacy: il cognome (e quindi il fullName che lo contiene) può essere
+    // usato come criterio di ricerca SOLO se il ristoratore ha già
+    // collaborato (turno completato) con questo lavoratore. Altrimenti la
+    // ricerca per cognome non deve mai restituire risultati, neanche se il
+    // nome combacia: "Mario Rossi" su un lavoratore mai collaborato non
+    // deve essere identificabile via "Rossi".
+    const workedWith = !!rel[w.id]?.workedWith;
+    const f = workedWith
+      ? rawF
+      : { ...rawF, last: "", fullName: rawF.first };
     const allText = [f.fullName, f.title, f.description, f.roles, f.langs, f.city, f.zone, f.province, f.badge, f.availability].join(" ");
     // Helper: ricerca nome multi-token. "Mar Ros" deve trovare "Mario Rossi".
     // Ogni token deve matchare almeno un campo nome (first / last / fullName).
