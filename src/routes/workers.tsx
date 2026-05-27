@@ -1214,6 +1214,13 @@ function WorkersPage() {
                         selectedAnnouncementId={selected || null}
                         activeRoleContext={activeRoleContext}
                         onOpenChat={(appId) => nav({ to: "/messages/$id", params: { id: appId } })}
+                        onSendProposal={requireComplete(() => openProposalDialog(w))}
+                        canSendProposal={!!selected && !isBlocked}
+                        blockedReason={
+                          isBlocked
+                            ? `Hai ${blockedCount} turn${blockedCount > 1 ? "i" : "o"} da recensire prima di poter inviare nuove proposte.`
+                            : (!selected ? "Seleziona un annuncio per inviare una proposta" : null)
+                        }
                         availRows={availByWorker[w.id] ?? null}
                         specialForDate={
                           selectedAnn
