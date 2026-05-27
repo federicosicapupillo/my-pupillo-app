@@ -704,6 +704,42 @@ function WorkersPage() {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
     setSendingProposal(true);
     try {
+      // BACKEND RECHECK: la disponibilità speciale prevale sempre. Se per la
+      // data dell'annuncio esistono eccezioni e nessuna è compatibile con
+      // città/zona/orario (o segna "Non disponibile"), blocchiamo qui prima
+      // di creare la candidatura → nessuna chat, nessuna notifica, nessun
+      // credito scalato.
+      const ann = anns.find((a) => a.id === selected) ?? selectedAnn;
+      if (ann) {
+        const { data: excRows } = await supabase
+          .from("worker_availability_exceptions")
+          .select("*")
+          .eq("worker_id", workerId)
+          .eq("date", ann.service_date);
+        const excs = (excRows ?? []) as AvailabilityExceptionRow[];
+        if (excs.length > 0) {
+          const { data: avRows } = await supabase
+            .from("worker_availability")
+            .select("*")
+            .eq("worker_id", workerId);
+          const level = computeCompatibility(
+            (avRows ?? []) as AvailabilityRow[],
+            excs,
+            ann.service_date,
+            ann.service_time ?? null,
+            ann.end_time ?? null,
+            ann.job_city ?? null,
+          );
+          if (level === "non_disponibile") {
+            toast.error(
+              "Non puoi inviare questa proposta perché il lavoratore non è disponibile per città, data o orario dell'annuncio.",
+            );
+            setProposalWorker(null);
+            setSendingProposal(false);
+            return;
+          }
+        }
+      }
       // Anti-doppio contatto: blocca se esiste già una candidatura/proposta
       // attiva tra questo ristoratore e questo lavoratore per lo stesso annuncio.
       const contact = await checkExistingContact({
