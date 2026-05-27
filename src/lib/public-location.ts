@@ -71,11 +71,16 @@ export function maskPartnerNameForWorker(
 
 /**
  * Shift statuses that count as "they have worked together at least once".
- * Any non-cancelled shift is treated as a confirmed past relationship: a row
- * in `shifts` exists only after the restaurant assigns/confirms a worker.
+ *
+ * Regola Pupillo: la collaborazione è reale SOLO quando esiste almeno un
+ * turno effettivamente completato/concluso tra le parti. Un turno solo
+ * "scheduled" può ancora essere annullato e quindi NON deve essere trattato
+ * come collaborazione: altrimenti il nome reale del ristorante verrebbe
+ * sbloccato lato lavoratore anche per nuove proposte in attesa, e lato
+ * ristoratore comparirebbero badge "Già lavorato con te" / "Ricontatta
+ * gratis" su rapporti mai effettivamente svolti.
  */
 export const WORKED_TOGETHER_SHIFT_STATUSES = [
-  "scheduled",
   "completed",
 ] as const;
 
