@@ -24,7 +24,12 @@ import {
   SPECIAL_INCOMPATIBLE_MESSAGE,
   type SpecialAvailabilityBlock,
 } from "@/lib/worker-special-availability";
-import type { AvailabilityExceptionRow } from "@/lib/availability";
+import {
+  computeCompatibility,
+  sameCity,
+  type AvailabilityExceptionRow,
+  type AvailabilityRow,
+} from "@/lib/availability";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -115,6 +120,19 @@ function Browse() {
   // abituale. Se nessuna è compatibile con città/orario dell'annuncio,
   // candidatura bloccata sia lato UI sia lato submit.
   const [specialExceptions, setSpecialExceptions] = useState<AvailabilityExceptionRow[]>([]);
+  // Disponibilità ABITUALE (settimanale) del lavoratore, usata per calcolare
+  // la compatibilità di ogni annuncio quando non c'è una disponibilità
+  // speciale per quella data. Serve a ordinare la lista nazionale per
+  // affinità (rule 5) e a mostrare i badge "Compatibile…" (rule 8-11).
+  const [weeklyAvailability, setWeeklyAvailability] = useState<AvailabilityRow[]>([]);
+  // Filtri aggiuntivi richiesti dal contratto "Trova offerte":
+  // città, data, fascia oraria, tariffa minima, solo compatibili (rule 12).
+  const [cityF, setCityF] = useState<string>("any");
+  const [dateF, setDateF] = useState<string>("");
+  const [timeFromF, setTimeFromF] = useState<string>("");
+  const [timeToF, setTimeToF] = useState<string>("");
+  const [minTariff, setMinTariff] = useState<string>("");
+  const [onlyCompatible, setOnlyCompatible] = useState(false);
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
@@ -133,7 +151,9 @@ function Browse() {
     // Use the PII-safe view for public browsing (excludes job contact details
     // and exact GPS). Workers only see full row via base table once they have
     // an application/shift on the announcement (enforced by RLS).
-    const { data: anns } = await (supabase as any).from("announcements_public").select("*").eq("status","active").order("created_at",{ascending:false}).limit(200);
+    // Vista nazionale: carichiamo tutti gli annunci attivi in Italia (rule 1-3).
+    // L'ordinamento per compatibilità avviene client-side nel useMemo.
+    const { data: anns } = await (supabase as any).from("announcements_public").select("*").eq("status","active").order("created_at",{ascending:false}).limit(500);
     const list = (anns as Ann[]) ?? [];
     setItems(list);
     // Multi-position: load workers_needed per announcement and accepted count.
@@ -185,8 +205,15 @@ function Browse() {
       } else {
         setSpecialExceptions([]);
       }
+      // Disponibilità settimanale (sempre, indipendentemente dalle date).
+      const { data: weekly } = await supabase
+        .from("worker_availability")
+        .select("*")
+        .eq("worker_id", user.id);
+      setWeeklyAvailability((weekly as AvailabilityRow[] | null) ?? []);
     } else {
       setSpecialExceptions([]);
+      setWeeklyAvailability([]);
     }
     setLoading(false);
   };
