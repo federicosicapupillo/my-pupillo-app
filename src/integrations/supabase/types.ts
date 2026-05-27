@@ -893,8 +893,10 @@ export type Database = {
           reputation_updated_at: string | null
           residence_address: string | null
           residence_city: string | null
+          residence_number: string | null
           residence_postal_code: string | null
           residence_province: string | null
+          residence_street: string | null
           review_blocked: boolean
           review_blocked_at: string | null
           reviews_count: number | null
@@ -1051,8 +1053,10 @@ export type Database = {
           reputation_updated_at?: string | null
           residence_address?: string | null
           residence_city?: string | null
+          residence_number?: string | null
           residence_postal_code?: string | null
           residence_province?: string | null
+          residence_street?: string | null
           review_blocked?: boolean
           review_blocked_at?: string | null
           reviews_count?: number | null
@@ -1209,8 +1213,10 @@ export type Database = {
           reputation_updated_at?: string | null
           residence_address?: string | null
           residence_city?: string | null
+          residence_number?: string | null
           residence_postal_code?: string | null
           residence_province?: string | null
+          residence_street?: string | null
           review_blocked?: boolean
           review_blocked_at?: string | null
           reviews_count?: number | null
@@ -2382,8 +2388,10 @@ export type Database = {
           reputation_updated_at: string | null
           residence_address: string | null
           residence_city: string | null
+          residence_number: string | null
           residence_postal_code: string | null
           residence_province: string | null
+          residence_street: string | null
           review_blocked: boolean
           review_blocked_at: string | null
           reviews_count: number | null
