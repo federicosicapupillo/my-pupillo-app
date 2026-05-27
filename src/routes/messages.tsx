@@ -606,7 +606,7 @@ function MessagesLayout() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
                         <div className={`truncate text-primary group-hover:underline underline-offset-2 ${t.unread > 0 ? "font-semibold" : "font-medium"}`}>
-                          {[t.annRole, fmtDate(t.annDate)].filter(Boolean).join(" — ") || t.other.name}
+                          {fmtThreadLabel(t) || t.other.name}
                         </div>
                         <div className="text-[11px] text-muted-foreground shrink-0">{formatWhen(t.lastAt)}</div>
                       </div>
@@ -682,8 +682,11 @@ function MessagesLayout() {
                         <div className={`text-xs truncate ${g.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
                           {last?.lastBody ?? "Nessun messaggio"}
                         </div>
-                        <span className="shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 bg-muted text-foreground">
-                          {g.items.length} {g.items.length === 1 ? "chat" : "chat"}
+                        <span
+                          className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 font-semibold ${g.items.length > 1 ? "bg-primary/15 text-primary" : "bg-muted text-foreground"}`}
+                          aria-label={`${g.items.length} candidature in questa conversazione`}
+                        >
+                          {g.items.length} {g.items.length === 1 ? "candidatura" : "candidature"}
                         </span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -725,7 +728,7 @@ function MessagesLayout() {
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className={`min-w-0 truncate text-sm ${isUnread ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>
-                                  {[t.annRole || "Annuncio", fmtDate(t.annDate)].filter(Boolean).join(" — ")}
+                                  {fmtThreadLabel(t)}
                                 </div>
                                 <div className="shrink-0 text-[10px] text-muted-foreground">{formatWhen(t.lastAt)}</div>
                               </div>
