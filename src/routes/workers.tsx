@@ -30,6 +30,12 @@ import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/forma
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
 import { summarizeWeeklyAvailability, formatAvailabilitySlotsForDay } from "@/lib/availability-summary";
+import {
+  summarizeWorkerAvailability,
+  formatWorkerAvailabilityByDay,
+  availabilitySearchText,
+} from "@/lib/worker-availability-summary";
+import type { AvailabilityRow } from "@/lib/availability";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
@@ -53,6 +59,10 @@ type W = {
   city: string | null;
   neighborhood: string | null;
   province: string | null;
+  service_area_city: string | null;
+  service_area_district: string | null;
+  residence_city: string | null;
+  available_now_until: string | null;
   badge: string | null;
   rating_avg: number | null;
   reliability_pct: number | null;
@@ -218,6 +228,9 @@ function WorkersPage() {
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
   const [workers, setWorkers] = useState<W[]>([]);
+  // worker_availability rows grouped by worker id. Card / dialog read here
+  // first; profiles.weekly_availability is only used as a legacy fallback.
+  const [availByWorker, setAvailByWorker] = useState<Record<string, AvailabilityRow[]>>({});
   const [anns, setAnns] = useState<Ann[]>([]);
   const [selected, setSelected] = useState<string>("");
   // Filtri reattivi: ogni cambio aggiorna immediatamente la lista
@@ -248,7 +261,7 @@ function WorkersPage() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count")
+        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count")
         .eq("is_deleted", false)
         .eq("account_status", "active")
         // Profili non completi al 100% non sono operativi:
@@ -257,7 +270,31 @@ function WorkersPage() {
         .order("last_active_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      setWorkers((data as W[]) ?? []);
+      const list = (data as W[]) ?? [];
+      setWorkers(list);
+      // Carica le disponibilità reali dalla tabella worker_availability per i
+      // lavoratori visibili. Il campo `profiles.weekly_availability` è legacy
+      // e nella maggior parte dei casi non viene popolato dall'onboarding.
+      const ids = list.map((w) => w.id);
+      if (ids.length > 0) {
+        const { data: avRows, error: avErr } = await supabase
+          .from("worker_availability")
+          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
+          .in("worker_id", ids);
+        if (avErr) {
+          console.warn("[workers] availability load error", avErr);
+        } else {
+          const map: Record<string, AvailabilityRow[]> = {};
+          for (const r of (avRows as AvailabilityRow[] | null) ?? []) {
+            const arr = map[r.worker_id] ?? [];
+            arr.push(r);
+            map[r.worker_id] = arr;
+          }
+          setAvailByWorker(map);
+        }
+      } else {
+        setAvailByWorker({});
+      }
       setLoaded(true);
     } catch (error) {
       console.error("[workers] load error", error);
@@ -509,11 +546,18 @@ function WorkersPage() {
         ...normalizeSpokenLanguages(w.spoken_languages).map((s) => s.language),
         ...(w.languages ?? []),
       ].join(" ").toLowerCase(),
-      city: (w.city ?? "").toLowerCase(),
-      zone: (w.neighborhood ?? "").toLowerCase(),
+      city: [w.service_area_city, w.residence_city, w.city]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(),
+      zone: [w.neighborhood, w.service_area_district].filter(Boolean).join(" ").toLowerCase(),
       province: (w.province ?? "").toLowerCase(),
       badge: (w.badge ?? "").toLowerCase(),
-      availability: (w.weekly_availability ?? []).join(" ").toLowerCase(),
+      availability: [
+        availabilitySearchText(availByWorker[w.id]),
+        (w.weekly_availability ?? []).join(" ").toLowerCase(),
+        w.available_now_until ? "oggi today disponibile ora" : "",
+      ].filter(Boolean).join(" "),
     };
   };
 
@@ -971,9 +1015,13 @@ function WorkersPage() {
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span>
                 <span className="font-medium text-foreground">Città attuale:</span>{" "}
-                {w.city
-                  ? `${w.city}${w.neighborhood ? ` · ${w.neighborhood}` : ""}`
-                  : "Città non indicata"}
+                {(() => {
+                  const city = w.service_area_city || w.residence_city || w.city;
+                  const zone = w.neighborhood || w.service_area_district;
+                  return city
+                    ? `${city}${zone ? ` · ${zone}` : ""}`
+                    : "Città non indicata";
+                })()}
               </span>
             </div>
             {(() => {
@@ -983,7 +1031,12 @@ function WorkersPage() {
                 <div className="mt-2"><SpokenLanguagesView value={legacy} /></div>
               ) : null;
             })()}
-            <AvailabilityBlock weekly={w.weekly_availability} onDetails={() => setDetailsWorker(w)} />
+            <AvailabilityBlock
+              rows={availByWorker[w.id] ?? null}
+              weekly={w.weekly_availability}
+              availableNowUntil={w.available_now_until}
+              onDetails={() => setDetailsWorker(w)}
+            />
             <Button
               size="sm"
               className="mt-4 w-full gap-1"
@@ -1034,6 +1087,7 @@ function WorkersPage() {
         worker={detailsWorker}
         onClose={() => setDetailsWorker(null)}
         workedTogether={detailsWorker ? !!rel[detailsWorker.id]?.workedWith : false}
+        rows={detailsWorker ? (availByWorker[detailsWorker.id] ?? null) : null}
       />
       <Dialog open={missingAnnOpen} onOpenChange={setMissingAnnOpen}>
         <DialogContent>
@@ -1445,21 +1499,29 @@ function WorkersMapSection({
 }
 
 function AvailabilityBlock({
+  rows,
   weekly,
+  availableNowUntil,
   onDetails,
 }: {
+  rows: AvailabilityRow[] | null;
   weekly: string[] | null;
+  availableNowUntil: string | null;
   onDetails: () => void;
 }) {
-  const summary = summarizeWeeklyAvailability(weekly, null, new Date());
+  // Real data lives in `worker_availability`. The legacy
+  // `profiles.weekly_availability` array is only a fallback when present.
+  const hasReal = !!rows && rows.length > 0;
+  const realSummary = summarizeWorkerAvailability(rows, new Date());
+  const legacySummary = summarizeWeeklyAvailability(weekly, availableNowUntil, new Date());
   return (
     <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Disponibilità
         </div>
-        {(summary.kind === "wide" ||
-          (summary.kind === "lines" && summary.truncated)) && (
+        {(hasReal && (realSummary.kind === "wide" ||
+          (realSummary.kind === "lines" && realSummary.truncated))) && (
           <button
             type="button"
             onClick={onDetails}
@@ -1470,31 +1532,62 @@ function AvailabilityBlock({
         )}
       </div>
       <div className="mt-1 text-xs text-foreground">
-        {summary.kind === "none" && (
+        {hasReal ? (
+          <>
+            {realSummary.kind === "today" && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[11px] font-medium">
+                  Disponibile oggi
+                </span>
+                {realSummary.slotLabels.length > 0 && (
+                  <span className="text-muted-foreground">{realSummary.slotLabels.join(", ")}</span>
+                )}
+              </div>
+            )}
+            {realSummary.kind === "all_week" && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-medium">Tutta la settimana</span>
+                <span className="text-muted-foreground">· {realSummary.slotLabel}</span>
+              </div>
+            )}
+            {realSummary.kind === "wide" && (
+              <span className="font-medium">
+                {realSummary.totalDays} giorni disponibili · Disponibilità ampia
+              </span>
+            )}
+            {realSummary.kind === "lines" && (
+              <div className="space-y-0.5">
+                {realSummary.lines.map((l) => (
+                  <div key={l}>{l}</div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : legacySummary.kind === "none" ? (
           <span className="text-muted-foreground">Disponibilità non indicata</span>
-        )}
-        {summary.kind === "today" && (
+        ) : null}
+        {!hasReal && legacySummary.kind === "today" && (
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[11px] font-medium">
               Disponibile oggi
             </span>
-            {summary.hours && <span className="text-muted-foreground">{summary.hours}</span>}
+            {legacySummary.hours && <span className="text-muted-foreground">{legacySummary.hours}</span>}
           </div>
         )}
-        {summary.kind === "all_week" && (
+        {!hasReal && legacySummary.kind === "all_week" && (
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-medium">Tutta la settimana</span>
-            {summary.hours && <span className="text-muted-foreground">· {summary.hours}</span>}
+            {legacySummary.hours && <span className="text-muted-foreground">· {legacySummary.hours}</span>}
           </div>
         )}
-        {summary.kind === "wide" && (
+        {!hasReal && legacySummary.kind === "wide" && (
           <span className="font-medium">
-            {summary.totalDays} giorni disponibili · Disponibilità ampia
+            {legacySummary.totalDays} giorni disponibili · Disponibilità ampia
           </span>
         )}
-        {summary.kind === "lines" && (
+        {!hasReal && legacySummary.kind === "lines" && (
           <div className="space-y-0.5">
-            {summary.lines.map((l) => (
+            {legacySummary.lines.map((l) => (
               <div key={l}>{l}</div>
             ))}
           </div>
@@ -1508,13 +1601,20 @@ function AvailabilityDetailsDialog({
   worker,
   workedTogether,
   onClose,
+  rows,
 }: {
   worker: W | null;
   workedTogether: boolean;
   onClose: () => void;
+  rows: AvailabilityRow[] | null;
 }) {
   const open = !!worker;
-  const days = worker ? formatAvailabilitySlotsForDay(worker.weekly_availability) : [];
+  // Prefer real availability rows; fall back to the legacy weekly_availability
+  // array on the profile if no rows exist for this worker.
+  const realDays = rows ? formatWorkerAvailabilityByDay(rows) : [];
+  const days = realDays.length > 0
+    ? realDays
+    : (worker ? formatAvailabilitySlotsForDay(worker.weekly_availability) : []);
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-md">
