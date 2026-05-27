@@ -858,11 +858,24 @@ function AvailabilityPage() {
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-2 pt-1">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => openDuplicate(i)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => openDuplicate(i)}
+                    disabled={saving || copying}
+                  >
                     <Copy className="h-3.5 w-3.5" /> Copia su altri giorni
                   </Button>
-                  <Button type="button" size="sm" className="gap-2" onClick={() => { setEditingDay(null); toast.success("Disponibilità aggiornata correttamente"); }}>
-                    <ChevronDown className="h-3.5 w-3.5" /> Chiudi
+                  <Button
+                    type="button"
+                    size="sm"
+                    className={`gap-2 ${gatedOpacity}`}
+                    onClick={() => requireCompleteForAvailability(() => saveAndClose(i))()}
+                    disabled={saving || copying}
+                  >
+                    <Save className="h-3.5 w-3.5" /> {saving ? "Salvataggio…" : "Salva e chiudi"}
                   </Button>
                 </div>
               </CardContent>
