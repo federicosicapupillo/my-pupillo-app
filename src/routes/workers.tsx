@@ -1306,6 +1306,12 @@ function WorkersPage() {
             })()}
             <AvailabilityBlock
               rows={availByWorker[w.id] ?? null}
+              specialForDate={
+                selectedAnn
+                  ? (excByWorker[w.id] ?? []).filter((e) => e.date === selectedAnn.service_date)
+                  : []
+              }
+              specialDate={selectedAnn?.service_date ?? null}
               weekly={w.weekly_availability}
               availableNowUntil={w.available_now_until}
               onDetails={() => setDetailsWorker(w)}
