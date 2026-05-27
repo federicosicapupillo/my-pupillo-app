@@ -146,17 +146,16 @@ function MessagesLayout() {
     timeLabel: string;
   } | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const toggleGroup = (id: string) =>
+  const userToggledRef = useRef<Set<string>>(new Set());
+  const toggleGroup = (id: string) => {
+    userToggledRef.current.add(id);
     setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      // Remember manual interaction so the auto-expand effect doesn't
-      // override the user's choice on the next reload.
-      // (declared later via useRef — assigned in effect closure)
-      try { (globalThis as any).__noop; } catch { /* noop */ }
       return next;
     });
+  };
 
   const load = async () => {
     if (!user || !role) return;
@@ -376,7 +375,6 @@ function MessagesLayout() {
   // Auto-expand any partner group that contains more than one application,
   // so two distinct candidatures for the same worker are immediately visible
   // instead of hidden behind a collapsed row. Honors manual collapse/expand.
-  const userToggledRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
