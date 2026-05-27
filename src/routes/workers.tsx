@@ -372,10 +372,18 @@ function WorkersPage() {
       // e nella maggior parte dei casi non viene popolato dall'onboarding.
       const ids = list.map((w) => w.id);
       if (ids.length > 0) {
-        const { data: avRows, error: avErr } = await supabase
-          .from("worker_availability")
-          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
-          .in("worker_id", ids);
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const [{ data: avRows, error: avErr }, { data: excRows, error: excErr }] = await Promise.all([
+          supabase
+            .from("worker_availability")
+            .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
+            .in("worker_id", ids),
+          supabase
+            .from("worker_availability_exceptions")
+            .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
+            .in("worker_id", ids)
+            .gte("date", todayIso),
+        ]);
         if (avErr) {
           console.warn("[workers] availability load error", avErr);
         } else {
@@ -387,8 +395,20 @@ function WorkersPage() {
           }
           setAvailByWorker(map);
         }
+        if (excErr) {
+          console.warn("[workers] exceptions load error", excErr);
+        } else {
+          const exMap: Record<string, AvailabilityExceptionRow[]> = {};
+          for (const r of (excRows as AvailabilityExceptionRow[] | null) ?? []) {
+            const arr = exMap[r.worker_id] ?? [];
+            arr.push(r);
+            exMap[r.worker_id] = arr;
+          }
+          setExcByWorker(exMap);
+        }
       } else {
         setAvailByWorker({});
+        setExcByWorker({});
       }
       setLoaded(true);
     } catch (error) {
