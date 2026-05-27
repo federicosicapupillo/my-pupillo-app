@@ -43,6 +43,7 @@ import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-pr
 import {
   useFieldErrors,
   REQUIRED_FIELD_MESSAGE,
+  scrollToField,
 } from "@/lib/form-field-validation";
 
 export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
@@ -276,7 +277,10 @@ function NewRestaurantJobRequest() {
           : null)
     : null;
 
-  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => setF(prev => ({ ...prev, [key]: value }));
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    clearError(key as string);
+    setF(prev => ({ ...prev, [key]: value }));
+  };
   // Auto-fill end_date when start_date is selected/changed (only if empty or same as previous start)
   useEffect(() => {
     if (!f.shift_date) return;
@@ -520,6 +524,12 @@ function NewRestaurantJobRequest() {
       "contact_person_email",
       "accessChoice",
       "accessReason",
+      "license_requirement",
+      "tattoos_allowed",
+      "piercings_allowed",
+      "beard_allowed",
+      "language_requirements",
+      "required_skills",
     ];
     if (!f.role_required) errs.role_required = "Seleziona il ruolo cercato.";
     if (!f.shift_date) errs.shift_date = "Inserisci la data di inizio turno.";
@@ -554,13 +564,20 @@ function NewRestaurantJobRequest() {
     if (!accessChoice) errs.accessChoice = "Seleziona l'anticipo richiesto.";
     else if (accessChoice === "over15" && accessReason.trim().length < 10)
       errs.accessReason = "Motivazione: minimo 10 caratteri.";
+    if (!f.license_requirement || !LICENSE_VALUES.has(f.license_requirement)) errs.license_requirement = "Seleziona il tipo di patente richiesto.";
+    if (!f.tattoos_allowed || !TATTOO_VALUES.has(f.tattoos_allowed)) errs.tattoos_allowed = "Indica se i tatuaggi sono ammessi.";
+    if (!f.piercings_allowed || !PIERCING_VALUES.has(f.piercings_allowed)) errs.piercings_allowed = "Indica se i piercing sono ammessi.";
+    if (!f.beard_allowed || !BEARD_VALUES.has(f.beard_allowed)) errs.beard_allowed = "Indica se la barba è ammessa.";
+    if (languageReqs.length === 0) errs.language_requirements = "Seleziona almeno una lingua richiesta.";
+    if (skills.length === 0) errs.required_skills = "Seleziona almeno una competenza richiesta.";
 
     setErrors(errs, order);
     const missing = Object.keys(errs).length;
     console.info("[nuovo-annuncio] validate", { missing, errs });
     if (missing > 0) {
       toast.error("Completa tutti i campi obbligatori per pubblicare l'annuncio.");
-      requestAnimationFrame(() => focusFirst(order));
+      const first = order.find((name) => errs[name]);
+      requestAnimationFrame(() => first ? scrollToField(first) : focusFirst(order));
       return false;
     }
     return true;
