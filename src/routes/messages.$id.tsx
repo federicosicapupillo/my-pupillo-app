@@ -3283,7 +3283,16 @@ function ProposalCard(props: {
           </div>
         )}
 
-        {decided ? (
+        {locked && !accepted && !rejected ? (
+          <div className="px-4 py-3 border-t text-sm font-semibold flex items-center justify-center gap-2 bg-destructive/10 text-destructive border-destructive/30 text-center">
+            <X className="h-4 w-4 shrink-0" />
+            <span>
+              {lockReason === "completed"
+                ? "Questo turno è stato concluso. Non è più possibile accettare o rifiutare la proposta."
+                : "Questo turno è stato annullato. Non è più possibile accettare o rifiutare la proposta."}
+            </span>
+          </div>
+        ) : decided ? (
           <div className={`px-4 py-3 border-t text-sm font-semibold flex items-center justify-center gap-2 ${
             accepted
               ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
