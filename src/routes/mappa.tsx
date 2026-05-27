@@ -635,6 +635,19 @@ function MapPage() {
       const restById = new Map(restaurants.map(r => [r.id, r]));
       anns.forEach(a => {
         const rest = restById.get(a.restaurant_id);
+        // Esclude difensivamente stati non attivi anche se la query li
+        // avesse fatti passare (rule 2, 24).
+        const annStatus = (a.status || "").toLowerCase();
+        if (["cancelled", "annullato", "closed", "completed", "expired", "deleted"].includes(annStatus)) {
+          return;
+        }
+        // Lato lavoratore: filtra per città consentite (rule 1, 4, 12, 15-18).
+        if (isWorker && !isWorkerCityAllowed(rest?.city)) {
+          if (typeof window !== "undefined") {
+            console.debug("[mappa] skip ann (city not allowed for worker)", { ann: a.id, restCity: rest?.city, allowed: workerAllowedCities ? Array.from(workerAllowedCities) : null });
+          }
+          return;
+        }
         // Fallback ordinato: job_latitude/job_longitude (sempre prioritari se presenti)
         // → location_lat/lng dell'annuncio → coordinate del profilo ristoratore → service_area_*
         const candidates: Array<[number | null | undefined, number | null | undefined, string]> = [
@@ -644,16 +657,39 @@ function MapPage() {
           [rest?.service_area_lat, rest?.service_area_lng, "service_area"],
         ];
         const picked = candidates.find(([la, ln]) => la != null && ln != null);
-        if (!picked) { stats.missing++; return; }
-        const [rawLat, rawLng, source] = picked as [number, number, "job" | "location" | "profile" | "service_area"];
-        stats[source]++;
-        byId[a.id] = source;
+        let rawLat: number | null = null;
+        let rawLng: number | null = null;
+        let source: "job" | "location" | "profile" | "service_area" | "city" = "city";
+        if (isWorker) {
+          // Posizione SEMPRE approssimata da zona/città del locale (rule 5/10/30).
+          // Se città/zona non risolvono, skip per non finire in città sbagliata (rule 14).
+          const base = lookupCityCoords(rest?.neighborhood) || lookupCityCoords(rest?.city);
+          if (!base) {
+            stats.missing++;
+            if (typeof window !== "undefined") {
+              console.debug("[mappa] skip ann (no city coords)", { ann: a.id, restCity: rest?.city, neighborhood: rest?.neighborhood });
+            }
+            return;
+          }
+          const j = jitterCoords(base, a.id, 0.9);
+          rawLat = j[0];
+          rawLng = j[1];
+          source = "city";
+          stats["service_area"] = (stats["service_area"] || 0); // keep keys
+          byId[a.id] = "service_area";
+        } else {
+          if (!picked) { stats.missing++; return; }
+          const p = picked as [number, number, "job" | "location" | "profile" | "service_area"];
+          rawLat = p[0]; rawLng = p[1]; source = p[2];
+          stats[source]++;
+          byId[a.id] = source;
+        }
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
         if (query || city !== "any" || district || venue !== "any" || planF !== "any" || statusF !== "any" || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
         }
         const refPoint = searchCenter || me;
-        const distance = refPoint ? distKm(refPoint.lat, refPoint.lng, rawLat, rawLng) : null;
+        const distance = refPoint && rawLat != null && rawLng != null ? distKm(refPoint.lat, refPoint.lng, rawLat, rawLng) : null;
         const contactName = a.job_contact_person_name
           || [rest?.contact_person_first_name, rest?.contact_person_last_name].filter(Boolean).join(" ").trim()
           || null;
@@ -672,7 +708,13 @@ function MapPage() {
         // L'indirizzo completo e i contatti restano nascosti finché il
         // servizio non viene accettato per QUESTO annuncio.
         const usePrivacy = isWorker && !confirmed;
-        const [lat, lng] = usePrivacy ? jitterCoords([rawLat, rawLng], a.id, 0.8) : [rawLat, rawLng];
+        // Per il lavoratore le coordinate sono già "approssimate da città"
+        // (vedi sopra). Per gli altri ruoli applichiamo il vecchio jitter
+        // solo se l'utente è in privacy. Per ristoratore/admin usiamo le
+        // coordinate precise originali.
+        const [lat, lng] = isWorker
+          ? [rawLat!, rawLng!]
+          : (usePrivacy ? jitterCoords([rawLat!, rawLng!], a.id, 0.8) : [rawLat!, rawLng!]);
 
         const zoneLabel = [rest?.neighborhood, rest?.city].filter(Boolean).join(" · ")
           || rest?.city
