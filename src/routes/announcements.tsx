@@ -1513,7 +1513,11 @@ function AnnouncementDetailsDialog({
 
             <Section title="6. Requisiti">
               <SummaryRow icon={UserCheck} label="Patente" value={licenseLabel} />
+              <SummaryRow icon={Sparkles} label="Tatuaggi ammessi" value={labelOf(ann.tattoos_allowed, TATTOO_OPTIONS as any)} />
+              <SummaryRow icon={Sparkles} label="Piercing ammessi" value={labelOf(ann.piercings_allowed, PIERCING_OPTIONS as any)} />
+              <SummaryRow icon={Sparkles} label="Barba ammessa" value={labelOf(ann.beard_allowed, BEARD_OPTIONS as any)} />
               <SummaryRow icon={Languages} label="Lingue richieste" value={langLabels.length ? langLabels.join(", ") : "—"} />
+              <SummaryRow icon={Briefcase} label="Competenze richieste" value={skillLabels.length ? skillLabels.join(", ") : "—"} />
             </Section>
 
             <Section title="7. Note operative">
