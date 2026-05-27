@@ -52,6 +52,7 @@ const VALID_ROUTES = new Set<string>([
   "/workers",
   "/workers/$id",
   "/profile",
+  "/onboarding",
   "/dashboard",
   "/notifications",
   "/jobs",
@@ -139,6 +140,7 @@ describe("navigateFromNotificationLink", () => {
   it("routes flat safe destinations (profile, dashboard, etc.)", async () => {
     for (const path of [
       "/profile",
+      "/onboarding",
       "/dashboard",
       "/notifications",
       "/jobs",
@@ -249,6 +251,7 @@ describe("navigateFromNotificationLink", () => {
       "/announcements",
       `/workers/${UUID_A}`,
       "/profile",
+      "/onboarding",
       "/dashboard",
       "/notifications",
       "/jobs",
