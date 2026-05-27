@@ -35,7 +35,8 @@ import {
   formatWorkerAvailabilityByDay,
   availabilitySearchText,
 } from "@/lib/worker-availability-summary";
-import type { AvailabilityRow } from "@/lib/availability";
+import type { AvailabilityRow, CompatibilityLevel } from "@/lib/availability";
+import { computeCompatibility } from "@/lib/availability";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 
@@ -219,6 +220,46 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
   const dLng = toRad(lng2 - lng1);
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Aliases used both for the subcategory filter and for the implicit
+// "filter by announcement role" behaviour when no advanced search is active.
+const ROLE_ALIASES: Record<string, string[]> = {
+  cameriere: ["cameriere", "camerieri", "cameriera", "commis di sala", "responsabile di sala", "runner", "sala"],
+  bartender: ["bartender", "barman", "barlady", "cocktail"],
+  barista: ["barista", "caffetteria", "banconista"],
+  chef: ["chef", "cuoco", "cucina"],
+  "aiuto cucina": ["aiuto cucina", "commis di cucina", "cucina", "preparazione linea", "lavapiatti"],
+  runner: ["runner", "sala", "cameriere"],
+  lavapiatti: ["lavapiatti", "lavaggio", "aiuto cucina"],
+  pizzaiolo: ["pizzaiolo", "pizzeria"],
+  hostess: ["hostess", "accoglienza"],
+  sommelier: ["sommelier", "vino"],
+};
+
+function workerRolesText(w: W): string {
+  return [w.primary_role ?? "", ...(w.secondary_roles ?? []), w.professional_profile ?? ""]
+    .join(" ")
+    .toLowerCase();
+}
+
+function workerMatchesRole(w: W, role: string | null | undefined): boolean {
+  if (!role) return true;
+  const key = role.trim().toLowerCase();
+  if (!key) return true;
+  const aliases = ROLE_ALIASES[key] ?? [key];
+  const text = workerRolesText(w);
+  return aliases.some((a) => text.includes(a));
+}
+
+// Numeric tier from a compatibility level — lower is better. Workers with
+// no availability indicated remain visible but go below compatible ones.
+function compatTier(level: CompatibilityLevel | null): number {
+  if (level === "disponibile") return 0;
+  if (level === "compatibile") return 1;
+  if (level === "parziale") return 2;
+  if (level === null) return 3; // disponibilità non indicata
+  return 4; // non disponibile
 }
 
 function WorkersPage() {
@@ -714,7 +755,15 @@ function WorkersPage() {
 
   const q = qInput.trim();
   const hasActiveFilters = category !== "all" || !!subcategory || !!q || !!lang;
+  const selectedAnn = anns.find((a) => a.id === selected);
+  // Default behaviour: when the restaurant has NOT opened the advanced
+  // search, the list is implicitly scoped to the role of the selected
+  // announcement. As soon as any advanced filter is active the user's
+  // explicit criteria win and the announcement role is ignored.
+  const announcementRole = selectedAnn?.professional_profile ?? null;
+  const applyAnnouncementRoleFilter = !hasActiveFilters && !!announcementRole;
   const filtered = workers.filter((worker) => {
+    if (applyAnnouncementRoleFilter && !workerMatchesRole(worker, announcementRole)) return false;
     if (!matchesSubcategory(worker, category, subcategory)) return false;
     if (!matchesText(worker, q, category, subcategory)) return false;
     if (lang) {
@@ -736,8 +785,6 @@ function WorkersPage() {
   const removeQChip = () => setQInput("");
   const removeLangChip = () => setLang("");
 
-
-  const selectedAnn = anns.find((a) => a.id === selected);
   const inRange = (w: W) => {
     if (!selectedAnn?.location_lat || !selectedAnn?.location_lng) return false;
     if (w.service_area_lat == null || w.service_area_lng == null) return false;
@@ -759,6 +806,29 @@ function WorkersPage() {
     }
     return true;
   });
+
+  // Per-worker compatibility with the selected announcement. `null` means
+  // the worker has no availability rows at all → keep visible but rank
+  // below those with declared availability.
+  const compatByWorker: Record<string, CompatibilityLevel | null> = {};
+  if (selectedAnn) {
+    for (const w of distFiltered) {
+      const rows = availByWorker[w.id];
+      if (!rows || rows.length === 0) {
+        compatByWorker[w.id] = null;
+        continue;
+      }
+      compatByWorker[w.id] = computeCompatibility(
+        rows,
+        [],
+        selectedAnn.service_date,
+        selectedAnn.service_time ?? null,
+        selectedAnn.end_time ?? null,
+        selectedAnn.job_city ?? null,
+      );
+    }
+  }
+
   const sorted = [...distFiltered].sort((a, b) => {
     // Ordinamento personale per ristoratore: priorità a chi è già stato
     // contattato / ha già lavorato con questo ristoratore. I filtri di
@@ -771,7 +841,13 @@ function WorkersPage() {
     const ra = rel[a.id]; const rb = rel[b.id];
     const ta = tierOf(ra, a.rating_avg); const tb = tierOf(rb, b.rating_avg);
     if (ta !== tb) return ta - tb;
-    // dentro lo stesso gruppo: ultimo contatto più recente, poi rating, poi in zona
+    // Inside the same group: prioritise availability for the selected
+    // announcement (when one is selected), then last contact, rating, zone.
+    if (selectedAnn) {
+      const ca = compatTier(compatByWorker[a.id] ?? null);
+      const cb = compatTier(compatByWorker[b.id] ?? null);
+      if (ca !== cb) return ca - cb;
+    }
     const la = ra?.lastContactAt ?? 0; const lb = rb?.lastContactAt ?? 0;
     if (la !== lb) return lb - la;
     const ar = a.rating_avg ?? 0; const br = b.rating_avg ?? 0;
@@ -907,6 +983,18 @@ function WorkersPage() {
                 return `${n} ${n === 1 ? "lavoratore trovato" : "lavoratori trovati"}`;
               })()}
         </p>
+        {hasActiveFilters ? (
+          <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            Ricerca avanzata attiva
+            <button onClick={resetFilters} className="ml-1 inline-flex items-center gap-0.5 underline-offset-2 hover:underline">
+              <RotateCcw className="h-3 w-3" />Cancella filtri
+            </button>
+          </span>
+        ) : announcementRole ? (
+          <span className="text-xs text-muted-foreground">
+            Filtro automatico: <strong className="text-foreground capitalize">{announcementRole}</strong> (dall'annuncio)
+          </span>
+        ) : null}
         <div className="inline-flex rounded-lg border p-0.5">
           <Button size="sm" variant={view==="list"?"secondary":"ghost"} onClick={()=>setView("list")} className="gap-1"><List className="h-4 w-4" />Lista</Button>
           <Button size="sm" variant={view==="map"?"secondary":"ghost"} onClick={()=>setView("map")} className="gap-1"><MapIcon className="h-4 w-4" />Mappa</Button>
@@ -971,6 +1059,13 @@ function WorkersPage() {
                 {g.items.map((w) => {
                   const near = inRange(w);
                   const r = rel[w.id];
+                  const compat = selectedAnn ? (compatByWorker[w.id] ?? null) : null;
+                  const compatBadge =
+                    compat === "disponibile" ? { text: "Disponibile per questo turno", cls: "bg-emerald-500/20 text-emerald-700" }
+                    : compat === "compatibile" ? { text: "Compatibile con il turno", cls: "bg-emerald-500/15 text-emerald-700" }
+                    : compat === "parziale" ? { text: "Disponibilità parziale", cls: "bg-amber-500/15 text-amber-700" }
+                    : compat === null && selectedAnn ? { text: "Disponibilità non indicata", cls: "bg-muted text-foreground/70" }
+                    : null;
                   if (g.key === "contacted") {
                     return (
                       <ContactedWorkerCard
@@ -1002,6 +1097,13 @@ function WorkersPage() {
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
+            {compatBadge && (
+              <div className="mt-2">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${compatBadge.cls}`}>
+                  {compatBadge.text}
+                </span>
+              </div>
+            )}
             {r && (r.workedWith || r.contacted) && (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {r.workedWith && (
