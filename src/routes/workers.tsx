@@ -224,23 +224,42 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 // Aliases used both for the subcategory filter and for the implicit
 // "filter by announcement role" behaviour when no advanced search is active.
+// Regola stretta: ogni chiave include SOLO sinonimi diretti dello stesso
+// ruolo (varianti singolare/plurale/genere, livelli, denominazioni
+// equivalenti). NON includere ruoli affini: un "cameriere" non deve
+// risultare automaticamente "runner", un "aiuto cucina" non deve
+// diventare "lavapiatti" ecc. Le card mostrerebbero un ruolo per cui il
+// lavoratore non è davvero qualificato.
 const ROLE_ALIASES: Record<string, string[]> = {
-  cameriere: ["cameriere", "camerieri", "cameriera", "commis di sala", "responsabile di sala", "runner", "sala"],
-  bartender: ["bartender", "barman", "barlady", "cocktail"],
-  barista: ["barista", "caffetteria", "banconista"],
-  chef: ["chef", "cuoco", "cucina"],
-  "aiuto cucina": ["aiuto cucina", "commis di cucina", "cucina", "preparazione linea", "lavapiatti"],
-  runner: ["runner", "sala", "cameriere"],
-  lavapiatti: ["lavapiatti", "lavaggio", "aiuto cucina"],
-  pizzaiolo: ["pizzaiolo", "pizzeria"],
-  hostess: ["hostess", "accoglienza"],
-  sommelier: ["sommelier", "vino"],
+  cameriere: ["cameriere", "camerieri", "cameriera", "commis di sala", "chef de rang", "responsabile di sala"],
+  "chef de rang": ["chef de rang", "cameriere"],
+  bartender: ["bartender", "barman", "barlady"],
+  barista: ["barista", "caffetteria"],
+  chef: ["chef", "cuoco", "cuoca"],
+  cuoco: ["cuoco", "cuoca", "chef"],
+  "aiuto cucina": ["aiuto cucina", "commis di cucina", "aiuto cuoco"],
+  runner: ["runner"],
+  lavapiatti: ["lavapiatti", "lavaggio piatti"],
+  pizzaiolo: ["pizzaiolo", "pizzaiola", "pizzeria"],
+  hostess: ["hostess", "steward", "accoglienza"],
+  "hostess / steward": ["hostess", "steward", "accoglienza"],
+  steward: ["steward", "hostess"],
+  sommelier: ["sommelier"],
+  "addetto sala": ["addetto sala", "sala"],
+  "addetto cassa": ["addetto cassa", "cassa", "cassiere", "cassiera"],
+  banconista: ["banconista", "bancone"],
+  receptionist: ["receptionist", "reception", "accoglienza"],
+  "addetto accoglienza": ["accoglienza", "hostess", "steward", "receptionist"],
 };
 
-function workerRolesText(w: W): string {
-  return [w.primary_role ?? "", ...(w.secondary_roles ?? []), w.professional_profile ?? ""]
-    .join(" ")
-    .toLowerCase();
+// Solo ruolo principale + ruoli secondari: NON usiamo professional_profile
+// (bio libera) per matchare il ruolo, perché introduce falsi positivi
+// (es. una bio che cita "ho fatto il runner una volta" non rende il
+// lavoratore un runner).
+function workerRolesList(w: W): string[] {
+  return [w.primary_role ?? "", ...(w.secondary_roles ?? [])]
+    .map((r) => (r ?? "").toLowerCase().trim())
+    .filter(Boolean);
 }
 
 function workerMatchesRole(w: W, role: string | null | undefined): boolean {
@@ -248,8 +267,40 @@ function workerMatchesRole(w: W, role: string | null | undefined): boolean {
   const key = role.trim().toLowerCase();
   if (!key) return true;
   const aliases = ROLE_ALIASES[key] ?? [key];
-  const text = workerRolesText(w);
-  return aliases.some((a) => text.includes(a));
+  const roles = workerRolesList(w);
+  return roles.some((r) => aliases.some((a) => r === a || r.includes(a)));
+}
+
+// Sceglie l'etichetta del ruolo da mostrare sotto il nome del lavoratore.
+// - Se non c'è un ruolo "target" (annuncio o ricerca avanzata), mostriamo
+//   il ruolo principale del lavoratore.
+// - Se il target combacia col ruolo principale, mostriamo quello.
+// - Se combacia con un ruolo secondario, mostriamo il ruolo target con
+//   l'indicazione "· anche {ruolo principale}".
+export function pickDisplayedRole(
+  w: Pick<W, "primary_role" | "secondary_roles">,
+  targetRole: string | null | undefined,
+): { label: string; secondary: string | null } {
+  const primary = (w.primary_role ?? "").trim();
+  const target = (targetRole ?? "").trim();
+  if (!target) return { label: primary, secondary: null };
+  const key = target.toLowerCase();
+  const aliases = ROLE_ALIASES[key] ?? [key];
+  const match = (s: string) => {
+    const v = s.toLowerCase().trim();
+    if (!v) return false;
+    return aliases.some((a) => v === a || v.includes(a));
+  };
+  if (primary && match(primary)) {
+    return { label: primary, secondary: null };
+  }
+  const sec = (w.secondary_roles ?? []).map((s) => (s ?? "").trim()).find((s) => s && match(s));
+  if (sec) {
+    return { label: target, secondary: primary || null };
+  }
+  // Non dovrebbe accadere se il worker è passato dal filtro di ruolo,
+  // ma per robustezza mostriamo comunque il target.
+  return { label: target, secondary: primary || null };
 }
 
 // Numeric tier from a compatibility level — lower is better. Workers with
