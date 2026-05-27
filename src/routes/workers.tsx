@@ -1489,9 +1489,12 @@ function ContactedWorkerCard({
   } else if (r?.hasShiftScheduled) {
     statusLabel = "Turno assegnato";
     statusTone = "emerald";
-  } else if (r?.hasAccepted) {
+  } else if (r?.hasAccepted && r?.hasActiveApp) {
     statusLabel = "Candidatura accettata";
     statusTone = "primary";
+  } else if (r?.hasCancelledShift) {
+    statusLabel = "Turno annullato";
+    statusTone = "muted";
   } else if (r?.hasPending) {
     statusLabel = "Candidatura in attesa";
     statusTone = "muted";
