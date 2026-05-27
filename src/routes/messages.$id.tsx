@@ -75,6 +75,11 @@ import {
 } from "@/components/ui/dialog";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
+  ReportDelayDialog,
+  CancelPresenceDialog,
+  type IncidentTarget,
+} from "@/components/WorkerIncidentDialogs";
+import {
   computeSpecialAvailabilityBlock,
   describeSpecialAvailability,
   fetchSpecialAvailabilityBlock,
@@ -463,6 +468,8 @@ function Thread() {
   const [serverAssign, setServerAssign] = useState<{ canAssign: boolean; reason: string | null } | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [delayOpen, setDelayOpen] = useState(false);
+  const [cancelPresenceOpen, setCancelPresenceOpen] = useState(false);
   const [workerReviews, setWorkerReviews] = useState<WorkerReview[]>([]);
   const [reviewRoles, setReviewRoles] = useState<Record<string, string | null>>({});
   const [reviewsOpen, setReviewsOpen] = useState(false);
@@ -2460,6 +2467,85 @@ function Thread() {
             />
           </div>
         )}
+        {role === "worker"
+          && !isConversationClosed
+          && app
+          && shift
+          && user
+          && shift.worker_id === user.id
+          && (shift.status === "scheduled" || shift.status === "confirmed")
+          && (() => {
+          const target: IncidentTarget = {
+            shiftId: shift.id,
+            workerId: shift.worker_id,
+            restaurantId: shift.restaurant_id,
+            applicationId: app.id,
+            announcementId: shift.announcement_id ?? app.announcement_id ?? null,
+            context: {
+              role: ann?.professional_profile ?? null,
+              date: ann?.service_date ?? shift.shift_date ?? null,
+              time: ann?.service_time ?? null,
+            },
+          };
+          return (
+            <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <AlarmClock className="h-4 w-4 text-amber-600" />
+                Gestione turno
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Usa queste azioni solo se hai un problema con questo turno.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDelayOpen(true)}
+                  className="border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                >
+                  <Clock className="h-4 w-4 mr-1.5" />
+                  Segnala ritardo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCancelPresenceOpen(true)}
+                  className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                >
+                  <Ban className="h-4 w-4 mr-1.5" />
+                  Annulla presenza
+                </Button>
+              </div>
+              <ReportDelayDialog
+                open={delayOpen}
+                onClose={() => setDelayOpen(false)}
+                target={target}
+                onDone={() => {
+                  // Refresh shift state from DB
+                  void supabase
+                    .from("shifts")
+                    .select("id, status, shift_date, worker_id, restaurant_id, announcement_id, reviewed_at, reviewed_by_restaurant_user_id")
+                    .eq("id", shift.id)
+                    .maybeSingle()
+                    .then(({ data }) => { if (data) setShift(data as Shift); });
+                }}
+              />
+              <CancelPresenceDialog
+                open={cancelPresenceOpen}
+                onClose={() => setCancelPresenceOpen(false)}
+                target={target}
+                onDone={() => {
+                  void supabase
+                    .from("shifts")
+                    .select("id, status, shift_date, worker_id, restaurant_id, announcement_id, reviewed_at, reviewed_by_restaurant_user_id")
+                    .eq("id", shift.id)
+                    .maybeSingle()
+                    .then(({ data }) => { if (data) setShift(data as Shift); });
+                }}
+              />
+            </div>
+          );
+        })()}
         <div id="chat-composer">
         {isConversationClosed ? (
           <div className="mt-4 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 p-4 text-center">
