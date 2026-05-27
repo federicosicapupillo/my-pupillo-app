@@ -812,26 +812,53 @@ function AvailabilityPage() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">Città *</label>
-                    <Input
-                      value={d.city}
-                      placeholder={defaults.city || "Es. Bologna"}
-                      onChange={(e) => updateDay(i, { city: e.target.value })}
-                    />
+                    <Select value={d.city || undefined} onValueChange={(v) => setDayCity(i, v)}>
+                      <SelectTrigger><SelectValue placeholder="Seleziona la città" /></SelectTrigger>
+                      <SelectContent>
+                        {d.city && !WORKER_CITIES.includes(d.city as (typeof WORKER_CITIES)[number]) && (
+                          <SelectItem value={d.city}>{d.city} (attuale)</SelectItem>
+                        )}
+                        {WORKER_CITIES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere</label>
-                    <Input
-                      value={d.district}
-                      placeholder={defaults.district || "Es. Centro, Navigli..."}
-                      onChange={(e) => updateDay(i, { district: e.target.value })}
-                    />
+                    <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere *</label>
+                    {(() => {
+                      const zones = zonesForCity(d.city);
+                      const options = [ALL_ZONES_OPTION, "Centro", ...zones.filter((z) => z !== "Centro")];
+                      const dedup = Array.from(new Set(options));
+                      const showCurrent = d.district && !dedup.includes(d.district);
+                      return (
+                        <Select
+                          value={d.district || undefined}
+                          onValueChange={(v) => updateDay(i, { district: v })}
+                          disabled={!d.city}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={d.city ? "Seleziona la zona" : "Prima seleziona la città"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {showCurrent && (
+                              <SelectItem value={d.district}>{d.district} (attuale)</SelectItem>
+                            )}
+                            {dedup.map((z) => (
+                              <SelectItem key={z} value={z}>{z}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
                   </div>
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
                     <Input
                       value={d.province}
-                      placeholder={defaults.province || "Es. BO"}
-                      onChange={(e) => updateDay(i, { province: e.target.value })}
+                      readOnly
+                      disabled
+                      placeholder="Auto da città"
                     />
                   </div>
                   <div>
