@@ -730,6 +730,20 @@ function ShiftsPage() {
             const isPast = s.shift_date < new Date().toISOString().slice(0, 10);
             const canRestaurantAct = role === "restaurant" && s.status === "scheduled";
             const canWorkerComplete = role === "worker" && s.status === "scheduled" && isPast;
+            const canWorkerSignal = role === "worker" && s.status === "scheduled" && isShiftNotEnded(s);
+            const ann0 = announcementsMap[s.announcement_id || ""];
+            const incidentTarget: IncidentTarget | null = canWorkerSignal && user ? {
+              shiftId: s.id,
+              workerId: user.id,
+              restaurantId: s.restaurant_id,
+              applicationId: s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null,
+              announcementId: s.announcement_id,
+              context: {
+                role: ann0?.professional_profile ?? null,
+                date: ann0?.service_date ?? s.shift_date,
+                time: ann0?.service_time ?? null,
+              },
+            } : null;
 
             return (
               <div
@@ -789,6 +803,16 @@ function ShiftsPage() {
                       <Button size="sm" onClick={() => updateStatus(s, "completed")} className="gap-1">
                         <CheckCircle2 className="h-4 w-4" /> Segna come completato
                       </Button>
+                    )}
+                    {canWorkerSignal && incidentTarget && (
+                      <>
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => setDelayTarget(incidentTarget)}>
+                          <Clock className="h-4 w-4" /> Segnala ritardo
+                        </Button>
+                        <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" onClick={() => setWorkerCancelTarget(incidentTarget)}>
+                          <XCircle className="h-4 w-4" /> Annulla presenza
+                        </Button>
+                      </>
                     )}
                     {canRestaurantAct && (
                       <>
