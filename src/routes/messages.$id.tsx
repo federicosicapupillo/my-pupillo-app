@@ -1099,15 +1099,45 @@ function Thread() {
     try {
     // Charge credits to the restaurant only on shift assignment confirmation.
     if (next === "accepted" && role === "restaurant" && app.status !== "accepted") {
+      // ── Pre-validazioni lato client (il backend resta autorità finale via RLS/triggers).
+      // Logghiamo sempre il contesto tecnico per facilitare il debug, senza esporre nulla all'utente.
+      const techCtx = {
+        application_id: app.id,
+        announcement_id: app.announcement_id,
+        restaurant_id: app.restaurant_id,
+        worker_id: app.worker_id,
+        app_status_before: app.status,
+        ann_status: ann?.status ?? null,
+        shift_status: shift?.status ?? null,
+      };
+      console.info("[accept-candidature] click", techCtx);
+
+      // La candidatura deve essere ancora processabile.
+      if (app.status !== "pending" && app.status !== "interested" && app.status !== "counter_offer") {
+        toast.error("Questa candidatura non è più disponibile.");
+        return;
+      }
+      // L'annuncio non deve essere annullato/concluso/assegnato in modo completo.
+      if (ann && (ann.status === "cancelled" || ann.status === "completed")) {
+        toast.error("Questa candidatura non è più disponibile.");
+        return;
+      }
+      // Il turno collegato non deve essere già annullato o concluso.
+      if (shift && (shift.status === "cancelled" || shift.status === "completed")) {
+        toast.error("Questa candidatura non è più disponibile.");
+        return;
+      }
       // Server-side authority: verify the current proposal has been accepted by the worker.
       try {
         const check = await canAssignShift({ data: { applicationId: id } });
         if (!check.canAssign) {
-          toast.error(check.reason ?? "Impossibile assegnare il turno in questo momento.");
+          console.warn("[accept-candidature] canAssignShift denied", { ...techCtx, reason: check.reason });
+          toast.error(check.reason ?? "Questa candidatura non è più disponibile.");
           return;
         }
       } catch (e: any) {
-        toast.error(e?.message ?? "Verifica server non riuscita.");
+        console.error("[accept-candidature] canAssignShift failed", { ...techCtx, error: e });
+        toast.error("Non è stato possibile accettare la candidatura. Riprova.");
         return;
       }
       if (isBlocked) {
@@ -1123,6 +1153,7 @@ function Thread() {
       const balance = prof?.credits ?? profile?.credits ?? 0;
       const isPaid = (prof?.plan ?? profile?.plan) === "pro" || (prof?.plan ?? profile?.plan) === "business";
       if (!isPaid && balance < CREDITS_PER_HIRE) {
+        console.info("[accept-candidature] insufficient credits", { ...techCtx, balance, required: CREDITS_PER_HIRE });
         setCreditsAvailable(balance);
         setInsufficientOpen(true);
         return;
@@ -1131,16 +1162,28 @@ function Thread() {
       // == one worker assignment, so the same shift can never be charged twice.
       const { consumeCredits } = await import("@/lib/credits");
       const ok = await consumeCredits(CREDITS_PER_HIRE, "assign_worker", app.id);
-      if (!ok) return;
+      if (!ok) {
+        console.warn("[accept-candidature] consumeCredits returned false", techCtx);
+        return;
+      }
     }
     const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
     const { error } = await supabase.from("applications").update(patch).eq("id", id);
     if (error) {
+      console.error("[accept-candidature] application update failed", {
+        application_id: app.id,
+        restaurant_id: app.restaurant_id,
+        worker_id: app.worker_id,
+        target_status: next,
+        supabase_error: error,
+      });
       if (String(error.message || "").toLowerCase().includes("announcement_full")) {
         toast.error("Questo annuncio ha già raggiunto il numero massimo di lavoratori richiesti.");
+      } else if (next === "accepted" && role === "restaurant") {
+        toast.error("Non è stato possibile accettare la candidatura. Riprova.");
       } else {
-        toast.error(error.message);
+        toast.error("Operazione non riuscita. Riprova.");
       }
       return;
     }
@@ -1241,8 +1284,26 @@ function Thread() {
       },
     };
     const t = toastByStatus[next];
-    toast.success(t.title, { description: t.description });
+    if (next === "accepted" && isRestaurant) {
+      toast.success("Candidatura accettata correttamente.", { description: t.description });
+    } else {
+      toast.success(t.title, { description: t.description });
+    }
     setApp({ ...app, ...patch } as App);
+    } catch (err) {
+      // Cattura difensiva: niente errori tecnici grezzi all'utente, ma traccia tutto in console.
+      console.error("[transition] unexpected failure", {
+        application_id: app?.id,
+        restaurant_id: app?.restaurant_id,
+        worker_id: app?.worker_id,
+        target_status: next,
+        error: err,
+      });
+      if (next === "accepted" && role === "restaurant") {
+        toast.error("Non è stato possibile accettare la candidatura. Riprova.");
+      } else {
+        toast.error("Operazione non riuscita. Riprova.");
+      }
     } finally {
       setTransitioning(null);
     }
