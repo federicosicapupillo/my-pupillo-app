@@ -17,6 +17,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import {
+  computeSpecialAvailabilityBlock,
+  describeSpecialAvailability,
+  fetchSpecialAvailabilityBlock,
+  SPECIAL_INCOMPATIBLE_MESSAGE,
+  type SpecialAvailabilityBlock,
+} from "@/lib/worker-special-availability";
+import type { AvailabilityExceptionRow } from "@/lib/availability";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
@@ -102,6 +110,11 @@ function Browse() {
   const [applyMode, setApplyMode] = useState<"accept" | "counter">("accept");
   const [counterAmount, setCounterAmount] = useState<string>("");
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
+  // Disponibilità speciali del lavoratore: se per la data dell'annuncio
+  // esistono entry "speciali", quelle prevalgono sempre sulla disponibilità
+  // abituale. Se nessuna è compatibile con città/orario dell'annuncio,
+  // candidatura bloccata sia lato UI sia lato submit.
+  const [specialExceptions, setSpecialExceptions] = useState<AvailabilityExceptionRow[]>([]);
 
   const selected = useMemo(() => items.find(i => i.id === openId) ?? null, [items, openId]);
 
@@ -161,6 +174,19 @@ function Browse() {
       }
       setAppStatusById(statusMap);
       setFavIds(new Set((favs??[]).map((f:any)=>f.announcement_id)));
+      const annDates = Array.from(new Set(list.map(a => a.service_date).filter(Boolean))) as string[];
+      if (annDates.length > 0) {
+        const { data: excs } = await supabase
+          .from("worker_availability_exceptions")
+          .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
+          .eq("worker_id", user.id)
+          .in("date", annDates);
+        setSpecialExceptions((excs as AvailabilityExceptionRow[] | null) ?? []);
+      } else {
+        setSpecialExceptions([]);
+      }
+    } else {
+      setSpecialExceptions([]);
     }
     setLoading(false);
   };
@@ -206,6 +232,11 @@ function Browse() {
       toast.info("Ti sei già candidato a questo turno.");
       return;
     }
+    const block = computeSpecialAvailabilityBlock(specialExceptions, a);
+    if (block?.blocked) {
+      toast.error(SPECIAL_INCOMPATIBLE_MESSAGE);
+      return;
+    }
     setConfirmAnn(a);
   };
 
@@ -213,6 +244,14 @@ function Browse() {
     if (!user || !confirmAnn) return;
     if (appliedIds.has(confirmAnn.id)) {
       toast.info("Ti sei già candidato a questo turno.");
+      setConfirmAnn(null);
+      return;
+    }
+    // Safety re-check lato backend: rileggiamo le eccezioni per quella data
+    // e blocchiamo se incompatibili, indipendentemente dallo stato in UI.
+    const freshBlock = await fetchSpecialAvailabilityBlock(user.id, confirmAnn);
+    if (freshBlock?.blocked) {
+      toast.error(SPECIAL_INCOMPATIBLE_MESSAGE);
       setConfirmAnn(null);
       return;
     }
