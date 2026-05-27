@@ -33,6 +33,25 @@ import {
   crossesMidnight,
   isValidTimeRange,
 } from "@/lib/availability";
+import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity } from "@/lib/worker-cities";
+
+// Province codes for the supported worker cities. Keep aligned with WORKER_CITIES.
+const CITY_PROVINCE_CODE: Record<string, string> = {
+  Milano: "MI",
+  Roma: "RM",
+  Torino: "TO",
+  Bologna: "BO",
+  Firenze: "FI",
+  Napoli: "NA",
+  Genova: "GE",
+  Verona: "VR",
+  Venezia: "VE",
+  Bari: "BA",
+};
+
+function provinceForCity(city: string): string {
+  return CITY_PROVINCE_CODE[city] ?? "";
+}
 
 export const Route = createFileRoute("/availability")({
   head: () => ({
