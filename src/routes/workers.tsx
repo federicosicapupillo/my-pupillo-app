@@ -1525,6 +1525,7 @@ function ContactedWorkerCard({
   specialDate,
   upcomingSpecials,
   compatBadge,
+  specialBlock,
   onDetails,
 }: {
   worker: W;
@@ -1540,6 +1541,7 @@ function ContactedWorkerCard({
   specialDate: string | null;
   upcomingSpecials: AvailabilityExceptionRow[];
   compatBadge: { text: string; cls: string } | null;
+  specialBlock: { blocked: boolean; specials: AvailabilityExceptionRow[] } | null;
   onDetails: () => void;
 }) {
   const workedTogether = !!r?.workedWith;
