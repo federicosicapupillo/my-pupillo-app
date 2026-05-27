@@ -771,7 +771,7 @@ function MapPage() {
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
