@@ -17,6 +17,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
 import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehirePicker";
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
+import { ReportDelayDialog, CancelPresenceDialog, type IncidentTarget } from "@/components/WorkerIncidentDialogs";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
