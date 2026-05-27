@@ -1186,6 +1186,29 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         onClose={() => setProposalTarget(null)}
       />
       <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
+      <CancelAnnouncementDialog
+        ann={cancelTarget}
+        restaurantId={user?.id ?? null}
+        venueName={(profile as any)?.business_name ?? (profile as any)?.full_name ?? null}
+        candidatesCount={cancelTarget ? (counts[cancelTarget.id] ?? 0) : 0}
+        hasAssigned={!!cancelTarget?.assigned_worker_id}
+        onClose={() => setCancelTarget(null)}
+        onCancelled={(updated) => {
+          setItems((prev) => prev.map((x) => x.id === updated.id ? { ...x, ...updated } : x));
+          setCandidates((prev) => {
+            const next = { ...prev };
+            const list = next[updated.id];
+            if (list) {
+              next[updated.id] = list.map((c) => ({
+                ...c,
+                app_status: ["pending","interested","counter_offer"].includes(c.app_status ?? "") ? "cancelled" : c.app_status,
+              }));
+            }
+            return next;
+          });
+          setCancelTarget(null);
+        }}
+      />
       <Dialog open={!!closeTarget} onOpenChange={(v) => { if (!v) setCloseTarget(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
