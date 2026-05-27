@@ -47,6 +47,8 @@ type Thread = {
   unread: number;
   annRole: string | null;
   annDate: string | null;
+  annTime: string | null;
+  annEndTime: string | null;
   hasWorkedTogether: boolean;
 };
 
