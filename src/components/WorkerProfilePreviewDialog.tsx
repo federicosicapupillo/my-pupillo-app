@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { displayWorkerName } from "@/lib/worker-display";
 
@@ -241,15 +240,7 @@ export function WorkerProfilePreviewDialog({
         )}
 
         <DialogFooter className="flex-row gap-2 p-4 border-t bg-card">
-          {workerId && (
-            <Button asChild className="flex-1" size="sm">
-              <Link to="/workers_/$id" params={{ id: workerId }}>
-                <ExternalLink className="h-4 w-4 mr-1.5" />
-                Profilo completo
-              </Link>
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" size="sm" className="ml-auto" onClick={() => onOpenChange(false)}>
             Chiudi
           </Button>
         </DialogFooter>
