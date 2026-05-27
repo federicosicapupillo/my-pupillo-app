@@ -24,7 +24,12 @@ import {
   SPECIAL_INCOMPATIBLE_MESSAGE,
   type SpecialAvailabilityBlock,
 } from "@/lib/worker-special-availability";
-import type { AvailabilityExceptionRow } from "@/lib/availability";
+import {
+  computeCompatibility,
+  sameCity,
+  type AvailabilityExceptionRow,
+  type AvailabilityRow,
+} from "@/lib/availability";
 
 export const Route = createFileRoute("/browse")({
   head: () => ({ meta: [{ title: "Trova offerte — Pupillo" }] }),
