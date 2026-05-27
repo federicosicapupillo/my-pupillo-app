@@ -113,7 +113,7 @@ export function RestaurantProfileGate({ children }: { children: ReactNode }) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={goBack}>Annulla</AlertDialogCancel>
-          <AlertDialogAction onClick={() => nav({ to: "/dashboard" })}>
+          <AlertDialogAction onClick={() => nav({ to: "/onboarding" })}>
             Completa profilo
           </AlertDialogAction>
         </AlertDialogFooter>
