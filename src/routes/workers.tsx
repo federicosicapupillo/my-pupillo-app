@@ -1348,11 +1348,13 @@ function ContactedWorkerCard({
   worker: w,
   rel: r,
   selectedAnnouncementId,
+  activeRoleContext,
   onOpenChat,
 }: {
   worker: W;
   rel: WorkerRel | undefined;
   selectedAnnouncementId: string | null;
+  activeRoleContext: string | null;
   onOpenChat: (applicationId: string) => void;
 }) {
   const workedTogether = !!r?.workedWith;
@@ -1398,6 +1400,7 @@ function ContactedWorkerCard({
   const reviewDate = review?.created_at ? new Date(review.created_at) : null;
   // Apri chat: usa l'applicazione più recente con questo lavoratore.
   const appId = r?.lastAppId ?? null;
+  const roleInfo = pickDisplayedRole(w, activeRoleContext);
   return (
     <div className="rounded-2xl border bg-card p-5">
       <div className="flex items-center gap-3">
@@ -1405,7 +1408,14 @@ function ContactedWorkerCard({
         <div className="min-w-0">
           <div className="truncate font-semibold">{displayName}</div>
           <div className="text-xs text-muted-foreground flex items-center gap-2">
-            {w.primary_role && <span className="capitalize">{w.primary_role}</span>}
+            {roleInfo.label && (
+              <span className="capitalize">
+                {roleInfo.label}
+                {roleInfo.secondary && (
+                  <span className="text-muted-foreground/80"> · anche {roleInfo.secondary}</span>
+                )}
+              </span>
+            )}
             {w.rating_avg != null && Number(w.rating_avg) > 0 && (
               <span className="inline-flex items-center gap-0.5 text-amber-600">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
