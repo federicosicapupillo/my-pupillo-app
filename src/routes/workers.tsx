@@ -1049,6 +1049,12 @@ function WorkersPage() {
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
       if (subcategory === "Più affidabili") return (b.reliability_pct ?? 0) - (a.reliability_pct ?? 0);
     }
+    // Penalizzazione affidabilità (3+ ritardi confermati): i lavoratori
+    // penalizzati restano ricercabili ma scendono SEMPRE in fondo, dopo
+    // aver verificato compatibilità minima (filtri già applicati sopra).
+    const pa = a.search_penalty_active ? 1 : 0;
+    const pb = b.search_penalty_active ? 1 : 0;
+    if (pa !== pb) return pa - pb;
     const ra = rel[a.id]; const rb = rel[b.id];
     const ta = tierOf(ra, a.rating_avg); const tb = tierOf(rb, b.rating_avg);
     if (ta !== tb) return ta - tb;
