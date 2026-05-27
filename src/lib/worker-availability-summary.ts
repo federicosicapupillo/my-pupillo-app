@@ -3,12 +3,26 @@ import { SLOT_LABELS } from "./availability";
 
 const DAY_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
+export type WorkerAvailabilityLine = {
+  /** Compressed day label, e.g. "Lun - Ven", "Sab, Dom", "Mer". */
+  days: string;
+  /** Hours blurb, e.g. "09:00 - 23:00" or "Cena" / "Valuto in base alla proposta". */
+  hours: string;
+  /** True when today's weekday is part of this line. */
+  includesToday: boolean;
+  /** Internal: ordered day indices (0=Mon..6=Sun) for highlighting. */
+  dayIndices: number[];
+};
+
 export type WorkerAvailabilitySummary =
   | { kind: "none" }
-  | { kind: "today"; slotLabels: string[] }
-  | { kind: "all_week"; slotLabel: string }
-  | { kind: "lines"; lines: string[]; totalDays: number; truncated: boolean }
-  | { kind: "wide"; totalDays: number };
+  | {
+      kind: "lines";
+      lines: WorkerAvailabilityLine[];
+      truncated: boolean;
+      extraCount: number;
+      todayInList: boolean;
+    };
 
 function todayDow(now = new Date()): number {
   // JS: 0=Sun..6=Sat → our: 0=Mon..6=Sun
@@ -25,10 +39,30 @@ function compressDays(days: number[]): string {
   return sorted.map((d) => DAY_SHORT[d]).join(", ");
 }
 
+function hoursKey(r: AvailabilityRow): string {
+  if (r.start_time && r.end_time) {
+    return `${r.start_time.slice(0, 5)}-${r.end_time.slice(0, 5)}`;
+  }
+  // Fall back to a stable slot-based key when explicit hours are missing.
+  return `slot:${r.time_slot}`;
+}
+
+function hoursLabel(key: string, slot: TimeSlot): string {
+  if (key.startsWith("slot:")) {
+    return SLOT_LABELS[slot] ?? slot;
+  }
+  // "HH:mm-HH:mm" → "HH:mm - HH:mm"
+  const [a, b] = key.split("-");
+  return `${a} - ${b}`;
+}
+
 /**
- * Summarise real availability rows (table `worker_availability`) into the
- * short blurb shown on the worker card. Returns `{ kind: "none" }` only when
- * the worker has saved nothing at all.
+ * Compact summary for the restaurant-side worker card.
+ *
+ * Rows are grouped by hour range ("HH:mm-HH:mm") so that days sharing the
+ * same time window collapse into one line like "Lun - Ven · 09:00 - 23:00".
+ * If explicit hours are missing the slot label is used instead (e.g.
+ * "Sab - Dom · Cena").
  */
 export function summarizeWorkerAvailability(
   rows: AvailabilityRow[] | null | undefined,
@@ -37,40 +71,44 @@ export function summarizeWorkerAvailability(
   if (!rows || rows.length === 0) return { kind: "none" };
 
   const today = todayDow(now);
-  const todaySlots = rows
-    .filter((r) => r.day_of_week === today)
-    .map((r) => SLOT_LABELS[r.time_slot]);
-  if (todaySlots.length > 0) {
-    return { kind: "today", slotLabels: [...new Set(todaySlots)] };
-  }
 
-  const bySlot = new Map<TimeSlot, Set<number>>();
+  // Bucket by (hour-range or slot-fallback); track contributing slot for label.
+  const buckets = new Map<string, { slot: TimeSlot; days: Set<number> }>();
   for (const r of rows) {
-    const s = bySlot.get(r.time_slot) ?? new Set<number>();
-    s.add(r.day_of_week);
-    bySlot.set(r.time_slot, s);
-  }
-  const uniqueDays = new Set(rows.map((r) => r.day_of_week));
-
-  for (const [slot, days] of bySlot) {
-    if (days.size === 7) return { kind: "all_week", slotLabel: SLOT_LABELS[slot] };
-  }
-  if (bySlot.size > 3 || uniqueDays.size >= 6) {
-    return { kind: "wide", totalDays: uniqueDays.size };
+    const key = hoursKey(r);
+    const b = buckets.get(key) ?? { slot: r.time_slot, days: new Set<number>() };
+    b.days.add(r.day_of_week);
+    buckets.set(key, b);
   }
 
-  const lines: string[] = [];
-  let count = 0;
-  for (const [slot, days] of bySlot) {
-    lines.push(`${compressDays([...days])} · ${SLOT_LABELS[slot]}`);
-    count++;
-    if (count >= 3) break;
+  const all: WorkerAvailabilityLine[] = [];
+  for (const [key, b] of buckets) {
+    const dayIndices = [...b.days].sort((a, c) => a - c);
+    all.push({
+      days: compressDays(dayIndices),
+      hours: hoursLabel(key, b.slot),
+      includesToday: b.days.has(today),
+      dayIndices,
+    });
   }
+
+  // Sort: lines that include today first, then by earliest day, then by hours.
+  all.sort((x, y) => {
+    if (x.includesToday !== y.includesToday) return x.includesToday ? -1 : 1;
+    const dx = x.dayIndices[0] ?? 99;
+    const dy = y.dayIndices[0] ?? 99;
+    if (dx !== dy) return dx - dy;
+    return x.hours.localeCompare(y.hours);
+  });
+
+  const MAX = 3;
+  const visible = all.slice(0, MAX);
   return {
     kind: "lines",
-    lines,
-    totalDays: uniqueDays.size,
-    truncated: bySlot.size > lines.length,
+    lines: visible,
+    truncated: all.length > MAX,
+    extraCount: Math.max(0, all.length - MAX),
+    todayInList: all.some((l) => l.includesToday),
   };
 }
 
