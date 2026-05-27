@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
