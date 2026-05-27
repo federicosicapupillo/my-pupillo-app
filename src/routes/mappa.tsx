@@ -421,6 +421,22 @@ function MapPage() {
   const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
   const workerRoles = useMemo(() => Array.from(new Set(workers.map(w => w.primary_role).filter(Boolean))) as string[], [workers]);
 
+  // Insieme effettivo delle città consentite per la mappa lato lavoratore.
+  // Se il lavoratore ha impostato un filtro città manuale, quello vince
+  // (rule 19). Altrimenti si usa la base (profilo + speciali future).
+  // Null = nessun vincolo (vista ristoratore/admin).
+  const workerAllowedCities = useMemo<Set<string> | null>(() => {
+    if (!isWorker) return null;
+    if (city !== "any") return new Set([normalizeCity(city)]);
+    return workerBaseAllowedCities;
+  }, [isWorker, city, workerBaseAllowedCities]);
+
+  const isWorkerCityAllowed = (c: string | null | undefined) => {
+    if (!workerAllowedCities) return true;
+    if (workerAllowedCities.size === 0) return true; // nessuna preferenza: non bloccare tutto
+    return workerAllowedCities.has(normalizeCity(c));
+  };
+
   const matchesWorkerQuery = (w: Worker) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
