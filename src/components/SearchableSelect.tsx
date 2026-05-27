@@ -17,6 +17,7 @@ type Props = {
   placeholder?: string;
   searchPlaceholder?: string;
   disabled?: boolean;
+  triggerClassName?: string;
 };
 
 export function SearchableSelect({
@@ -26,6 +27,7 @@ export function SearchableSelect({
   placeholder = "Seleziona…",
   searchPlaceholder = "Cerca…",
   disabled,
+  triggerClassName,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -58,7 +60,7 @@ export function SearchableSelect({
           type="button"
           variant="outline"
           disabled={disabled}
-          className="w-full justify-between h-12 text-left font-normal"
+          className={["w-full justify-between h-12 text-left font-normal", triggerClassName].filter(Boolean).join(" ")}
         >
           <span className={!value ? "text-muted-foreground" : ""}>
             {value ? selectedLabel : placeholder}

@@ -15,7 +15,7 @@ import { KeyRound, Trash2, FileText, Coins, Star, Eye, EyeOff, User, Building2, 
 import { SpokenLanguagesView, SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
-import { provinceCode } from "@/lib/italian-locations";
+import { provinceCode, splitAddressAndCivic } from "@/lib/italian-locations";
 import { ReferralCard } from "@/components/ReferralCard";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
@@ -264,7 +264,8 @@ function useBoxSave(userId: string | null, onSaved: () => Promise<void> | void, 
       toast.success(messages?.success ?? "Profilo aggiornato correttamente.");
       await onSaved();
       return true;
-    } catch {
+    } catch (error) {
+      console.error("Profile box save failed", { error, patch });
       toast.error(messages?.error ?? "Non è stato possibile aggiornare il profilo. Riprova.");
       return false;
     } finally {
@@ -351,10 +352,15 @@ function PersonalDataBox({ profile, email }: { profile: any; email: string | nul
 }
 
 function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: string | null; onSaved: () => Promise<void> | void }) {
+  const legacyAddress = splitAddressAndCivic(profile?.residence_address);
+  const displayCity = profile?.residence_city ?? profile?.city ?? "";
+  const displayStreet = profile?.residence_street ?? legacyAddress.street ?? "";
+  const displayNumber = profile?.residence_number ?? legacyAddress.civic ?? "";
+  const displayAddress = displayStreet && displayNumber ? `${displayStreet}, ${displayNumber}` : "";
   const [editing, setEditing] = useState(false);
-  const [city, setCity] = useState<string>(profile?.residence_city ?? profile?.city ?? "");
-  const [street, setStreet] = useState<string>(profile?.residence_street ?? "");
-  const [number, setNumber] = useState<string>(profile?.residence_number ?? "");
+  const [city, setCity] = useState<string>(displayCity);
+  const [street, setStreet] = useState<string>(displayStreet);
+  const [number, setNumber] = useState<string>(displayNumber);
   const [errors, setErrors] = useState<Partial<Record<"city" | "street" | "number", string>>>({});
   const { saving, save } = useBoxSave(userId, onSaved, {
     success: "Residenza aggiornata correttamente.",
@@ -362,9 +368,10 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
   });
 
   const start = () => {
+    const currentLegacyAddress = splitAddressAndCivic(profile?.residence_address);
     setCity(profile?.residence_city ?? profile?.city ?? "");
-    setStreet(profile?.residence_street ?? profile?.residence_address ?? "");
-    setNumber(profile?.residence_number ?? "");
+    setStreet(profile?.residence_street ?? currentLegacyAddress.street ?? "");
+    setNumber(profile?.residence_number ?? currentLegacyAddress.civic ?? "");
     setErrors({});
     setEditing(true);
   };
@@ -385,51 +392,61 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
       residence_city: city.trim() || null,
       residence_street: street.trim() || null,
       residence_number: number.trim() || null,
-      residence_address: null,
+      residence_address: `${street.trim()}, ${number.trim()}`,
     });
     if (ok) setEditing(false);
   };
 
   return (
     <ProfileBox title="Residenza" editing={editing} saving={saving} onEdit={start} onCancel={cancel} onSave={onSave}>
-      <div className="grid gap-3 md:grid-cols-2">
-        <div>
-          <Label>Città di residenza <span className="text-destructive">*</span></Label>
-          {editing ? (
+      {editing ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <Label>Città di residenza <span className="text-destructive">*</span></Label>
             <SearchableSelect
               options={WORKER_CITIES as unknown as string[]}
               value={city}
               onChange={(v) => { setCity(v); if (errors.city) setErrors(p => ({ ...p, city: undefined })); }}
               placeholder="Seleziona città"
+              triggerClassName={errors.city ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive" : undefined}
             />
-          ) : (
-            <Input value={city} readOnly className="bg-muted/50" />
-          )}
-          {errors.city && <p className="mt-1 text-xs text-destructive">{errors.city}</p>}
+            {errors.city && <p className="mt-1 text-xs text-destructive">{errors.city}</p>}
+          </div>
+          <div className="md:col-span-2">
+            <Label>Via <span className="text-destructive">*</span></Label>
+            <Input
+              value={street}
+              onChange={(e) => { setStreet(e.target.value); if (errors.street) setErrors(p => ({ ...p, street: undefined })); }}
+              className={cn(errors.street && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
+              placeholder="Inserisci la via"
+            />
+            {errors.street && <p className="mt-1 text-xs text-destructive">{errors.street}</p>}
+          </div>
+          <div>
+            <Label>Numero civico <span className="text-destructive">*</span></Label>
+            <Input
+              value={number}
+              onChange={(e) => { setNumber(e.target.value); if (errors.number) setErrors(p => ({ ...p, number: undefined })); }}
+              className={cn(errors.number && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
+              placeholder="12, 12/A, 12 bis, SNC…"
+            />
+            {errors.number && <p className="mt-1 text-xs text-destructive">{errors.number}</p>}
+          </div>
         </div>
-        <div className="md:col-span-2">
-          <Label>Via <span className="text-destructive">*</span></Label>
-          <Input
-            value={street}
-            readOnly={!editing}
-            onChange={(e) => { setStreet(e.target.value); if (errors.street) setErrors(p => ({ ...p, street: undefined })); }}
-            className={cn(!editing && "bg-muted/50", errors.street && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
-            placeholder="Inserisci la via"
-          />
-          {errors.street && <p className="mt-1 text-xs text-destructive">{errors.street}</p>}
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Città di residenza</p>
+            <p className="text-sm font-medium">{displayCity || "Città non completata"}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Indirizzo di residenza</p>
+            <p className={cn("text-sm font-medium", !displayAddress && "text-muted-foreground")}>
+              {displayAddress || "Indirizzo non completato"}
+            </p>
+          </div>
         </div>
-        <div>
-          <Label>Numero civico <span className="text-destructive">*</span></Label>
-          <Input
-            value={number}
-            readOnly={!editing}
-            onChange={(e) => { setNumber(e.target.value); if (errors.number) setErrors(p => ({ ...p, number: undefined })); }}
-            className={cn(!editing && "bg-muted/50", errors.number && "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive")}
-            placeholder="12, 12/A, 12 bis, SNC…"
-          />
-          {errors.number && <p className="mt-1 text-xs text-destructive">{errors.number}</p>}
-        </div>
-      </div>
+      )}
     </ProfileBox>
   );
 }
