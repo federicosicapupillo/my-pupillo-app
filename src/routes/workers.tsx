@@ -1193,6 +1193,15 @@ function WorkersPage() {
                         selectedAnnouncementId={selected || null}
                         activeRoleContext={activeRoleContext}
                         onOpenChat={(appId) => nav({ to: "/messages/$id", params: { id: appId } })}
+                        availRows={availByWorker[w.id] ?? null}
+                        specialForDate={
+                          selectedAnn
+                            ? (excByWorker[w.id] ?? []).filter((e) => e.date === selectedAnn.service_date)
+                            : []
+                        }
+                        specialDate={selectedAnn?.service_date ?? null}
+                        compatBadge={compatBadge}
+                        onDetails={() => setDetailsWorker(w)}
                       />
                     );
                   }
