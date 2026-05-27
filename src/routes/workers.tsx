@@ -1348,6 +1348,16 @@ function WorkersPage() {
                 </span>
               </div>
             )}
+            {w.search_penalty_active && (
+              <div className="mt-2">
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium"
+                  title="Ritardi ripetuti recenti — il profilo ha priorità ridotta nei risultati."
+                >
+                  Affidabilità da verificare
+                </span>
+              </div>
+            )}
             {r && (r.workedWith || r.contacted) && (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {r.workedWith && (
