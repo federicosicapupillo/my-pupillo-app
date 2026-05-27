@@ -1200,6 +1200,7 @@ function WorkersPage() {
                             : []
                         }
                         specialDate={selectedAnn?.service_date ?? null}
+                        upcomingSpecials={excByWorker[w.id] ?? []}
                         compatBadge={compatBadge}
                         onDetails={() => setDetailsWorker(w)}
                       />
@@ -1321,6 +1322,7 @@ function WorkersPage() {
                   : []
               }
               specialDate={selectedAnn?.service_date ?? null}
+              upcomingSpecials={excByWorker[w.id] ?? []}
               weekly={w.weekly_availability}
               availableNowUntil={w.available_now_until}
               onDetails={() => setDetailsWorker(w)}
