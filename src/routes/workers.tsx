@@ -1448,6 +1448,9 @@ function ContactedWorkerCard({
   selectedAnnouncementId,
   activeRoleContext,
   onOpenChat,
+  onSendProposal,
+  canSendProposal,
+  blockedReason,
   availRows,
   specialForDate,
   specialDate,
@@ -1460,6 +1463,9 @@ function ContactedWorkerCard({
   selectedAnnouncementId: string | null;
   activeRoleContext: string | null;
   onOpenChat: (applicationId: string) => void;
+  onSendProposal: () => void;
+  canSendProposal: boolean;
+  blockedReason: string | null;
   availRows: AvailabilityRow[] | null;
   specialForDate: AvailabilityExceptionRow[];
   specialDate: string | null;
