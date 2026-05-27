@@ -929,13 +929,16 @@ function WorkersPage() {
   if (selectedAnn) {
     for (const w of distFiltered) {
       const rows = availByWorker[w.id];
-      if (!rows || rows.length === 0) {
+      const excs = (excByWorker[w.id] ?? []).filter(
+        (e) => e.date === selectedAnn.service_date,
+      );
+      if ((!rows || rows.length === 0) && excs.length === 0) {
         compatByWorker[w.id] = null;
         continue;
       }
       compatByWorker[w.id] = computeCompatibility(
-        rows,
-        [],
+        rows ?? [],
+        excs,
         selectedAnn.service_date,
         selectedAnn.service_time ?? null,
         selectedAnn.end_time ?? null,
