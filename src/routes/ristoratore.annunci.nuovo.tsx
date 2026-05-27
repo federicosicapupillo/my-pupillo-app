@@ -192,7 +192,6 @@ function NewRestaurantJobRequest() {
     useFieldErrors<string>();
   const [previewVisible, setPreviewVisible] = useState(true);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
-  const [defaultsLoaded, setDefaultsLoaded] = useState(false);
   const [confirmDefaultsOpen, setConfirmDefaultsOpen] = useState(false);
   const pendingStatusRef = useRef<"bozza" | "pubblicato" | null>(null);
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
@@ -370,7 +369,6 @@ function NewRestaurantJobRequest() {
       toast.info("Abbiamo caricato le tue impostazioni predefinite. Puoi modificarle per questo annuncio.");
       defaultsToastShownRef.current = true;
     }
-    setDefaultsLoaded(true);
     console.info("[nuovo-annuncio] valori onboarding passati al form requisiti", { source, defaults });
   };
 
@@ -712,9 +710,13 @@ function NewRestaurantJobRequest() {
       announcement_id: announcement.id,
       status,
       license_requirement: f.license_requirement,
+      tattoos_allowed: f.tattoos_allowed,
+      piercings_allowed: f.piercings_allowed,
+      beard_allowed: f.beard_allowed,
       language_requirements: languageReqs,
       required_skills: skills,
       dress_code_items: dressItems,
+      dress_code_notes: f.dress_code_notes,
     });
     toast.success(status === "bozza" ? "Bozza salvata correttamente" : "Annuncio pubblicato correttamente");
 
