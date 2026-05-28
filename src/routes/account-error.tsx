@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 
@@ -8,9 +9,18 @@ export const Route = createFileRoute("/account-error")({
 });
 
 function AccountErrorPage() {
-  const { user, role, profile, signOut, refresh } = useAuth();
+  const { user, role, profile, signOut, refresh, extrasLoaded } = useAuth();
   const navigate = useNavigate();
   const isDev = import.meta.env.DEV;
+
+  // If a role IS already resolved (e.g. after a refresh / fallback to
+  // profiles.primary_role kicked in), don't keep the user stuck here.
+  useEffect(() => {
+    if (!extrasLoaded) return;
+    if (role === "admin") navigate({ to: "/admin", replace: true });
+    else if (role === "restaurant") navigate({ to: "/dashboard", replace: true });
+    else if (role === "worker") navigate({ to: "/jobs", replace: true });
+  }, [role, extrasLoaded, navigate]);
 
   const retry = async () => {
     await refresh();
