@@ -31,6 +31,7 @@ import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
+import { computeProposalStatus, type ProposalState } from "@/lib/proposal-status";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -167,6 +168,12 @@ function AnnouncementDetail() {
   const [fullDialogOpen, setFullDialogOpen] = useState(false);
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
+  // Per-application: state of the most recent shift_proposal sent in this chat.
+  // `waitingWorker` is true when the restaurant sent a proposal that the worker
+  // has not yet answered → operational buttons must stay disabled.
+  const [proposalInfo, setProposalInfo] = useState<
+    Record<string, { state: ProposalState | null; waitingWorker: boolean }>
+  >({});
 
   const load = async () => {
     // Try the base table first — succeeds for the owning restaurant, the
@@ -194,6 +201,57 @@ function AnnouncementDetail() {
       .order("created_at", { ascending: false });
     const list = (ax as App[]) ?? [];
     setApps(list);
+    // Compute per-application proposal state (latest shift_proposal in chat).
+    if (list.length) {
+      const appIds = list.map((x) => x.id);
+      const { data: msgs } = await supabase
+        .from("messages")
+        .select("id, application_id, sender_id, created_at, template_id")
+        .in("application_id", appIds)
+        .eq("template_id", "shift_proposal")
+        .order("created_at", { ascending: false });
+      const latestByApp = new Map<
+        string,
+        { id: string; sender_id: string; created_at: string }
+      >();
+      for (const m of ((msgs ?? []) as any[])) {
+        if (!latestByApp.has(m.application_id)) latestByApp.set(m.application_id, m);
+      }
+      const msgIds = Array.from(latestByApp.values()).map((m) => m.id);
+      const respByMsg = new Map<string, { status: "accepted" | "rejected" }>();
+      if (msgIds.length) {
+        const { data: resps } = await supabase
+          .from("proposal_responses")
+          .select("message_id, status")
+          .in("message_id", msgIds);
+        for (const r of ((resps ?? []) as any[])) {
+          respByMsg.set(r.message_id, { status: r.status });
+        }
+      }
+      const info: Record<string, { state: ProposalState | null; waitingWorker: boolean }> = {};
+      const restaurantId = (a as Ann).restaurant_id;
+      for (const app of list) {
+        const lp = latestByApp.get(app.id);
+        if (!lp) {
+          info[app.id] = { state: null, waitingWorker: false };
+          continue;
+        }
+        const resp = respByMsg.get(lp.id) ?? null;
+        const state = computeProposalStatus({
+          response: resp,
+          applicationStatus: app.status,
+          supersededByNewer: false,
+        });
+        // Restaurant-initiated proposal awaiting worker response.
+        const isFromRestaurant = lp.sender_id === restaurantId;
+        const waitingWorker =
+          isFromRestaurant && state === "pending" && app.status === "pending";
+        info[app.id] = { state, waitingWorker };
+      }
+      setProposalInfo(info);
+    } else {
+      setProposalInfo({});
+    }
     const { data: jr } = await (supabase as any)
       .from("job_requests_public")
       .select("title,role_required,workers_needed,description,tasks,shift_date,end_date,start_time,end_time,hourly_rate,break_included,restaurant_name")
@@ -365,6 +423,12 @@ function AnnouncementDetail() {
   };
 
   const accept = async (app: App) => {
+    // Hard guard: do not let the restaurant assign a worker while the
+    // outgoing proposal is still waiting for the worker's acceptance.
+    if (proposalInfo[app.id]?.waitingWorker) {
+      toast.error("Non puoi confermare questa proposta finché il lavoratore non ha accettato.");
+      return;
+    }
     if (isFull) {
       setFullDialogOpen(true);
       return;
@@ -467,6 +531,10 @@ function AnnouncementDetail() {
     load();
   };
   const reject = async (app: App) => {
+    if (proposalInfo[app.id]?.waitingWorker) {
+      toast.error("Per ritirare una proposta in attesa usa la chat (Annulla proposta).");
+      return;
+    }
     setBusyId(app.id);
     const { error } = await supabase.from("applications").update({ status: "rejected" }).eq("id", app.id);
     setBusyId(null);
