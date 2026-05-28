@@ -248,6 +248,57 @@ export type RestoreReport = {
 
 const CHUNK = 500;
 
+// Crea uno snapshot inline (solo database) del DB corrente, usato come
+// pre-restore-backup. Salva su admin-backups/runs/pre-restore-<stamp>/database.json
+// e registra un record in backup_logs.
+async function createDatabaseSnapshot(
+  triggeredBy: string,
+  prefix: "pre-restore" | "manual" = "pre-restore",
+): Promise<{ logId: string | null; stamp: string }> {
+  const startedAt = new Date();
+  const stampRaw = startedAt.toISOString().replace(/[:.]/g, "-");
+  const stamp = `${prefix}-${stampRaw}`;
+  const { data: log } = await supabaseAdmin
+    .from("backup_logs")
+    .insert({
+      status: "running",
+      type: prefix,
+      triggered_by: triggeredBy,
+      started_at: startedAt.toISOString(),
+    })
+    .select("id")
+    .maybeSingle();
+  const logId = (log as any)?.id as string | undefined;
+
+  const dump: any = { generated_at: startedAt.toISOString(), tables: {} };
+  for (const t of RESTORE_ORDER) {
+    const { data, error } = await (supabaseAdmin.from as any)(t).select("*").limit(50000);
+    dump.tables[t] = error ? [] : (data ?? []);
+  }
+  const path = `runs/${stamp}/database.json`;
+  const blob = new Blob([JSON.stringify(dump)], { type: "application/json" });
+  const { error: upErr } = await supabaseAdmin.storage
+    .from(BACKUP_BUCKET)
+    .upload(path, blob, { contentType: "application/json", upsert: true });
+  const ok = !upErr;
+
+  if (logId) {
+    await supabaseAdmin
+      .from("backup_logs")
+      .update({
+        status: ok ? "completed" : "failed",
+        completed_at: new Date().toISOString(),
+        database_backup_status: ok ? "completed" : "failed",
+        storage_backup_status: "skipped",
+        github_backup_status: "skipped",
+        error_message: upErr ? upErr.message.slice(0, 4000) : null,
+        metadata: { stamp, kind: prefix, tables: RESTORE_ORDER.length },
+      })
+      .eq("id", logId);
+  }
+  return { logId: logId ?? null, stamp };
+}
+
 async function chunkInsert(
   table: string,
   rows: any[],
