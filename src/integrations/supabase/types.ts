@@ -116,6 +116,8 @@ export type Database = {
           notes: string | null
           piercings_allowed: string | null
           professional_profile: string | null
+          reopened_after_worker_cancellation: boolean
+          reopened_at: string | null
           required_skills: string[] | null
           restaurant_id: string
           reused_from_announcement_id: string | null
@@ -170,6 +172,8 @@ export type Database = {
           notes?: string | null
           piercings_allowed?: string | null
           professional_profile?: string | null
+          reopened_after_worker_cancellation?: boolean
+          reopened_at?: string | null
           required_skills?: string[] | null
           restaurant_id: string
           reused_from_announcement_id?: string | null
@@ -224,6 +228,8 @@ export type Database = {
           notes?: string | null
           piercings_allowed?: string | null
           professional_profile?: string | null
+          reopened_after_worker_cancellation?: boolean
+          reopened_at?: string | null
           required_skills?: string[] | null
           restaurant_id?: string
           reused_from_announcement_id?: string | null
