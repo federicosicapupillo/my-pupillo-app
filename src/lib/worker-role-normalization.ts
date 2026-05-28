@@ -12,8 +12,6 @@ const ROLE_SYNONYMS: Record<string, string[]> = {
     "coordinatore sala",
     "cameriere responsabile",
   ],
-  caposala: ["caposala", "capo sala"],
-  "maître": ["maitre", "maître"],
   bartender: ["bartender", "bar tender", "bar_tender", "barman", "barlady", "addetto cocktail", "addetta cocktail", "preparazione cocktail", "preparazione_cocktail", "cocktail base"],
   barista: ["barista", "caffetteria"],
   chef: ["chef", "cuoco", "cuoca"],
