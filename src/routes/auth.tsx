@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 
-import { DELETED_ACCOUNT_MESSAGE, useAuth } from "@/lib/auth-context";
+import { DELETED_ACCOUNT_MESSAGE, routeForRole, useAuth } from "@/lib/auth-context";
 import { useEffect } from "react";
 import { lovable } from "@/integrations/lovable";
 import pupilloLogo from "@/assets/pupillo-logo.png";
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { user, role: userRole, profile, loading, extrasLoaded, refresh } = useAuth();
+  const { user, role: userRole, profile, roleDebug, loading, extrasLoaded, refresh } = useAuth();
   const { role: roleParam, ref: refParam, deleted: deletedParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
@@ -86,18 +86,30 @@ function AuthPage() {
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
     if (profile?.is_deleted || profile?.deleted_at) return;
-    console.info("[PUPILLO_ROLE_RESTORE_DEBUG] auth redirect decision", {
+    const finalRole = userRole ?? roleDebug?.final_role ?? null;
+    const finalRoute = routeForRole(finalRole);
+    const redirectDebug = {
       user_id: user.id,
       email: user.email,
       has_profile: !!profile,
       profile_primary_role: (profile as { primary_role?: string | null } | null)?.primary_role ?? null,
+      profile_role: roleDebug?.profile_role ?? (profile as { primary_role?: string | null } | null)?.primary_role ?? null,
+      user_role: roleDebug?.user_role ?? null,
+      metadata_role: roleDebug?.metadata_role ?? ((user.user_metadata?.role as string | null | undefined) ?? null),
+      profile_error: roleDebug?.profile_error ?? null,
+      user_roles_error: roleDebug?.user_roles_error ?? null,
+      rpc_error: roleDebug?.rpc_error ?? null,
       profile_completed: profile?.profile_completed ?? null,
       phone_verified: profile?.phone_verified ?? null,
       role: userRole,
-      is_admin: userRole === "admin",
-    });
+      final_role: finalRole,
+      final_route: finalRoute,
+      is_admin: finalRole === "admin",
+    };
+    console.info("[PUPILLO_ROLE_RESTORE_DEBUG] auth redirect decision", redirectDebug);
+    console.info("[PUPILLO_ROLE_FINAL_DEBUG] redirect decision", redirectDebug);
     // Admins bypass phone verification, onboarding and profile completion.
-    if (userRole === "admin") {
+    if (finalRole === "admin") {
       navigate({ to: "/admin" });
       return;
     }
@@ -114,21 +126,17 @@ function AuthPage() {
       navigate({ to: "/onboarding" });
       return;
     }
-    if (userRole === "restaurant") navigate({ to: "/dashboard" });
-    else if (userRole === "worker") navigate({ to: "/jobs" });
-    else if (userRole === null) {
+    if (finalRole === "restaurant") navigate({ to: "/dashboard" });
+    else if (finalRole === "worker") navigate({ to: "/jobs" });
+    else if (finalRole === null) {
       // Authenticated but no role row in user_roles. Send the user to a
       // dedicated page with logout / retry / contact-support actions
       // instead of leaving them stuck on the login screen.
-      console.warn("[PUPILLO_ROLE_RESTORE_DEBUG] missing role for authenticated user", {
-        user_id: user.id,
-        email: user.email,
-        has_profile: !!profile,
-        profile_primary_role: (profile as { primary_role?: string | null } | null)?.primary_role ?? null,
-      });
+      console.warn("[PUPILLO_ROLE_RESTORE_DEBUG] missing role for authenticated user", redirectDebug);
+      console.warn("[PUPILLO_ROLE_FINAL_DEBUG] redirecting to account-error", redirectDebug);
       navigate({ to: "/account-error" });
     }
-  }, [user, userRole, profile, loading, extrasLoaded, navigate, roleParam]);
+  }, [user, userRole, roleDebug, profile, loading, extrasLoaded, navigate, roleParam]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
