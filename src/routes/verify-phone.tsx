@@ -194,12 +194,27 @@ function VerifyPhonePage() {
       await refresh();
       // Dopo OTP WhatsApp confermato: se l'email non è ancora verificata,
       // mostra il popup e poi la schermata bloccante /verify-email.
-      const emailConfirmed = !!user?.email_confirmed_at;
+      const { data: freshUserData } = await supabase.auth.getUser();
+      const authUser = freshUserData.user ?? user;
+      const emailConfirmed = isAuthEmailConfirmed(authUser);
       const dest = role === "admin"
         ? "/admin"
         : emailConfirmed
           ? (profile?.profile_completed ? "/dashboard" : "/onboarding")
           : "/verify-email";
+      logPupilloAuthFlow("verify_phone_otp_success", {
+        user: authUser,
+        profile: profile ? { ...profile, phone_verified: true, whatsapp_confirmation_status: "verified" } : profile,
+        role,
+        currentRoute: "/verify-phone",
+        flow: computePupilloAuthFlow({
+          user: authUser,
+          profile: profile ? { ...profile, phone_verified: true, whatsapp_confirmation_status: "verified" } : profile,
+          role,
+        }),
+        redirectTo: dest,
+        redirectReason: "otp_verified",
+      });
       pendingNavRef.current = dest;
       if (emailConfirmed) {
         nav({ to: dest as any });
@@ -394,11 +409,11 @@ function VerifyPhonePage() {
               Conferma la tua email
             </DialogTitle>
             <DialogDescription>
-              Ti abbiamo inviato una mail di conferma. Apri la tua casella email e clicca sul link ricevuto per completare la registrazione.
+              Numero WhatsApp verificato correttamente. Ora devi confermare anche la tua email per completare la registrazione e attivare il profilo.
             </DialogDescription>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
-            Se non trovi la mail, controlla anche nella cartella spam o posta indesiderata.
+            Controlla la tua casella di posta e clicca sul link di conferma. Se non trovi l'email, controlla anche nello spam.
           </p>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button
