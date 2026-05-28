@@ -2380,6 +2380,10 @@ function Thread() {
                       toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
                       return;
                     }
+                    if (role === "worker" && !profile?.profile_completed) {
+                      openGate?.({ kind: "general" });
+                      return;
+                    }
                     if (role === "worker" && user) {
                       const fresh = await fetchSpecialAvailabilityBlock(user.id, ann);
                       if (fresh?.blocked) {
