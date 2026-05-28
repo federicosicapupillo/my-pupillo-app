@@ -28,6 +28,7 @@ import {
 import { isValidCapForCity } from "@/lib/italian-locations";
 import { CapField } from "@/components/CapField";
 import { DateField } from "@/components/DateField";
+import { WORKER_ROLES } from "@/lib/worker-roles";
 import { HourlyRateInput } from "@/components/HourlyRateInput";
 import { scrollToField } from "@/lib/form-field-validation";
 import { useProfileGate } from "@/components/ProfileGate";
@@ -517,8 +518,8 @@ function NewAnn() {
           <Select value={f.professional_profile} onValueChange={v => setF({ ...f, professional_profile: v })}>
             <SelectTrigger><SelectValue placeholder="Seleziona un ruolo" /></SelectTrigger>
             <SelectContent>
-              {["cameriere","bartender","chef","aiuto cucina","runner","lavapiatti","hostess","responsabile sala"].map(r => (
-                <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>
+              {WORKER_ROLES.map(r => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
             </SelectContent>
           </Select>
