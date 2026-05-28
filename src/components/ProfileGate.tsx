@@ -149,11 +149,39 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
   };
 
   const titles: Record<GateKind, string> = {
-    general: "Completa il profilo per continuare",
-    availability: "Completa il profilo per modificare la disponibilità",
+    general: "Profilo incompleto",
+    availability: "Profilo incompleto",
     target: "Utente non ancora disponibile",
   };
   const isTarget = kind === "target";
+
+  // Lista sintetica dei campi mancanti per il lavoratore.
+  // Mostrata solo se ruolo = worker e profilo non completo.
+  const missingFields: string[] = (() => {
+    if (isTarget || isComplete || isAdmin || role !== "worker" || !profile) return [];
+    const p = profile as Record<string, unknown> & typeof profile;
+    const items: string[] = [];
+    const has = (v: unknown) =>
+      v !== null && v !== undefined && (typeof v !== "string" || v.trim().length > 0);
+    const hasArr = (v: unknown) => Array.isArray(v) && v.length > 0;
+
+    if (!has(p.full_name) && !(has((p as any).first_name) && has((p as any).last_name))) {
+      items.push("Dati anagrafici (nome e cognome)");
+    }
+    if (!has((p as any).birth_date)) items.push("Data di nascita");
+    if (!p.phone_verified) items.push("Telefono verificato");
+    if (!has((p as any).avatar_url)) items.push("Foto profilo");
+    if (!has((p as any).residence_city) && !has((p as any).service_area_city) && !has(p.city)) {
+      items.push("Città / residenza");
+    }
+    if (!has((p as any).primary_role)) items.push("Ruolo lavorativo");
+    const langs = (p as any).spoken_languages ?? p.languages;
+    if (!hasArr(langs)) items.push("Lingue parlate");
+    if (!has((p as any).id_document_path)) items.push("Documento d'identità");
+    if (!has((p as any).service_area_city)) items.push("Disponibilità / zona di lavoro");
+    if (!p.terms_accepted) items.push("Accettazione termini");
+    return items;
+  })();
 
   return (
     <ProfileGateContext.Provider value={value}>
@@ -166,12 +194,15 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
               {kind === "general" && (
                 <>
                   <span className="block">
-                    Per usare questa funzione devi completare il tuo profilo al 100%.
+                    Per candidarti ai turni devi completare il tuo profilo al 100%.
                   </span>
                   <span className="block">
-                    Solo i profili completi possono inviare messaggi, ricevere
-                    richieste operative, risultare online, inserire disponibilità
-                    o usare le funzioni operative della piattaforma.
+                    Un profilo completo permette ai ristoratori di valutarti
+                    correttamente e ti consente di ricevere proposte di lavoro
+                    operative.
+                  </span>
+                  <span className="block">
+                    Completa ora il tuo profilo per poter inviare candidature.
                   </span>
                 </>
               )}
@@ -185,6 +216,18 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
                 <span className="block">
                   Questo profilo non è ancora completo al 100% e non può ricevere
                   messaggi o richieste operative.
+                </span>
+              )}
+              {!isTarget && missingFields.length > 0 && (
+                <span className="block pt-2">
+                  <span className="block font-medium text-foreground">
+                    Per completare il profilo mancano:
+                  </span>
+                  <span className="mt-1 block">
+                    {missingFields.map((f) => (
+                      <span key={f} className="block">• {f}</span>
+                    ))}
+                  </span>
                 </span>
               )}
             </AlertDialogDescription>
