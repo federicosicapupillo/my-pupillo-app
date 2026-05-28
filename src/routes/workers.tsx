@@ -39,6 +39,13 @@ import type { AvailabilityRow, AvailabilityExceptionRow, CompatibilityLevel } fr
 import { computeCompatibility, SLOT_LABELS } from "@/lib/availability";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import {
+  collectWorkerCompetenceValues,
+  collectWorkerRoleValues,
+  normalizeRole,
+  roleMatches,
+  workerMatchesAnyRoleField,
+} from "@/lib/worker-role-normalization";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -54,6 +61,7 @@ type W = {
   languages: string[] | null;
   spoken_languages: any;
   professional_profile: string | null;
+  default_required_skills: string[] | null;
   short_bio: string | null;
   primary_role: string | null;
   secondary_roles: string[] | null;
