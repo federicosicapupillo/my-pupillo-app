@@ -31,6 +31,7 @@ import { Route as AvailabilityRouteImport } from './routes/availability'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AccountErrorRouteImport } from './routes/account-error'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkersIdRouteImport } from './routes/workers_.$id'
 import { Route as RistoratoreCollaboratoriRouteImport } from './routes/ristoratore.collaboratori'
@@ -156,6 +157,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountErrorRoute = AccountErrorRouteImport.update({
+  id: '/account-error',
+  path: '/account-error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -232,6 +238,7 @@ const ApiPublicHooksExpireStaleRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account-error': typeof AccountErrorRoute
   '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account-error': typeof AccountErrorRoute
   '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
@@ -309,6 +317,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account-error': typeof AccountErrorRoute
   '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
@@ -349,6 +358,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account-error'
     | '/admin'
     | '/announcements'
     | '/auth'
@@ -387,6 +397,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account-error'
     | '/admin'
     | '/announcements'
     | '/auth'
@@ -425,6 +436,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account-error'
     | '/admin'
     | '/announcements'
     | '/auth'
@@ -464,6 +476,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountErrorRoute: typeof AccountErrorRoute
   AdminRoute: typeof AdminRouteWithChildren
   AnnouncementsRoute: typeof AnnouncementsRouteWithChildren
   AuthRoute: typeof AuthRoute
@@ -652,6 +665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account-error': {
+      id: '/account-error'
+      path: '/account-error'
+      fullPath: '/account-error'
+      preLoaderRoute: typeof AccountErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -793,6 +813,7 @@ const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountErrorRoute: AccountErrorRoute,
   AdminRoute: AdminRouteWithChildren,
   AnnouncementsRoute: AnnouncementsRouteWithChildren,
   AuthRoute: AuthRoute,
