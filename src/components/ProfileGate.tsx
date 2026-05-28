@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -82,7 +82,7 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
   const isComplete = !!profile?.profile_completed;
   const canPerformOperationalAction = !user || isAdmin || isComplete;
 
-  useMemo(() => {
+  useEffect(() => {
     console.info("[PUPILLO_BLOCK_DEBUG] profile_gate_provider", {
       route_attuale: typeof window !== "undefined" ? window.location.pathname : null,
       user_id: user?.id ?? null,
@@ -98,7 +98,6 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
       overlay_active: open,
       main_container_pointer_events_none: false,
     });
-    return null;
   }, [user?.id, role, profile?.phone_verified, profile?.completion_pct, profile?.profile_completed, isComplete, isAdmin, canPerformOperationalAction, open]);
 
   const openGate = useCallback((opts?: OpenOptions) => {
