@@ -882,6 +882,8 @@ function AnnouncementDetail() {
                 const isRejected = ["rejected","not_interested","expired"].includes(a.status);
                 const canAct = !isAnnInactive && (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
                 const acceptBlocked = isFull && !isAccepted;
+                const waitingWorker = !!proposalInfo[a.id]?.waitingWorker;
+                const waitingTooltip = "Potrai procedere quando il lavoratore avrà accettato la proposta.";
                 return (
                   <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -904,8 +906,16 @@ function AnnouncementDetail() {
                       </Link>
                       {(() => {
                         const slotTaken = isSlotTakenByOther(a, ann);
-                        const cls = slotTaken ? SLOT_TAKEN_CLS : (APP_STATUS_CLS[a.status] ?? "");
-                        const label = slotTaken ? SLOT_TAKEN_LABEL : (APP_STATUS_LABEL[a.status] ?? a.status);
+                        const cls = waitingWorker
+                          ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                          : slotTaken
+                          ? SLOT_TAKEN_CLS
+                          : (APP_STATUS_CLS[a.status] ?? "");
+                        const label = waitingWorker
+                          ? "In attesa risposta lavoratore"
+                          : slotTaken
+                          ? SLOT_TAKEN_LABEL
+                          : (APP_STATUS_LABEL[a.status] ?? a.status);
                         return (
                           <Badge variant="outline" className={cls}>
                             {label}
@@ -943,13 +953,27 @@ function AnnouncementDetail() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+                      {waitingWorker && (
+                        <div className="w-full rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 mb-1">
+                          Proposta inviata. In attesa della risposta del lavoratore.
+                        </div>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
                         className="gap-1"
-                        disabled={isAnnInactive}
-                        title={isAnnInactive ? "Annuncio scaduto o completato: messaggistica disabilitata" : undefined}
-                        onClick={() => { if (!isAnnInactive) nav({ to: "/messages/$id", params: { id: a.id } }); }}
+                        disabled={isAnnInactive || waitingWorker}
+                        title={
+                          waitingWorker
+                            ? waitingTooltip
+                            : isAnnInactive
+                            ? "Annuncio scaduto o completato: messaggistica disabilitata"
+                            : undefined
+                        }
+                        onClick={() => {
+                          if (waitingWorker || isAnnInactive) return;
+                          nav({ to: "/messages/$id", params: { id: a.id } });
+                        }}
                       >
                         <MessageSquare className="h-3.5 w-3.5" />Messaggia
                       </Button>
@@ -958,8 +982,14 @@ function AnnouncementDetail() {
                           <Button
                             size="sm"
                             className={`gap-1 ${!canPerformOperationalAction ? "opacity-70" : ""}`}
-                            disabled={busyId === a.id || acceptBlocked}
-                            title={acceptBlocked ? "Turno già completo" : undefined}
+                            disabled={busyId === a.id || acceptBlocked || waitingWorker}
+                            title={
+                              waitingWorker
+                                ? waitingTooltip
+                                : acceptBlocked
+                                ? "Turno già completo"
+                                : undefined
+                            }
                             onClick={requireComplete(() => accept(a))}
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -969,7 +999,8 @@ function AnnouncementDetail() {
                             size="sm"
                             variant="ghost"
                             className={`gap-1 text-destructive hover:text-destructive ${!canPerformOperationalAction ? "opacity-70" : ""}`}
-                            disabled={busyId === a.id}
+                            disabled={busyId === a.id || waitingWorker}
+                            title={waitingWorker ? waitingTooltip : undefined}
                             onClick={requireComplete(() => reject(a))}
                           >
                             <XCircle className="h-3.5 w-3.5" />Rifiuta
