@@ -168,18 +168,20 @@ function BackendInfo() {
 function TestDataCleanupSection() {
   const run = useServerFn(cleanupTestProfiles);
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<CleanupReport | null>(null);
 
-  const canConfirm = confirm === "CANCELLA TEST" && !running;
+  const canConfirm = confirm === "PULISCI DATABASE" && !running;
 
   async function execute() {
     if (!canConfirm) return;
     setRunning(true);
     try {
-      const r = await run({ data: { confirm: "CANCELLA TEST" } });
+      const r = await run({ data: { confirm: "PULISCI DATABASE" } });
       setReport(r);
+      setConfirmOpen(false);
       setOpen(false);
       setConfirm("");
       toast.success("Pulizia completata");
@@ -194,16 +196,17 @@ function TestDataCleanupSection() {
     <Card className="mt-6 border-destructive/40">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Trash2 className="h-4 w-4 text-destructive" /> Gestione dati di test
+            <Trash2 className="h-4 w-4 text-destructive" /> Pulizia completa database
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Usa questa funzione per ripulire il database dai profili lavoratore e ristoratore
-          creati durante i test. Gli account admin verranno mantenuti.
+            Cancella tutti i profili lavoratore e ristoratore, foto, documenti, annunci,
+            candidature, turni, chat, notifiche e recensioni. Gli admin verranno mantenuti.
+            Assicurati di avere un backup prima di procedere.
         </p>
         <Button variant="destructive" onClick={() => setOpen(true)}>
-          <Trash2 className="h-4 w-4 mr-2" /> Ripulisci profili di test
+            <Trash2 className="h-4 w-4 mr-2" /> Pulisci database
         </Button>
 
         <PopulateTestUsersBlock />
@@ -242,30 +245,49 @@ function TestDataCleanupSection() {
       <Dialog open={open} onOpenChange={(v) => { if (!running) { setOpen(v); if (!v) setConfirm(""); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Conferma cancellazione profili di test</DialogTitle>
+            <DialogTitle>Confermi la pulizia completa del database?</DialogTitle>
             <DialogDescription>
-              Questa operazione cancellerà definitivamente tutti i profili lavoratore e ristoratore
-              di test, comprese foto profilo, annunci, candidature, messaggi, notifiche, recensioni,
-              disponibilità e dati collegati. Gli account admin verranno mantenuti.
-              L'operazione non può essere annullata.
+              Questa operazione cancellerà tutti i profili lavoratori e ristoratori, inclusi
+              foto, documenti, annunci, candidature, turni, chat, notifiche e recensioni.
+              Gli admin verranno mantenuti. Assicurati di avere un backup Supabase prima di procedere.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="cleanup-confirm">Scrivi <code>CANCELLA TEST</code> per continuare</Label>
+            <Label htmlFor="cleanup-confirm">Scrivi <code>PULISCI DATABASE</code> per continuare</Label>
             <Input
               id="cleanup-confirm"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              placeholder="CANCELLA TEST"
+              placeholder="PULISCI DATABASE"
               autoComplete="off"
               disabled={running}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={running}>Annulla</Button>
-            <Button variant="destructive" onClick={execute} disabled={!canConfirm}>
+            <Button variant="destructive" onClick={() => setConfirmOpen(true)} disabled={!canConfirm}>
               {running ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Cancella profili di test
+              Procedi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmOpen} onOpenChange={(v) => { if (!running) setConfirmOpen(v); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sei sicuro?</DialogTitle>
+            <DialogDescription>
+              Questa operazione non può essere annullata senza backup.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={running}>
+              Annulla
+            </Button>
+            <Button variant="destructive" onClick={execute} disabled={running}>
+              {running ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Confermo pulizia
             </Button>
           </DialogFooter>
         </DialogContent>

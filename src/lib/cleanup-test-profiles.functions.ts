@@ -79,8 +79,8 @@ async function deleteStorageForUsers(
 export const cleanupTestProfiles = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { confirm: string }) => {
-    if (input?.confirm !== "CANCELLA TEST") {
-      throw new Response("Conferma mancante: digitare CANCELLA TEST", { status: 400 });
+    if (input?.confirm !== "PULISCI DATABASE" && input?.confirm !== "CANCELLA TEST") {
+      throw new Response("Conferma mancante: digitare PULISCI DATABASE", { status: 400 });
     }
     return { confirm: input.confirm };
   })
