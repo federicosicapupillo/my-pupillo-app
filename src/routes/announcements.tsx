@@ -1804,13 +1804,10 @@ function ProposalConfirmDialog({
         restaurantId,
         workerId: candidate.worker_id,
       });
-      await supabase.from("notifications").insert({
-        user_id: candidate.worker_id,
-        title: "Nuova proposta di lavoro",
-        body: "Hai ricevuto una nuova proposta di turno. Apri la chat per vedere i dettagli.",
-        link: `/messages/${appId}`,
-        metadata: { kind: "shift_proposal", announcement_id: ann.id, application_id: appId } as any,
-      } as any);
+      // La notifica al lavoratore viene creata automaticamente dal trigger
+      // `notify_new_message` con titolo "Nuova proposta di lavoro" sul
+      // messaggio shift_proposal. Evitiamo il doppio insert qui per non
+      // generare due notifiche allo stesso lavoratore.
       toast.success("Proposta inviata correttamente.");
       onClose();
       navigate({ to: "/messages/$id", params: { id: appId! } });
