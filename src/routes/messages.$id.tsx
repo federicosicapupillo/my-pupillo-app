@@ -2096,34 +2096,84 @@ function Thread() {
               )}
 
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2 w-full"
-                  onClick={() => {
-                    document.getElementById("chat-composer")?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }}
-                  disabled={transitioning !== null}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Chatta
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="gap-2 w-full"
-                  onClick={() => setRejectOpen(true)}
-                  disabled={transitioning !== null}
-                >
-                  {transitioning === "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                  {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
-                </Button>
-                <Button
-                  className="gap-2 w-full bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
-                  onClick={() => transition("accepted")}
-                  disabled={transitioning !== null}
-                >
-                  {transitioning === "accepted" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  {transitioning === "accepted" ? "Conferma in corso…" : "Accetta candidatura"}
-                </Button>
+                {(() => {
+                  // Stato proposta inviata dal ristoratore: se l'ultima proposta
+                  // (template shift_proposal inviata dal ristoratore) non è stata
+                  // ancora accettata dal lavoratore, NON mostriamo
+                  // "Accetta candidatura" né "Rifiuta". Il ristoratore non può
+                  // confermare nulla finché il lavoratore non risponde.
+                  const restaurantProposals = msgs.filter(
+                    (m) =>
+                      m.template_id === PROPOSAL_TEMPLATE_ID &&
+                      m.sender_id === app?.restaurant_id,
+                  );
+                  const latestProposalMsg = restaurantProposals[restaurantProposals.length - 1] ?? null;
+                  const latestProposalResponse = latestProposalMsg
+                    ? proposalStatuses[latestProposalMsg.id]
+                    : undefined;
+                  const hasPendingRestaurantProposal =
+                    !!latestProposalMsg && !latestProposalResponse;
+                  const restaurantProposalAccepted =
+                    !!latestProposalMsg && latestProposalResponse === "accepted";
+                  const restaurantProposalRejected =
+                    !!latestProposalMsg && latestProposalResponse === "rejected";
+
+                  if (hasPendingRestaurantProposal) {
+                    return (
+                      <div className="sm:col-span-3 rounded-xl border border-dashed bg-muted/40 p-3 text-sm text-muted-foreground">
+                        <div className="font-medium text-foreground">Proposta inviata</div>
+                        <div className="text-xs mt-0.5">
+                          In attesa della risposta del lavoratore. Potrai confermare il
+                          turno solo dopo che il lavoratore avrà accettato la proposta.
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (restaurantProposalRejected) {
+                    return (
+                      <div className="sm:col-span-3 rounded-xl border border-dashed bg-muted/40 p-3 text-sm text-muted-foreground">
+                        <div className="font-medium text-foreground">Proposta rifiutata dal lavoratore</div>
+                        <div className="text-xs mt-0.5">
+                          Puoi inviare una nuova proposta o cercare un altro lavoratore.
+                        </div>
+                      </div>
+                    );
+                  }
+                  const confirmLabel = restaurantProposalAccepted ? "Conferma turno" : "Accetta candidatura";
+                  const confirmingLabel = restaurantProposalAccepted ? "Conferma in corso…" : "Conferma in corso…";
+                  return (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="gap-2 w-full"
+                        onClick={() => {
+                          document.getElementById("chat-composer")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }}
+                        disabled={transitioning !== null}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        Chatta
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="gap-2 w-full"
+                        onClick={() => setRejectOpen(true)}
+                        disabled={transitioning !== null}
+                      >
+                        {transitioning === "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                        {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
+                      </Button>
+                      <Button
+                        className="gap-2 w-full bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
+                        onClick={() => transition("accepted")}
+                        disabled={transitioning !== null}
+                      >
+                        {transitioning === "accepted" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        {transitioning === "accepted" ? confirmingLabel : confirmLabel}
+                      </Button>
+                    </>
+                  );
+                })()}
               </div>
               <PayOnHireBox className="mt-3" compact />
             </div>
