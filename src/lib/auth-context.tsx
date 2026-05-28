@@ -140,56 +140,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadExtras = async (uid: string) => {
     setExtrasLoaded(false);
-    const [{ data: roles, error: rolesError }, { data: prof, error: profileError }] = await Promise.all([
+    const [{ data: roles, error: rolesError }, { data: prof, error: profileError }, { data: resolvedRows, error: rpcError }] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", uid),
       // Use a SECURITY DEFINER RPC so the owner can read their own sensitive
       // PII columns (email, phone, tax code, document fields, etc.). Direct
       // SELECT on those columns is revoked for the `authenticated` role.
       supabase.rpc("get_my_profile").maybeSingle(),
+      supabase.rpc("resolve_current_user_role"),
     ]);
     if (rolesError) console.error("[auth] role load failed", rolesError);
     if (profileError) console.error("[auth] profile load failed", profileError);
+    if (rpcError) console.error("[auth] role resolver RPC failed", rpcError);
     const loadedProfile = (prof as unknown as Profile) ?? null;
     if (loadedProfile?.is_deleted || loadedProfile?.deleted_at) {
       await blockDeletedAccount(uid);
       return;
     }
-    const allRoles = (roles ?? []).map((x: { role: Role }) => x.role);
-    let r: Role | undefined =
-      allRoles.includes("admin") ? "admin"
-      : allRoles.includes("restaurant") ? "restaurant"
-      : allRoles.includes("worker") ? "worker"
-      : undefined;
-    // Fallback: if user_roles is empty (RLS hiccup, stale session, post-restore
-    // race), trust profiles.primary_role so admins / users with a valid
-    // primary_role aren't wrongly sent to /account-error.
-    const primaryRole = (loadedProfile as { primary_role?: string | null } | null)?.primary_role ?? null;
-    if (!r && (primaryRole === "admin" || primaryRole === "restaurant" || primaryRole === "worker")) {
-      r = primaryRole as Role;
-      console.warn("[PUPILLO_ROLE_RESTORE_DEBUG] role resolved from profiles.primary_role fallback", {
-        user_id: uid,
-        primary_role: primaryRole,
-        user_roles_rows: allRoles,
-      });
-    }
-    const debugPayload = {
+    const allRoles = (roles ?? []).map((x: { role: string | null }) => x.role).filter((x): x is string => !!x);
+    const resolver = Array.isArray(resolvedRows) ? (resolvedRows[0] as any | undefined) : (resolvedRows as any | undefined);
+    const primaryRole = loadedProfile?.primary_role ?? resolver?.profile_role ?? null;
+    const userRoleFromRows = allRoles.find((candidate) => normalizeAccountRole(candidate) === "admin")
+      ?? allRoles.find((candidate) => normalizeAccountRole(candidate) === "restaurant")
+      ?? allRoles.find((candidate) => normalizeAccountRole(candidate) === "worker")
+      ?? resolver?.user_role
+      ?? null;
+    const metadataRole = (user?.user_metadata?.role as string | null | undefined) ?? resolver?.metadata_role ?? null;
+    const r = normalizeAccountRole(resolver?.final_role)
+      ?? normalizeAccountRole(userRoleFromRows)
+      ?? normalizeAccountRole(primaryRole)
+      ?? normalizeAccountRole(metadataRole);
+    const finalRoute = routeForRole(r);
+    const debugPayload: RoleDebug = {
       user_id: uid,
-      profile_found: !!loadedProfile,
-      profile_primary_role: primaryRole,
+      email: user?.email ?? resolver?.email ?? null,
+      profile_role: primaryRole,
+      user_role: userRoleFromRows,
+      metadata_role: metadataRole,
       user_roles_rows: allRoles,
-      resolved_role: r ?? null,
-      roles_error: rolesError?.message ?? null,
-      profile_error: profileError?.message ?? null,
+      final_role: r,
+      final_route: finalRoute,
+      user_roles_error: rolesError?.message ?? resolver?.user_roles_error ?? null,
+      profile_error: profileError?.message ?? resolver?.profile_error ?? null,
+      rpc_error: rpcError?.message ?? null,
     };
     console.info("[PUPILLO_ROLE_LOGIN_DEBUG] loadExtras", debugPayload);
     console.info("[PUPILLO_ROLE_RESTORE_DEBUG] loadExtras", debugPayload);
+    console.info("[PUPILLO_ROLE_FINAL_DEBUG] resolved role", debugPayload);
     if (!r) {
       console.warn("[PUPILLO_ROLE_MISMATCH_DEBUG] no role resolved for user", debugPayload);
-    } else if (primaryRole && primaryRole !== r && !allRoles.includes(primaryRole as Role)) {
+    } else if (primaryRole && normalizeAccountRole(primaryRole) !== r && !allRoles.some((rowRole) => normalizeAccountRole(rowRole) === normalizeAccountRole(primaryRole))) {
       console.warn("[PUPILLO_ROLE_MISMATCH_DEBUG] primary_role differs from user_roles", debugPayload);
     }
-    setRole(r ?? null);
+    setRole(r);
     setProfile(loadedProfile);
+    setRoleDebug(debugPayload);
     // Apply per-user theme preference. Default restaurants to light.
     const saved = readUserTheme(uid);
     if (saved) {
