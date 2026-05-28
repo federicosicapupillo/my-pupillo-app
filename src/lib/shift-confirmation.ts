@@ -101,10 +101,12 @@ export function buildConfirmationBody(
     lines.push(`Compenso: ${formatTariff(ann?.tariff_amount ?? null, ann?.tariff_type ?? null)}`);
   }
   const ref = clean(ann?.job_contact_person_name);
-  if (ref) {
-    const phone = clean(ann?.job_contact_person_phone);
-    lines.push(`Referente: ${ref}${phone ? ` (${phone})` : ""}`);
-  }
+  const phone = clean(ann?.job_contact_person_phone);
+  // Il referente deve sempre comparire nel messaggio operativo lato
+  // lavoratore. Se il ristoratore non lo ha indicato, mostriamo il
+  // fallback chiaro "non indicato" anziché omettere la riga.
+  lines.push(`Referente: ${ref || "non indicato"}${phone ? ` (${phone})` : ""}`);
+  if (phone) lines.push(`Telefono: ${phone}`);
   const dressItems = (ann?.dress_code_items ?? []).map(clean).filter(Boolean);
   const dressNotes = clean(ann?.dress_code_notes);
   const dress = [dressItems.join(", "), dressNotes].filter(Boolean).join(" — ");
