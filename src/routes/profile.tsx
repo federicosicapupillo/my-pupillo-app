@@ -64,7 +64,7 @@ function Profile() {
         title="Il tuo profilo"
         subtitle="Visualizza e modifica le tue informazioni"
       />
-      {role === "restaurant" && <PayOnHireBox className="mb-6 max-w-2xl" />}
+      {role === "restaurant" && <PayOnHireBox className="mb-6" />}
       {role === "worker" ? (
         <WorkerProfileSections profile={profile as any} email={user?.email ?? null} userId={user?.id ?? null} onSaved={refresh} />
       ) : role === "restaurant" ? (
@@ -652,7 +652,7 @@ function RestaurantProfileView({ profile, email }: { profile: any; email: string
   const vatBadge = profile?.vat_status === "valid" ? "Verificata" : null;
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Informazioni account */}
       <section className="rounded-2xl border bg-card p-6 shadow-sm">
         <header className="mb-4 flex items-center gap-2">
@@ -721,7 +721,7 @@ function RestaurantProfileView({ profile, email }: { profile: any; email: string
         </div>
       </section>
 
-      <p className="text-xs text-muted-foreground flex items-start gap-1.5 px-1">
+      <p className="text-xs text-muted-foreground flex items-start gap-1.5 px-1 lg:col-span-2">
         <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
         <span>I dati verificati sono bloccati. Per modificarli contatta il servizio clienti.</span>
       </p>
