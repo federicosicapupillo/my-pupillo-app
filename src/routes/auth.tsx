@@ -100,7 +100,7 @@ function AuthPage() {
       return;
     }
     // Profile incomplete → onboarding (one onboarding route covers both roles)
-    if (profile && profile.profile_completed === false && userRole !== "admin") {
+    if (profile && profile.profile_completed === false) {
       navigate({ to: "/onboarding" });
       return;
     }
