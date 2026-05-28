@@ -13,12 +13,29 @@ async function assertAdmin(supabase: any, userId: string) {
   }
 }
 
+export type RoleStatus =
+  | "ok"
+  | "missing_profile"
+  | "missing_user_role"
+  | "missing_both"
+  | "role_mismatch";
+
+export type RoleIssueRow = {
+  id: string;
+  email: string | null;
+  createdAt: string;
+  metaRole: string | null;
+  profileRole: string | null;
+  userRoles: string[];
+  status: RoleStatus;
+  suggestedRole: "admin" | "worker" | "restaurant" | null;
+};
+
 export type RoleMismatchReport = {
   authUsers: number;
   profiles: number;
   userRoles: number;
-  authWithoutRole: Array<{ id: string; email: string | null; metaRole: string | null; createdAt: string }>;
-  authWithoutProfile: Array<{ id: string; email: string | null; metaRole: string | null }>;
+  issues: RoleIssueRow[];
   orphanProfiles: number;
   orphanRoles: number;
   admins: Array<{ id: string; email: string | null }>;
@@ -31,12 +48,15 @@ export const listRoleMismatches = createServerFn({ method: "GET" })
 
     const [{ data: authList, error: authErr }, profilesRes, rolesRes] = await Promise.all([
       supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-      supabaseAdmin.from("profiles").select("id"),
+      supabaseAdmin.from("profiles").select("id, primary_role"),
       supabaseAdmin.from("user_roles").select("user_id, role"),
     ]);
     if (authErr) throw new Error(authErr.message);
 
-    const profileIds = new Set((profilesRes.data ?? []).map((r: any) => r.id));
+    const profileById = new Map<string, { primary_role: string | null }>();
+    for (const p of profilesRes.data ?? []) {
+      profileById.set(p.id, { primary_role: (p as any).primary_role ?? null });
+    }
     const rolesByUser = new Map<string, string[]>();
     for (const r of rolesRes.data ?? []) {
       const arr = rolesByUser.get(r.user_id) ?? [];
@@ -45,24 +65,59 @@ export const listRoleMismatches = createServerFn({ method: "GET" })
     }
     const authIds = new Set((authList.users ?? []).map((u) => u.id));
 
-    const authWithoutRole = (authList.users ?? [])
-      .filter((u) => !rolesByUser.has(u.id))
-      .map((u) => ({
+    const VALID = new Set(["admin", "worker", "restaurant"]);
+    const issues: RoleIssueRow[] = [];
+    for (const u of authList.users ?? []) {
+      const prof = profileById.get(u.id);
+      const profileRole = prof?.primary_role ?? null;
+      const userRoles = rolesByUser.get(u.id) ?? [];
+      const hasProfile = !!prof;
+      const hasRoleRow = userRoles.length > 0;
+      const metaRole = (u.user_metadata?.role as string) ?? null;
+
+      let status: RoleStatus = "ok";
+      if (!hasProfile && !hasRoleRow) status = "missing_both";
+      else if (!hasProfile) status = "missing_profile";
+      else if (!hasRoleRow) status = "missing_user_role";
+      else if (profileRole && !userRoles.includes(profileRole)) status = "role_mismatch";
+
+      if (status === "ok") continue;
+
+      // Suggest a role from existing data, in priority order.
+      const candidates = [
+        userRoles.find((r) => r === "admin"),
+        userRoles.find((r) => r === "restaurant"),
+        userRoles.find((r) => r === "worker"),
+        profileRole,
+        metaRole,
+      ].filter((v): v is string => !!v && VALID.has(v));
+      const suggestedRole = (candidates[0] as RoleIssueRow["suggestedRole"]) ?? null;
+
+      issues.push({
         id: u.id,
         email: u.email ?? null,
-        metaRole: (u.user_metadata?.role as string) ?? null,
         createdAt: u.created_at ?? "",
-      }));
-    const authWithoutProfile = (authList.users ?? [])
-      .filter((u) => !profileIds.has(u.id))
-      .map((u) => ({
-        id: u.id,
-        email: u.email ?? null,
-        metaRole: (u.user_metadata?.role as string) ?? null,
-      }));
+        metaRole,
+        profileRole,
+        userRoles,
+        status,
+        suggestedRole,
+      });
+    }
+
+    console.info("[PUPILLO_ROLE_MISMATCH_DEBUG] report", {
+      authUsers: authList.users?.length ?? 0,
+      profiles: profileById.size,
+      userRoles: rolesRes.data?.length ?? 0,
+      issuesCount: issues.length,
+      issuesByStatus: issues.reduce<Record<string, number>>((acc, i) => {
+        acc[i.status] = (acc[i.status] ?? 0) + 1;
+        return acc;
+      }, {}),
+    });
 
     let orphanProfiles = 0;
-    for (const id of profileIds) if (!authIds.has(id)) orphanProfiles++;
+    for (const id of profileById.keys()) if (!authIds.has(id)) orphanProfiles++;
     let orphanRoles = 0;
     for (const uid of rolesByUser.keys()) if (!authIds.has(uid)) orphanRoles++;
 
@@ -72,10 +127,9 @@ export const listRoleMismatches = createServerFn({ method: "GET" })
 
     return {
       authUsers: authList.users?.length ?? 0,
-      profiles: profileIds.size,
+      profiles: profileById.size,
       userRoles: rolesRes.data?.length ?? 0,
-      authWithoutRole,
-      authWithoutProfile,
+      issues,
       orphanProfiles,
       orphanRoles,
       admins,
@@ -100,10 +154,10 @@ export const repairUserRole = createServerFn({ method: "POST" })
     }
     const u = authUser.user;
 
-    // Ensure profile exists.
+    // Ensure profile exists and primary_role matches the target role.
     const { data: existingProfile } = await supabaseAdmin
       .from("profiles")
-      .select("id")
+      .select("id, primary_role")
       .eq("id", u.id)
       .maybeSingle();
     if (!existingProfile) {
@@ -121,15 +175,25 @@ export const repairUserRole = createServerFn({ method: "POST" })
         is_deleted: false,
       });
       if (insErr) throw new Error(`Creazione profilo fallita: ${insErr.message}`);
-    } else if (data.role === "admin") {
-      await supabaseAdmin.from("profiles").update({ primary_role: "admin" }).eq("id", u.id);
+    } else if (existingProfile.primary_role !== data.role) {
+      const { error: updErr } = await supabaseAdmin
+        .from("profiles")
+        .update({ primary_role: data.role })
+        .eq("id", u.id);
+      if (updErr) throw new Error(`Aggiornamento primary_role fallito: ${updErr.message}`);
     }
 
-    // Insert role row (idempotent).
+    // Ensure user_roles row exists for the target role (idempotent).
     const { error: roleErr } = await supabaseAdmin
       .from("user_roles")
       .upsert({ user_id: u.id, role: data.role }, { onConflict: "user_id,role" });
     if (roleErr) throw new Error(`Assegnazione ruolo fallita: ${roleErr.message}`);
+
+    console.info("[PUPILLO_ROLE_REPAIR_DEBUG] repaired", {
+      user_id: u.id,
+      email: u.email,
+      assigned_role: data.role,
+    });
 
     return { ok: true, userId: u.id, email: u.email ?? null, role: data.role };
   });
