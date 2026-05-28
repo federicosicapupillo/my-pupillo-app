@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Mail } from "lucide-react";
 import { toast } from "sonner";
+import { computePupilloAuthFlow, destinationForAuthFlowState, isAuthEmailConfirmed, logPupilloAuthFlow } from "@/lib/auth-flow";
 
 export const Route = createFileRoute("/verify-email")({
   head: () => ({ meta: [{ title: "Conferma la tua email — Pupillo" }] }),
@@ -18,23 +19,26 @@ function VerifyEmailPage() {
   const [busy, setBusy] = useState(false);
   const [resending, setResending] = useState(false);
 
-  const emailConfirmed = !!user?.email_confirmed_at;
+  const emailConfirmed = isAuthEmailConfirmed(user);
   const phoneVerified = !!profile?.phone_verified;
 
   useEffect(() => {
     if (loading) return;
     if (!user) { nav({ to: "/auth" }); return; }
-    // Se manca la verifica del telefono, manda prima a /verify-phone.
-    if (profile && phoneVerified === false) {
-      nav({ to: "/verify-phone" });
-      return;
-    }
-    // Se email è già confermata, prosegui.
-    if (emailConfirmed) {
-      const dest = role === "admin"
-        ? "/admin"
-        : profile?.profile_completed ? "/dashboard" : "/onboarding";
-      nav({ to: dest as any });
+    if (!profile) return;
+    const flow = computePupilloAuthFlow({ user, profile, role });
+    const dest = flow ? destinationForAuthFlowState(flow.state, role) : null;
+    logPupilloAuthFlow("verify_email_page", {
+      user,
+      profile,
+      role,
+      currentRoute: "/verify-email",
+      flow,
+      redirectTo: dest !== "/verify-email" ? dest : null,
+      redirectReason: dest !== "/verify-email" ? "verify_email_state_mismatch" : null,
+    });
+    if (dest && dest !== "/verify-email") {
+      nav({ to: dest as any, replace: true });
     }
   }, [user, profile, role, loading, emailConfirmed, phoneVerified, nav]);
 
@@ -42,21 +46,34 @@ function VerifyEmailPage() {
     if (busy) return;
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.refreshSession();
+      const { error } = await supabase.auth.refreshSession();
       if (error) {
         toast.error("Impossibile aggiornare lo stato. Riprova.");
         return;
       }
-      const confirmed = !!data.user?.email_confirmed_at;
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        toast.error("Impossibile controllare la conferma email. Riprova.");
+        return;
+      }
+      const confirmed = isAuthEmailConfirmed(userData.user);
       if (!confirmed) {
         toast.error("Email non ancora confermata. Controlla la tua casella di posta.");
         return;
       }
       toast.success("Email confermata.");
       await refresh();
-      const dest = role === "admin"
-        ? "/admin"
-        : profile?.profile_completed ? "/dashboard" : "/onboarding";
+      const nextFlow = computePupilloAuthFlow({ user: userData.user, profile, role });
+      const dest = nextFlow ? destinationForAuthFlowState(nextFlow.state, role) : "/onboarding";
+      logPupilloAuthFlow("verify_email_check_success", {
+        user: userData.user,
+        profile,
+        role,
+        currentRoute: "/verify-email",
+        flow: nextFlow,
+        redirectTo: dest,
+        redirectReason: "email_confirmed_after_refresh_and_get_user",
+      });
       nav({ to: dest as any });
     } finally {
       setBusy(false);
