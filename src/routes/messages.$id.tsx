@@ -1726,6 +1726,20 @@ function Thread() {
     },
   }), [role, app?.status, hasWorkedTogether, otherIdentity, other?.name]);
 
+  // Nome reale del LOCALE collegato all'annuncio. Indipendente dal ruolo
+  // di chi sta guardando la chat:
+  //  - se l'utente corrente è il ristoratore → usa il suo profilo
+  //  - se l'utente corrente è il lavoratore → usa il profilo del ristoratore
+  //    (l'"altra parte" della conversazione)
+  // Non deve MAI cadere sul nome del lavoratore: dove non disponibile,
+  // mostriamo un fallback neutro.
+  const venueName = useMemo<string | null>(() => {
+    if (role === "restaurant") {
+      return (profile?.business_name as string | null) || (profile?.full_name as string | null) || null;
+    }
+    return otherIdentity?.businessName || otherIdentity?.fullName || null;
+  }, [role, profile?.business_name, profile?.full_name, otherIdentity?.businessName, otherIdentity?.fullName]);
+
   if (loading) {
     return <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">Caricamento chat…</div>;
   }
