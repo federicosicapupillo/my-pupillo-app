@@ -424,7 +424,7 @@ function buildTimeline(status?: string, opts?: { slotTakenByOther?: boolean }): 
 function Thread() {
   const { id } = Route.useParams();
   const { user, role, profile, refresh: refreshAuth } = useAuth();
-  const { requireComplete, ensureTargetComplete } = useProfileGate();
+  const { requireComplete, ensureTargetComplete, openGate } = useProfileGate();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
