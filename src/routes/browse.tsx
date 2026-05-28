@@ -409,6 +409,18 @@ function Browse() {
     <AppShell>
       <PageHeader title="Trova offerte" subtitle="Esplora gli annunci attivi e candidati" />
 
+      {role === "worker" && !canPerformOperationalAction && (
+        <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div className="font-semibold">Profilo incompleto</div>
+            <div className="opacity-90">Completa il profilo al 100% per candidarti ai turni.</div>
+          </div>
+          <Link to="/onboarding">
+            <Button size="sm" className="whitespace-nowrap">Completa profilo</Button>
+          </Link>
+        </div>
+      )}
+
       <div className="rounded-2xl border bg-card p-4 mb-4">
         <div className="grid gap-3 md:grid-cols-4">
           <Select value={roleF} onValueChange={setRoleF}>
