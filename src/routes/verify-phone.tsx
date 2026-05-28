@@ -69,7 +69,10 @@ function VerifyPhonePage() {
     if (!extrasLoaded || !profile) return;
     if (profile?.phone_verified) {
       clearPendingRegistrationOtpState();
-      if (profile?.profile_completed) {
+      const emailConfirmed = !!user?.email_confirmed_at;
+      if (!emailConfirmed) {
+        nav({ to: "/verify-email" });
+      } else if (profile?.profile_completed) {
         nav({ to: "/dashboard" });
       } else {
         nav({ to: "/onboarding" });
