@@ -142,11 +142,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refresh = async () => {
-    const currentSession = session ?? (await supabase.auth.getSession()).data.session;
+    const currentSession = (await supabase.auth.getSession()).data.session;
     if (currentSession) {
       setSession(currentSession);
       setUser(currentSession.user);
       await loadExtras(currentSession.user.id);
+    } else {
+      setSession(null);
+      setUser(null);
+      setRole(null);
+      setProfile(null);
+      setExtrasLoaded(false);
     }
   };
 
