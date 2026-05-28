@@ -25,10 +25,16 @@ export type PupilloAuthFlow = {
 
 const FLOW_ROUTES = new Set([
   "/auth",
+  "/auth/callback",
   "/verify-phone",
+  "/verify-otp",
   "/verify-email",
   "/registration-success",
   "/onboarding",
+  "/worker/onboarding",
+  "/restaurant/onboarding",
+  "/worker/dashboard",
+  "/restaurant/dashboard",
 ]);
 
 export function hasWhatsAppNumber(profile: Profile | null | undefined): boolean {
@@ -75,6 +81,19 @@ export function computePupilloAuthFlow({ user, profile, role }: AuthFlowInput): 
     return { state: "VERIFIED_NEEDS_PROFILE", hasPhone, phoneVerified, otpPending: false, emailConfirmed, profileCompleted };
   }
   return { state: "PROFILE_COMPLETE", hasPhone, phoneVerified, otpPending: false, emailConfirmed, profileCompleted };
+}
+
+export function getRegistrationState(input: AuthFlowInput): PupilloAuthFlow | null {
+  return computePupilloAuthFlow(input);
+}
+
+export function describeAuthFlowReason(flow: PupilloAuthFlow | null): string {
+  if (!flow) return "utente o profilo non ancora caricati";
+  if (flow.state === "NEEDS_PHONE") return "numero WhatsApp assente";
+  if (flow.state === "NEEDS_OTP") return "numero WhatsApp presente, phone_verified=false";
+  if (flow.state === "PHONE_VERIFIED_EMAIL_PENDING") return "phone_verified=true, email_confirmed_at=null";
+  if (flow.state === "VERIFIED_NEEDS_PROFILE") return "phone_verified=true, email confermata, profilo incompleto";
+  return "telefono verificato, email verificata, profilo completo";
 }
 
 export function destinationForAuthFlowState(state: PupilloAuthFlowState, role: Role | null): string {
@@ -130,6 +149,7 @@ export function logPupilloAuthFlow(
     onboarding_step: profileRecord?.onboarding_step ?? null,
     profile_completion: input.profile?.completion_pct ?? input.profile?.profile_completed ?? null,
     stato_calcolato: input.flow?.state ?? null,
+    motivo_stato: describeAuthFlowReason(input.flow),
     redirect_deciso: input.redirectTo ?? null,
     motivo_redirect: input.redirectReason ?? null,
   });

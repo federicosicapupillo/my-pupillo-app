@@ -142,11 +142,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refresh = async () => {
+    await supabase.auth.refreshSession();
     const currentSession = (await supabase.auth.getSession()).data.session;
     if (currentSession) {
+      const { data: freshUserData } = await supabase.auth.getUser();
+      const freshUser = freshUserData.user ?? currentSession.user;
       setSession(currentSession);
-      setUser(currentSession.user);
-      await loadExtras(currentSession.user.id);
+      setUser(freshUser);
+      await loadExtras(freshUser.id);
     } else {
       setSession(null);
       setUser(null);
@@ -170,8 +173,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      setUser(data.session?.user ?? null);
-      if (data.session?.user) await loadExtras(data.session.user.id);
+      if (data.session?.user) {
+        const { data: freshUserData } = await supabase.auth.getUser();
+        const freshUser = freshUserData.user ?? data.session.user;
+        setUser(freshUser);
+        await loadExtras(freshUser.id);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
     return () => sub.subscription.unsubscribe();

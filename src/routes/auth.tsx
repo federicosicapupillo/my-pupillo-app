@@ -170,7 +170,7 @@ function AuthPage() {
       email: emailTrim,
       password,
       options: {
-        emailRedirectTo: window.location.origin + "/registration-success",
+        emailRedirectTo: window.location.origin + "/auth/callback",
         data: {
           full_name: fullName,
           first_name: firstNameTrim,
@@ -191,12 +191,14 @@ function AuthPage() {
       }
       return;
     }
-    // Auto-confirm is enabled, so we can sign in immediately
+    // Dopo la creazione profilo serve una sessione per avviare WhatsApp OTP.
+    // Se il backend rifiuta il login perché la mail non è ancora confermata,
+    // mostriamo errore chiaro invece di saltare la macchina stati centrale.
     const { error: signInErr } = await supabase.auth.signInWithPassword({ email: emailTrim, password });
     if (signInErr) {
       setBusy(false);
       justSignedUpRef.current = false;
-      toast.success("Account creato! Accedi per continuare.");
+      toast.error("Account creato, ma non è stato possibile avviare la verifica WhatsApp. Riprova ad accedere o contatta l'assistenza.");
       setTab("login");
       return;
     }

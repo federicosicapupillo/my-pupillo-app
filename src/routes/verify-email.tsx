@@ -92,7 +92,7 @@ function VerifyEmailPage() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: window.location.origin + "/registration-success" },
+        options: { emailRedirectTo: window.location.origin + "/auth/callback" },
       });
       if (error) {
         toast.error("Non siamo riusciti a inviare la mail di conferma. Riprova tra qualche secondo.");
@@ -117,16 +117,14 @@ function VerifyEmailPage() {
         </div>
         <h1 className="mt-4 text-2xl font-semibold text-center">Conferma la tua email</h1>
         <p className="mt-3 text-sm text-muted-foreground text-center">
-          Il tuo numero WhatsApp è stato verificato. Per continuare devi confermare la tua email cliccando sul link che ti abbiamo inviato.
+          Il numero WhatsApp è stato verificato. Ora controlla la tua casella email e clicca sul link di conferma.
         </p>
         {user.email && (
           <p className="mt-3 text-sm text-center">
             Email: <strong className="break-all">{user.email}</strong>
           </p>
         )}
-        <p className="mt-2 text-xs text-muted-foreground text-center">
-          Se non trovi l'email, controlla anche nello spam.
-        </p>
+        <p className="mt-2 text-xs text-muted-foreground text-center">Se non trovi l'email, controlla anche nello spam.</p>
         <div className="mt-6 space-y-2">
           <Button className="w-full" onClick={handleCheck} disabled={busy}>
             {busy ? "Verifica in corso…" : "Ho confermato, controlla ora"}
