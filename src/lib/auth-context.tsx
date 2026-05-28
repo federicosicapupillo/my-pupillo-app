@@ -9,6 +9,7 @@ export const DELETED_ACCOUNT_MESSAGE = "Questo account è stato eliminato e non 
 type Role = "admin" | "restaurant" | "worker";
 type Profile = {
   id: string;
+  primary_role?: string | null;
   full_name: string | null;
   email: string | null;
   business_name: string | null;
@@ -68,11 +69,41 @@ type Ctx = {
   session: Session | null;
   role: Role | null;
   profile: Profile | null;
+  roleDebug: RoleDebug | null;
   loading: boolean;
   extrasLoaded: boolean;
   refresh: () => Promise<void>;
   signOut: (options?: { redirectTo?: string | false }) => Promise<void>;
 };
+
+export type RoleDebug = {
+  user_id: string | null;
+  email: string | null;
+  profile_role: string | null;
+  user_role: string | null;
+  metadata_role: string | null;
+  user_roles_rows: string[];
+  profile_error: string | null;
+  user_roles_error: string | null;
+  rpc_error: string | null;
+  final_role: Role | null;
+  final_route: string;
+};
+
+export function normalizeAccountRole(value: string | null | undefined): Role | null {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized === "admin") return "admin";
+  if (normalized === "restaurant" || normalized === "ristoratore") return "restaurant";
+  if (normalized === "worker" || normalized === "lavoratore") return "worker";
+  return null;
+}
+
+export function routeForRole(role: Role | null): string {
+  if (role === "admin") return "/admin";
+  if (role === "restaurant") return "/dashboard";
+  if (role === "worker") return "/jobs";
+  return "/account-error";
+}
 
 const AuthContext = createContext<Ctx | undefined>(undefined);
 
@@ -81,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [roleDebug, setRoleDebug] = useState<RoleDebug | null>(null);
   const [loading, setLoading] = useState(true);
   const [extrasLoaded, setExtrasLoaded] = useState(false);
 
@@ -97,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setRole(null);
       setProfile(null);
+      setRoleDebug(null);
       setExtrasLoaded(false);
       setLoading(false);
       if (typeof window !== "undefined") {
