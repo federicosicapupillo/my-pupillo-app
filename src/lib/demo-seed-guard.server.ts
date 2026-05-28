@@ -8,7 +8,7 @@
 export const DEMO_SEED_MODE = true as const;
 export const DEMO_BATCH_PREFIX = "demo_seed_";
 export const DEMO_EMAIL_DOMAIN = "@pupillo.test" as const;
-export const DEMO_PASSWORD = "TestDemo2026!" as const;
+export const DEMO_PASSWORD = "Test1234!" as const;
 
 export type DemoWhitelist = {
   emails: string[];
@@ -98,7 +98,7 @@ export function isDemoEmail(email: string | null | undefined): boolean {
 
 export function makeDemoEmail(role: "ristoratore" | "lavoratore", index: number): string {
   const n = String(index).padStart(3, "0");
-  return `${role}.demo${n}${DEMO_EMAIL_DOMAIN}`;
+  return `${role}-${n}${DEMO_EMAIL_DOMAIN}`;
 }
 
 export function newBatchId(): string {
