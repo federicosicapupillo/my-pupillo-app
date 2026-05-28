@@ -1,11 +1,24 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { listRoleMismatches, repairUserRole, type RoleMismatchReport } from "@/lib/role-repair.functions";
+import {
+  listRoleMismatches,
+  repairUserRole,
+  type RoleMismatchReport,
+  type RoleStatus,
+} from "@/lib/role-repair.functions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, RefreshCw } from "lucide-react";
 
 type Role = "admin" | "worker" | "restaurant";
+
+const STATUS_LABEL: Record<RoleStatus, string> = {
+  ok: "OK",
+  missing_profile: "Profilo mancante",
+  missing_user_role: "user_roles mancante",
+  missing_both: "Profilo + ruolo mancanti",
+  role_mismatch: "Ruolo profiles ≠ user_roles",
+};
 
 export function AdminRoleRepairSection() {
   const list = useServerFn(listRoleMismatches);
@@ -32,7 +45,7 @@ export function AdminRoleRepairSection() {
     setBusyUser(userId);
     try {
       await repair({ data: { userId, role } });
-      toast.success(`Ruolo "${role}" assegnato.`);
+      toast.success(`Ruolo "${role}" sincronizzato su profiles + user_roles.`);
       await load();
     } catch (e) {
       toast.error(`Riparazione fallita: ${(e as Error).message}`);
@@ -74,29 +87,37 @@ export function AdminRoleRepairSection() {
           </div>
 
           <div>
-            <h4 className="font-medium">Utenti Auth senza ruolo ({data.authWithoutRole.length})</h4>
-            {data.authWithoutRole.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nessuno. Tutti gli utenti hanno un ruolo.</p>
+            <h4 className="font-medium">Utenti con problemi di ruolo ({data.issues.length})</h4>
+            {data.issues.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Tutto allineato. Nessun utente con ruolo mancante o disallineato.
+              </p>
             ) : (
               <ul className="divide-y border rounded">
-                {data.authWithoutRole.map((u) => (
-                  <li key={u.id} className="p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-sm">
+                {data.issues.map((u) => (
+                  <li key={u.id} className="p-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="text-sm space-y-1">
                       <div className="font-medium">{u.email ?? u.id}</div>
-                      <div className="text-muted-foreground text-xs">
-                        id: {u.id} · metadata role: {u.metaRole ?? "—"}
+                      <div className="text-muted-foreground text-xs font-mono">{u.id}</div>
+                      <div className="text-xs">
+                        <span className="inline-block rounded bg-destructive/10 text-destructive px-2 py-0.5 mr-2">
+                          {STATUS_LABEL[u.status]}
+                        </span>
+                        <span className="text-muted-foreground">
+                          profiles.primary_role: <b>{u.profileRole ?? "—"}</b> · user_roles: <b>{u.userRoles.join(", ") || "—"}</b> · metadata: <b>{u.metaRole ?? "—"}</b>
+                        </span>
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap shrink-0">
                       {(["worker", "restaurant", "admin"] as Role[]).map((r) => (
                         <Button
                           key={r}
                           size="sm"
-                          variant={u.metaRole === r ? "default" : "outline"}
+                          variant={u.suggestedRole === r ? "default" : "outline"}
                           disabled={busyUser === u.id}
                           onClick={() => doRepair(u.id, r)}
                         >
-                          {busyUser === u.id ? <Loader2 className="h-3 w-3 animate-spin" /> : `Assegna ${r}`}
+                          {busyUser === u.id ? <Loader2 className="h-3 w-3 animate-spin" /> : `Ripara → ${r}`}
                         </Button>
                       ))}
                     </div>
@@ -105,12 +126,6 @@ export function AdminRoleRepairSection() {
               </ul>
             )}
           </div>
-
-          {data.authWithoutProfile.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Profili mancanti per {data.authWithoutProfile.length} utenti Auth — verranno creati automaticamente all'assegnazione del ruolo.
-            </p>
-          )}
         </>
       )}
     </section>

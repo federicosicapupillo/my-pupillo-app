@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user_roles_rows: allRoles,
       });
     }
-    console.info("[PUPILLO_ROLE_RESTORE_DEBUG] loadExtras", {
+    const debugPayload = {
       user_id: uid,
       profile_found: !!loadedProfile,
       profile_primary_role: primaryRole,
@@ -147,7 +147,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resolved_role: r ?? null,
       roles_error: rolesError?.message ?? null,
       profile_error: profileError?.message ?? null,
-    });
+    };
+    console.info("[PUPILLO_ROLE_LOGIN_DEBUG] loadExtras", debugPayload);
+    console.info("[PUPILLO_ROLE_RESTORE_DEBUG] loadExtras", debugPayload);
+    if (!r) {
+      console.warn("[PUPILLO_ROLE_MISMATCH_DEBUG] no role resolved for user", debugPayload);
+    } else if (primaryRole && primaryRole !== r && !allRoles.includes(primaryRole as Role)) {
+      console.warn("[PUPILLO_ROLE_MISMATCH_DEBUG] primary_role differs from user_roles", debugPayload);
+    }
     setRole(r ?? null);
     setProfile(loadedProfile);
     // Apply per-user theme preference. Default restaurants to light.
