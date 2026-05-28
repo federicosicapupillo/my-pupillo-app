@@ -21,7 +21,6 @@ import { startPhoneVerification } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { savePendingRegistrationOtpState } from "@/lib/registration-otp-state";
-import { computePupilloAuthFlow, getAuthFlowRedirect, logPupilloAuthFlow } from "@/lib/auth-flow";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -87,23 +86,22 @@ function AuthPage() {
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
     if (profile?.is_deleted || profile?.deleted_at) return;
-    if (profile) {
-      const flow = computePupilloAuthFlow({ user, profile, role: userRole });
-      const redirect = flow ? getAuthFlowRedirect("/auth", flow, userRole) : null;
-      logPupilloAuthFlow("auth_page", {
-        user,
-        profile,
-        role: userRole,
-        currentRoute: "/auth",
-        flow,
-        redirectTo: redirect?.to ?? null,
-        redirectReason: redirect?.reason ?? null,
-      });
-      if (redirect) {
-        navigate({ to: redirect.to as any, replace: true });
-        return;
-      }
+    // If phone not yet verified, send to OTP page — UNLESS the user
+    // explicitly came back from the OTP page via the "Torna alla
+    // registrazione" link (URL carries ?role=...). In that case, let
+    // them edit their account here.
+    if (profile && profile.phone_verified === false && !roleParam) {
+      navigate({ to: "/verify-phone" });
+      return;
     }
+    // Profile incomplete → onboarding (one onboarding route covers both roles)
+    if (profile && profile.profile_completed === false && userRole !== "admin") {
+      navigate({ to: "/onboarding" });
+      return;
+    }
+    if (userRole === "admin") navigate({ to: "/admin" });
+    else if (userRole === "restaurant") navigate({ to: "/dashboard" });
+    else if (userRole === "worker") navigate({ to: "/jobs" });
     else if (userRole === null) {
       // Authenticated but no role row yet — surface a clear error.
       toast.error("Ruolo account non configurato. Contatta l'assistenza.");
@@ -170,7 +168,7 @@ function AuthPage() {
       email: emailTrim,
       password,
       options: {
-        emailRedirectTo: window.location.origin + "/auth/callback",
+        emailRedirectTo: window.location.origin + "/registration-success",
         data: {
           full_name: fullName,
           first_name: firstNameTrim,
@@ -191,14 +189,12 @@ function AuthPage() {
       }
       return;
     }
-    // Dopo la creazione profilo serve una sessione per avviare WhatsApp OTP.
-    // Se il backend rifiuta il login perché la mail non è ancora confermata,
-    // mostriamo errore chiaro invece di saltare la macchina stati centrale.
+    // Auto-confirm is enabled, so we can sign in immediately
     const { error: signInErr } = await supabase.auth.signInWithPassword({ email: emailTrim, password });
     if (signInErr) {
       setBusy(false);
       justSignedUpRef.current = false;
-      toast.error("Account creato, ma non è stato possibile avviare la verifica WhatsApp. Riprova ad accedere o contatta l'assistenza.");
+      toast.success("Account creato! Accedi per continuare.");
       setTab("login");
       return;
     }

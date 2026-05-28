@@ -58,11 +58,20 @@ export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
   ),
 });
 
-import { WORKER_ROLES } from "@/lib/worker-roles";
-
-// Fonte unica condivisa con il profilo lavoratore: stesso elenco lato
-// ristoratore (creazione annuncio) e lato lavoratore (profilo/competenze).
-const ROLE_OPTIONS = [...WORKER_ROLES];
+const ROLE_OPTIONS = [
+  "Cameriere",
+  "Bartender",
+  "Chef",
+  "Aiuto cucina",
+  "Runner",
+  "Lavapiatti",
+  "Barista",
+  "Pizzaiolo",
+  "Hostess",
+  "Responsabile di sala",
+  "Addetto catering",
+  "Receptionist",
+];
 
 const HOURLY_RATE_OPTIONS = Array.from({ length: 17 }, (_, i) => 9 + i); // 9..25
 const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {

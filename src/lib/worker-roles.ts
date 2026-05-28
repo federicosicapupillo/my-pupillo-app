@@ -1,40 +1,19 @@
-/**
- * Lista canonica unica dei ruoli Ho.Re.Ca.
- * Usata sia lato lavoratore (profilo / competenze) sia lato ristoratore
- * (creazione annuncio / ricerca lavoratori). Per il matching usare le
- * funzioni in `worker-role-normalization.ts` che gestiscono sinonimi
- * (es. Caposala / Maître → Responsabile di sala).
- */
 export const WORKER_ROLES = [
-  // SALA
   "Cameriere",
-  "Runner",
-  "Responsabile di sala",
-  "Caposala",
-  "Maître",
-  "Hostess",
-  "Steward",
-  "Addetto accoglienza",
-  "Banconista",
-  "Barista",
   "Bartender",
-  // CUCINA
-  "Chef",
+  "Barista",
+  "Aiuto cucina",
   "Cuoco",
-  "Aiuto cuoco",
-  "Commis di cucina",
-  "Pizzaiolo",
-  "Aiuto pizzaiolo",
+  "Chef de rang",
+  "Runner",
   "Lavapiatti",
-  "Addetto preparazioni",
-  // EVENTI / EXTRA
-  "Addetto catering",
-  "Addetto banqueting",
-  "Addetto buffet",
-  "Addetto cassa",
-  "Addetto delivery",
-  "Addetto pulizie",
+  "Pizzaiolo",
   "Receptionist",
+  "Addetto sala",
+  "Addetto cassa",
+  "Banconista",
+  "Hostess / Steward",
+  "Addetto accoglienza",
 ] as const;
 
 export type WorkerRole = (typeof WORKER_ROLES)[number];

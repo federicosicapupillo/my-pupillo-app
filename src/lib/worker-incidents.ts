@@ -210,44 +210,12 @@ export async function cancelPresence(input: CancelPresenceInput): Promise<void> 
   }
 
   // 3) Re-open the announcement so the restaurant can search a new worker.
-  //    Solo se il turno non è ancora iniziato/scaduto: leggiamo la data/ora
-  //    di servizio dall'annuncio e confrontiamo con "ora".
-  let announcementReopened = false;
-  let shiftAlreadyStarted = false;
   if (announcementId) {
-    const { data: annRow } = await supabase
+    await supabase
       .from("announcements")
-      .select("service_date, service_time")
+      .update({ assigned_worker_id: null, status: "active" } as never)
       .eq("id", announcementId)
-      .maybeSingle();
-    if (annRow?.service_date) {
-      const t = (annRow.service_time ?? "00:00:00").slice(0, 8);
-      const startsAt = new Date(`${annRow.service_date}T${t}`);
-      shiftAlreadyStarted = Number.isFinite(startsAt.getTime())
-        ? Date.now() >= startsAt.getTime()
-        : false;
-    }
-    if (!shiftAlreadyStarted) {
-      const { error: annUpdErr } = await supabase
-        .from("announcements")
-        .update({
-          assigned_worker_id: null,
-          status: "active",
-          reopened_after_worker_cancellation: true,
-          reopened_at: new Date().toISOString(),
-        } as never)
-        .eq("id", announcementId)
-        .eq("restaurant_id", restaurantId);
-      if (!annUpdErr) announcementReopened = true;
-    } else {
-      // Turno già iniziato: rimuoviamo comunque l'assegnazione, ma NON
-      // riapriamo automaticamente l'annuncio.
-      await supabase
-        .from("announcements")
-        .update({ assigned_worker_id: null } as never)
-        .eq("id", announcementId)
-        .eq("restaurant_id", restaurantId);
-    }
+      .eq("restaurant_id", restaurantId);
   }
 
   // 4) Close the application (RLS allows the worker through can_update_application).
@@ -274,24 +242,15 @@ export async function cancelPresence(input: CancelPresenceInput): Promise<void> 
   }
 
   // 5) Notify restaurant.
-  const notifBody = shiftAlreadyStarted
-    ? `Il lavoratore ha annullato la presenza per il ${descriptor}, ma il turno risulta già iniziato o scaduto. Gestisci il caso manualmente.`
-    : announcementReopened
-      ? `Il lavoratore ha annullato la presenza per il ${descriptor}. L'annuncio è tornato disponibile per altri lavoratori.`
-      : `Il lavoratore ha annullato la propria presenza per il ${descriptor}.`;
   await supabase.from("notifications").insert({
     user_id: restaurantId,
     title: "Presenza annullata dal lavoratore",
-    body: notifBody,
-    link: announcementReopened && announcementId
-      ? `/announcements/${announcementId}`
-      : applicationId ? `/messages/${applicationId}` : `/shifts?shift=${shiftId}`,
+    body: `Il lavoratore ha annullato la propria presenza per il ${descriptor}.`,
+    link: applicationId ? `/messages/${applicationId}` : `/shifts?shift=${shiftId}`,
     metadata: {
       kind: "worker_presence_cancelled",
       shift_id: shiftId,
       announcement_id: announcementId,
-      announcement_reopened: announcementReopened,
-      shift_already_started: shiftAlreadyStarted,
       reason,
     },
   } as never);
@@ -311,16 +270,4 @@ export async function cancelPresence(input: CancelPresenceInput): Promise<void> 
       note: note ?? null,
     },
   } as never);
-
-  // 7) Refund the assignment credits to the restaurant (idempotent, server-side).
-  if (applicationId) {
-    try {
-      const { refundWorkerCancellationCredits } = await import(
-        "@/lib/worker-cancellation.functions"
-      );
-      await refundWorkerCancellationCredits({ data: { applicationId } });
-    } catch (e) {
-      console.warn("[cancelPresence] credit refund failed (non-blocking)", e);
-    }
-  }
 }

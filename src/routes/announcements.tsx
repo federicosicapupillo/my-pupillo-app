@@ -238,8 +238,6 @@ type Ann = {
   job_province?: string | null;
   job_postal_code?: string | null;
   job_country?: string | null;
-  reopened_after_worker_cancellation?: boolean | null;
-  reopened_at?: string | null;
 }
 
 type Candidate = {
@@ -599,13 +597,6 @@ function AnnouncementsPage() {
             {STATUS_LABEL[eff.kind] ?? eff.kind}
           </span>
         </div>
-        {a.reopened_after_worker_cancellation && (eff.kind === "active" || eff.kind === "soon") ? (
-          <div className="mt-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-300">
-              ⚠ Turno riaperto per annullamento lavoratore
-            </span>
-          </div>
-        ) : null}
         <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${candCount > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
             <Users className="h-3 w-3" />

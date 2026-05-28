@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
-import { useProfileGate } from "@/components/ProfileGate";
 import {
   computeSpecialAvailabilityBlock,
   describeSpecialAvailability,
@@ -91,7 +90,6 @@ function distKm(aLat:number,aLng:number,bLat:number,bLng:number){
 
 function Browse() {
   const { user, role, profile } = useAuth();
-  const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const navigate = useNavigate();
   const [items, setItems] = useState<Ann[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
@@ -409,18 +407,6 @@ function Browse() {
     <AppShell>
       <PageHeader title="Trova offerte" subtitle="Esplora gli annunci attivi e candidati" />
 
-      {role === "worker" && !canPerformOperationalAction && (
-        <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <div className="font-semibold">Profilo incompleto</div>
-            <div className="opacity-90">Completa il profilo al 100% per candidarti ai turni.</div>
-          </div>
-          <Link to="/onboarding">
-            <Button size="sm" className="whitespace-nowrap">Completa profilo</Button>
-          </Link>
-        </div>
-      )}
-
       <div className="rounded-2xl border bg-card p-4 mb-4">
         <div className="grid gap-3 md:grid-cols-4">
           <Select value={roleF} onValueChange={setRoleF}>
@@ -607,7 +593,7 @@ function Browse() {
                       ))}
                     </div>
                   ) : (
-                    <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={requireComplete(() => apply(a))}>
+                    <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={() => apply(a)}>
                       <Send className="h-4 w-4" />
                       Candidati
                     </Button>
@@ -695,7 +681,7 @@ function Browse() {
                       ))}
                     </div>
                   ) : (
-                    <Button className="flex-1 gap-2" onClick={requireComplete(() => apply(selected))}><Send className="h-4 w-4" />Candidati ora</Button>
+                    <Button className="flex-1 gap-2" onClick={()=>apply(selected)}><Send className="h-4 w-4" />Candidati ora</Button>
                   )}
                 </div>
               </>

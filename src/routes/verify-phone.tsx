@@ -14,7 +14,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Mail } from "lucide-react";
 import { clearPendingRegistrationOtpState, readPendingRegistrationOtpState, savePendingRegistrationOtpState } from "@/lib/registration-otp-state";
-import { computePupilloAuthFlow, destinationForAuthFlowState, isAuthEmailConfirmed, logPupilloAuthFlow } from "@/lib/auth-flow";
 
 const TEST_OTP_ENABLED = import.meta.env.VITE_ENABLE_TEST_OTP === "true" && import.meta.env.PROD !== true;
 
@@ -68,20 +67,13 @@ function VerifyPhonePage() {
     // creato in registrazione: il profilo in auth-context può essere ancora
     // quello letto prima dell'update del telefono.
     if (!extrasLoaded || !profile) return;
-    const flow = computePupilloAuthFlow({ user, profile, role });
-    const dest = flow ? destinationForAuthFlowState(flow.state, role) : null;
-    logPupilloAuthFlow("verify_phone_page", {
-      user,
-      profile,
-      role,
-      currentRoute: "/verify-phone",
-      flow,
-      redirectTo: dest !== "/verify-phone" ? dest : null,
-      redirectReason: dest !== "/verify-phone" ? "verify_phone_state_mismatch" : null,
-    });
-    if (dest && dest !== "/verify-phone") {
+    if (profile?.phone_verified) {
       clearPendingRegistrationOtpState();
-      nav({ to: dest as any, replace: true });
+      if (profile?.profile_completed) {
+        nav({ to: "/dashboard" });
+      } else {
+        nav({ to: "/onboarding" });
+      }
       return;
     }
     const phoneForOtp = profile?.phone_full || pendingPhone;
@@ -192,34 +184,12 @@ function VerifyPhonePage() {
       clearPendingRegistrationOtpState();
       setPendingRegistrationOtp(null);
       await refresh();
-      // Dopo OTP WhatsApp confermato: se l'email non è ancora verificata,
-      // mostra il popup e poi la schermata bloccante /verify-email.
-      const { data: freshUserData } = await supabase.auth.getUser();
-      const authUser = freshUserData.user ?? user;
-      const emailConfirmed = isAuthEmailConfirmed(authUser);
       const dest = role === "admin"
         ? "/admin"
-        : emailConfirmed
-          ? (profile?.profile_completed ? "/dashboard" : "/onboarding")
-          : "/verify-email";
-      logPupilloAuthFlow("verify_phone_otp_success", {
-        user: authUser,
-        profile: profile ? { ...profile, phone_verified: true, whatsapp_confirmation_status: "verified" } : profile,
-        role,
-        currentRoute: "/verify-phone",
-        flow: computePupilloAuthFlow({
-          user: authUser,
-          profile: profile ? { ...profile, phone_verified: true, whatsapp_confirmation_status: "verified" } : profile,
-          role,
-        }),
-        redirectTo: dest,
-        redirectReason: "otp_verified",
-      });
+        : profile?.profile_completed
+          ? "/dashboard"
+          : "/onboarding";
       pendingNavRef.current = dest;
-      if (emailConfirmed) {
-        nav({ to: dest as any });
-        return;
-      }
       // Invio reale della mail di conferma SUBITO dopo la verifica WhatsApp.
       // Solo in caso di invio riuscito mostriamo il popup informativo.
       const email = user?.email ?? null;
@@ -232,7 +202,7 @@ function VerifyPhonePage() {
       const { error: resendErr } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: window.location.origin + "/auth/callback" },
+        options: { emailRedirectTo: window.location.origin + "/registration-success" },
       });
       if (resendErr) {
         toast.error("Non siamo riusciti a inviare la mail di conferma. Riprova tra qualche secondo.");
@@ -277,7 +247,7 @@ function VerifyPhonePage() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: window.location.origin + "/auth/callback" },
+        options: { emailRedirectTo: window.location.origin + "/registration-success" },
       });
       if (error) {
         toast.error("Non siamo riusciti a inviare la mail di conferma. Riprova tra qualche secondo.");
@@ -409,11 +379,11 @@ function VerifyPhonePage() {
               Conferma la tua email
             </DialogTitle>
             <DialogDescription>
-              Numero WhatsApp verificato correttamente. Ora devi confermare anche la tua email per completare la registrazione e attivare il profilo.
+              Ti abbiamo inviato una mail di conferma. Apri la tua casella email e clicca sul link ricevuto per completare la registrazione.
             </DialogDescription>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
-            Controlla la tua casella di posta e clicca sul link di conferma. Se non trovi l'email, controlla anche nello spam.
+            Se non trovi la mail, controlla anche nella cartella spam o posta indesiderata.
           </p>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button
@@ -421,7 +391,7 @@ function VerifyPhonePage() {
               onClick={handleResendEmail}
               disabled={resendingEmail}
             >
-              {resendingEmail ? "Invio…" : "Reinvia email di conferma"}
+              {resendingEmail ? "Invio…" : "Reinvia email"}
             </Button>
             <Button onClick={handleAcknowledgeEmail} disabled={resendingEmail}>
               Ho capito

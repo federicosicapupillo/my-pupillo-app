@@ -101,24 +101,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Chiudi automaticamente al cambio di route
   useEffect(() => { setMobileOpen(false); }, [loc.pathname]);
 
-  useEffect(() => {
-    const main = typeof document !== "undefined" ? document.querySelector("main") : null;
-    console.info("[PUPILLO_BLOCK_DEBUG] app_shell", {
-      route_attuale: loc.pathname,
-      user_id: user?.id ?? null,
-      ruolo: role,
-      phone_verified: profile?.phone_verified ?? null,
-      profile_completion: profile?.completion_pct ?? profile?.profile_completed ?? null,
-      isProfileComplete: profile?.profile_completed === true,
-      isPageBlocked: false,
-      motivo_blocco: null,
-      disabled_buttons: [],
-      disabled_by_component: null,
-      overlay_active: mobileOpen,
-      main_container_pointer_events_none: main ? getComputedStyle(main).pointerEvents === "none" : false,
-    });
-  }, [loc.pathname, user?.id, role, profile?.phone_verified, profile?.profile_completed, profile?.completion_pct, mobileOpen]);
-
   // Gestione globale Esc + focus sul primo link all'apertura
   useEffect(() => {
     if (!mobileOpen) return;

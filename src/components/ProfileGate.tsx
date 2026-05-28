@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -82,24 +82,6 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
   const isComplete = !!profile?.profile_completed;
   const canPerformOperationalAction = !user || isAdmin || isComplete;
 
-  useEffect(() => {
-    console.info("[PUPILLO_BLOCK_DEBUG] profile_gate_provider", {
-      route_attuale: typeof window !== "undefined" ? window.location.pathname : null,
-      user_id: user?.id ?? null,
-      ruolo: role,
-      phone_verified: profile?.phone_verified ?? null,
-      profile_completion: profile?.completion_pct ?? profile?.profile_completed ?? null,
-      isProfileComplete: isComplete,
-      calculated_state: isAdmin ? "ADMIN_BYPASS" : isComplete ? "PROFILE_COMPLETE" : "PROFILE_INCOMPLETE",
-      isPageBlocked: false,
-      motivo_blocco: null,
-      disabled_buttons: canPerformOperationalAction ? [] : ["azioni operative protette da requireComplete"],
-      disabled_by_component: "ProfileGateProvider",
-      overlay_active: open,
-      main_container_pointer_events_none: false,
-    });
-  }, [user?.id, role, profile?.phone_verified, profile?.completion_pct, profile?.profile_completed, isComplete, isAdmin, canPerformOperationalAction, open]);
-
   const openGate = useCallback((opts?: OpenOptions) => {
     setKind(opts?.kind ?? "general");
     setOpen(true);
@@ -115,25 +97,10 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
           void fn(...args);
           return;
         }
-        console.info("[PUPILLO_BLOCK_DEBUG] operational_action_blocked", {
-          route_attuale: typeof window !== "undefined" ? window.location.pathname : null,
-          user_id: user?.id ?? null,
-          ruolo: role,
-          phone_verified: profile?.phone_verified ?? null,
-          profile_completion: profile?.completion_pct ?? profile?.profile_completed ?? null,
-          isProfileComplete: isComplete,
-          calculated_state: "PROFILE_INCOMPLETE",
-          isPageBlocked: false,
-          motivo_blocco: "Profilo incompleto: blocco solo azione operativa",
-          disabled_buttons: [opts?.kind ?? "general"],
-          disabled_by_component: "ProfileGateProvider.requireComplete",
-          overlay_active: true,
-          main_container_pointer_events_none: false,
-        });
         setKind(opts?.kind ?? "general");
         setOpen(true);
       },
-    [canPerformOperationalAction, user?.id, role, profile, isComplete],
+    [canPerformOperationalAction],
   );
 
   const requireCompleteForAvailability = useCallback(
@@ -182,39 +149,11 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
   };
 
   const titles: Record<GateKind, string> = {
-    general: "Profilo incompleto",
-    availability: "Profilo incompleto",
+    general: "Completa il profilo per continuare",
+    availability: "Completa il profilo per modificare la disponibilità",
     target: "Utente non ancora disponibile",
   };
   const isTarget = kind === "target";
-
-  // Lista sintetica dei campi mancanti per il lavoratore.
-  // Mostrata solo se ruolo = worker e profilo non completo.
-  const missingFields: string[] = (() => {
-    if (isTarget || isComplete || isAdmin || role !== "worker" || !profile) return [];
-    const p = profile as Record<string, unknown> & typeof profile;
-    const items: string[] = [];
-    const has = (v: unknown) =>
-      v !== null && v !== undefined && (typeof v !== "string" || v.trim().length > 0);
-    const hasArr = (v: unknown) => Array.isArray(v) && v.length > 0;
-
-    if (!has(p.full_name) && !(has((p as any).first_name) && has((p as any).last_name))) {
-      items.push("Dati anagrafici (nome e cognome)");
-    }
-    if (!has((p as any).birth_date)) items.push("Data di nascita");
-    if (!p.phone_verified) items.push("Telefono verificato");
-    if (!has((p as any).avatar_url)) items.push("Foto profilo");
-    if (!has((p as any).residence_city) && !has((p as any).service_area_city) && !has(p.city)) {
-      items.push("Città / residenza");
-    }
-    if (!has((p as any).primary_role)) items.push("Ruolo lavorativo");
-    const langs = (p as any).spoken_languages ?? p.languages;
-    if (!hasArr(langs)) items.push("Lingue parlate");
-    if (!has((p as any).id_document_path)) items.push("Documento d'identità");
-    if (!has((p as any).service_area_city)) items.push("Disponibilità / zona di lavoro");
-    if (!p.terms_accepted) items.push("Accettazione termini");
-    return items;
-  })();
 
   return (
     <ProfileGateContext.Provider value={value}>
@@ -227,15 +166,12 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
               {kind === "general" && (
                 <>
                   <span className="block">
-                    Per candidarti ai turni devi completare il tuo profilo al 100%.
+                    Per usare questa funzione devi completare il tuo profilo al 100%.
                   </span>
                   <span className="block">
-                    Un profilo completo permette ai ristoratori di valutarti
-                    correttamente e ti consente di ricevere proposte di lavoro
-                    operative.
-                  </span>
-                  <span className="block">
-                    Completa ora il tuo profilo per poter inviare candidature.
+                    Solo i profili completi possono inviare messaggi, ricevere
+                    richieste operative, risultare online, inserire disponibilità
+                    o usare le funzioni operative della piattaforma.
                   </span>
                 </>
               )}
@@ -249,18 +185,6 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
                 <span className="block">
                   Questo profilo non è ancora completo al 100% e non può ricevere
                   messaggi o richieste operative.
-                </span>
-              )}
-              {!isTarget && missingFields.length > 0 && (
-                <span className="block pt-2">
-                  <span className="block font-medium text-foreground">
-                    Per completare il profilo mancano:
-                  </span>
-                  <span className="mt-1 block">
-                    {missingFields.map((f) => (
-                      <span key={f} className="block">• {f}</span>
-                    ))}
-                  </span>
                 </span>
               )}
             </AlertDialogDescription>

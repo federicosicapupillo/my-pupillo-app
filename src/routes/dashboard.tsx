@@ -31,35 +31,6 @@ import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Pupillo" }] }),
   component: () => <RequireAuth><DashboardInner /></RequireAuth>,
-  errorComponent: ({ error, reset }) => {
-    console.error("[dashboard] route error boundary", error);
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-xl font-semibold">
-            Si è verificato un errore nel caricamento della dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Il tuo profilo è stato salvato. Ricarica per riprovare.
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <button
-              onClick={() => reset()}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
-              Ricarica
-            </button>
-            <a
-              href="/profile"
-              className="inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium"
-            >
-              Vai al profilo
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  },
 });
 
 type AssignedItem = {

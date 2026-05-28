@@ -6,8 +6,8 @@ import { clearKnownRestaurantsCache } from "@/lib/known-restaurants-cache";
 
 export const DELETED_ACCOUNT_MESSAGE = "Questo account è stato eliminato e non può più essere utilizzato.";
 
-export type Role = "admin" | "restaurant" | "worker";
-export type Profile = {
+type Role = "admin" | "restaurant" | "worker";
+type Profile = {
   id: string;
   full_name: string | null;
   email: string | null;
@@ -34,7 +34,6 @@ export type Profile = {
   rating_avg: number | null;
   reviews_count: number | null;
   reliability_pct: number | null;
-  completion_pct: number | null;
   city: string | null;
   province: string | null;
   country: string | null;
@@ -142,20 +141,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refresh = async () => {
-    await supabase.auth.refreshSession();
-    const currentSession = (await supabase.auth.getSession()).data.session;
+    const currentSession = session ?? (await supabase.auth.getSession()).data.session;
     if (currentSession) {
-      const { data: freshUserData } = await supabase.auth.getUser();
-      const freshUser = freshUserData.user ?? currentSession.user;
       setSession(currentSession);
-      setUser(freshUser);
-      await loadExtras(freshUser.id);
-    } else {
-      setSession(null);
-      setUser(null);
-      setRole(null);
-      setProfile(null);
-      setExtrasLoaded(false);
+      setUser(currentSession.user);
+      await loadExtras(currentSession.user.id);
     }
   };
 
@@ -173,14 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      if (data.session?.user) {
-        const { data: freshUserData } = await supabase.auth.getUser();
-        const freshUser = freshUserData.user ?? data.session.user;
-        setUser(freshUser);
-        await loadExtras(freshUser.id);
-      } else {
-        setUser(null);
-      }
+      setUser(data.session?.user ?? null);
+      if (data.session?.user) await loadExtras(data.session.user.id);
       setLoading(false);
     });
     return () => sub.subscription.unsubscribe();

@@ -397,39 +397,9 @@ function WorkersPage() {
   const loadWorkers = async () => {
     setLoading(true);
     try {
-      // Step 1: carica gli user_id che hanno ESPLICITAMENTE il ruolo worker.
-      // Senza questo filtro la ricerca lavoratori può accidentalmente includere
-      // profili ristoratore/admin (bug segnalato). La fonte di verità del ruolo
-      // è la tabella `user_roles`, non `profiles`.
-      const { data: roleRows, error: rolesErr } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-      if (rolesErr) throw rolesErr;
-      const workerIds = new Set<string>();
-      const nonWorkerIds = new Set<string>();
-      for (const r of (roleRows as { user_id: string; role: string }[] | null) ?? []) {
-        if (r.role === "worker") workerIds.add(r.user_id);
-        else nonWorkerIds.add(r.user_id); // restaurant, admin, ecc.
-      }
-      // Escludi chi ha ANCHE un ruolo non-worker (profilo ibrido non valido per questa lista).
-      const allowedIds = Array.from(workerIds).filter((id) => !nonWorkerIds.has(id));
-      console.info("[PUPILLO_WORKER_SEARCH_DEBUG] role filter", {
-        total_role_rows: (roleRows ?? []).length,
-        worker_ids: workerIds.size,
-        non_worker_ids: nonWorkerIds.size,
-        allowed_after_hybrid_exclusion: allowedIds.length,
-      });
-      if (allowedIds.length === 0) {
-        setWorkers([]);
-        setAvailByWorker({});
-        setExcByWorker({});
-        setLoaded(true);
-        return;
-      }
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count, search_penalty_active, search_penalty_reason, search_penalty_until, delay_count")
-        .in("id", allowedIds)
         .eq("is_deleted", false)
         .eq("account_status", "active")
         // Profili non completi al 100% non sono operativi:
@@ -439,30 +409,11 @@ function WorkersPage() {
         .limit(1000);
       if (error) throw error;
       const list = (data as W[]) ?? [];
-      // Difesa extra: nessun record ristorante deve passare. Se un profilo ha
-      // business_name/vat_number ed è privo di dati worker, lo escludiamo
-      // anche se per errore avesse il ruolo worker.
-      const safeList = list.filter((p: any) => {
-        const hasRestaurantFields = !!(p.business_name || p.vat_number || p.venue_type);
-        const hasWorkerFields = !!(p.primary_role || (p.secondary_roles && p.secondary_roles.length > 0));
-        const included = !hasRestaurantFields || hasWorkerFields;
-        if (!included) {
-          console.warn("[PUPILLO_WORKER_SEARCH_DEBUG] excluded hybrid restaurant-like profile", {
-            user_id: p.id,
-            reason: "excluded_role_restaurant_like_fields",
-          });
-        }
-        return included;
-      });
-      console.info("[PUPILLO_WORKER_SEARCH_DEBUG] loaded workers", {
-        from_profiles: list.length,
-        after_safety_filter: safeList.length,
-      });
-      setWorkers(safeList);
+      setWorkers(list);
       // Carica le disponibilità reali dalla tabella worker_availability per i
       // lavoratori visibili. Il campo `profiles.weekly_availability` è legacy
       // e nella maggior parte dei casi non viene popolato dall'onboarding.
-      const ids = safeList.map((w) => w.id);
+      const ids = list.map((w) => w.id);
       if (ids.length > 0) {
         const todayIso = new Date().toISOString().slice(0, 10);
         const [{ data: avRows, error: avErr }, { data: excRows, error: excErr }] = await Promise.all([

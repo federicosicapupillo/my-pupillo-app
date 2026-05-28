@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
-import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShiftsRouteImport } from './routes/shifts'
 import { Route as RistoratoriRouteImport } from './routes/ristoratori'
@@ -55,11 +54,6 @@ const WorkersRoute = WorkersRouteImport.update({
 const VerifyPhoneRoute = VerifyPhoneRouteImport.update({
   id: '/verify-phone',
   path: '/verify-phone',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VerifyEmailRoute = VerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -258,7 +252,6 @@ export interface FileRoutesByFullPath {
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/admin/backend': typeof AdminBackendRoute
@@ -297,7 +290,6 @@ export interface FileRoutesByTo {
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/admin/backend': typeof AdminBackendRoute
@@ -337,7 +329,6 @@ export interface FileRoutesById {
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
   '/terms': typeof TermsRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
   '/admin/backend': typeof AdminBackendRoute
@@ -378,7 +369,6 @@ export interface FileRouteTypes {
     | '/ristoratori'
     | '/shifts'
     | '/terms'
-    | '/verify-email'
     | '/verify-phone'
     | '/workers'
     | '/admin/backend'
@@ -417,7 +407,6 @@ export interface FileRouteTypes {
     | '/ristoratori'
     | '/shifts'
     | '/terms'
-    | '/verify-email'
     | '/verify-phone'
     | '/workers'
     | '/admin/backend'
@@ -456,7 +445,6 @@ export interface FileRouteTypes {
     | '/ristoratori'
     | '/shifts'
     | '/terms'
-    | '/verify-email'
     | '/verify-phone'
     | '/workers'
     | '/admin/backend'
@@ -496,7 +484,6 @@ export interface RootRouteChildren {
   RistoratoriRoute: typeof RistoratoriRoute
   ShiftsRoute: typeof ShiftsRoute
   TermsRoute: typeof TermsRoute
-  VerifyEmailRoute: typeof VerifyEmailRoute
   VerifyPhoneRoute: typeof VerifyPhoneRoute
   WorkersRoute: typeof WorkersRoute
   RestaurantsIdRoute: typeof RestaurantsIdRoute
@@ -523,13 +510,6 @@ declare module '@tanstack/react-router' {
       path: '/verify-phone'
       fullPath: '/verify-phone'
       preLoaderRoute: typeof VerifyPhoneRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/verify-email': {
-      id: '/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -833,7 +813,6 @@ const rootRouteChildren: RootRouteChildren = {
   RistoratoriRoute: RistoratoriRoute,
   ShiftsRoute: ShiftsRoute,
   TermsRoute: TermsRoute,
-  VerifyEmailRoute: VerifyEmailRoute,
   VerifyPhoneRoute: VerifyPhoneRoute,
   WorkersRoute: WorkersRoute,
   RestaurantsIdRoute: RestaurantsIdRoute,
