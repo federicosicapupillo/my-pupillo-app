@@ -434,7 +434,7 @@ export const restoreBackupRun = createServerFn({ method: "POST" })
             const { error } = await supabaseAdmin
               .from("profiles")
               .delete()
-              .not("id", "in", `(${ids.map((x) => `"${x}"`).join(",")})`);
+              .not("id", "in", `(${ids.join(",")})`);
             if (error) report.errors.push(`delete profiles: ${error.message}`);
           } else {
             const { error } = await supabaseAdmin
