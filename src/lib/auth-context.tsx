@@ -122,17 +122,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const allRoles = (roles ?? []).map((x: { role: Role }) => x.role);
-    const r: Role | undefined =
+    let r: Role | undefined =
       allRoles.includes("admin") ? "admin"
       : allRoles.includes("restaurant") ? "restaurant"
       : allRoles.includes("worker") ? "worker"
       : undefined;
+    // Fallback: if user_roles is empty (RLS hiccup, stale session, post-restore
+    // race), trust profiles.primary_role so admins / users with a valid
+    // primary_role aren't wrongly sent to /account-error.
+    const primaryRole = (loadedProfile as { primary_role?: string | null } | null)?.primary_role ?? null;
+    if (!r && (primaryRole === "admin" || primaryRole === "restaurant" || primaryRole === "worker")) {
+      r = primaryRole as Role;
+      console.warn("[PUPILLO_ROLE_RESTORE_DEBUG] role resolved from profiles.primary_role fallback", {
+        user_id: uid,
+        primary_role: primaryRole,
+        user_roles_rows: allRoles,
+      });
+    }
     console.info("[PUPILLO_ROLE_RESTORE_DEBUG] loadExtras", {
       user_id: uid,
       profile_found: !!loadedProfile,
-      profile_primary_role: (loadedProfile as { primary_role?: string | null } | null)?.primary_role ?? null,
+      profile_primary_role: primaryRole,
       user_roles_rows: allRoles,
       resolved_role: r ?? null,
+      roles_error: rolesError?.message ?? null,
+      profile_error: profileError?.message ?? null,
     });
     setRole(r ?? null);
     setProfile(loadedProfile);
