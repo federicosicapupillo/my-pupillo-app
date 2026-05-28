@@ -397,9 +397,39 @@ function WorkersPage() {
   const loadWorkers = async () => {
     setLoading(true);
     try {
+      // Carica i ruoli reali: solo utenti con ruolo `worker` possono comparire
+      // nella ricerca lavoratori. Qualsiasi utente con ruolo `restaurant` o
+      // `admin` viene escluso anche se ha per qualsiasi motivo un profilo
+      // compilato come worker.
+      const { data: roleRows, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+      if (rolesError) throw rolesError;
+      const workerIds = new Set<string>();
+      const excludedIds = new Set<string>();
+      for (const r of (roleRows as { user_id: string; role: string }[] | null) ?? []) {
+        if (r.role === "worker") workerIds.add(r.user_id);
+        if (r.role === "restaurant" || r.role === "admin") excludedIds.add(r.user_id);
+      }
+      for (const id of excludedIds) workerIds.delete(id);
+      const allowedIds = Array.from(workerIds);
+      if (import.meta.env.DEV) {
+        console.log("[PUPILLO_WORKER_SEARCH_DEBUG] roles", {
+          worker_ids: workerIds.size,
+          excluded_ids: excludedIds.size,
+        });
+      }
+      if (allowedIds.length === 0) {
+        setWorkers([]);
+        setAvailByWorker({});
+        setExcByWorker({});
+        setLoaded(true);
+        return;
+      }
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count, search_penalty_active, search_penalty_reason, search_penalty_until, delay_count")
+        .in("id", allowedIds)
         .eq("is_deleted", false)
         .eq("account_status", "active")
         // Profili non completi al 100% non sono operativi:
@@ -409,6 +439,11 @@ function WorkersPage() {
         .limit(1000);
       if (error) throw error;
       const list = (data as W[]) ?? [];
+      if (import.meta.env.DEV) {
+        console.log("[PUPILLO_WORKER_SEARCH_DEBUG] loaded worker profiles", {
+          count: list.length,
+        });
+      }
       setWorkers(list);
       // Carica le disponibilità reali dalla tabella worker_availability per i
       // lavoratori visibili. Il campo `profiles.weekly_availability` è legacy
