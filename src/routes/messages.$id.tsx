@@ -1028,7 +1028,7 @@ function Thread() {
         }, 50);
         return;
       }
-      const body = renderTemplate(selectedTpl.text, ann, displayOtherName ?? null, displayAddress);
+      const body = renderTemplate(selectedTpl.text, ann, venueName ?? null, displayAddress);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
       const { data, error } = await supabase.from("messages").insert({
