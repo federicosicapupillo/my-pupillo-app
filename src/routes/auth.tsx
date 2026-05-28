@@ -86,6 +86,16 @@ function AuthPage() {
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
     if (profile?.is_deleted || profile?.deleted_at) return;
+    console.info("[PUPILLO_ROLE_RESTORE_DEBUG] auth redirect decision", {
+      user_id: user.id,
+      email: user.email,
+      has_profile: !!profile,
+      profile_primary_role: (profile as { primary_role?: string | null } | null)?.primary_role ?? null,
+      profile_completed: profile?.profile_completed ?? null,
+      phone_verified: profile?.phone_verified ?? null,
+      role: userRole,
+      is_admin: userRole === "admin",
+    });
     // Admins bypass phone verification, onboarding and profile completion.
     if (userRole === "admin") {
       navigate({ to: "/admin" });
@@ -107,8 +117,16 @@ function AuthPage() {
     if (userRole === "restaurant") navigate({ to: "/dashboard" });
     else if (userRole === "worker") navigate({ to: "/jobs" });
     else if (userRole === null) {
-      // Authenticated but no role row yet — surface a clear error.
-      toast.error("Ruolo account non configurato. Contatta l'assistenza.");
+      // Authenticated but no role row in user_roles. Send the user to a
+      // dedicated page with logout / retry / contact-support actions
+      // instead of leaving them stuck on the login screen.
+      console.warn("[PUPILLO_ROLE_RESTORE_DEBUG] missing role for authenticated user", {
+        user_id: user.id,
+        email: user.email,
+        has_profile: !!profile,
+        profile_primary_role: (profile as { primary_role?: string | null } | null)?.primary_role ?? null,
+      });
+      navigate({ to: "/account-error" });
     }
   }, [user, userRole, profile, loading, extrasLoaded, navigate, roleParam]);
 

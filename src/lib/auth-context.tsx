@@ -127,6 +127,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       : allRoles.includes("restaurant") ? "restaurant"
       : allRoles.includes("worker") ? "worker"
       : undefined;
+    console.info("[PUPILLO_ROLE_RESTORE_DEBUG] loadExtras", {
+      user_id: uid,
+      profile_found: !!loadedProfile,
+      profile_primary_role: (loadedProfile as { primary_role?: string | null } | null)?.primary_role ?? null,
+      user_roles_rows: allRoles,
+      resolved_role: r ?? null,
+    });
     setRole(r ?? null);
     setProfile(loadedProfile);
     // Apply per-user theme preference. Default restaurants to light.

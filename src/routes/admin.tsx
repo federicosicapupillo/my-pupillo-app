@@ -18,6 +18,7 @@ import { AdminBackupsSection } from "@/components/AdminBackupsSection";
 import { AdminBackupSystemSection } from "@/components/AdminBackupSystemSection";
 import { AdminBackupRestoreSection } from "@/components/AdminBackupRestoreSection";
 import { AdminSupportTicketsSection } from "@/components/AdminSupportTicketsSection";
+import { AdminRoleRepairSection } from "@/components/AdminRoleRepairSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/admin")({
@@ -596,6 +597,7 @@ function Admin() {
         <TabsContent value="backups" className="space-y-6">
           <AdminBackupSystemSection />
           <AdminBackupRestoreSection />
+          <AdminRoleRepairSection />
           <AdminBackupsSection />
         </TabsContent>
         <TabsContent value="support" className="space-y-6">
