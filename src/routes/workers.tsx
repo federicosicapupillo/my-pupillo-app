@@ -1277,11 +1277,20 @@ function WorkersPage() {
                   const near = inRange(w);
                   const r = rel[w.id];
                   const compat = selectedAnn ? (compatByWorker[w.id] ?? null) : null;
+                  // Coerenza badge: se il lavoratore ha una disponibilità
+                  // "legacy" (available_now_until ancora valido oppure
+                  // weekly_availability popolato) NON deve comparire
+                  // "Disponibilità non indicata" mentre più sotto la card
+                  // mostra "Disponibile oggi 19:00 - 23:00".
+                  const hasLegacyAvailability =
+                    (!!w.available_now_until && new Date(w.available_now_until).getTime() > Date.now())
+                    || (Array.isArray(w.weekly_availability) && w.weekly_availability.length > 0);
                   const compatBadge =
                     compat === "disponibile" ? { text: "Disponibile per questo turno", cls: "bg-emerald-500/20 text-emerald-700" }
                     : compat === "compatibile" ? { text: "Compatibile con il turno", cls: "bg-emerald-500/15 text-emerald-700" }
                     : compat === "parziale" ? { text: "Disponibilità parziale", cls: "bg-amber-500/15 text-amber-700" }
-                    : compat === null && selectedAnn ? { text: "Disponibilità non indicata", cls: "bg-muted text-foreground/70" }
+                    : compat === null && selectedAnn && !hasLegacyAvailability
+                      ? { text: "Disponibilità non indicata", cls: "bg-muted text-foreground/70" }
                     : null;
                   if (g.key === "contacted") {
                     return (
