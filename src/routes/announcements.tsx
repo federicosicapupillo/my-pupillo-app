@@ -238,6 +238,8 @@ type Ann = {
   job_province?: string | null;
   job_postal_code?: string | null;
   job_country?: string | null;
+  reopened_after_worker_cancellation?: boolean | null;
+  reopened_at?: string | null;
 }
 
 type Candidate = {
