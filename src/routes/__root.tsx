@@ -17,7 +17,6 @@ import { StalePreviewOverlay } from "@/components/StalePreviewOverlay";
 import { installServerFnAuthFetch } from "@/lib/server-fn-auth";
 import { DevLoopMonitor } from "@/lib/dev-loop-monitor";
 import { SiteAccessGate } from "@/components/SiteAccessGate";
-import { AuthFlowDebugPanel } from "@/components/AuthFlowDebugPanel";
 
 installServerFnAuthFetch();
 
@@ -142,7 +141,6 @@ function RootComponent() {
               </ProfileGateProvider>
             </PhoneVerificationGate>
           </AccountAccessGate>
-          <AuthFlowDebugPanel />
           <Toaster richColors position="top-right" />
           <StalePreviewOverlay />
           {import.meta.env.DEV ? <DevLoopMonitor /> : null}
@@ -155,7 +153,20 @@ function RootComponent() {
 function AccountAccessGate({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, extrasLoaded } = useAuth();
   const isDeleted = Boolean(profile?.is_deleted || profile?.deleted_at);
-  if (loading || (user && (!extrasLoaded || isDeleted))) {
+  if (user) {
+    console.info("[PUPILLO_BLOCK_DEBUG] account_access_gate", {
+      route_attuale: typeof window !== "undefined" ? window.location.pathname : null,
+      user_id: user.id,
+      extrasLoaded,
+      isPageBlocked: loading || isDeleted,
+      motivo_blocco: loading ? "sessione in caricamento" : isDeleted ? "account eliminato" : null,
+      disabled_buttons: [],
+      disabled_by_component: "AccountAccessGate",
+      overlay_active: false,
+      main_container_pointer_events_none: false,
+    });
+  }
+  if (loading || (user && isDeleted)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
         Caricamento…

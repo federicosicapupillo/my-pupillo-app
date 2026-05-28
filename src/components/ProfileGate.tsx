@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -82,6 +82,24 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
   const isComplete = !!profile?.profile_completed;
   const canPerformOperationalAction = !user || isAdmin || isComplete;
 
+  useEffect(() => {
+    console.info("[PUPILLO_BLOCK_DEBUG] profile_gate_provider", {
+      route_attuale: typeof window !== "undefined" ? window.location.pathname : null,
+      user_id: user?.id ?? null,
+      ruolo: role,
+      phone_verified: profile?.phone_verified ?? null,
+      profile_completion: profile?.completion_pct ?? profile?.profile_completed ?? null,
+      isProfileComplete: isComplete,
+      calculated_state: isAdmin ? "ADMIN_BYPASS" : isComplete ? "PROFILE_COMPLETE" : "PROFILE_INCOMPLETE",
+      isPageBlocked: false,
+      motivo_blocco: null,
+      disabled_buttons: canPerformOperationalAction ? [] : ["azioni operative protette da requireComplete"],
+      disabled_by_component: "ProfileGateProvider",
+      overlay_active: open,
+      main_container_pointer_events_none: false,
+    });
+  }, [user?.id, role, profile?.phone_verified, profile?.completion_pct, profile?.profile_completed, isComplete, isAdmin, canPerformOperationalAction, open]);
+
   const openGate = useCallback((opts?: OpenOptions) => {
     setKind(opts?.kind ?? "general");
     setOpen(true);
@@ -97,10 +115,25 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
           void fn(...args);
           return;
         }
+        console.info("[PUPILLO_BLOCK_DEBUG] operational_action_blocked", {
+          route_attuale: typeof window !== "undefined" ? window.location.pathname : null,
+          user_id: user?.id ?? null,
+          ruolo: role,
+          phone_verified: profile?.phone_verified ?? null,
+          profile_completion: profile?.completion_pct ?? profile?.profile_completed ?? null,
+          isProfileComplete: isComplete,
+          calculated_state: "PROFILE_INCOMPLETE",
+          isPageBlocked: false,
+          motivo_blocco: "Profilo incompleto: blocco solo azione operativa",
+          disabled_buttons: [opts?.kind ?? "general"],
+          disabled_by_component: "ProfileGateProvider.requireComplete",
+          overlay_active: true,
+          main_container_pointer_events_none: false,
+        });
         setKind(opts?.kind ?? "general");
         setOpen(true);
       },
-    [canPerformOperationalAction],
+    [canPerformOperationalAction, user?.id, role, profile, isComplete],
   );
 
   const requireCompleteForAvailability = useCallback(
