@@ -6,6 +6,7 @@ const ALLOWED_PATHS = new Set([
   "/",
   "/auth",
   "/verify-phone",
+  "/verify-email",
   "/registration-success",
   "/reset-password",
   "/terms",
@@ -38,6 +39,11 @@ export function PhoneVerificationGate({ children }: { children: ReactNode }) {
     // Strict check: only redirect when explicitly false (not null/undefined).
     if (profile && profile.phone_verified === false) {
       nav({ to: "/verify-phone" });
+      return;
+    }
+    // Telefono verificato ma email non ancora confermata: schermata bloccante.
+    if (profile && profile.phone_verified === true && !user.email_confirmed_at) {
+      nav({ to: "/verify-email" });
     }
   }, [user, profile, loading, extrasLoaded, role, loc.pathname, nav]);
 
