@@ -91,6 +91,7 @@ function distKm(aLat:number,aLng:number,bLat:number,bLng:number){
 
 function Browse() {
   const { user, role, profile } = useAuth();
+  const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const navigate = useNavigate();
   const [items, setItems] = useState<Ann[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
