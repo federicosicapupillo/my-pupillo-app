@@ -58,7 +58,27 @@ function isTestOrDemoUser(profile: { email?: string | null; is_demo?: boolean | 
 function isTestOtpAllowedFor(profile: { email?: string | null; is_demo?: boolean | null } | null, phoneFull?: string | null): boolean {
   const envAllows = isTestOtpFlagEnabled() || isLovableTestHostOrLocal() || isWhatsAppSimulatedMode();
   if (!envAllows) return false;
-  return isTestOrDemoUser(profile, phoneFull) || isWhatsAppSimulatedMode();
+  // In ambienti preview/dev/test o quando WhatsApp è in modalità simulata, il
+  // codice fisso 123456 deve essere sempre accettato: l'utente non riceve
+  // alcun messaggio reale, quindi non avrebbe modo di completare la verifica.
+  // In produzione (host reale + WhatsApp configurato) questa funzione resta
+  // disattivata dal primo check envAllows.
+  return true;
+}
+
+function normalizePhoneFull(raw: string | null | undefined): string {
+  if (!raw) return "";
+  // Mantieni un eventuale "+" iniziale, rimuovi tutti gli altri caratteri non numerici.
+  const trimmed = String(raw).trim();
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return "";
+  if (hasPlus) return `+${digits}`;
+  // Se inizia con 00 (formato internazionale alternativo) sostituisci con +.
+  if (digits.startsWith("00")) return `+${digits.slice(2)}`;
+  // Numero italiano senza prefisso → assumi +39.
+  if (digits.length === 10 && digits.startsWith("3")) return `+39${digits}`;
+  return `+${digits}`;
 }
 
 function hashOtp(code: string, userId: string): string {
@@ -296,14 +316,27 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
       .select("email, is_demo, phone_full, is_deleted, deleted_at")
       .eq("id", userId)
       .maybeSingle();
+    const normalizedPhone = normalizePhoneFull(verifyProfile?.phone_full);
+    const testAllowed = isTestOtpAllowedFor(verifyProfile, verifyProfile?.phone_full ?? null);
+    console.info("[PUPILLO_PHONE_VERIFY_DEBUG] verify start", {
+      user_id: userId,
+      email: verifyProfile?.email ?? null,
+      phone_inserted: verifyProfile?.phone_full ?? null,
+      phone_normalized: normalizedPhone,
+      otp_inserted: data.code,
+      otp_expected: testAllowed ? "<hashed-or-123456>" : "<hashed>",
+      verification_row_id: row?.id ?? null,
+      verification_status: row?.status ?? null,
+      verification_expires_at: row?.expires_at ?? null,
+      test_mode_allowed: testAllowed,
+      env_lovable_host: isLovableTestHostOrLocal(),
+      env_simulated_whatsapp: isWhatsAppSimulatedMode(),
+    });
     if (verifyProfile?.is_deleted || verifyProfile?.deleted_at) {
       console.info("[auth] phone verification confirm blocked for deleted account", { userId });
       return { ok: false, error: "Questo account è stato eliminato e non può più essere utilizzato." };
     }
-    if (
-      data.code === TEST_OTP_CODE &&
-      isTestOtpAllowedFor(verifyProfile, verifyProfile?.phone_full ?? null)
-    ) {
+    if (data.code === TEST_OTP_CODE && testAllowed) {
       const now = new Date().toISOString();
       if (row) {
         await supabaseAdmin
@@ -311,14 +344,25 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
           .update({ status: "verified", verified_at: now })
           .eq("id", row.id);
       }
-      await supabaseAdmin
+      const { data: updTest, error: updTestErr } = await supabaseAdmin
         .from("profiles")
         .update({
           phone_verified: true,
           phone_verified_at: now,
+          phone_full: normalizedPhone || verifyProfile?.phone_full,
           whatsapp_confirmation_status: "verified_test",
         })
-        .eq("id", userId);
+        .eq("id", userId)
+        .select("phone_verified")
+        .maybeSingle();
+      console.info("[PUPILLO_PHONE_VERIFY_DEBUG] verify test-mode update", {
+        user_id: userId,
+        update_error: updTestErr?.message ?? null,
+        final_phone_verified: updTest?.phone_verified ?? null,
+      });
+      if (updTestErr) {
+        return { ok: false, error: `Errore aggiornamento profilo: ${updTestErr.message}` };
+      }
       return { ok: true, testMode: true };
     }
 
@@ -342,6 +386,11 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
         .from("phone_verifications")
         .update({ attempts_count: attempts, status: newStatus })
         .eq("id", row.id);
+      console.warn("[PUPILLO_PHONE_VERIFY_DEBUG] otp mismatch", {
+        user_id: userId,
+        attempts,
+        attempts_left: Math.max(0, MAX_ATTEMPTS - attempts),
+      });
       return {
         ok: false,
         error: attempts >= MAX_ATTEMPTS ? "Hai superato il numero massimo di tentativi." : "Codice non valido. Controlla il codice ricevuto e riprova.",
@@ -354,14 +403,25 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
       .from("phone_verifications")
       .update({ status: "verified", verified_at: now })
       .eq("id", row.id);
-    await supabaseAdmin
+    const { data: updReal, error: updRealErr } = await supabaseAdmin
       .from("profiles")
       .update({
         phone_verified: true,
         phone_verified_at: now,
+        phone_full: normalizedPhone || verifyProfile?.phone_full,
         whatsapp_confirmation_status: "verified",
       })
-      .eq("id", userId);
+      .eq("id", userId)
+      .select("phone_verified")
+      .maybeSingle();
+    console.info("[PUPILLO_PHONE_VERIFY_DEBUG] verify real update", {
+      user_id: userId,
+      update_error: updRealErr?.message ?? null,
+      final_phone_verified: updReal?.phone_verified ?? null,
+    });
+    if (updRealErr) {
+      return { ok: false, error: `Errore aggiornamento profilo: ${updRealErr.message}` };
+    }
 
     return { ok: true };
     } catch (e) {
