@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { runFullBackup } from "@/lib/backup-system.functions";
 
 const BACKUP_BUCKET = "admin-backups";
 
@@ -343,16 +342,11 @@ export const restoreBackupRun = createServerFn({ method: "POST" })
       return report;
     }
 
-    // 3. Pre-restore snapshot automatico
+    // 3. Pre-restore snapshot automatico (DB only, inline)
     try {
-      const pre = (await (runFullBackup as any)()) as { logId: string; status: string };
-      report.preRestoreLogId = pre.logId;
-      const { data: logRow } = await supabaseAdmin
-        .from("backup_logs")
-        .select("metadata")
-        .eq("id", pre.logId)
-        .maybeSingle();
-      report.preRestoreStamp = ((logRow as any)?.metadata?.stamp as string) ?? null;
+      const snap = await createDatabaseSnapshot(userId, "pre-restore");
+      report.preRestoreLogId = snap.logId;
+      report.preRestoreStamp = snap.stamp;
     } catch (e) {
       report.errors.push(`pre-restore: ${e instanceof Error ? e.message : String(e)}`);
       return report; // mai ripristinare senza snapshot
