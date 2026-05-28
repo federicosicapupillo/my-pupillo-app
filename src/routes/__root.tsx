@@ -17,7 +17,6 @@ import { StalePreviewOverlay } from "@/components/StalePreviewOverlay";
 import { installServerFnAuthFetch } from "@/lib/server-fn-auth";
 import { DevLoopMonitor } from "@/lib/dev-loop-monitor";
 import { SiteAccessGate } from "@/components/SiteAccessGate";
-import { AuthFlowDebugPanel } from "@/components/AuthFlowDebugPanel";
 
 installServerFnAuthFetch();
 
@@ -142,7 +141,6 @@ function RootComponent() {
               </ProfileGateProvider>
             </PhoneVerificationGate>
           </AccountAccessGate>
-          <AuthFlowDebugPanel />
           <Toaster richColors position="top-right" />
           <StalePreviewOverlay />
           {import.meta.env.DEV ? <DevLoopMonitor /> : null}
