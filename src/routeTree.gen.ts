@@ -43,7 +43,6 @@ import { Route as AdminResetTestDbRouteImport } from './routes/admin.reset-test-
 import { Route as AdminBackendRouteImport } from './routes/admin.backend'
 import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
 import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
-import { Route as ApiPublicBootstrapAdminTestRouteImport } from './routes/api/public/bootstrap-admin-test'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/public/hooks/expire-stale'
 
@@ -218,12 +217,6 @@ const RistoratoreAnnunciNuovoRoute = RistoratoreAnnunciNuovoRouteImport.update({
   path: '/ristoratore/annunci/nuovo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicBootstrapAdminTestRoute =
-  ApiPublicBootstrapAdminTestRouteImport.update({
-    id: '/api/public/bootstrap-admin-test',
-    path: '/api/public/bootstrap-admin-test',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -270,7 +263,6 @@ export interface FileRoutesByFullPath {
   '/reviews/$id': typeof ReviewsIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/workers/$id': typeof WorkersIdRoute
-  '/api/public/bootstrap-admin-test': typeof ApiPublicBootstrapAdminTestRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -309,7 +301,6 @@ export interface FileRoutesByTo {
   '/reviews/$id': typeof ReviewsIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/workers/$id': typeof WorkersIdRoute
-  '/api/public/bootstrap-admin-test': typeof ApiPublicBootstrapAdminTestRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -349,7 +340,6 @@ export interface FileRoutesById {
   '/reviews/$id': typeof ReviewsIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/workers_/$id': typeof WorkersIdRoute
-  '/api/public/bootstrap-admin-test': typeof ApiPublicBootstrapAdminTestRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -390,7 +380,6 @@ export interface FileRouteTypes {
     | '/reviews/$id'
     | '/ristoratore/collaboratori'
     | '/workers/$id'
-    | '/api/public/bootstrap-admin-test'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -429,7 +418,6 @@ export interface FileRouteTypes {
     | '/reviews/$id'
     | '/ristoratore/collaboratori'
     | '/workers/$id'
-    | '/api/public/bootstrap-admin-test'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -468,7 +456,6 @@ export interface FileRouteTypes {
     | '/reviews/$id'
     | '/ristoratore/collaboratori'
     | '/workers_/$id'
-    | '/api/public/bootstrap-admin-test'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -503,7 +490,6 @@ export interface RootRouteChildren {
   ReviewsIdRoute: typeof ReviewsIdRoute
   RistoratoreCollaboratoriRoute: typeof RistoratoreCollaboratoriRoute
   WorkersIdRoute: typeof WorkersIdRoute
-  ApiPublicBootstrapAdminTestRoute: typeof ApiPublicBootstrapAdminTestRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
   ApiPublicHooksExpireStaleRoute: typeof ApiPublicHooksExpireStaleRoute
@@ -750,13 +736,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RistoratoreAnnunciNuovoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/bootstrap-admin-test': {
-      id: '/api/public/bootstrap-admin-test'
-      path: '/api/public/bootstrap-admin-test'
-      fullPath: '/api/public/bootstrap-admin-test'
-      preLoaderRoute: typeof ApiPublicBootstrapAdminTestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -840,7 +819,6 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewsIdRoute: ReviewsIdRoute,
   RistoratoreCollaboratoriRoute: RistoratoreCollaboratoriRoute,
   WorkersIdRoute: WorkersIdRoute,
-  ApiPublicBootstrapAdminTestRoute: ApiPublicBootstrapAdminTestRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
   ApiPublicHooksExpireStaleRoute: ApiPublicHooksExpireStaleRoute,
@@ -849,3 +827,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
