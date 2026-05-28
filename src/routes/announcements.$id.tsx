@@ -31,6 +31,7 @@ import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
+import { computeProposalStatus, type ProposalState } from "@/lib/proposal-status";
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
@@ -167,6 +168,12 @@ function AnnouncementDetail() {
   const [fullDialogOpen, setFullDialogOpen] = useState(false);
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
+  // Per-application: state of the most recent shift_proposal sent in this chat.
+  // `waitingWorker` is true when the restaurant sent a proposal that the worker
+  // has not yet answered → operational buttons must stay disabled.
+  const [proposalInfo, setProposalInfo] = useState<
+    Record<string, { state: ProposalState | null; waitingWorker: boolean }>
+  >({});
 
   const load = async () => {
     // Try the base table first — succeeds for the owning restaurant, the
@@ -194,6 +201,57 @@ function AnnouncementDetail() {
       .order("created_at", { ascending: false });
     const list = (ax as App[]) ?? [];
     setApps(list);
+    // Compute per-application proposal state (latest shift_proposal in chat).
+    if (list.length) {
+      const appIds = list.map((x) => x.id);
+      const { data: msgs } = await supabase
+        .from("messages")
+        .select("id, application_id, sender_id, created_at, template_id")
+        .in("application_id", appIds)
+        .eq("template_id", "shift_proposal")
+        .order("created_at", { ascending: false });
+      const latestByApp = new Map<
+        string,
+        { id: string; sender_id: string; created_at: string }
+      >();
+      for (const m of ((msgs ?? []) as any[])) {
+        if (!latestByApp.has(m.application_id)) latestByApp.set(m.application_id, m);
+      }
+      const msgIds = Array.from(latestByApp.values()).map((m) => m.id);
+      const respByMsg = new Map<string, { status: "accepted" | "rejected" }>();
+      if (msgIds.length) {
+        const { data: resps } = await supabase
+          .from("proposal_responses")
+          .select("message_id, status")
+          .in("message_id", msgIds);
+        for (const r of ((resps ?? []) as any[])) {
+          respByMsg.set(r.message_id, { status: r.status });
+        }
+      }
+      const info: Record<string, { state: ProposalState | null; waitingWorker: boolean }> = {};
+      const restaurantId = (a as Ann).restaurant_id;
+      for (const app of list) {
+        const lp = latestByApp.get(app.id);
+        if (!lp) {
+          info[app.id] = { state: null, waitingWorker: false };
+          continue;
+        }
+        const resp = respByMsg.get(lp.id) ?? null;
+        const state = computeProposalStatus({
+          response: resp,
+          applicationStatus: app.status,
+          supersededByNewer: false,
+        });
+        // Restaurant-initiated proposal awaiting worker response.
+        const isFromRestaurant = lp.sender_id === restaurantId;
+        const waitingWorker =
+          isFromRestaurant && state === "pending" && app.status === "pending";
+        info[app.id] = { state, waitingWorker };
+      }
+      setProposalInfo(info);
+    } else {
+      setProposalInfo({});
+    }
     const { data: jr } = await (supabase as any)
       .from("job_requests_public")
       .select("title,role_required,workers_needed,description,tasks,shift_date,end_date,start_time,end_time,hourly_rate,break_included,restaurant_name")
@@ -365,6 +423,12 @@ function AnnouncementDetail() {
   };
 
   const accept = async (app: App) => {
+    // Hard guard: do not let the restaurant assign a worker while the
+    // outgoing proposal is still waiting for the worker's acceptance.
+    if (proposalInfo[app.id]?.waitingWorker) {
+      toast.error("Non puoi confermare questa proposta finché il lavoratore non ha accettato.");
+      return;
+    }
     if (isFull) {
       setFullDialogOpen(true);
       return;
@@ -467,6 +531,10 @@ function AnnouncementDetail() {
     load();
   };
   const reject = async (app: App) => {
+    if (proposalInfo[app.id]?.waitingWorker) {
+      toast.error("Per ritirare una proposta in attesa usa la chat (Annulla proposta).");
+      return;
+    }
     setBusyId(app.id);
     const { error } = await supabase.from("applications").update({ status: "rejected" }).eq("id", app.id);
     setBusyId(null);
@@ -814,6 +882,8 @@ function AnnouncementDetail() {
                 const isRejected = ["rejected","not_interested","expired"].includes(a.status);
                 const canAct = !isAnnInactive && (ann.status === "active" || ann.status === "assigned" && !isAccepted) && !isAccepted && !isRejected;
                 const acceptBlocked = isFull && !isAccepted;
+                const waitingWorker = !!proposalInfo[a.id]?.waitingWorker;
+                const waitingTooltip = "Potrai procedere quando il lavoratore avrà accettato la proposta.";
                 return (
                   <div key={a.id} className={`rounded-2xl border bg-card p-4 ${isAccepted ? "border-emerald-500/40 bg-emerald-500/5" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -836,8 +906,16 @@ function AnnouncementDetail() {
                       </Link>
                       {(() => {
                         const slotTaken = isSlotTakenByOther(a, ann);
-                        const cls = slotTaken ? SLOT_TAKEN_CLS : (APP_STATUS_CLS[a.status] ?? "");
-                        const label = slotTaken ? SLOT_TAKEN_LABEL : (APP_STATUS_LABEL[a.status] ?? a.status);
+                        const cls = waitingWorker
+                          ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                          : slotTaken
+                          ? SLOT_TAKEN_CLS
+                          : (APP_STATUS_CLS[a.status] ?? "");
+                        const label = waitingWorker
+                          ? "In attesa risposta lavoratore"
+                          : slotTaken
+                          ? SLOT_TAKEN_LABEL
+                          : (APP_STATUS_LABEL[a.status] ?? a.status);
                         return (
                           <Badge variant="outline" className={cls}>
                             {label}
@@ -875,13 +953,27 @@ function AnnouncementDetail() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+                      {waitingWorker && (
+                        <div className="w-full rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 mb-1">
+                          Proposta inviata. In attesa della risposta del lavoratore.
+                        </div>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
                         className="gap-1"
-                        disabled={isAnnInactive}
-                        title={isAnnInactive ? "Annuncio scaduto o completato: messaggistica disabilitata" : undefined}
-                        onClick={() => { if (!isAnnInactive) nav({ to: "/messages/$id", params: { id: a.id } }); }}
+                        disabled={isAnnInactive || waitingWorker}
+                        title={
+                          waitingWorker
+                            ? waitingTooltip
+                            : isAnnInactive
+                            ? "Annuncio scaduto o completato: messaggistica disabilitata"
+                            : undefined
+                        }
+                        onClick={() => {
+                          if (waitingWorker || isAnnInactive) return;
+                          nav({ to: "/messages/$id", params: { id: a.id } });
+                        }}
                       >
                         <MessageSquare className="h-3.5 w-3.5" />Messaggia
                       </Button>
@@ -890,8 +982,14 @@ function AnnouncementDetail() {
                           <Button
                             size="sm"
                             className={`gap-1 ${!canPerformOperationalAction ? "opacity-70" : ""}`}
-                            disabled={busyId === a.id || acceptBlocked}
-                            title={acceptBlocked ? "Turno già completo" : undefined}
+                            disabled={busyId === a.id || acceptBlocked || waitingWorker}
+                            title={
+                              waitingWorker
+                                ? waitingTooltip
+                                : acceptBlocked
+                                ? "Turno già completo"
+                                : undefined
+                            }
                             onClick={requireComplete(() => accept(a))}
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -901,7 +999,8 @@ function AnnouncementDetail() {
                             size="sm"
                             variant="ghost"
                             className={`gap-1 text-destructive hover:text-destructive ${!canPerformOperationalAction ? "opacity-70" : ""}`}
-                            disabled={busyId === a.id}
+                            disabled={busyId === a.id || waitingWorker}
+                            title={waitingWorker ? waitingTooltip : undefined}
                             onClick={requireComplete(() => reject(a))}
                           >
                             <XCircle className="h-3.5 w-3.5" />Rifiuta
