@@ -146,6 +146,36 @@ export const Route = createFileRoute("/onboarding")({
       <Onboarding />
     </RequireAuth>
   ),
+  errorComponent: ({ error, reset }) => {
+    console.error("[onboarding] route error boundary", error);
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-xl font-semibold">
+            Si è verificato un errore nel caricamento del profilo
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Riprova oppure torna alla dashboard. I dati già salvati non sono
+            stati persi.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              onClick={() => reset()}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Ricarica profilo
+            </button>
+            <a
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium"
+            >
+              Vai alla dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  },
 });
 
 function Onboarding() {
@@ -638,7 +668,28 @@ function Onboarding() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await submitInner(e);
+    } catch (err) {
+      // Global safety net: any unexpected throw inside the save flow must
+      // never crash the page (no more "This page didn't load"). Surface a
+      // readable toast, keep the form data, and re-enable the button.
+      console.error("[onboarding] submit crashed", err);
+      setBusy(false);
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(
+        msg || "Non è stato possibile salvare il profilo. Riprova.",
+      );
+    }
+  };
+
+  const submitInner = async (e: React.FormEvent) => {
     if (!user) return;
+    console.info("[onboarding] submit start", {
+      userId: user.id,
+      role,
+      profileCompleted: profile?.profile_completed ?? null,
+    });
     if (!form.terms_accepted) {
       toast.error("Devi accettare le condizioni d'uso");
       return;
@@ -1164,23 +1215,45 @@ function Onboarding() {
             id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
           };
-    const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
+    console.info("[onboarding] update payload", {
+      userId: user.id,
+      role,
+      keys: Object.keys(update),
+    });
+    const { error } = await supabase
+      .from("profiles")
+      .update(update)
+      .eq("id", user.id);
     if (error) {
+      console.error("[onboarding] supabase update failed", error);
       setBusy(false);
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("profiles_vat_number_unique") || msg.includes("duplicate key")) {
         toast.error(
           "Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.",
         );
+      } else if (msg.includes("row-level security") || msg.includes("violates")) {
+        toast.error("Non è stato possibile salvare il profilo. Riprova.");
       } else {
-        toast.error(error.message);
+        toast.error(error.message || "Non è stato possibile salvare il profilo. Riprova.");
       }
       return;
     }
     setBusy(false);
-    toast.success("Profilo completato!");
-    await refresh();
-    nav({ to: "/dashboard" });
+    toast.success("Profilo salvato correttamente.");
+    // Refresh non deve bloccare la navigazione: se fallisce, logghiamo ma
+    // procediamo comunque alla dashboard.
+    try {
+      await refresh();
+    } catch (refreshErr) {
+      console.error("[onboarding] refresh after save failed", refreshErr);
+    }
+    try {
+      nav({ to: "/dashboard" });
+    } catch (navErr) {
+      console.error("[onboarding] nav to /dashboard failed", navErr);
+      if (typeof window !== "undefined") window.location.assign("/dashboard");
+    }
   };
 
   return (
