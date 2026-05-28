@@ -2681,7 +2681,7 @@ function Thread() {
           })}
           sending={sending}
           ann={ann}
-          otherName={other?.name ?? null}
+          otherName={venueName ?? null}
           addressOverride={displayAddress}
           disabled={isConversationClosed}
         />
