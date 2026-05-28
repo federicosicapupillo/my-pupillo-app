@@ -223,6 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setRole(null);
         setProfile(null);
+        setRoleDebug(null);
         setExtrasLoaded(false);
       }
     });
@@ -242,6 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setRole(null);
     setProfile(null);
+    setRoleDebug(null);
     setExtrasLoaded(false);
     if (typeof window !== "undefined") {
       // Hard redirect to public Home, replacing history so back button
@@ -252,7 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profile, loading, extrasLoaded, refresh, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, profile, roleDebug, loading, extrasLoaded, refresh, signOut }}>
       {children}
     </AuthContext.Provider>
   );
