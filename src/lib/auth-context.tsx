@@ -6,8 +6,8 @@ import { clearKnownRestaurantsCache } from "@/lib/known-restaurants-cache";
 
 export const DELETED_ACCOUNT_MESSAGE = "Questo account è stato eliminato e non può più essere utilizzato.";
 
-type Role = "admin" | "restaurant" | "worker";
-type Profile = {
+export type Role = "admin" | "restaurant" | "worker";
+export type Profile = {
   id: string;
   full_name: string | null;
   email: string | null;
