@@ -184,12 +184,19 @@ function VerifyPhonePage() {
       clearPendingRegistrationOtpState();
       setPendingRegistrationOtp(null);
       await refresh();
+      // Dopo OTP WhatsApp confermato: se l'email non è ancora verificata,
+      // mostra il popup e poi la schermata bloccante /verify-email.
+      const emailConfirmed = !!user?.email_confirmed_at;
       const dest = role === "admin"
         ? "/admin"
-        : profile?.profile_completed
-          ? "/dashboard"
-          : "/onboarding";
+        : emailConfirmed
+          ? (profile?.profile_completed ? "/dashboard" : "/onboarding")
+          : "/verify-email";
       pendingNavRef.current = dest;
+      if (emailConfirmed) {
+        nav({ to: dest as any });
+        return;
+      }
       // Invio reale della mail di conferma SUBITO dopo la verifica WhatsApp.
       // Solo in caso di invio riuscito mostriamo il popup informativo.
       const email = user?.email ?? null;
