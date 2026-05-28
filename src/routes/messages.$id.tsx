@@ -2412,24 +2412,18 @@ function Thread() {
                         console.error("[proposal] notify accept failed", err);
                       }
                     }
+                    // NON transizionare automaticamente l'applicazione a "accepted":
+                    // la conferma del turno deve essere esplicita lato ristoratore
+                    // perché comporta lo scalamento dei crediti (7 crediti per conferma).
+                    // Il lavoratore qui sta solo segnalando la disponibilità ad accettare
+                    // la proposta; il ristoratore confermerà cliccando "Conferma lavoratore".
                     try {
-                      // Keep the application transition for the FIRST accepted proposal so
-                      // shift creation / notifications triggers still fire. Later proposals
-                      // in the same conversation only update the per-proposal record.
-                      if ((app?.status ?? "pending") !== "accepted") {
-                        await transition("accepted");
-                      }
-                    } finally {
-                      // Always emit a system message so both sides see the outcome,
-                      // even if the status update partially fails.
-                      try {
-                        await insertSystemMessage(
-                          "Proposta accettata.\nHai accettato il turno. Ora puoi visualizzare tutti i dettagli operativi del servizio.",
-                          "accept_application",
-                        );
-                      } catch (err) {
-                        console.error("[proposal] system message insert failed", err);
-                      }
+                      await insertSystemMessage(
+                        "Proposta accettata dal lavoratore.\nIl ristoratore deve confermare il turno per finalizzare l'assegnazione.",
+                        "accept_application",
+                      );
+                    } catch (err) {
+                      console.error("[proposal] system message insert failed", err);
                     }
                   }}
                   onReject={async (reason?: string) => {
