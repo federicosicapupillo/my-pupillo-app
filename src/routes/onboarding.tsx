@@ -668,7 +668,28 @@ function Onboarding() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await submitInner(e);
+    } catch (err) {
+      // Global safety net: any unexpected throw inside the save flow must
+      // never crash the page (no more "This page didn't load"). Surface a
+      // readable toast, keep the form data, and re-enable the button.
+      console.error("[onboarding] submit crashed", err);
+      setBusy(false);
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(
+        msg || "Non è stato possibile salvare il profilo. Riprova.",
+      );
+    }
+  };
+
+  const submitInner = async (e: React.FormEvent) => {
     if (!user) return;
+    console.info("[onboarding] submit start", {
+      userId: user.id,
+      role,
+      profileCompleted: profile?.profile_completed ?? null,
+    });
     if (!form.terms_accepted) {
       toast.error("Devi accettare le condizioni d'uso");
       return;
