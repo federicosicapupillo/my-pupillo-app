@@ -423,7 +423,7 @@ function buildTimeline(status?: string, opts?: { slotTakenByOther?: boolean }): 
 
 function Thread() {
   const { id } = Route.useParams();
-  const { user, role, profile } = useAuth();
+  const { user, role, profile, refresh: refreshAuth } = useAuth();
   const { requireComplete, ensureTargetComplete } = useProfileGate();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const { isBlocked, actionShifts } = useRequiredReviews();
@@ -1189,6 +1189,8 @@ function Thread() {
         console.warn("[accept-candidature] consumeCredits returned false", techCtx);
         return;
       }
+      // Refresh auth profile so the credit counter in the UI reflects the new balance.
+      try { await refreshAuth?.(); } catch (e) { console.warn("[accept-candidature] refresh profile failed", e); }
     }
     const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
