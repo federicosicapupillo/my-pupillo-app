@@ -1215,23 +1215,45 @@ function Onboarding() {
             id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
           };
-    const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
+    console.info("[onboarding] update payload", {
+      userId: user.id,
+      role,
+      keys: Object.keys(update),
+    });
+    const { error } = await supabase
+      .from("profiles")
+      .update(update)
+      .eq("id", user.id);
     if (error) {
+      console.error("[onboarding] supabase update failed", error);
       setBusy(false);
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("profiles_vat_number_unique") || msg.includes("duplicate key")) {
         toast.error(
           "Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.",
         );
+      } else if (msg.includes("row-level security") || msg.includes("violates")) {
+        toast.error("Non è stato possibile salvare il profilo. Riprova.");
       } else {
-        toast.error(error.message);
+        toast.error(error.message || "Non è stato possibile salvare il profilo. Riprova.");
       }
       return;
     }
     setBusy(false);
-    toast.success("Profilo completato!");
-    await refresh();
-    nav({ to: "/dashboard" });
+    toast.success("Profilo salvato correttamente.");
+    // Refresh non deve bloccare la navigazione: se fallisce, logghiamo ma
+    // procediamo comunque alla dashboard.
+    try {
+      await refresh();
+    } catch (refreshErr) {
+      console.error("[onboarding] refresh after save failed", refreshErr);
+    }
+    try {
+      nav({ to: "/dashboard" });
+    } catch (navErr) {
+      console.error("[onboarding] nav to /dashboard failed", navErr);
+      if (typeof window !== "undefined") window.location.assign("/dashboard");
+    }
   };
 
   return (
