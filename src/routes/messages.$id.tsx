@@ -1910,21 +1910,38 @@ function Thread() {
               <div className="flex items-start gap-4">
                 <UserAvatar userId={identityVisible ? otherId : null} name={identityVisible ? displayOtherName : undefined} className="h-14 w-14 shrink-0" />
                 <div className="min-w-0 flex-1">
+                  {/*
+                    Titolo della card: per la privacy del lavoratore, finché
+                    non c'è collaborazione reale (turno completato) o la
+                    candidatura non è accettata/confermata, NON usiamo il
+                    nome del lavoratore come titolo. Mostriamo una dicitura
+                    neutra "Nuovo candidato" e portiamo il nome locale in
+                    evidenza come richiesto dalle regole progetto.
+                  */}
                   <div className="font-semibold text-base truncate flex items-center gap-2">
-                    <span className={identityVisible ? "" : "italic text-muted-foreground"}>{displayName}</span>
+                    <span>{hasWorkedTogether ? (displayName || "Nuovo candidato") : "Nuovo candidato"}</span>
                     {!identityVisible && (
                       <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">Privacy</span>
                     )}
                   </div>
+                  <div className="text-sm text-muted-foreground truncate">
+                    Locale: <span className="text-foreground font-medium">{venueName ?? "Locale non specificato"}</span>
+                  </div>
                   {ann?.professional_profile && (
                     <div className="text-sm text-muted-foreground truncate">
-                      Ruolo: <span className="text-foreground font-medium">{ann.professional_profile}</span>
+                      Mansione: <span className="text-foreground font-medium">{ann.professional_profile}</span>
                     </div>
                   )}
                   {ann && (
                     <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(ann.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</span>
-                      {ann.service_time && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{ann.service_time.slice(0, 5)}</span>}
+                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />Data: {new Date(ann.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</span>
+                      {ann.service_time && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />Orario: {ann.service_time.slice(0, 5)}</span>}
+                    </div>
+                  )}
+                  {!hasWorkedTogether && identityVisible && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Candidato: <span className="text-foreground">{displayName}</span>{" "}
+                      <span className="opacity-75">(cognome visibile solo dopo collaborazione confermata)</span>
                     </div>
                   )}
                 </div>
