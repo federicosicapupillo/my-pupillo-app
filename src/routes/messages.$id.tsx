@@ -424,7 +424,7 @@ function buildTimeline(status?: string, opts?: { slotTakenByOther?: boolean }): 
 function Thread() {
   const { id } = Route.useParams();
   const { user, role, profile, refresh: refreshAuth } = useAuth();
-  const { requireComplete, ensureTargetComplete } = useProfileGate();
+  const { requireComplete, ensureTargetComplete, openGate } = useProfileGate();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
@@ -2378,6 +2378,10 @@ function Thread() {
                     if (closureReason) {
                       console.warn("[proposal] accept blocked: chat closed", { closureReason, shiftStatus: shift?.status, annStatus: ann?.status, appStatus: app?.status });
                       toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
+                      return;
+                    }
+                    if (role === "worker" && !profile?.profile_completed) {
+                      openGate?.({ kind: "general" });
                       return;
                     }
                     if (role === "worker" && user) {
