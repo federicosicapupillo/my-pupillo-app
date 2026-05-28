@@ -1,13 +1,9 @@
 import { ReactNode, useEffect } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { DELETED_ACCOUNT_MESSAGE, useAuth } from "@/lib/auth-context";
+import { computePupilloAuthFlow, getAuthFlowRedirect, logPupilloAuthFlow } from "@/lib/auth-flow";
 
 const ALLOWED_PATHS = new Set([
-  "/",
-  "/auth",
-  "/verify-phone",
-  "/verify-email",
-  "/registration-success",
   "/reset-password",
   "/terms",
   "/forbidden",
@@ -31,19 +27,22 @@ export function PhoneVerificationGate({ children }: { children: ReactNode }) {
       nav({ to: "/auth", search: { deleted: "1" } as never });
       return;
     }
-    // API and public routes pass through
+    // API and non-registration public routes pass through
     if (loc.pathname.startsWith("/api/")) return;
     if (ALLOWED_PATHS.has(loc.pathname)) return;
-    // Admins are never forced through phone verification.
-    if (role === "admin") return;
-    // Strict check: only redirect when explicitly false (not null/undefined).
-    if (profile && profile.phone_verified === false) {
-      nav({ to: "/verify-phone" });
-      return;
-    }
-    // Telefono verificato ma email non ancora confermata: schermata bloccante.
-    if (profile && profile.phone_verified === true && !user.email_confirmed_at) {
-      nav({ to: "/verify-email" });
+    const flow = computePupilloAuthFlow({ user, profile, role });
+    const redirect = flow ? getAuthFlowRedirect(loc.pathname, flow, role) : null;
+    logPupilloAuthFlow("route_guard", {
+      user,
+      profile,
+      role,
+      currentRoute: loc.pathname,
+      flow,
+      redirectTo: redirect?.to ?? null,
+      redirectReason: redirect?.reason ?? null,
+    });
+    if (redirect) {
+      nav({ to: redirect.to as never, replace: true });
     }
   }, [user, profile, loading, extrasLoaded, role, loc.pathname, nav]);
 
