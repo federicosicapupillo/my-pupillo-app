@@ -175,6 +175,12 @@ function VerifyPhonePage() {
     setBusy(true);
     try {
       const res = await verify({ data: { code } });
+      console.info("[PUPILLO_PHONE_VERIFY_DEBUG] client verify result", {
+        user_id: user?.id ?? null,
+        email: user?.email ?? null,
+        otp_inserted: code,
+        result: res,
+      });
       if (!res.ok) {
         toast.error(res.error ?? "Codice non valido.");
         if ((res.expired || res.maxedOut) && !profile?.phone_full && !pendingRegistrationOtp?.phoneFull) setPhase("phone");
@@ -184,11 +190,28 @@ function VerifyPhonePage() {
       clearPendingRegistrationOtpState();
       setPendingRegistrationOtp(null);
       await refresh();
-      const dest = role === "admin"
-        ? "/admin"
-        : profile?.profile_completed
-          ? "/dashboard"
-          : "/onboarding";
+      // Destinazione dopo la verifica: admin → /admin, worker → /jobs,
+      // restaurant → /dashboard. Se l'onboarding non è ancora stato
+      // completato (e non si tratta di admin) andiamo prima a /onboarding.
+      let dest: string;
+      if (role === "admin") {
+        dest = "/admin";
+      } else if (!profile?.profile_completed) {
+        dest = "/onboarding";
+      } else if (role === "worker") {
+        dest = "/jobs";
+      } else if (role === "restaurant") {
+        dest = "/dashboard";
+      } else {
+        dest = "/dashboard";
+      }
+      console.info("[PUPILLO_PHONE_VERIFY_DEBUG] client redirect", {
+        user_id: user?.id ?? null,
+        role,
+        profile_completed: profile?.profile_completed ?? null,
+        phone_verified: profile?.phone_verified ?? null,
+        dest,
+      });
       pendingNavRef.current = dest;
       // Invio reale della mail di conferma SUBITO dopo la verifica WhatsApp.
       // Solo in caso di invio riuscito mostriamo il popup informativo.
