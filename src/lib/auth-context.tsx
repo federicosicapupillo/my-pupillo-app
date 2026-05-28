@@ -6,8 +6,8 @@ import { clearKnownRestaurantsCache } from "@/lib/known-restaurants-cache";
 
 export const DELETED_ACCOUNT_MESSAGE = "Questo account è stato eliminato e non può più essere utilizzato.";
 
-type Role = "admin" | "restaurant" | "worker";
-type Profile = {
+export type Role = "admin" | "restaurant" | "worker";
+export type Profile = {
   id: string;
   full_name: string | null;
   email: string | null;
@@ -34,6 +34,7 @@ type Profile = {
   rating_avg: number | null;
   reviews_count: number | null;
   reliability_pct: number | null;
+  completion_pct: number | null;
   city: string | null;
   province: string | null;
   country: string | null;
@@ -141,11 +142,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refresh = async () => {
-    const currentSession = session ?? (await supabase.auth.getSession()).data.session;
+    const currentSession = (await supabase.auth.getSession()).data.session;
     if (currentSession) {
       setSession(currentSession);
       setUser(currentSession.user);
       await loadExtras(currentSession.user.id);
+    } else {
+      setSession(null);
+      setUser(null);
+      setRole(null);
+      setProfile(null);
+      setExtrasLoaded(false);
     }
   };
 

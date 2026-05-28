@@ -77,6 +77,7 @@ import {
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton";
 import { scrollToField } from "@/lib/form-field-validation";
+import { computePupilloAuthFlow, destinationForAuthFlowState, logPupilloAuthFlow } from "@/lib/auth-flow";
 
 /**
  * Compute per-field error messages for the three worker date inputs.
@@ -187,15 +188,22 @@ function Onboarding() {
   const uploadIdDocumentFn = useServerFn(uploadWorkerIdDocument);
 
   useEffect(() => {
-    if (!profile) return;
-    if (profile.phone_verified === false) {
-      nav({ to: "/verify-phone" });
-      return;
+    if (!user || !profile) return;
+    const flow = computePupilloAuthFlow({ user, profile, role });
+    const dest = flow ? destinationForAuthFlowState(flow.state, role) : null;
+    logPupilloAuthFlow("onboarding_page", {
+      user,
+      profile,
+      role,
+      currentRoute: "/onboarding",
+      flow,
+      redirectTo: dest !== "/onboarding" ? dest : null,
+      redirectReason: dest !== "/onboarding" ? "onboarding_state_mismatch" : null,
+    });
+    if (dest && dest !== "/onboarding") {
+      nav({ to: dest as any, replace: true });
     }
-    if (profile.profile_completed) {
-      nav({ to: "/dashboard" });
-    }
-  }, [profile, nav]);
+  }, [user, profile, role, nav]);
 
   // Sentinel value stored in service_area_district when the worker chooses
   // GeoRadar mode (radius around position) instead of specific zones.
