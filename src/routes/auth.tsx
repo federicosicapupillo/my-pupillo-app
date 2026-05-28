@@ -86,6 +86,11 @@ function AuthPage() {
     // here — handleSignup will navigate to the OTP page itself.
     if (justSignedUpRef.current) return;
     if (profile?.is_deleted || profile?.deleted_at) return;
+    // Admins bypass phone verification, onboarding and profile completion.
+    if (userRole === "admin") {
+      navigate({ to: "/admin" });
+      return;
+    }
     // If phone not yet verified, send to OTP page — UNLESS the user
     // explicitly came back from the OTP page via the "Torna alla
     // registrazione" link (URL carries ?role=...). In that case, let
@@ -95,12 +100,11 @@ function AuthPage() {
       return;
     }
     // Profile incomplete → onboarding (one onboarding route covers both roles)
-    if (profile && profile.profile_completed === false && userRole !== "admin") {
+    if (profile && profile.profile_completed === false) {
       navigate({ to: "/onboarding" });
       return;
     }
-    if (userRole === "admin") navigate({ to: "/admin" });
-    else if (userRole === "restaurant") navigate({ to: "/dashboard" });
+    if (userRole === "restaurant") navigate({ to: "/dashboard" });
     else if (userRole === "worker") navigate({ to: "/jobs" });
     else if (userRole === null) {
       // Authenticated but no role row yet — surface a clear error.

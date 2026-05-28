@@ -69,7 +69,20 @@ const BUCKETS: { name: string; visibility: "private" | "public" }[] = [
 ];
 
 function BackendInfo() {
-  const { role, loading } = useAuth();
+  const { role, loading, user, extrasLoaded } = useAuth();
+
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.info("[PUPILLO_ADMIN_ACCESS_DEBUG]", {
+      route: "/admin/backend",
+      user_id: user?.id ?? null,
+      email: user?.email ?? null,
+      role,
+      is_admin: role === "admin",
+      loading,
+      extrasLoaded,
+    });
+  }
 
   if (loading) {
     return (
