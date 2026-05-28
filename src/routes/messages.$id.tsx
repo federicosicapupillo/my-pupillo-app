@@ -1258,7 +1258,34 @@ function Thread() {
         const venueName = role === "restaurant"
           ? (profile?.business_name || profile?.full_name || null)
           : (otherIdentity?.businessName || otherIdentity?.fullName || null);
-        const body = buildConfirmationBody(ann, venueName, restaurantArrivalAdvance);
+        // Refetch the on-site contact person now that the application is
+        // `accepted` (RLS/security-definer RPC allows the worker only at this
+        // point). Without this, the worker side would build a confirmation
+        // body missing "Referente: …" because the initial page-load call to
+        // get_announcement_contact returned no row.
+        let annForBody: typeof ann = ann;
+        if (app.announcement_id) {
+          try {
+            const { data: contactRows } = await supabase.rpc(
+              "get_announcement_contact",
+              { _announcement_id: app.announcement_id },
+            );
+            const contact = Array.isArray(contactRows) ? contactRows[0] : contactRows;
+            if (annForBody && contact) {
+              annForBody = {
+                ...annForBody,
+                job_contact_person_name:
+                  (contact as any).job_contact_person_name ?? annForBody.job_contact_person_name ?? null,
+                job_contact_person_phone:
+                  (contact as any).job_contact_person_phone ?? annForBody.job_contact_person_phone ?? null,
+              } as typeof ann;
+              setAnn(annForBody);
+            }
+          } catch {
+            // No access yet: build with whatever we already have.
+          }
+        }
+        const body = buildConfirmationBody(annForBody, venueName, restaurantArrivalAdvance);
         const createdAt = new Date().toISOString();
         const receiverId = role === "restaurant" ? app.worker_id : app.restaurant_id;
         const { data: confMsg } = await supabase.from("messages").insert({
