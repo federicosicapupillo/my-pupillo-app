@@ -146,6 +146,36 @@ export const Route = createFileRoute("/onboarding")({
       <Onboarding />
     </RequireAuth>
   ),
+  errorComponent: ({ error, reset }) => {
+    console.error("[onboarding] route error boundary", error);
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-xl font-semibold">
+            Si è verificato un errore nel caricamento del profilo
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Riprova oppure torna alla dashboard. I dati già salvati non sono
+            stati persi.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              onClick={() => reset()}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Ricarica profilo
+            </button>
+            <a
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium"
+            >
+              Vai alla dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  },
 });
 
 function Onboarding() {
