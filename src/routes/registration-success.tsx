@@ -19,6 +19,7 @@ function RegistrationSuccessPage() {
   }, [user, loading, nav]);
 
   const phoneVerified = !!profile?.phone_verified;
+  const emailConfirmed = !!user?.email_confirmed_at;
   const profileComplete = !!profile?.profile_completed;
 
   return (
@@ -41,12 +42,17 @@ function RegistrationSuccessPage() {
               <Link to="/verify-phone">Conferma numero WhatsApp</Link>
             </Button>
           )}
-          {phoneVerified && !profileComplete && (
+          {phoneVerified && !emailConfirmed && (
+            <Button asChild className="w-full">
+              <Link to="/verify-email">Conferma email</Link>
+            </Button>
+          )}
+          {phoneVerified && emailConfirmed && !profileComplete && (
             <Button asChild className="w-full">
               <Link to="/onboarding">Completa il profilo</Link>
             </Button>
           )}
-          {phoneVerified && profileComplete && (
+          {phoneVerified && emailConfirmed && profileComplete && (
             <Button asChild className="w-full">
               <Link to="/dashboard">Vai alla dashboard</Link>
             </Button>
