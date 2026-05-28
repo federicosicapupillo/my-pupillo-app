@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Mail } from "lucide-react";
 import { clearPendingRegistrationOtpState, readPendingRegistrationOtpState, savePendingRegistrationOtpState } from "@/lib/registration-otp-state";
+import { computePupilloAuthFlow, destinationForAuthFlowState, isAuthEmailConfirmed, logPupilloAuthFlow } from "@/lib/auth-flow";
 
 const TEST_OTP_ENABLED = import.meta.env.VITE_ENABLE_TEST_OTP === "true" && import.meta.env.PROD !== true;
 
@@ -67,16 +68,20 @@ function VerifyPhonePage() {
     // creato in registrazione: il profilo in auth-context può essere ancora
     // quello letto prima dell'update del telefono.
     if (!extrasLoaded || !profile) return;
-    if (profile?.phone_verified) {
+    const flow = computePupilloAuthFlow({ user, profile, role });
+    const dest = flow ? destinationForAuthFlowState(flow.state, role) : null;
+    logPupilloAuthFlow("verify_phone_page", {
+      user,
+      profile,
+      role,
+      currentRoute: "/verify-phone",
+      flow,
+      redirectTo: dest !== "/verify-phone" ? dest : null,
+      redirectReason: dest !== "/verify-phone" ? "verify_phone_state_mismatch" : null,
+    });
+    if (dest && dest !== "/verify-phone") {
       clearPendingRegistrationOtpState();
-      const emailConfirmed = !!user?.email_confirmed_at;
-      if (!emailConfirmed) {
-        nav({ to: "/verify-email" });
-      } else if (profile?.profile_completed) {
-        nav({ to: "/dashboard" });
-      } else {
-        nav({ to: "/onboarding" });
-      }
+      nav({ to: dest as any, replace: true });
       return;
     }
     const phoneForOtp = profile?.phone_full || pendingPhone;
