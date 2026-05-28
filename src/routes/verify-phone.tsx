@@ -421,7 +421,7 @@ function VerifyPhonePage() {
               onClick={handleResendEmail}
               disabled={resendingEmail}
             >
-              {resendingEmail ? "Invio…" : "Reinvia email"}
+              {resendingEmail ? "Invio…" : "Reinvia email di conferma"}
             </Button>
             <Button onClick={handleAcknowledgeEmail} disabled={resendingEmail}>
               Ho capito
