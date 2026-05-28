@@ -34,6 +34,7 @@ export type Profile = {
   rating_avg: number | null;
   reviews_count: number | null;
   reliability_pct: number | null;
+  completion_pct: number | null;
   city: string | null;
   province: string | null;
   country: string | null;
