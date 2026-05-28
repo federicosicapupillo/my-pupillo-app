@@ -142,6 +142,21 @@ export function AdminBackupRestoreSection() {
         </Button>
       </div>
 
+      {runs.length > 0 && (
+        <div className="rounded-lg border bg-primary/5 p-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 text-sm">
+            <p className="font-medium">Ripristina l'ultimo backup salvato</p>
+            <p className="text-xs text-muted-foreground break-all">
+              {formatDate(runs[0].createdAt)} · {runs[0].databasePath} · {formatBytes(runs[0].databaseSize)}
+            </p>
+          </div>
+          <Button size="sm" className="gap-1" onClick={() => startRestore(runs[0])}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            Ripristina ultimo backup
+          </Button>
+        </div>
+      )}
+
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carico backup disponibili…</p>
       ) : runs.length === 0 ? (
