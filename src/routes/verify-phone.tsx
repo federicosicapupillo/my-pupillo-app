@@ -232,7 +232,7 @@ function VerifyPhonePage() {
       const { error: resendErr } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: window.location.origin + "/registration-success" },
+        options: { emailRedirectTo: window.location.origin + "/auth/callback" },
       });
       if (resendErr) {
         toast.error("Non siamo riusciti a inviare la mail di conferma. Riprova tra qualche secondo.");
@@ -277,7 +277,7 @@ function VerifyPhonePage() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: window.location.origin + "/registration-success" },
+        options: { emailRedirectTo: window.location.origin + "/auth/callback" },
       });
       if (error) {
         toast.error("Non siamo riusciti a inviare la mail di conferma. Riprova tra qualche secondo.");
