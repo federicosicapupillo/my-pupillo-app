@@ -335,7 +335,7 @@ const TEMPLATES: MsgTemplate[] = [
   { key: "w_post_issue", role: "worker", category: "issue_report", text: "Vorrei segnalare un problema.", action: "report_issue" },
 ];
 
-function renderTemplate(text: string, ann: Ann | null, otherName: string | null, addressOverride?: string | null): string {
+function renderTemplate(text: string, ann: Ann | null, restaurantName: string | null, addressOverride?: string | null): string {
   const date = ann?.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "—";
   const time = ann?.service_time ? ann.service_time.slice(0, 5) : "—";
   const address = addressOverride ?? ann?.location_address ?? "—";
@@ -343,7 +343,7 @@ function renderTemplate(text: string, ann: Ann | null, otherName: string | null,
     .replace(/{{shift_date}}/g, date)
     .replace(/{{start_time}}/g, time)
     .replace(/{{address}}/g, address)
-    .replace(/{{restaurant_name}}/g, otherName ?? "—");
+    .replace(/{{restaurant_name}}/g, restaurantName ?? "Locale non specificato");
 }
 type LogEvent = {
   id: string;
@@ -1028,7 +1028,7 @@ function Thread() {
         }, 50);
         return;
       }
-      const body = renderTemplate(selectedTpl.text, ann, displayOtherName ?? null, displayAddress);
+      const body = renderTemplate(selectedTpl.text, ann, venueName ?? null, displayAddress);
       const createdAt = new Date().toISOString();
       const actionType = selectedTpl.action === "none" ? null : selectedTpl.action;
       const { data, error } = await supabase.from("messages").insert({
@@ -1726,6 +1726,20 @@ function Thread() {
     },
   }), [role, app?.status, hasWorkedTogether, otherIdentity, other?.name]);
 
+  // Nome reale del LOCALE collegato all'annuncio. Indipendente dal ruolo
+  // di chi sta guardando la chat:
+  //  - se l'utente corrente è il ristoratore → usa il suo profilo
+  //  - se l'utente corrente è il lavoratore → usa il profilo del ristoratore
+  //    (l'"altra parte" della conversazione)
+  // Non deve MAI cadere sul nome del lavoratore: dove non disponibile,
+  // mostriamo un fallback neutro.
+  const venueName = useMemo<string | null>(() => {
+    if (role === "restaurant") {
+      return (profile?.business_name as string | null) || (profile?.full_name as string | null) || null;
+    }
+    return otherIdentity?.businessName || otherIdentity?.fullName || null;
+  }, [role, profile?.business_name, profile?.full_name, otherIdentity?.businessName, otherIdentity?.fullName]);
+
   if (loading) {
     return <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">Caricamento chat…</div>;
   }
@@ -1896,21 +1910,38 @@ function Thread() {
               <div className="flex items-start gap-4">
                 <UserAvatar userId={identityVisible ? otherId : null} name={identityVisible ? displayOtherName : undefined} className="h-14 w-14 shrink-0" />
                 <div className="min-w-0 flex-1">
+                  {/*
+                    Titolo della card: per la privacy del lavoratore, finché
+                    non c'è collaborazione reale (turno completato) o la
+                    candidatura non è accettata/confermata, NON usiamo il
+                    nome del lavoratore come titolo. Mostriamo una dicitura
+                    neutra "Nuovo candidato" e portiamo il nome locale in
+                    evidenza come richiesto dalle regole progetto.
+                  */}
                   <div className="font-semibold text-base truncate flex items-center gap-2">
-                    <span className={identityVisible ? "" : "italic text-muted-foreground"}>{displayName}</span>
+                    <span>{hasWorkedTogether ? (displayName || "Nuovo candidato") : "Nuovo candidato"}</span>
                     {!identityVisible && (
                       <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">Privacy</span>
                     )}
                   </div>
+                  <div className="text-sm text-muted-foreground truncate">
+                    Locale: <span className="text-foreground font-medium">{venueName ?? "Locale non specificato"}</span>
+                  </div>
                   {ann?.professional_profile && (
                     <div className="text-sm text-muted-foreground truncate">
-                      Ruolo: <span className="text-foreground font-medium">{ann.professional_profile}</span>
+                      Mansione: <span className="text-foreground font-medium">{ann.professional_profile}</span>
                     </div>
                   )}
                   {ann && (
                     <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(ann.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</span>
-                      {ann.service_time && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{ann.service_time.slice(0, 5)}</span>}
+                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />Data: {new Date(ann.service_date).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</span>
+                      {ann.service_time && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />Orario: {ann.service_time.slice(0, 5)}</span>}
+                    </div>
+                  )}
+                  {!hasWorkedTogether && identityVisible && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Candidato: <span className="text-foreground">{displayName}</span>{" "}
+                      <span className="opacity-75">(cognome visibile solo dopo collaborazione confermata)</span>
                     </div>
                   )}
                 </div>
@@ -2667,7 +2698,7 @@ function Thread() {
           })}
           sending={sending}
           ann={ann}
-          otherName={other?.name ?? null}
+          otherName={venueName ?? null}
           addressOverride={displayAddress}
           disabled={isConversationClosed}
         />
