@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.info("[PUPILLO_ROLE_RESTORE_DEBUG] loadExtras", debugPayload);
     if (!r) {
       console.warn("[PUPILLO_ROLE_MISMATCH_DEBUG] no role resolved for user", debugPayload);
-    } else if (primaryRole && primaryRole !== r && !allRoles.includes(primaryRole)) {
+    } else if (primaryRole && primaryRole !== r && !allRoles.includes(primaryRole as Role)) {
       console.warn("[PUPILLO_ROLE_MISMATCH_DEBUG] primary_role differs from user_roles", debugPayload);
     }
     setRole(r ?? null);
