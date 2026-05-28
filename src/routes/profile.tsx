@@ -71,11 +71,11 @@ function Profile() {
         <RestaurantProfileView profile={profile as any} email={user?.email ?? null} />
       ) : null}
 
-      <div className="mt-6 max-w-4xl">
+      <div className="mt-6">
         <ReferralCard />
       </div>
 
-      <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
+      <div className="mt-6 rounded-2xl border bg-card p-6">
         <h2 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4" />Cambia password</h2>
         <form onSubmit={changePassword} className="mt-3 space-y-3">
           <div>
@@ -133,12 +133,12 @@ function Profile() {
         </form>
       </div>
 
-      <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6 space-y-4">
+      <div className="mt-6 rounded-2xl border bg-card p-6 space-y-4">
         <h2 className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4" />Documenti</h2>
         <Link to="/terms" className="text-sm text-primary underline">Leggi le condizioni d'uso e la privacy policy</Link>
       </div>
 
-      <div className="mt-6 max-w-2xl rounded-2xl border bg-card p-6">
+      <div className="mt-6 rounded-2xl border bg-card p-6">
         <h2 className="font-semibold flex items-center gap-2"><Coins className="h-4 w-4" />Piano e crediti</h2>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <div className="rounded-xl border p-3">
@@ -171,14 +171,14 @@ function Profile() {
       </div>
 
       {role === "worker" && user?.id && (
-        <div className="mt-6 max-w-2xl">
+        <div className="mt-6">
           <h2 className="font-semibold mb-2">La mia reputazione</h2>
           <WorkerReputationCard workerId={user.id} profile={profile as any} showTips />
         </div>
       )}
 
       {role === "worker" && user?.id && (
-        <div className="mt-6 max-w-2xl">
+        <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold flex items-center gap-2"><Star className="h-4 w-4 text-yellow-500" />Le mie recensioni</h2>
             <WorkerReputationBadge profile={profile as any} />
@@ -205,7 +205,7 @@ function Profile() {
         </div>
       )}
 
-      <div className="mt-6 max-w-2xl rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
+      <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
         <h2 className="font-semibold flex items-center gap-2 text-destructive"><Trash2 className="h-4 w-4" />Cancella account</h2>
         <p className="text-sm text-muted-foreground mt-1">Cancella i tuoi dati personali dalla piattaforma. L'operazione è irreversibile.</p>
         <Button variant="destructive" className="mt-3" onClick={() => setDeleteOpen(true)}>Elimina account</Button>
@@ -529,7 +529,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
 
 function WorkerProfileSections({ profile, email, userId, onSaved }: { profile: any; email: string | null; userId: string | null; onSaved: () => Promise<void> | void }) {
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <AvatarBox profile={profile} userId={userId} onSaved={onSaved} />
       <PersonalDataBox profile={profile} email={email} />
       <ResidenceBox profile={profile} userId={userId} onSaved={onSaved} />
