@@ -595,7 +595,7 @@ function Browse() {
                       ))}
                     </div>
                   ) : (
-                    <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={() => apply(a)}>
+                    <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={requireComplete(() => apply(a))}>
                       <Send className="h-4 w-4" />
                       Candidati
                     </Button>
@@ -683,7 +683,7 @@ function Browse() {
                       ))}
                     </div>
                   ) : (
-                    <Button className="flex-1 gap-2" onClick={()=>apply(selected)}><Send className="h-4 w-4" />Candidati ora</Button>
+                    <Button className="flex-1 gap-2" onClick={requireComplete(() => apply(selected))}><Send className="h-4 w-4" />Candidati ora</Button>
                   )}
                 </div>
               </>
