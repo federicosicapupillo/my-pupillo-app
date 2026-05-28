@@ -81,34 +81,48 @@ export function AdminBackupRestoreSection() {
   };
 
   const startRestore = async (run: BackupRun) => {
+    console.log("[PUPILLO_BACKUP_RESTORE_DEBUG] click Ripristina", { stamp: run.stamp, path: run.databasePath });
     try {
       const v = await validateRun({ data: { stamp: run.stamp } });
+      console.log("[PUPILLO_BACKUP_RESTORE_DEBUG] validateRun result", v);
       if (!v.ok) {
         toast.error(v.reason ?? "Backup non valido o non compatibile.");
         return;
       }
       setRestore({ phase: "first", run, text: "" });
     } catch (e) {
+      console.error("[PUPILLO_BACKUP_RESTORE_DEBUG] validateRun error", e);
       toast.error(e instanceof Error ? e.message : "Validazione fallita");
     }
   };
 
   const runRestore = async () => {
-    if (restore.phase !== "second") return;
+    console.log("[PUPILLO_BACKUP_RESTORE_DEBUG] click Confermo ripristino", { phase: restore.phase });
+    if (restore.phase !== "second") {
+      console.warn("[PUPILLO_BACKUP_RESTORE_DEBUG] runRestore abort: phase!=second");
+      return;
+    }
     const run = restore.run;
     setRestore({ phase: "running", run });
+    console.log("[PUPILLO_BACKUP_RESTORE_DEBUG] calling restoreRun serverFn", { stamp: run.stamp });
     try {
       const report = await restoreRun({
         data: { stamp: run.stamp, confirm: "RIPRISTINA BACKUP" },
       });
+      console.log("[PUPILLO_BACKUP_RESTORE_DEBUG] restoreRun OK", report);
       setRestore({ phase: "done", run, report });
       qc.invalidateQueries({ queryKey: ["admin-backup-runs"] });
       qc.invalidateQueries({ queryKey: ["admin-backup-logs"] });
       if (report.ok) toast.success("Ripristino completato.");
       else toast.warning("Ripristino completato con errori. Controlla il riepilogo.");
     } catch (e) {
+      console.error("[PUPILLO_BACKUP_RESTORE_DEBUG] restoreRun ERROR", e);
       setRestore({ phase: "idle" });
-      toast.error(e instanceof Error ? e.message : "Ripristino fallito");
+      toast.error(
+        e instanceof Error
+          ? `Ripristino non riuscito: ${e.message}`
+          : "Ripristino non riuscito. Controlla i log admin.",
+      );
     }
   };
 
@@ -211,7 +225,7 @@ export function AdminBackupRestoreSection() {
       {/* Dialog 1: conferma testuale */}
       <AlertDialog
         open={restore.phase === "first"}
-        onOpenChange={(v) => { if (!v) setRestore({ phase: "idle" }); }}
+        onOpenChange={(v) => { if (!v && restore.phase === "first") setRestore({ phase: "idle" }); }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -232,12 +246,20 @@ export function AdminBackupRestoreSection() {
           )}
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setRestore({ phase: "idle" })}>Annulla</AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               disabled={restore.phase !== "first" || restore.text !== "RIPRISTINA BACKUP"}
-              onClick={() => restore.phase === "first" && setRestore({ phase: "second", run: restore.run })}
+              onClick={() => {
+                if (restore.phase !== "first") return;
+                console.log("[PUPILLO_BACKUP_RESTORE_DEBUG] avanti conferma testo", { text: restore.text, valid: restore.text === "RIPRISTINA BACKUP" });
+                if (restore.text !== "RIPRISTINA BACKUP") {
+                  toast.error("Scrivi RIPRISTINA BACKUP per confermare.");
+                  return;
+                }
+                setRestore({ phase: "second", run: restore.run });
+              }}
             >
               Avanti
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -245,7 +267,7 @@ export function AdminBackupRestoreSection() {
       {/* Dialog 2: seconda conferma */}
       <AlertDialog
         open={restore.phase === "second"}
-        onOpenChange={(v) => { if (!v) setRestore({ phase: "idle" }); }}
+        onOpenChange={(v) => { if (!v && restore.phase === "second") setRestore({ phase: "idle" }); }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -259,7 +281,16 @@ export function AdminBackupRestoreSection() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setRestore({ phase: "idle" })}>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={runRestore}>Confermo ripristino</AlertDialogAction>
+            <Button
+              disabled={restore.phase !== "second"}
+              onClick={() => { void runRestore(); }}
+            >
+              {restore.phase === "running" ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Ripristino in corso…</>
+              ) : (
+                "Confermo ripristino"
+              )}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
