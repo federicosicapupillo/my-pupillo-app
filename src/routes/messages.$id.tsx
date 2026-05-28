@@ -335,7 +335,7 @@ const TEMPLATES: MsgTemplate[] = [
   { key: "w_post_issue", role: "worker", category: "issue_report", text: "Vorrei segnalare un problema.", action: "report_issue" },
 ];
 
-function renderTemplate(text: string, ann: Ann | null, otherName: string | null, addressOverride?: string | null): string {
+function renderTemplate(text: string, ann: Ann | null, restaurantName: string | null, addressOverride?: string | null): string {
   const date = ann?.service_date ? new Date(ann.service_date).toLocaleDateString("it-IT") : "—";
   const time = ann?.service_time ? ann.service_time.slice(0, 5) : "—";
   const address = addressOverride ?? ann?.location_address ?? "—";
@@ -343,7 +343,7 @@ function renderTemplate(text: string, ann: Ann | null, otherName: string | null,
     .replace(/{{shift_date}}/g, date)
     .replace(/{{start_time}}/g, time)
     .replace(/{{address}}/g, address)
-    .replace(/{{restaurant_name}}/g, otherName ?? "—");
+    .replace(/{{restaurant_name}}/g, restaurantName ?? "Locale non specificato");
 }
 type LogEvent = {
   id: string;
