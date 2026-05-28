@@ -1189,6 +1189,8 @@ function Thread() {
         console.warn("[accept-candidature] consumeCredits returned false", techCtx);
         return;
       }
+      // Refresh auth profile so the credit counter in the UI reflects the new balance.
+      try { await refreshAuth?.(); } catch (e) { console.warn("[accept-candidature] refresh profile failed", e); }
     }
     const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
