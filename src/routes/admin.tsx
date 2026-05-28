@@ -16,6 +16,7 @@ import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
 import { AdminRequiredReviewsSection } from "@/components/AdminRequiredReviewsSection";
 import { AdminBackupsSection } from "@/components/AdminBackupsSection";
 import { AdminBackupSystemSection } from "@/components/AdminBackupSystemSection";
+import { AdminBackupRestoreSection } from "@/components/AdminBackupRestoreSection";
 import { AdminSupportTicketsSection } from "@/components/AdminSupportTicketsSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -594,6 +595,7 @@ function Admin() {
         {/* BACKUP */}
         <TabsContent value="backups" className="space-y-6">
           <AdminBackupSystemSection />
+          <AdminBackupRestoreSection />
           <AdminBackupsSection />
         </TabsContent>
         <TabsContent value="support" className="space-y-6">
