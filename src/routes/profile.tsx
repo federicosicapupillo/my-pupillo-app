@@ -64,7 +64,7 @@ function Profile() {
         title="Il tuo profilo"
         subtitle="Visualizza e modifica le tue informazioni"
       />
-      {role === "restaurant" && <PayOnHireBox className="mb-6 max-w-2xl" />}
+      {role === "restaurant" && <PayOnHireBox className="mb-6" />}
       {role === "worker" ? (
         <WorkerProfileSections profile={profile as any} email={user?.email ?? null} userId={user?.id ?? null} onSaved={refresh} />
       ) : role === "restaurant" ? (
