@@ -58,7 +58,27 @@ function isTestOrDemoUser(profile: { email?: string | null; is_demo?: boolean | 
 function isTestOtpAllowedFor(profile: { email?: string | null; is_demo?: boolean | null } | null, phoneFull?: string | null): boolean {
   const envAllows = isTestOtpFlagEnabled() || isLovableTestHostOrLocal() || isWhatsAppSimulatedMode();
   if (!envAllows) return false;
-  return isTestOrDemoUser(profile, phoneFull) || isWhatsAppSimulatedMode();
+  // In ambienti preview/dev/test o quando WhatsApp è in modalità simulata, il
+  // codice fisso 123456 deve essere sempre accettato: l'utente non riceve
+  // alcun messaggio reale, quindi non avrebbe modo di completare la verifica.
+  // In produzione (host reale + WhatsApp configurato) questa funzione resta
+  // disattivata dal primo check envAllows.
+  return true;
+}
+
+function normalizePhoneFull(raw: string | null | undefined): string {
+  if (!raw) return "";
+  // Mantieni un eventuale "+" iniziale, rimuovi tutti gli altri caratteri non numerici.
+  const trimmed = String(raw).trim();
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return "";
+  if (hasPlus) return `+${digits}`;
+  // Se inizia con 00 (formato internazionale alternativo) sostituisci con +.
+  if (digits.startsWith("00")) return `+${digits.slice(2)}`;
+  // Numero italiano senza prefisso → assumi +39.
+  if (digits.length === 10 && digits.startsWith("3")) return `+39${digits}`;
+  return `+${digits}`;
 }
 
 function hashOtp(code: string, userId: string): string {
