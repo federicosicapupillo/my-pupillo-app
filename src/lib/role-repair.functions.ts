@@ -41,6 +41,14 @@ export type RoleMismatchReport = {
   admins: Array<{ id: string; email: string | null }>;
 };
 
+function normalizeStoredRole(role: string | null | undefined): "admin" | "worker" | "restaurant" | null {
+  const value = (role ?? "").trim().toLowerCase();
+  if (value === "admin") return "admin";
+  if (value === "worker" || value === "lavoratore") return "worker";
+  if (value === "restaurant" || value === "ristoratore") return "restaurant";
+  return null;
+}
+
 export const listRoleMismatches = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<RoleMismatchReport> => {
@@ -79,19 +87,19 @@ export const listRoleMismatches = createServerFn({ method: "GET" })
       if (!hasProfile && !hasRoleRow) status = "missing_both";
       else if (!hasProfile) status = "missing_profile";
       else if (!hasRoleRow) status = "missing_user_role";
-      else if (profileRole && !userRoles.includes(profileRole)) status = "role_mismatch";
+      else if (profileRole && normalizeStoredRole(profileRole) && !userRoles.some((role) => normalizeStoredRole(role) === normalizeStoredRole(profileRole))) status = "role_mismatch";
 
       if (status === "ok") continue;
 
       // Suggest a role from existing data, in priority order.
       const candidates = [
         userRoles.find((r) => r === "admin"),
-        userRoles.find((r) => r === "restaurant"),
-        userRoles.find((r) => r === "worker"),
+        userRoles.find((r) => normalizeStoredRole(r) === "restaurant"),
+        userRoles.find((r) => normalizeStoredRole(r) === "worker"),
         profileRole,
         metaRole,
-      ].filter((v): v is string => !!v && VALID.has(v));
-      const suggestedRole = (candidates[0] as RoleIssueRow["suggestedRole"]) ?? null;
+      ].map(normalizeStoredRole).filter((v): v is NonNullable<RoleIssueRow["suggestedRole"]> => !!v && VALID.has(v));
+      const suggestedRole = candidates[0] ?? null;
 
       issues.push({
         id: u.id,

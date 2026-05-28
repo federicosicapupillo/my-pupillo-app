@@ -8,6 +8,7 @@ const ALLOWED_PATHS = new Set([
   "/verify-phone",
   "/registration-success",
   "/reset-password",
+  "/account-error",
   "/terms",
   "/forbidden",
 ]);

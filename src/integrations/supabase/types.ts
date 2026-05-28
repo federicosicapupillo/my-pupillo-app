@@ -2568,6 +2568,20 @@ export type Database = {
         Args: { _code: string; _new_user: string }
         Returns: string
       }
+      resolve_current_user_role: {
+        Args: never
+        Returns: {
+          email: string
+          final_role: string
+          final_route: string
+          metadata_role: string
+          profile_error: string
+          profile_role: string
+          user_id: string
+          user_role: string
+          user_roles_error: string
+        }[]
+      }
       send_required_review_reminders: { Args: never; Returns: number }
       unseed_demo: {
         Args: { _batch: string }
