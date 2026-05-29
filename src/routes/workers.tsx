@@ -983,12 +983,12 @@ function WorkersPage() {
   const q = qInput.trim();
   const hasActiveFilters = category !== "all" || !!subcategory || !!q || !!lang;
   const selectedAnn = anns.find((a) => a.id === selected);
-  // Default behaviour: when the restaurant has NOT opened the advanced
-  // search, the list is implicitly scoped to the role of the selected
-  // announcement. As soon as any advanced filter is active the user's
-  // explicit criteria win and the announcement role is ignored.
+  // L'annuncio selezionato NON deve mai escludere lavoratori dalla lista
+  // (regola Pupillo "Cerca lavoratori"): il ruolo dell'annuncio serve
+  // solo per ordinare e per mostrare il badge di compatibilità. I
+  // lavoratori non compatibili restano visibili, vengono soltanto messi
+  // dopo. La ricerca avanzata invece può filtrare in modo esplicito.
   const announcementRole = selectedAnn?.professional_profile ?? null;
-  const applyAnnouncementRoleFilter = !hasActiveFilters && !!announcementRole;
   // Ruolo "attivo" usato per (a) filtrare i risultati standard e (b) decidere
   // quale etichetta di ruolo mostrare sotto il nome di ogni lavoratore.
   // Priorità: ricerca avanzata per ruolo > ruolo dell'annuncio selezionato.
@@ -998,7 +998,6 @@ function WorkersPage() {
       : null;
   const activeRoleContext: string | null = advancedRole ?? announcementRole ?? null;
   const filtered = workers.filter((worker) => {
-    if (applyAnnouncementRoleFilter && !workerMatchesRole(worker, announcementRole)) return false;
     // Anche in modalità ricerca avanzata, se l'utente ha scelto un ruolo
     // specifico nel filtro avanzato, scartiamo i lavoratori che non lo
     // hanno davvero tra primary/secondary roles. `matchesSubcategory` qui
