@@ -11,6 +11,8 @@ const ALLOWED_PATHS = new Set([
   "/account-error",
   "/terms",
   "/forbidden",
+  "/onboarding",
+  "/profile",
 ]);
 
 export function PhoneVerificationGate({ children }: { children: ReactNode }) {
@@ -38,7 +40,15 @@ export function PhoneVerificationGate({ children }: { children: ReactNode }) {
     if (role === "admin") return;
     // Strict check: only redirect when explicitly false (not null/undefined).
     if (profile && profile.phone_verified === false) {
-      nav({ to: "/verify-phone" });
+      // Phone verification now lives inside onboarding.
+      // Operative routes are blocked until phone_verified=true: send the
+      // user back to /onboarding where the OTP section lives.
+      console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] gate redirect → /onboarding", {
+        userId: user.id,
+        path: loc.pathname,
+        phone_verified: profile.phone_verified,
+      });
+      nav({ to: "/onboarding" });
     }
   }, [user, profile, loading, extrasLoaded, role, loc.pathname, nav]);
 
