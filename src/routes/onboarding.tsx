@@ -690,7 +690,7 @@ function Onboarding() {
       scrollToField("phone");
       return;
     }
-    if (role !== "admin" && !profile?.phone_verified) {
+    if (role !== "admin" && !(profile?.phone_verified || phoneVerifiedOptimistic)) {
       toast.error("Verifica il numero di cellulare prima di completare il profilo.");
       scrollToField("phone");
       return;
