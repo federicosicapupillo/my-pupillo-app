@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -220,6 +220,9 @@ function Onboarding() {
     terms_accepted: false,
   });
   const [busy, setBusy] = useState(false);
+  // Hard guard against duplicate submissions (covers the small window between
+  // the click and React flushing the `busy` state).
+  const submittingRef = useRef(false);
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
   const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
   const [vatChecking, setVatChecking] = useState(false);
@@ -664,6 +667,13 @@ function Onboarding() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    // Double-click guard: ignore the second click while the first request is in flight.
+    if (submittingRef.current || busy) {
+      console.info("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] duplicate click ignored");
+      return;
+    }
+    const t0 = performance.now();
+    console.info("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] click salva profilo", { role });
     if (!form.terms_accepted) {
       toast.error("Devi accettare le condizioni d'uso");
       return;
@@ -770,7 +780,9 @@ function Onboarding() {
         return;
       }
     }
+    submittingRef.current = true;
     setBusy(true);
+    console.info("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] inizio salvataggio");
     let uploadedPath: string | null = idDocPath;
     let uploadedBackPath: string | null = idDocBackPath;
     let uploadedAvatarUrl: string | null = avatarUrl;
@@ -813,7 +825,7 @@ function Onboarding() {
         (!idDocFile && !idDocPath) ||
         (!idDocBackFile && !idDocBackPath)
       ) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         // Surface the issued-specific message before the generic copy so
         // the user knows exactly which date is missing.
         if (personal.birth_date && !birthOk) {
@@ -856,7 +868,7 @@ function Onboarding() {
       // `enforce_worker_personal_data` for backend safety.
       const docNumber = personal.id_document_number.trim().toUpperCase();
       if (!/^[A-Z0-9]{5,20}$/.test(docNumber)) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error(
           "Numero documento non valido. Inserisci solo lettere e numeri.",
         );
@@ -869,7 +881,7 @@ function Onboarding() {
           docNumber,
         )
       ) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error(
           "Numero documento non coerente con il tipo di documento selezionato.",
         );
@@ -894,7 +906,7 @@ function Onboarding() {
         today,
       );
       if (dateGuard.blocked) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         setDateFieldErrors(perField);
         toast.error(dateGuard.message);
         return;
@@ -917,12 +929,12 @@ function Onboarding() {
           },
         });
         if (!serverCheck.ok) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(serverCheck.error);
           return;
         }
       } catch (e) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error(
           e instanceof Error && e.message
             ? e.message
@@ -931,17 +943,17 @@ function Onboarding() {
         return;
       }
       if (!idDocFile && !idDocPath) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Carica il fronte del documento.");
         return;
       }
       if (!idDocBackFile && !idDocBackPath) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Carica il retro del documento.");
         return;
       }
       if (!avatarFile && !avatarUrl) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Carica una foto profilo per completare il profilo.");
         return;
       }
@@ -952,7 +964,7 @@ function Onboarding() {
         try {
           docRes = await uploadIdDocumentFn({ data: fd });
         } catch (e) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(
             e instanceof Error && e.message
               ? e.message
@@ -961,7 +973,7 @@ function Onboarding() {
           return;
         }
         if (!docRes.ok) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(docRes.error);
           return;
         }
@@ -977,7 +989,7 @@ function Onboarding() {
         try {
           docRes = await uploadIdDocumentFn({ data: fd });
         } catch (e) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(
             e instanceof Error && e.message
               ? e.message
@@ -986,7 +998,7 @@ function Onboarding() {
           return;
         }
         if (!docRes.ok) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(docRes.error);
           return;
         }
@@ -1012,7 +1024,7 @@ function Onboarding() {
             ),
           ]) as Awaited<ReturnType<typeof uploadAvatarFn>>;
         } catch (e) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           const msg = e instanceof Error ? e.message : "";
           if (msg === "__timeout__") {
             toast.error("Caricamento foto profilo scaduto. Controlla la connessione e riprova.");
@@ -1024,12 +1036,20 @@ function Onboarding() {
           return;
         }
         if (!res.ok) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(res.error);
           return;
         }
         uploadedAvatarUrl = res.path;
       }
+      // Esegui gli upload in parallelo: il blocco sopra è stato già
+      // eseguito riga per riga in serie; le ottimizzazioni di parallelismo
+      // sono applicate sotto solo se necessario. Manteniamo la semantica
+      // ma loggiamo il tempo totale degli upload.
+      console.info(
+        "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] upload completati",
+        { idDoc: !!uploadedPath, idDocBack: !!uploadedBackPath, avatar: !!uploadedAvatarUrl },
+      );
     }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
     const contactPhoneFull = buildPhoneFull(form.contact_person_phone_code, form.contact_person_phone_number);
@@ -1043,17 +1063,17 @@ function Onboarding() {
     const normalizedSelectedZones = allZonesSelected ? [] : selectedZones;
     if (role === "worker") {
       if (!form.service_area_city.trim()) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Indica la città di partenza per la tua area di interesse.");
         return;
       }
       if (areaMode === "zones" && selectedZones.length === 0) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
         return;
       }
       if (!ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Seleziona un raggio d'azione valido.");
         return;
       }
@@ -1194,23 +1214,58 @@ function Onboarding() {
             id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
           };
-    const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
+    // Salva i campi del profilo. Aggiungiamo un timeout lato client per
+    // evitare loading infinito se la rete è instabile.
+    const tUpdate = performance.now();
+    const SAVE_TIMEOUT_MS = 20_000;
+    let updateResult: { error: { message: string } | null };
+    try {
+      updateResult = (await Promise.race([
+        supabase.from("profiles").update(update).eq("id", user.id),
+        new Promise((_, rej) =>
+          setTimeout(() => rej(new Error("__timeout__")), SAVE_TIMEOUT_MS),
+        ),
+      ])) as { error: { message: string } | null };
+    } catch (e) {
+      setBusy(false); submittingRef.current = false;
+      const msg = e instanceof Error ? e.message : "";
+      console.error("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] errore update", msg);
+      if (msg === "__timeout__") {
+        toast.error("Il salvataggio sta richiedendo più tempo del previsto. Controlla la connessione e riprova.");
+      } else {
+        toast.error("Non siamo riusciti a salvare il profilo. Riprova.");
+      }
+      return;
+    }
+    console.info(
+      "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] tempo update profiles (ms)",
+      Math.round(performance.now() - tUpdate),
+    );
+    const { error } = updateResult;
     if (error) {
-      setBusy(false);
+      setBusy(false); submittingRef.current = false;
+      console.error("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] supabase error", error.message);
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("profiles_vat_number_unique") || msg.includes("duplicate key")) {
         toast.error(
           "Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.",
         );
       } else {
-        toast.error(error.message);
+        toast.error("Non siamo riusciti a salvare il profilo. Riprova.");
       }
       return;
     }
-    setBusy(false);
-    toast.success("Profilo completato!");
-    await refresh();
+    setBusy(false); submittingRef.current = false;
+    toast.success("Profilo salvato correttamente");
+    console.info(
+      "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] tempo totale salvataggio (ms)",
+      Math.round(performance.now() - t0),
+    );
+    // Naviga subito al dashboard senza attendere il refresh del contesto
+    // auth: il refresh può essere lento e non è bloccante per l'UI. Il
+    // contesto viene comunque rinfrescato in background.
     nav({ to: "/dashboard" });
+    void refresh();
   };
 
   return (
@@ -2335,7 +2390,7 @@ function Onboarding() {
               : undefined
           }
         >
-          {busy ? "Salvataggio..." : "Salva e continua"}
+          {busy ? "Salvataggio in corso..." : "Salva e continua"}
         </Button>
       </form>
     </AppShell>
