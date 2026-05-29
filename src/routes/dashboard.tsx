@@ -75,8 +75,8 @@ function DashboardInner() {
         key: "reminder:phone",
         variant: "warning",
         guard: () => !profile.phone_verified,
-        description: "Conferma il numero per attivare completamente l'account.",
-        action: { label: "Verifica", onClick: () => nav({ to: "/verify-phone" }) },
+        description: "Verifica il numero dall'onboarding per attivare completamente l'account.",
+        action: { label: "Vai all'onboarding", onClick: () => nav({ to: "/onboarding" }) },
         duration: 8000,
       });
     } else if (!profileOk) {

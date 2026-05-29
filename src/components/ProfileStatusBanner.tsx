@@ -20,21 +20,20 @@ export function ProfileStatusBanner() {
   // di rimandare l'utente indietro durante un task.
   const BACK_TO_DASHBOARD_ROUTES = new Set<string>([
     "/onboarding",
-    "/verify-phone",
     "/registration-success",
   ]);
   const shouldOfferDashboard = BACK_TO_DASHBOARD_ROUTES.has(loc.pathname);
 
   // Logica prossimo step:
-  // 1) telefono non verificato → /verify-phone
-  // 2) profilo incompleto → /onboarding
-  // 3) profilo attivo → CTA contestuale (dashboard, oppure azione tipica del ruolo)
+  // 1) telefono non verificato o profilo incompleto → /onboarding
+  //    (la verifica WhatsApp vive solo dentro l'onboarding)
+  // 2) profilo attivo → CTA contestuale
   let nextStep: { label: string; to: string; description?: string } | null = null;
   if (!phoneVerified) {
     nextStep = {
-      label: "Verifica il numero WhatsApp",
-      to: "/verify-phone",
-      description: "Conferma il tuo numero per attivare l'account.",
+      label: "Completa il profilo",
+      to: "/onboarding",
+      description: "Verifica il numero WhatsApp e completa i dati richiesti.",
     };
   } else if (!profileCompleted) {
     nextStep = {
