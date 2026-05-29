@@ -40,6 +40,7 @@ import {
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
+import { startPhoneVerification, verifyPhoneOtp, resendPhoneOtp } from "@/lib/phone-verification.functions";
 import {
   validateDocumentDates,
   validateRequiredDates,
@@ -155,13 +156,24 @@ function Onboarding() {
   const uploadAvatarFn = useServerFn(uploadAvatar);
   const validateWorkerDatesFn = useServerFn(validateWorkerDocumentDates);
   const uploadIdDocumentFn = useServerFn(uploadWorkerIdDocument);
+  const startPhoneFn = useServerFn(startPhoneVerification);
+  const verifyPhoneFn = useServerFn(verifyPhoneOtp);
+  const resendPhoneFn = useServerFn(resendPhoneOtp);
+
+  // Inline phone-OTP state (verification now happens here in onboarding).
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const t = setInterval(() => setOtpCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [otpCooldown]);
 
   useEffect(() => {
     if (!profile) return;
-    if (profile.phone_verified === false) {
-      nav({ to: "/verify-phone" });
-      return;
-    }
     if (profile.profile_completed) {
       nav({ to: "/dashboard" });
     }
@@ -403,7 +415,7 @@ function Onboarding() {
           id: "phone",
           label: "Numero WhatsApp verificato",
           status: phoneDone ? "done" : "todo",
-          href: phoneDone ? undefined : "/verify-phone",
+          href: phoneDone ? undefined : "#sec-phone",
         },
         {
           id: "business",
@@ -454,7 +466,7 @@ function Onboarding() {
         id: "phone",
         label: "Numero WhatsApp verificato",
         status: phoneDone ? "done" : "todo",
-        href: phoneDone ? undefined : "/verify-phone",
+        href: phoneDone ? undefined : "#sec-phone",
       },
       {
         id: "personal",
@@ -645,6 +657,11 @@ function Onboarding() {
     }
     if (!isValidPhone(form.phone_code, form.phone_number)) {
       toast.error("Inserisci un numero di telefono valido.");
+      scrollToField("phone");
+      return;
+    }
+    if (role !== "admin" && !profile?.phone_verified) {
+      toast.error("Verifica il numero di cellulare prima di completare il profilo.");
       scrollToField("phone");
       return;
     }
@@ -1231,20 +1248,25 @@ function Onboarding() {
               })()}
             </div>
           ) : null}
-          <div data-field="phone" className="scroll-mt-24">
-            <Label>Telefono *</Label>
+          <div id="sec-phone" data-field="phone" className="scroll-mt-24 rounded-lg border bg-card/40 p-4 space-y-3">
+            <div>
+              <Label className="text-base font-semibold">Numero di cellulare *</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Per completare il profilo e usare Pupillo devi verificare il tuo numero di cellulare.
+              </p>
+            </div>
             <PhoneInput
               required
               code={form.phone_code}
               number={form.phone_number}
-              onCodeChange={(c) => setForm({ ...form, phone_code: c })}
-              onNumberChange={(n) => setForm({ ...form, phone_number: n })}
+              onCodeChange={(c) => { setForm({ ...form, phone_code: c }); setOtpSent(false); }}
+              onNumberChange={(n) => { setForm({ ...form, phone_number: n }); setOtpSent(false); }}
               disabled={!!profile?.phone_verified}
             />
             {profile?.phone_verified ? (
               <div className="mt-1.5 space-y-1">
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  ✓ Numero verificato
+                  ✓ Numero verificato correttamente
                 </span>
                 <p className="text-xs text-muted-foreground">
                   Per modificare il numero di cellulare verificato,{" "}
@@ -1257,7 +1279,122 @@ function Onboarding() {
                   .
                 </p>
               </div>
-            ) : null}
+            ) : (
+              <div className="space-y-3 pt-1">
+                {!otpSent ? (
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      if (!isValidPhone(form.phone_code, form.phone_number)) {
+                        toast.error("Inserisci un numero di cellulare valido.");
+                        return;
+                      }
+                      setOtpBusy(true);
+                      try {
+                        const res = await startPhoneFn({
+                          data: {
+                            phoneCountryCode: form.phone_code,
+                            phoneNumber: form.phone_number,
+                            sendSummary: false,
+                          },
+                        });
+                        console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] OTP send", { user_id: user?.id, res });
+                        if (!res.ok) {
+                          toast.error(res.error ?? "Invio codice fallito. Riprova.");
+                          if (res.cooldownSeconds) setOtpCooldown(res.cooldownSeconds);
+                          return;
+                        }
+                        setOtpSent(true);
+                        setOtpCooldown(60);
+                        toast.success(res.simulated ? "Codice di test inviato (modalità preview)." : "Codice inviato via WhatsApp.");
+                      } finally {
+                        setOtpBusy(false);
+                      }
+                    }}
+                    disabled={otpBusy || !isValidPhone(form.phone_code, form.phone_number)}
+                  >
+                    {otpBusy ? "Invio in corso…" : "Invia codice di verifica"}
+                  </Button>
+                ) : (
+                  <>
+                    <Label>Codice di verifica (6 cifre)</Label>
+                    <Input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="000000"
+                      className="text-center text-xl tracking-[0.4em] max-w-[200px]"
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={async () => {
+                          if (!/^\d{6}$/.test(otpCode)) {
+                            toast.error("Inserisci un codice di 6 cifre.");
+                            return;
+                          }
+                          setOtpBusy(true);
+                          try {
+                            const res = await verifyPhoneFn({ data: { code: otpCode } });
+                            console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] OTP verify", { user_id: user?.id, res });
+                            if (!res.ok) {
+                              toast.error(res.error ?? "Codice non valido.");
+                              return;
+                            }
+                            toast.success("Numero verificato correttamente.");
+                            setOtpCode("");
+                            setOtpSent(false);
+                            await refresh();
+                          } finally {
+                            setOtpBusy(false);
+                          }
+                        }}
+                        disabled={otpBusy || otpCode.length !== 6}
+                      >
+                        {otpBusy ? "Verifica…" : "Verifica codice"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={async () => {
+                          if (otpCooldown > 0) return;
+                          setOtpBusy(true);
+                          try {
+                            const res = await resendPhoneFn({ data: undefined as any });
+                            console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] OTP resend", { user_id: user?.id, res });
+                            if (!res.ok) {
+                              toast.error(res.error ?? "Reinvio fallito.");
+                              if (res.cooldownSeconds) setOtpCooldown(res.cooldownSeconds);
+                              return;
+                            }
+                            setOtpCooldown(60);
+                            toast.success("Codice reinviato.");
+                          } finally {
+                            setOtpBusy(false);
+                          }
+                        }}
+                        disabled={otpBusy || otpCooldown > 0}
+                      >
+                        {otpCooldown > 0 ? `Reinvia (${otpCooldown}s)` : "Reinvia codice"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => { setOtpSent(false); setOtpCode(""); }}
+                        disabled={otpBusy}
+                      >
+                        Cambia numero
+                      </Button>
+                    </div>
+                  </>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Il numero verrà usato per le comunicazioni operative su WhatsApp.
+                </p>
+              </div>
+            )}
           </div>
         </div>
         {role === "restaurant" ? (

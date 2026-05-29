@@ -15,12 +15,7 @@ import { lovable } from "@/integrations/lovable";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { isPasswordStrongEnough, doPasswordsMatch, PASSWORD_RULES } from "@/lib/password-validation";
 import { Check, X } from "lucide-react";
-import { PhoneInput } from "@/components/PhoneInput";
-import { DEFAULT_PHONE_PREFIX, isValidPhone, buildPhoneFull } from "@/lib/phone-prefixes";
-import { startPhoneVerification } from "@/lib/phone-verification.functions";
-import { useServerFn } from "@tanstack/react-start";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { savePendingRegistrationOtpState } from "@/lib/registration-otp-state";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -48,15 +43,11 @@ function AuthPage() {
   const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
-  const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const startVerification = useServerFn(startPhoneVerification);
   const justSignedUpRef = useRef(false);
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
   const passwordStrongEnough = isPasswordStrongEnough(password);
   const passwordsMatch = doPasswordsMatch(password, confirmPassword);
-  const phoneOk = isValidPhone(phoneCode, phoneNumber);
   const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ' \-]+$/;
   const firstNameTrim = firstName.trim();
   const lastNameTrim = lastName.trim();
@@ -111,14 +102,6 @@ function AuthPage() {
     // Admins bypass phone verification, onboarding and profile completion.
     if (finalRole === "admin") {
       navigate({ to: "/admin" });
-      return;
-    }
-    // If phone not yet verified, send to OTP page — UNLESS the user
-    // explicitly came back from the OTP page via the "Torna alla
-    // registrazione" link (URL carries ?role=...). In that case, let
-    // them edit their account here.
-    if (profile && profile.phone_verified === false && !roleParam) {
-      navigate({ to: "/verify-phone" });
       return;
     }
     // Profile incomplete → onboarding (one onboarding route covers both roles)
@@ -187,10 +170,6 @@ function AuthPage() {
       toast.error("Le password non coincidono.");
       return;
     }
-    if (!phoneOk) {
-      toast.error("Inserisci un numero WhatsApp valido (prefisso + cifre).");
-      return;
-    }
     const fullName = `${firstNameTrim} ${lastNameTrim}`;
     setBusy(true);
     justSignedUpRef.current = true;
@@ -228,9 +207,8 @@ function AuthPage() {
       setTab("login");
       return;
     }
-    // Fire WhatsApp OTP + summary email
-    const phoneFull = buildPhoneFull(phoneCode, phoneNumber);
-    let otpReady = false;
+    // Phone verification is now handled later, inside the onboarding flow.
+    // Just persist the name fields on the profile so onboarding starts pre-filled.
     try {
       const currentUser = (await supabase.auth.getUser()).data.user;
       if (!currentUser) throw new Error("Sessione non disponibile dopo la registrazione.");
@@ -240,21 +218,14 @@ function AuthPage() {
           first_name: firstNameTrim,
           last_name: lastNameTrim,
           full_name: fullName,
-          phone_country_code: phoneCode,
-          phone_number: phoneNumber,
-          phone_full: phoneFull,
-          phone: phoneFull,
         })
         .eq("id", currentUser.id);
-      const otpResult = await startVerification({ data: { phoneCountryCode: phoneCode, phoneNumber, sendSummary: true } });
-      if (otpResult.ok || otpResult.cooldownSeconds) {
-        savePendingRegistrationOtpState({ phoneCountryCode: phoneCode, phoneNumber, phoneFull });
-        otpReady = true;
-      } else {
-        toast.error(otpResult.error ?? "Non siamo riusciti a inviare il codice WhatsApp. Riprova.");
-      }
+      console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] signup ok, no phone collected", {
+        email: emailTrim,
+        role,
+      });
     } catch (err) {
-      console.error("OTP/email summary kickoff failed", err);
+      console.error("post-signup profile update failed", err);
     }
     await refresh();
     // Register referral if a code was passed via ?ref=
@@ -269,8 +240,8 @@ function AuthPage() {
       }
     }
     setBusy(false);
-    if (otpReady) toast.success("Codice WhatsApp inviato correttamente");
-    navigate({ to: "/verify-phone", search: { phase: "code" } as never, replace: true });
+    toast.success("Account creato. Completa il profilo per continuare.");
+    navigate({ to: "/onboarding", replace: true });
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -565,19 +536,6 @@ function AuthPage() {
                     </p>
                   </div>
                 )}
-                <div>
-                  <Label>Numero WhatsApp</Label>
-                  <PhoneInput
-                    code={phoneCode}
-                    number={phoneNumber}
-                    onCodeChange={setPhoneCode}
-                    onNumberChange={setPhoneNumber}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Riceverai un codice via WhatsApp per confermare il numero.
-                  </p>
-                </div>
                 <Button
                   type="submit"
                   className="w-full"
@@ -589,8 +547,7 @@ function AuthPage() {
                     !emailsMatch ||
                     !restaurantAgeOk ||
                     !passwordStrongEnough ||
-                    !passwordsMatch ||
-                    !phoneOk
+                    !passwordsMatch
                   }
                 >
                   {busy ? "Attendi..." : "Crea profilo"}
