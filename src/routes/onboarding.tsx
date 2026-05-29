@@ -660,6 +660,11 @@ function Onboarding() {
       scrollToField("phone");
       return;
     }
+    if (role !== "admin" && !profile?.phone_verified) {
+      toast.error("Verifica il numero di cellulare prima di completare il profilo.");
+      scrollToField("phone");
+      return;
+    }
     if (role === "restaurant") {
       if (!vatValid) {
         toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
