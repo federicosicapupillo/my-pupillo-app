@@ -1091,6 +1091,14 @@ function WorkersPage() {
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
       if (subcategory === "Più affidabili") return (b.reliability_pct ?? 0) - (a.reliability_pct ?? 0);
     }
+    // Quando c'è un annuncio selezionato, i lavoratori il cui ruolo
+    // combacia col ruolo richiesto dall'annuncio vanno SEMPRE prima di
+    // quelli che non combaciano. I non compatibili restano visibili.
+    if (selectedAnn && announcementRole) {
+      const ra = workerMatchesRole(a, announcementRole) ? 0 : 1;
+      const rb = workerMatchesRole(b, announcementRole) ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+    }
     // Penalizzazione affidabilità (3+ ritardi confermati): i lavoratori
     // penalizzati restano ricercabili ma scendono SEMPRE in fondo, dopo
     // aver verificato compatibilità minima (filtri già applicati sopra).
