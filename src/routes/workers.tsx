@@ -1261,7 +1261,7 @@ function WorkersPage() {
           </span>
         ) : announcementRole ? (
           <span className="text-xs text-muted-foreground">
-            Filtro automatico: <strong className="text-foreground capitalize">{announcementRole}</strong> (dall'annuncio)
+            Ordinati per compatibilità con: <strong className="text-foreground capitalize">{announcementRole}</strong>
           </span>
         ) : null}
         <div className="inline-flex rounded-lg border p-0.5">
