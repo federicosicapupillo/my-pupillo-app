@@ -16,6 +16,15 @@ import pupilloLogo from "@/assets/pupillo-logo.png";
 import { isPasswordStrongEnough, doPasswordsMatch, PASSWORD_RULES } from "@/lib/password-validation";
 import { Check, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { MailCheck } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -29,7 +38,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { user, role: userRole, profile, roleDebug, loading, extrasLoaded, refresh } = useAuth();
+  const { user, role: userRole, profile, roleDebug, loading, extrasLoaded } = useAuth();
   const { role: roleParam, ref: refParam, deleted: deletedParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
@@ -44,6 +53,9 @@ function AuthPage() {
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const justSignedUpRef = useRef(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [resendBusy, setResendBusy] = useState(false);
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
   const passwordStrongEnough = isPasswordStrongEnough(password);
@@ -123,6 +135,11 @@ function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) {
+      console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] click ignored: already busy");
+      return;
+    }
+    console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] click crea profilo", { email: email.trim(), role });
     if (!firstNameTrim) {
       toast.error("Inserisci il tuo nome");
       return;
@@ -170,10 +187,11 @@ function AuthPage() {
       toast.error("Le password non coincidono.");
       return;
     }
+    console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] validation ok");
     const fullName = `${firstNameTrim} ${lastNameTrim}`;
     setBusy(true);
     justSignedUpRef.current = true;
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: emailTrim,
       password,
       options: {
@@ -191,57 +209,65 @@ function AuthPage() {
       setBusy(false);
       justSignedUpRef.current = false;
       const msg = (error.message || "").toLowerCase();
+      console.warn("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] signup error, popup NOT shown", { message: error.message });
       if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already")) {
-        toast.error("Questa email è già registrata. Accedi oppure usa un'altra email.");
+        toast.error("Questa email risulta già registrata. Accedi oppure recupera la password.");
       } else {
         toast.error(error.message);
       }
       return;
     }
-    // Auto-confirm is enabled, so we can sign in immediately
-    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: emailTrim, password });
-    if (signInErr) {
+    // Detect "user already registered" returned without an error
+    // (Supabase returns a user with empty `identities` in that case).
+    const identities = (data?.user as { identities?: unknown[] } | null)?.identities;
+    if (data?.user && Array.isArray(identities) && identities.length === 0) {
       setBusy(false);
       justSignedUpRef.current = false;
-      toast.success("Account creato! Accedi per continuare.");
-      setTab("login");
+      console.warn("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] email already registered (empty identities), popup NOT shown");
+      toast.error("Questa email risulta già registrata. Accedi oppure recupera la password.");
       return;
     }
-    // Phone verification is now handled later, inside the onboarding flow.
-    // Just persist the name fields on the profile so onboarding starts pre-filled.
-    try {
-      const currentUser = (await supabase.auth.getUser()).data.user;
-      if (!currentUser) throw new Error("Sessione non disponibile dopo la registrazione.");
-      await supabase
-        .from("profiles")
-        .update({
-          first_name: firstNameTrim,
-          last_name: lastNameTrim,
-          full_name: fullName,
-        })
-        .eq("id", currentUser.id);
-      console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] signup ok, no phone collected", {
-        email: emailTrim,
-        role,
-      });
-    } catch (err) {
-      console.error("post-signup profile update failed", err);
-    }
-    await refresh();
-    // Register referral if a code was passed via ?ref=
-    if (refParam) {
+    // Register referral if a code was passed via ?ref= (best-effort).
+    if (refParam && data?.user?.id) {
       try {
-        const { data: uid } = await supabase.auth.getUser();
-        if (uid.user?.id) {
-          await supabase.rpc("register_referral", { _new_user: uid.user.id, _code: refParam });
-        }
+        await supabase.rpc("register_referral", { _new_user: data.user.id, _code: refParam });
       } catch (err) {
         console.error("register_referral failed", err);
       }
     }
+    console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] signup ok, confirmation email dispatched", {
+      email: emailTrim,
+      has_session: !!data?.session,
+      user_id: data?.user?.id ?? null,
+    });
     setBusy(false);
-    toast.success("Account creato. Completa il profilo per continuare.");
-    navigate({ to: "/onboarding", replace: true });
+    justSignedUpRef.current = false;
+    setConfirmationEmail(emailTrim);
+    setConfirmationOpen(true);
+    console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] popup shown");
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!confirmationEmail || resendBusy) return;
+    setResendBusy(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: confirmationEmail,
+      options: { emailRedirectTo: window.location.origin + "/registration-success" },
+    });
+    setResendBusy(false);
+    if (error) {
+      console.warn("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] resend error", { message: error.message });
+      toast.error("Impossibile inviare di nuovo l'email. Riprova tra qualche minuto.");
+      return;
+    }
+    console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] resend ok");
+    toast.success("Email di conferma inviata di nuovo.");
+  };
+
+  const handleConfirmationClose = () => {
+    setConfirmationOpen(false);
+    setTab("login");
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -564,6 +590,40 @@ function AuthPage() {
           </Tabs>
         </div>
       </div>
+      <Dialog
+        open={confirmationOpen}
+        onOpenChange={(o) => {
+          if (!o) handleConfirmationClose();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <div className="mx-auto sm:mx-0 mb-2 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <MailCheck className="h-6 w-6" />
+            </div>
+            <DialogTitle>Controlla la tua email</DialogTitle>
+            <DialogDescription>
+              Ti abbiamo inviato una mail di conferma{confirmationEmail ? ` a ${confirmationEmail}` : ""}. Apri la tua casella di posta e clicca sul link ricevuto per attivare il profilo Pupillo.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Se non trovi la mail, controlla anche nella cartella Spam o Posta indesiderata.
+          </p>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleResendConfirmation}
+              disabled={resendBusy}
+            >
+              {resendBusy ? "Invio…" : "Invia di nuovo email"}
+            </Button>
+            <Button type="button" onClick={handleConfirmationClose}>
+              Ho capito
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
