@@ -104,14 +104,6 @@ function AuthPage() {
       navigate({ to: "/admin" });
       return;
     }
-    // If phone not yet verified, send to OTP page — UNLESS the user
-    // explicitly came back from the OTP page via the "Torna alla
-    // registrazione" link (URL carries ?role=...). In that case, let
-    // them edit their account here.
-    if (profile && profile.phone_verified === false && !roleParam) {
-      navigate({ to: "/verify-phone" });
-      return;
-    }
     // Profile incomplete → onboarding (one onboarding route covers both roles)
     if (profile && profile.profile_completed === false) {
       navigate({ to: "/onboarding" });
