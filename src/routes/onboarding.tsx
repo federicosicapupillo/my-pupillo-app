@@ -1334,11 +1334,19 @@ function Onboarding() {
               required
               code={form.phone_code}
               number={form.phone_number}
-              onCodeChange={(c) => { setForm({ ...form, phone_code: c }); setOtpSent(false); }}
-              onNumberChange={(n) => { setForm({ ...form, phone_number: n }); setOtpSent(false); }}
-              disabled={!!profile?.phone_verified}
+              onCodeChange={(c) => {
+                setForm({ ...form, phone_code: c });
+                setOtpSent(false);
+                if (!profile?.phone_verified) setPhoneVerifiedOptimistic(false);
+              }}
+              onNumberChange={(n) => {
+                setForm({ ...form, phone_number: n });
+                setOtpSent(false);
+                if (!profile?.phone_verified) setPhoneVerifiedOptimistic(false);
+              }}
+              disabled={!!profile?.phone_verified || phoneVerifiedOptimistic}
             />
-            {profile?.phone_verified ? (
+            {profile?.phone_verified || phoneVerifiedOptimistic ? (
               <div className="mt-1.5 space-y-1">
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   ✓ Numero verificato correttamente
