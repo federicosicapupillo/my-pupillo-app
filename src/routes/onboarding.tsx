@@ -780,7 +780,12 @@ function Onboarding() {
         return;
       }
     }
+    submittingRef.current = true;
     setBusy(true);
+    console.info("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] inizio salvataggio");
+    const releaseGuard = () => {
+      submittingRef.current = false;
+    };
     let uploadedPath: string | null = idDocPath;
     let uploadedBackPath: string | null = idDocBackPath;
     let uploadedAvatarUrl: string | null = avatarUrl;
