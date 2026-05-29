@@ -667,6 +667,13 @@ function Onboarding() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    // Double-click guard: ignore the second click while the first request is in flight.
+    if (submittingRef.current || busy) {
+      console.info("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] duplicate click ignored");
+      return;
+    }
+    const t0 = performance.now();
+    console.info("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] click salva profilo", { role });
     if (!form.terms_accepted) {
       toast.error("Devi accettare le condizioni d'uso");
       return;
