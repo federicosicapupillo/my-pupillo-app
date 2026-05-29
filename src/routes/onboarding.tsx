@@ -1421,6 +1421,13 @@ function Onboarding() {
                             toast.success("Numero verificato correttamente.");
                             setOtpCode("");
                             setOtpSent(false);
+                            // Aggiorna lo step UI immediatamente — il refresh
+                            // del contesto auth viene fatto in background.
+                            setPhoneVerifiedOptimistic(true);
+                            console.info(
+                              "[PUPILLO_PHONE_ONBOARDING_DEBUG] phone_verified=true (optimistic) applied to onboarding step",
+                              { user_id: user?.id },
+                            );
                             await refresh();
                           } finally {
                             setOtpBusy(false);
