@@ -434,11 +434,11 @@ function WorkersPage() {
         .limit(1000);
       if (error) throw error;
       const list = (data as W[]) ?? [];
-      if (import.meta.env.DEV) {
-        console.log("[PUPILLO_WORKER_SEARCH_DEBUG] loaded worker profiles", {
-          count: list.length,
-        });
-      }
+      console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] loaded worker profiles", {
+        worker_ids_from_rpc: allowedIds.length,
+        worker_profiles_after_filters: list.length,
+        excluded_count: allowedIds.length - list.length,
+      });
       setWorkers(list);
       // Carica le disponibilità reali dalla tabella worker_availability per i
       // lavoratori visibili. Il campo `profiles.weekly_availability` è legacy
