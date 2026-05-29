@@ -40,6 +40,29 @@ const OPERATIONAL_PATHS = [
   "/settings",
 ];
 
+/**
+ * Le quattro aree operative dichiarate come "MUST be gated":
+ *   - candidature   → flusso applications (lista + dettagli)
+ *   - chat          → /messages (lista) e /messages/$id (thread)
+ *   - assegnazione turni → /shifts e /ristoratore/turni/:shiftId
+ *   - pubblicazione annunci → /announcements/new, /ristoratore/annunci/nuovo
+ *
+ * Ogni path qui sotto corrisponde a un `createFileRoute(...)` esistente in
+ * `src/routes/`. Se in futuro qualcuno aggiungesse una nuova rotta
+ * operativa, basterà includerla qui per garantire che continui ad essere
+ * intercettata dal gate UNICO (`evaluatePhoneGate`).
+ */
+const NAMED_OPERATIONAL_AREAS: ReadonlyArray<{ area: string; path: string }> = [
+  { area: "candidature (lista)", path: "/ristoratore/candidature" },
+  { area: "candidature (worker)", path: "/lavoratore/candidature" },
+  { area: "chat (inbox)", path: "/messages" },
+  { area: "chat (thread)", path: "/messages/abc-123" },
+  { area: "assegnazione turni (lista)", path: "/shifts" },
+  { area: "assegnazione turni (dettaglio)", path: "/ristoratore/turni/shift-42" },
+  { area: "pubblicazione annunci (worker route)", path: "/announcements/new" },
+  { area: "pubblicazione annunci (ristoratore route)", path: "/ristoratore/annunci/nuovo" },
+];
+
 describe("WhatsApp OTP gate — operational functions blocked until phone_verified=true", () => {
   describe("ristoratore", () => {
     for (const path of OPERATIONAL_PATHS) {
