@@ -178,10 +178,6 @@ function AuthPage() {
       toast.error("Le password non coincidono.");
       return;
     }
-    if (!phoneOk) {
-      toast.error("Inserisci un numero WhatsApp valido (prefisso + cifre).");
-      return;
-    }
     const fullName = `${firstNameTrim} ${lastNameTrim}`;
     setBusy(true);
     justSignedUpRef.current = true;
