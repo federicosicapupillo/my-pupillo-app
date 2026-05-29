@@ -1896,7 +1896,7 @@ function Onboarding() {
               <RestaurantRequirementsEditor value={requirements} onChange={setRequirements} />
             </div>
           </>
-        ) : (
+        ) : role === "worker" ? (
           <>
             <div id="sec-avatar" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <Label className="font-semibold">Foto profilo *</Label>
@@ -2522,7 +2522,7 @@ function Onboarding() {
             </div>
             {/* Upload UI moved inside the "Documento di identità" section above. */}
           </>
-        )}
+        ) : null}
         <label className="flex items-start gap-2 text-sm">
           <Checkbox checked={form.terms_accepted} onCheckedChange={(v) => setForm({ ...form, terms_accepted: !!v })} />
           <span>
