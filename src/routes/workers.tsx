@@ -2120,20 +2120,34 @@ function WorkersMapSection({
   inviteLabel: string;
   rel: Record<string, WorkerRel>;
 }) {
-  // Resolve a position for each worker:
-  // 1) service_area_lat/lng (precise approx area set by the worker)
-  // 2) city → static lookup (with deterministic jitter so markers don't stack)
-  // Workers without either are skipped (but don't block the others).
-  const located = workers
+  // Sulla mappa mostriamo SOLO lavoratori con coordinate reali impostate
+  // dal worker stesso (service_area_lat/lng). Niente fallback "lookup città
+  // + jitter": creerebbe marker fittizi per profili senza posizione reale e
+  // i ristoratori vedrebbero punti sulla mappa che in realtà non esistono.
+  // Deduplicazione difensiva per `id` prima di renderizzare i marker.
+  const seen = new Set<string>();
+  const deduped: W[] = [];
+  for (const w of workers) {
+    if (!w?.id || seen.has(w.id)) continue;
+    seen.add(w.id);
+    deduped.push(w);
+  }
+  const located = deduped
     .map((w) => {
       if (w.service_area_lat != null && w.service_area_lng != null) {
         return { w, pos: [w.service_area_lat, w.service_area_lng] as [number, number] };
       }
-      const base = lookupCityCoords(w.city);
-      if (base) return { w, pos: jitterCoords(base, w.id, 1.5) };
       return null;
     })
     .filter((x): x is { w: W; pos: [number, number] } => x != null);
+  console.log("[PUPILLO_WORKER_MAP_SOURCE_DEBUG]", {
+    selected_view: "mappa",
+    source: "Supabase (state `workers`)",
+    workers_received: workers.length,
+    workers_after_dedup: deduped.length,
+    workers_with_valid_coords: located.length,
+    workers_rendered_on_map: located.length,
+  });
   const ids = located.map(({ w }) => w.id);
   const avatars = useAvatarUrls(ids);
   const points: WorkerMapPoint[] = located.map(({ w, pos }) => ({
