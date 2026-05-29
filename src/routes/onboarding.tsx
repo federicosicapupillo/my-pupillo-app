@@ -40,6 +40,7 @@ import {
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
+import { startPhoneVerification, verifyPhoneOtp, resendPhoneOtp } from "@/lib/phone-verification.functions";
 import {
   validateDocumentDates,
   validateRequiredDates,
@@ -158,10 +159,6 @@ function Onboarding() {
 
   useEffect(() => {
     if (!profile) return;
-    if (profile.phone_verified === false) {
-      nav({ to: "/verify-phone" });
-      return;
-    }
     if (profile.profile_completed) {
       nav({ to: "/dashboard" });
     }
