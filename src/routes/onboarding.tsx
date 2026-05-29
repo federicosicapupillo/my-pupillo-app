@@ -165,6 +165,10 @@ function Onboarding() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpCooldown, setOtpCooldown] = useState(0);
+  // Optimistic local override: set immediately after a successful OTP verify
+  // so the "Numero WhatsApp verificato" step flips to "done" and CTAs unlock
+  // without waiting for the async refresh() of the auth context.
+  const [phoneVerifiedOptimistic, setPhoneVerifiedOptimistic] = useState(false);
 
   useEffect(() => {
     if (otpCooldown <= 0) return;
@@ -396,12 +400,15 @@ function Onboarding() {
     // Strict: step is "done" ONLY when the phone is stored on the profile
     // AND phone_verified=true. Either field missing → step remains "todo"
     // so the user must actually complete the OTP flow in this page.
-    const phoneDone = !!(profile?.phone && profile.phone_verified === true);
+    const phoneVerifiedEffective = profile?.phone_verified === true || phoneVerifiedOptimistic;
+    const phoneStored = !!profile?.phone || isValidPhone(form.phone_code, form.phone_number);
+    const phoneDone = phoneStored && phoneVerifiedEffective;
     if (typeof window !== "undefined") {
       console.info("[PUPILLO_ONBOARDING_ONLY_PHONE_OTP_DEBUG] phone step status", {
         user_id: user?.id,
         has_phone: !!profile?.phone,
         phone_verified: profile?.phone_verified ?? null,
+        phone_verified_optimistic: phoneVerifiedOptimistic,
         phoneDone,
       });
     }
@@ -683,7 +690,7 @@ function Onboarding() {
       scrollToField("phone");
       return;
     }
-    if (role !== "admin" && !profile?.phone_verified) {
+    if (role !== "admin" && !(profile?.phone_verified || phoneVerifiedOptimistic)) {
       toast.error("Verifica il numero di cellulare prima di completare il profilo.");
       scrollToField("phone");
       return;
@@ -1327,11 +1334,19 @@ function Onboarding() {
               required
               code={form.phone_code}
               number={form.phone_number}
-              onCodeChange={(c) => { setForm({ ...form, phone_code: c }); setOtpSent(false); }}
-              onNumberChange={(n) => { setForm({ ...form, phone_number: n }); setOtpSent(false); }}
-              disabled={!!profile?.phone_verified}
+              onCodeChange={(c) => {
+                setForm({ ...form, phone_code: c });
+                setOtpSent(false);
+                if (!profile?.phone_verified) setPhoneVerifiedOptimistic(false);
+              }}
+              onNumberChange={(n) => {
+                setForm({ ...form, phone_number: n });
+                setOtpSent(false);
+                if (!profile?.phone_verified) setPhoneVerifiedOptimistic(false);
+              }}
+              disabled={!!profile?.phone_verified || phoneVerifiedOptimistic}
             />
-            {profile?.phone_verified ? (
+            {profile?.phone_verified || phoneVerifiedOptimistic ? (
               <div className="mt-1.5 space-y-1">
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   ✓ Numero verificato correttamente
@@ -1414,6 +1429,13 @@ function Onboarding() {
                             toast.success("Numero verificato correttamente.");
                             setOtpCode("");
                             setOtpSent(false);
+                            // Aggiorna lo step UI immediatamente — il refresh
+                            // del contesto auth viene fatto in background.
+                            setPhoneVerifiedOptimistic(true);
+                            console.info(
+                              "[PUPILLO_PHONE_ONBOARDING_DEBUG] phone_verified=true (optimistic) applied to onboarding step",
+                              { user_id: user?.id },
+                            );
                             await refresh();
                           } finally {
                             setOtpBusy(false);
