@@ -433,9 +433,40 @@ function WorkersPage() {
         .order("last_active_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      const list = (data as W[]) ?? [];
+      const rawList = (data as W[]) ?? [];
+      // Deduplicazione difensiva per `id` (profile_id == user_id su `profiles`).
+      // Anche se la SELECT su `profiles` non dovrebbe mai produrre duplicati,
+      // proteggiamo il render da qualsiasi anomalia futura.
+      const seen = new Map<string, W>();
+      const dupLog: Array<{ id: string; name: string | null; count: number }> = [];
+      const counter = new Map<string, number>();
+      for (const w of rawList) {
+        if (!w?.id) continue;
+        counter.set(w.id, (counter.get(w.id) ?? 0) + 1);
+        if (!seen.has(w.id)) seen.set(w.id, w);
+      }
+      for (const [id, count] of counter) {
+        if (count > 1) {
+          const w = seen.get(id);
+          dupLog.push({ id, name: w?.full_name ?? null, count });
+          console.warn("[PUPILLO_WORKER_DUPLICATE_DEBUG]", {
+            worker_id: id,
+            profile_id: id,
+            user_id: id,
+            name: w?.full_name ?? null,
+            origine: "profiles.in(allowedIds) — query principale",
+            occorrenze_prima_della_deduplicazione: count,
+          });
+        }
+      }
+      const list = Array.from(seen.values());
       console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] loaded worker profiles", {
+        restaurant_user_id: user?.id ?? null,
+        source: "Supabase (profiles via list_worker_user_ids RPC)",
         worker_ids_from_rpc: allowedIds.length,
+        rows_received: rawList.length,
+        workers_after_dedup: list.length,
+        duplicates_removed: rawList.length - list.length,
         worker_profiles_after_filters: list.length,
         excluded_count: allowedIds.length - list.length,
       });
