@@ -2537,6 +2537,12 @@ export type Database = {
         Returns: boolean
       }
       is_confirmed_delay: { Args: { _status: string }; Returns: boolean }
+      list_worker_user_ids: {
+        Args: never
+        Returns: {
+          user_id: string
+        }[]
+      }
       log_profile_date_validation_failure: {
         Args: { _payload: Json; _reason: string }
         Returns: string
