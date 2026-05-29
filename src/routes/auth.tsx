@@ -215,9 +215,8 @@ function AuthPage() {
       setTab("login");
       return;
     }
-    // Fire WhatsApp OTP + summary email
-    const phoneFull = buildPhoneFull(phoneCode, phoneNumber);
-    let otpReady = false;
+    // Phone verification is now handled later, inside the onboarding flow.
+    // Just persist the name fields on the profile so onboarding starts pre-filled.
     try {
       const currentUser = (await supabase.auth.getUser()).data.user;
       if (!currentUser) throw new Error("Sessione non disponibile dopo la registrazione.");
@@ -227,21 +226,14 @@ function AuthPage() {
           first_name: firstNameTrim,
           last_name: lastNameTrim,
           full_name: fullName,
-          phone_country_code: phoneCode,
-          phone_number: phoneNumber,
-          phone_full: phoneFull,
-          phone: phoneFull,
         })
         .eq("id", currentUser.id);
-      const otpResult = await startVerification({ data: { phoneCountryCode: phoneCode, phoneNumber, sendSummary: true } });
-      if (otpResult.ok || otpResult.cooldownSeconds) {
-        savePendingRegistrationOtpState({ phoneCountryCode: phoneCode, phoneNumber, phoneFull });
-        otpReady = true;
-      } else {
-        toast.error(otpResult.error ?? "Non siamo riusciti a inviare il codice WhatsApp. Riprova.");
-      }
+      console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] signup ok, no phone collected", {
+        email: emailTrim,
+        role,
+      });
     } catch (err) {
-      console.error("OTP/email summary kickoff failed", err);
+      console.error("post-signup profile update failed", err);
     }
     await refresh();
     // Register referral if a code was passed via ?ref=
@@ -256,8 +248,8 @@ function AuthPage() {
       }
     }
     setBusy(false);
-    if (otpReady) toast.success("Codice WhatsApp inviato correttamente");
-    navigate({ to: "/verify-phone", search: { phase: "code" } as never, replace: true });
+    toast.success("Account creato. Completa il profilo per continuare.");
+    navigate({ to: "/onboarding", replace: true });
   };
 
   const handleLogin = async (e: React.FormEvent) => {
