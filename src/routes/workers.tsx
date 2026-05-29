@@ -1152,6 +1152,23 @@ function WorkersPage() {
   const cost = CREDIT_COSTS.assignWorker;
   const canAfford = isPaid || credits >= cost;
 
+  if (loaded) {
+    const validCoords = sorted.filter(
+      (w) => w.service_area_lat != null && w.service_area_lng != null,
+    ).length;
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_WORKER_MAP_SOURCE_DEBUG]", {
+      restaurant_user_id: user?.id ?? null,
+      selected_view: view,
+      source: "Supabase (state `workers` → derive `sorted`)",
+      workers_from_supabase: workers.length,
+      workers_after_dedup: workers.length,
+      workers_after_filters: sorted.length,
+      workers_with_valid_coords: validCoords,
+      workers_rendered_in_list: view === "list" ? sorted.length : 0,
+      workers_rendered_on_map: view === "map" ? validCoords : 0,
+    });
+  }
   if (import.meta.env.DEV && loaded) {
     const compatCount = selectedAnn
       ? distFiltered.filter((w) => {
