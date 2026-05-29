@@ -828,7 +828,7 @@ function Onboarding() {
         (!idDocFile && !idDocPath) ||
         (!idDocBackFile && !idDocBackPath)
       ) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         // Surface the issued-specific message before the generic copy so
         // the user knows exactly which date is missing.
         if (personal.birth_date && !birthOk) {
@@ -871,7 +871,7 @@ function Onboarding() {
       // `enforce_worker_personal_data` for backend safety.
       const docNumber = personal.id_document_number.trim().toUpperCase();
       if (!/^[A-Z0-9]{5,20}$/.test(docNumber)) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error(
           "Numero documento non valido. Inserisci solo lettere e numeri.",
         );
@@ -884,7 +884,7 @@ function Onboarding() {
           docNumber,
         )
       ) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error(
           "Numero documento non coerente con il tipo di documento selezionato.",
         );
@@ -909,7 +909,7 @@ function Onboarding() {
         today,
       );
       if (dateGuard.blocked) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         setDateFieldErrors(perField);
         toast.error(dateGuard.message);
         return;
@@ -932,12 +932,12 @@ function Onboarding() {
           },
         });
         if (!serverCheck.ok) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(serverCheck.error);
           return;
         }
       } catch (e) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error(
           e instanceof Error && e.message
             ? e.message
@@ -946,17 +946,17 @@ function Onboarding() {
         return;
       }
       if (!idDocFile && !idDocPath) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Carica il fronte del documento.");
         return;
       }
       if (!idDocBackFile && !idDocBackPath) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Carica il retro del documento.");
         return;
       }
       if (!avatarFile && !avatarUrl) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Carica una foto profilo per completare il profilo.");
         return;
       }
@@ -967,7 +967,7 @@ function Onboarding() {
         try {
           docRes = await uploadIdDocumentFn({ data: fd });
         } catch (e) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(
             e instanceof Error && e.message
               ? e.message
@@ -976,7 +976,7 @@ function Onboarding() {
           return;
         }
         if (!docRes.ok) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(docRes.error);
           return;
         }
@@ -992,7 +992,7 @@ function Onboarding() {
         try {
           docRes = await uploadIdDocumentFn({ data: fd });
         } catch (e) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(
             e instanceof Error && e.message
               ? e.message
@@ -1001,7 +1001,7 @@ function Onboarding() {
           return;
         }
         if (!docRes.ok) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(docRes.error);
           return;
         }
@@ -1027,7 +1027,7 @@ function Onboarding() {
             ),
           ]) as Awaited<ReturnType<typeof uploadAvatarFn>>;
         } catch (e) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           const msg = e instanceof Error ? e.message : "";
           if (msg === "__timeout__") {
             toast.error("Caricamento foto profilo scaduto. Controlla la connessione e riprova.");
@@ -1039,7 +1039,7 @@ function Onboarding() {
           return;
         }
         if (!res.ok) {
-          setBusy(false);
+          setBusy(false); submittingRef.current = false;
           toast.error(res.error);
           return;
         }
@@ -1058,17 +1058,17 @@ function Onboarding() {
     const normalizedSelectedZones = allZonesSelected ? [] : selectedZones;
     if (role === "worker") {
       if (!form.service_area_city.trim()) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Indica la città di partenza per la tua area di interesse.");
         return;
       }
       if (areaMode === "zones" && selectedZones.length === 0) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
         return;
       }
       if (!ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m))) {
-        setBusy(false);
+        setBusy(false); submittingRef.current = false;
         toast.error("Seleziona un raggio d'azione valido.");
         return;
       }
@@ -1211,7 +1211,7 @@ function Onboarding() {
           };
     const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
     if (error) {
-      setBusy(false);
+      setBusy(false); submittingRef.current = false;
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("profiles_vat_number_unique") || msg.includes("duplicate key")) {
         toast.error(
@@ -1222,7 +1222,7 @@ function Onboarding() {
       }
       return;
     }
-    setBusy(false);
+    setBusy(false); submittingRef.current = false;
     toast.success("Profilo completato!");
     await refresh();
     nav({ to: "/dashboard" });
