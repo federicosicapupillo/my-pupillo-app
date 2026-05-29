@@ -24,7 +24,6 @@ import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useProfileGate } from "@/components/ProfileGate";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
-import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/format";
 import { firstNameOf } from "@/lib/public-location";
