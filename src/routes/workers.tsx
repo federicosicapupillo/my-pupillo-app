@@ -983,12 +983,12 @@ function WorkersPage() {
   const q = qInput.trim();
   const hasActiveFilters = category !== "all" || !!subcategory || !!q || !!lang;
   const selectedAnn = anns.find((a) => a.id === selected);
-  // Default behaviour: when the restaurant has NOT opened the advanced
-  // search, the list is implicitly scoped to the role of the selected
-  // announcement. As soon as any advanced filter is active the user's
-  // explicit criteria win and the announcement role is ignored.
+  // L'annuncio selezionato NON deve mai escludere lavoratori dalla lista
+  // (regola Pupillo "Cerca lavoratori"): il ruolo dell'annuncio serve
+  // solo per ordinare e per mostrare il badge di compatibilità. I
+  // lavoratori non compatibili restano visibili, vengono soltanto messi
+  // dopo. La ricerca avanzata invece può filtrare in modo esplicito.
   const announcementRole = selectedAnn?.professional_profile ?? null;
-  const applyAnnouncementRoleFilter = !hasActiveFilters && !!announcementRole;
   // Ruolo "attivo" usato per (a) filtrare i risultati standard e (b) decidere
   // quale etichetta di ruolo mostrare sotto il nome di ogni lavoratore.
   // Priorità: ricerca avanzata per ruolo > ruolo dell'annuncio selezionato.
@@ -998,7 +998,6 @@ function WorkersPage() {
       : null;
   const activeRoleContext: string | null = advancedRole ?? announcementRole ?? null;
   const filtered = workers.filter((worker) => {
-    if (applyAnnouncementRoleFilter && !workerMatchesRole(worker, announcementRole)) return false;
     // Anche in modalità ricerca avanzata, se l'utente ha scelto un ruolo
     // specifico nel filtro avanzato, scartiamo i lavoratori che non lo
     // hanno davvero tra primary/secondary roles. `matchesSubcategory` qui
@@ -1092,6 +1091,14 @@ function WorkersPage() {
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
       if (subcategory === "Più affidabili") return (b.reliability_pct ?? 0) - (a.reliability_pct ?? 0);
     }
+    // Quando c'è un annuncio selezionato, i lavoratori il cui ruolo
+    // combacia col ruolo richiesto dall'annuncio vanno SEMPRE prima di
+    // quelli che non combaciano. I non compatibili restano visibili.
+    if (selectedAnn && announcementRole) {
+      const ra = workerMatchesRole(a, announcementRole) ? 0 : 1;
+      const rb = workerMatchesRole(b, announcementRole) ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+    }
     // Penalizzazione affidabilità (3+ ritardi confermati): i lavoratori
     // penalizzati restano ricercabili ma scendono SEMPRE in fondo, dopo
     // aver verificato compatibilità minima (filtri già applicati sopra).
@@ -1119,6 +1126,26 @@ function WorkersPage() {
   const isPaid = profile?.plan === "pro" || profile?.plan === "business";
   const cost = CREDIT_COSTS.assignWorker;
   const canAfford = isPaid || credits >= cost;
+
+  if (import.meta.env.DEV && loaded) {
+    const compatCount = selectedAnn
+      ? distFiltered.filter((w) => {
+          const c = compatByWorker[w.id];
+          return c === "disponibile" || c === "compatibile";
+        }).length
+      : 0;
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_WORKER_SEARCH_DEBUG]", {
+      restaurant_id: user?.id ?? null,
+      active_announcements: anns.length,
+      selected_announcement: selected || null,
+      workers_total: workers.length,
+      workers_after_filters: sorted.length,
+      compatible_with_selected: compatCount,
+      not_compatible_with_selected: selectedAnn ? distFiltered.length - compatCount : 0,
+      filters: { category, subcategory, q, lang },
+    });
+  }
 
   return (
     <AppShell>
@@ -1148,7 +1175,9 @@ function WorkersPage() {
             onChange={(e) => { setSelected(e.target.value); setLastAnnouncementId(user?.id, e.target.value); }}
             className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="" disabled={anns.length > 0}>Nessun annuncio attivo</option>
+            <option value="">
+              {anns.length > 0 ? "Tutti i lavoratori (nessun filtro annuncio)" : "Nessun annuncio attivo"}
+            </option>
             {anns.map((a) => (
               <option key={a.id} value={a.id}>
                 {formatAnnouncementLabel(a)}
@@ -1252,7 +1281,7 @@ function WorkersPage() {
           </span>
         ) : announcementRole ? (
           <span className="text-xs text-muted-foreground">
-            Filtro automatico: <strong className="text-foreground capitalize">{announcementRole}</strong> (dall'annuncio)
+            Ordinati per compatibilità con: <strong className="text-foreground capitalize">{announcementRole}</strong>
           </span>
         ) : null}
         <div className="inline-flex rounded-lg border p-0.5">
@@ -1332,8 +1361,8 @@ function WorkersPage() {
                     compat === "disponibile" ? { text: "Disponibile per questo turno", cls: "bg-emerald-500/20 text-emerald-700" }
                     : compat === "compatibile" ? { text: "Compatibile con il turno", cls: "bg-emerald-500/15 text-emerald-700" }
                     : compat === "parziale" ? { text: "Disponibilità parziale", cls: "bg-amber-500/15 text-amber-700" }
-                    : compat === null && selectedAnn && !hasLegacyAvailability
-                      ? { text: "Disponibilità non indicata", cls: "bg-muted text-foreground/70" }
+                    : selectedAnn
+                      ? { text: "Disponibilità non confermata per questo annuncio", cls: "bg-muted text-foreground/70" }
                     : null;
                   if (g.key === "contacted") {
                     return (
