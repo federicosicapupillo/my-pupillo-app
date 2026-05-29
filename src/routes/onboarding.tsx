@@ -196,6 +196,28 @@ function Onboarding() {
     }
   }, [profile, nav]);
 
+  // Temporary debug log: helps diagnose any case where worker-only sections
+  // (availability, weekly days, service area, roles) would otherwise render
+  // inside the restaurant onboarding flow because `role` is null/undefined
+  // during loading. Logs user id, detected role, which branch is rendered
+  // and the current step so we can confirm role-based gating at runtime.
+  useEffect(() => {
+    const renderedBranch =
+      role === "restaurant"
+        ? "restaurant"
+        : role === "worker"
+          ? "worker"
+          : "none (role not ready)";
+    // eslint-disable-next-line no-console
+    console.info("[PUPILLO_ONBOARDING_ROLE_RENDER_DEBUG]", {
+      userId: user?.id ?? null,
+      detectedRole: role ?? null,
+      renderedBranch,
+      worker_only_sections_visible: role === "worker",
+      profileCompleted: profile?.profile_completed ?? null,
+    });
+  }, [user?.id, role, profile?.profile_completed]);
+
   // Sentinel value stored in service_area_district when the worker chooses
   // GeoRadar mode (radius around position) instead of specific zones.
   const GEORADAR_SENTINEL = "__georadar__";
