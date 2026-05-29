@@ -55,6 +55,7 @@ import { evaluateOnboardingDateGuard } from "@/lib/onboarding-date-guard";
 import { splitPhone, buildPhoneFull, isValidPhone, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 import { OnboardingStatusCard, type OnboardingStep } from "@/components/OnboardingStatusCard";
 import { DateField } from "@/components/DateField";
 import { BirthDateSelect } from "@/components/BirthDateSelect";
