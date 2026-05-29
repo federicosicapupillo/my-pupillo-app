@@ -390,7 +390,18 @@ function Onboarding() {
 
   const steps: OnboardingStep[] = (() => {
     const accountDone = !!user;
-    const phoneDone = !!profile?.phone_verified;
+    // Strict: step is "done" ONLY when the phone is stored on the profile
+    // AND phone_verified=true. Either field missing → step remains "todo"
+    // so the user must actually complete the OTP flow in this page.
+    const phoneDone = !!(profile?.phone && profile.phone_verified === true);
+    if (typeof window !== "undefined") {
+      console.info("[PUPILLO_ONBOARDING_ONLY_PHONE_OTP_DEBUG] phone step status", {
+        user_id: user?.id,
+        has_phone: !!profile?.phone,
+        phone_verified: profile?.phone_verified ?? null,
+        phoneDone,
+      });
+    }
     const allDone = !!profile?.profile_completed;
 
     if (role === "restaurant") {
@@ -408,7 +419,8 @@ function Onboarding() {
         !!form.contact_person_email.trim() &&
         isValidEmail(form.contact_person_email);
       const finalDone = allDone;
-      const finalLocked = !(businessDone && vatDone && contactDone);
+      // The final CTA must stay locked until the WhatsApp OTP step is done.
+      const finalLocked = !(phoneDone && businessDone && vatDone && contactDone);
       return [
         { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
         {
@@ -459,7 +471,8 @@ function Onboarding() {
       !!form.service_area_city.trim() &&
       ALLOWED_RADIUS_M.has(parseInt(form.service_area_radius_m)) &&
       (areaMode === "georadar" || selectedZones.length > 0);
-    const finalLocked = !(personalDone && languagesDone);
+    // Worker "pronto a candidarti" CTA also requires verified WhatsApp.
+    const finalLocked = !(phoneDone && personalDone && languagesDone);
     return [
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
       {
