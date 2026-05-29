@@ -1381,11 +1381,18 @@ function Onboarding() {
                   <Button
                     type="button"
                     onClick={async () => {
+                      // Hard double-click guard: ignore any click that arrives
+                      // while a previous OTP request is still in flight, even
+                      // if React hasn't flipped `otpBusy` yet.
+                      if (otpInFlightRef.current) return;
                       if (!isValidPhone(form.phone_code, form.phone_number)) {
                         toast.error("Inserisci un numero di cellulare valido.");
                         return;
                       }
+                      otpInFlightRef.current = true;
+                      setOtpAction("send");
                       setOtpBusy(true);
+                      setOtpError(null);
                       try {
                         const res = await startPhoneFn({
                           data: {
@@ -1396,7 +1403,9 @@ function Onboarding() {
                         });
                         console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] OTP send", { user_id: user?.id, res });
                         if (!res.ok) {
-                          toast.error(res.error ?? "Invio codice fallito. Riprova.");
+                          const msg = res.error ?? "Invio codice fallito. Riprova.";
+                          toast.error(msg);
+                          setOtpError({ kind: res.cooldownSeconds ? "rate_limited" : "generic", message: msg });
                           if (res.cooldownSeconds) setOtpCooldown(res.cooldownSeconds);
                           return;
                         }
@@ -1405,11 +1414,21 @@ function Onboarding() {
                         toast.success(res.simulated ? "Codice di test inviato (modalità preview)." : "Codice inviato via WhatsApp.");
                       } finally {
                         setOtpBusy(false);
+                        setOtpAction(null);
+                        otpInFlightRef.current = false;
                       }
                     }}
                     disabled={otpBusy || !isValidPhone(form.phone_code, form.phone_number)}
+                    aria-busy={otpAction === "send"}
                   >
-                    {otpBusy ? "Invio in corso…" : "Invia codice di verifica"}
+                    {otpAction === "send" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                        Invio in corso…
+                      </>
+                    ) : (
+                      "Invia codice di verifica"
+                    )}
                   </Button>
                 ) : (
                   <>
@@ -1419,24 +1438,63 @@ function Onboarding() {
                       pattern="[0-9]*"
                       maxLength={6}
                       value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      onChange={(e) => {
+                        setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                        if (otpError) setOtpError(null);
+                      }}
                       placeholder="000000"
-                      className="text-center text-xl tracking-[0.4em] max-w-[200px]"
+                      className={`text-center text-xl tracking-[0.4em] max-w-[200px] ${
+                        otpError ? "border-destructive focus-visible:ring-destructive" : ""
+                      }`}
+                      aria-invalid={!!otpError}
+                      aria-describedby={otpError ? "otp-error" : undefined}
+                      disabled={otpBusy}
                     />
+                    {otpError ? (
+                      <p
+                        id="otp-error"
+                        role="alert"
+                        className="text-sm font-medium text-destructive"
+                      >
+                        {otpError.kind === "expired"
+                          ? "Codice scaduto. Richiedi un nuovo codice e riprova."
+                          : otpError.kind === "invalid"
+                            ? "Codice non valido. Controlla le 6 cifre ricevute su WhatsApp."
+                            : otpError.message}
+                      </p>
+                    ) : null}
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
                         onClick={async () => {
+                          if (otpInFlightRef.current) return;
                           if (!/^\d{6}$/.test(otpCode)) {
-                            toast.error("Inserisci un codice di 6 cifre.");
+                            const msg = "Inserisci un codice di 6 cifre.";
+                            toast.error(msg);
+                            setOtpError({ kind: "invalid", message: msg });
                             return;
                           }
+                          otpInFlightRef.current = true;
+                          setOtpAction("verify");
                           setOtpBusy(true);
+                          setOtpError(null);
                           try {
                             const res = await verifyPhoneFn({ data: { code: otpCode } });
                             console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] OTP verify", { user_id: user?.id, res });
                             if (!res.ok) {
-                              toast.error(res.error ?? "Codice non valido.");
+                              const raw = (res.error ?? "Codice non valido.").toString();
+                              const lower = raw.toLowerCase();
+                              const kind: "expired" | "invalid" | "generic" =
+                                lower.includes("scadut") || lower.includes("expire")
+                                  ? "expired"
+                                  : lower.includes("non valido") ||
+                                      lower.includes("invalid") ||
+                                      lower.includes("errat") ||
+                                      lower.includes("wrong")
+                                    ? "invalid"
+                                    : "generic";
+                              toast.error(raw);
+                              setOtpError({ kind, message: raw });
                               return;
                             }
                             toast.success("Numero verificato correttamente.");
@@ -1452,40 +1510,76 @@ function Onboarding() {
                             await refresh();
                           } finally {
                             setOtpBusy(false);
+                            setOtpAction(null);
+                            otpInFlightRef.current = false;
                           }
                         }}
                         disabled={otpBusy || otpCode.length !== 6}
+                        aria-busy={otpAction === "verify"}
                       >
-                        {otpBusy ? "Verifica…" : "Verifica codice"}
+                        {otpAction === "verify" ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                            Verifica in corso…
+                          </>
+                        ) : (
+                          "Verifica codice"
+                        )}
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
                         onClick={async () => {
+                          if (otpInFlightRef.current) return;
                           if (otpCooldown > 0) return;
+                          otpInFlightRef.current = true;
+                          setOtpAction("resend");
                           setOtpBusy(true);
+                          setOtpError(null);
                           try {
                             const res = await resendPhoneFn({ data: undefined as any });
                             console.info("[PUPILLO_PHONE_ONBOARDING_DEBUG] OTP resend", { user_id: user?.id, res });
                             if (!res.ok) {
-                              toast.error(res.error ?? "Reinvio fallito.");
+                              const msg = res.error ?? "Reinvio fallito.";
+                              toast.error(msg);
+                              setOtpError({
+                                kind: res.cooldownSeconds ? "rate_limited" : "generic",
+                                message: msg,
+                              });
                               if (res.cooldownSeconds) setOtpCooldown(res.cooldownSeconds);
                               return;
                             }
+                            setOtpCode("");
                             setOtpCooldown(60);
                             toast.success("Codice reinviato.");
                           } finally {
                             setOtpBusy(false);
+                            setOtpAction(null);
+                            otpInFlightRef.current = false;
                           }
                         }}
                         disabled={otpBusy || otpCooldown > 0}
+                        aria-busy={otpAction === "resend"}
                       >
-                        {otpCooldown > 0 ? `Reinvia (${otpCooldown}s)` : "Reinvia codice"}
+                        {otpAction === "resend" ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                            Reinvio…
+                          </>
+                        ) : otpCooldown > 0 ? (
+                          `Reinvia (${otpCooldown}s)`
+                        ) : (
+                          "Reinvia codice"
+                        )}
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
-                        onClick={() => { setOtpSent(false); setOtpCode(""); }}
+                        onClick={() => {
+                          setOtpSent(false);
+                          setOtpCode("");
+                          setOtpError(null);
+                        }}
                         disabled={otpBusy}
                       >
                         Cambia numero
