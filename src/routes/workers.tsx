@@ -24,7 +24,6 @@ import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useProfileGate } from "@/components/ProfileGate";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
-import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/format";
 import { firstNameOf } from "@/lib/public-location";
@@ -433,9 +432,40 @@ function WorkersPage() {
         .order("last_active_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      const list = (data as W[]) ?? [];
+      const rawList = (data as W[]) ?? [];
+      // Deduplicazione difensiva per `id` (profile_id == user_id su `profiles`).
+      // Anche se la SELECT su `profiles` non dovrebbe mai produrre duplicati,
+      // proteggiamo il render da qualsiasi anomalia futura.
+      const seen = new Map<string, W>();
+      const dupLog: Array<{ id: string; name: string | null; count: number }> = [];
+      const counter = new Map<string, number>();
+      for (const w of rawList) {
+        if (!w?.id) continue;
+        counter.set(w.id, (counter.get(w.id) ?? 0) + 1);
+        if (!seen.has(w.id)) seen.set(w.id, w);
+      }
+      for (const [id, count] of counter) {
+        if (count > 1) {
+          const w = seen.get(id);
+          dupLog.push({ id, name: w?.full_name ?? null, count });
+          console.warn("[PUPILLO_WORKER_DUPLICATE_DEBUG]", {
+            worker_id: id,
+            profile_id: id,
+            user_id: id,
+            name: w?.full_name ?? null,
+            origine: "profiles.in(allowedIds) — query principale",
+            occorrenze_prima_della_deduplicazione: count,
+          });
+        }
+      }
+      const list = Array.from(seen.values());
       console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] loaded worker profiles", {
+        restaurant_user_id: user?.id ?? null,
+        source: "Supabase (profiles via list_worker_user_ids RPC)",
         worker_ids_from_rpc: allowedIds.length,
+        rows_received: rawList.length,
+        workers_after_dedup: list.length,
+        duplicates_removed: rawList.length - list.length,
         worker_profiles_after_filters: list.length,
         excluded_count: allowedIds.length - list.length,
       });
@@ -1122,6 +1152,23 @@ function WorkersPage() {
   const cost = CREDIT_COSTS.assignWorker;
   const canAfford = isPaid || credits >= cost;
 
+  if (loaded) {
+    const validCoords = sorted.filter(
+      (w) => w.service_area_lat != null && w.service_area_lng != null,
+    ).length;
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_WORKER_MAP_SOURCE_DEBUG]", {
+      restaurant_user_id: user?.id ?? null,
+      selected_view: view,
+      source: "Supabase (state `workers` → derive `sorted`)",
+      workers_from_supabase: workers.length,
+      workers_after_dedup: workers.length,
+      workers_after_filters: sorted.length,
+      workers_with_valid_coords: validCoords,
+      workers_rendered_in_list: view === "list" ? sorted.length : 0,
+      workers_rendered_on_map: view === "map" ? validCoords : 0,
+    });
+  }
   if (import.meta.env.DEV && loaded) {
     const compatCount = selectedAnn
       ? distFiltered.filter((w) => {
@@ -2089,20 +2136,34 @@ function WorkersMapSection({
   inviteLabel: string;
   rel: Record<string, WorkerRel>;
 }) {
-  // Resolve a position for each worker:
-  // 1) service_area_lat/lng (precise approx area set by the worker)
-  // 2) city → static lookup (with deterministic jitter so markers don't stack)
-  // Workers without either are skipped (but don't block the others).
-  const located = workers
+  // Sulla mappa mostriamo SOLO lavoratori con coordinate reali impostate
+  // dal worker stesso (service_area_lat/lng). Niente fallback "lookup città
+  // + jitter": creerebbe marker fittizi per profili senza posizione reale e
+  // i ristoratori vedrebbero punti sulla mappa che in realtà non esistono.
+  // Deduplicazione difensiva per `id` prima di renderizzare i marker.
+  const seen = new Set<string>();
+  const deduped: W[] = [];
+  for (const w of workers) {
+    if (!w?.id || seen.has(w.id)) continue;
+    seen.add(w.id);
+    deduped.push(w);
+  }
+  const located = deduped
     .map((w) => {
       if (w.service_area_lat != null && w.service_area_lng != null) {
         return { w, pos: [w.service_area_lat, w.service_area_lng] as [number, number] };
       }
-      const base = lookupCityCoords(w.city);
-      if (base) return { w, pos: jitterCoords(base, w.id, 1.5) };
       return null;
     })
     .filter((x): x is { w: W; pos: [number, number] } => x != null);
+  console.log("[PUPILLO_WORKER_MAP_SOURCE_DEBUG]", {
+    selected_view: "mappa",
+    source: "Supabase (state `workers`)",
+    workers_received: workers.length,
+    workers_after_dedup: deduped.length,
+    workers_with_valid_coords: located.length,
+    workers_rendered_on_map: located.length,
+  });
   const ids = located.map(({ w }) => w.id);
   const avatars = useAvatarUrls(ids);
   const points: WorkerMapPoint[] = located.map(({ w, pos }) => ({
