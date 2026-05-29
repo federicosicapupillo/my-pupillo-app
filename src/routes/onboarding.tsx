@@ -165,6 +165,18 @@ function Onboarding() {
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpBusy, setOtpBusy] = useState(false);
+  // Granular spinner state: distinguishes which OTP action is in flight so
+  // the right button shows a spinner (send vs verify vs resend).
+  const [otpAction, setOtpAction] = useState<null | "send" | "verify" | "resend">(null);
+  // Inline error shown right below the OTP input. Cleared when the user
+  // edits the code, requests a new code, or changes the phone number.
+  // `kind` lets us style "expired" differently from a generic "invalid" error.
+  const [otpError, setOtpError] = useState<
+    null | { kind: "invalid" | "expired" | "rate_limited" | "generic"; message: string }
+  >(null);
+  // Ref-based guard: blocks any further OTP request that fires before the
+  // React state has time to flip `otpBusy=true` (e.g. very rapid double-click).
+  const otpInFlightRef = useRef(false);
   const [otpCooldown, setOtpCooldown] = useState(0);
   // Optimistic local override: set immediately after a successful OTP verify
   // so the "Numero WhatsApp verificato" step flips to "done" and CTAs unlock
