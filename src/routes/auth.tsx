@@ -544,19 +544,6 @@ function AuthPage() {
                     </p>
                   </div>
                 )}
-                <div>
-                  <Label>Numero WhatsApp</Label>
-                  <PhoneInput
-                    code={phoneCode}
-                    number={phoneNumber}
-                    onCodeChange={setPhoneCode}
-                    onNumberChange={setPhoneNumber}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Riceverai un codice via WhatsApp per confermare il numero.
-                  </p>
-                </div>
                 <Button
                   type="submit"
                   className="w-full"
@@ -568,8 +555,7 @@ function AuthPage() {
                     !emailsMatch ||
                     !restaurantAgeOk ||
                     !passwordStrongEnough ||
-                    !passwordsMatch ||
-                    !phoneOk
+                    !passwordsMatch
                   }
                 >
                   {busy ? "Attendi..." : "Crea profilo"}
