@@ -397,28 +397,23 @@ function WorkersPage() {
   const loadWorkers = async () => {
     setLoading(true);
     try {
-      // Carica i ruoli reali: solo utenti con ruolo `worker` possono comparire
-      // nella ricerca lavoratori. Qualsiasi utente con ruolo `restaurant` o
-      // `admin` viene escluso anche se ha per qualsiasi motivo un profilo
-      // compilato come worker.
+      // Carica i ruoli reali tramite RPC SECURITY DEFINER: la policy RLS su
+      // `user_roles` consente solo a un utente di vedere il PROPRIO ruolo,
+      // quindi una SELECT diretta dal client del ristoratore restituirebbe
+      // sempre 0 worker. La funzione bypassa l'RLS lato server e restituisce
+      // solo gli user_id con ruolo `worker` (esclusi restaurant/admin).
       const { data: roleRows, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
+        .rpc("list_worker_user_ids");
       if (rolesError) throw rolesError;
       const workerIds = new Set<string>();
-      const excludedIds = new Set<string>();
-      for (const r of (roleRows as { user_id: string; role: string }[] | null) ?? []) {
-        if (r.role === "worker") workerIds.add(r.user_id);
-        if (r.role === "restaurant" || r.role === "admin") excludedIds.add(r.user_id);
+      for (const r of (roleRows as { user_id: string }[] | null) ?? []) {
+        if (r.user_id) workerIds.add(r.user_id);
       }
-      for (const id of excludedIds) workerIds.delete(id);
       const allowedIds = Array.from(workerIds);
-      if (import.meta.env.DEV) {
-        console.log("[PUPILLO_WORKER_SEARCH_DEBUG] roles", {
-          worker_ids: workerIds.size,
-          excluded_ids: excludedIds.size,
-        });
-      }
+      console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] roles", {
+        worker_ids: workerIds.size,
+        sample: allowedIds.slice(0, 5),
+      });
       if (allowedIds.length === 0) {
         setWorkers([]);
         setAvailByWorker({});
