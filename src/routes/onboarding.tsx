@@ -2393,7 +2393,7 @@ function Onboarding() {
               : undefined
           }
         >
-          {busy ? "Salvataggio..." : "Salva e continua"}
+          {busy ? "Salvataggio in corso..." : "Salva e continua"}
         </Button>
       </form>
     </AppShell>
