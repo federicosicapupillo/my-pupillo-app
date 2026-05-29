@@ -1127,6 +1127,26 @@ function WorkersPage() {
   const cost = CREDIT_COSTS.assignWorker;
   const canAfford = isPaid || credits >= cost;
 
+  if (import.meta.env.DEV && loaded) {
+    const compatCount = selectedAnn
+      ? distFiltered.filter((w) => {
+          const c = compatByWorker[w.id];
+          return c === "disponibile" || c === "compatibile";
+        }).length
+      : 0;
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_WORKER_SEARCH_DEBUG]", {
+      restaurant_id: user?.id ?? null,
+      active_announcements: anns.length,
+      selected_announcement: selected || null,
+      workers_total: workers.length,
+      workers_after_filters: sorted.length,
+      compatible_with_selected: compatCount,
+      not_compatible_with_selected: selectedAnn ? distFiltered.length - compatCount : 0,
+      filters: { category, subcategory, q, lang },
+    });
+  }
+
   return (
     <AppShell>
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
