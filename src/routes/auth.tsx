@@ -38,7 +38,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { user, role: userRole, profile, roleDebug, loading, extrasLoaded, refresh } = useAuth();
+  const { user, role: userRole, profile, roleDebug, loading, extrasLoaded } = useAuth();
   const { role: roleParam, ref: refParam, deleted: deletedParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
