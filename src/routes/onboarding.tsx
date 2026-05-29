@@ -220,6 +220,9 @@ function Onboarding() {
     terms_accepted: false,
   });
   const [busy, setBusy] = useState(false);
+  // Hard guard against duplicate submissions (covers the small window between
+  // the click and React flushing the `busy` state).
+  const submittingRef = React.useRef(false);
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
   const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
   const [vatChecking, setVatChecking] = useState(false);
