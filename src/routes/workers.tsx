@@ -1155,7 +1155,9 @@ function WorkersPage() {
             onChange={(e) => { setSelected(e.target.value); setLastAnnouncementId(user?.id, e.target.value); }}
             className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="" disabled={anns.length > 0}>Nessun annuncio attivo</option>
+            <option value="">
+              {anns.length > 0 ? "Tutti i lavoratori (nessun filtro annuncio)" : "Nessun annuncio attivo"}
+            </option>
             {anns.map((a) => (
               <option key={a.id} value={a.id}>
                 {formatAnnouncementLabel(a)}
