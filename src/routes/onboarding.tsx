@@ -400,7 +400,7 @@ function Onboarding() {
           id: "phone",
           label: "Numero WhatsApp verificato",
           status: phoneDone ? "done" : "todo",
-          href: phoneDone ? undefined : "/verify-phone",
+          href: phoneDone ? undefined : "#sec-phone",
         },
         {
           id: "business",
@@ -451,7 +451,7 @@ function Onboarding() {
         id: "phone",
         label: "Numero WhatsApp verificato",
         status: phoneDone ? "done" : "todo",
-        href: phoneDone ? undefined : "/verify-phone",
+        href: phoneDone ? undefined : "#sec-phone",
       },
       {
         id: "personal",
