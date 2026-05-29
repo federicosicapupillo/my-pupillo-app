@@ -1217,23 +1217,58 @@ function Onboarding() {
             id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
           };
-    const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
+    // Salva i campi del profilo. Aggiungiamo un timeout lato client per
+    // evitare loading infinito se la rete è instabile.
+    const tUpdate = performance.now();
+    const SAVE_TIMEOUT_MS = 20_000;
+    let updateResult: { error: { message: string } | null };
+    try {
+      updateResult = (await Promise.race([
+        supabase.from("profiles").update(update).eq("id", user.id),
+        new Promise((_, rej) =>
+          setTimeout(() => rej(new Error("__timeout__")), SAVE_TIMEOUT_MS),
+        ),
+      ])) as { error: { message: string } | null };
+    } catch (e) {
+      setBusy(false); submittingRef.current = false;
+      const msg = e instanceof Error ? e.message : "";
+      console.error("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] errore update", msg);
+      if (msg === "__timeout__") {
+        toast.error("Il salvataggio sta richiedendo più tempo del previsto. Controlla la connessione e riprova.");
+      } else {
+        toast.error("Non siamo riusciti a salvare il profilo. Riprova.");
+      }
+      return;
+    }
+    console.info(
+      "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] tempo update profiles (ms)",
+      Math.round(performance.now() - tUpdate),
+    );
+    const { error } = updateResult;
     if (error) {
       setBusy(false); submittingRef.current = false;
+      console.error("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] supabase error", error.message);
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("profiles_vat_number_unique") || msg.includes("duplicate key")) {
         toast.error(
           "Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.",
         );
       } else {
-        toast.error(error.message);
+        toast.error("Non siamo riusciti a salvare il profilo. Riprova.");
       }
       return;
     }
     setBusy(false); submittingRef.current = false;
-    toast.success("Profilo completato!");
-    await refresh();
+    toast.success("Profilo salvato correttamente");
+    console.info(
+      "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] tempo totale salvataggio (ms)",
+      Math.round(performance.now() - t0),
+    );
+    // Naviga subito al dashboard senza attendere il refresh del contesto
+    // auth: il refresh può essere lento e non è bloccante per l'UI. Il
+    // contesto viene comunque rinfrescato in background.
     nav({ to: "/dashboard" });
+    void refresh();
   };
 
   return (
