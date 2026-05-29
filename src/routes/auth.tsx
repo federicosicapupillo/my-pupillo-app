@@ -15,12 +15,7 @@ import { lovable } from "@/integrations/lovable";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { isPasswordStrongEnough, doPasswordsMatch, PASSWORD_RULES } from "@/lib/password-validation";
 import { Check, X } from "lucide-react";
-import { PhoneInput } from "@/components/PhoneInput";
-import { DEFAULT_PHONE_PREFIX, isValidPhone, buildPhoneFull } from "@/lib/phone-prefixes";
-import { startPhoneVerification } from "@/lib/phone-verification.functions";
-import { useServerFn } from "@tanstack/react-start";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { savePendingRegistrationOtpState } from "@/lib/registration-otp-state";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -48,15 +43,11 @@ function AuthPage() {
   const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
-  const [phoneCode, setPhoneCode] = useState(DEFAULT_PHONE_PREFIX);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const startVerification = useServerFn(startPhoneVerification);
   const justSignedUpRef = useRef(false);
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
   const passwordStrongEnough = isPasswordStrongEnough(password);
   const passwordsMatch = doPasswordsMatch(password, confirmPassword);
-  const phoneOk = isValidPhone(phoneCode, phoneNumber);
   const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ' \-]+$/;
   const firstNameTrim = firstName.trim();
   const lastNameTrim = lastName.trim();
