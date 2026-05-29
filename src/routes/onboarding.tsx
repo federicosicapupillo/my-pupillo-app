@@ -156,6 +156,21 @@ function Onboarding() {
   const uploadAvatarFn = useServerFn(uploadAvatar);
   const validateWorkerDatesFn = useServerFn(validateWorkerDocumentDates);
   const uploadIdDocumentFn = useServerFn(uploadWorkerIdDocument);
+  const startPhoneFn = useServerFn(startPhoneVerification);
+  const verifyPhoneFn = useServerFn(verifyPhoneOtp);
+  const resendPhoneFn = useServerFn(resendPhoneOtp);
+
+  // Inline phone-OTP state (verification now happens here in onboarding).
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const t = setInterval(() => setOtpCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [otpCooldown]);
 
   useEffect(() => {
     if (!profile) return;
