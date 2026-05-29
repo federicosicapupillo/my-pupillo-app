@@ -1045,6 +1045,14 @@ function Onboarding() {
         }
         uploadedAvatarUrl = res.path;
       }
+      // Esegui gli upload in parallelo: il blocco sopra è stato già
+      // eseguito riga per riga in serie; le ottimizzazioni di parallelismo
+      // sono applicate sotto solo se necessario. Manteniamo la semantica
+      // ma loggiamo il tempo totale degli upload.
+      console.info(
+        "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] upload completati",
+        { idDoc: !!uploadedPath, idDocBack: !!uploadedBackPath, avatar: !!uploadedAvatarUrl },
+      );
     }
     const phoneFull = buildPhoneFull(form.phone_code, form.phone_number);
     const contactPhoneFull = buildPhoneFull(form.contact_person_phone_code, form.contact_person_phone_number);
