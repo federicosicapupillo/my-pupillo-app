@@ -400,12 +400,15 @@ function Onboarding() {
     // Strict: step is "done" ONLY when the phone is stored on the profile
     // AND phone_verified=true. Either field missing → step remains "todo"
     // so the user must actually complete the OTP flow in this page.
-    const phoneDone = !!(profile?.phone && profile.phone_verified === true);
+    const phoneVerifiedEffective = profile?.phone_verified === true || phoneVerifiedOptimistic;
+    const phoneStored = !!profile?.phone || isValidPhone(form.phone_code, form.phone_number);
+    const phoneDone = phoneStored && phoneVerifiedEffective;
     if (typeof window !== "undefined") {
       console.info("[PUPILLO_ONBOARDING_ONLY_PHONE_OTP_DEBUG] phone step status", {
         user_id: user?.id,
         has_phone: !!profile?.phone,
         phone_verified: profile?.phone_verified ?? null,
+        phone_verified_optimistic: phoneVerifiedOptimistic,
         phoneDone,
       });
     }
