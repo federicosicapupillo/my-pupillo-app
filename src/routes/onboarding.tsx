@@ -1350,11 +1350,13 @@ function Onboarding() {
               onCodeChange={(c) => {
                 setForm({ ...form, phone_code: c });
                 setOtpSent(false);
+                setOtpError(null);
                 if (!profile?.phone_verified) setPhoneVerifiedOptimistic(false);
               }}
               onNumberChange={(n) => {
                 setForm({ ...form, phone_number: n });
                 setOtpSent(false);
+                setOtpError(null);
                 if (!profile?.phone_verified) setPhoneVerifiedOptimistic(false);
               }}
               disabled={!!profile?.phone_verified || phoneVerifiedOptimistic}
