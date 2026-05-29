@@ -165,6 +165,10 @@ function Onboarding() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpCooldown, setOtpCooldown] = useState(0);
+  // Optimistic local override: set immediately after a successful OTP verify
+  // so the "Numero WhatsApp verificato" step flips to "done" and CTAs unlock
+  // without waiting for the async refresh() of the auth context.
+  const [phoneVerifiedOptimistic, setPhoneVerifiedOptimistic] = useState(false);
 
   useEffect(() => {
     if (otpCooldown <= 0) return;
