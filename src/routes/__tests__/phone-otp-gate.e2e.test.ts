@@ -40,6 +40,29 @@ const OPERATIONAL_PATHS = [
   "/settings",
 ];
 
+/**
+ * Le quattro aree operative dichiarate come "MUST be gated":
+ *   - candidature   → flusso applications (lista + dettagli)
+ *   - chat          → /messages (lista) e /messages/$id (thread)
+ *   - assegnazione turni → /shifts e /ristoratore/turni/:shiftId
+ *   - pubblicazione annunci → /announcements/new, /ristoratore/annunci/nuovo
+ *
+ * Ogni path qui sotto corrisponde a un `createFileRoute(...)` esistente in
+ * `src/routes/`. Se in futuro qualcuno aggiungesse una nuova rotta
+ * operativa, basterà includerla qui per garantire che continui ad essere
+ * intercettata dal gate UNICO (`evaluatePhoneGate`).
+ */
+const NAMED_OPERATIONAL_AREAS: ReadonlyArray<{ area: string; path: string }> = [
+  { area: "candidature (lista)", path: "/ristoratore/candidature" },
+  { area: "candidature (worker)", path: "/lavoratore/candidature" },
+  { area: "chat (inbox)", path: "/messages" },
+  { area: "chat (thread)", path: "/messages/abc-123" },
+  { area: "assegnazione turni (lista)", path: "/shifts" },
+  { area: "assegnazione turni (dettaglio)", path: "/ristoratore/turni/shift-42" },
+  { area: "pubblicazione annunci (worker route)", path: "/announcements/new" },
+  { area: "pubblicazione annunci (ristoratore route)", path: "/ristoratore/annunci/nuovo" },
+];
+
 describe("WhatsApp OTP gate — operational functions blocked until phone_verified=true", () => {
   describe("ristoratore", () => {
     for (const path of OPERATIONAL_PATHS) {
@@ -264,5 +287,64 @@ describe("Full OTP completion flow — state transitions", () => {
     expect(
       evaluatePhoneGate({ ...base, profile: PROFILE_VERIFIED }).action,
     ).toBe("pass");
+  });
+});
+
+describe("Gate UNICO — candidature, chat, turni, annunci sono tutte intercettate", () => {
+  for (const { area, path } of NAMED_OPERATIONAL_AREAS) {
+    it(`[${area}] ${path} → redirect a /onboarding se phone_verified=false (ristoratore)`, () => {
+      const decision = evaluatePhoneGate({
+        loading: false,
+        extrasLoaded: true,
+        user: USER,
+        profile: PROFILE_UNVERIFIED,
+        role: "restaurant",
+        pathname: path,
+      });
+      expect(decision).toEqual({
+        action: "redirect",
+        to: "/onboarding",
+        reason: "phone-not-verified",
+      });
+    });
+
+    it(`[${area}] ${path} → redirect a /onboarding se phone_verified=false (lavoratore)`, () => {
+      const decision = evaluatePhoneGate({
+        loading: false,
+        extrasLoaded: true,
+        user: USER,
+        profile: PROFILE_UNVERIFIED,
+        role: "worker",
+        pathname: path,
+      });
+      expect(decision).toEqual({
+        action: "redirect",
+        to: "/onboarding",
+        reason: "phone-not-verified",
+      });
+    });
+
+    it(`[${area}] ${path} → accesso consentito dopo OTP verificato`, () => {
+      const decision = evaluatePhoneGate({
+        loading: false,
+        extrasLoaded: true,
+        user: USER,
+        profile: PROFILE_VERIFIED,
+        role: "restaurant",
+        pathname: path,
+      });
+      expect(decision.action).toBe("pass");
+    });
+  }
+
+  it("nessuna area operativa è inclusa nella allowlist del gate", () => {
+    // Garanzia che NESSUNA delle 4 aree operative sia stata accidentalmente
+    // aggiunta a PHONE_GATE_ALLOWED_PATHS (cosa che bypasserebbe il gate).
+    for (const { path } of NAMED_OPERATIONAL_AREAS) {
+      // I path dinamici (es. /messages/abc-123) non saranno mai in allowlist
+      // perché la allowlist contiene solo path esatti. Per i path "padre"
+      // (es. /messages) controlliamo esplicitamente.
+      expect(PHONE_GATE_ALLOWED_PATHS.has(path)).toBe(false);
+    }
   });
 });
