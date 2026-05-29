@@ -1341,8 +1341,8 @@ function WorkersPage() {
                     compat === "disponibile" ? { text: "Disponibile per questo turno", cls: "bg-emerald-500/20 text-emerald-700" }
                     : compat === "compatibile" ? { text: "Compatibile con il turno", cls: "bg-emerald-500/15 text-emerald-700" }
                     : compat === "parziale" ? { text: "Disponibilità parziale", cls: "bg-amber-500/15 text-amber-700" }
-                    : compat === null && selectedAnn && !hasLegacyAvailability
-                      ? { text: "Disponibilità non indicata", cls: "bg-muted text-foreground/70" }
+                    : selectedAnn
+                      ? { text: "Disponibilità non confermata per questo annuncio", cls: "bg-muted text-foreground/70" }
                     : null;
                   if (g.key === "contacted") {
                     return (
