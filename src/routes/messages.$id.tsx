@@ -2205,7 +2205,7 @@ function Thread() {
           <div className="mb-4 space-y-2">
             <div className="flex flex-wrap gap-2">
               {role === "worker" && app.status === "pending" && (<>
-                <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => transition("interested")}>
+                <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => setInterestConfirmOpen(true)}>
                   {transitioning === "interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
                   {transitioning === "interested" ? "Invio in corso…" : "Sono interessato"}
                 </Button>
