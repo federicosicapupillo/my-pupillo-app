@@ -1454,7 +1454,8 @@ function MapPage() {
                     ? distKm(ref.lat, ref.lng, coords.lat, coords.lng) : null;
                   const proRoles = workerProfessionalRoles(w);
                   const rolesLabel = formatRolesForCard(proRoles, 3);
-                  const availabilityLabel = formatWorkerAvailabilityLine(w);
+                  const realAvailRows = availByWorker[w.id] ?? null;
+                  const availabilityLabel = formatWorkerAvailabilityLine(w, realAvailRows);
                   const isNikla = (w.full_name ?? "").toLowerCase().includes("nikla");
                   if (isNikla || debugEnabled) {
                     const logTag = isNikla
@@ -1464,6 +1465,8 @@ function MapPage() {
                       user_id: w.id,
                       nome: w.full_name,
                       availabilitySource: w.availability_source ?? "missing",
+                      worker_availability_rows_count: realAvailRows?.length ?? 0,
+                      worker_availability_rows: realAvailRows ?? [],
                       weekly_availability: w.weekly_availability ?? [],
                       hourly_availability: w.hourly_availability ?? null,
                       available_now_until: w.available_now_until ?? null,
@@ -1474,6 +1477,22 @@ function MapPage() {
                       service_area_district: w.service_area_district ?? null,
                       radius_km: w.radius_km ?? null,
                       cardAvailabilityText: availabilityLabel,
+                      sorgente_finale: (realAvailRows && realAvailRows.length > 0)
+                        ? "worker_availability (stessa del profilo)"
+                        : ((w.weekly_availability ?? []).length > 0
+                          ? "profiles.weekly_availability (fallback legacy)"
+                          : "fallback area (city/zone) o nessuna"),
+                    });
+                  }
+                  if (isNikla) {
+                    console.log("[PUPILLO_MAP_CARD_AVAILABILITY_SYNC_DEBUG]", {
+                      user_id: w.id,
+                      nome: w.full_name,
+                      tabella_sorgente_profilo: "worker_availability + worker_availability_exceptions",
+                      tabella_sorgente_mappa: "worker_availability (ora allineata al profilo)",
+                      raw_rows_count: realAvailRows?.length ?? 0,
+                      raw_rows: realAvailRows ?? [],
+                      formatted_card_mappa: availabilityLabel,
                     });
                   }
                   if (debugEnabled) {
