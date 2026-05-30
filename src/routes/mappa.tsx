@@ -623,6 +623,34 @@ function MapPage() {
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
+  useEffect(() => {
+    const availableZones = city !== "any" ? zonesForCity(city) : [];
+    const workersBefore = workers.filter((w) => city === "any" || w.city === city);
+    const restaurantsBefore = restaurants.filter((r) => city === "any" || r.city === city);
+    const zoneFieldsChecked = ["neighborhood", "service_area_district", "location_zone"];
+    console.log("[PUPILLO_MAP_ZONE_FILTER_DEBUG]", {
+      selectedCity: city,
+      selectedZone: district || "Tutte le zone",
+      zoneFilterActive: !!district,
+      availableZonesForCity: availableZones,
+      totaleLavoratoriPrimaFiltroZona: workersBefore.length,
+      totaleLavoratoriDopoFiltroZona: filteredWorkers.length,
+      totaleRistoratoriPrimaFiltroZona: restaurantsBefore.length,
+      totaleRistoratoriDopoFiltroZona: filteredRestaurants.length,
+      campiZonaUsatiPerFiltrare: zoneFieldsChecked,
+      lavoratoriEsclusiPerZona: district
+        ? workersBefore
+            .filter((w) => !(w.neighborhood || "").toLowerCase().includes(district.toLowerCase()))
+            .map((w) => ({ id: w.id, neighborhood: w.neighborhood }))
+        : [],
+      ristoratoriEsclusiPerZona: district
+        ? restaurantsBefore
+            .filter((r) => !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase()))
+            .map((r) => ({ id: r.id, neighborhood: r.neighborhood }))
+        : [],
+    });
+  }, [city, district, workers, restaurants, filteredWorkers, filteredRestaurants]);
+
   // Worker points for the avatar-based map (used for restaurant view).
   // One source only: filteredWorkers from loadRestaurantWorkerSearchResults; no city/mock fallback.
   const locatedWorkers = useMemo(() => {
