@@ -1514,6 +1514,24 @@ function MapPage() {
                       shownOnMap: coords.shownOnMap,
                     });
                   }
+                  console.debug("[PUPILLO_WORKER_REVIEWS_CARD_DEBUG]", {
+                    pagina: "mappa",
+                    worker_user_id: w.id,
+                    profile_id: w.id,
+                    nome: w.full_name,
+                    averageRating: w.rating_avg ?? null,
+                    reviewsCount: w.reviews_count ?? 0,
+                    rating_mostrato:
+                      w.rating_avg != null && Number(w.rating_avg) > 0 && (w.reviews_count ?? 0) > 0
+                        ? `${Number(w.rating_avg).toFixed(1).replace(".", ",")} · ${w.reviews_count} ${w.reviews_count === 1 ? "recensione" : "recensioni"}`
+                        : "Nessuna recensione ancora",
+                    motivo_no_rating:
+                      w.rating_avg == null || Number(w.rating_avg) === 0
+                        ? "rating_avg assente o 0 sul profilo"
+                        : (w.reviews_count ?? 0) === 0
+                          ? "reviews_count = 0 sul profilo"
+                          : null,
+                  });
                   return (
                     <li key={w.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
                       <div className="flex items-start justify-between gap-2">
