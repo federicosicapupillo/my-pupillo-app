@@ -576,21 +576,39 @@ function MapPage() {
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
   // Worker points for the avatar-based map (used for restaurant view).
-  // Position fallback: service_area_lat/lng → city lookup (with jitter).
+  // One source only: filteredWorkers from loadRestaurantWorkerSearchResults; no city/mock fallback.
   const locatedWorkers = useMemo(() => {
-    let withCoords = 0, withCity = 0, skipped = 0;
+    let withCoords = 0, skipped = 0;
+    const coordDebug: Array<Record<string, unknown>> = [];
     const arr = filteredWorkers.map((w) => {
-      if (w.service_area_lat != null && w.service_area_lng != null) {
-        withCoords++;
-        return { w, pos: [w.service_area_lat, w.service_area_lng] as [number, number] };
+      if (!isRealWorker(w)) {
+        console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx locatedWorkers", worker: w, motivo: nonWorkerReason(w) });
+        return null;
       }
-      const base = lookupCityCoords(w.city) || lookupCityCoords(w.neighborhood);
-      if (base) { withCity++; return { w, pos: jitterCoords(base, w.id, 1.5) }; }
+      const coords = getWorkerCoordinates(w);
+      coordDebug.push({
+        user_id: w.id,
+        profile_id: w.id,
+        nome: w.full_name,
+        ruolo: w.primary_role,
+        città: w.city,
+        zona: w.neighborhood,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        hasValidCoordinates: coords.hasValidCoordinates,
+        shownOnMap: coords.hasValidCoordinates,
+        motivo: coords.hasValidCoordinates ? null : "coordinate valide mancanti",
+      });
+      if (coords.hasValidCoordinates && coords.lat != null && coords.lng != null) {
+        withCoords++;
+        return { w, pos: [coords.lat, coords.lng] as [number, number] };
+      }
       skipped++;
       return null;
     }).filter((x): x is { w: Worker; pos: [number, number] } => x != null);
     if (typeof window !== "undefined") {
-      console.debug("[mappa] workers totali:", filteredWorkers.length, "con coordinate:", withCoords, "con città/zona:", withCity, "saltati:", skipped, "marker:", arr.length);
+      console.log("[PUPILLO_WORKER_MAP_COORDINATES_FINAL_DEBUG]", coordDebug);
+      console.debug("[mappa] workers totali:", filteredWorkers.length, "con coordinate:", withCoords, "saltati:", skipped, "marker:", arr.length);
     }
     return arr;
   }, [filteredWorkers]);
