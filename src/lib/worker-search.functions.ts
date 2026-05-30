@@ -94,7 +94,29 @@ export type WorkerSearchDebug = {
   excluded_orphan_auth: number;
 };
 
-type ProfileRow = Omit<SearchWorkerProfile, "user_roles" | "role_is_worker" | "role_is_admin" | "role_is_restaurant" | "is_active" | "is_visible"> & {
+type ProfileRow = Omit<
+  SearchWorkerProfile,
+  | "user_roles"
+  | "role_is_worker"
+  | "role_is_admin"
+  | "role_is_restaurant"
+  | "is_active"
+  | "is_visible"
+  | "location_city"
+  | "location_zone"
+  | "location_province"
+  | "radius_km"
+  | "available_days"
+  | "availability_schedule"
+  | "location_source"
+  | "availability_source"
+  | "coordinate_source"
+  | "map_lat"
+  | "map_lng"
+  | "has_valid_coordinates"
+  | "has_approximate_location"
+  | "shown_on_map"
+> & {
   email: string | null;
   created_at: string | null;
 };
