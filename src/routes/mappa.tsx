@@ -135,6 +135,11 @@ type Worker = {
   account_status: string | null;
   punctuality_pct?: number | null;
   avg_professionalism?: number | null;
+  hourly_availability?: string | null;
+  available_now_until?: string | null;
+  work_area_mode?: string | null;
+  all_zones?: boolean | null;
+  selected_zones?: string[] | null;
 };
 
 function normalizeWorkerRole(value: string | null | undefined) {
