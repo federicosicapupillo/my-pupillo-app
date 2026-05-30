@@ -281,6 +281,22 @@ function Onboarding() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  // Sezione facoltativa "Esperienza e preferenze" (lavoratore).
+  // Tutti i campi sono opzionali: non bloccano salvataggio né completamento.
+  const [optExp, setOptExp] = useState<{
+    experience_years: string;
+    experience_level: "" | "junior" | "intermediate" | "senior";
+    hourly_rate: string;
+    is_motorized: "" | "yes" | "no";
+    short_bio: string;
+  }>({
+    experience_years: "",
+    experience_level: "",
+    hourly_rate: "",
+    is_motorized: "",
+    short_bio: "",
+  });
+
   const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsServiceArea, setGpsServiceArea] = useState<{ lat: number; lng: number } | null>(null);
   const [serviceAreaLoading, setServiceAreaLoading] = useState(false);
@@ -644,6 +660,16 @@ function Onboarding() {
     }
     if (profile) setRequirements(reqFromProfile(profile));
     if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
+    if (profile) {
+      const p = profile as any;
+      setOptExp({
+        experience_years: p.experience_years != null ? String(p.experience_years) : "",
+        experience_level: (p.experience_level === "junior" || p.experience_level === "intermediate" || p.experience_level === "senior") ? p.experience_level : "",
+        hourly_rate: p.hourly_rate != null ? String(p.hourly_rate) : "",
+        is_motorized: p.is_motorized === true ? "yes" : p.is_motorized === false ? "no" : "",
+        short_bio: (p.short_bio ?? p.professional_profile ?? "") as string,
+      });
+    }
     if (profile) {
       const sec = (profile as any).secondary_roles as string[] | null | undefined;
       const prim = (profile as any).primary_role as string | null | undefined;
@@ -1255,6 +1281,23 @@ function Onboarding() {
             id_document_expires_at: personal.id_document_expires_at,
             id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
+            // Campi facoltativi sezione "Esperienza e preferenze"
+            experience_years: (() => {
+              const v = optExp.experience_years.trim();
+              if (!v) return null;
+              const n = parseInt(v, 10);
+              return Number.isFinite(n) && n >= 0 ? n : null;
+            })(),
+            experience_level: optExp.experience_level || null,
+            hourly_rate: (() => {
+              const v = optExp.hourly_rate.trim().replace(",", ".");
+              if (!v) return null;
+              const n = Number(v);
+              return Number.isFinite(n) && n >= 0 ? n : null;
+            })(),
+            is_motorized: optExp.is_motorized === "yes" ? true : optExp.is_motorized === "no" ? false : null,
+            short_bio: optExp.short_bio.trim() ? optExp.short_bio.trim().slice(0, 500) : null,
+            professional_profile: optExp.short_bio.trim() ? optExp.short_bio.trim().slice(0, 500) : ((profile as any)?.professional_profile ?? null),
           };
     // Salva i campi del profilo. Aggiungiamo un timeout lato client per
     // evitare loading infinito se la rete è instabile.
@@ -1298,6 +1341,17 @@ function Onboarding() {
       return;
     }
     setBusy(false); submittingRef.current = false;
+    if (role === "worker") {
+      console.info("[PUPILLO_WORKER_OPTIONAL_EXPERIENCE_ONBOARDING_DEBUG]", {
+        worker_user_id: user.id,
+        years_experience: optExp.experience_years || null,
+        experience_level: optExp.experience_level || null,
+        desired_hourly_rate: optExp.hourly_rate || null,
+        has_vehicle: optExp.is_motorized || "non_specificato",
+        professional_summary_presente: !!optExp.short_bio.trim(),
+        dati_salvati_correttamente: true,
+      });
+    }
     toast.success("Profilo salvato correttamente");
     console.info(
       "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] tempo totale salvataggio (ms)",
@@ -2350,6 +2404,84 @@ function Onboarding() {
               <Label className="font-semibold">Lingue parlate</Label>
               <p className="text-xs text-muted-foreground">Seleziona una o più lingue e indica il livello.</p>
               <SpokenLanguagesEditor value={spokenLanguages} onChange={setSpokenLanguages} />
+            </div>
+            <div id="sec-experience" className="rounded-xl border bg-muted/30 p-4 space-y-4 scroll-mt-24">
+              <div>
+                <h3 className="font-semibold">Esperienza e preferenze</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Queste informazioni aiutano i ristoratori a capire meglio il tuo profilo. Puoi compilarle ora o modificarle più avanti. Tutti i campi sono facoltativi.
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Anni di esperienza</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    placeholder="Es. 2"
+                    value={optExp.experience_years}
+                    onChange={(e) => setOptExp({ ...optExp, experience_years: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Livello di esperienza</Label>
+                  <Select
+                    value={optExp.experience_level || "none"}
+                    onValueChange={(v) => setOptExp({ ...optExp, experience_level: (v === "none" ? "" : v) as typeof optExp.experience_level })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuna selezione</SelectItem>
+                      <SelectItem value="junior">Junior</SelectItem>
+                      <SelectItem value="intermediate">Intermedio</SelectItem>
+                      <SelectItem value="senior">Senior</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Tariffa oraria desiderata (€/h)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.5"
+                    inputMode="decimal"
+                    placeholder="Es. 12"
+                    value={optExp.hourly_rate}
+                    onChange={(e) => setOptExp({ ...optExp, hourly_rate: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    La tariffa è indicativa. Il compenso finale dipende dal turno proposto dal ristoratore.
+                  </p>
+                </div>
+                <div>
+                  <Label>Sei automunito?</Label>
+                  <Select
+                    value={optExp.is_motorized || "none"}
+                    onValueChange={(v) => setOptExp({ ...optExp, is_motorized: (v === "none" ? "" : v) as typeof optExp.is_motorized })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Non specificato</SelectItem>
+                      <SelectItem value="yes">Sì</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Descrizione professionale</Label>
+                <Textarea
+                  rows={4}
+                  maxLength={500}
+                  placeholder="Scrivi in poche righe la tua esperienza, il tipo di locali in cui hai lavorato o i servizi che sai gestire."
+                  value={optExp.short_bio}
+                  onChange={(e) => setOptExp({ ...optExp, short_bio: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {optExp.short_bio.length}/500 caratteri. Se non compili, sul profilo apparirà "Profilo non specificato".
+                </p>
+              </div>
             </div>
             <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <div>
