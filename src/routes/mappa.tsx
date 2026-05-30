@@ -671,13 +671,6 @@ function MapPage() {
     return workerAllowedCities.has(normalizeCity(c));
   };
 
-  const matchesWorkerQuery = (w: Worker) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return [w.full_name, w.primary_role, w.city, w.neighborhood, w.badge, w.experience_level, ...(w.secondary_roles || [])]
-      .some(v => (v || "").toString().toLowerCase().includes(q));
-  };
-
   const filteredWorkers = useMemo(() => {
     const max = radiusKm !== "any" ? Number(radiusKm) : null;
     const ref = searchCenter || me;
@@ -686,7 +679,6 @@ function MapPage() {
         console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx filteredWorkers", worker: w, motivo: nonWorkerReason(w) });
         return false;
       }
-      if (!matchesWorkerQuery(w)) return false;
       if (city !== "any") {
         const target = normalizeLocation(city);
         const cands = workerCityCandidates(w);
@@ -709,7 +701,7 @@ function MapPage() {
       }
       return true;
     });
-  }, [workers, query, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, radiusKm, searchCenter, me]);
+  }, [workers, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, radiusKm, searchCenter, me]);
 
   useEffect(() => {
     if (!isRestaurant) return;
@@ -821,18 +813,10 @@ function MapPage() {
     }
   }, [isRestaurant, workers, filteredWorkers, city, district]);
 
-  const matchesQuery = (r: Restaurant) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return [r.business_name, r.full_name, r.address, r.city, r.neighborhood, r.venue_type]
-      .some(v => (v || "").toLowerCase().includes(q));
-  };
-
   const filteredRestaurants = useMemo(() => {
     const max = radiusKm !== "any" ? Number(radiusKm) : null;
     const ref = searchCenter || me;
     return restaurants.filter(r => {
-      if (!matchesQuery(r)) return false;
       if (province !== "any" && r.province !== province) return false;
       if (city !== "any" && r.city !== city) return false;
       if (district && !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
