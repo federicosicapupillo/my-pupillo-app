@@ -72,6 +72,7 @@ type W = {
   service_area_city: string | null;
   service_area_district: string | null;
   residence_city: string | null;
+  residence_province?: string | null;
   available_now_until: string | null;
   badge: string | null;
   rating_avg: number | null;
@@ -106,7 +107,23 @@ type W = {
   role_is_restaurant?: boolean;
   is_active?: boolean;
   is_visible?: boolean;
-  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "missing";
+  selected_zones?: string[] | null;
+  all_zones?: boolean | null;
+  work_area_mode?: string | null;
+  location_city?: string | null;
+  location_zone?: string | null;
+  location_province?: string | null;
+  radius_km?: number | null;
+  available_days?: string[];
+  availability_schedule?: string[];
+  location_source?: "profiles.service_area" | "worker_availability" | "profiles.residence" | "profiles.city" | "missing";
+  availability_source?: "worker_availability" | "profiles.weekly_availability" | "profiles.available_now_until" | "missing";
+  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "approximate_city_zone" | "missing";
+  map_lat?: number | null;
+  map_lng?: number | null;
+  has_valid_coordinates?: boolean;
+  has_approximate_location?: boolean;
+  shown_on_map?: boolean;
 };
 
 type Category =
@@ -338,9 +355,9 @@ function workerBlockReason(w: W): string {
   return "non_idoneo";
 }
 
-function getWorkerCoordinates(w: W): { lat: number | null; lng: number | null; hasValidCoordinates: boolean } {
-  const latRaw = w.service_area_lat ?? w.latitude ?? null;
-  const lngRaw = w.service_area_lng ?? w.longitude ?? null;
+function getWorkerCoordinates(w: W): { lat: number | null; lng: number | null; hasValidCoordinates: boolean; hasApproximateLocation: boolean; shownOnMap: boolean } {
+  const latRaw = w.map_lat ?? w.service_area_lat ?? w.latitude ?? null;
+  const lngRaw = w.map_lng ?? w.service_area_lng ?? w.longitude ?? null;
   const lat = typeof latRaw === "number" ? latRaw : latRaw == null ? null : Number(latRaw);
   const lng = typeof lngRaw === "number" ? lngRaw : lngRaw == null ? null : Number(lngRaw);
   const hasValidCoordinates =
@@ -352,7 +369,28 @@ function getWorkerCoordinates(w: W): { lat: number | null; lng: number | null; h
     lat <= 90 &&
     lng >= -180 &&
     lng <= 180;
-  return { lat: hasValidCoordinates ? lat : null, lng: hasValidCoordinates ? lng : null, hasValidCoordinates };
+  const hasApproximateLocation = w.has_approximate_location === true || (!!hasValidCoordinates && w.coordinate_source === "approximate_city_zone");
+  return { lat: hasValidCoordinates ? lat : null, lng: hasValidCoordinates ? lng : null, hasValidCoordinates, hasApproximateLocation, shownOnMap: hasValidCoordinates };
+}
+
+function workerLocationLabel(w: W): string {
+  const city = (w.location_city || w.service_area_city || w.residence_city || w.city || "").trim();
+  const zoneRaw = (w.location_zone || w.service_area_district || w.neighborhood || "").trim();
+  const zone = zoneRaw && zoneRaw !== "__georadar__" ? zoneRaw : "";
+  const province = (w.location_province || w.province || w.residence_province || "").trim();
+  if (city && zone) return `${city} · ${zone}`;
+  if (city && province) return `${city} · ${province}`;
+  if (city) return city;
+  if (zone) return zone;
+  if (province) return province;
+  return "Posizione non indicata";
+}
+
+function workerAvailabilityFallback(w: W): string | null {
+  if (w.available_days && w.available_days.length > 0) return `Disponibile ${w.available_days.map((d) => d.toLowerCase()).join(", ")}`;
+  if (w.availability_schedule && w.availability_schedule.length > 0) return "Disponibilità impostata";
+  if (w.radius_km != null) return `Raggio ${w.radius_km} km`;
+  return null;
 }
 
 // Sceglie l'etichetta del ruolo da mostrare sotto il nome del lavoratore.
