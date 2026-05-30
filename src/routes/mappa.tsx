@@ -1037,21 +1037,32 @@ function MapPage() {
 
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
-        <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); }}>
+        <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); setDistrict(""); }}>
           <SelectTrigger><SelectValue placeholder="Provincia" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="any">Tutte le province</SelectItem>
             {ITALIAN_LOCATIONS.map((p) => <SelectItem key={p.province_code} value={p.province}>{p.province}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={city} onValueChange={setCity}>
+        <Select value={city} onValueChange={(v) => { setCity(v); setDistrict(""); }}>
           <SelectTrigger><SelectValue placeholder="Città" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="any">Tutte le città</SelectItem>
             {(province !== "any" ? citiesForProvince(province) : cities).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Input placeholder="Zona / quartiere" value={district} onChange={e => setDistrict(e.target.value)} />
+        <Select
+          value={district === "" ? "__all__" : district}
+          onValueChange={(v) => setDistrict(v === "__all__" ? "" : v)}
+        >
+          <SelectTrigger><SelectValue placeholder="Zona / quartiere" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Tutte le zone</SelectItem>
+            {(city !== "any" ? zonesForCity(city) : []).map((z) => (
+              <SelectItem key={z} value={z}>{z}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={venue} onValueChange={setVenue}>
           <SelectTrigger><SelectValue placeholder="Tipologia locale" /></SelectTrigger>
           <SelectContent>
