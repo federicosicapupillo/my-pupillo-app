@@ -1422,6 +1422,27 @@ function MapPage() {
                   const proRoles = workerProfessionalRoles(w);
                   const rolesLabel = formatRolesForCard(proRoles, 3);
                   const availabilityLabel = formatWorkerAvailabilityLine(w);
+                  const isNikla = (w.full_name ?? "").toLowerCase().includes("nikla");
+                  if (isNikla || debugEnabled) {
+                    const logTag = isNikla
+                      ? "[PUPILLO_MAP_WORKER_AVAILABILITY_NIKLA_DEBUG]"
+                      : "[PUPILLO_MAP_WORKER_AVAILABILITY_CARD_DEBUG]";
+                    console.log(logTag, {
+                      user_id: w.id,
+                      nome: w.full_name,
+                      availabilitySource: w.availability_source ?? "missing",
+                      weekly_availability: w.weekly_availability ?? [],
+                      hourly_availability: w.hourly_availability ?? null,
+                      available_now_until: w.available_now_until ?? null,
+                      work_area_mode: w.work_area_mode ?? null,
+                      all_zones: w.all_zones ?? null,
+                      selected_zones: w.selected_zones ?? [],
+                      service_area_city: w.service_area_city ?? null,
+                      service_area_district: w.service_area_district ?? null,
+                      radius_km: w.radius_km ?? null,
+                      cardAvailabilityText: availabilityLabel,
+                    });
+                  }
                   if (debugEnabled) {
                     console.log("[PUPILLO_MAP_WORKER_CARD_DETAILS_DEBUG]", {
                       user_id: w.id,
