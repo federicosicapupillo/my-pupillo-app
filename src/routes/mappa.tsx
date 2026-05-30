@@ -591,8 +591,17 @@ function MapPage() {
         return false;
       }
       if (!matchesWorkerQuery(w)) return false;
-      if (city !== "any" && w.city !== city) return false;
-      if (district && !(w.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
+      if (city !== "any") {
+        const target = normalizeLocation(city);
+        const cands = workerCityCandidates(w);
+        if (!cands.some((c) => c === target || c.includes(target) || target.includes(c))) return false;
+      }
+      if (district) {
+        const target = normalizeLocation(district);
+        const zCands = workerZoneCandidates(w);
+        // "tutte le zone" worker matches any specific zone in his city
+        if (!(zCands.includes("tutte le zone") || zCands.some((z) => z.includes(target) || target.includes(z)))) return false;
+      }
       if (wRole !== "any" && w.primary_role !== wRole) return false;
       if (wBadge !== "any" && w.badge !== wBadge) return false;
       if (wExp !== "any" && w.experience_level !== wExp) return false;
