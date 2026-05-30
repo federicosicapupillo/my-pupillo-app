@@ -2447,6 +2447,7 @@ function AvailabilityBlock({
   upcomingSpecials,
   weekly,
   availableNowUntil,
+  fallbackSummary,
   onDetails,
 }: {
   rows: AvailabilityRow[] | null;
@@ -2455,6 +2456,7 @@ function AvailabilityBlock({
   upcomingSpecials?: AvailabilityExceptionRow[];
   weekly: string[] | null;
   availableNowUntil: string | null;
+  fallbackSummary?: string | null;
   onDetails: () => void;
 }) {
   // Real data lives in `worker_availability`. The legacy
@@ -2583,7 +2585,7 @@ function AvailabilityBlock({
             )}
           </div>
         ) : legacySummary.kind === "none" ? (
-          <span className="text-muted-foreground">Disponibilità non indicata</span>
+          <span className={fallbackSummary ? "text-foreground" : "text-muted-foreground"}>{fallbackSummary ?? "Disponibilità non indicata"}</span>
         ) : null}
         {!hasReal && legacySummary.kind === "today" && (
           <div className="flex flex-wrap items-center gap-1.5">
