@@ -838,20 +838,17 @@ function MapPage() {
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
   useEffect(() => {
-    console.log("[PUPILLO_MAP_FILTERS_SIMPLIFICATION_DEBUG]", {
-      filtri_attivi_rimasti: ["query", "province", "city", "district", "radiusKm", "withRequests", "wRole", "wBadge", "wExp", "wMinRating", "wMinReliab", "showW", "showA", "showR"],
+    if (!isRestaurant) return;
+    console.log("[PUPILLO_MAP_SEARCH_BAR_REMOVED_DEBUG]", {
+      filtri_attivi_rimasti: ["province", "city", "district", "radiusKm", "withRequests", "wRole", "wBadge", "wExp", "wMinRating", "wMinReliab", "showW", "showA", "showR"],
       selectedCity: city,
       selectedZone: district,
       selectedDistance: radiusKm,
       selectedRole: wRole,
-      selectedBadge: wBadge,
-      selectedExperience: wExp,
-      selectedRating: wMinRating,
-      selectedReliability: wMinReliab,
       showWorkers: showW,
       showRequests: showA,
-      totalWorkers: filteredWorkers.length,
-      totalRestaurants: filteredRestaurants.length,
+      workersMostrati: filteredWorkers.length,
+      richiesteMostrate: filteredRestaurants.length,
     });
   }, [city, district, radiusKm, wRole, wBadge, wExp, wMinRating, wMinReliab, showW, showA, showR, filteredWorkers.length, filteredRestaurants.length]);
 
