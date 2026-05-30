@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useState } from "react";
@@ -45,6 +46,7 @@ import {
   roleMatches,
   workerMatchesAnyRoleField,
 } from "@/lib/worker-role-normalization";
+import { getRestaurantWorkerSearchData, type WorkerSearchDebug } from "@/lib/worker-search.functions";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -90,6 +92,18 @@ type W = {
   search_penalty_reason?: string | null;
   search_penalty_until?: string | null;
   delay_count?: number | null;
+  account_status?: string | null;
+  profile_completed?: boolean | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
+  is_demo?: boolean | null;
+  seed_batch_id?: string | null;
+  user_roles?: string[];
+  role_is_worker?: boolean;
+  role_is_admin?: boolean;
+  role_is_restaurant?: boolean;
+  is_active?: boolean;
+  is_visible?: boolean;
 };
 
 type Category =
