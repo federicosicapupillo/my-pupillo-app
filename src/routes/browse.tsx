@@ -660,6 +660,122 @@ function Browse() {
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">{PRECISE_ADDRESS_HINT}</p>
 
+                {(() => {
+                  const skills = (selected.required_skills ?? []).filter(Boolean);
+                  const dressItems = (selected.dress_code_items ?? []).filter(Boolean);
+                  const dressNotes = (selected.dress_code_notes ?? "").trim();
+                  const langs = (selected.language_requirements ?? []).filter(Boolean);
+                  const license = (selected.license_requirement ?? "").trim();
+                  const opsParts = [selected.notes, selected.job_location_notes, selected.job_additional_directions, selected.job_access_restrictions]
+                    .map((s) => (s ?? "").trim()).filter(Boolean);
+                  const need = workersNeededById[selected.id] ?? 1;
+                  const filled = filledById[selected.id] ?? 0;
+                  const endLabel = (() => {
+                    if (selected.end_time) return selected.end_time.slice(0, 5);
+                    if (!selected.service_time) return null;
+                    const [h, m] = selected.service_time.split(":").map(Number);
+                    const total = h * 60 + (m || 0) + Math.round((selected.duration_hours || 0) * 60);
+                    const eh = Math.floor(total / 60) % 24;
+                    const em = total % 60;
+                    return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
+                  })();
+                  const statusLabel =
+                    selected.status === "active" ? "Annuncio attivo" :
+                    selected.status === "completed" ? "Turno completo" :
+                    selected.status === "cancelled" ? "Annuncio annullato" :
+                    selected.status === "expired" ? "Annuncio scaduto" : selected.status;
+                  console.log("[PUPILLO_WORKER_ANNOUNCEMENT_DETAILS_DEBUG]", {
+                    worker_user_id: user?.id ?? null,
+                    announcement_id: selected.id,
+                    job_request_id: null,
+                    shift_id: null,
+                    status: selected.status,
+                    has_application: applied,
+                    application_status: appStatus ?? null,
+                    workers_needed: need,
+                    workers_filled: filled,
+                    end_label: endLabel,
+                    privacy_hidden: ["indirizzo_preciso", "referente_completo", "telefono_diretto"],
+                    shown_before_confirm: {
+                      role: selected.professional_profile,
+                      city: selected.job_city ?? restaurant?.city ?? null,
+                      zone: restaurant?.neighborhood ?? null,
+                      dress_code_items: dressItems,
+                      required_skills: skills,
+                      languages: langs,
+                      license,
+                      notes_count: opsParts.length,
+                    },
+                  });
+                  return (
+                    <div className="mt-5 space-y-4 text-sm">
+                      {endLabel && (
+                        <Row icon={Clock} label="Fine turno" value={endLabel} />
+                      )}
+                      {need > 1 && (
+                        <Row icon={User} label="Posti" value={`${Math.max(0, need - filled)} disponibili su ${need}`} />
+                      )}
+
+                      {skills.length > 0 && (
+                        <section>
+                          <div className="font-semibold text-foreground mb-1.5">Mansioni richieste</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {skills.map((s) => (
+                              <span key={s} className="rounded-full bg-secondary px-2.5 py-1 text-xs">{s}</span>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {(dressItems.length > 0 || dressNotes) && (
+                        <section>
+                          <div className="font-semibold text-foreground mb-1.5">Dress code</div>
+                          {dressItems.length > 0 && (
+                            <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+                              {dressItems.map((d) => <li key={d}>{d}</li>)}
+                            </ul>
+                          )}
+                          {dressNotes && <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{dressNotes}</p>}
+                        </section>
+                      )}
+
+                      {(langs.length > 0 || license) && (
+                        <section>
+                          <div className="font-semibold text-foreground mb-1.5">Requisiti</div>
+                          {langs.length > 0 && (
+                            <p className="text-muted-foreground"><span className="text-foreground">Lingue:</span> {langs.join(", ")}</p>
+                          )}
+                          {license && (
+                            <p className="text-muted-foreground"><span className="text-foreground">Patente:</span> {license}</p>
+                          )}
+                        </section>
+                      )}
+
+                      {opsParts.length > 0 && (
+                        <section>
+                          <div className="font-semibold text-foreground mb-1.5">Istruzioni servizio</div>
+                          <div className="space-y-1 text-muted-foreground">
+                            {opsParts.map((p, i) => (
+                              <p key={i} className="whitespace-pre-wrap">{p}</p>
+                            ))}
+                          </div>
+                          <p className="mt-2 text-xs text-muted-foreground/80">
+                            Indirizzo preciso, referente e contatti diretti saranno visibili dopo la conferma del turno.
+                          </p>
+                        </section>
+                      )}
+
+                      <section>
+                        <div className="font-semibold text-foreground mb-1.5">Stato</div>
+                        <p className="text-muted-foreground">
+                          {statusLabel}
+                          {applied ? " · Candidatura già inviata" : ""}
+                        </p>
+                      </section>
+                    </div>
+                  );
+                })()}
+
                 <div className="mt-6 flex gap-2 sticky bottom-0 bg-background pt-3">
                   <Button variant="outline" size="icon" onClick={()=>toggleFav(selected.id)} aria-label="Preferiti">
                     <Heart className={`h-5 w-5 ${fav?"fill-primary text-primary":""}`} />
