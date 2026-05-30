@@ -1093,7 +1093,7 @@ function MapPage() {
           byId[a.id] = source;
         }
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
-        if (query || city !== "any" || district || withRequests) {
+        if (city !== "any" || district || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
         }
         const refPoint = searchCenter || me;
@@ -1179,7 +1179,7 @@ function MapPage() {
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, city, district, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
@@ -1249,19 +1249,6 @@ function MapPage() {
       (err) => { setLocating(false); toast.error("Posizione: " + err.message); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  };
-
-  const runSearch = async () => {
-    if (!query.trim()) { setSearchCenter(null); return; }
-    setGeocoding(true);
-    const r = await geocodeAddressWithRetry(query.trim(), { maxAttempts: 2 });
-    setGeocoding(false);
-    if (r.ok) {
-      setSearchCenter({ lat: r.lat, lng: r.lng, label: r.displayName });
-    } else {
-      // ricerca testuale comunque attiva, niente center change
-      setSearchCenter(null);
-    }
   };
 
   const ref = searchCenter || me;
@@ -1653,7 +1640,7 @@ function MapPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setQuery(""); setCity("any"); setProvince("any"); setDistrict("");
+                    setCity("any"); setProvince("any"); setDistrict("");
                     setWithRequests(false); setRadiusKm("any");
                   }}
                 >
