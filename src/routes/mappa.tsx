@@ -21,6 +21,7 @@ import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
+import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
 import { WORKER_ROLES } from "@/lib/worker-roles";
@@ -129,6 +130,7 @@ type Worker = {
   longitude?: number | null;
   badge: string | null;
   rating_avg: number | null;
+  reviews_count?: number | null;
   reliability_pct: number | null;
   completed_shifts: number | null;
   hourly_rate: number | null;
@@ -503,7 +505,7 @@ function MapPage() {
         ? loadWorkerSearchData({ data: { reason: "mappa_restaurant_workers" } }).then((res) => ({ data: res.workers, error: null }))
         : supabase
             .from("profiles")
-            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_city, service_area_district, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, hourly_availability, available_now_until, work_area_mode, all_zones, selected_zones, account_status, business_name, punctuality_pct, avg_professionalism")
+            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_city, service_area_district, service_area_lat, service_area_lng, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, hourly_availability, available_now_until, work_area_mode, all_zones, selected_zones, account_status, business_name, punctuality_pct, avg_professionalism")
             .is("business_name", null)
             .not("primary_role", "is", null)
             .limit(2000);
@@ -1512,6 +1514,24 @@ function MapPage() {
                       shownOnMap: coords.shownOnMap,
                     });
                   }
+                  console.debug("[PUPILLO_WORKER_REVIEWS_CARD_DEBUG]", {
+                    pagina: "mappa",
+                    worker_user_id: w.id,
+                    profile_id: w.id,
+                    nome: w.full_name,
+                    averageRating: w.rating_avg ?? null,
+                    reviewsCount: w.reviews_count ?? 0,
+                    rating_mostrato:
+                      w.rating_avg != null && Number(w.rating_avg) > 0 && (w.reviews_count ?? 0) > 0
+                        ? `${Number(w.rating_avg).toFixed(1).replace(".", ",")} · ${w.reviews_count} ${w.reviews_count === 1 ? "recensione" : "recensioni"}`
+                        : "Nessuna recensione ancora",
+                    motivo_no_rating:
+                      w.rating_avg == null || Number(w.rating_avg) === 0
+                        ? "rating_avg assente o 0 sul profilo"
+                        : (w.reviews_count ?? 0) === 0
+                          ? "reviews_count = 0 sul profilo"
+                          : null,
+                  });
                   return (
                     <li key={w.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
                       <div className="flex items-start justify-between gap-2">
@@ -1535,7 +1555,10 @@ function MapPage() {
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           {w.badge && <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{w.badge}</span>}
-                          {w.rating_avg ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{Number(w.rating_avg).toFixed(1)}</span> : null}
+                          <WorkerRatingSummary
+                            ratingAvg={w.rating_avg}
+                            reviewsCount={w.reviews_count ?? null}
+                          />
                           {w.reliability_pct != null && <span>{w.reliability_pct}% affid.</span>}
                           {w.hourly_rate != null && <span>€ {Number(w.hourly_rate).toFixed(0)}/h</span>}
                         </div>

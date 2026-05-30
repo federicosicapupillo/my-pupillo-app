@@ -21,6 +21,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
+import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useProfileGate } from "@/components/ProfileGate";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
@@ -1681,6 +1682,24 @@ function WorkersPage() {
                       raggio_nascosto_dalla_card: true,
                       citta: workerLocationLabel(w),
                     });
+                    console.debug("[PUPILLO_WORKER_REVIEWS_CARD_DEBUG]", {
+                      pagina: "cerca_lavoratori",
+                      worker_user_id: w.id,
+                      profile_id: w.id,
+                      nome: w.full_name,
+                      averageRating: w.rating_avg ?? null,
+                      reviewsCount: w.reviews_count ?? 0,
+                      rating_mostrato:
+                        w.rating_avg != null && Number(w.rating_avg) > 0 && (w.reviews_count ?? 0) > 0
+                          ? `${Number(w.rating_avg).toFixed(1).replace(".", ",")} · ${w.reviews_count} ${w.reviews_count === 1 ? "recensione" : "recensioni"}`
+                          : "Nessuna recensione ancora",
+                      motivo_no_rating:
+                        w.rating_avg == null || Number(w.rating_avg) === 0
+                          ? "rating_avg assente o 0"
+                          : (w.reviews_count ?? 0) === 0
+                            ? "reviews_count = 0"
+                            : null,
+                    });
                   }
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
@@ -1705,12 +1724,10 @@ function WorkersPage() {
                     const label = formatWorkerCardRoles(allRoles);
                     return label ? <span className="capitalize">{label}</span> : null;
                   })()}
-                  {w.rating_avg != null && Number(w.rating_avg) > 0 && (
-                    <span className="inline-flex items-center gap-0.5 text-amber-600">
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      <span className="tabular-nums font-medium">{Number(w.rating_avg).toFixed(1)}</span>
-                    </span>
-                  )}
+                  <WorkerRatingSummary
+                    ratingAvg={w.rating_avg}
+                    reviewsCount={w.reviews_count ?? null}
+                  />
                   {w.age && <span>· {w.age} anni</span>}
                 </div>
                 <div className="mt-1"><WorkerReputationBadge profile={w} /></div>
@@ -2041,12 +2058,10 @@ function ContactedWorkerCard({
               const label = formatWorkerCardRoles(allRoles);
               return label ? <span className="capitalize">{label}</span> : null;
             })()}
-            {w.rating_avg != null && Number(w.rating_avg) > 0 && (
-              <span className="inline-flex items-center gap-0.5 text-amber-600">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                <span className="tabular-nums font-medium">{Number(w.rating_avg).toFixed(1)}</span>
-              </span>
-            )}
+            <WorkerRatingSummary
+              ratingAvg={w.rating_avg}
+              reviewsCount={w.reviews_count ?? null}
+            />
           </div>
         </div>
       </div>
