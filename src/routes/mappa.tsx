@@ -265,6 +265,92 @@ function maskedZoneLabel(r: { neighborhood?: string | null; city?: string | null
   return "Zona non specificata";
 }
 
+// Map normalized role key -> canonical display label from WORKER_ROLES.
+const ROLE_DISPLAY_BY_NORMALIZED: Record<string, string> = WORKER_ROLES.reduce(
+  (acc, label) => {
+    const key = normalizeRole(label);
+    if (key) acc[key] = label;
+    return acc;
+  },
+  {} as Record<string, string>,
+);
+
+function toDisplayRole(value: string): string {
+  const key = normalizeRole(value);
+  if (!key) return value.trim();
+  if (ROLE_DISPLAY_BY_NORMALIZED[key]) return ROLE_DISPLAY_BY_NORMALIZED[key];
+  // Title-case fallback for unknown roles
+  return key
+    .split(" ")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+/**
+ * Collect professional roles for a worker, primary first then secondaries/competences,
+ * deduplicated by normalized role. Account roles (worker/restaurant/admin) are filtered.
+ */
+function workerProfessionalRoles(w: Worker): string[] {
+  const ACCOUNT_ROLES = new Set(["worker", "restaurant", "ristoratore", "admin"]);
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  const pushRaw = (raw: string | null | undefined) => {
+    if (!raw) return;
+    for (const part of String(raw).split(/[,;|\n•·]+/g)) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      const key = normalizeRole(trimmed);
+      if (!key || ACCOUNT_ROLES.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      ordered.push(toDisplayRole(trimmed));
+    }
+  };
+  pushRaw(w.primary_role);
+  for (const s of w.secondary_roles ?? []) pushRaw(s);
+  for (const s of ((w as any).default_required_skills as string[] | undefined) ?? []) pushRaw(s);
+  return ordered;
+}
+
+function formatRolesForCard(roles: string[], max = 3): string {
+  if (roles.length === 0) return "—";
+  if (roles.length <= max) return roles.join(" · ");
+  return `${roles.slice(0, max).join(" · ")} · +${roles.length - max}`;
+}
+
+const DAY_FULL_LABEL: Record<string, string> = {
+  lun: "lunedì", mar: "martedì", mer: "mercoledì", gio: "giovedì",
+  ven: "venerdì", sab: "sabato", dom: "domenica",
+};
+
+function formatWorkerAvailabilityLine(w: Worker): string {
+  const weekly = w.weekly_availability ?? [];
+  const summary = summarizeWeeklyAvailability(weekly, (w as any).available_now_until ?? null);
+  switch (summary.kind) {
+    case "none":
+      return "Nessuna disponibilità indicata";
+    case "today":
+      return summary.hours ? `Disponibile oggi · ${summary.hours}` : "Disponibile oggi";
+    case "all_week":
+      return summary.hours ? `Tutta la settimana · ${summary.hours}` : "Tutta la settimana";
+    case "wide":
+      return `Disponibilità impostata (${summary.totalDays} giorni/settimana)`;
+    case "lines": {
+      // Try to extract the unique days from weekly tokens for a friendly label.
+      const days = new Set<string>();
+      for (const t of weekly) {
+        const d = String(t).toLowerCase().split("_")[0];
+        if (d && DAY_FULL_LABEL[d]) days.add(d);
+      }
+      if (days.size > 0 && days.size <= 4) {
+        const order = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+        const labels = order.filter((d) => days.has(d)).map((d) => DAY_FULL_LABEL[d]);
+        return `Disponibile: ${labels.join(", ")}`;
+      }
+      return summary.lines[0] ? `Disponibile: ${summary.lines[0]}` : "Disponibilità impostata";
+    }
+  }
+}
+
 function MapPage() {
   const { user, role } = useAuth();
   const loadWorkerSearchData = useServerFn(loadRestaurantWorkerSearchResults);
