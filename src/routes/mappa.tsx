@@ -772,6 +772,19 @@ function MapPage() {
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
   useEffect(() => {
+    console.log("[PUPILLO_MAP_FILTERS_CLEANUP_DEBUG]", {
+      filtri_attivi_rimasti: ["query", "province", "city", "district", "priceF", "planF", "radiusKm", "withRequests", "showW", "showA", "showR"],
+      selectedCity: city,
+      selectedZone: district,
+      selectedDistance: radiusKm,
+      showWorkers: showW,
+      showRequests: showA,
+      totalWorkers: filteredWorkers.length,
+      totalRestaurants: filteredRestaurants.length,
+    });
+  }, [city, district, radiusKm, showW, showA, showR, filteredWorkers.length, filteredRestaurants.length]);
+
+  useEffect(() => {
     const availableZones = city !== "any" ? zonesForCity(city) : [];
     const workersBefore = workers.filter((w) => city === "any" || w.city === city);
     const restaurantsBefore = restaurants.filter((r) => city === "any" || r.city === city);
