@@ -630,6 +630,76 @@ function MapPage() {
     });
   }, [isRestaurant, workers, filteredWorkers]);
 
+  useEffect(() => {
+    if (!isRestaurant) return;
+    const target = city === "any" ? "" : normalizeLocation(city);
+    const zoneTarget = normalizeLocation(district);
+    const afterRole = workers.filter((w) => isRealWorker(w));
+    const afterCity = afterRole.filter((w) => {
+      if (!target) return true;
+      const cands = workerCityCandidates(w);
+      return cands.some((c) => c === target || c.includes(target) || target.includes(c));
+    });
+    const afterZone = afterCity.filter((w) => {
+      if (!zoneTarget) return true;
+      const z = workerZoneCandidates(w);
+      return z.includes("tutte le zone") || z.some((x) => x.includes(zoneTarget) || zoneTarget.includes(x));
+    });
+    const exclusions = afterRole
+      .filter((w) => !filteredWorkers.find((f) => f.id === w.id))
+      .map((w) => {
+        const cands = workerCityCandidates(w);
+        const z = workerZoneCandidates(w);
+        const cityOk = !target || cands.some((c) => c === target || c.includes(target) || target.includes(c));
+        const zoneOk = !zoneTarget || z.includes("tutte le zone") || z.some((x) => x.includes(zoneTarget) || zoneTarget.includes(x));
+        return { id: w.id, nome: w.full_name, motivo: !cityOk ? "citta_non_corrisponde" : !zoneOk ? "zona_non_corrisponde" : "altro_filtro", cityCandidates: cands, zoneCandidates: z };
+      });
+    console.log("[PUPILLO_MAP_FILTER_RESULTS_DEBUG]", {
+      selectedCity: city,
+      selectedZone: district || "Tutte le zone",
+      normalizedSelectedCity: target,
+      normalizedSelectedZone: zoneTarget,
+      totale_worker_prima_filtri: workers.length,
+      totale_worker_dopo_filtro_ruolo: afterRole.length,
+      totale_worker_dopo_filtro_citta: afterCity.length,
+      totale_worker_dopo_filtro_zona: afterZone.length,
+      totale_worker_finali_lista: filteredWorkers.length,
+      totale_worker_finali_mappa: filteredWorkers.filter((w) => getWorkerCoordinates(w).hasValidCoordinates).length,
+      esclusioni: exclusions,
+    });
+
+    const nikla = workers.find((w) => (w.full_name || "").toLowerCase().includes("nikla"));
+    if (nikla) {
+      const cityCands = workerCityCandidates(nikla);
+      const zoneCands = workerZoneCandidates(nikla);
+      const cityMatch = !target || cityCands.some((c) => c === target || c.includes(target) || target.includes(c));
+      const zoneMatch = !zoneTarget || zoneCands.includes("tutte le zone") || zoneCands.some((x) => x.includes(zoneTarget) || zoneTarget.includes(x));
+      const coords = getWorkerCoordinates(nikla);
+      const shownInList = !!filteredWorkers.find((w) => w.id === nikla.id);
+      console.log("[PUPILLO_MAP_CITY_FILTER_NIKLA_DEBUG]", {
+        user_id: nikla.id,
+        nome: nikla.full_name,
+        ruolo: nikla.primary_role,
+        citta_profiles: (nikla as any).city,
+        citta_service_area: (nikla as any).service_area_city,
+        citta_disponibilita: nikla.location_city,
+        zona_profiles: (nikla as any).neighborhood,
+        zona_service_area: (nikla as any).service_area_district,
+        zona_disponibilita: nikla.location_zone,
+        selectedCity: city,
+        selectedZone: district || "Tutte le zone",
+        normalizedWorkerCities: cityCands,
+        normalizedSelectedCity: target,
+        cityMatch,
+        zoneMatch,
+        motivo_esclusione: shownInList ? null : !cityMatch ? "citta_non_corrisponde" : !zoneMatch ? "zona_non_corrisponde" : "altro_filtro",
+        hasCoordinates: coords.hasValidCoordinates,
+        shownInList,
+        shownOnMap: shownInList && coords.hasValidCoordinates,
+      });
+    }
+  }, [isRestaurant, workers, filteredWorkers, city, district]);
+
   const matchesQuery = (r: Restaurant) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
