@@ -15,7 +15,7 @@ import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
 import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
+import { priceRangeLabel } from "@/lib/price-range";
 import { ITALIAN_LOCATIONS, citiesForProvince, zonesForCity } from "@/lib/italian-locations";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
@@ -302,8 +302,6 @@ function MapPage() {
   const [city, setCity] = useState("any");
   const [province, setProvince] = useState("any");
   const [district, setDistrict] = useState("");
-  const [priceF, setPriceF] = useState("any");
-  const [planF, setPlanF] = useState("any");
   const [withRequests, setWithRequests] = useState(false);
   const [showR, setShowR] = useState(true);
   const [showW, setShowW] = useState(true);
@@ -752,8 +750,6 @@ function MapPage() {
       if (province !== "any" && r.province !== province) return false;
       if (city !== "any" && r.city !== city) return false;
       if (district && !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
-      if (priceF !== "any" && r.price_range !== priceF) return false;
-      if (planF !== "any" && r.plan !== planF) return false;
       if (withRequests && !annCounts[r.id]) return false;
       // Lato lavoratore: mostra SOLO ristoratori della/e città del lavoratore
       // (rule 1, 4, 12). Inoltre il locale deve avere almeno un annuncio
@@ -767,22 +763,27 @@ function MapPage() {
       }
       return true;
     });
-  }, [restaurants, query, city, province, district, priceF, planF, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
+  }, [restaurants, query, city, province, district, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
   useEffect(() => {
-    console.log("[PUPILLO_MAP_FILTERS_CLEANUP_DEBUG]", {
-      filtri_attivi_rimasti: ["query", "province", "city", "district", "priceF", "planF", "radiusKm", "withRequests", "showW", "showA", "showR"],
+    console.log("[PUPILLO_MAP_FILTERS_SIMPLIFICATION_DEBUG]", {
+      filtri_attivi_rimasti: ["query", "province", "city", "district", "radiusKm", "withRequests", "wRole", "wBadge", "wExp", "wMinRating", "wMinReliab", "showW", "showA", "showR"],
       selectedCity: city,
       selectedZone: district,
       selectedDistance: radiusKm,
+      selectedRole: wRole,
+      selectedBadge: wBadge,
+      selectedExperience: wExp,
+      selectedRating: wMinRating,
+      selectedReliability: wMinReliab,
       showWorkers: showW,
       showRequests: showA,
       totalWorkers: filteredWorkers.length,
       totalRestaurants: filteredRestaurants.length,
     });
-  }, [city, district, radiusKm, showW, showA, showR, filteredWorkers.length, filteredRestaurants.length]);
+  }, [city, district, radiusKm, wRole, wBadge, wExp, wMinRating, wMinReliab, showW, showA, showR, filteredWorkers.length, filteredRestaurants.length]);
 
   useEffect(() => {
     const availableZones = city !== "any" ? zonesForCity(city) : [];
@@ -1025,7 +1026,7 @@ function MapPage() {
           byId[a.id] = source;
         }
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
-        if (query || city !== "any" || district || planF !== "any" || withRequests) {
+        if (query || city !== "any" || district || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
         }
         const refPoint = searchCenter || me;
@@ -1111,7 +1112,7 @@ function MapPage() {
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, planF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
@@ -1250,24 +1251,6 @@ function MapPage() {
             {(city !== "any" ? zonesForCity(city) : []).map((z) => (
               <SelectItem key={z} value={z}>{z}</SelectItem>
             ))}
-          </SelectContent>
-        </Select>
-        <Select value={priceF} onValueChange={setPriceF}>
-          <SelectTrigger><SelectValue placeholder="Fascia di prezzo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Tutte le fasce</SelectItem>
-            {PRICE_RANGE_OPTIONS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>{p.symbol ? `${p.symbol} — ${p.label}` : p.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={planF} onValueChange={setPlanF}>
-          <SelectTrigger><SelectValue placeholder="Piano" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Tutti i piani</SelectItem>
-            <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
-            <SelectItem value="business">Business</SelectItem>
           </SelectContent>
         </Select>
         <Select value={radiusKm} onValueChange={setRadiusKm}>
@@ -1578,7 +1561,6 @@ function MapPage() {
                   size="sm"
                   onClick={() => {
                     setQuery(""); setCity("any"); setProvince("any"); setDistrict("");
-                    setPlanF("any");
                     setWithRequests(false); setRadiusKm("any");
                   }}
                 >
