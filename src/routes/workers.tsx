@@ -574,10 +574,10 @@ function WorkersPage() {
   // Carica tutti i lavoratori all'apertura della pagina
   useEffect(() => {
     if (role === "restaurant") {
-      void loadWorkers();
+      void loadWorkers("page_enter_or_user_change");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role]);
+  }, [role, user?.id]);
 
   // Refetch availabilities when the tab regains focus, so a worker's update
   // shows up here without a full page reload. Also subscribe to realtime
@@ -1049,6 +1049,7 @@ function WorkersPage() {
     setSubcategory("");
     setQInput("");
     setLang("");
+    void loadWorkers("filters_reset");
   };
   const onChangeCategory = (c: Category) => { setCategory(c); setSubcategory(""); };
   const removeCategoryChip = () => { setCategory("all"); setSubcategory(""); };
