@@ -637,6 +637,32 @@ function MapPage() {
 
   useEffect(() => {
     if (!isRestaurant) return;
+    const realWorkers = workers.filter(isRealWorker);
+    const targetNorm = wRole === "any" ? null : normalizeRole(wRole);
+    const perWorker = realWorkers.map((w) => {
+      const rawRoles = collectWorkerRoleValues(w as any);
+      const rawSkills = collectWorkerCompetenceValues(w as any);
+      const normalizedRoles = [...rawRoles, ...rawSkills].map(normalizeRole);
+      const matches = targetNorm == null ? true : normalizedRoles.includes(targetNorm);
+      return { user_id: w.id, nome: w.full_name, primary_role: w.primary_role, secondary_roles: w.secondary_roles, raw_roles: rawRoles, normalized_roles: normalizedRoles, matches };
+    });
+    console.log("[PUPILLO_MAP_ROLE_FILTER_DEBUG]", {
+      componente: "src/routes/mappa.tsx",
+      selectedRole: wRole,
+      selectedRoleNormalized: targetNorm,
+      dropdown_ruoli_disponibili: workerRoles,
+      totale_worker_prima_filtro_ruolo: realWorkers.length,
+      totale_worker_dopo_filtro_ruolo: perWorker.filter((p) => p.matches).length,
+      worker_esclusi_per_ruolo: perWorker.filter((p) => !p.matches),
+    });
+    console.log("[PUPILLO_WORKER_ROLE_SOURCE_DEBUG]", {
+      componente: "src/routes/mappa.tsx",
+      per_worker: perWorker,
+    });
+  }, [isRestaurant, workers, wRole, workerRoles]);
+
+  useEffect(() => {
+    if (!isRestaurant) return;
     const target = city === "any" ? "" : normalizeLocation(city);
     const zoneTarget = normalizeLocation(district);
     const afterRole = workers.filter((w) => isRealWorker(w));
