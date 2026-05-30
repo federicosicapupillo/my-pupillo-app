@@ -21,6 +21,7 @@ import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
+import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
 import { WORKER_ROLES } from "@/lib/worker-roles";
