@@ -305,6 +305,23 @@ function workerMatchesRole(w: W, role: string | null | undefined): boolean {
   return roles.some((r) => aliases.some((a) => r === a || r.includes(a)));
 }
 
+function plainRole(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isSafeSearchWorker(w: W): boolean {
+  const roles = (w.user_roles ?? []).map(plainRole);
+  const primary = plainRole(w.primary_role);
+  const hasWorkerRole = roles.includes("worker") || primary === "worker" || w.role_is_worker === true;
+  const hasBlockedRole =
+    roles.includes("admin") ||
+    roles.includes("restaurant") ||
+    ["admin", "restaurant", "ristoratore"].includes(primary) ||
+    w.role_is_admin === true ||
+    w.role_is_restaurant === true;
+  return hasWorkerRole && !hasBlockedRole && w.is_deleted !== true && !w.deleted_at && w.is_active !== false && w.is_visible !== false && w.is_demo !== true && !w.seed_batch_id;
+}
+
 // Sceglie l'etichetta del ruolo da mostrare sotto il nome del lavoratore.
 // - Se non c'è un ruolo "target" (annuncio o ricerca avanzata), mostriamo
 //   il ruolo principale del lavoratore.
