@@ -687,7 +687,7 @@ function MapPage() {
         // mostriamo invece nome e cognome completi.
         name: isRestaurant ? displayWorkerName(w, known) : w.full_name,
         role: w.primary_role,
-        city: w.city ?? w.neighborhood ?? null,
+        city: workerLocationLabel(w),
         rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
         badge: w.badge,
         avatarUrl: workerAvatars[w.id] ?? null,
@@ -766,7 +766,7 @@ function MapPage() {
           category: "worker",
           title: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : (w.full_name || "Lavoratore"),
           subtitle: [w.primary_role, w.badge ? `· ${w.badge}` : null].filter(Boolean).join(" "),
-          city: [w.neighborhood, w.city].filter(Boolean).join(", ") || w.city,
+          city: workerLocationLabel(w),
           status: w.account_status,
           link: `/workers?focus=${w.id}`,
           meta: {
