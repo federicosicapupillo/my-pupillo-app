@@ -135,6 +135,11 @@ type Worker = {
   account_status: string | null;
   punctuality_pct?: number | null;
   avg_professionalism?: number | null;
+  hourly_availability?: string | null;
+  available_now_until?: string | null;
+  work_area_mode?: string | null;
+  all_zones?: boolean | null;
+  selected_zones?: string[] | null;
 };
 
 function normalizeWorkerRole(value: string | null | undefined) {
@@ -325,9 +330,33 @@ const DAY_FULL_LABEL: Record<string, string> = {
 function formatWorkerAvailabilityLine(w: Worker): string {
   const weekly = w.weekly_availability ?? [];
   const summary = summarizeWeeklyAvailability(weekly, (w as any).available_now_until ?? null);
+
+  const hasAreaAvailability =
+    !!w.work_area_mode ||
+    w.all_zones === true ||
+    (Array.isArray(w.selected_zones) && w.selected_zones.length > 0) ||
+    !!w.service_area_city ||
+    !!w.service_area_district ||
+    (w.available_days && w.available_days.length > 0) ||
+    (w.availability_schedule && w.availability_schedule.length > 0) ||
+    !!w.hourly_availability ||
+    !!w.available_now_until ||
+    (w.availability_source && w.availability_source !== "missing");
+
   switch (summary.kind) {
-    case "none":
+    case "none": {
+      if (hasAreaAvailability) {
+        const city = w.service_area_city ?? w.location_city ?? w.city;
+        const zone = w.all_zones
+          ? "Tutte le zone"
+          : (w.service_area_district ?? w.location_zone ?? w.neighborhood);
+        if (city || zone) {
+          return `Disponibile su ${[city, zone].filter(Boolean).join(" · ")}`;
+        }
+        return "Disponibilità impostata";
+      }
       return "Nessuna disponibilità indicata";
+    }
     case "today":
       return summary.hours ? `Disponibile oggi · ${summary.hours}` : "Disponibile oggi";
     case "all_week":
@@ -464,7 +493,7 @@ function MapPage() {
         ? loadWorkerSearchData({ data: { reason: "mappa_restaurant_workers" } }).then((res) => ({ data: res.workers, error: null }))
         : supabase
             .from("profiles")
-            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name, punctuality_pct, avg_professionalism")
+            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_city, service_area_district, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, hourly_availability, available_now_until, work_area_mode, all_zones, selected_zones, account_status, business_name, punctuality_pct, avg_professionalism")
             .is("business_name", null)
             .not("primary_role", "is", null)
             .limit(2000);
@@ -1393,6 +1422,27 @@ function MapPage() {
                   const proRoles = workerProfessionalRoles(w);
                   const rolesLabel = formatRolesForCard(proRoles, 3);
                   const availabilityLabel = formatWorkerAvailabilityLine(w);
+                  const isNikla = (w.full_name ?? "").toLowerCase().includes("nikla");
+                  if (isNikla || debugEnabled) {
+                    const logTag = isNikla
+                      ? "[PUPILLO_MAP_WORKER_AVAILABILITY_NIKLA_DEBUG]"
+                      : "[PUPILLO_MAP_WORKER_AVAILABILITY_CARD_DEBUG]";
+                    console.log(logTag, {
+                      user_id: w.id,
+                      nome: w.full_name,
+                      availabilitySource: w.availability_source ?? "missing",
+                      weekly_availability: w.weekly_availability ?? [],
+                      hourly_availability: w.hourly_availability ?? null,
+                      available_now_until: w.available_now_until ?? null,
+                      work_area_mode: w.work_area_mode ?? null,
+                      all_zones: w.all_zones ?? null,
+                      selected_zones: w.selected_zones ?? [],
+                      service_area_city: w.service_area_city ?? null,
+                      service_area_district: w.service_area_district ?? null,
+                      radius_km: w.radius_km ?? null,
+                      cardAvailabilityText: availabilityLabel,
+                    });
+                  }
                   if (debugEnabled) {
                     console.log("[PUPILLO_MAP_WORKER_CARD_DETAILS_DEBUG]", {
                       user_id: w.id,
