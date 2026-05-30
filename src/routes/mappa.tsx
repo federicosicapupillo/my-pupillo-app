@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle, Info, MapPinOff, Settings2 } from "lucide-react";
+import { Locate, MapPin, Coins, Briefcase, Star, AlertTriangle, Info, MapPinOff, Settings2 } from "lucide-react";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
