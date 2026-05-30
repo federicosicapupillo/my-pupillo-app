@@ -557,7 +557,10 @@ function MapPage() {
 
   const cities = useMemo(() => Array.from(new Set(restaurants.map(r => r.city).filter(Boolean))) as string[], [restaurants]);
   const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
-  const workerRoles = useMemo(() => Array.from(new Set(workers.map(w => w.primary_role).filter(Boolean))) as string[], [workers]);
+  // Centralised list of HoReCa roles for the role filter dropdown.
+  // MUST NOT be derived from currently loaded workers (otherwise the dropdown
+  // shrinks to whichever roles happen to exist, e.g. only "Cameriere").
+  const workerRoles = useMemo(() => [...WORKER_ROLES] as string[], []);
 
   // Insieme effettivo delle città consentite per la mappa lato lavoratore.
   // Comportamento richiesto: per default il lavoratore vede TUTTI gli annunci
@@ -604,7 +607,7 @@ function MapPage() {
         // "tutte le zone" worker matches any specific zone in his city
         if (!(zCands.includes("tutte le zone") || zCands.some((z) => z.includes(target) || target.includes(z)))) return false;
       }
-      if (wRole !== "any" && w.primary_role !== wRole) return false;
+      if (wRole !== "any" && !workerMatchesAnyRoleField(w as any, wRole)) return false;
       if (wBadge !== "any" && w.badge !== wBadge) return false;
       if (wExp !== "any" && w.experience_level !== wExp) return false;
       if (wMinRating !== "any" && Number(w.rating_avg || 0) < Number(wMinRating)) return false;
