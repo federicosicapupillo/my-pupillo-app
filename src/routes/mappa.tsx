@@ -26,6 +26,8 @@ import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { workerMatchesAnyRoleField, normalizeRole, collectWorkerRoleValues, collectWorkerCompetenceValues } from "@/lib/worker-role-normalization";
 import { summarizeWeeklyAvailability } from "@/lib/availability-summary";
+import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summary";
+import type { AvailabilityRow } from "@/lib/availability";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
@@ -327,7 +329,14 @@ const DAY_FULL_LABEL: Record<string, string> = {
   ven: "venerdì", sab: "sabato", dom: "domenica",
 };
 
-function formatWorkerAvailabilityLine(w: Worker): string {
+function formatWorkerAvailabilityLine(w: Worker, rows?: AvailabilityRow[] | null): string {
+  // 1) Sorgente di verità: tabella worker_availability (stessa usata dal
+  // profilo dettaglio). Se ci sono righe, riusiamo lo stesso summarizer.
+  if (rows && rows.length > 0) {
+    const cardLine = formatWorkerAvailabilityCardLine(rows, new Date());
+    if (cardLine) return cardLine;
+  }
+  // 2) Fallback legacy: profiles.weekly_availability + available_now_until.
   const weekly = w.weekly_availability ?? [];
   const summary = summarizeWeeklyAvailability(weekly, (w as any).available_now_until ?? null);
 
@@ -389,6 +398,7 @@ function MapPage() {
   const debugEnabled = role === "admin" || isDev;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
+  const [availByWorker, setAvailByWorker] = useState<Record<string, AvailabilityRow[]>>({});
   const [anns, setAnns] = useState<Ann[]>([]);
   const [annCounts, setAnnCounts] = useState<Record<string, number>>({});
   // applicationStatus per announcement_id, solo per il lavoratore loggato
@@ -545,6 +555,29 @@ function MapPage() {
         array_finale_renderizzato: wsRaw.map((w) => ({ user_id: w.id, nome: w.full_name, ruolo: w.primary_role, user_roles: w.user_roles ?? [] })),
       });
       setWorkers(wsRaw);
+      // Carica le disponibilità reali dalla tabella worker_availability
+      // (stessa fonte usata dalla pagina /workers e dal profilo dettaglio).
+      // Il campo profiles.weekly_availability è legacy e spesso vuoto.
+      const workerIds = wsRaw.map((w) => w.id);
+      if (workerIds.length > 0) {
+        const { data: avRows, error: avErr } = await supabase
+          .from("worker_availability")
+          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
+          .in("worker_id", workerIds);
+        if (avErr) {
+          console.warn("[mappa] worker_availability load error", avErr);
+        } else {
+          const map: Record<string, AvailabilityRow[]> = {};
+          for (const row of (avRows as AvailabilityRow[] | null) ?? []) {
+            const arr = map[row.worker_id] ?? [];
+            arr.push(row);
+            map[row.worker_id] = arr;
+          }
+          setAvailByWorker(map);
+        }
+      } else {
+        setAvailByWorker({});
+      }
       setAnns((a as Ann[]) || []);
       const counts: Record<string, number> = {};
       (a || []).forEach((x: any) => { counts[x.restaurant_id] = (counts[x.restaurant_id] || 0) + 1; });
@@ -1421,7 +1454,8 @@ function MapPage() {
                     ? distKm(ref.lat, ref.lng, coords.lat, coords.lng) : null;
                   const proRoles = workerProfessionalRoles(w);
                   const rolesLabel = formatRolesForCard(proRoles, 3);
-                  const availabilityLabel = formatWorkerAvailabilityLine(w);
+                  const realAvailRows = availByWorker[w.id] ?? null;
+                  const availabilityLabel = formatWorkerAvailabilityLine(w, realAvailRows);
                   const isNikla = (w.full_name ?? "").toLowerCase().includes("nikla");
                   if (isNikla || debugEnabled) {
                     const logTag = isNikla
@@ -1431,6 +1465,8 @@ function MapPage() {
                       user_id: w.id,
                       nome: w.full_name,
                       availabilitySource: w.availability_source ?? "missing",
+                      worker_availability_rows_count: realAvailRows?.length ?? 0,
+                      worker_availability_rows: realAvailRows ?? [],
                       weekly_availability: w.weekly_availability ?? [],
                       hourly_availability: w.hourly_availability ?? null,
                       available_now_until: w.available_now_until ?? null,
@@ -1441,6 +1477,22 @@ function MapPage() {
                       service_area_district: w.service_area_district ?? null,
                       radius_km: w.radius_km ?? null,
                       cardAvailabilityText: availabilityLabel,
+                      sorgente_finale: (realAvailRows && realAvailRows.length > 0)
+                        ? "worker_availability (stessa del profilo)"
+                        : ((w.weekly_availability ?? []).length > 0
+                          ? "profiles.weekly_availability (fallback legacy)"
+                          : "fallback area (city/zone) o nessuna"),
+                    });
+                  }
+                  if (isNikla) {
+                    console.log("[PUPILLO_MAP_CARD_AVAILABILITY_SYNC_DEBUG]", {
+                      user_id: w.id,
+                      nome: w.full_name,
+                      tabella_sorgente_profilo: "worker_availability + worker_availability_exceptions",
+                      tabella_sorgente_mappa: "worker_availability (ora allineata al profilo)",
+                      raw_rows_count: realAvailRows?.length ?? 0,
+                      raw_rows: realAvailRows ?? [],
+                      formatted_card_mappa: availabilityLabel,
                     });
                   }
                   if (debugEnabled) {
