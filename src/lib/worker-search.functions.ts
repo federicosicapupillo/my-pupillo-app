@@ -308,5 +308,3 @@ export const loadRestaurantWorkerSearchResults = createServerFn({ method: "POST"
       debug,
     };
   });
-
-export const getRestaurantWorkerSearchData = loadRestaurantWorkerSearchResults;
