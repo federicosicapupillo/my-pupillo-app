@@ -46,8 +46,7 @@ import {
   roleMatches,
   workerMatchesAnyRoleField,
 } from "@/lib/worker-role-normalization";
-import { getRestaurantWorkerSearchData, type WorkerSearchDebug } from "@/lib/worker-search.functions";
-import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
+import { loadRestaurantWorkerSearchResults, type WorkerSearchDebug } from "@/lib/worker-search.functions";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -82,6 +81,8 @@ type W = {
   last_active_at: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   service_area_radius_m: number | null;
   reputation_score?: number | null;
   reputation_level?: string | null;
@@ -105,6 +106,7 @@ type W = {
   role_is_restaurant?: boolean;
   is_active?: boolean;
   is_visible?: boolean;
+  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "missing";
 };
 
 type Category =
@@ -313,7 +315,7 @@ function plainRole(value: string | null | undefined): string {
 function isSafeSearchWorker(w: W): boolean {
   const roles = (w.user_roles ?? []).map(plainRole);
   const primary = plainRole(w.primary_role);
-  const hasWorkerRole = roles.includes("worker") || primary === "worker" || w.role_is_worker === true;
+  const hasWorkerRole = roles.includes("worker") || w.role_is_worker === true;
   const hasBlockedRole =
     roles.includes("admin") ||
     roles.includes("restaurant") ||
@@ -321,6 +323,36 @@ function isSafeSearchWorker(w: W): boolean {
     w.role_is_admin === true ||
     w.role_is_restaurant === true;
   return hasWorkerRole && !hasBlockedRole && w.is_deleted !== true && !w.deleted_at && w.is_active !== false && w.is_visible !== false && w.is_demo !== true && !w.seed_batch_id;
+}
+
+function workerBlockReason(w: W): string {
+  const roles = (w.user_roles ?? []).map(plainRole);
+  const primary = plainRole(w.primary_role);
+  if (roles.includes("admin") || primary === "admin" || w.role_is_admin) return "ruolo_admin";
+  if (roles.includes("restaurant") || ["restaurant", "ristoratore"].includes(primary) || w.role_is_restaurant) return "ruolo_restaurant";
+  if (!roles.includes("worker") && w.role_is_worker !== true) return "ruolo_non_worker";
+  if (w.is_deleted || w.deleted_at) return "profilo_eliminato";
+  if (w.is_demo || w.seed_batch_id) return "profilo_demo";
+  if (w.is_active === false) return "account_non_attivo";
+  if (w.is_visible === false) return "profilo_non_completato";
+  return "non_idoneo";
+}
+
+function getWorkerCoordinates(w: W): { lat: number | null; lng: number | null; hasValidCoordinates: boolean } {
+  const latRaw = w.service_area_lat ?? w.latitude ?? null;
+  const lngRaw = w.service_area_lng ?? w.longitude ?? null;
+  const lat = typeof latRaw === "number" ? latRaw : latRaw == null ? null : Number(latRaw);
+  const lng = typeof lngRaw === "number" ? lngRaw : lngRaw == null ? null : Number(lngRaw);
+  const hasValidCoordinates =
+    lat != null &&
+    lng != null &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180;
+  return { lat: hasValidCoordinates ? lat : null, lng: hasValidCoordinates ? lng : null, hasValidCoordinates };
 }
 
 // Sceglie l'etichetta del ruolo da mostrare sotto il nome del lavoratore.
