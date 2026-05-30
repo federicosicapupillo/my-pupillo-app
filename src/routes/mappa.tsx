@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -21,6 +22,7 @@ import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
 import { displayWorkerName } from "@/lib/worker-display";
+import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
@@ -87,10 +89,23 @@ type Worker = {
   full_name: string | null;
   primary_role: string | null;
   secondary_roles: string[] | null;
+  user_roles?: string[];
+  role_is_worker?: boolean;
+  role_is_admin?: boolean;
+  role_is_restaurant?: boolean;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
+  is_demo?: boolean | null;
+  seed_batch_id?: string | null;
+  is_active?: boolean;
+  is_visible?: boolean;
+  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "missing";
   city: string | null;
   neighborhood: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   badge: string | null;
   rating_avg: number | null;
   reliability_pct: number | null;
@@ -102,6 +117,34 @@ type Worker = {
   punctuality_pct?: number | null;
   avg_professionalism?: number | null;
 };
+
+function normalizeWorkerRole(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isRealWorker(profile: Worker): boolean {
+  const roles = (profile.user_roles ?? []).map(normalizeWorkerRole);
+  const primary = normalizeWorkerRole(profile.primary_role);
+  const finalRole = roles.includes("worker") || profile.role_is_worker === true ? "worker" : primary;
+  const blocked = roles.includes("admin") || roles.includes("restaurant") || ["admin", "restaurant", "ristoratore"].includes(primary) || profile.role_is_admin === true || profile.role_is_restaurant === true;
+  return finalRole === "worker" && !blocked && profile.is_deleted !== true && !profile.deleted_at && profile.is_demo !== true && !profile.seed_batch_id && profile.is_active !== false && profile.is_visible !== false;
+}
+
+function nonWorkerReason(profile: Worker): string {
+  const roles = (profile.user_roles ?? []).map(normalizeWorkerRole);
+  const primary = normalizeWorkerRole(profile.primary_role);
+  if (roles.includes("admin") || primary === "admin" || profile.role_is_admin) return "ruolo_admin";
+  if (roles.includes("restaurant") || ["restaurant", "ristoratore"].includes(primary) || profile.role_is_restaurant) return "ruolo_restaurant";
+  if (!roles.includes("worker") && profile.role_is_worker !== true) return "senza_ruolo_worker";
+  return "non_idoneo";
+}
+
+function getWorkerCoordinates(profile: Worker) {
+  const lat = profile.service_area_lat ?? profile.latitude ?? null;
+  const lng = profile.service_area_lng ?? profile.longitude ?? null;
+  const hasValidCoordinates = lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+  return { lat: hasValidCoordinates ? Number(lat) : null, lng: hasValidCoordinates ? Number(lng) : null, hasValidCoordinates };
+}
 
 type Ann = {
   id: string;
