@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -21,6 +22,7 @@ import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
 import { displayWorkerName } from "@/lib/worker-display";
+import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
@@ -87,10 +89,23 @@ type Worker = {
   full_name: string | null;
   primary_role: string | null;
   secondary_roles: string[] | null;
+  user_roles?: string[];
+  role_is_worker?: boolean;
+  role_is_admin?: boolean;
+  role_is_restaurant?: boolean;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
+  is_demo?: boolean | null;
+  seed_batch_id?: string | null;
+  is_active?: boolean;
+  is_visible?: boolean;
+  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "missing";
   city: string | null;
   neighborhood: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   badge: string | null;
   rating_avg: number | null;
   reliability_pct: number | null;
@@ -102,6 +117,34 @@ type Worker = {
   punctuality_pct?: number | null;
   avg_professionalism?: number | null;
 };
+
+function normalizeWorkerRole(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isRealWorker(profile: Worker): boolean {
+  const roles = (profile.user_roles ?? []).map(normalizeWorkerRole);
+  const primary = normalizeWorkerRole(profile.primary_role);
+  const finalRole = roles.includes("worker") || profile.role_is_worker === true ? "worker" : primary;
+  const blocked = roles.includes("admin") || roles.includes("restaurant") || ["admin", "restaurant", "ristoratore"].includes(primary) || profile.role_is_admin === true || profile.role_is_restaurant === true;
+  return finalRole === "worker" && !blocked && profile.is_deleted !== true && !profile.deleted_at && profile.is_demo !== true && !profile.seed_batch_id && profile.is_active !== false && profile.is_visible !== false;
+}
+
+function nonWorkerReason(profile: Worker): string {
+  const roles = (profile.user_roles ?? []).map(normalizeWorkerRole);
+  const primary = normalizeWorkerRole(profile.primary_role);
+  if (roles.includes("admin") || primary === "admin" || profile.role_is_admin) return "ruolo_admin";
+  if (roles.includes("restaurant") || ["restaurant", "ristoratore"].includes(primary) || profile.role_is_restaurant) return "ruolo_restaurant";
+  if (!roles.includes("worker") && profile.role_is_worker !== true) return "senza_ruolo_worker";
+  return "non_idoneo";
+}
+
+function getWorkerCoordinates(profile: Worker) {
+  const lat = profile.service_area_lat ?? profile.latitude ?? null;
+  const lng = profile.service_area_lng ?? profile.longitude ?? null;
+  const hasValidCoordinates = lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+  return { lat: hasValidCoordinates ? Number(lat) : null, lng: hasValidCoordinates ? Number(lng) : null, hasValidCoordinates };
+}
 
 type Ann = {
   id: string;
@@ -158,6 +201,7 @@ function maskedZoneLabel(r: { neighborhood?: string | null; city?: string | null
 
 function MapPage() {
   const { user, role } = useAuth();
+  const loadWorkerSearchData = useServerFn(loadRestaurantWorkerSearchResults);
   const isRestaurant = role === "restaurant";
   const isWorker = role === "worker";
   const isDev = typeof import.meta !== "undefined" && (import.meta as any).env?.DEV === true;
@@ -269,22 +313,21 @@ function MapPage() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [{ data: r }, { data: w }, { data: a }] = await Promise.all([
+      const workerSource = isRestaurant ? "Supabase server function loadRestaurantWorkerSearchResults" : "Supabase direct profiles query";
+      const workerPromise = isRestaurant
+        ? loadWorkerSearchData({ data: { reason: "mappa_restaurant_workers" } }).then((res) => ({ data: res.workers, error: null }))
+        : supabase
+            .from("profiles")
+            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name, punctuality_pct, avg_professionalism")
+            .is("business_name", null)
+            .not("primary_role", "is", null)
+            .limit(2000);
+      const [{ data: r }, workerResult, { data: a }] = await Promise.all([
         supabase.from("profiles")
           .select("id, business_name, full_name, venue_type, venue_type_other, price_range, address, city, province, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
-        // NB: interroghiamo `profiles` direttamente perché la tabella
-        // `user_roles` ha RLS che permette ad ogni utente di vedere solo i
-        // propri ruoli. Filtriamo i lavoratori escludendo i profili
-        // ristoratore (business_name valorizzato) e richiedendo un
-        // primary_role del lavoratore.
-        supabase
-          .from("profiles")
-          .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name, punctuality_pct, avg_professionalism")
-          .is("business_name", null)
-          .not("primary_role", "is", null)
-          .limit(2000),
+        workerPromise,
         // PII-safe view: contact name/phone/email and precise job_latitude/
         // job_longitude/job_address are intentionally not selected here.
         // Workers with an accepted application read those via the base table
@@ -295,7 +338,37 @@ function MapPage() {
           .limit(1000),
       ]);
       setRestaurants((r as Restaurant[]) || []);
-      const wsRaw = ((w as any[]) || []) as Worker[];
+      const workerError = "error" in workerResult ? workerResult.error : null;
+      if (workerError) console.warn("[mappa] worker load error", workerError);
+      const workersReceived = (((workerResult as any).data as any[]) || []) as Worker[];
+      const blockedWorkers: Array<{ user_id: string; nome: string | null; primary_role: string | null; user_roles: string[]; motivo: string }> = [];
+      const dedupedWorkers = new Map<string, Worker>();
+      for (const candidate of workersReceived) {
+        if (isRestaurant && !isRealWorker(candidate)) {
+          const blocked = {
+            user_id: candidate.id,
+            nome: candidate.full_name,
+            primary_role: candidate.primary_role,
+            user_roles: candidate.user_roles ?? [],
+            motivo: nonWorkerReason(candidate),
+          };
+          blockedWorkers.push(blocked);
+          console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx", ...blocked });
+          continue;
+        }
+        if (!dedupedWorkers.has(candidate.id)) dedupedWorkers.set(candidate.id, candidate);
+      }
+      const wsRaw = Array.from(dedupedWorkers.values());
+      console.log("[PUPILLO_WORKER_RENDER_SOURCE_FINAL_DEBUG]", {
+        componente: "src/routes/mappa.tsx",
+        source_dati_usata: workerSource,
+        numero_profili_ricevuti_prima_del_filtro_ruolo: workersReceived.length,
+        numero_profili_con_ruolo_worker: workersReceived.filter((w) => (w.user_roles ?? []).map(normalizeWorkerRole).includes("worker") || w.role_is_worker === true).length,
+        numero_profili_esclusi_perche_admin: blockedWorkers.filter((w) => w.motivo === "ruolo_admin").length,
+        numero_profili_esclusi_perche_restaurant: blockedWorkers.filter((w) => w.motivo === "ruolo_restaurant").length,
+        numero_profili_esclusi_perche_senza_ruolo: blockedWorkers.filter((w) => w.motivo === "senza_ruolo_worker").length,
+        array_finale_renderizzato: wsRaw.map((w) => ({ user_id: w.id, nome: w.full_name, ruolo: w.primary_role, user_roles: w.user_roles ?? [] })),
+      });
       setWorkers(wsRaw);
       setAnns((a as Ann[]) || []);
       const counts: Record<string, number> = {};
@@ -450,6 +523,10 @@ function MapPage() {
     const max = radiusKm !== "any" ? Number(radiusKm) : null;
     const ref = searchCenter || me;
     return workers.filter(w => {
+      if (isRestaurant && !isRealWorker(w)) {
+        console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx filteredWorkers", worker: w, motivo: nonWorkerReason(w) });
+        return false;
+      }
       if (!matchesWorkerQuery(w)) return false;
       if (city !== "any" && w.city !== city) return false;
       if (district && !(w.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
@@ -459,12 +536,27 @@ function MapPage() {
       if (wMinRating !== "any" && Number(w.rating_avg || 0) < Number(wMinRating)) return false;
       if (wMinReliab !== "any" && Number(w.reliability_pct || 0) < Number(wMinReliab)) return false;
       if (statusF !== "any" && w.account_status !== statusF) return false;
-      if (max != null && ref && w.service_area_lat != null && w.service_area_lng != null) {
-        if (distKm(ref.lat, ref.lng, w.service_area_lat, w.service_area_lng) > max) return false;
+      const coords = getWorkerCoordinates(w);
+      if (max != null && ref && coords.hasValidCoordinates && coords.lat != null && coords.lng != null) {
+        if (distKm(ref.lat, ref.lng, coords.lat, coords.lng) > max) return false;
       }
       return true;
     });
   }, [workers, query, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, statusF, radiusKm, searchCenter, me]);
+
+  useEffect(() => {
+    if (!isRestaurant) return;
+    console.log("[PUPILLO_WORKER_RENDER_SOURCE_FINAL_DEBUG]", {
+      componente: "src/routes/mappa.tsx",
+      source_dati_usata: "Supabase server function loadRestaurantWorkerSearchResults -> state workers -> filteredWorkers",
+      numero_profili_ricevuti_prima_del_filtro_ruolo: workers.length,
+      numero_profili_con_ruolo_worker: workers.filter((w) => (w.user_roles ?? []).map(normalizeWorkerRole).includes("worker") || w.role_is_worker === true).length,
+      numero_profili_esclusi_perche_admin: workers.filter((w) => nonWorkerReason(w) === "ruolo_admin").length,
+      numero_profili_esclusi_perche_restaurant: workers.filter((w) => nonWorkerReason(w) === "ruolo_restaurant").length,
+      numero_profili_esclusi_perche_senza_ruolo: workers.filter((w) => nonWorkerReason(w) === "senza_ruolo_worker").length,
+      array_finale_renderizzato: filteredWorkers.map((w) => ({ user_id: w.id, nome: w.full_name, ruolo: w.primary_role, user_roles: w.user_roles ?? [] })),
+    });
+  }, [isRestaurant, workers, filteredWorkers]);
 
   const matchesQuery = (r: Restaurant) => {
     if (!query.trim()) return true;
@@ -503,21 +595,39 @@ function MapPage() {
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
   // Worker points for the avatar-based map (used for restaurant view).
-  // Position fallback: service_area_lat/lng → city lookup (with jitter).
+  // One source only: filteredWorkers from loadRestaurantWorkerSearchResults; no city/mock fallback.
   const locatedWorkers = useMemo(() => {
-    let withCoords = 0, withCity = 0, skipped = 0;
+    let withCoords = 0, skipped = 0;
+    const coordDebug: Array<Record<string, unknown>> = [];
     const arr = filteredWorkers.map((w) => {
-      if (w.service_area_lat != null && w.service_area_lng != null) {
-        withCoords++;
-        return { w, pos: [w.service_area_lat, w.service_area_lng] as [number, number] };
+      if (isRestaurant && !isRealWorker(w)) {
+        console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx locatedWorkers", worker: w, motivo: nonWorkerReason(w) });
+        return null;
       }
-      const base = lookupCityCoords(w.city) || lookupCityCoords(w.neighborhood);
-      if (base) { withCity++; return { w, pos: jitterCoords(base, w.id, 1.5) }; }
+      const coords = getWorkerCoordinates(w);
+      coordDebug.push({
+        user_id: w.id,
+        profile_id: w.id,
+        nome: w.full_name,
+        ruolo: w.primary_role,
+        città: w.city,
+        zona: w.neighborhood,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        hasValidCoordinates: coords.hasValidCoordinates,
+        shownOnMap: coords.hasValidCoordinates,
+        motivo: coords.hasValidCoordinates ? null : "coordinate valide mancanti",
+      });
+      if (coords.hasValidCoordinates && coords.lat != null && coords.lng != null) {
+        withCoords++;
+        return { w, pos: [coords.lat, coords.lng] as [number, number] };
+      }
       skipped++;
       return null;
     }).filter((x): x is { w: Worker; pos: [number, number] } => x != null);
     if (typeof window !== "undefined") {
-      console.debug("[mappa] workers totali:", filteredWorkers.length, "con coordinate:", withCoords, "con città/zona:", withCity, "saltati:", skipped, "marker:", arr.length);
+      console.log("[PUPILLO_WORKER_MAP_COORDINATES_FINAL_DEBUG]", coordDebug);
+      console.debug("[mappa] workers totali:", filteredWorkers.length, "con coordinate:", withCoords, "saltati:", skipped, "marker:", arr.length);
     }
     return arr;
   }, [filteredWorkers]);
@@ -1036,8 +1146,13 @@ function MapPage() {
             ) : (
               <ul className="space-y-2">
                 {filteredWorkers.slice(0, 200).map(w => {
-                  const d = ref && w.service_area_lat != null && w.service_area_lng != null
-                    ? distKm(ref.lat, ref.lng, w.service_area_lat, w.service_area_lng) : null;
+                  if (isRestaurant && !isRealWorker(w)) {
+                    console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx lista card", worker: w, motivo: nonWorkerReason(w) });
+                    return null;
+                  }
+                  const coords = getWorkerCoordinates(w);
+                  const d = ref && coords.hasValidCoordinates && coords.lat != null && coords.lng != null
+                    ? distKm(ref.lat, ref.lng, coords.lat, coords.lng) : null;
                   return (
                     <li key={w.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
                       <div className="flex items-start justify-between gap-2">
@@ -1061,15 +1176,17 @@ function MapPage() {
                         </div>
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => {
-                          if (isRestaurant) {
-                            focusWorkerOnMap(w.id);
-                          } else if (w.service_area_lat != null && w.service_area_lng != null) {
-                            focusOnMap(w.service_area_lat, w.service_area_lng, w.full_name || undefined);
-                          } else {
-                            toast.error("Posizione non disponibile per questo lavoratore.");
-                          }
-                        }}>Mostra sulla mappa</Button>
+                        {coords.hasValidCoordinates ? (
+                          <Button size="sm" variant="outline" className="flex-1" onClick={() => {
+                            if (isRestaurant) {
+                              focusWorkerOnMap(w.id);
+                            } else if (coords.lat != null && coords.lng != null) {
+                              focusOnMap(coords.lat, coords.lng, w.full_name || undefined);
+                            }
+                          }}>Mostra sulla mappa</Button>
+                        ) : (
+                          <Button size="sm" variant="outline" className="flex-1" disabled>Posizione non disponibile</Button>
+                        )}
                         <Button size="sm" onClick={() => setPreviewWorkerId(w.id)}>Vedi profilo</Button>
                       </div>
                     </li>
