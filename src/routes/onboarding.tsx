@@ -281,6 +281,22 @@ function Onboarding() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  // Sezione facoltativa "Esperienza e preferenze" (lavoratore).
+  // Tutti i campi sono opzionali: non bloccano salvataggio né completamento.
+  const [optExp, setOptExp] = useState<{
+    experience_years: string;
+    experience_level: "" | "junior" | "intermediate" | "senior";
+    hourly_rate: string;
+    is_motorized: "" | "yes" | "no";
+    short_bio: string;
+  }>({
+    experience_years: "",
+    experience_level: "",
+    hourly_rate: "",
+    is_motorized: "",
+    short_bio: "",
+  });
+
   const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsServiceArea, setGpsServiceArea] = useState<{ lat: number; lng: number } | null>(null);
   const [serviceAreaLoading, setServiceAreaLoading] = useState(false);
