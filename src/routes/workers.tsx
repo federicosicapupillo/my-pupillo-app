@@ -433,6 +433,43 @@ function WorkersPage() {
       const result = await loadWorkerSearchData({ data: { reason } });
       setWorkerSearchDebug(result.debug);
       const rawList = (((result.workers as W[]) ?? []).filter(isSafeSearchWorker));
+      // Hard render-time guard: any profile that slipped past the server filter
+      // (admin / restaurant / ruolo mancante) viene loggato ed escluso prima
+      // ancora di entrare nel grafo di render.
+      const blocked: Array<{ user_id: string; name: string | null; primary_role: string | null; user_roles: string[]; motivo: string }> = [];
+      const allFromServer = ((result.workers as W[]) ?? []);
+      for (const w of allFromServer) {
+        if (isSafeSearchWorker(w)) continue;
+        const roles = (w.user_roles ?? []).map((r) => (r ?? "").toLowerCase());
+        const primary = (w.primary_role ?? "").toLowerCase();
+        let motivo = "ruolo_non_worker";
+        if (roles.includes("admin") || primary === "admin" || w.role_is_admin) motivo = "ruolo_admin";
+        else if (roles.includes("restaurant") || ["restaurant", "ristoratore"].includes(primary) || w.role_is_restaurant) motivo = "ruolo_restaurant";
+        else if (w.is_deleted || w.deleted_at) motivo = "profilo_eliminato";
+        else if (w.is_demo || w.seed_batch_id) motivo = "profilo_demo";
+        else if (w.is_active === false) motivo = "account_non_attivo";
+        else if (w.is_visible === false) motivo = "profilo_non_completato";
+        blocked.push({ user_id: w.id, name: w.full_name, primary_role: w.primary_role, user_roles: roles, motivo });
+        console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", {
+          user_id: w.id,
+          nome: w.full_name,
+          primary_role: w.primary_role,
+          user_roles: roles,
+          motivo_blocco: motivo,
+        });
+      }
+      console.log("[PUPILLO_WORKER_SEARCH_ROLE_FILTER_DEBUG]", {
+        totale_profili_ricevuti_da_supabase: allFromServer.length,
+        totale_con_ruolo_worker: allFromServer.filter((w) => {
+          const roles = (w.user_roles ?? []).map((r) => (r ?? "").toLowerCase());
+          return roles.includes("worker") || (w.primary_role ?? "").toLowerCase() === "worker" || w.role_is_worker === true;
+        }).length,
+        totale_esclusi_perche_admin: blocked.filter((b) => b.motivo === "ruolo_admin").length,
+        totale_esclusi_perche_restaurant: blocked.filter((b) => b.motivo === "ruolo_restaurant").length,
+        totale_esclusi_perche_ruolo_mancante: blocked.filter((b) => b.motivo === "ruolo_non_worker").length,
+        totale_esclusi_altri_motivi: blocked.filter((b) => !["ruolo_admin", "ruolo_restaurant", "ruolo_non_worker"].includes(b.motivo)).length,
+        totale_finale_mostrato: rawList.length,
+      });
       // Deduplicazione difensiva per `id` (profile_id == user_id su `profiles`).
       // Anche se la SELECT su `profiles` non dovrebbe mai produrre duplicati,
       // proteggiamo il render da qualsiasi anomalia futura.
