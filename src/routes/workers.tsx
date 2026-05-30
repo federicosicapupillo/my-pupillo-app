@@ -2335,11 +2335,9 @@ function WorkersMapSection({
   inviteLabel: string;
   rel: Record<string, WorkerRel>;
 }) {
-  // Sulla mappa mostriamo SOLO lavoratori con coordinate reali impostate
-  // dal worker stesso (service_area_lat/lng). Niente fallback "lookup città
-  // + jitter": creerebbe marker fittizi per profili senza posizione reale e
-  // i ristoratori vedrebbero punti sulla mappa che in realtà non esistono.
   // Deduplicazione difensiva per `id` prima di renderizzare i marker.
+  // La server function passa coordinate reali quando presenti oppure coordinate
+  // approssimative derivate da città/zona salvate dal worker in onboarding.
   const seen = new Set<string>();
   const deduped: W[] = [];
   for (const w of workers) {
@@ -2362,18 +2360,26 @@ function WorkersMapSection({
         profile_id: w.id,
         nome: w.full_name,
         ruolo: w.primary_role,
-        citta: w.service_area_city ?? w.city ?? w.residence_city ?? null,
-        zona: w.service_area_district ?? w.neighborhood ?? null,
+        city: w.location_city ?? w.service_area_city ?? w.city ?? w.residence_city ?? null,
+        province: w.location_province ?? w.province ?? w.residence_province ?? null,
+        zone: w.location_zone ?? w.service_area_district ?? w.neighborhood ?? null,
+        district: w.location_zone ?? w.service_area_district ?? w.neighborhood ?? null,
+        radius_km: w.radius_km ?? (w.service_area_radius_m != null ? Math.round(Number(w.service_area_radius_m) / 1000) : null),
         latitude: coords.lat,
         longitude: coords.lng,
+        available_days: w.available_days ?? [],
+        availability_schedule: w.availability_schedule ?? [],
+        tabella_sorgente_dati_posizione: w.location_source ?? "missing",
+        tabella_sorgente_dati_disponibilita: w.availability_source ?? "missing",
         hasValidCoordinates: coords.hasValidCoordinates,
+        hasApproximateLocation: coords.hasApproximateLocation,
         shownOnMap: pos != null,
-        fonte_coordinate: w.coordinate_source ?? "missing",
-        motivo: pos == null ? "coordinate valide mancanti" : null,
+        motivo_se_non_mostrato_su_mappa: pos == null ? "nessuna coordinata valida e città/zona non risolvibile" : null,
       });
       return pos ? { w, pos } : null;
     })
     .filter((x): x is { w: W; pos: [number, number] } => x != null);
+  console.log("[PUPILLO_WORKER_LOCATION_AVAILABILITY_DEBUG]", coordDebug);
   console.log("[PUPILLO_WORKER_MAP_COORDINATES_FINAL_DEBUG]", coordDebug);
   console.log("[PUPILLO_WORKER_MAP_SOURCE_DEBUG]", {
     selected_view: "mappa",
@@ -2397,7 +2403,7 @@ function WorkersMapSection({
     lng: pos[1],
     name: displayWorkerName(w, !!rel[w.id]?.workedWith),
     role: w.primary_role,
-    city: w.city ?? w.neighborhood ?? null,
+    city: workerLocationLabel(w),
     rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
     badge: w.badge,
     avatarUrl: avatars[w.id] ?? null,
