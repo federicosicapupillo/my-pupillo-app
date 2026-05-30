@@ -768,7 +768,7 @@ function MapPage() {
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
   useEffect(() => {
-    console.log("[PUPILLO_MAP_FILTERS_CLEANUP_DEBUG]", {
+    console.log("[PUPILLO_MAP_FILTERS_SIMPLIFICATION_DEBUG]", {
       filtri_attivi_rimasti: ["query", "province", "city", "district", "radiusKm", "withRequests", "wRole", "wBadge", "wExp", "wMinRating", "wMinReliab", "showW", "showA", "showR"],
       selectedCity: city,
       selectedZone: district,
