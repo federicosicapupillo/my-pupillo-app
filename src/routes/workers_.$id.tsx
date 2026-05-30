@@ -12,6 +12,9 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 import { displayWorkerName } from "@/lib/worker-display";
+import { formatWorkerLocation, resolveWorkerCity, resolveWorkerZone } from "@/lib/worker-location-summary";
+import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summary";
+import type { AvailabilityRow } from "@/lib/availability";
 
 export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
@@ -59,6 +62,10 @@ type Worker = {
   id_document_path: string | null;
   is_deleted: boolean | null;
   deleted_at: string | null;
+  service_area_city?: string | null;
+  service_area_district?: string | null;
+  selected_zones?: string[] | null;
+  all_zones?: boolean | null;
 };
 
 function initials(name: string | null) {
@@ -73,16 +80,24 @@ function WorkerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [contactAllowed, setContactAllowed] = useState(false);
   const [workedTogether, setWorkedTogether] = useState(false);
+  const [availRows, setAvailRows] = useState<AvailabilityRow[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const { data } = await supabase.from("profiles")
-        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,short_bio,age,phone,email,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,id_document_path,is_deleted,deleted_at")
+        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,short_bio,age,phone,email,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,id_document_path,is_deleted,deleted_at,service_area_city,service_area_district,selected_zones,all_zones")
         .eq("id", id).maybeSingle();
       if (cancelled) return;
       const worker = data as Worker | null;
       setW(worker && !worker.is_deleted && !worker.deleted_at ? worker : null);
+      // Load worker_availability rows — same source used by the card / map,
+      // so the detail page can format hours with the same helper.
+      const { data: avail } = await supabase
+        .from("worker_availability")
+        .select("*")
+        .eq("worker_id", id);
+      if (!cancelled) setAvailRows((avail ?? []) as unknown as AvailabilityRow[]);
       // Show contacts only if the viewer (restaurant) has an accepted application with this worker
       if (user && role === "restaurant") {
         const { data: ax } = await supabase.from("applications")
@@ -100,11 +115,50 @@ function WorkerDetailPage() {
   if (loading) return <AppShell><p className="text-muted-foreground">Caricamento…</p></AppShell>;
   if (!w) return <AppShell><p className="text-muted-foreground">Lavoratore non trovato.</p></AppShell>;
 
-  const cityLine = [w.city, w.neighborhood, w.province].filter(Boolean).join(" · ");
+  const cityLine = formatWorkerLocation(w);
   const roleLine = [w.professional_profile || w.primary_role, ...(w.secondary_roles ?? [])].filter(Boolean).join(" · ");
   const langsJson = normalizeSpokenLanguages(w.spoken_languages);
   const isRestaurantViewer = role === "restaurant";
   const shownName = isRestaurantViewer ? displayWorkerName(w, workedTogether) : (w.full_name || "Lavoratore");
+
+  // Same formatter used by Mappa / Cerca lavoratori cards.
+  const availabilityLine = formatWorkerAvailabilityCardLine(availRows ?? [], new Date());
+  const hasAvailabilitySignal =
+    (availRows && availRows.length > 0) ||
+    (w.weekly_availability && w.weekly_availability.length > 0) ||
+    !!w.hourly_availability;
+  const hourlyLine =
+    availabilityLine ||
+    (w.hourly_availability && w.hourly_availability.trim()) ||
+    (hasAvailabilitySignal ? "Disponibilità impostata" : "—");
+
+  if (typeof console !== "undefined") {
+    console.log("[PUPILLO_WORKER_PROFILE_LOCATION_AVAILABILITY_DEBUG]", {
+      worker_user_id: w.id,
+      profile_id: w.id,
+      nome: w.full_name,
+      city_profiles: w.city,
+      neighborhood_profiles: w.neighborhood,
+      service_area_city: w.service_area_city ?? null,
+      service_area_district: w.service_area_district ?? null,
+      all_zones: w.all_zones ?? null,
+      selected_zones: w.selected_zones ?? null,
+      hourly_availability_raw: w.hourly_availability,
+      weekly_availability_raw: w.weekly_availability ?? [],
+      worker_availability_rows_count: availRows?.length ?? 0,
+      worker_availability_rows: availRows ?? [],
+      resolved_city: resolveWorkerCity(w),
+      resolved_zone: resolveWorkerZone(w),
+      formattedLocation: cityLine,
+      formattedAvailability: hourlyLine,
+      motivo_dash:
+        cityLine === "—"
+          ? "nessun dato città/zona/provincia su profilo"
+          : hourlyLine === "—"
+            ? "nessuna riga worker_availability + nessuna weekly/hourly su profilo"
+            : null,
+    });
+  }
 
   return (
     <AppShell>
@@ -153,7 +207,7 @@ function WorkerDetailPage() {
           </Card>
 
           <Card title="Disponibilità">
-            <Row label="Fascia oraria" value={w.hourly_availability || "—"} />
+            <Row label="Fascia oraria" value={hourlyLine} />
             {w.weekly_availability && w.weekly_availability.length > 0 ? (
               <div className="flex flex-wrap gap-1 pt-1">
                 {w.weekly_availability.map((d) => <Badge key={d} variant="outline">{d}</Badge>)}
