@@ -203,9 +203,9 @@ function workerZoneCandidates(w: Worker): string[] {
     w.location_zone,
     w.service_area_district,
     w.neighborhood,
-    ...((w.selected_zones as string[] | undefined) ?? []),
+    ...(((w as any).selected_zones as string[] | undefined) ?? []),
   ].map(normalizeLocation).filter(Boolean);
-  if (w.all_zones) zones.push("tutte le zone");
+  if ((w as any).all_zones) zones.push("tutte le zone");
   return zones;
 }
 
