@@ -386,7 +386,7 @@ function MapPage() {
 
   // search & filters
   const [city, setCity] = useState("any");
-  const [city, setCity] = useState("any");
+  const [province, setProvince] = useState("any");
   const [province, setProvince] = useState("any");
   const [district, setDistrict] = useState("");
   const [withRequests, setWithRequests] = useState(false);
