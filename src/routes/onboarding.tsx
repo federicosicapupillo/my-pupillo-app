@@ -661,6 +661,16 @@ function Onboarding() {
     if (profile) setRequirements(reqFromProfile(profile));
     if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
     if (profile) {
+      const p = profile as any;
+      setOptExp({
+        experience_years: p.experience_years != null ? String(p.experience_years) : "",
+        experience_level: (p.experience_level === "junior" || p.experience_level === "intermediate" || p.experience_level === "senior") ? p.experience_level : "",
+        hourly_rate: p.hourly_rate != null ? String(p.hourly_rate) : "",
+        is_motorized: p.is_motorized === true ? "yes" : p.is_motorized === false ? "no" : "",
+        short_bio: (p.short_bio ?? p.professional_profile ?? "") as string,
+      });
+    }
+    if (profile) {
       const sec = (profile as any).secondary_roles as string[] | null | undefined;
       const prim = (profile as any).primary_role as string | null | undefined;
       const known = new Set<string>(WORKER_ROLES as readonly string[]);
