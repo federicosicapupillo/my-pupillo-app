@@ -329,7 +329,14 @@ const DAY_FULL_LABEL: Record<string, string> = {
   ven: "venerdì", sab: "sabato", dom: "domenica",
 };
 
-function formatWorkerAvailabilityLine(w: Worker): string {
+function formatWorkerAvailabilityLine(w: Worker, rows?: AvailabilityRow[] | null): string {
+  // 1) Sorgente di verità: tabella worker_availability (stessa usata dal
+  // profilo dettaglio). Se ci sono righe, riusiamo lo stesso summarizer.
+  if (rows && rows.length > 0) {
+    const cardLine = formatWorkerAvailabilityCardLine(rows, new Date());
+    if (cardLine) return cardLine;
+  }
+  // 2) Fallback legacy: profiles.weekly_availability + available_now_until.
   const weekly = w.weekly_availability ?? [];
   const summary = summarizeWeeklyAvailability(weekly, (w as any).available_now_until ?? null);
 
