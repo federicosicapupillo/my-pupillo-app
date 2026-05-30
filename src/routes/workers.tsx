@@ -1664,6 +1664,24 @@ function WorkersPage() {
                     );
                   }
                   const roleInfo = pickDisplayedRole(w, activeRoleContext);
+                  if (typeof console !== "undefined") {
+                    const _allRoles = workerCardRoles(w);
+                    const _avRows = availByWorker[w.id] ?? null;
+                    console.debug("[PUPILLO_WORKER_CARD_DISPLAY_DEBUG]", {
+                      pagina: "cerca_lavoratori",
+                      componente: "WorkersListCard",
+                      user_id: w.id,
+                      nome: w.full_name,
+                      foto_profilo_presente: undefined,
+                      ruoli_grezzi: { primary_role: w.primary_role, secondary_roles: w.secondary_roles ?? [] },
+                      ruoli_mostrati: formatWorkerCardRoles(_allRoles),
+                      disponibilita_grezza: _avRows,
+                      disponibilita_formattata: workerAvailabilityFallback(w),
+                      raggio_km: w.radius_km ?? null,
+                      raggio_nascosto_dalla_card: true,
+                      citta: workerLocationLabel(w),
+                    });
+                  }
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
