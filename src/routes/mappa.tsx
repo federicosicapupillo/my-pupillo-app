@@ -1537,7 +1537,10 @@ function MapPage() {
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           {w.badge && <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{w.badge}</span>}
-                          {w.rating_avg ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{Number(w.rating_avg).toFixed(1)}</span> : null}
+                          <WorkerRatingSummary
+                            ratingAvg={w.rating_avg}
+                            reviewsCount={w.reviews_count ?? null}
+                          />
                           {w.reliability_pct != null && <span>{w.reliability_pct}% affid.</span>}
                           {w.hourly_rate != null && <span>€ {Number(w.hourly_rate).toFixed(0)}/h</span>}
                         </div>
