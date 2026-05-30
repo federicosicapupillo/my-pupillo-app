@@ -125,6 +125,29 @@ function hasAnyRole(roles: string[], values: string[]) {
   return roles.some((role) => set.has(normalizeRole(role)));
 }
 
+function firstText(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    const text = (value ?? "").trim();
+    if (text) return text;
+  }
+  return null;
+}
+
+function validCoord(lat: number | null | undefined, lng: number | null | undefined): [number, number] | null {
+  const nLat = lat == null ? null : Number(lat);
+  const nLng = lng == null ? null : Number(lng);
+  if (nLat == null || nLng == null || !Number.isFinite(nLat) || !Number.isFinite(nLng)) return null;
+  if (nLat < -90 || nLat > 90 || nLng < -180 || nLng > 180) return null;
+  return [nLat, nLng];
+}
+
+function availabilityLine(row: AvailabilityCoordinateRow): string {
+  const day = typeof row.day_of_week === "number" ? DAY_LABELS[row.day_of_week] : null;
+  const slot = row.time_slot ? row.time_slot.replaceAll("_", " ") : null;
+  const hours = row.start_time && row.end_time ? `${row.start_time.slice(0, 5)}-${row.end_time.slice(0, 5)}` : null;
+  return [day, slot, hours].filter(Boolean).join(" · ");
+}
+
 async function listAuthUserIds(): Promise<Set<string>> {
   const ids = new Set<string>();
   for (let page = 1; page <= 20; page += 1) {
