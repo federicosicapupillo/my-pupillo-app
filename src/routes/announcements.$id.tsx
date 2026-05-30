@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, MapPin, Euro, Clock, Users, Star, Shield,
   CheckCircle2, XCircle, MessageSquare, Award, Building2, Phone, Mail, Globe,
-  Languages as LanguagesIcon, IdCard, ListChecks, Sparkles, Info,
+  Languages as LanguagesIcon, IdCard, ListChecks, Sparkles, Info, User,
 } from "lucide-react";
 import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
@@ -977,6 +977,24 @@ function AnnouncementDetail() {
                       >
                         <MessageSquare className="h-3.5 w-3.5" />Messaggia
                       </Button>
+                      <Link
+                        to="/workers/$id"
+                        params={{ id: a.worker_id }}
+                        onClick={() => {
+                          console.log("[PUPILLO_WORKER_PROFILE_BUTTON_DEBUG]", {
+                            pagina: "announcements/$id (Candidati)",
+                            worker_user_id: a.worker_id,
+                            profile_id: a.worker_id,
+                            nome_lavoratore: w?.full_name ?? null,
+                            pulsante_vedi_profilo_renderizzato: true,
+                            route_aperta_al_click: `/workers/${a.worker_id}`,
+                          });
+                        }}
+                      >
+                        <Button size="sm" variant="outline" className="gap-1">
+                          <User className="h-3.5 w-3.5" />Vedi profilo
+                        </Button>
+                      </Link>
                       {canAct && (
                         <>
                           <Button
