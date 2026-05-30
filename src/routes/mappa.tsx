@@ -201,6 +201,7 @@ function maskedZoneLabel(r: { neighborhood?: string | null; city?: string | null
 
 function MapPage() {
   const { user, role } = useAuth();
+  const loadWorkerSearchData = useServerFn(loadRestaurantWorkerSearchResults);
   const isRestaurant = role === "restaurant";
   const isWorker = role === "worker";
   const isDev = typeof import.meta !== "undefined" && (import.meta as any).env?.DEV === true;
@@ -312,22 +313,21 @@ function MapPage() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [{ data: r }, { data: w }, { data: a }] = await Promise.all([
+      const workerSource = isRestaurant ? "Supabase server function loadRestaurantWorkerSearchResults" : "Supabase direct profiles query";
+      const workerPromise = isRestaurant
+        ? loadWorkerSearchData({ data: { reason: "mappa_restaurant_workers" } }).then((res) => ({ data: res.workers, error: null }))
+        : supabase
+            .from("profiles")
+            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name, punctuality_pct, avg_professionalism")
+            .is("business_name", null)
+            .not("primary_role", "is", null)
+            .limit(2000);
+      const [{ data: r }, workerResult, { data: a }] = await Promise.all([
         supabase.from("profiles")
           .select("id, business_name, full_name, venue_type, venue_type_other, price_range, address, city, province, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
-        // NB: interroghiamo `profiles` direttamente perché la tabella
-        // `user_roles` ha RLS che permette ad ogni utente di vedere solo i
-        // propri ruoli. Filtriamo i lavoratori escludendo i profili
-        // ristoratore (business_name valorizzato) e richiedendo un
-        // primary_role del lavoratore.
-        supabase
-          .from("profiles")
-          .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name, punctuality_pct, avg_professionalism")
-          .is("business_name", null)
-          .not("primary_role", "is", null)
-          .limit(2000),
+        workerPromise,
         // PII-safe view: contact name/phone/email and precise job_latitude/
         // job_longitude/job_address are intentionally not selected here.
         // Workers with an accepted application read those via the base table
@@ -338,7 +338,37 @@ function MapPage() {
           .limit(1000),
       ]);
       setRestaurants((r as Restaurant[]) || []);
-      const wsRaw = ((w as any[]) || []) as Worker[];
+      const workerError = "error" in workerResult ? workerResult.error : null;
+      if (workerError) console.warn("[mappa] worker load error", workerError);
+      const workersReceived = (((workerResult as any).data as any[]) || []) as Worker[];
+      const blockedWorkers: Array<{ user_id: string; nome: string | null; primary_role: string | null; user_roles: string[]; motivo: string }> = [];
+      const dedupedWorkers = new Map<string, Worker>();
+      for (const candidate of workersReceived) {
+        if (!isRealWorker(candidate)) {
+          const blocked = {
+            user_id: candidate.id,
+            nome: candidate.full_name,
+            primary_role: candidate.primary_role,
+            user_roles: candidate.user_roles ?? [],
+            motivo: nonWorkerReason(candidate),
+          };
+          blockedWorkers.push(blocked);
+          console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx", ...blocked });
+          continue;
+        }
+        if (!dedupedWorkers.has(candidate.id)) dedupedWorkers.set(candidate.id, candidate);
+      }
+      const wsRaw = Array.from(dedupedWorkers.values());
+      console.log("[PUPILLO_WORKER_RENDER_SOURCE_FINAL_DEBUG]", {
+        componente: "src/routes/mappa.tsx",
+        source_dati_usata: workerSource,
+        numero_profili_ricevuti_prima_del_filtro_ruolo: workersReceived.length,
+        numero_profili_con_ruolo_worker: workersReceived.filter((w) => (w.user_roles ?? []).map(normalizeWorkerRole).includes("worker") || w.role_is_worker === true).length,
+        numero_profili_esclusi_perche_admin: blockedWorkers.filter((w) => w.motivo === "ruolo_admin").length,
+        numero_profili_esclusi_perche_restaurant: blockedWorkers.filter((w) => w.motivo === "ruolo_restaurant").length,
+        numero_profili_esclusi_perche_senza_ruolo: blockedWorkers.filter((w) => w.motivo === "senza_ruolo_worker").length,
+        array_finale_renderizzato: wsRaw.map((w) => ({ user_id: w.id, nome: w.full_name, ruolo: w.primary_role, user_roles: w.user_roles ?? [] })),
+      });
       setWorkers(wsRaw);
       setAnns((a as Ann[]) || []);
       const counts: Record<string, number> = {};
