@@ -47,6 +47,7 @@ import {
   workerMatchesAnyRoleField,
 } from "@/lib/worker-role-normalization";
 import { getRestaurantWorkerSearchData, type WorkerSearchDebug } from "@/lib/worker-search.functions";
+import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
