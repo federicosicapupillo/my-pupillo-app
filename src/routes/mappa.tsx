@@ -389,7 +389,9 @@ function MapPage() {
   const [province, setProvince] = useState("any");
   const [district, setDistrict] = useState("");
   const [withRequests, setWithRequests] = useState(false);
-  const [withRequests, setWithRequests] = useState(false);
+  const [showR, setShowR] = useState(true);
+  const [showW, setShowW] = useState(true);
+  const [showA, setShowA] = useState(true);
   const [showR, setShowR] = useState(true);
   const [showW, setShowW] = useState(true);
   const [showA, setShowA] = useState(true);
