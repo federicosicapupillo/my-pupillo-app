@@ -25,6 +25,7 @@ import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { workerMatchesAnyRoleField, normalizeRole, collectWorkerRoleValues, collectWorkerCompetenceValues } from "@/lib/worker-role-normalization";
+import { summarizeWeeklyAvailability } from "@/lib/availability-summary";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
@@ -262,6 +263,92 @@ function maskedZoneLabel(r: { neighborhood?: string | null; city?: string | null
   if (zone) return zone;
   if (r.city) return r.city;
   return "Zona non specificata";
+}
+
+// Map normalized role key -> canonical display label from WORKER_ROLES.
+const ROLE_DISPLAY_BY_NORMALIZED: Record<string, string> = WORKER_ROLES.reduce(
+  (acc, label) => {
+    const key = normalizeRole(label);
+    if (key) acc[key] = label;
+    return acc;
+  },
+  {} as Record<string, string>,
+);
+
+function toDisplayRole(value: string): string {
+  const key = normalizeRole(value);
+  if (!key) return value.trim();
+  if (ROLE_DISPLAY_BY_NORMALIZED[key]) return ROLE_DISPLAY_BY_NORMALIZED[key];
+  // Title-case fallback for unknown roles
+  return key
+    .split(" ")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+/**
+ * Collect professional roles for a worker, primary first then secondaries/competences,
+ * deduplicated by normalized role. Account roles (worker/restaurant/admin) are filtered.
+ */
+function workerProfessionalRoles(w: Worker): string[] {
+  const ACCOUNT_ROLES = new Set(["worker", "restaurant", "ristoratore", "admin"]);
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  const pushRaw = (raw: string | null | undefined) => {
+    if (!raw) return;
+    for (const part of String(raw).split(/[,;|\n•·]+/g)) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      const key = normalizeRole(trimmed);
+      if (!key || ACCOUNT_ROLES.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      ordered.push(toDisplayRole(trimmed));
+    }
+  };
+  pushRaw(w.primary_role);
+  for (const s of w.secondary_roles ?? []) pushRaw(s);
+  for (const s of ((w as any).default_required_skills as string[] | undefined) ?? []) pushRaw(s);
+  return ordered;
+}
+
+function formatRolesForCard(roles: string[], max = 3): string {
+  if (roles.length === 0) return "—";
+  if (roles.length <= max) return roles.join(" · ");
+  return `${roles.slice(0, max).join(" · ")} · +${roles.length - max}`;
+}
+
+const DAY_FULL_LABEL: Record<string, string> = {
+  lun: "lunedì", mar: "martedì", mer: "mercoledì", gio: "giovedì",
+  ven: "venerdì", sab: "sabato", dom: "domenica",
+};
+
+function formatWorkerAvailabilityLine(w: Worker): string {
+  const weekly = w.weekly_availability ?? [];
+  const summary = summarizeWeeklyAvailability(weekly, (w as any).available_now_until ?? null);
+  switch (summary.kind) {
+    case "none":
+      return "Nessuna disponibilità indicata";
+    case "today":
+      return summary.hours ? `Disponibile oggi · ${summary.hours}` : "Disponibile oggi";
+    case "all_week":
+      return summary.hours ? `Tutta la settimana · ${summary.hours}` : "Tutta la settimana";
+    case "wide":
+      return `Disponibilità impostata (${summary.totalDays} giorni/settimana)`;
+    case "lines": {
+      // Try to extract the unique days from weekly tokens for a friendly label.
+      const days = new Set<string>();
+      for (const t of weekly) {
+        const d = String(t).toLowerCase().split("_")[0];
+        if (d && DAY_FULL_LABEL[d]) days.add(d);
+      }
+      if (days.size > 0 && days.size <= 4) {
+        const order = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+        const labels = order.filter((d) => days.has(d)).map((d) => DAY_FULL_LABEL[d]);
+        return `Disponibile: ${labels.join(", ")}`;
+      }
+      return summary.lines[0] ? `Disponibile: ${summary.lines[0]}` : "Disponibilità impostata";
+    }
+  }
 }
 
 function MapPage() {
@@ -1359,6 +1446,26 @@ function MapPage() {
                   const coords = getWorkerCoordinates(w);
                   const d = ref && coords.hasValidCoordinates && coords.lat != null && coords.lng != null
                     ? distKm(ref.lat, ref.lng, coords.lat, coords.lng) : null;
+                  const proRoles = workerProfessionalRoles(w);
+                  const rolesLabel = formatRolesForCard(proRoles, 3);
+                  const availabilityLabel = formatWorkerAvailabilityLine(w);
+                  if (debugEnabled) {
+                    console.log("[PUPILLO_MAP_WORKER_CARD_DETAILS_DEBUG]", {
+                      user_id: w.id,
+                      nome: w.full_name,
+                      ruolo_account: (w.user_roles ?? []).join(",") || (w.role_is_worker ? "worker" : "?"),
+                      ruolo_professionale_principale: w.primary_role,
+                      ruoli_professionali_secondari: w.secondary_roles ?? [],
+                      competenze: (w as any).default_required_skills ?? [],
+                      ruoli_finali_card: proRoles,
+                      disponibilita_grezza: w.weekly_availability ?? [],
+                      disponibilita_mostrata: availabilityLabel,
+                      citta: w.location_city ?? w.city,
+                      zona: w.location_zone ?? w.neighborhood,
+                      shownInList: true,
+                      shownOnMap: coords.shownOnMap,
+                    });
+                  }
                   return (
                     <li key={w.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
                       <div className="flex items-start justify-between gap-2">
@@ -1368,12 +1475,18 @@ function MapPage() {
                               ? displayWorkerName(w, knownWorkerIds.has(w.id))
                               : (w.full_name || "Lavoratore")}
                           </div>
-                          <div className="text-xs text-muted-foreground capitalize">{w.primary_role || "—"}</div>
+                          <div className="text-xs text-muted-foreground truncate" title={proRoles.join(" · ")}>
+                            {rolesLabel}
+                          </div>
                         </div>
                         {d != null && <span className="text-xs rounded-full bg-secondary px-2 py-0.5 whitespace-nowrap">{d.toFixed(1)} km</span>}
                       </div>
                       <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{workerLocationLabel(w)}</div>
+                        <div className="flex items-start gap-1.5">
+                          <span aria-hidden>🗓</span>
+                          <span className="break-words">{availabilityLabel}</span>
+                        </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           {w.badge && <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{w.badge}</span>}
                           {w.rating_avg ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{Number(w.rating_avg).toFixed(1)}</span> : null}
