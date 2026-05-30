@@ -639,13 +639,21 @@ function MapPage() {
         profile_id: w.id,
         nome: w.full_name,
         ruolo: w.primary_role,
-        città: w.city,
-        zona: w.neighborhood,
+        city: w.location_city ?? w.service_area_city ?? w.city ?? null,
+        province: w.location_province ?? w.province ?? null,
+        zone: w.location_zone ?? w.service_area_district ?? w.neighborhood ?? null,
+        district: w.location_zone ?? w.service_area_district ?? w.neighborhood ?? null,
+        radius_km: w.radius_km ?? null,
         latitude: coords.lat,
         longitude: coords.lng,
+        available_days: w.available_days ?? [],
+        availability_schedule: w.availability_schedule ?? [],
+        tabella_sorgente_dati_posizione: w.location_source ?? "missing",
+        tabella_sorgente_dati_disponibilita: w.availability_source ?? "missing",
         hasValidCoordinates: coords.hasValidCoordinates,
+        hasApproximateLocation: coords.hasApproximateLocation,
         shownOnMap: coords.hasValidCoordinates,
-        motivo: coords.hasValidCoordinates ? null : "coordinate valide mancanti",
+        motivo_se_non_mostrato_su_mappa: coords.hasValidCoordinates ? null : "nessuna coordinata valida e città/zona non risolvibile",
       });
       if (coords.hasValidCoordinates && coords.lat != null && coords.lng != null) {
         withCoords++;
@@ -655,6 +663,7 @@ function MapPage() {
       return null;
     }).filter((x): x is { w: Worker; pos: [number, number] } => x != null);
     if (typeof window !== "undefined") {
+      console.log("[PUPILLO_WORKER_LOCATION_AVAILABILITY_DEBUG]", coordDebug);
       console.log("[PUPILLO_WORKER_MAP_COORDINATES_FINAL_DEBUG]", coordDebug);
       console.debug("[mappa] workers totali:", filteredWorkers.length, "con coordinate:", withCoords, "saltati:", skipped, "marker:", arr.length);
     }
