@@ -302,10 +302,8 @@ function MapPage() {
   const [city, setCity] = useState("any");
   const [province, setProvince] = useState("any");
   const [district, setDistrict] = useState("");
-  const [venue, setVenue] = useState("any");
   const [priceF, setPriceF] = useState("any");
   const [planF, setPlanF] = useState("any");
-  const [statusF, setStatusF] = useState("any");
   const [withRequests, setWithRequests] = useState(false);
   const [showR, setShowR] = useState(true);
   const [showW, setShowW] = useState(true);
@@ -556,7 +554,6 @@ function MapPage() {
   }, [user?.id, isWorker, isRestaurant]);
 
   const cities = useMemo(() => Array.from(new Set(restaurants.map(r => r.city).filter(Boolean))) as string[], [restaurants]);
-  const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
   // Centralised list of HoReCa roles for the role filter dropdown.
   // MUST NOT be derived from currently loaded workers (otherwise the dropdown
   // shrinks to whichever roles happen to exist, e.g. only "Cameriere").
@@ -622,14 +619,13 @@ function MapPage() {
       if (wExp !== "any" && w.experience_level !== wExp) return false;
       if (wMinRating !== "any" && Number(w.rating_avg || 0) < Number(wMinRating)) return false;
       if (wMinReliab !== "any" && Number(w.reliability_pct || 0) < Number(wMinReliab)) return false;
-      if (statusF !== "any" && w.account_status !== statusF) return false;
       const coords = getWorkerCoordinates(w);
       if (max != null && ref && coords.hasValidCoordinates && coords.lat != null && coords.lng != null) {
         if (distKm(ref.lat, ref.lng, coords.lat, coords.lng) > max) return false;
       }
       return true;
     });
-  }, [workers, query, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, statusF, radiusKm, searchCenter, me]);
+  }, [workers, query, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, radiusKm, searchCenter, me]);
 
   useEffect(() => {
     if (!isRestaurant) return;
@@ -756,10 +752,8 @@ function MapPage() {
       if (province !== "any" && r.province !== province) return false;
       if (city !== "any" && r.city !== city) return false;
       if (district && !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
-      if (venue !== "any" && r.venue_type !== venue) return false;
       if (priceF !== "any" && r.price_range !== priceF) return false;
       if (planF !== "any" && r.plan !== planF) return false;
-      if (statusF !== "any" && r.account_status !== statusF) return false;
       if (withRequests && !annCounts[r.id]) return false;
       // Lato lavoratore: mostra SOLO ristoratori della/e città del lavoratore
       // (rule 1, 4, 12). Inoltre il locale deve avere almeno un annuncio
@@ -773,9 +767,22 @@ function MapPage() {
       }
       return true;
     });
-  }, [restaurants, query, city, province, district, venue, priceF, planF, statusF, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
+  }, [restaurants, query, city, province, district, priceF, planF, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
+
+  useEffect(() => {
+    console.log("[PUPILLO_MAP_FILTERS_CLEANUP_DEBUG]", {
+      filtri_attivi_rimasti: ["query", "province", "city", "district", "priceF", "planF", "radiusKm", "withRequests", "showW", "showA", "showR"],
+      selectedCity: city,
+      selectedZone: district,
+      selectedDistance: radiusKm,
+      showWorkers: showW,
+      showRequests: showA,
+      totalWorkers: filteredWorkers.length,
+      totalRestaurants: filteredRestaurants.length,
+    });
+  }, [city, district, radiusKm, showW, showA, showR, filteredWorkers.length, filteredRestaurants.length]);
 
   useEffect(() => {
     const availableZones = city !== "any" ? zonesForCity(city) : [];
@@ -1018,7 +1025,7 @@ function MapPage() {
           byId[a.id] = source;
         }
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
-        if (query || city !== "any" || district || venue !== "any" || planF !== "any" || statusF !== "any" || withRequests) {
+        if (query || city !== "any" || district || planF !== "any" || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
         }
         const refPoint = searchCenter || me;
@@ -1104,7 +1111,7 @@ function MapPage() {
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, venue, planF, statusF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, planF, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
@@ -1245,13 +1252,6 @@ function MapPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={venue} onValueChange={setVenue}>
-          <SelectTrigger><SelectValue placeholder="Tipologia locale" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Tutte le tipologie</SelectItem>
-            {venues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-          </SelectContent>
-        </Select>
         <Select value={priceF} onValueChange={setPriceF}>
           <SelectTrigger><SelectValue placeholder="Fascia di prezzo" /></SelectTrigger>
           <SelectContent>
@@ -1268,15 +1268,6 @@ function MapPage() {
             <SelectItem value="free">Free</SelectItem>
             <SelectItem value="pro">Pro</SelectItem>
             <SelectItem value="business">Business</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusF} onValueChange={setStatusF}>
-          <SelectTrigger><SelectValue placeholder="Stato account" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Tutti gli stati</SelectItem>
-            <SelectItem value="active">Attivo</SelectItem>
-            <SelectItem value="pending">In attesa</SelectItem>
-            <SelectItem value="suspended">Sospeso</SelectItem>
           </SelectContent>
         </Select>
         <Select value={radiusKm} onValueChange={setRadiusKm}>
@@ -1587,7 +1578,7 @@ function MapPage() {
                   size="sm"
                   onClick={() => {
                     setQuery(""); setCity("any"); setProvince("any"); setDistrict("");
-                    setVenue("any"); setPlanF("any"); setStatusF("any");
+                    setPlanF("any");
                     setWithRequests(false); setRadiusKm("any");
                   }}
                 >
