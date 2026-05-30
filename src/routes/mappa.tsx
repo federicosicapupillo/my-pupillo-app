@@ -1446,6 +1446,26 @@ function MapPage() {
                   const coords = getWorkerCoordinates(w);
                   const d = ref && coords.hasValidCoordinates && coords.lat != null && coords.lng != null
                     ? distKm(ref.lat, ref.lng, coords.lat, coords.lng) : null;
+                  const proRoles = workerProfessionalRoles(w);
+                  const rolesLabel = formatRolesForCard(proRoles, 3);
+                  const availabilityLabel = formatWorkerAvailabilityLine(w);
+                  if (debugEnabled) {
+                    console.log("[PUPILLO_MAP_WORKER_CARD_DETAILS_DEBUG]", {
+                      user_id: w.id,
+                      nome: w.full_name,
+                      ruolo_account: (w.user_roles ?? []).join(",") || (w.role_is_worker ? "worker" : "?"),
+                      ruolo_professionale_principale: w.primary_role,
+                      ruoli_professionali_secondari: w.secondary_roles ?? [],
+                      competenze: (w as any).default_required_skills ?? [],
+                      ruoli_finali_card: proRoles,
+                      disponibilita_grezza: w.weekly_availability ?? [],
+                      disponibilita_mostrata: availabilityLabel,
+                      citta: w.location_city ?? w.city,
+                      zona: w.location_zone ?? w.neighborhood,
+                      shownInList: true,
+                      shownOnMap: coords.shownOnMap,
+                    });
+                  }
                   return (
                     <li key={w.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
                       <div className="flex items-start justify-between gap-2">
@@ -1455,12 +1475,18 @@ function MapPage() {
                               ? displayWorkerName(w, knownWorkerIds.has(w.id))
                               : (w.full_name || "Lavoratore")}
                           </div>
-                          <div className="text-xs text-muted-foreground capitalize">{w.primary_role || "—"}</div>
+                          <div className="text-xs text-muted-foreground truncate" title={proRoles.join(" · ")}>
+                            {rolesLabel}
+                          </div>
                         </div>
                         {d != null && <span className="text-xs rounded-full bg-secondary px-2 py-0.5 whitespace-nowrap">{d.toFixed(1)} km</span>}
                       </div>
                       <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{workerLocationLabel(w)}</div>
+                        <div className="flex items-start gap-1.5">
+                          <span aria-hidden>🗓</span>
+                          <span className="break-words">{availabilityLabel}</span>
+                        </div>
                         <div className="flex items-center gap-3 flex-wrap">
                           {w.badge && <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{w.badge}</span>}
                           {w.rating_avg ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{Number(w.rating_avg).toFixed(1)}</span> : null}
