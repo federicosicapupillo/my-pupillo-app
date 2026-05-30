@@ -1855,6 +1855,26 @@ function WorkersPage() {
                     <MessageSquare className="h-3.5 w-3.5" />
                     {hardBlocked ? "Non disponibile per questo turno" : "Invia proposta"}
                   </Button>
+                  <Link
+                    to="/workers/$id"
+                    params={{ id: w.id }}
+                    className="mt-2 block"
+                    onClick={() => {
+                      console.log("[PUPILLO_WORKER_PROFILE_BUTTON_DEBUG]", {
+                        pagina: "workers (Cerca lavoratori) - WorkersListCard",
+                        worker_user_id: w.id,
+                        profile_id: w.id,
+                        nome_lavoratore: w.full_name ?? null,
+                        pulsante_vedi_profilo_renderizzato: true,
+                        route_aperta_al_click: `/workers/${w.id}`,
+                      });
+                    }}
+                  >
+                    <Button size="sm" variant="outline" className="w-full gap-1">
+                      <User className="h-3.5 w-3.5" />
+                      Vedi profilo
+                    </Button>
+                  </Link>
                   {hardBlocked && (
                     <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
                       <p className="font-medium">Disponibilità speciale in un'altra città / orario</p>
