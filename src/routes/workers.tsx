@@ -389,6 +389,7 @@ function computeSpecialBlock(
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const loadWorkerSearchData = useServerFn(getRestaurantWorkerSearchData);
   const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
@@ -422,48 +423,15 @@ function WorkersPage() {
     arrival_minutes: number | null;
     arrival_reason: string | null;
   }>({ contact_name: null, arrival_minutes: null, arrival_reason: null });
+  const [workerSearchDebug, setWorkerSearchDebug] = useState<WorkerSearchDebug | null>(null);
 
   // Carica TUTTI i lavoratori attivi una sola volta. I filtri lavorano poi lato client.
-  const loadWorkers = async () => {
+  const loadWorkers = async (reason = "page_enter") => {
     setLoading(true);
     try {
-      // Carica i ruoli reali tramite RPC SECURITY DEFINER: la policy RLS su
-      // `user_roles` consente solo a un utente di vedere il PROPRIO ruolo,
-      // quindi una SELECT diretta dal client del ristoratore restituirebbe
-      // sempre 0 worker. La funzione bypassa l'RLS lato server e restituisce
-      // solo gli user_id con ruolo `worker` (esclusi restaurant/admin).
-      const { data: roleRows, error: rolesError } = await supabase
-        .rpc("list_worker_user_ids");
-      if (rolesError) throw rolesError;
-      const workerIds = new Set<string>();
-      for (const r of (roleRows as { user_id: string }[] | null) ?? []) {
-        if (r.user_id) workerIds.add(r.user_id);
-      }
-      const allowedIds = Array.from(workerIds);
-      console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] roles", {
-        worker_ids: workerIds.size,
-        sample: allowedIds.slice(0, 5),
-      });
-      if (allowedIds.length === 0) {
-        setWorkers([]);
-        setAvailByWorker({});
-        setExcByWorker({});
-        setLoaded(true);
-        return;
-      }
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count, search_penalty_active, search_penalty_reason, search_penalty_until, delay_count")
-        .in("id", allowedIds)
-        .eq("is_deleted", false)
-        .eq("account_status", "active")
-        // Profili non completi al 100% non sono operativi:
-        // non devono comparire come disponibili/online/contattabili.
-        .eq("profile_completed", true)
-        .order("last_active_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      const rawList = (data as W[]) ?? [];
+      const result = await loadWorkerSearchData({ data: { reason } });
+      setWorkerSearchDebug(result.debug);
+      const rawList = (((result.workers as W[]) ?? []).filter(isSafeSearchWorker));
       // Deduplicazione difensiva per `id` (profile_id == user_id su `profiles`).
       // Anche se la SELECT su `profiles` non dovrebbe mai produrre duplicati,
       // proteggiamo il render da qualsiasi anomalia futura.
