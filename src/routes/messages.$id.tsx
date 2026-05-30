@@ -2356,12 +2356,26 @@ function Thread() {
               const specialBlock = role === "worker"
                 ? computeSpecialAvailabilityBlock(workerSpecialExceptions, ann)
                 : null;
+              if (typeof console !== "undefined") {
+                console.debug("[PUPILLO_CHAT_PROPOSAL_MESSAGE_MAPPING_DEBUG]", {
+                  role,
+                  restaurant_user_id: app?.restaurant_id ?? null,
+                  worker_user_id: app?.worker_id ?? null,
+                  announcement_id: app?.announcement_id ?? null,
+                  message_id: m.id,
+                  worker_name: role === "worker" ? null : displayOtherName,
+                  restaurant_name_other: role === "worker" ? displayOtherName : null,
+                  business_name_self: profile?.business_name ?? null,
+                  full_name_self: profile?.full_name ?? null,
+                  venue_value_shown: venueName,
+                });
+              }
               return (
                 <div key={m.id} className="flex flex-col gap-2">
                 <ProposalCard
                   message={m}
                   ann={ann}
-                  venueName={role === "worker" ? displayOtherName : displayOtherName}
+                  venueName={venueName}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
