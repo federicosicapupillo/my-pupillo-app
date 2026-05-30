@@ -2897,8 +2897,8 @@ function Thread() {
               </div>
               {ann && (() => {
                 const rows: Array<{ label: string; value: string }> = [];
-                const role = (ann.professional_profile ?? "").toString().trim();
-                if (role) rows.push({ label: "Ruolo", value: role.charAt(0).toUpperCase() + role.slice(1) });
+                const roleLabel = (ann.professional_profile ?? "").toString().trim();
+                if (roleLabel) rows.push({ label: "Ruolo", value: roleLabel.charAt(0).toUpperCase() + roleLabel.slice(1) });
                 if (ann.service_date) rows.push({ label: "Data", value: formatDateIT(ann.service_date) });
                 const start = ann.service_time ? String(ann.service_time).slice(0, 5) : "";
                 const end = (ann as any).end_time ? String((ann as any).end_time).slice(0, 5) : "";
