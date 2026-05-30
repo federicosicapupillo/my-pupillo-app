@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Json } from "@/integrations/supabase/types";
 
 export type SearchWorkerProfile = {
   id: string;
@@ -9,7 +10,7 @@ export type SearchWorkerProfile = {
   last_name: string | null;
   age: number | null;
   languages: string[] | null;
-  spoken_languages: unknown;
+  spoken_languages: Json;
   professional_profile: string | null;
   default_required_skills: string[] | null;
   short_bio: string | null;
@@ -72,6 +73,7 @@ export type WorkerSearchDebug = {
 
 type ProfileRow = Omit<SearchWorkerProfile, "user_roles" | "role_is_worker" | "role_is_admin" | "role_is_restaurant" | "is_active" | "is_visible"> & {
   email: string | null;
+  created_at: string | null;
 };
 
 type RoleRow = { user_id: string; role: string };
@@ -113,7 +115,7 @@ export const getRestaurantWorkerSearchData = createServerFn({ method: "POST" })
     const [{ data: profilesData, error: profilesError }, { data: rolesData, error: rolesError }, authUserIds] = await Promise.all([
       supabaseAdmin
         .from("profiles")
-        .select("id,email,full_name,first_name,last_name,age,languages,spoken_languages,professional_profile,default_required_skills,short_bio,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,residence_city,available_now_until,badge,rating_avg,reliability_pct,no_shows,weekly_availability,last_active_at,service_area_lat,service_area_lng,service_area_radius_m,reputation_score,reputation_level,completed_shifts,punctuality_pct,rehire_restaurants_count,reviews_count,search_penalty_active,search_penalty_reason,search_penalty_until,delay_count,account_status,profile_completed,is_deleted,deleted_at,is_demo,seed_batch_id"),
+        .select("id,email,full_name,first_name,last_name,age,languages,spoken_languages,professional_profile,default_required_skills,short_bio,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,residence_city,available_now_until,badge,rating_avg,reliability_pct,no_shows,weekly_availability,last_active_at,service_area_lat,service_area_lng,service_area_radius_m,reputation_score,reputation_level,completed_shifts,punctuality_pct,rehire_restaurants_count,reviews_count,search_penalty_active,search_penalty_reason,search_penalty_until,delay_count,account_status,profile_completed,is_deleted,deleted_at,is_demo,seed_batch_id,created_at"),
       supabaseAdmin.from("user_roles").select("user_id, role"),
       listAuthUserIds(),
     ]);
@@ -155,7 +157,7 @@ export const getRestaurantWorkerSearchData = createServerFn({ method: "POST" })
           is_active: normalizeRole(p.account_status) === "active",
           is_visible: p.profile_completed === true && p.is_deleted !== true && !p.deleted_at,
           deleted_at: p.deleted_at,
-          created_at: (p as any).created_at ?? null,
+          created_at: p.created_at,
         };
       });
 
