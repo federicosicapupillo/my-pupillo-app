@@ -391,6 +391,7 @@ function MapPage() {
   const debugEnabled = role === "admin" || isDev;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
+  const [availByWorker, setAvailByWorker] = useState<Record<string, AvailabilityRow[]>>({});
   const [anns, setAnns] = useState<Ann[]>([]);
   const [annCounts, setAnnCounts] = useState<Record<string, number>>({});
   // applicationStatus per announcement_id, solo per il lavoratore loggato
