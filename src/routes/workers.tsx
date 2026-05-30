@@ -389,8 +389,40 @@ function workerLocationLabel(w: W): string {
 function workerAvailabilityFallback(w: W): string | null {
   if (w.available_days && w.available_days.length > 0) return `Disponibile ${w.available_days.map((d) => d.toLowerCase()).join(", ")}`;
   if (w.availability_schedule && w.availability_schedule.length > 0) return "Disponibilità impostata";
-  if (w.radius_km != null) return `Raggio ${w.radius_km} km`;
+  // NOTE: il raggio di azione (radius_km) non viene più mostrato come
+  // "disponibilità" nella card lavoratore: è un dato tecnico utile al
+  // matching/ai filtri, ma non rappresenta una disponibilità reale del
+  // lavoratore. La sorgente di verità per la card è `worker_availability`
+  // (gestita da AvailabilityBlock + summarizeWorkerAvailability).
   return null;
+}
+
+/**
+ * Lista pulita di ruoli/mansioni del lavoratore per la card lato ristoratore.
+ * Usa solo dati reali del profilo (primary_role + secondary_roles), dedup
+ * case-insensitive, mantenendo l'ordine. Non inventa nulla.
+ */
+function workerCardRoles(w: Pick<W, "primary_role" | "secondary_roles">): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: string | null | undefined) => {
+    const v = (raw ?? "").trim();
+    if (!v) return;
+    const key = v.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(v);
+  };
+  push(w.primary_role);
+  for (const s of w.secondary_roles ?? []) push(s);
+  return out;
+}
+
+/** "Cameriere · Bartender · Barista · +13" (max 3 visibili). */
+function formatWorkerCardRoles(roles: string[], max = 3): string {
+  if (roles.length === 0) return "";
+  if (roles.length <= max) return roles.join(" · ");
+  return `${roles.slice(0, max).join(" · ")} · +${roles.length - max}`;
 }
 
 // Sceglie l'etichetta del ruolo da mostrare sotto il nome del lavoratore.
@@ -1632,6 +1664,24 @@ function WorkersPage() {
                     );
                   }
                   const roleInfo = pickDisplayedRole(w, activeRoleContext);
+                  if (typeof console !== "undefined") {
+                    const _allRoles = workerCardRoles(w);
+                    const _avRows = availByWorker[w.id] ?? null;
+                    console.debug("[PUPILLO_WORKER_CARD_DISPLAY_DEBUG]", {
+                      pagina: "cerca_lavoratori",
+                      componente: "WorkersListCard",
+                      user_id: w.id,
+                      nome: w.full_name,
+                      foto_profilo_presente: undefined,
+                      ruoli_grezzi: { primary_role: w.primary_role, secondary_roles: w.secondary_roles ?? [] },
+                      ruoli_mostrati: formatWorkerCardRoles(_allRoles),
+                      disponibilita_grezza: _avRows,
+                      disponibilita_formattata: workerAvailabilityFallback(w),
+                      raggio_km: w.radius_km ?? null,
+                      raggio_nascosto_dalla_card: true,
+                      citta: workerLocationLabel(w),
+                    });
+                  }
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
@@ -1639,14 +1689,22 @@ function WorkersPage() {
               <div>
                 <div className="font-semibold">{displayWorkerName(w, !!r?.workedWith)}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  {roleInfo.label && (
-                    <span className="capitalize">
-                      {roleInfo.label}
-                      {roleInfo.secondary && (
-                        <span className="text-muted-foreground/80"> · anche {roleInfo.secondary}</span>
-                      )}
-                    </span>
-                  )}
+                  {(() => {
+                    const allRoles = workerCardRoles(w);
+                    const hasContext = !!(activeRoleContext && activeRoleContext.trim());
+                    if (hasContext && roleInfo.label) {
+                      return (
+                        <span className="capitalize">
+                          {roleInfo.label}
+                          {roleInfo.secondary && (
+                            <span className="text-muted-foreground/80"> · anche {roleInfo.secondary}</span>
+                          )}
+                        </span>
+                      );
+                    }
+                    const label = formatWorkerCardRoles(allRoles);
+                    return label ? <span className="capitalize">{label}</span> : null;
+                  })()}
                   {w.rating_avg != null && Number(w.rating_avg) > 0 && (
                     <span className="inline-flex items-center gap-0.5 text-amber-600">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -1967,14 +2025,22 @@ function ContactedWorkerCard({
         <div className="min-w-0">
           <div className="truncate font-semibold">{displayName}</div>
           <div className="text-xs text-muted-foreground flex items-center gap-2">
-            {roleInfo.label && (
-              <span className="capitalize">
-                {roleInfo.label}
-                {roleInfo.secondary && (
-                  <span className="text-muted-foreground/80"> · anche {roleInfo.secondary}</span>
-                )}
-              </span>
-            )}
+            {(() => {
+              const allRoles = workerCardRoles(w);
+              const hasContext = !!(activeRoleContext && activeRoleContext.trim());
+              if (hasContext && roleInfo.label) {
+                return (
+                  <span className="capitalize">
+                    {roleInfo.label}
+                    {roleInfo.secondary && (
+                      <span className="text-muted-foreground/80"> · anche {roleInfo.secondary}</span>
+                    )}
+                  </span>
+                );
+              }
+              const label = formatWorkerCardRoles(allRoles);
+              return label ? <span className="capitalize">{label}</span> : null;
+            })()}
             {w.rating_avg != null && Number(w.rating_avg) > 0 && (
               <span className="inline-flex items-center gap-0.5 text-amber-600">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
