@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Locate, Search, MapPin, Coins, Briefcase, Star, AlertTriangle, Info, MapPinOff, Settings2 } from "lucide-react";
+import { Locate, MapPin, Coins, Briefcase, Star, AlertTriangle, Info, MapPinOff, Settings2 } from "lucide-react";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
@@ -385,7 +385,6 @@ function MapPage() {
   const navigate = useNavigate();
 
   // search & filters
-  const [query, setQuery] = useState("");
   const [city, setCity] = useState("any");
   const [province, setProvince] = useState("any");
   const [district, setDistrict] = useState("");
@@ -428,7 +427,6 @@ function MapPage() {
   const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number; label?: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState<string>("any");
   const [locating, setLocating] = useState(false);
-  const [geocoding, setGeocoding] = useState(false);
   const [focusZoom, setFocusZoom] = useState<number | undefined>(undefined);
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
   const [focusWorkerId, setFocusWorkerId] = useState<string | null>(null);
@@ -672,13 +670,6 @@ function MapPage() {
     return workerAllowedCities.has(normalizeCity(c));
   };
 
-  const matchesWorkerQuery = (w: Worker) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return [w.full_name, w.primary_role, w.city, w.neighborhood, w.badge, w.experience_level, ...(w.secondary_roles || [])]
-      .some(v => (v || "").toString().toLowerCase().includes(q));
-  };
-
   const filteredWorkers = useMemo(() => {
     const max = radiusKm !== "any" ? Number(radiusKm) : null;
     const ref = searchCenter || me;
@@ -687,7 +678,6 @@ function MapPage() {
         console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx filteredWorkers", worker: w, motivo: nonWorkerReason(w) });
         return false;
       }
-      if (!matchesWorkerQuery(w)) return false;
       if (city !== "any") {
         const target = normalizeLocation(city);
         const cands = workerCityCandidates(w);
@@ -710,7 +700,7 @@ function MapPage() {
       }
       return true;
     });
-  }, [workers, query, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, radiusKm, searchCenter, me]);
+  }, [workers, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, radiusKm, searchCenter, me]);
 
   useEffect(() => {
     if (!isRestaurant) return;
@@ -822,18 +812,10 @@ function MapPage() {
     }
   }, [isRestaurant, workers, filteredWorkers, city, district]);
 
-  const matchesQuery = (r: Restaurant) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return [r.business_name, r.full_name, r.address, r.city, r.neighborhood, r.venue_type]
-      .some(v => (v || "").toLowerCase().includes(q));
-  };
-
   const filteredRestaurants = useMemo(() => {
     const max = radiusKm !== "any" ? Number(radiusKm) : null;
     const ref = searchCenter || me;
     return restaurants.filter(r => {
-      if (!matchesQuery(r)) return false;
       if (province !== "any" && r.province !== province) return false;
       if (city !== "any" && r.city !== city) return false;
       if (district && !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
@@ -850,25 +832,22 @@ function MapPage() {
       }
       return true;
     });
-  }, [restaurants, query, city, province, district, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
+  }, [restaurants, city, province, district, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
   useEffect(() => {
-    console.log("[PUPILLO_MAP_FILTERS_SIMPLIFICATION_DEBUG]", {
-      filtri_attivi_rimasti: ["query", "province", "city", "district", "radiusKm", "withRequests", "wRole", "wBadge", "wExp", "wMinRating", "wMinReliab", "showW", "showA", "showR"],
+    if (!isRestaurant) return;
+    console.log("[PUPILLO_MAP_SEARCH_BAR_REMOVED_DEBUG]", {
+      filtri_attivi_rimasti: ["province", "city", "district", "radiusKm", "withRequests", "wRole", "wBadge", "wExp", "wMinRating", "wMinReliab", "showW", "showA", "showR"],
       selectedCity: city,
       selectedZone: district,
       selectedDistance: radiusKm,
       selectedRole: wRole,
-      selectedBadge: wBadge,
-      selectedExperience: wExp,
-      selectedRating: wMinRating,
-      selectedReliability: wMinReliab,
       showWorkers: showW,
       showRequests: showA,
-      totalWorkers: filteredWorkers.length,
-      totalRestaurants: filteredRestaurants.length,
+      workersMostrati: filteredWorkers.length,
+      richiesteMostrate: filteredRestaurants.length,
     });
   }, [city, district, radiusKm, wRole, wBadge, wExp, wMinRating, wMinReliab, showW, showA, showR, filteredWorkers.length, filteredRestaurants.length]);
 
@@ -1113,7 +1092,7 @@ function MapPage() {
           byId[a.id] = source;
         }
         // se c'è una ricerca attiva, mostra solo annunci dei ristoratori filtrati
-        if (query || city !== "any" || district || withRequests) {
+        if (city !== "any" || district || withRequests) {
           if (!restaurantIdSet.has(a.restaurant_id)) return;
         }
         const refPoint = searchCenter || me;
@@ -1199,7 +1178,7 @@ function MapPage() {
       });
     }
     return { points: pts, coordSourceStats: stats, coordSourceById: byId };
-  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, query, city, district, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
+  }, [filteredRestaurants, filteredWorkers, anns, restaurants, showR, showW, showA, restaurantIdSet, city, district, withRequests, searchCenter, me, debugEnabled, isWorker, appStatusByAnn, knownRestaurantIds, annCounts, workerAllowedCities]);
 
   // Quality check: per ogni annuncio elenca quali sorgenti coordinate mancano.
   type QualityRow = { id: string; title: string; restaurant_id: string; missing: string[]; available: string[] };
@@ -1271,46 +1250,11 @@ function MapPage() {
     );
   };
 
-  const runSearch = async () => {
-    if (!query.trim()) { setSearchCenter(null); return; }
-    setGeocoding(true);
-    const r = await geocodeAddressWithRetry(query.trim(), { maxAttempts: 2 });
-    setGeocoding(false);
-    if (r.ok) {
-      setSearchCenter({ lat: r.lat, lng: r.lng, label: r.displayName });
-    } else {
-      // ricerca testuale comunque attiva, niente center change
-      setSearchCenter(null);
-    }
-  };
-
   const ref = searchCenter || me;
 
   return (
     <AppShell>
       <PageHeader title="Mappa" subtitle="Ristoratori, lavoratori e richieste attive in tempo reale" />
-
-      {/* SEARCH BAR */}
-      <div className="rounded-2xl border bg-card p-4 mb-4">
-        <form onSubmit={(e) => { e.preventDefault(); runSearch(); }} className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              className="pl-9 h-11 text-base"
-              placeholder="Cerca lavoratore, ruolo, città o zona"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={geocoding} className="h-11">
-            {geocoding ? "Cerco…" : "Cerca"}
-          </Button>
-        </form>
-        {searchCenter?.label && (
-          <p className="mt-2 text-xs text-muted-foreground">📍 {searchCenter.label}</p>
-        )}
-      </div>
-
 
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
@@ -1673,7 +1617,7 @@ function MapPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setQuery(""); setCity("any"); setProvince("any"); setDistrict("");
+                    setCity("any"); setProvince("any"); setDistrict("");
                     setWithRequests(false); setRadiusKm("any");
                   }}
                 >
