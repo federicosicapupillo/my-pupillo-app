@@ -344,7 +344,7 @@ function MapPage() {
       const blockedWorkers: Array<{ user_id: string; nome: string | null; primary_role: string | null; user_roles: string[]; motivo: string }> = [];
       const dedupedWorkers = new Map<string, Worker>();
       for (const candidate of workersReceived) {
-        if (!isRealWorker(candidate)) {
+        if (isRestaurant && !isRealWorker(candidate)) {
           const blocked = {
             user_id: candidate.id,
             nome: candidate.full_name,
@@ -523,7 +523,7 @@ function MapPage() {
     const max = radiusKm !== "any" ? Number(radiusKm) : null;
     const ref = searchCenter || me;
     return workers.filter(w => {
-      if (!isRealWorker(w)) {
+      if (isRestaurant && !isRealWorker(w)) {
         console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx filteredWorkers", worker: w, motivo: nonWorkerReason(w) });
         return false;
       }
@@ -600,7 +600,7 @@ function MapPage() {
     let withCoords = 0, skipped = 0;
     const coordDebug: Array<Record<string, unknown>> = [];
     const arr = filteredWorkers.map((w) => {
-      if (!isRealWorker(w)) {
+      if (isRestaurant && !isRealWorker(w)) {
         console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx locatedWorkers", worker: w, motivo: nonWorkerReason(w) });
         return null;
       }
@@ -1146,7 +1146,7 @@ function MapPage() {
             ) : (
               <ul className="space-y-2">
                 {filteredWorkers.slice(0, 200).map(w => {
-                  if (!isRealWorker(w)) {
+                  if (isRestaurant && !isRealWorker(w)) {
                     console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx lista card", worker: w, motivo: nonWorkerReason(w) });
                     return null;
                   }
