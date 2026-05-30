@@ -1319,6 +1319,27 @@ function Thread() {
       }
     }
     await logEvent(next, { by_role: role ?? undefined });
+    // Quando il LAVORATORE comunica il proprio interesse su una proposta del
+    // ristoratore, scriviamo in chat un messaggio di sistema che chiarisce
+    // che il turno NON è ancora confermato e che alcuni dati (nome locale,
+    // indirizzo completo, istruzioni operative finali) saranno visibili
+    // solo dopo la conferma del ristoratore. Anti-duplicato: lo inseriamo
+    // solo se non esiste già un system message con lo stesso testo per
+    // questa application.
+    if (next === "interested" && role === "worker") {
+      try {
+        const noteText =
+          "Hai comunicato il tuo interesse per questa proposta. " +
+          "Disponibilità inviata, in attesa di conferma del ristoratore. " +
+          "Quando il ristoratore confermerà il turno, potrai vedere nome del locale, indirizzo completo e istruzioni operative.";
+        const already = msgs.some(
+          (m) => m.message_type === "system" && typeof m.body === "string" && m.body.includes("Disponibilità inviata"),
+        );
+        if (!already) await insertSystemMessage(noteText);
+      } catch (e) {
+        console.error("[worker-interest] system note failed", e);
+      }
+    }
     const isRestaurant = role === "restaurant";
     const toastByStatus: Record<string, { title: string; description: string }> = {
       interested: {
