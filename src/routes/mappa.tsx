@@ -26,7 +26,6 @@ import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { workerMatchesAnyRoleField, normalizeRole, collectWorkerRoleValues, collectWorkerCompetenceValues } from "@/lib/worker-role-normalization";
 import { summarizeWeeklyAvailability } from "@/lib/availability-summary";
-import { WORKER_ROLES } from "@/lib/worker-roles";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
