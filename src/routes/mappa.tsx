@@ -99,9 +99,25 @@ type Worker = {
   seed_batch_id?: string | null;
   is_active?: boolean;
   is_visible?: boolean;
-  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "missing";
+  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "approximate_city_zone" | "missing";
+  location_city?: string | null;
+  location_zone?: string | null;
+  location_province?: string | null;
+  radius_km?: number | null;
+  available_days?: string[];
+  availability_schedule?: string[];
+  location_source?: "profiles.service_area" | "worker_availability" | "profiles.residence" | "profiles.city" | "missing";
+  availability_source?: "worker_availability" | "profiles.weekly_availability" | "profiles.available_now_until" | "missing";
+  map_lat?: number | null;
+  map_lng?: number | null;
+  has_valid_coordinates?: boolean;
+  has_approximate_location?: boolean;
+  shown_on_map?: boolean;
   city: string | null;
   neighborhood: string | null;
+  province?: string | null;
+  service_area_city?: string | null;
+  service_area_district?: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
   latitude?: number | null;
@@ -140,10 +156,23 @@ function nonWorkerReason(profile: Worker): string {
 }
 
 function getWorkerCoordinates(profile: Worker) {
-  const lat = profile.service_area_lat ?? profile.latitude ?? null;
-  const lng = profile.service_area_lng ?? profile.longitude ?? null;
+  const lat = profile.map_lat ?? profile.service_area_lat ?? profile.latitude ?? null;
+  const lng = profile.map_lng ?? profile.service_area_lng ?? profile.longitude ?? null;
   const hasValidCoordinates = lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
-  return { lat: hasValidCoordinates ? Number(lat) : null, lng: hasValidCoordinates ? Number(lng) : null, hasValidCoordinates };
+  const hasApproximateLocation = profile.has_approximate_location === true || (!!hasValidCoordinates && profile.coordinate_source === "approximate_city_zone");
+  return { lat: hasValidCoordinates ? Number(lat) : null, lng: hasValidCoordinates ? Number(lng) : null, hasValidCoordinates, hasApproximateLocation, shownOnMap: hasValidCoordinates };
+}
+
+function workerLocationLabel(profile: Worker): string {
+  const city = (profile.location_city || profile.service_area_city || profile.city || "").trim();
+  const zone = (profile.location_zone || profile.service_area_district || profile.neighborhood || "").trim();
+  const province = (profile.location_province || profile.province || "").trim();
+  if (city && zone) return `${city} · ${zone}`;
+  if (city && province) return `${city} · ${province}`;
+  if (city) return city;
+  if (zone) return zone;
+  if (province) return province;
+  return "Posizione non indicata";
 }
 
 type Ann = {
@@ -610,13 +639,21 @@ function MapPage() {
         profile_id: w.id,
         nome: w.full_name,
         ruolo: w.primary_role,
-        città: w.city,
-        zona: w.neighborhood,
+        city: w.location_city ?? w.service_area_city ?? w.city ?? null,
+        province: w.location_province ?? w.province ?? null,
+        zone: w.location_zone ?? w.service_area_district ?? w.neighborhood ?? null,
+        district: w.location_zone ?? w.service_area_district ?? w.neighborhood ?? null,
+        radius_km: w.radius_km ?? null,
         latitude: coords.lat,
         longitude: coords.lng,
+        available_days: w.available_days ?? [],
+        availability_schedule: w.availability_schedule ?? [],
+        tabella_sorgente_dati_posizione: w.location_source ?? "missing",
+        tabella_sorgente_dati_disponibilita: w.availability_source ?? "missing",
         hasValidCoordinates: coords.hasValidCoordinates,
+        hasApproximateLocation: coords.hasApproximateLocation,
         shownOnMap: coords.hasValidCoordinates,
-        motivo: coords.hasValidCoordinates ? null : "coordinate valide mancanti",
+        motivo_se_non_mostrato_su_mappa: coords.hasValidCoordinates ? null : "nessuna coordinata valida e città/zona non risolvibile",
       });
       if (coords.hasValidCoordinates && coords.lat != null && coords.lng != null) {
         withCoords++;
@@ -626,6 +663,7 @@ function MapPage() {
       return null;
     }).filter((x): x is { w: Worker; pos: [number, number] } => x != null);
     if (typeof window !== "undefined") {
+      console.log("[PUPILLO_WORKER_LOCATION_AVAILABILITY_DEBUG]", coordDebug);
       console.log("[PUPILLO_WORKER_MAP_COORDINATES_FINAL_DEBUG]", coordDebug);
       console.debug("[mappa] workers totali:", filteredWorkers.length, "con coordinate:", withCoords, "saltati:", skipped, "marker:", arr.length);
     }
@@ -649,7 +687,7 @@ function MapPage() {
         // mostriamo invece nome e cognome completi.
         name: isRestaurant ? displayWorkerName(w, known) : w.full_name,
         role: w.primary_role,
-        city: w.city ?? w.neighborhood ?? null,
+        city: workerLocationLabel(w),
         rating: w.rating_avg != null && Number(w.rating_avg) > 0 ? Number(w.rating_avg) : null,
         badge: w.badge,
         avatarUrl: workerAvatars[w.id] ?? null,
@@ -720,15 +758,16 @@ function MapPage() {
     }
     if (showW) {
       filteredWorkers.forEach(w => {
-        if (w.service_area_lat == null || w.service_area_lng == null) return;
+        const coords = getWorkerCoordinates(w);
+        if (!coords.hasValidCoordinates || coords.lat == null || coords.lng == null) return;
         pts.push({
           id: w.id,
-          lat: w.service_area_lat,
-          lng: w.service_area_lng,
+          lat: coords.lat,
+          lng: coords.lng,
           category: "worker",
           title: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : (w.full_name || "Lavoratore"),
           subtitle: [w.primary_role, w.badge ? `· ${w.badge}` : null].filter(Boolean).join(" "),
-          city: [w.neighborhood, w.city].filter(Boolean).join(", ") || w.city,
+          city: workerLocationLabel(w),
           status: w.account_status,
           link: `/workers?focus=${w.id}`,
           meta: {
@@ -1167,7 +1206,7 @@ function MapPage() {
                         {d != null && <span className="text-xs rounded-full bg-secondary px-2 py-0.5 whitespace-nowrap">{d.toFixed(1)} km</span>}
                       </div>
                       <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{[w.neighborhood, w.city].filter(Boolean).join(", ") || "—"}</div>
+                        <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{workerLocationLabel(w)}</div>
                         <div className="flex items-center gap-3 flex-wrap">
                           {w.badge && <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{w.badge}</span>}
                           {w.rating_avg ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{Number(w.rating_avg).toFixed(1)}</span> : null}
