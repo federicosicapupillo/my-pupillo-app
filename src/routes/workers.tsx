@@ -1682,6 +1682,24 @@ function WorkersPage() {
                       raggio_nascosto_dalla_card: true,
                       citta: workerLocationLabel(w),
                     });
+                    console.debug("[PUPILLO_WORKER_REVIEWS_CARD_DEBUG]", {
+                      pagina: "cerca_lavoratori",
+                      worker_user_id: w.id,
+                      profile_id: w.id,
+                      nome: w.full_name,
+                      averageRating: w.rating_avg ?? null,
+                      reviewsCount: w.reviews_count ?? 0,
+                      rating_mostrato:
+                        w.rating_avg != null && Number(w.rating_avg) > 0 && (w.reviews_count ?? 0) > 0
+                          ? `${Number(w.rating_avg).toFixed(1).replace(".", ",")} · ${w.reviews_count} ${w.reviews_count === 1 ? "recensione" : "recensioni"}`
+                          : "Nessuna recensione ancora",
+                      motivo_no_rating:
+                        w.rating_avg == null || Number(w.rating_avg) === 0
+                          ? "rating_avg assente o 0"
+                          : (w.reviews_count ?? 0) === 0
+                            ? "reviews_count = 0"
+                            : null,
+                    });
                   }
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
