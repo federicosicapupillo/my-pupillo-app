@@ -23,6 +23,8 @@ import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
+import { WORKER_ROLES } from "@/lib/worker-roles";
+import { workerMatchesAnyRoleField, normalizeRole, collectWorkerRoleValues, collectWorkerCompetenceValues } from "@/lib/worker-role-normalization";
 import {
   readKnownRestaurantsCache,
   writeKnownRestaurantsCache,
@@ -555,7 +557,10 @@ function MapPage() {
 
   const cities = useMemo(() => Array.from(new Set(restaurants.map(r => r.city).filter(Boolean))) as string[], [restaurants]);
   const venues = useMemo(() => Array.from(new Set(restaurants.map(r => r.venue_type).filter(Boolean))) as string[], [restaurants]);
-  const workerRoles = useMemo(() => Array.from(new Set(workers.map(w => w.primary_role).filter(Boolean))) as string[], [workers]);
+  // Centralised list of HoReCa roles for the role filter dropdown.
+  // MUST NOT be derived from currently loaded workers (otherwise the dropdown
+  // shrinks to whichever roles happen to exist, e.g. only "Cameriere").
+  const workerRoles = useMemo(() => [...WORKER_ROLES] as string[], []);
 
   // Insieme effettivo delle città consentite per la mappa lato lavoratore.
   // Comportamento richiesto: per default il lavoratore vede TUTTI gli annunci
@@ -602,7 +607,7 @@ function MapPage() {
         // "tutte le zone" worker matches any specific zone in his city
         if (!(zCands.includes("tutte le zone") || zCands.some((z) => z.includes(target) || target.includes(z)))) return false;
       }
-      if (wRole !== "any" && w.primary_role !== wRole) return false;
+      if (wRole !== "any" && !workerMatchesAnyRoleField(w as any, wRole)) return false;
       if (wBadge !== "any" && w.badge !== wBadge) return false;
       if (wExp !== "any" && w.experience_level !== wExp) return false;
       if (wMinRating !== "any" && Number(w.rating_avg || 0) < Number(wMinRating)) return false;
@@ -629,6 +634,32 @@ function MapPage() {
       array_finale_renderizzato: filteredWorkers.map((w) => ({ user_id: w.id, nome: w.full_name, ruolo: w.primary_role, user_roles: w.user_roles ?? [] })),
     });
   }, [isRestaurant, workers, filteredWorkers]);
+
+  useEffect(() => {
+    if (!isRestaurant) return;
+    const realWorkers = workers.filter(isRealWorker);
+    const targetNorm = wRole === "any" ? null : normalizeRole(wRole);
+    const perWorker = realWorkers.map((w) => {
+      const rawRoles = collectWorkerRoleValues(w as any);
+      const rawSkills = collectWorkerCompetenceValues(w as any);
+      const normalizedRoles = [...rawRoles, ...rawSkills].map(normalizeRole);
+      const matches = targetNorm == null ? true : normalizedRoles.includes(targetNorm);
+      return { user_id: w.id, nome: w.full_name, primary_role: w.primary_role, secondary_roles: w.secondary_roles, raw_roles: rawRoles, normalized_roles: normalizedRoles, matches };
+    });
+    console.log("[PUPILLO_MAP_ROLE_FILTER_DEBUG]", {
+      componente: "src/routes/mappa.tsx",
+      selectedRole: wRole,
+      selectedRoleNormalized: targetNorm,
+      dropdown_ruoli_disponibili: workerRoles,
+      totale_worker_prima_filtro_ruolo: realWorkers.length,
+      totale_worker_dopo_filtro_ruolo: perWorker.filter((p) => p.matches).length,
+      worker_esclusi_per_ruolo: perWorker.filter((p) => !p.matches),
+    });
+    console.log("[PUPILLO_WORKER_ROLE_SOURCE_DEBUG]", {
+      componente: "src/routes/mappa.tsx",
+      per_worker: perWorker,
+    });
+  }, [isRestaurant, workers, wRole, workerRoles]);
 
   useEffect(() => {
     if (!isRestaurant) return;
