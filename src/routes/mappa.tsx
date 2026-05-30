@@ -523,6 +523,10 @@ function MapPage() {
     const max = radiusKm !== "any" ? Number(radiusKm) : null;
     const ref = searchCenter || me;
     return workers.filter(w => {
+      if (!isRealWorker(w)) {
+        console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx filteredWorkers", worker: w, motivo: nonWorkerReason(w) });
+        return false;
+      }
       if (!matchesWorkerQuery(w)) return false;
       if (city !== "any" && w.city !== city) return false;
       if (district && !(w.neighborhood || "").toLowerCase().includes(district.toLowerCase())) return false;
@@ -532,12 +536,27 @@ function MapPage() {
       if (wMinRating !== "any" && Number(w.rating_avg || 0) < Number(wMinRating)) return false;
       if (wMinReliab !== "any" && Number(w.reliability_pct || 0) < Number(wMinReliab)) return false;
       if (statusF !== "any" && w.account_status !== statusF) return false;
-      if (max != null && ref && w.service_area_lat != null && w.service_area_lng != null) {
-        if (distKm(ref.lat, ref.lng, w.service_area_lat, w.service_area_lng) > max) return false;
+      const coords = getWorkerCoordinates(w);
+      if (max != null && ref && coords.hasValidCoordinates && coords.lat != null && coords.lng != null) {
+        if (distKm(ref.lat, ref.lng, coords.lat, coords.lng) > max) return false;
       }
       return true;
     });
   }, [workers, query, city, district, wRole, wBadge, wExp, wMinRating, wMinReliab, statusF, radiusKm, searchCenter, me]);
+
+  useEffect(() => {
+    if (!isRestaurant) return;
+    console.log("[PUPILLO_WORKER_RENDER_SOURCE_FINAL_DEBUG]", {
+      componente: "src/routes/mappa.tsx",
+      source_dati_usata: "Supabase server function loadRestaurantWorkerSearchResults -> state workers -> filteredWorkers",
+      numero_profili_ricevuti_prima_del_filtro_ruolo: workers.length,
+      numero_profili_con_ruolo_worker: workers.filter((w) => (w.user_roles ?? []).map(normalizeWorkerRole).includes("worker") || w.role_is_worker === true).length,
+      numero_profili_esclusi_perche_admin: workers.filter((w) => nonWorkerReason(w) === "ruolo_admin").length,
+      numero_profili_esclusi_perche_restaurant: workers.filter((w) => nonWorkerReason(w) === "ruolo_restaurant").length,
+      numero_profili_esclusi_perche_senza_ruolo: workers.filter((w) => nonWorkerReason(w) === "senza_ruolo_worker").length,
+      array_finale_renderizzato: filteredWorkers.map((w) => ({ user_id: w.id, nome: w.full_name, ruolo: w.primary_role, user_roles: w.user_roles ?? [] })),
+    });
+  }, [isRestaurant, workers, filteredWorkers]);
 
   const matchesQuery = (r: Restaurant) => {
     if (!query.trim()) return true;
