@@ -310,27 +310,76 @@ export const loadRestaurantWorkerSearchResults = createServerFn({ method: "POST"
       if (!hasAuthUser) { excluded.orphan_auth += 1; continue; }
 
       const { email: _email, ...safeProfile } = p;
+      const availabilityRows = availabilityRowsByWorker.get(p.id) ?? [];
       const availabilityCoord = availabilityCoordinateByWorker.get(p.id);
-      const lat = p.service_area_lat ?? p.latitude ?? availabilityCoord?.latitude ?? null;
-      const lng = p.service_area_lng ?? p.longitude ?? availabilityCoord?.longitude ?? null;
-      const coordinateSource: SearchWorkerProfile["coordinate_source"] = p.service_area_lat != null && p.service_area_lng != null
+      const availabilityLocation = availabilityRows.find((r) => firstText(r.city, r.district, r.province));
+      const selectedZones = Array.isArray(p.selected_zones) ? p.selected_zones.filter(Boolean) : [];
+      const profileZone = p.all_zones ? "Tutte le zone" : firstText(p.service_area_district, selectedZones.join(", "), p.neighborhood);
+      const locationCity = firstText(p.service_area_city, availabilityLocation?.city, p.residence_city, p.city);
+      const locationZone = firstText(profileZone, availabilityLocation?.district);
+      const locationProvince = firstText(p.province, availabilityLocation?.province, p.residence_province);
+      const radiusKm = availabilityLocation?.radius_km ?? (p.service_area_radius_m != null ? Math.round(Number(p.service_area_radius_m) / 1000) : null);
+      const preciseCoord = validCoord(p.service_area_lat, p.service_area_lng) ?? validCoord(p.latitude, p.longitude) ?? validCoord(availabilityCoord?.latitude, availabilityCoord?.longitude);
+      const approximateBase = !preciseCoord && locationCity ? (lookupCityCoords([locationZone, locationCity].filter(Boolean).join(" ")) ?? lookupCityCoords(locationCity)) : null;
+      const approximateCoord = approximateBase ? jitterCoords(approximateBase, p.id, 1.2) : null;
+      const mapCoord = preciseCoord ?? approximateCoord;
+      const coordinateSource: SearchWorkerProfile["coordinate_source"] = validCoord(p.service_area_lat, p.service_area_lng)
         ? "profile_service_area"
-        : p.latitude != null && p.longitude != null
+        : validCoord(p.latitude, p.longitude)
         ? "profile_location"
         : availabilityCoord
         ? "worker_availability"
+        : approximateCoord
+        ? "approximate_city_zone"
         : "missing";
+      const locationSource: SearchWorkerProfile["location_source"] = firstText(p.service_area_city, p.service_area_district)
+        ? "profiles.service_area"
+        : availabilityLocation
+        ? "worker_availability"
+        : firstText(p.residence_city, p.residence_province)
+        ? "profiles.residence"
+        : firstText(p.city, p.neighborhood, p.province)
+        ? "profiles.city"
+        : "missing";
+      const availableDays = Array.from(new Set(availabilityRows.map((r) => typeof r.day_of_week === "number" ? DAY_LABELS[r.day_of_week] : null).filter((v): v is string => Boolean(v))));
+      const availabilitySchedule = availabilityRows.map(availabilityLine).filter(Boolean);
+      const availabilitySource: SearchWorkerProfile["availability_source"] = availabilityRows.length > 0
+        ? "worker_availability"
+        : (p.weekly_availability?.length ?? 0) > 0
+        ? "profiles.weekly_availability"
+        : p.available_now_until
+        ? "profiles.available_now_until"
+        : "missing";
+      const hasValidCoordinates = !!preciseCoord;
+      const hasApproximateLocation = !hasValidCoordinates && !!approximateCoord;
+      const shownOnMap = !!mapCoord;
       workers.push({
         ...safeProfile,
-        service_area_lat: lat,
-        service_area_lng: lng,
+        service_area_lat: mapCoord?.[0] ?? null,
+        service_area_lng: mapCoord?.[1] ?? null,
         user_roles: Array.from(new Set(userRoles.map(normalizeRole).filter(Boolean))),
         role_is_worker: roleIsWorker,
         role_is_admin: roleIsAdmin,
         role_is_restaurant: roleIsRestaurant,
         is_active: isActive,
         is_visible: isVisible,
+        selected_zones: selectedZones,
+        all_zones: p.all_zones,
+        work_area_mode: p.work_area_mode,
+        location_city: locationCity,
+        location_zone: locationZone,
+        location_province: locationProvince,
+        radius_km: radiusKm,
+        available_days: availableDays,
+        availability_schedule: availabilitySchedule,
+        location_source: locationSource,
+        availability_source: availabilitySource,
         coordinate_source: coordinateSource,
+        map_lat: mapCoord?.[0] ?? null,
+        map_lng: mapCoord?.[1] ?? null,
+        has_valid_coordinates: hasValidCoordinates,
+        has_approximate_location: hasApproximateLocation,
+        shown_on_map: shownOnMap,
       });
     }
 
