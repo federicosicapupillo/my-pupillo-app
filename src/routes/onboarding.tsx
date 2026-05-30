@@ -1281,6 +1281,23 @@ function Onboarding() {
             id_document_expires_at: personal.id_document_expires_at,
             id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
+            // Campi facoltativi sezione "Esperienza e preferenze"
+            experience_years: (() => {
+              const v = optExp.experience_years.trim();
+              if (!v) return null;
+              const n = parseInt(v, 10);
+              return Number.isFinite(n) && n >= 0 ? n : null;
+            })(),
+            experience_level: optExp.experience_level || null,
+            hourly_rate: (() => {
+              const v = optExp.hourly_rate.trim().replace(",", ".");
+              if (!v) return null;
+              const n = Number(v);
+              return Number.isFinite(n) && n >= 0 ? n : null;
+            })(),
+            is_motorized: optExp.is_motorized === "yes" ? true : optExp.is_motorized === "no" ? false : null,
+            short_bio: optExp.short_bio.trim() ? optExp.short_bio.trim().slice(0, 500) : null,
+            professional_profile: optExp.short_bio.trim() ? optExp.short_bio.trim().slice(0, 500) : ((profile as any)?.professional_profile ?? null),
           };
     // Salva i campi del profilo. Aggiungiamo un timeout lato client per
     // evitare loading infinito se la rete è instabile.
