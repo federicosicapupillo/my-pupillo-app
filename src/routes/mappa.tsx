@@ -392,9 +392,6 @@ function MapPage() {
   const [showR, setShowR] = useState(true);
   const [showW, setShowW] = useState(true);
   const [showA, setShowA] = useState(true);
-  const [showR, setShowR] = useState(true);
-  const [showW, setShowW] = useState(true);
-  const [showA, setShowA] = useState(true);
 
   // worker filters
   const [wRole, setWRole] = useState("any");
