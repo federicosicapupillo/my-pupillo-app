@@ -1257,28 +1257,6 @@ function MapPage() {
     <AppShell>
       <PageHeader title="Mappa" subtitle="Ristoratori, lavoratori e richieste attive in tempo reale" />
 
-      {/* SEARCH BAR */}
-      <div className="rounded-2xl border bg-card p-4 mb-4">
-        <form onSubmit={(e) => { e.preventDefault(); runSearch(); }} className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              className="pl-9 h-11 text-base"
-              placeholder="Cerca lavoratore, ruolo, città o zona"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={geocoding} className="h-11">
-            {geocoding ? "Cerco…" : "Cerca"}
-          </Button>
-        </form>
-        {searchCenter?.label && (
-          <p className="mt-2 text-xs text-muted-foreground">📍 {searchCenter.label}</p>
-        )}
-      </div>
-
-
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
         <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); setDistrict(""); }}>
