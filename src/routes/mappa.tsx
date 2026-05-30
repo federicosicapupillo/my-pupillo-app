@@ -99,9 +99,25 @@ type Worker = {
   seed_batch_id?: string | null;
   is_active?: boolean;
   is_visible?: boolean;
-  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "missing";
+  coordinate_source?: "profile_service_area" | "profile_location" | "worker_availability" | "approximate_city_zone" | "missing";
+  location_city?: string | null;
+  location_zone?: string | null;
+  location_province?: string | null;
+  radius_km?: number | null;
+  available_days?: string[];
+  availability_schedule?: string[];
+  location_source?: "profiles.service_area" | "worker_availability" | "profiles.residence" | "profiles.city" | "missing";
+  availability_source?: "worker_availability" | "profiles.weekly_availability" | "profiles.available_now_until" | "missing";
+  map_lat?: number | null;
+  map_lng?: number | null;
+  has_valid_coordinates?: boolean;
+  has_approximate_location?: boolean;
+  shown_on_map?: boolean;
   city: string | null;
   neighborhood: string | null;
+  province?: string | null;
+  service_area_city?: string | null;
+  service_area_district?: string | null;
   service_area_lat: number | null;
   service_area_lng: number | null;
   latitude?: number | null;
@@ -140,10 +156,23 @@ function nonWorkerReason(profile: Worker): string {
 }
 
 function getWorkerCoordinates(profile: Worker) {
-  const lat = profile.service_area_lat ?? profile.latitude ?? null;
-  const lng = profile.service_area_lng ?? profile.longitude ?? null;
+  const lat = profile.map_lat ?? profile.service_area_lat ?? profile.latitude ?? null;
+  const lng = profile.map_lng ?? profile.service_area_lng ?? profile.longitude ?? null;
   const hasValidCoordinates = lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
-  return { lat: hasValidCoordinates ? Number(lat) : null, lng: hasValidCoordinates ? Number(lng) : null, hasValidCoordinates };
+  const hasApproximateLocation = profile.has_approximate_location === true || (!!hasValidCoordinates && profile.coordinate_source === "approximate_city_zone");
+  return { lat: hasValidCoordinates ? Number(lat) : null, lng: hasValidCoordinates ? Number(lng) : null, hasValidCoordinates, hasApproximateLocation, shownOnMap: hasValidCoordinates };
+}
+
+function workerLocationLabel(profile: Worker): string {
+  const city = (profile.location_city || profile.service_area_city || profile.city || "").trim();
+  const zone = (profile.location_zone || profile.service_area_district || profile.neighborhood || "").trim();
+  const province = (profile.location_province || profile.province || "").trim();
+  if (city && zone) return `${city} · ${zone}`;
+  if (city && province) return `${city} · ${province}`;
+  if (city) return city;
+  if (zone) return zone;
+  if (province) return province;
+  return "Posizione non indicata";
 }
 
 type Ann = {
