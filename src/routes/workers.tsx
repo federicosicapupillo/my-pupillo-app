@@ -494,7 +494,7 @@ function WorkersPage() {
         totale_profili_ricevuti_da_supabase: allFromServer.length,
         totale_con_ruolo_worker: allFromServer.filter((w) => {
           const roles = (w.user_roles ?? []).map((r) => (r ?? "").toLowerCase());
-          return roles.includes("worker") || (w.primary_role ?? "").toLowerCase() === "worker" || w.role_is_worker === true;
+          return roles.includes("worker") || w.role_is_worker === true;
         }).length,
         totale_esclusi_perche_admin: blocked.filter((b) => b.motivo === "ruolo_admin").length,
         totale_esclusi_perche_restaurant: blocked.filter((b) => b.motivo === "ruolo_restaurant").length,
@@ -1244,6 +1244,16 @@ function WorkersPage() {
       workers_with_valid_coords: validCoords,
       workers_rendered_in_list: view === "list" ? sorted.length : 0,
       workers_rendered_on_map: view === "map" ? validCoords : 0,
+    });
+    console.log("[PUPILLO_WORKER_RENDER_SOURCE_FINAL_DEBUG]", {
+      componente: "src/routes/workers.tsx",
+      source_dati_usata: "Supabase server function loadRestaurantWorkerSearchResults",
+      numero_profili_ricevuti_prima_del_filtro_ruolo: workerSearchDebug?.profiles_received_before_final_filter ?? workers.length,
+      numero_profili_con_ruolo_worker: workerSearchDebug?.worker_role_user_ids ?? workers.length,
+      numero_profili_esclusi_perche_admin: workerSearchDebug?.excluded_admin ?? 0,
+      numero_profili_esclusi_perche_restaurant: workerSearchDebug?.excluded_restaurant ?? 0,
+      numero_profili_esclusi_perche_senza_ruolo: workerSearchDebug?.excluded_without_worker_role ?? 0,
+      array_finale_renderizzato: sorted.map((w) => ({ user_id: w.id, nome: w.full_name, ruolo: w.primary_role, user_roles: w.user_roles ?? [] })),
     });
   }
   if (import.meta.env.DEV && loaded) {
