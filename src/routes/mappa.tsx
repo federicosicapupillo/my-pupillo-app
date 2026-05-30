@@ -833,7 +833,7 @@ function MapPage() {
       }
       return true;
     });
-  }, [restaurants, query, city, province, district, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
+  }, [restaurants, city, province, district, withRequests, annCounts, radiusKm, searchCenter, me, isWorker, workerAllowedCities]);
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
