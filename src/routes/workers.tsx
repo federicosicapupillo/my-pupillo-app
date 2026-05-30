@@ -422,7 +422,7 @@ function computeSpecialBlock(
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
-  const loadWorkerSearchData = useServerFn(getRestaurantWorkerSearchData);
+  const loadWorkerSearchData = useServerFn(loadRestaurantWorkerSearchResults);
   const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
@@ -522,7 +522,7 @@ function WorkersPage() {
             profile_id: id,
             user_id: id,
             name: w?.full_name ?? null,
-            origine: "getRestaurantWorkerSearchData — query principale server-side",
+            origine: "loadRestaurantWorkerSearchResults — query principale server-side",
             occorrenze_prima_della_deduplicazione: count,
           });
         }
@@ -537,7 +537,7 @@ function WorkersPage() {
       });
       console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] loaded worker profiles", {
         restaurant_user_id: user?.id ?? null,
-        source: "Supabase server function getRestaurantWorkerSearchData",
+        source: "Supabase server function loadRestaurantWorkerSearchResults",
         worker_ids_from_query: result.workers.length,
         rows_received: rawList.length,
         workers_after_dedup: list.length,
