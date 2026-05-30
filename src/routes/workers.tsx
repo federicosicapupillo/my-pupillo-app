@@ -389,8 +389,40 @@ function workerLocationLabel(w: W): string {
 function workerAvailabilityFallback(w: W): string | null {
   if (w.available_days && w.available_days.length > 0) return `Disponibile ${w.available_days.map((d) => d.toLowerCase()).join(", ")}`;
   if (w.availability_schedule && w.availability_schedule.length > 0) return "Disponibilità impostata";
-  if (w.radius_km != null) return `Raggio ${w.radius_km} km`;
+  // NOTE: il raggio di azione (radius_km) non viene più mostrato come
+  // "disponibilità" nella card lavoratore: è un dato tecnico utile al
+  // matching/ai filtri, ma non rappresenta una disponibilità reale del
+  // lavoratore. La sorgente di verità per la card è `worker_availability`
+  // (gestita da AvailabilityBlock + summarizeWorkerAvailability).
   return null;
+}
+
+/**
+ * Lista pulita di ruoli/mansioni del lavoratore per la card lato ristoratore.
+ * Usa solo dati reali del profilo (primary_role + secondary_roles), dedup
+ * case-insensitive, mantenendo l'ordine. Non inventa nulla.
+ */
+function workerCardRoles(w: Pick<W, "primary_role" | "secondary_roles">): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: string | null | undefined) => {
+    const v = (raw ?? "").trim();
+    if (!v) return;
+    const key = v.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(v);
+  };
+  push(w.primary_role);
+  for (const s of w.secondary_roles ?? []) push(s);
+  return out;
+}
+
+/** "Cameriere · Bartender · Barista · +13" (max 3 visibili). */
+function formatWorkerCardRoles(roles: string[], max = 3): string {
+  if (roles.length === 0) return "";
+  if (roles.length <= max) return roles.join(" · ");
+  return `${roles.slice(0, max).join(" · ")} · +${roles.length - max}`;
 }
 
 // Sceglie l'etichetta del ruolo da mostrare sotto il nome del lavoratore.
