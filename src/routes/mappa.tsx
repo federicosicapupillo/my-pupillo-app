@@ -129,6 +129,7 @@ type Worker = {
   longitude?: number | null;
   badge: string | null;
   rating_avg: number | null;
+  reviews_count?: number | null;
   reliability_pct: number | null;
   completed_shifts: number | null;
   hourly_rate: number | null;
