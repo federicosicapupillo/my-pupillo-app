@@ -2040,12 +2040,10 @@ function ContactedWorkerCard({
               const label = formatWorkerCardRoles(allRoles);
               return label ? <span className="capitalize">{label}</span> : null;
             })()}
-            {w.rating_avg != null && Number(w.rating_avg) > 0 && (
-              <span className="inline-flex items-center gap-0.5 text-amber-600">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                <span className="tabular-nums font-medium">{Number(w.rating_avg).toFixed(1)}</span>
-              </span>
-            )}
+            <WorkerRatingSummary
+              ratingAvg={w.rating_avg}
+              reviewsCount={w.reviews_count ?? null}
+            />
           </div>
         </div>
       </div>
