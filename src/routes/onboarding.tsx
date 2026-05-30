@@ -1341,6 +1341,17 @@ function Onboarding() {
       return;
     }
     setBusy(false); submittingRef.current = false;
+    if (role === "worker") {
+      console.info("[PUPILLO_WORKER_OPTIONAL_EXPERIENCE_ONBOARDING_DEBUG]", {
+        worker_user_id: user.id,
+        years_experience: optExp.experience_years || null,
+        experience_level: optExp.experience_level || null,
+        desired_hourly_rate: optExp.hourly_rate || null,
+        has_vehicle: optExp.is_motorized || "non_specificato",
+        professional_summary_presente: !!optExp.short_bio.trim(),
+        dati_salvati_correttamente: true,
+      });
+    }
     toast.success("Profilo salvato correttamente");
     console.info(
       "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] tempo totale salvataggio (ms)",
