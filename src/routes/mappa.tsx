@@ -562,6 +562,16 @@ function MapPage() {
   // shrinks to whichever roles happen to exist, e.g. only "Cameriere").
   const workerRoles = useMemo(() => [...WORKER_ROLES] as string[], []);
 
+  // [PUPILLO_MAP_ROLE_DROPDOWN_SOURCE_DEBUG]
+  useEffect(() => {
+    console.log("[PUPILLO_MAP_ROLE_DROPDOWN_SOURCE_DEBUG]", {
+      file_sorgente_ruoli: "src/lib/worker-roles.ts (WORKER_ROLES)",
+      lista_ruoli_dropdown: ["Tutti i ruoli", ...workerRoles],
+      numero_ruoli_mostrati: workerRoles.length + 1,
+      fonte: "costante centrale (NON derivata dai worker caricati)",
+    });
+  }, [workerRoles]);
+
   // Insieme effettivo delle città consentite per la mappa lato lavoratore.
   // Comportamento richiesto: per default il lavoratore vede TUTTI gli annunci
   // attivi in Italia (rule 1, 20). Solo quando seleziona esplicitamente una
