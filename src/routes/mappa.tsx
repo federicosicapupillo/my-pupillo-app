@@ -758,11 +758,12 @@ function MapPage() {
     }
     if (showW) {
       filteredWorkers.forEach(w => {
-        if (w.service_area_lat == null || w.service_area_lng == null) return;
+        const coords = getWorkerCoordinates(w);
+        if (!coords.hasValidCoordinates || coords.lat == null || coords.lng == null) return;
         pts.push({
           id: w.id,
-          lat: w.service_area_lat,
-          lng: w.service_area_lng,
+          lat: coords.lat,
+          lng: coords.lng,
           category: "worker",
           title: isRestaurant ? displayWorkerName(w, knownWorkerIds.has(w.id)) : (w.full_name || "Lavoratore"),
           subtitle: [w.primary_role, w.badge ? `· ${w.badge}` : null].filter(Boolean).join(" "),
