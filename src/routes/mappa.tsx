@@ -1146,8 +1146,13 @@ function MapPage() {
             ) : (
               <ul className="space-y-2">
                 {filteredWorkers.slice(0, 200).map(w => {
-                  const d = ref && w.service_area_lat != null && w.service_area_lng != null
-                    ? distKm(ref.lat, ref.lng, w.service_area_lat, w.service_area_lng) : null;
+                  if (!isRealWorker(w)) {
+                    console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", { componente: "src/routes/mappa.tsx lista card", worker: w, motivo: nonWorkerReason(w) });
+                    return null;
+                  }
+                  const coords = getWorkerCoordinates(w);
+                  const d = ref && coords.hasValidCoordinates && coords.lat != null && coords.lng != null
+                    ? distKm(ref.lat, ref.lng, coords.lat, coords.lng) : null;
                   return (
                     <li key={w.id} className="rounded-xl border p-3 hover:border-primary transition-colors">
                       <div className="flex items-start justify-between gap-2">
@@ -1171,15 +1176,17 @@ function MapPage() {
                         </div>
                       </div>
                       <div className="mt-3 flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => {
-                          if (isRestaurant) {
-                            focusWorkerOnMap(w.id);
-                          } else if (w.service_area_lat != null && w.service_area_lng != null) {
-                            focusOnMap(w.service_area_lat, w.service_area_lng, w.full_name || undefined);
-                          } else {
-                            toast.error("Posizione non disponibile per questo lavoratore.");
-                          }
-                        }}>Mostra sulla mappa</Button>
+                        {coords.hasValidCoordinates ? (
+                          <Button size="sm" variant="outline" className="flex-1" onClick={() => {
+                            if (isRestaurant) {
+                              focusWorkerOnMap(w.id);
+                            } else if (coords.lat != null && coords.lng != null) {
+                              focusOnMap(coords.lat, coords.lng, w.full_name || undefined);
+                            }
+                          }}>Mostra sulla mappa</Button>
+                        ) : (
+                          <Button size="sm" variant="outline" className="flex-1" disabled>Posizione non disponibile</Button>
+                        )}
                         <Button size="sm" onClick={() => setPreviewWorkerId(w.id)}>Vedi profilo</Button>
                       </div>
                     </li>
