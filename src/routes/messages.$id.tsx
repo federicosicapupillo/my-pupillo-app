@@ -2361,7 +2361,7 @@ function Thread() {
                 <ProposalCard
                   message={m}
                   ann={ann}
-                  venueName={role === "worker" ? displayOtherName : displayOtherName}
+                  venueName={venueName}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
                   isWorker={role === "worker"}
