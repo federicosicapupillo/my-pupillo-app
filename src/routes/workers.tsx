@@ -1475,6 +1475,14 @@ function WorkersPage() {
               </h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {g.items.map((w) => {
+                  if (!isSafeSearchWorker(w)) {
+                    console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", {
+                      componente: "src/routes/workers.tsx lista card",
+                      profile: w,
+                      motivo_blocco: workerBlockReason(w),
+                    });
+                    return null;
+                  }
                   const near = inRange(w);
                   const r = rel[w.id];
                   const compat = selectedAnn ? (compatByWorker[w.id] ?? null) : null;
@@ -1800,6 +1808,14 @@ function ContactedWorkerCard({
   specialBlock: { blocked: boolean; specials: AvailabilityExceptionRow[] } | null;
   onDetails: () => void;
 }) {
+  if (!isSafeSearchWorker(w)) {
+    console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", {
+      componente: "ContactedWorkerCard src/routes/workers.tsx",
+      profile: w,
+      motivo_blocco: workerBlockReason(w),
+    });
+    return null;
+  }
   const workedTogether = !!r?.workedWith;
   const displayName = displayWorkerName(w, workedTogether);
   // Stato del rapporto
