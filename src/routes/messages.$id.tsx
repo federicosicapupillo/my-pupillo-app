@@ -446,6 +446,11 @@ function Thread() {
   const [sendingCounter, setSendingCounter] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // Popup di conferma quando il LAVORATORE clicca "Sono interessato".
+  // Serve a chiarire che NON si tratta di un turno confermato, ma solo
+  // di una dichiarazione di disponibilità in attesa della conferma del
+  // ristoratore. Mantiene nascosti nome locale e indirizzo completo.
+  const [interestConfirmOpen, setInterestConfirmOpen] = useState(false);
   const [transitioning, setTransitioning] = useState<null | "interested" | "not_interested" | "accepted" | "rejected">(null);
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
