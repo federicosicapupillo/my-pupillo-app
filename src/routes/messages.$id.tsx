@@ -1322,8 +1322,8 @@ function Thread() {
     const isRestaurant = role === "restaurant";
     const toastByStatus: Record<string, { title: string; description: string }> = {
       interested: {
-        title: "Interesse confermato",
-        description: "Stato candidatura: Interessato.",
+        title: "Interesse inviato",
+        description: "In attesa di conferma del ristoratore.",
       },
       not_interested: {
         title: "Offerta rifiutata",
