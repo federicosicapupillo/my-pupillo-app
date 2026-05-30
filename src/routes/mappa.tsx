@@ -469,7 +469,7 @@ function MapPage() {
         ? loadWorkerSearchData({ data: { reason: "mappa_restaurant_workers" } }).then((res) => ({ data: res.workers, error: null }))
         : supabase
             .from("profiles")
-            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, account_status, business_name, punctuality_pct, avg_professionalism")
+            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_city, service_area_district, service_area_lat, service_area_lng, badge, rating_avg, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, hourly_availability, available_now_until, work_area_mode, all_zones, selected_zones, account_status, business_name, punctuality_pct, avg_professionalism")
             .is("business_name", null)
             .not("primary_role", "is", null)
             .limit(2000);
