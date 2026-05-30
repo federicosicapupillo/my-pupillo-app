@@ -2233,36 +2233,26 @@ function WorkersMapSection({
   const coordDebug: Array<Record<string, unknown>> = [];
   const located = deduped
     .map((w) => {
-      let pos: [number, number] | null = null;
-      let source: "precise" | "city_approx" | "none" = "none";
-      if (w.service_area_lat != null && w.service_area_lng != null) {
-        pos = [w.service_area_lat, w.service_area_lng];
-        source = "precise";
-      } else {
-        const cityKey = w.service_area_city ?? w.city ?? w.residence_city ?? null;
-        const zoneKey = w.service_area_district ?? w.neighborhood ?? null;
-        const base = lookupCityCoords(zoneKey) || lookupCityCoords(cityKey);
-        if (base) {
-          pos = jitterCoords(base, w.id, 1.5);
-          source = "city_approx";
-        }
-      }
+      const coords = getWorkerCoordinates(w);
+      const pos: [number, number] | null = coords.hasValidCoordinates && coords.lat != null && coords.lng != null ? [coords.lat, coords.lng] : null;
       coordDebug.push({
         user_id: w.id,
+        profile_id: w.id,
         nome: w.full_name,
+        ruolo: w.primary_role,
         citta: w.service_area_city ?? w.city ?? w.residence_city ?? null,
         zona: w.service_area_district ?? w.neighborhood ?? null,
-        latitude: w.service_area_lat,
-        longitude: w.service_area_lng,
-        hasValidCoordinates: pos != null,
-        viene_mostrato_su_mappa: pos != null,
-        fonte_coordinate: source,
-        motivo: pos == null ? "nessuna coordinata né città riconosciuta" : null,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        hasValidCoordinates: coords.hasValidCoordinates,
+        shownOnMap: pos != null,
+        fonte_coordinate: w.coordinate_source ?? "missing",
+        motivo: pos == null ? "coordinate valide mancanti" : null,
       });
       return pos ? { w, pos } : null;
     })
     .filter((x): x is { w: W; pos: [number, number] } => x != null);
-  console.log("[PUPILLO_WORKER_MAP_COORDINATES_DEBUG]", coordDebug);
+  console.log("[PUPILLO_WORKER_MAP_COORDINATES_FINAL_DEBUG]", coordDebug);
   console.log("[PUPILLO_WORKER_MAP_SOURCE_DEBUG]", {
     selected_view: "mappa",
     source: "Supabase (state `workers`)",
