@@ -1205,7 +1205,7 @@ function MapPage() {
                         {d != null && <span className="text-xs rounded-full bg-secondary px-2 py-0.5 whitespace-nowrap">{d.toFixed(1)} km</span>}
                       </div>
                       <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{[w.neighborhood, w.city].filter(Boolean).join(", ") || "—"}</div>
+                        <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{workerLocationLabel(w)}</div>
                         <div className="flex items-center gap-3 flex-wrap">
                           {w.badge && <span className="rounded-full bg-accent text-accent-foreground px-2 py-0.5 capitalize">{w.badge}</span>}
                           {w.rating_avg ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3" />{Number(w.rating_avg).toFixed(1)}</span> : null}
