@@ -15,7 +15,7 @@ import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
 import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
+import { priceRangeLabel } from "@/lib/price-range";
 import { ITALIAN_LOCATIONS, citiesForProvince, zonesForCity } from "@/lib/italian-locations";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
