@@ -566,6 +566,68 @@ function WorkersPage() {
         }
       }
       const list = Array.from(seen.values());
+      const locationAvailabilityDebug = list.map((w) => {
+        const coords = getWorkerCoordinates(w);
+        const hasApproximateLocation = coords.hasApproximateLocation || !!w.location_city || !!w.location_zone || !!w.service_area_city;
+        const shownOnMap = coords.hasValidCoordinates;
+        return {
+          user_id: w.id,
+          profile_id: w.id,
+          nome: w.full_name ?? [w.first_name, w.last_name].filter(Boolean).join(" "),
+          ruolo: w.primary_role,
+          city: w.location_city ?? w.service_area_city ?? w.residence_city ?? w.city ?? null,
+          province: w.location_province ?? w.province ?? w.residence_province ?? null,
+          zone: w.location_zone ?? w.service_area_district ?? null,
+          district: w.location_zone ?? w.service_area_district ?? w.neighborhood ?? null,
+          radius_km: w.radius_km ?? (w.service_area_radius_m != null ? Math.round(Number(w.service_area_radius_m) / 1000) : null),
+          latitude: coords.lat,
+          longitude: coords.lng,
+          available_days: w.available_days ?? [],
+          availability_schedule: w.availability_schedule ?? [],
+          tabella_sorgente_dati_posizione: w.location_source ?? "missing",
+          tabella_sorgente_dati_disponibilita: w.availability_source ?? "missing",
+          hasValidCoordinates: coords.hasValidCoordinates,
+          hasApproximateLocation,
+          shownOnMap,
+          motivo_se_non_mostrato_su_mappa: shownOnMap ? null : "nessuna coordinata valida e città/zona non risolvibile",
+        };
+      });
+      console.log("[PUPILLO_WORKER_LOCATION_AVAILABILITY_DEBUG]", locationAvailabilityDebug);
+      for (const w of list) {
+        const name = `${w.full_name ?? ""} ${w.first_name ?? ""} ${w.last_name ?? ""}`.toLowerCase();
+        if (name.includes("nikla")) {
+          const coords = getWorkerCoordinates(w);
+          console.log("[PUPILLO_NIKLA_DEBUG]", {
+            dati_profilo: w,
+            dati_disponibilita_normalizzati: {
+              available_days: w.available_days ?? [],
+              availability_schedule: w.availability_schedule ?? [],
+              availability_source: w.availability_source ?? "missing",
+              radius_km: w.radius_km ?? null,
+            },
+            dati_posizione_normalizzati: {
+              city: w.location_city ?? w.service_area_city ?? w.residence_city ?? w.city ?? null,
+              zone: w.location_zone ?? w.service_area_district ?? null,
+              province: w.location_province ?? w.province ?? w.residence_province ?? null,
+              latitude: coords.lat,
+              longitude: coords.lng,
+              coordinate_source: w.coordinate_source ?? "missing",
+              location_source: w.location_source ?? "missing",
+            },
+            risultato_normalizzato_card: {
+              luogo: workerLocationLabel(w),
+              disponibilita: workerAvailabilityFallback(w),
+            },
+            risultato_normalizzato_mappa: {
+              hasValidCoordinates: coords.hasValidCoordinates,
+              hasApproximateLocation: coords.hasApproximateLocation,
+              shownOnMap: coords.shownOnMap,
+              lat: coords.lat,
+              lng: coords.lng,
+            },
+          });
+        }
+      }
       console.log("[PUPILLO_WORKER_DEDUPLICATION_DEBUG]", {
         workers_before_deduplication: rawList.length,
         workers_after_deduplication: list.length,
