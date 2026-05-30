@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { CREDIT_COSTS } from "@/lib/pricing";
-import { Coins, AlertCircle, MessageSquare } from "lucide-react";
+import { Coins, AlertCircle, MessageSquare, User } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { useRequiredReviews } from "@/lib/required-reviews";
