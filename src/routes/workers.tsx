@@ -2193,14 +2193,44 @@ function WorkersMapSection({
     seen.add(w.id);
     deduped.push(w);
   }
+  // Coordinate priority:
+  //  1. service_area_lat/lng (precise, set by worker)
+  //  2. lookup approssimato su city/neighborhood (privacy-safe, jitter)
+  // Se nessuna delle due è disponibile il worker resta in lista ma NON
+  // viene mostrato sulla mappa.
+  const coordDebug: Array<Record<string, unknown>> = [];
   const located = deduped
     .map((w) => {
+      let pos: [number, number] | null = null;
+      let source: "precise" | "city_approx" | "none" = "none";
       if (w.service_area_lat != null && w.service_area_lng != null) {
-        return { w, pos: [w.service_area_lat, w.service_area_lng] as [number, number] };
+        pos = [w.service_area_lat, w.service_area_lng];
+        source = "precise";
+      } else {
+        const cityKey = w.service_area_city ?? w.city ?? w.residence_city ?? null;
+        const zoneKey = w.service_area_district ?? w.neighborhood ?? null;
+        const base = lookupCityCoords(zoneKey) || lookupCityCoords(cityKey);
+        if (base) {
+          pos = jitterCoords(base, w.id, 1.5);
+          source = "city_approx";
+        }
       }
-      return null;
+      coordDebug.push({
+        user_id: w.id,
+        nome: w.full_name,
+        citta: w.service_area_city ?? w.city ?? w.residence_city ?? null,
+        zona: w.service_area_district ?? w.neighborhood ?? null,
+        latitude: w.service_area_lat,
+        longitude: w.service_area_lng,
+        hasValidCoordinates: pos != null,
+        viene_mostrato_su_mappa: pos != null,
+        fonte_coordinate: source,
+        motivo: pos == null ? "nessuna coordinata né città riconosciuta" : null,
+      });
+      return pos ? { w, pos } : null;
     })
     .filter((x): x is { w: W; pos: [number, number] } => x != null);
+  console.log("[PUPILLO_WORKER_MAP_COORDINATES_DEBUG]", coordDebug);
   console.log("[PUPILLO_WORKER_MAP_SOURCE_DEBUG]", {
     selected_view: "mappa",
     source: "Supabase (state `workers`)",
@@ -2208,6 +2238,12 @@ function WorkersMapSection({
     workers_after_dedup: deduped.length,
     workers_with_valid_coords: located.length,
     workers_rendered_on_map: located.length,
+  });
+  console.log("[PUPILLO_WORKER_SEARCH_FINAL_RENDER_DEBUG]", {
+    worker_renderizzati_in_lista: deduped.length,
+    worker_renderizzati_in_mappa: located.length,
+    nomi_worker_in_lista: deduped.map((w) => w.full_name),
+    nomi_worker_in_mappa: located.map(({ w }) => w.full_name),
   });
   const ids = located.map(({ w }) => w.id);
   const avatars = useAvatarUrls(ids);
