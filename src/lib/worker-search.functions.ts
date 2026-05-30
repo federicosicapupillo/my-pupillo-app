@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
+import { jitterCoords, lookupCityCoords } from "@/lib/italian-city-coords";
 
 export type SearchWorkerProfile = {
   id: string;
@@ -22,6 +23,7 @@ export type SearchWorkerProfile = {
   service_area_city: string | null;
   service_area_district: string | null;
   residence_city: string | null;
+  residence_province: string | null;
   available_now_until: string | null;
   badge: string | null;
   rating_avg: number | null;
@@ -56,7 +58,23 @@ export type SearchWorkerProfile = {
   role_is_restaurant: boolean;
   is_active: boolean;
   is_visible: boolean;
-  coordinate_source: "profile_service_area" | "profile_location" | "worker_availability" | "missing";
+  selected_zones: string[] | null;
+  all_zones: boolean | null;
+  work_area_mode: string | null;
+  location_city: string | null;
+  location_zone: string | null;
+  location_province: string | null;
+  radius_km: number | null;
+  available_days: string[];
+  availability_schedule: string[];
+  location_source: "profiles.service_area" | "worker_availability" | "profiles.residence" | "profiles.city" | "missing";
+  availability_source: "worker_availability" | "profiles.weekly_availability" | "profiles.available_now_until" | "missing";
+  coordinate_source: "profile_service_area" | "profile_location" | "worker_availability" | "approximate_city_zone" | "missing";
+  map_lat: number | null;
+  map_lng: number | null;
+  has_valid_coordinates: boolean;
+  has_approximate_location: boolean;
+  shown_on_map: boolean;
 };
 
 export type WorkerSearchDebug = {
@@ -82,7 +100,21 @@ type ProfileRow = Omit<SearchWorkerProfile, "user_roles" | "role_is_worker" | "r
 };
 
 type RoleRow = { user_id: string; role: string };
-type AvailabilityCoordinateRow = { worker_id: string; latitude: number | null; longitude: number | null; city: string | null; district: string | null };
+type AvailabilityCoordinateRow = {
+  worker_id: string;
+  day_of_week: number | null;
+  time_slot: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  city: string | null;
+  province: string | null;
+  district: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  radius_km: number | null;
+};
+
+const DAY_LABELS = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
 function normalizeRole(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase();
