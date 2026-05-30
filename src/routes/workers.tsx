@@ -2014,9 +2014,7 @@ function ContactedWorkerCard({
         <span>
           <span className="font-medium text-foreground">Città attuale:</span>{" "}
           {(() => {
-            const city = w.service_area_city || w.residence_city || w.city;
-            const zone = w.neighborhood || w.service_area_district;
-            return city ? `${city}${zone ? ` · ${zone}` : ""}` : "Città non indicata";
+            return workerLocationLabel(w);
           })()}
         </span>
       </div>
@@ -2034,6 +2032,7 @@ function ContactedWorkerCard({
         upcomingSpecials={upcomingSpecials}
         weekly={w.weekly_availability}
         availableNowUntil={w.available_now_until}
+        fallbackSummary={workerAvailabilityFallback(w)}
         onDetails={onDetails}
       />
       {workedTogether && (
