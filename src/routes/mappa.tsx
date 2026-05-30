@@ -175,6 +175,40 @@ function workerLocationLabel(profile: Worker): string {
   return "Posizione non indicata";
 }
 
+function normalizeLocation(value: unknown): string {
+  if (value == null) return "";
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function workerCityCandidates(w: Worker): string[] {
+  return [
+    w.location_city,
+    w.service_area_city,
+    w.city,
+    (w as any).residence_city,
+    w.location_province,
+    w.province,
+  ]
+    .map(normalizeLocation)
+    .filter(Boolean);
+}
+
+function workerZoneCandidates(w: Worker): string[] {
+  const zones: string[] = [
+    w.location_zone,
+    w.service_area_district,
+    w.neighborhood,
+    ...((w.selected_zones as string[] | undefined) ?? []),
+  ].map(normalizeLocation).filter(Boolean);
+  if (w.all_zones) zones.push("tutte le zone");
+  return zones;
+}
+
 type Ann = {
   id: string;
   professional_profile: string | null;
