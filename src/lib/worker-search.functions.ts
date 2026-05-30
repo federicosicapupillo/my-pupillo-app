@@ -204,23 +204,26 @@ export const loadRestaurantWorkerSearchResults = createServerFn({ method: "POST"
       const [{ data: profilesData, error: profilesError }, { data: availabilityData, error: availabilityError }] = await Promise.all([
         supabaseAdmin
           .from("profiles")
-          .select("id,email,full_name,first_name,last_name,age,languages,spoken_languages,professional_profile,default_required_skills,short_bio,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,residence_city,available_now_until,badge,rating_avg,reliability_pct,no_shows,weekly_availability,last_active_at,service_area_lat,service_area_lng,latitude,longitude,service_area_radius_m,reputation_score,reputation_level,completed_shifts,punctuality_pct,rehire_restaurants_count,reviews_count,search_penalty_active,search_penalty_reason,search_penalty_until,delay_count,account_status,profile_completed,is_deleted,deleted_at,is_demo,seed_batch_id,created_at")
+          .select("id,email,full_name,first_name,last_name,age,languages,spoken_languages,professional_profile,default_required_skills,short_bio,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,residence_city,residence_province,available_now_until,badge,rating_avg,reliability_pct,no_shows,weekly_availability,last_active_at,service_area_lat,service_area_lng,latitude,longitude,service_area_radius_m,reputation_score,reputation_level,completed_shifts,punctuality_pct,rehire_restaurants_count,reviews_count,search_penalty_active,search_penalty_reason,search_penalty_until,delay_count,account_status,profile_completed,is_deleted,deleted_at,is_demo,seed_batch_id,selected_zones,all_zones,work_area_mode,created_at")
           .in("id", allowedWorkerIds),
         supabaseAdmin
           .from("worker_availability")
-          .select("worker_id, latitude, longitude, city, district")
-          .in("worker_id", allowedWorkerIds)
-          .not("latitude", "is", null)
-          .not("longitude", "is", null),
+          .select("worker_id, day_of_week, time_slot, start_time, end_time, city, province, district, latitude, longitude, radius_km")
+          .in("worker_id", allowedWorkerIds),
       ]);
       if (profilesError) throw new Error(`Errore lettura profili worker: ${profilesError.message}`);
       if (availabilityError) throw new Error(`Errore lettura coordinate disponibilità worker: ${availabilityError.message}`);
       profiles = (profilesData ?? []) as ProfileRow[];
       availabilityCoordinates = (availabilityData ?? []) as AvailabilityCoordinateRow[];
     }
+    const availabilityRowsByWorker = new Map<string, AvailabilityCoordinateRow[]>();
     const availabilityCoordinateByWorker = new Map<string, AvailabilityCoordinateRow>();
     for (const row of availabilityCoordinates) {
-      if (row.worker_id && row.latitude != null && row.longitude != null && !availabilityCoordinateByWorker.has(row.worker_id)) {
+      if (!row.worker_id) continue;
+      const rows = availabilityRowsByWorker.get(row.worker_id) ?? [];
+      rows.push(row);
+      availabilityRowsByWorker.set(row.worker_id, rows);
+      if (validCoord(row.latitude, row.longitude) && !availabilityCoordinateByWorker.has(row.worker_id)) {
         availabilityCoordinateByWorker.set(row.worker_id, row);
       }
     }
