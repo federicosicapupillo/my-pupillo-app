@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useState } from "react";
@@ -45,6 +46,7 @@ import {
   roleMatches,
   workerMatchesAnyRoleField,
 } from "@/lib/worker-role-normalization";
+import { getRestaurantWorkerSearchData, type WorkerSearchDebug } from "@/lib/worker-search.functions";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
@@ -90,6 +92,18 @@ type W = {
   search_penalty_reason?: string | null;
   search_penalty_until?: string | null;
   delay_count?: number | null;
+  account_status?: string | null;
+  profile_completed?: boolean | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
+  is_demo?: boolean | null;
+  seed_batch_id?: string | null;
+  user_roles?: string[];
+  role_is_worker?: boolean;
+  role_is_admin?: boolean;
+  role_is_restaurant?: boolean;
+  is_active?: boolean;
+  is_visible?: boolean;
 };
 
 type Category =
@@ -291,6 +305,23 @@ function workerMatchesRole(w: W, role: string | null | undefined): boolean {
   return roles.some((r) => aliases.some((a) => r === a || r.includes(a)));
 }
 
+function plainRole(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isSafeSearchWorker(w: W): boolean {
+  const roles = (w.user_roles ?? []).map(plainRole);
+  const primary = plainRole(w.primary_role);
+  const hasWorkerRole = roles.includes("worker") || primary === "worker" || w.role_is_worker === true;
+  const hasBlockedRole =
+    roles.includes("admin") ||
+    roles.includes("restaurant") ||
+    ["admin", "restaurant", "ristoratore"].includes(primary) ||
+    w.role_is_admin === true ||
+    w.role_is_restaurant === true;
+  return hasWorkerRole && !hasBlockedRole && w.is_deleted !== true && !w.deleted_at && w.is_active !== false && w.is_visible !== false && w.is_demo !== true && !w.seed_batch_id;
+}
+
 // Sceglie l'etichetta del ruolo da mostrare sotto il nome del lavoratore.
 // - Se non c'è un ruolo "target" (annuncio o ricerca avanzata), mostriamo
 //   il ruolo principale del lavoratore.
@@ -358,6 +389,7 @@ function computeSpecialBlock(
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const loadWorkerSearchData = useServerFn(getRestaurantWorkerSearchData);
   const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
@@ -391,48 +423,15 @@ function WorkersPage() {
     arrival_minutes: number | null;
     arrival_reason: string | null;
   }>({ contact_name: null, arrival_minutes: null, arrival_reason: null });
+  const [workerSearchDebug, setWorkerSearchDebug] = useState<WorkerSearchDebug | null>(null);
 
   // Carica TUTTI i lavoratori attivi una sola volta. I filtri lavorano poi lato client.
-  const loadWorkers = async () => {
+  const loadWorkers = async (reason = "page_enter") => {
     setLoading(true);
     try {
-      // Carica i ruoli reali tramite RPC SECURITY DEFINER: la policy RLS su
-      // `user_roles` consente solo a un utente di vedere il PROPRIO ruolo,
-      // quindi una SELECT diretta dal client del ristoratore restituirebbe
-      // sempre 0 worker. La funzione bypassa l'RLS lato server e restituisce
-      // solo gli user_id con ruolo `worker` (esclusi restaurant/admin).
-      const { data: roleRows, error: rolesError } = await supabase
-        .rpc("list_worker_user_ids");
-      if (rolesError) throw rolesError;
-      const workerIds = new Set<string>();
-      for (const r of (roleRows as { user_id: string }[] | null) ?? []) {
-        if (r.user_id) workerIds.add(r.user_id);
-      }
-      const allowedIds = Array.from(workerIds);
-      console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] roles", {
-        worker_ids: workerIds.size,
-        sample: allowedIds.slice(0, 5),
-      });
-      if (allowedIds.length === 0) {
-        setWorkers([]);
-        setAvailByWorker({});
-        setExcByWorker({});
-        setLoaded(true);
-        return;
-      }
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, first_name, last_name, age, languages, spoken_languages, professional_profile, short_bio, primary_role, secondary_roles, city, neighborhood, province, service_area_city, service_area_district, residence_city, available_now_until, badge, rating_avg, reliability_pct, no_shows, weekly_availability, last_active_at, service_area_lat, service_area_lng, service_area_radius_m, reputation_score, reputation_level, completed_shifts, punctuality_pct, rehire_restaurants_count, reviews_count, search_penalty_active, search_penalty_reason, search_penalty_until, delay_count")
-        .in("id", allowedIds)
-        .eq("is_deleted", false)
-        .eq("account_status", "active")
-        // Profili non completi al 100% non sono operativi:
-        // non devono comparire come disponibili/online/contattabili.
-        .eq("profile_completed", true)
-        .order("last_active_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      const rawList = (data as W[]) ?? [];
+      const result = await loadWorkerSearchData({ data: { reason } });
+      setWorkerSearchDebug(result.debug);
+      const rawList = (((result.workers as W[]) ?? []).filter(isSafeSearchWorker));
       // Deduplicazione difensiva per `id` (profile_id == user_id su `profiles`).
       // Anche se la SELECT su `profiles` non dovrebbe mai produrre duplicati,
       // proteggiamo il render da qualsiasi anomalia futura.
@@ -453,21 +452,28 @@ function WorkersPage() {
             profile_id: id,
             user_id: id,
             name: w?.full_name ?? null,
-            origine: "profiles.in(allowedIds) — query principale",
+            origine: "getRestaurantWorkerSearchData — query principale server-side",
             occorrenze_prima_della_deduplicazione: count,
           });
         }
       }
       const list = Array.from(seen.values());
+      console.log("[PUPILLO_WORKER_DEDUPLICATION_DEBUG]", {
+        workers_before_deduplication: rawList.length,
+        workers_after_deduplication: list.length,
+        duplicates_found: dupLog.length,
+        duplicate_user_ids: dupLog.map((d) => d.id),
+        probable_cause: dupLog.length ? "join o dati duplicati a monte" : "nessuna duplicazione rilevata",
+      });
       console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] loaded worker profiles", {
         restaurant_user_id: user?.id ?? null,
-        source: "Supabase (profiles via list_worker_user_ids RPC)",
-        worker_ids_from_rpc: allowedIds.length,
+        source: "Supabase server function getRestaurantWorkerSearchData",
+        worker_ids_from_query: result.workers.length,
         rows_received: rawList.length,
         workers_after_dedup: list.length,
         duplicates_removed: rawList.length - list.length,
         worker_profiles_after_filters: list.length,
-        excluded_count: allowedIds.length - list.length,
+        excluded_count: result.workers.length - list.length,
       });
       setWorkers(list);
       // Carica le disponibilità reali dalla tabella worker_availability per i
@@ -568,10 +574,10 @@ function WorkersPage() {
   // Carica tutti i lavoratori all'apertura della pagina
   useEffect(() => {
     if (role === "restaurant") {
-      void loadWorkers();
+      void loadWorkers("page_enter_or_user_change");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role]);
+  }, [role, user?.id]);
 
   // Refetch availabilities when the tab regains focus, so a worker's update
   // shows up here without a full page reload. Also subscribe to realtime
@@ -1043,6 +1049,7 @@ function WorkersPage() {
     setSubcategory("");
     setQInput("");
     setLang("");
+    void loadWorkers("filters_reset");
   };
   const onChangeCategory = (c: Category) => { setCategory(c); setSubcategory(""); };
   const removeCategoryChip = () => { setCategory("all"); setSubcategory(""); };
