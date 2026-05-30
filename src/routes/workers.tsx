@@ -2254,6 +2254,26 @@ function ContactedWorkerCard({
                 Apri storico chat
               </Button>
             )}
+            <Link
+              to="/workers/$id"
+              params={{ id: w.id }}
+              className="mt-2 block"
+              onClick={() => {
+                console.log("[PUPILLO_WORKER_PROFILE_BUTTON_DEBUG]", {
+                  pagina: "workers (Cerca lavoratori) - ContactedWorkerCard",
+                  worker_user_id: w.id,
+                  profile_id: w.id,
+                  nome_lavoratore: w.full_name ?? null,
+                  pulsante_vedi_profilo_renderizzato: true,
+                  route_aperta_al_click: `/workers/${w.id}`,
+                });
+              }}
+            >
+              <Button size="sm" variant="outline" className="w-full gap-1">
+                <User className="h-3.5 w-3.5" />
+                Vedi profilo
+              </Button>
+            </Link>
             {blockedReason && !activeAppForSelected && !hardBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
                 {blockedReason}
