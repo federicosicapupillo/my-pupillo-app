@@ -410,39 +410,38 @@ export function isValidDistrict(
 // =============================================================
 export const CITY_ZONES: Record<string, string[]> = {
   Milano: [
-    "Centro", "Duomo", "Brera", "Navigli", "Porta Romana", "Porta Venezia",
-    "Isola", "CityLife", "Garibaldi", "Lambrate", "Bicocca", "Città Studi",
+    "Centro", "Brera", "Navigli", "Porta Romana", "Isola", "Porta Venezia",
+    "CityLife", "Garibaldi", "Bicocca", "Lambrate", "NoLo", "Corso Como",
+    "San Siro", "Porta Genova", "Duomo", "Loreto", "Città Studi",
   ],
   Torino: [
-    "Centro", "Crocetta", "San Salvario", "Vanchiglia", "Aurora", "Cit Turin",
-    "Santa Rita", "Mirafiori", "Lingotto", "Barriera di Milano",
+    "Centro", "San Salvario", "Crocetta", "Vanchiglia", "Aurora",
+    "Barriera di Milano", "Santa Rita", "Mirafiori", "Cit Turin", "Lingotto",
+    "Pozzo Strada", "Parella", "Borgo Vittoria", "Madonna di Campagna",
   ],
   Roma: [
-    "Centro Storico", "Trastevere", "Testaccio", "Prati", "Parioli",
-    "San Giovanni", "EUR", "Ostiense", "Garbatella", "Monteverde",
+    "Centro Storico", "Trastevere", "Prati", "Testaccio", "Parioli",
+    "San Lorenzo", "EUR", "Garbatella", "Ostiense", "Monti", "Pigneto",
+    "Monteverde", "Tuscolano", "Appio", "Flaminio",
   ],
   Firenze: [
-    "Centro Storico", "Santa Croce", "Santo Spirito", "San Frediano",
-    "Campo di Marte", "Rifredi", "Novoli",
+    "Centro", "Santa Croce", "San Frediano", "Oltrarno", "Campo di Marte",
+    "Rifredi", "Novoli", "Gavinana", "Porta Romana", "Careggi",
   ],
   Bologna: [
-    "Centro Storico", "Santo Stefano", "San Donato", "Bolognina", "Saragozza",
-    "Savena", "Borgo Panigale",
+    "Centro", "Bolognina", "San Donato", "Santo Stefano", "Saragozza",
+    "Borgo Panigale", "Navile", "Savena", "Murri", "Fiera",
   ],
 };
 
 // Aggiunte: Napoli e altre città principali con elenco zone/quartieri.
 CITY_ZONES["Napoli"] = [
   "Centro Storico", "Chiaia", "Vomero", "Posillipo", "Fuorigrotta",
-  "Mergellina", "Arenella", "San Ferdinando", "Quartieri Spagnoli",
-  "Porto", "Soccavo", "Bagnoli", "Vicaria", "Stella", "San Carlo all'Arena",
-  "Pianura", "Ponticelli", "Barra", "San Giovanni a Teduccio", "Secondigliano",
-  "Scampia", "Miano", "Piscinola", "Chiaiano",
+  "Mergellina", "San Ferdinando", "Bagnoli", "Arenella", "Secondigliano",
 ];
 CITY_ZONES["Genova"] = [
-  "Centro Storico", "Carignano", "Castelletto", "Albaro", "Foce",
-  "San Fruttuoso", "Marassi", "Sampierdarena", "Sestri Ponente",
-  "Pegli", "Voltri", "Nervi", "Quarto", "Quinto", "Boccadasse", "Sturla",
+  "Centro", "Porto Antico", "Carignano", "Foce", "Albaro", "Sturla",
+  "Nervi", "Sampierdarena", "Cornigliano", "Sestri Ponente", "Pegli",
 ];
 CITY_ZONES["Palermo"] = [
   "Centro Storico", "Kalsa", "Albergheria", "Vucciria", "Politeama",

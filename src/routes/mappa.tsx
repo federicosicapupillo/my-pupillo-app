@@ -16,7 +16,7 @@ import type { MapPoint } from "@/components/MapViewInner";
 import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PRICE_RANGE_OPTIONS, priceRangeLabel } from "@/lib/price-range";
-import { ITALIAN_LOCATIONS, citiesForProvince } from "@/lib/italian-locations";
+import { ITALIAN_LOCATIONS, citiesForProvince, zonesForCity } from "@/lib/italian-locations";
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
@@ -623,6 +623,34 @@ function MapPage() {
 
   const restaurantIdSet = useMemo(() => new Set(filteredRestaurants.map(r => r.id)), [filteredRestaurants]);
 
+  useEffect(() => {
+    const availableZones = city !== "any" ? zonesForCity(city) : [];
+    const workersBefore = workers.filter((w) => city === "any" || w.city === city);
+    const restaurantsBefore = restaurants.filter((r) => city === "any" || r.city === city);
+    const zoneFieldsChecked = ["neighborhood", "service_area_district", "location_zone"];
+    console.log("[PUPILLO_MAP_ZONE_FILTER_DEBUG]", {
+      selectedCity: city,
+      selectedZone: district || "Tutte le zone",
+      zoneFilterActive: !!district,
+      availableZonesForCity: availableZones,
+      totaleLavoratoriPrimaFiltroZona: workersBefore.length,
+      totaleLavoratoriDopoFiltroZona: filteredWorkers.length,
+      totaleRistoratoriPrimaFiltroZona: restaurantsBefore.length,
+      totaleRistoratoriDopoFiltroZona: filteredRestaurants.length,
+      campiZonaUsatiPerFiltrare: zoneFieldsChecked,
+      lavoratoriEsclusiPerZona: district
+        ? workersBefore
+            .filter((w) => !(w.neighborhood || "").toLowerCase().includes(district.toLowerCase()))
+            .map((w) => ({ id: w.id, neighborhood: w.neighborhood }))
+        : [],
+      ristoratoriEsclusiPerZona: district
+        ? restaurantsBefore
+            .filter((r) => !(r.neighborhood || "").toLowerCase().includes(district.toLowerCase()))
+            .map((r) => ({ id: r.id, neighborhood: r.neighborhood }))
+        : [],
+    });
+  }, [city, district, workers, restaurants, filteredWorkers, filteredRestaurants]);
+
   // Worker points for the avatar-based map (used for restaurant view).
   // One source only: filteredWorkers from loadRestaurantWorkerSearchResults; no city/mock fallback.
   const locatedWorkers = useMemo(() => {
@@ -1037,21 +1065,32 @@ function MapPage() {
 
       {/* FILTERS */}
       <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
-        <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); }}>
+        <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); setDistrict(""); }}>
           <SelectTrigger><SelectValue placeholder="Provincia" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="any">Tutte le province</SelectItem>
             {ITALIAN_LOCATIONS.map((p) => <SelectItem key={p.province_code} value={p.province}>{p.province}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={city} onValueChange={setCity}>
+        <Select value={city} onValueChange={(v) => { setCity(v); setDistrict(""); }}>
           <SelectTrigger><SelectValue placeholder="Città" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="any">Tutte le città</SelectItem>
             {(province !== "any" ? citiesForProvince(province) : cities).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Input placeholder="Zona / quartiere" value={district} onChange={e => setDistrict(e.target.value)} />
+        <Select
+          value={district === "" ? "__all__" : district}
+          onValueChange={(v) => setDistrict(v === "__all__" ? "" : v)}
+        >
+          <SelectTrigger><SelectValue placeholder="Zona / quartiere" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Tutte le zone</SelectItem>
+            {(city !== "any" ? zonesForCity(city) : []).map((z) => (
+              <SelectItem key={z} value={z}>{z}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={venue} onValueChange={setVenue}>
           <SelectTrigger><SelectValue placeholder="Tipologia locale" /></SelectTrigger>
           <SelectContent>
