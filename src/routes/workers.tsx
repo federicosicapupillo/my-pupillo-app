@@ -452,21 +452,28 @@ function WorkersPage() {
             profile_id: id,
             user_id: id,
             name: w?.full_name ?? null,
-            origine: "profiles.in(allowedIds) — query principale",
+            origine: "getRestaurantWorkerSearchData — query principale server-side",
             occorrenze_prima_della_deduplicazione: count,
           });
         }
       }
       const list = Array.from(seen.values());
+      console.log("[PUPILLO_WORKER_DEDUPLICATION_DEBUG]", {
+        workers_before_deduplication: rawList.length,
+        workers_after_deduplication: list.length,
+        duplicates_found: dupLog.length,
+        duplicate_user_ids: dupLog.map((d) => d.id),
+        probable_cause: dupLog.length ? "join o dati duplicati a monte" : "nessuna duplicazione rilevata",
+      });
       console.log("[PUPILLO_WORKER_SEARCH_DEEP_DEBUG] loaded worker profiles", {
         restaurant_user_id: user?.id ?? null,
-        source: "Supabase (profiles via list_worker_user_ids RPC)",
-        worker_ids_from_rpc: allowedIds.length,
+        source: "Supabase server function getRestaurantWorkerSearchData",
+        worker_ids_from_query: result.workers.length,
         rows_received: rawList.length,
         workers_after_dedup: list.length,
         duplicates_removed: rawList.length - list.length,
         worker_profiles_after_filters: list.length,
-        excluded_count: allowedIds.length - list.length,
+        excluded_count: result.workers.length - list.length,
       });
       setWorkers(list);
       // Carica le disponibilità reali dalla tabella worker_availability per i
