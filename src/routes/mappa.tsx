@@ -427,7 +427,6 @@ function MapPage() {
   const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number; label?: string } | null>(null);
   const [radiusKm, setRadiusKm] = useState<string>("any");
   const [locating, setLocating] = useState(false);
-  const [geocoding, setGeocoding] = useState(false);
   const [focusZoom, setFocusZoom] = useState<number | undefined>(undefined);
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
   const [focusWorkerId, setFocusWorkerId] = useState<string | null>(null);
