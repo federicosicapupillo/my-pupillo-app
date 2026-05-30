@@ -155,3 +155,22 @@ export function availabilitySearchText(
   }
   return parts.join(" ").toLowerCase();
 }
+
+/**
+ * One-line summary for compact worker cards (e.g. Map page list).
+ * Reuses `summarizeWorkerAvailability` to stay consistent with the worker
+ * profile detail view. Returns null when there are no rows.
+ */
+export function formatWorkerAvailabilityCardLine(
+  rows: AvailabilityRow[] | null | undefined,
+  now: Date = new Date(),
+): string | null {
+  const summary = summarizeWorkerAvailability(rows, now);
+  if (summary.kind === "none") return null;
+  const line = summary.lines[0];
+  if (!line) return null;
+  const base = `${line.days} · ${line.hours}`;
+  const withToday = line.includesToday ? `${base} · Oggi` : base;
+  const extra = summary.extraCount > 0 ? ` · +${summary.extraCount}` : "";
+  return `${withToday}${extra}`;
+}
