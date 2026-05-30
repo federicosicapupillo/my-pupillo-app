@@ -207,7 +207,7 @@ function WorkerDetailPage() {
           </Card>
 
           <Card title="Disponibilità">
-            <Row label="Fascia oraria" value={w.hourly_availability || "—"} />
+            <Row label="Fascia oraria" value={hourlyLine} />
             {w.weekly_availability && w.weekly_availability.length > 0 ? (
               <div className="flex flex-wrap gap-1 pt-1">
                 {w.weekly_availability.map((d) => <Badge key={d} variant="outline">{d}</Badge>)}
