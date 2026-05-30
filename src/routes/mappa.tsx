@@ -330,9 +330,33 @@ const DAY_FULL_LABEL: Record<string, string> = {
 function formatWorkerAvailabilityLine(w: Worker): string {
   const weekly = w.weekly_availability ?? [];
   const summary = summarizeWeeklyAvailability(weekly, (w as any).available_now_until ?? null);
+
+  const hasAreaAvailability =
+    !!w.work_area_mode ||
+    w.all_zones === true ||
+    (Array.isArray(w.selected_zones) && w.selected_zones.length > 0) ||
+    !!w.service_area_city ||
+    !!w.service_area_district ||
+    (w.available_days && w.available_days.length > 0) ||
+    (w.availability_schedule && w.availability_schedule.length > 0) ||
+    !!w.hourly_availability ||
+    !!w.available_now_until ||
+    (w.availability_source && w.availability_source !== "missing");
+
   switch (summary.kind) {
-    case "none":
+    case "none": {
+      if (hasAreaAvailability) {
+        const city = w.service_area_city ?? w.location_city ?? w.city;
+        const zone = w.all_zones
+          ? "Tutte le zone"
+          : (w.service_area_district ?? w.location_zone ?? w.neighborhood);
+        if (city || zone) {
+          return `Disponibile su ${[city, zone].filter(Boolean).join(" · ")}`;
+        }
+        return "Disponibilità impostata";
+      }
       return "Nessuna disponibilità indicata";
+    }
     case "today":
       return summary.hours ? `Disponibile oggi · ${summary.hours}` : "Disponibile oggi";
     case "all_week":
