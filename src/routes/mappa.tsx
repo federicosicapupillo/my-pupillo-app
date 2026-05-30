@@ -548,6 +548,29 @@ function MapPage() {
         array_finale_renderizzato: wsRaw.map((w) => ({ user_id: w.id, nome: w.full_name, ruolo: w.primary_role, user_roles: w.user_roles ?? [] })),
       });
       setWorkers(wsRaw);
+      // Carica le disponibilità reali dalla tabella worker_availability
+      // (stessa fonte usata dalla pagina /workers e dal profilo dettaglio).
+      // Il campo profiles.weekly_availability è legacy e spesso vuoto.
+      const workerIds = wsRaw.map((w) => w.id);
+      if (workerIds.length > 0) {
+        const { data: avRows, error: avErr } = await supabase
+          .from("worker_availability")
+          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
+          .in("worker_id", workerIds);
+        if (avErr) {
+          console.warn("[mappa] worker_availability load error", avErr);
+        } else {
+          const map: Record<string, AvailabilityRow[]> = {};
+          for (const row of (avRows as AvailabilityRow[] | null) ?? []) {
+            const arr = map[row.worker_id] ?? [];
+            arr.push(row);
+            map[row.worker_id] = arr;
+          }
+          setAvailByWorker(map);
+        }
+      } else {
+        setAvailByWorker({});
+      }
       setAnns((a as Ann[]) || []);
       const counts: Record<string, number> = {};
       (a || []).forEach((x: any) => { counts[x.restaurant_id] = (counts[x.restaurant_id] || 0) + 1; });
