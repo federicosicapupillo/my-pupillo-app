@@ -446,6 +446,11 @@ function Thread() {
   const [sendingCounter, setSendingCounter] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // Popup di conferma quando il LAVORATORE clicca "Sono interessato".
+  // Serve a chiarire che NON si tratta di un turno confermato, ma solo
+  // di una dichiarazione di disponibilità in attesa della conferma del
+  // ristoratore. Mantiene nascosti nome locale e indirizzo completo.
+  const [interestConfirmOpen, setInterestConfirmOpen] = useState(false);
   const [transitioning, setTransitioning] = useState<null | "interested" | "not_interested" | "accepted" | "rejected">(null);
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
@@ -1314,11 +1319,32 @@ function Thread() {
       }
     }
     await logEvent(next, { by_role: role ?? undefined });
+    // Quando il LAVORATORE comunica il proprio interesse su una proposta del
+    // ristoratore, scriviamo in chat un messaggio di sistema che chiarisce
+    // che il turno NON è ancora confermato e che alcuni dati (nome locale,
+    // indirizzo completo, istruzioni operative finali) saranno visibili
+    // solo dopo la conferma del ristoratore. Anti-duplicato: lo inseriamo
+    // solo se non esiste già un system message con lo stesso testo per
+    // questa application.
+    if (next === "interested" && role === "worker") {
+      try {
+        const noteText =
+          "Hai comunicato il tuo interesse per questa proposta. " +
+          "Disponibilità inviata, in attesa di conferma del ristoratore. " +
+          "Quando il ristoratore confermerà il turno, potrai vedere nome del locale, indirizzo completo e istruzioni operative.";
+        const already = msgs.some(
+          (m) => m.message_type === "system" && typeof m.body === "string" && m.body.includes("Disponibilità inviata"),
+        );
+        if (!already) await insertSystemMessage(noteText);
+      } catch (e) {
+        console.error("[worker-interest] system note failed", e);
+      }
+    }
     const isRestaurant = role === "restaurant";
     const toastByStatus: Record<string, { title: string; description: string }> = {
       interested: {
-        title: "Interesse confermato",
-        description: "Stato candidatura: Interessato.",
+        title: "Interesse inviato",
+        description: "In attesa di conferma del ristoratore.",
       },
       not_interested: {
         title: "Offerta rifiutata",
@@ -2179,7 +2205,7 @@ function Thread() {
           <div className="mb-4 space-y-2">
             <div className="flex flex-wrap gap-2">
               {role === "worker" && app.status === "pending" && (<>
-                <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => transition("interested")}>
+                <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => setInterestConfirmOpen(true)}>
                   {transitioning === "interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
                   {transitioning === "interested" ? "Invio in corso…" : "Sono interessato"}
                 </Button>
@@ -2848,6 +2874,85 @@ function Thread() {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {cancelling ? "Annullamento…" : "Conferma annullamento"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {/* Popup di conferma per il LAVORATORE quando dichiara interesse. */}
+        <AlertDialog open={interestConfirmOpen} onOpenChange={setInterestConfirmOpen}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confermi il tuo interesse?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Stai comunicando al ristoratore che sei disponibile per questo turno.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-3 py-1 text-sm">
+              <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                <div className="font-semibold">ATTENZIONE: il turno non è ancora confermato.</div>
+                <div className="text-xs mt-1">Dovrai attendere la conferma del ristoratore.</div>
+              </div>
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                Solo dopo la conferma potrai vedere il nome del locale, l’indirizzo completo e le istruzioni operative finali. Fino ad allora restano visibili solo città/zona e informazioni generali del turno.
+              </div>
+              {ann && (() => {
+                const rows: Array<{ label: string; value: string }> = [];
+                const roleLabel = (ann.professional_profile ?? "").toString().trim();
+                if (roleLabel) rows.push({ label: "Ruolo", value: roleLabel.charAt(0).toUpperCase() + roleLabel.slice(1) });
+                if (ann.service_date) rows.push({ label: "Data", value: formatDateIT(ann.service_date) });
+                const start = ann.service_time ? String(ann.service_time).slice(0, 5) : "";
+                const end = (ann as any).end_time ? String((ann as any).end_time).slice(0, 5) : "";
+                if (start) rows.push({ label: "Orario", value: end ? `${start} - ${end}` : start });
+                const zona = [ann.job_city, (ann as any).job_province].filter(Boolean).join(" · ");
+                if (zona) rows.push({ label: "Città/Zona", value: zona });
+                const amt = ann.tariff_amount == null ? null : Number(ann.tariff_amount);
+                if (amt != null && Number.isFinite(amt) && amt > 0) {
+                  rows.push({ label: "Compenso", value: formatTariff(ann.tariff_amount ?? null, ann.tariff_type ?? null) });
+                }
+                const dress = labelsOf((ann as any).dress_code_items ?? [], DRESS_CODE_OPTIONS as any).filter(Boolean);
+                if (dress.length) rows.push({ label: "Dress code", value: dress.join(", ") });
+                const tasks = labelsOf((ann as any).required_skills ?? [], SKILL_OPTIONS as any).filter(Boolean);
+                if (tasks.length) rows.push({ label: "Mansioni", value: tasks.join(", ") });
+                if (rows.length === 0) return null;
+                return (
+                  <ul className="rounded-md border divide-y text-xs">
+                    {rows.map((r) => (
+                      <li key={r.label} className="flex gap-2 px-3 py-1.5">
+                        <span className="w-24 shrink-0 text-muted-foreground">{r.label}</span>
+                        <span className="flex-1 font-medium">{r.value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={transitioning === "interested"}>Annulla</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={transitioning === "interested"}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== "undefined") {
+                    // eslint-disable-next-line no-console
+                    console.log("[PUPILLO_WORKER_INTEREST_CONFIRMATION_POPUP_DEBUG]", {
+                      worker_user_id: app?.worker_id,
+                      restaurant_user_id: app?.restaurant_id,
+                      proposal_id: msgs.find((m) => m.template_id === PROPOSAL_TEMPLATE_ID && m.sender_id === app?.restaurant_id)?.id ?? null,
+                      job_request_id: app?.announcement_id ?? null,
+                      shift_id: shift?.id ?? null,
+                      status_before: app?.status ?? null,
+                      status_after: "interested",
+                      visible_before_confirm: ["ruolo", "data", "orario", "città", "zona", "compenso", "dress_code", "mansioni_generali", "requisiti_generali"],
+                      hidden_until_confirm: ["nome_reale_locale", "indirizzo_completo", "referente_sul_posto", "istruzioni_operative_complete", "dettagli_accesso", "contatto_operativo"],
+                      popup_shown: true,
+                      cta_text: "Confermo interesse",
+                    });
+                  }
+                  setInterestConfirmOpen(false);
+                  void transition("interested");
+                }}
+              >
+                {transitioning === "interested" ? "Invio in corso…" : "Confermo interesse"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
