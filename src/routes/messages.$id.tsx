@@ -2884,16 +2884,29 @@ function Thread() {
             <AlertDialogHeader>
               <AlertDialogTitle>Confermi il tuo interesse?</AlertDialogTitle>
               <AlertDialogDescription>
-                Stai comunicando al ristoratore che sei disponibile per questo turno.
+                Stai inviando la tua disponibilità al ristoratore. Dopo l'invio dovrai attendere la sua conferma.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-3 py-1 text-sm">
               <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
                 <div className="font-semibold">ATTENZIONE: il turno non è ancora confermato.</div>
-                <div className="text-xs mt-1">Dovrai attendere la conferma del ristoratore.</div>
+                <div className="text-xs mt-1">
+                  Stai inviando la tua disponibilità al ristoratore. Dopo l'invio dovrai attendere la sua conferma.
+                </div>
               </div>
-              <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                Solo dopo la conferma potrai vedere il nome del locale, l’indirizzo completo e le istruzioni operative finali. Fino ad allora restano visibili solo città/zona e informazioni generali del turno.
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground space-y-1.5">
+                <div>
+                  Solo quando il ristoratore confermerà definitivamente il turno, sbloccherai:
+                </div>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  <li>nome del locale</li>
+                  <li>indirizzo completo</li>
+                  <li>referente sul posto</li>
+                  <li>istruzioni operative finali</li>
+                </ul>
+                <div>
+                  Fino a quel momento vedrai solo città, zona e informazioni generali del servizio.
+                </div>
               </div>
               {ann && (() => {
                 const rows: Array<{ label: string; value: string }> = [];
