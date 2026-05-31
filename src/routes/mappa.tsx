@@ -1593,7 +1593,7 @@ function MapPage() {
                         ) : (
                           <Button size="sm" variant="outline" className="flex-1" disabled>Posizione non disponibile</Button>
                         )}
-                        <Button size="sm" onClick={() => setPreviewWorkerId(w.id)}>Vedi profilo</Button>
+                        <Button size="sm" onClick={() => openWorkerProfile(w.id, "lista_mappa", w.full_name)}>Vedi profilo</Button>
                       </div>
                     </li>
                   );
@@ -1696,7 +1696,7 @@ function MapPage() {
                   height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
                   focusId={focusWorkerId}
                   focusNonce={focusWorkerNonce}
-                  onViewProfile={(id) => setPreviewWorkerId(id)}
+                  onViewProfile={(id) => openWorkerProfile(id, "marker_mappa")}
                   onOpenChat={async (workerId) => {
                     if (!user) return;
                     const { data, error } = await supabase
@@ -1788,11 +1788,6 @@ function MapPage() {
           )}
         </div>
       </div>
-      <WorkerProfilePreviewDialog
-        workerId={previewWorkerId}
-        open={previewWorkerId !== null}
-        onOpenChange={(o) => { if (!o) setPreviewWorkerId(null); }}
-      />
     </AppShell>
   );
 }
