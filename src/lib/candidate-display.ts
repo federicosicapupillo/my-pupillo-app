@@ -20,6 +20,14 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export const COLLABORATED_SHIFT_STATUSES = ["scheduled", "completed"] as const;
 
+/**
+ * Shift statuses that mean the worker has actually FINISHED at least one
+ * service for the restaurant. Only these qualify for the
+ * "Già collaboratore" badge — an assigned/confirmed turn that has not yet
+ * been closed must NOT show the badge.
+ */
+export const COMPLETED_SHIFT_STATUSES = ["completed"] as const;
+
 /** Application statuses that mean "this worker is currently confirmed for this restaurant". */
 export const CONFIRMED_APPLICATION_STATUSES = ["accepted"] as const;
 
@@ -90,5 +98,26 @@ export async function loadCollaboratedWorkerIds(restaurantId: string): Promise<S
   for (const r of (shiftsRes.data ?? []) as any[]) if (r.worker_id) ids.add(r.worker_id);
   for (const r of (annRes.data ?? []) as any[]) if (r.assigned_worker_id) ids.add(r.assigned_worker_id);
   for (const r of (appsRes.data ?? []) as any[]) if (r.worker_id) ids.add(r.worker_id);
+  return ids;
+}
+
+/**
+ * Worker IDs that count as ACTUAL past collaborators of the restaurant —
+ * i.e. at least one shift between them has been completed/closed. Use this
+ * (NOT loadCollaboratedWorkerIds) to decide whether to render the
+ * "Già collaboratore" badge. A simple assignment / confirmation is not
+ * enough.
+ */
+export async function loadCompletedCollaboratorWorkerIds(
+  restaurantId: string,
+): Promise<Set<string>> {
+  if (!restaurantId) return new Set();
+  const ids = new Set<string>();
+  const { data } = await supabase
+    .from("shifts")
+    .select("worker_id")
+    .eq("restaurant_id", restaurantId)
+    .in("status", COMPLETED_SHIFT_STATUSES as unknown as any);
+  for (const r of (data ?? []) as any[]) if (r.worker_id) ids.add(r.worker_id);
   return ids;
 }
