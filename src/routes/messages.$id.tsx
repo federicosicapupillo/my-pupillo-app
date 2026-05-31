@@ -2910,6 +2910,25 @@ function Thread() {
           currentCredits={creditsAvailable}
           returnTo={`/messages/${id}`}
         />
+        {role === "restaurant" && app && ann && (
+          <CounterofferDialog
+            open={counterofferOpen}
+            onOpenChange={setCounterofferOpen}
+            applicationId={app.id}
+            restaurantId={app.restaurant_id}
+            workerId={app.worker_id}
+            announcement={{
+              id: ann.id,
+              service_date: ann.service_date ?? null,
+              service_time: ann.service_time ?? null,
+              end_time: (ann as any).end_time ?? null,
+              tariff_amount: ann.tariff_amount ?? null,
+              tariff_type: ann.tariff_type ?? null,
+              professional_profile: ann.professional_profile ?? null,
+              notes: (ann as any).notes ?? null,
+            }}
+          />
+        )}
         <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
         <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
           <AlertDialogContent>
