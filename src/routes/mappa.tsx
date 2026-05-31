@@ -20,10 +20,10 @@ import { ITALIAN_LOCATIONS, citiesForProvince, zonesForCity } from "@/lib/italia
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
-// Unified worker profile: all "Vedi profilo" entry points navigate to
-// /workers/$id (same full profile used by "Cerca lavoratori"). The file
-// is named workers_.$id.tsx only to escape layout nesting; the actual URL
-// served has no underscore — using "/workers_/..." literally would 404.
+// Unified worker profile: all "Vedi profilo" entry points on the
+// restaurant side open the shared WorkerProfilePreviewDialog modal — no
+// navigation, no 404 risk, restaurant stays on the current page.
+import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
 import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
@@ -475,24 +475,23 @@ function MapPage() {
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
   const [focusWorkerId, setFocusWorkerId] = useState<string | null>(null);
   const [focusWorkerNonce, setFocusWorkerNonce] = useState(0);
+  const [profileModalWorkerId, setProfileModalWorkerId] = useState<string | null>(null);
   const openWorkerProfile = (
     workerId: string,
     source: "lista_mappa" | "marker_mappa" | "foto_candidato",
     workerName?: string | null,
   ) => {
     if (typeof console !== "undefined") {
-      console.log("[PUPILLO_WORKER_PROFILE_UNIFIED_OPEN_DEBUG]", {
-        pagina_di_origine: "mappa",
-        trigger: source === "lista_mappa" ? "bottone_vedi_profilo" : source === "foto_candidato" ? "click_foto" : "overlay_profilo",
+      console.log("[PUPILLO_WORKER_PROFILE_MODAL_OPEN_DEBUG]", {
+        pagina_origine: "mappa",
+        trigger: source === "lista_mappa" ? "card_button" : source === "foto_candidato" ? "avatar_button" : "marker_button",
         worker_user_id: workerId,
         profile_id: workerId,
-        nome: workerName ?? null,
-        componente_profilo_usato: "/workers/$id (route page, same as Cerca lavoratori)",
-        target_route: `/workers/${workerId}`,
-        stesso_metodo_cerca_lavoratori: true,
+        nome_lavoratore: workerName ?? null,
+        popup_aperto: true,
       });
     }
-    navigate({ to: "/workers/$id", params: { id: workerId } });
+    setProfileModalWorkerId(workerId);
   };
 
   const focusWorkerOnMap = (workerId: string) => {
