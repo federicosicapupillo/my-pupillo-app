@@ -132,6 +132,34 @@ function WorkerDetailPage() {
     (w.hourly_availability && w.hourly_availability.trim()) ||
     (hasAvailabilitySignal ? "Disponibilità impostata" : "—");
 
+  // Formatters for experience section (must match labels used in profile editing).
+  const fmtExperienceYears = (y: string | null) => {
+    if (!y) return "—";
+    const map: Record<string, string> = {
+      prima_esperienza: "Prima esperienza",
+      meno_di_1: "Meno di 1 anno",
+      oltre_10: "Oltre 10 anni",
+    };
+    return map[y] || y;
+  };
+  const fmtExperienceLevel = (l: string | null) => {
+    if (!l) return "—";
+    const map: Record<string, string> = {
+      prima_esperienza: "Prima esperienza",
+      junior: "Junior",
+      intermediate: "Intermedio",
+      esperto: "Esperto",
+      senior: "Senior",
+    };
+    return map[l] || l;
+  };
+  const fmtHourlyRate = (r: number | null) => {
+    if (r == null) return "—";
+    if (r >= 21) return "Oltre 20 €/h";
+    return `€${r}/h`;
+  };
+  const fmtMotorized = (m: boolean | null) => m === true ? "Sì" : m === false ? "No" : "Non specificato";
+
   if (typeof console !== "undefined") {
     console.log("[PUPILLO_WORKER_PROFILE_LOCATION_AVAILABILITY_DEBUG]", {
       worker_user_id: w.id,
@@ -151,6 +179,11 @@ function WorkerDetailPage() {
       resolved_zone: resolveWorkerZone(w),
       formattedLocation: cityLine,
       formattedAvailability: hourlyLine,
+      experience_years_raw: w.experience_years,
+      experience_level_raw: w.experience_level,
+      hourly_rate_raw: w.hourly_rate,
+      is_motorized_raw: w.is_motorized,
+      dati_letti_nel_profilo_ristoratore: true,
       motivo_dash:
         cityLine === "—"
           ? "nessun dato città/zona/provincia su profilo"
