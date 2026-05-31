@@ -20,6 +20,7 @@ import {
   WORKED_TOGETHER_SHIFT_STATUSES,
 } from "@/lib/public-location";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
+import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreColorClass } from "@/lib/reputation";
