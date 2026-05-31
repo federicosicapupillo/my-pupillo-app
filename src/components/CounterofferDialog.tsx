@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,8 +70,8 @@ export function CounterofferDialog({
   const [role, setRole] = useState(initial.professional_profile);
   const [notes, setNotes] = useState(initial.notes);
 
-  // Reset when re-opened
-  useState(() => {
+  // Reset form values when dialog (re-)opens or announcement changes
+  useEffect(() => {
     if (open) {
       setTariff(initial.tariff_amount);
       setStartTime(initial.service_time);
@@ -79,8 +79,10 @@ export function CounterofferDialog({
       setDate(initial.service_date);
       setRole(initial.professional_profile);
       setNotes(initial.notes);
+      setType("compenso");
     }
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, announcement?.id]);
 
   const showCompenso = type === "compenso" || type === "piu_condizioni";
   const showOrario = type === "orario" || type === "piu_condizioni";
