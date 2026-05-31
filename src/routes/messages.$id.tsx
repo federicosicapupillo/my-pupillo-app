@@ -2155,11 +2155,35 @@ function Thread() {
                       button_enabled: !waitingWorkerInterest && transitioning === null,
                     });
                   }
+                  const workerInterested = !!restaurantProposalMsg && !waitingWorkerInterest && app?.status !== "accepted";
+                  if (typeof window !== "undefined") {
+                    // eslint-disable-next-line no-console
+                    console.log("[PUPILLO_RESTAURANT_INTEREST_ACTIONS_DEBUG]", {
+                      restaurant_user_id: restaurantId,
+                      worker_user_id: app?.worker_id,
+                      proposal_id: restaurantProposalMsg?.id ?? null,
+                      announcement_id: app?.announcement_id,
+                      application_id: app?.id,
+                      current_status: app?.status,
+                      worker_interested: workerInterested,
+                      can_confirm: workerInterested && transitioning === null,
+                      can_send_counteroffer: !!restaurantProposalMsg && transitioning === null,
+                      buttons_rendered: ["Chatta", "Rifiuta", restaurantProposalMsg ? "Conferma lavoratore" : "Accetta candidatura", restaurantProposalMsg ? "Invia controfferta" : null].filter(Boolean),
+                      credits_balance: creditsAvailable,
+                      credits_required: CREDITS_PER_HIRE,
+                    });
+                  }
                   return (
                     <>
                 {waitingWorkerInterest && (
                   <div className="sm:col-span-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
                     Proposta inviata. In attesa della risposta del lavoratore. Potrai confermare il turno quando il lavoratore avrà mostrato interesse.
+                  </div>
+                )}
+                {workerInterested && (
+                  <div className="sm:col-span-3 rounded-lg border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900">
+                    <div className="font-semibold">Il lavoratore è interessato</div>
+                    Il lavoratore ha confermato la disponibilità per questa proposta. Ora puoi confermare il servizio oppure inviare una controfferta.
                   </div>
                 )}
                 <Button
@@ -2195,6 +2219,17 @@ function Thread() {
                       ? "Conferma lavoratore"
                       : "Accetta candidatura"}
                 </Button>
+                {restaurantProposalMsg && (
+                  <Button
+                    variant="outline"
+                    className="gap-2 w-full sm:col-span-3 border-primary/40 text-primary hover:bg-primary/5"
+                    onClick={() => setCounterofferOpen(true)}
+                    disabled={transitioning !== null}
+                  >
+                    <Handshake className="h-4 w-4" />
+                    Invia controfferta
+                  </Button>
+                )}
                     </>
                   );
                 })()}
