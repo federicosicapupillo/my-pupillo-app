@@ -1265,6 +1265,38 @@ function Thread() {
       }
       // Refresh auth profile so the credit counter in the UI reflects the new balance.
       try { await refreshAuth?.(); } catch (e) { console.warn("[accept-candidature] refresh profile failed", e); }
+      // Privacy unlock debug log — captures the credit + privacy state at the
+      // exact moment the restaurant confirms the worker.
+      try {
+        const { data: balAfter } = await supabase
+          .from("profiles").select("credits").eq("id", user.id).maybeSingle();
+        const { data: wp } = await supabase
+          .from("profiles")
+          .select("first_name,last_name,phone_full,phone,phone_verified")
+          .eq("id", app.worker_id)
+          .maybeSingle();
+        const wp2: any = wp ?? {};
+        console.info("[PUPILLO_WORKER_PRIVACY_UNLOCK_AFTER_CONFIRM_DEBUG]", {
+          restaurant_user_id: app.restaurant_id,
+          worker_user_id: app.worker_id,
+          proposal_id: app.id,
+          shift_id: shift?.id ?? null,
+          announcement_id: app.announcement_id,
+          status_before: app.status,
+          status_after: "accepted",
+          credits_before: balance,
+          credits_required: CREDITS_PER_HIRE,
+          credits_after: (balAfter as any)?.credits ?? null,
+          credit_transaction_created: true,
+          privacy_unlocked: true,
+          worker_first_name: wp2.first_name ?? null,
+          worker_last_name: wp2.last_name ?? null,
+          worker_phone_present: !!(wp2.phone_full || wp2.phone),
+          worker_phone_verified: !!wp2.phone_verified,
+        });
+      } catch (e) {
+        console.warn("[PUPILLO_WORKER_PRIVACY_UNLOCK_AFTER_CONFIRM_DEBUG] log failed", e);
+      }
     }
     const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
