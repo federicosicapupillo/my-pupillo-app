@@ -26,6 +26,7 @@ import { useRequiredReviews } from "@/lib/required-reviews";
 import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreColorClass } from "@/lib/reputation";
 import { shouldShowNewApplicationCard } from "@/lib/application-card";
 import { Award } from "lucide-react";
+import { ConfirmedWorkerCard, type ConfirmedWorkerProfile, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { ReviewLabelsPicker, ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { WouldRehirePicker, WouldRehireBadge } from "@/components/WouldRehirePicker";
@@ -460,6 +461,8 @@ function Thread() {
   const [otherIdentity, setOtherIdentity] = useState<{ businessName: string | null; fullName: string | null; firstName: string | null } | null>(null);
   const [hasWorkedTogether, setHasWorkedTogether] = useState(false);
   const [workerRep, setWorkerRep] = useState<WorkerReputationInput | null>(null);
+  const [confirmedWorker, setConfirmedWorker] = useState<ConfirmedWorkerProfile | null>(null);
+  const [confirmedWorkerLastReview, setConfirmedWorkerLastReview] = useState<ConfirmedWorkerLastReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [otherId, setOtherId] = useState<string | null>(null);
