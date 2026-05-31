@@ -64,14 +64,29 @@ function langsLabel(spoken: any, langs: string[] | null) {
   return (langs ?? []).join(", ");
 }
 
+const EXPERIENCE_YEARS_LABELS: Record<string, string> = {
+  prima_esperienza: "Prima esperienza",
+  meno_di_1: "Meno di 1 anno",
+  "1_2": "1-2 anni",
+  "3_5": "3-5 anni",
+  "6_10": "6-10 anni",
+  oltre_10: "Oltre 10 anni",
+};
+function fmtExperienceYears(v: string | null): string {
+  if (!v) return "";
+  return EXPERIENCE_YEARS_LABELS[v] ?? v;
+}
+
 export function WorkerProfilePreviewDialog({
   workerId,
   open,
   onOpenChange,
+  source,
 }: {
   workerId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  source?: string;
 }) {
   const { user, role } = useAuth();
   const [w, setW] = useState<WorkerProfile | null>(null);
