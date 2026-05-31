@@ -2445,6 +2445,7 @@ function WorkersMapSection({
   inviteLabel: string;
   rel: Record<string, WorkerRel>;
 }) {
+  const openProfileFromMap = useOpenWorkerProfile();
   // Deduplicazione difensiva per `id` prima di renderizzare i marker.
   // La server function passa coordinate reali quando presenti oppure coordinate
   // approssimative derivate da città/zona salvate dal worker in onboarding.
