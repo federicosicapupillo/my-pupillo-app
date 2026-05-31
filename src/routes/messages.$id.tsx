@@ -2122,6 +2122,44 @@ function Thread() {
               )}
 
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {(() => {
+                  // CASO B — Proposta inviata dal ristoratore: il lavoratore deve
+                  // ancora dichiarare interesse. Finché non lo fa, il ristoratore
+                  // NON può confermare il turno.
+                  const restaurantId = app?.restaurant_id;
+                  const restaurantProposalMsg = msgs.find(
+                    (m) => m.template_id === PROPOSAL_TEMPLATE_ID && m.sender_id === restaurantId,
+                  );
+                  const restaurantProposalAccepted = restaurantProposalMsg
+                    ? proposalStatuses[restaurantProposalMsg.id] === "accepted"
+                    : false;
+                  const waitingWorkerInterest =
+                    !!restaurantProposalMsg &&
+                    !restaurantProposalAccepted &&
+                    app?.status === "pending";
+                  if (typeof window !== "undefined") {
+                    // eslint-disable-next-line no-console
+                    console.log("[PUPILLO_RESTAURANT_PROPOSAL_STATUS_DEBUG]", {
+                      restaurant_user_id: restaurantId,
+                      worker_user_id: app?.worker_id,
+                      announcement_id: app?.announcement_id,
+                      proposal_id: restaurantProposalMsg?.id ?? null,
+                      application_id: app?.id,
+                      source: restaurantProposalMsg ? "restaurant_proposal" : "worker_application",
+                      current_status: app?.status,
+                      worker_has_shown_interest: !waitingWorkerInterest,
+                      restaurant_can_confirm: !waitingWorkerInterest,
+                      button_rendered: "Accetta candidatura / Conferma lavoratore",
+                      button_enabled: !waitingWorkerInterest && transitioning === null,
+                    });
+                  }
+                  return (
+                    <>
+                {waitingWorkerInterest && (
+                  <div className="sm:col-span-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
+                    Proposta inviata. In attesa della risposta del lavoratore. Potrai confermare il turno quando il lavoratore avrà mostrato interesse.
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   className="gap-2 w-full"
@@ -2145,11 +2183,19 @@ function Thread() {
                 <Button
                   className="gap-2 w-full bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
                   onClick={() => transition("accepted")}
-                  disabled={transitioning !== null}
+                  disabled={transitioning !== null || waitingWorkerInterest}
+                  title={waitingWorkerInterest ? "Attendi la risposta del lavoratore" : undefined}
                 >
                   {transitioning === "accepted" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  {transitioning === "accepted" ? "Conferma in corso…" : "Accetta candidatura"}
+                  {transitioning === "accepted"
+                    ? "Conferma in corso…"
+                    : restaurantProposalMsg
+                      ? "Conferma lavoratore"
+                      : "Accetta candidatura"}
                 </Button>
+                    </>
+                  );
+                })()}
               </div>
               <PayOnHireBox className="mt-3" compact />
             </div>
