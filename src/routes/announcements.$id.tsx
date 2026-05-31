@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, MapPin, Euro, Clock, Users, Star, Shield,
   CheckCircle2, XCircle, MessageSquare, Award, Building2, Phone, Mail, Globe,
-  Languages as LanguagesIcon, IdCard, ListChecks, Sparkles, Info, User,
+  Languages as LanguagesIcon, IdCard, ListChecks, Sparkles, Info, User, Handshake,
 } from "lucide-react";
 import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
