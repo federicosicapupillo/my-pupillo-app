@@ -1951,6 +1951,19 @@ function Thread() {
           </div>
         </div>
 
+        {role === "restaurant" && app?.status === "accepted" && confirmedWorker && (
+          <div className="mb-4">
+            <div className="mb-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
+              Lavoratore confermato. Ora puoi visualizzare i dati operativi del lavoratore.
+            </div>
+            <ConfirmedWorkerCard
+              worker={confirmedWorker}
+              applicationId={app.id}
+              lastReview={confirmedWorkerLastReview}
+            />
+          </div>
+        )}
+
         {app && shouldShowNewApplicationCard({ role: role as any, status: app.status as any, hasWorkerReputation: !!workerRep }) && workerRep && (() => {
           const s = summarizeReputation(workerRep);
           // ============================================================
