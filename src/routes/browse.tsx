@@ -667,11 +667,18 @@ function Browse() {
         </div>
       </div>
 
-      {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
+      {loading ? <p className="text-muted-foreground">Caricamento…</p> : orderedFiltered.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">Nessuna offerta corrisponde ai filtri.</div>
       ) : view === "list" ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filtered.map(a => {
+        <div className="space-y-6">
+        {(() => {
+          const compatibles = hasCompatibleHeader
+            ? orderedFiltered.slice(0, firstOtherIdx)
+            : orderedFiltered;
+          const others = hasCompatibleHeader
+            ? orderedFiltered.slice(firstOtherIdx)
+            : [];
+          const renderCard = (a: Ann) => {
             const applied = appliedIds.has(a.id);
             const appStatus = appStatusById[a.id];
             const rejected = appStatus === "rejected" || appStatus === "not_interested";
@@ -679,6 +686,17 @@ function Browse() {
             const role = a.professional_profile || "ruolo";
             const specialBlock = computeSpecialAvailabilityBlock(specialExceptions, a);
             const incompatibleSpecial = !!specialBlock?.blocked;
+            const compatTag = compatById[a.id];
+            const compatChip =
+              compatTag === "compatible"
+                ? { text: "Compatibile con la tua disponibilità", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" }
+                : compatTag === "partial"
+                ? { text: "Disponibilità parziale", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" }
+                : compatTag === "other_city"
+                ? { text: "Altra città", cls: "bg-muted text-foreground/70" }
+                : compatTag === "incompatible"
+                ? { text: "Fuori disponibilità", cls: "bg-muted text-foreground/70" }
+                : null;
             const loc = publicLocationLabel({
               job_city: a.job_city,
               city: restaurantsById[a.restaurant_id]?.city,
@@ -719,6 +737,11 @@ function Browse() {
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${speedClasses(a.speed)}`}>
                         {speedLabel(a.speed)}
                       </span>
+                      {compatChip && (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${compatChip.cls}`}>
+                          {compatChip.text}
+                        </span>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">Ristorante partner</p>
                   </div>
@@ -813,7 +836,33 @@ function Browse() {
                 </div>
               </div>
             );
-          })}
+          };
+          return (
+            <>
+              {hasCompatibleHeader && (
+                <section>
+                  <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Offerte compatibili con la tua disponibilità
+                    <span className="text-xs font-normal text-muted-foreground">({compatibles.length})</span>
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">{compatibles.map(renderCard)}</div>
+                </section>
+              )}
+              <section>
+                {hasCompatibleHeader && (
+                  <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-2">
+                    Altre offerte disponibili
+                    <span className="text-xs font-normal text-muted-foreground">({others.length})</span>
+                  </h3>
+                )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {(hasCompatibleHeader ? others : compatibles).map(renderCard)}
+                </div>
+              </section>
+            </>
+          );
+        })()}
         </div>
       ) : (
         <div className="rounded-2xl border bg-card p-2">
