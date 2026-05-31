@@ -1788,6 +1788,12 @@ function MapPage() {
           )}
         </div>
       </div>
+      <WorkerProfilePreviewDialog
+        workerId={profileModalWorkerId}
+        open={profileModalWorkerId !== null}
+        onOpenChange={(o: boolean) => { if (!o) setProfileModalWorkerId(null); }}
+        source="mappa"
+      />
     </AppShell>
   );
 }
