@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { formatTariff } from "@/lib/format";
+import { formatShiftLocation } from "@/lib/format-location";
 import {
   ArrowLeft, Calendar, MapPin, Clock, Star, CheckCheck, CheckCircle2,
   XCircle, AlertTriangle, MessageSquare, User, Briefcase, Euro, Check, Heart,
@@ -494,7 +495,7 @@ function ShiftDetailPage() {
           <Field icon={Clock} label="Durata stimata" value={dur ? `${dur} ore` : "—"} />
           {tariff != null && <Field icon={Euro} label={ann?.tariff_type === "hourly" ? "Tariffa oraria" : "Tariffa"} value={formatTariff(tariff, ann?.tariff_type)} />}
           {compenso != null && <Field icon={Euro} label="Compenso stimato" value={`€${Number(compenso).toFixed(2)}`} />}
-          {ann?.location_address && <Field icon={MapPin} label="Luogo" value={ann.location_address} />}
+          {ann?.location_address && <Field icon={MapPin} label="Luogo" value={formatShiftLocation(ann.location_address)} />}
         </div>
 
         {(ann?.notes || jobReq?.operational_notes) && (
