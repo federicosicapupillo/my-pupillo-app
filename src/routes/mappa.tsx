@@ -21,7 +21,7 @@ import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 // Unified worker profile: opens via the shared modal — no route change, no 404.
-import { WorkerProfileModalProvider, useOpenWorkerProfile } from "@/components/WorkerProfileModalProvider";
+import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
 import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
