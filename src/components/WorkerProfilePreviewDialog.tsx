@@ -144,8 +144,9 @@ export function WorkerProfilePreviewDialog({
         ? displayWorkerName(w, workedTogether)
         : (w.full_name || "Lavoratore"))
     : "Lavoratore";
-  const zone = w ? [w.neighborhood, w.city].filter(Boolean).join(", ") || w.city || "—" : "—";
-  const roleLine = w ? [w.primary_role, ...(w.secondary_roles ?? [])].filter(Boolean).join(" · ") : "";
+  const zone = w ? (formatWorkerLocation(w) || "—") : "—";
+  const roles = (w ? [w.primary_role, ...((w.secondary_roles ?? []) as string[])].filter(Boolean) : []) as string[];
+  const roleLine = roles.join(" · ");
   const langs = w ? langsLabel(w.spoken_languages, w.languages) : "";
 
   return (
