@@ -263,7 +263,7 @@ function AnnouncementDetail() {
     const ids = Array.from(new Set(list.map(x => x.worker_id)));
     if (ids.length) {
       const { data: ps } = await supabase.from("profiles")
-        .select("id,full_name,age,city,professional_profile,primary_role,languages,rating_avg,reviews_count,badge,reliability_pct,experience_years,completed_shifts,phone_verified,profile_completed,id_document_path")
+        .select("id,full_name,first_name,last_name,age,city,professional_profile,primary_role,languages,rating_avg,reviews_count,badge,reliability_pct,experience_years,completed_shifts,phone_verified,profile_completed,id_document_path,phone_full,phone")
         .in("id", ids);
       const map: Record<string, WorkerProfile> = {};
       (ps ?? []).forEach((p: any) => { map[p.id] = p; });
