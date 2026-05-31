@@ -229,6 +229,12 @@ export function WorkerProfilePreviewDialog({
               </section>
             )}
 
+            {/* Zona / Città */}
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Zona / Città</h3>
+              <p className="text-sm">{zone}</p>
+            </section>
+
             {/* Bio */}
             {w.short_bio && (
               <section>
