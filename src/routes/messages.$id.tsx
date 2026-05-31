@@ -427,6 +427,7 @@ function Thread() {
   const { user, role, profile, refresh: refreshAuth } = useAuth();
   const { requireComplete, ensureTargetComplete } = useProfileGate();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
+  const [counterofferOpen, setCounterofferOpen] = useState(false);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
