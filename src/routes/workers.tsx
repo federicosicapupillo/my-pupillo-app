@@ -1416,6 +1416,38 @@ function WorkersPage() {
       filters: { category, subcategory, q, lang },
     });
   }
+  if (loaded) {
+    const compatCount = selectedAnn
+      ? sorted.filter((w) => {
+          const c = compatByWorker[w.id];
+          return c === "disponibile" || c === "compatibile";
+        }).length
+      : 0;
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_VISIBILITY_NOT_HARD_FILTER_DEBUG]", {
+      page: "cerca_lavoratori",
+      current_user_id: user?.id ?? null,
+      selected_filters: { category, subcategory, q, lang, selected_announcement_id: selected || null },
+      worker_availability_city: null,
+      worker_extra_availability_city: null,
+      selected_announcement_city: selectedAnn?.job_city ?? null,
+      hard_filters_applied: false,
+      soft_matching_used: true,
+      total_items_before_filters: workers.length,
+      total_items_after_filters: filtered.length,
+      total_items_final_rendered: sorted.length,
+    });
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_RESTAURANT_WORKER_SEARCH_SOFT_MATCH_DEBUG]", {
+      restaurant_user_id: user?.id ?? null,
+      selected_announcement_id: selected || null,
+      total_workers_real: workers.length,
+      workers_compatible: compatCount,
+      workers_not_compatible: selectedAnn ? sorted.length - compatCount : 0,
+      workers_final_rendered: sorted.length,
+      worker_excluded_reason: null, // mai esclusi per disponibilità: solo ordinamento
+    });
+  }
 
   return (
     <AppShell>

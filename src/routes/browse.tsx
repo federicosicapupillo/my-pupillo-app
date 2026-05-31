@@ -328,6 +328,130 @@ function Browse() {
     return out;
   }, [items, roleF, speedF, q, maxKm, onlyNotApplied, onlyFav, sort, profile, appliedIds, favIds, restaurantsById]);
 
+  // Soft-matching: per ogni annuncio della lista calcoliamo la compatibilità
+  // rispetto alla disponibilità del lavoratore (settimanale + eccezioni
+  // speciali). NON è un filtro: gli annunci non compatibili restano
+  // visibili. Serve solo per dare priorità in lista e per il badge.
+  const compatById = useMemo(() => {
+    const map: Record<string, "compatible" | "partial" | "unknown" | "incompatible" | "other_city"> = {};
+    for (const a of items) {
+      const dayExc = (specialExceptions ?? []).filter((e) => e.date === a.service_date);
+      const block = computeSpecialAvailabilityBlock(specialExceptions, a);
+      if (block?.blocked) {
+        map[a.id] = "incompatible";
+        continue;
+      }
+      const hasWeekly = (weeklyAvailability ?? []).length > 0;
+      if (!hasWeekly && dayExc.length === 0) {
+        map[a.id] = "unknown";
+        continue;
+      }
+      const start = a.service_time ? a.service_time.slice(0, 5) : null;
+      const end = a.end_time ? a.end_time.slice(0, 5) : null;
+      const level = computeCompatibility(
+        weeklyAvailability ?? [],
+        dayExc,
+        a.service_date,
+        start,
+        end,
+        a.job_city ?? null,
+      );
+      if (level === "disponibile" || level === "compatibile") map[a.id] = "compatible";
+      else if (level === "parziale") map[a.id] = "partial";
+      else if (level === "non_disponibile") {
+        // distinguiamo "altra città" da "fuori disponibilità oraria"
+        const workerCities = new Set(
+          (weeklyAvailability ?? [])
+            .map((r) => (r.city ?? "").trim().toLowerCase())
+            .filter(Boolean),
+        );
+        const annCity = (a.job_city ?? "").trim().toLowerCase();
+        if (annCity && workerCities.size > 0 && !workerCities.has(annCity)) {
+          map[a.id] = "other_city";
+        } else {
+          map[a.id] = "incompatible";
+        }
+      } else map[a.id] = "unknown";
+    }
+    return map;
+  }, [items, weeklyAvailability, specialExceptions]);
+
+  // Ordina la lista filtrata: prima compatibili, poi parziali/unknown,
+  // poi non compatibili / altra città. Mai nascondere.
+  const tier = (id: string): number => {
+    const c = compatById[id];
+    if (c === "compatible") return 0;
+    if (c === "partial") return 1;
+    if (c === "unknown") return 2;
+    if (c === "other_city") return 3;
+    return 4; // incompatible
+  };
+  const orderedFiltered = useMemo(() => {
+    // Stable sort: applica solo se l'utente NON ha scelto un ordinamento
+    // esplicito alternativo (pay/date). Per "recent" usiamo il sort di
+    // affinità sopra l'ordine di arrivo già rispettato dalla query.
+    if (sort !== "recent") return filtered;
+    return [...filtered].sort((a, b) => tier(a.id) - tier(b.id));
+  }, [filtered, compatById, sort]);
+  const firstOtherIdx = useMemo(() => {
+    if (sort !== "recent") return -1;
+    const idx = orderedFiltered.findIndex((a) => tier(a.id) > 0);
+    return idx;
+  }, [orderedFiltered, compatById, sort]);
+  const hasCompatibleHeader =
+    sort === "recent" &&
+    firstOtherIdx > 0 &&
+    orderedFiltered.length - firstOtherIdx > 0;
+
+  useEffect(() => {
+    if (loading || !user) return;
+    const counts = { compatible: 0, partial: 0, unknown: 0, other_city: 0, incompatible: 0 };
+    for (const a of items) {
+      const k = compatById[a.id] ?? "unknown";
+      (counts as any)[k] = ((counts as any)[k] ?? 0) + 1;
+    }
+    const explicitFilters = {
+      role: roleF !== "any" ? roleF : null,
+      speed: speedF !== "any" ? speedF : null,
+      max_km: maxKm || null,
+      text: q || null,
+      only_not_applied: onlyNotApplied,
+      only_favorites: onlyFav,
+      sort,
+    };
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_VISIBILITY_NOT_HARD_FILTER_DEBUG]", {
+      page: "trova_offerte",
+      current_user_id: user.id,
+      selected_filters: explicitFilters,
+      worker_availability_city: (weeklyAvailability ?? []).map((r) => r.city).filter(Boolean),
+      worker_extra_availability_city: (specialExceptions ?? []).map((e) => e.city).filter(Boolean),
+      selected_announcement_city: null,
+      hard_filters_applied: false,
+      soft_matching_used: true,
+      total_items_before_filters: items.length,
+      total_items_after_filters: filtered.length,
+      total_items_final_rendered: orderedFiltered.length,
+    });
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_WORKER_FIND_OFFERS_SOFT_MATCH_DEBUG]", {
+      worker_user_id: user.id,
+      worker_availability: (weeklyAvailability ?? []).map((r) => ({
+        day_of_week: r.day_of_week, city: r.city, district: r.district,
+      })),
+      worker_extra_availability: (specialExceptions ?? []).map((e) => ({
+        date: e.date, city: e.city, is_available: e.is_available,
+      })),
+      total_real_offers: items.length,
+      offers_compatible: counts.compatible,
+      offers_partial_or_unknown: counts.partial + counts.unknown,
+      offers_other_city: counts.other_city,
+      offers_not_compatible: counts.incompatible,
+      offers_final_rendered: orderedFiltered.length,
+      offer_excluded_reason: null, // mai escluse: filtro hard non applicato
+    });
+  }, [loading, user, items, filtered, orderedFiltered, compatById, weeklyAvailability, specialExceptions, roleF, speedF, maxKm, q, onlyNotApplied, onlyFav, sort]);
+
   const toggleFav = async (annId: string) => {
     if (!user) return;
     if (favIds.has(annId)) {
@@ -543,11 +667,18 @@ function Browse() {
         </div>
       </div>
 
-      {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
+      {loading ? <p className="text-muted-foreground">Caricamento…</p> : orderedFiltered.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">Nessuna offerta corrisponde ai filtri.</div>
       ) : view === "list" ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filtered.map(a => {
+        <div className="space-y-6">
+        {(() => {
+          const compatibles = hasCompatibleHeader
+            ? orderedFiltered.slice(0, firstOtherIdx)
+            : orderedFiltered;
+          const others = hasCompatibleHeader
+            ? orderedFiltered.slice(firstOtherIdx)
+            : [];
+          const renderCard = (a: Ann) => {
             const applied = appliedIds.has(a.id);
             const appStatus = appStatusById[a.id];
             const rejected = appStatus === "rejected" || appStatus === "not_interested";
@@ -555,6 +686,17 @@ function Browse() {
             const role = a.professional_profile || "ruolo";
             const specialBlock = computeSpecialAvailabilityBlock(specialExceptions, a);
             const incompatibleSpecial = !!specialBlock?.blocked;
+            const compatTag = compatById[a.id];
+            const compatChip =
+              compatTag === "compatible"
+                ? { text: "Compatibile con la tua disponibilità", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" }
+                : compatTag === "partial"
+                ? { text: "Disponibilità parziale", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" }
+                : compatTag === "other_city"
+                ? { text: "Altra città", cls: "bg-muted text-foreground/70" }
+                : compatTag === "incompatible"
+                ? { text: "Fuori disponibilità", cls: "bg-muted text-foreground/70" }
+                : null;
             const loc = publicLocationLabel({
               job_city: a.job_city,
               city: restaurantsById[a.restaurant_id]?.city,
@@ -595,6 +737,11 @@ function Browse() {
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${speedClasses(a.speed)}`}>
                         {speedLabel(a.speed)}
                       </span>
+                      {compatChip && (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${compatChip.cls}`}>
+                          {compatChip.text}
+                        </span>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">Ristorante partner</p>
                   </div>
@@ -689,7 +836,33 @@ function Browse() {
                 </div>
               </div>
             );
-          })}
+          };
+          return (
+            <>
+              {hasCompatibleHeader && (
+                <section>
+                  <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Offerte compatibili con la tua disponibilità
+                    <span className="text-xs font-normal text-muted-foreground">({compatibles.length})</span>
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">{compatibles.map(renderCard)}</div>
+                </section>
+              )}
+              <section>
+                {hasCompatibleHeader && (
+                  <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-2">
+                    Altre offerte disponibili
+                    <span className="text-xs font-normal text-muted-foreground">({others.length})</span>
+                  </h3>
+                )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {(hasCompatibleHeader ? others : compatibles).map(renderCard)}
+                </div>
+              </section>
+            </>
+          );
+        })()}
         </div>
       ) : (
         <div className="rounded-2xl border bg-card p-2">
