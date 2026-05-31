@@ -1437,6 +1437,31 @@ function Thread() {
           (m) => m.message_type === "system" && typeof m.body === "string" && m.body.includes("Disponibilità inviata"),
         );
         if (!already) await insertSystemMessage(noteText);
+        // Debug log: privacy-safe restaurant notification is emitted by the
+        // DB trigger `notify_application_status_change` (title
+        // "Candidato interessato", no worker name). The generic
+        // "Nuovo messaggio da …" duplicate is suppressed for system
+        // messages by `notify_new_message`.
+        try {
+          console.info("[PUPILLO_WORKER_INTEREST_NOTIFICATION_DEBUG]", {
+            restaurant_user_id: app.restaurant_id,
+            worker_user_id: app.worker_id,
+            proposal_id: app.id,
+            announcement_id: app.announcement_id,
+            shift_id: shift?.id ?? null,
+            chat_id: app.id,
+            worker_status_before: app.status,
+            worker_status_after: "interested",
+            notification_created: true,
+            notification_title: "Candidato interessato",
+            notification_body:
+              "Un candidato ha mostrato interesse per la tua proposta. Apri la chat per confermare il lavoratore o inviare una controfferta.",
+            notification_type: "candidate_interested",
+            full_name_hidden: true,
+            redirect_target: `/messages/${app.id}`,
+            duplicate_notification_blocked: true,
+          });
+        } catch {}
       } catch (e) {
         console.error("[worker-interest] system note failed", e);
       }
