@@ -1017,6 +1017,16 @@ function AnnouncementDetail() {
                           </Button>
                           <Button
                             size="sm"
+                            variant="outline"
+                            className="gap-1 border-primary/40 text-primary hover:bg-primary/5"
+                            disabled={busyId === a.id}
+                            onClick={() => setCounterofferAppId(a.id)}
+                          >
+                            <Handshake className="h-3.5 w-3.5" />
+                            Invia controfferta
+                          </Button>
+                          <Button
+                            size="sm"
                             variant="ghost"
                             className={`gap-1 text-destructive hover:text-destructive ${!canPerformOperationalAction ? "opacity-70" : ""}`}
                             disabled={busyId === a.id || waitingWorker}
