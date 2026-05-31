@@ -26,6 +26,7 @@ import { useRequiredReviews } from "@/lib/required-reviews";
 import { summarizeReputation, type WorkerReputationInput, levelChipClass, scoreColorClass } from "@/lib/reputation";
 import { shouldShowNewApplicationCard } from "@/lib/application-card";
 import { Award } from "lucide-react";
+import { ConfirmedWorkerCard, type ConfirmedWorkerProfile, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { ReviewLabelsPicker, ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { WouldRehirePicker, WouldRehireBadge } from "@/components/WouldRehirePicker";
@@ -460,6 +461,8 @@ function Thread() {
   const [otherIdentity, setOtherIdentity] = useState<{ businessName: string | null; fullName: string | null; firstName: string | null } | null>(null);
   const [hasWorkedTogether, setHasWorkedTogether] = useState(false);
   const [workerRep, setWorkerRep] = useState<WorkerReputationInput | null>(null);
+  const [confirmedWorker, setConfirmedWorker] = useState<ConfirmedWorkerProfile | null>(null);
+  const [confirmedWorkerLastReview, setConfirmedWorkerLastReview] = useState<ConfirmedWorkerLastReview | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [otherId, setOtherId] = useState<string | null>(null);
@@ -549,7 +552,7 @@ function Thread() {
         const otherId = a.restaurant_id === user?.id ? a.worker_id : a.restaurant_id;
         setOtherId(otherId);
         const [{ data: p }, { data: an }] = await Promise.all([
-          supabase.from("profiles").select("full_name, first_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, default_arrival_advance_minutes").eq("id", otherId).maybeSingle(),
+          supabase.from("profiles").select("full_name, first_name, last_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, default_arrival_advance_minutes, phone_full, phone, primary_role, professional_profile, badge, id_document_path, is_deleted").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, service_date, service_time, end_time, end_date, duration_hours, location_address, tariff_amount, tariff_type, job_city, job_province, restaurant_id, status, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address").eq("id", a.announcement_id).maybeSingle(),
         ]);
         // Contact person is restricted at the DB level. Fetch via the
@@ -598,6 +601,49 @@ function Thread() {
           setHasWorkedTogether(false);
         }
         setWorkerRep((p as WorkerReputationInput | null) ?? null);
+        // Privacy-unlocked worker card data (shown to the restaurant only
+        // after final confirmation). We always populate it from the same
+        // profile fetch but only render it when role === "restaurant" and
+        // the application status is "accepted".
+        if (role === "restaurant" && a.worker_id) {
+          const pp = (p as any) ?? {};
+          setConfirmedWorker({
+            id: a.worker_id,
+            full_name: pp.full_name ?? null,
+            first_name: pp.first_name ?? null,
+            last_name: pp.last_name ?? null,
+            primary_role: pp.primary_role ?? null,
+            professional_profile: pp.professional_profile ?? null,
+            badge: pp.badge ?? null,
+            rating_avg: pp.rating_avg ?? null,
+            reviews_count: pp.reviews_count ?? null,
+            completed_shifts: pp.completed_shifts ?? null,
+            phone_verified: !!pp.phone_verified,
+            profile_completed: !!pp.profile_completed,
+            id_document_path: pp.id_document_path ?? null,
+            is_deleted: !!pp.is_deleted,
+            phone_full: pp.phone_full ?? null,
+            phone: pp.phone ?? null,
+          });
+          try {
+            const { data: rev } = await supabase
+              .from("reviews")
+              .select("rating, comment, created_at, is_visible_to_restaurants")
+              .eq("target_id", a.worker_id)
+              .eq("is_visible_to_restaurants", true)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            setConfirmedWorkerLastReview(
+              rev ? { rating: (rev as any).rating, comment: (rev as any).comment, created_at: (rev as any).created_at } : null,
+            );
+          } catch {
+            setConfirmedWorkerLastReview(null);
+          }
+        } else {
+          setConfirmedWorker(null);
+          setConfirmedWorkerLastReview(null);
+        }
         setAnn(an as Ann | null);
         // Se il ruolo è "worker" e l'annuncio ha una data, carico le
         // disponibilità speciali del lavoratore per quella data. Servono per
@@ -1219,6 +1265,38 @@ function Thread() {
       }
       // Refresh auth profile so the credit counter in the UI reflects the new balance.
       try { await refreshAuth?.(); } catch (e) { console.warn("[accept-candidature] refresh profile failed", e); }
+      // Privacy unlock debug log — captures the credit + privacy state at the
+      // exact moment the restaurant confirms the worker.
+      try {
+        const { data: balAfter } = await supabase
+          .from("profiles").select("credits").eq("id", user.id).maybeSingle();
+        const { data: wp } = await supabase
+          .from("profiles")
+          .select("first_name,last_name,phone_full,phone,phone_verified")
+          .eq("id", app.worker_id)
+          .maybeSingle();
+        const wp2: any = wp ?? {};
+        console.info("[PUPILLO_WORKER_PRIVACY_UNLOCK_AFTER_CONFIRM_DEBUG]", {
+          restaurant_user_id: app.restaurant_id,
+          worker_user_id: app.worker_id,
+          proposal_id: app.id,
+          shift_id: shift?.id ?? null,
+          announcement_id: app.announcement_id,
+          status_before: app.status,
+          status_after: "accepted",
+          credits_before: balance,
+          credits_required: CREDITS_PER_HIRE,
+          credits_after: (balAfter as any)?.credits ?? null,
+          credit_transaction_created: true,
+          privacy_unlocked: true,
+          worker_first_name: wp2.first_name ?? null,
+          worker_last_name: wp2.last_name ?? null,
+          worker_phone_present: !!(wp2.phone_full || wp2.phone),
+          worker_phone_verified: !!wp2.phone_verified,
+        });
+      } catch (e) {
+        console.warn("[PUPILLO_WORKER_PRIVACY_UNLOCK_AFTER_CONFIRM_DEBUG] log failed", e);
+      }
     }
     const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
@@ -1904,6 +1982,19 @@ function Thread() {
             </div>
           </div>
         </div>
+
+        {role === "restaurant" && app?.status === "accepted" && confirmedWorker && (
+          <div className="mb-4">
+            <div className="mb-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
+              Lavoratore confermato. Ora puoi visualizzare i dati operativi del lavoratore.
+            </div>
+            <ConfirmedWorkerCard
+              worker={confirmedWorker}
+              applicationId={app.id}
+              lastReview={confirmedWorkerLastReview}
+            />
+          </div>
+        )}
 
         {app && shouldShowNewApplicationCard({ role: role as any, status: app.status as any, hasWorkerReputation: !!workerRep }) && workerRep && (() => {
           const s = summarizeReputation(workerRep);
