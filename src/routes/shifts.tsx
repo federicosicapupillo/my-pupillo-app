@@ -56,6 +56,81 @@ const statusMeta: Record<Shift["status"], { label: string; color: string; icon: 
   cancelled: { label: "Annullato", color: "bg-gray-500/10 text-gray-700 border-gray-500/30", icon: XCircle },
 };
 
+// Tolleranza minima prima che il ristoratore possa segnalare "No show".
+// Regola Pupillo: il No show diventa disponibile solo 15 minuti DOPO
+// l'orario di inizio turno reale (shift_date + service_time del turno o
+// dell'annuncio collegato). Non si usa data creazione/pubblicazione
+// annuncio, candidatura, fine turno, né expires_at.
+const NO_SHOW_TOLERANCE_MINUTES = 15;
+
+function computeShiftStartDate(shiftDate: string | null | undefined, serviceTime: string | null | undefined): Date | null {
+  if (!shiftDate) return null;
+  const time = (serviceTime ?? "").trim();
+  const hhmm = /^(\d{2}):(\d{2})/.exec(time);
+  const h = hhmm ? Number(hhmm[1]) : 0;
+  const m = hhmm ? Number(hhmm[2]) : 0;
+  const d = new Date(`${shiftDate}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function formatTimeHHMM(d: Date): string {
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+type NoShowAvailability = {
+  canMark: boolean;
+  availableFrom: Date | null;
+  minutesAfterStart: number | null;
+  reasonIfDisabled: string | null;
+  disabledMessage: string | null;
+};
+
+function getNoShowAvailability(shift: Shift, serviceTime: string | null | undefined): NoShowAvailability {
+  // Stati incompatibili: solo "scheduled" può diventare no_show
+  if (shift.status !== "scheduled") {
+    return {
+      canMark: false,
+      availableFrom: null,
+      minutesAfterStart: null,
+      reasonIfDisabled: `turno in stato ${shift.status}, no_show non applicabile`,
+      disabledMessage: "Il No show può essere segnalato solo su turni confermati.",
+    };
+  }
+  const start = computeShiftStartDate(shift.shift_date, serviceTime);
+  if (!start) {
+    return {
+      canMark: false,
+      availableFrom: null,
+      minutesAfterStart: null,
+      reasonIfDisabled: "orario inizio turno mancante",
+      disabledMessage: "Orario di inizio turno non disponibile.",
+    };
+  }
+  const availableFrom = new Date(start.getTime() + NO_SHOW_TOLERANCE_MINUTES * 60_000);
+  const now = new Date();
+  const minutesAfterStart = Math.floor((now.getTime() - start.getTime()) / 60_000);
+  if (now.getTime() < availableFrom.getTime()) {
+    return {
+      canMark: false,
+      availableFrom,
+      minutesAfterStart,
+      reasonIfDisabled: "tolleranza 15 minuti non ancora trascorsa",
+      disabledMessage: `Potrai segnalare No show dalle ${formatTimeHHMM(availableFrom)}.`,
+    };
+  }
+  return {
+    canMark: true,
+    availableFrom,
+    minutesAfterStart,
+    reasonIfDisabled: null,
+    disabledMessage: null,
+  };
+}
+
 function ShiftsPage() {
   const { user, role } = useAuth();
   const [shifts, setShifts] = useState<Shift[]>([]);
