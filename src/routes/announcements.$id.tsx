@@ -27,6 +27,7 @@ import { useProfileGate } from "@/components/ProfileGate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
+import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
