@@ -601,6 +601,49 @@ function Thread() {
           setHasWorkedTogether(false);
         }
         setWorkerRep((p as WorkerReputationInput | null) ?? null);
+        // Privacy-unlocked worker card data (shown to the restaurant only
+        // after final confirmation). We always populate it from the same
+        // profile fetch but only render it when role === "restaurant" and
+        // the application status is "accepted".
+        if (role === "restaurant" && a.worker_id) {
+          const pp = (p as any) ?? {};
+          setConfirmedWorker({
+            id: a.worker_id,
+            full_name: pp.full_name ?? null,
+            first_name: pp.first_name ?? null,
+            last_name: pp.last_name ?? null,
+            primary_role: pp.primary_role ?? null,
+            professional_profile: pp.professional_profile ?? null,
+            badge: pp.badge ?? null,
+            rating_avg: pp.rating_avg ?? null,
+            reviews_count: pp.reviews_count ?? null,
+            completed_shifts: pp.completed_shifts ?? null,
+            phone_verified: !!pp.phone_verified,
+            profile_completed: !!pp.profile_completed,
+            id_document_path: pp.id_document_path ?? null,
+            is_deleted: !!pp.is_deleted,
+            phone_full: pp.phone_full ?? null,
+            phone: pp.phone ?? null,
+          });
+          try {
+            const { data: rev } = await supabase
+              .from("reviews")
+              .select("rating, comment, created_at, is_visible_to_restaurants")
+              .eq("target_id", a.worker_id)
+              .eq("is_visible_to_restaurants", true)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            setConfirmedWorkerLastReview(
+              rev ? { rating: (rev as any).rating, comment: (rev as any).comment, created_at: (rev as any).created_at } : null,
+            );
+          } catch {
+            setConfirmedWorkerLastReview(null);
+          }
+        } else {
+          setConfirmedWorker(null);
+          setConfirmedWorkerLastReview(null);
+        }
         setAnn(an as Ann | null);
         // Se il ruolo è "worker" e l'annuncio ha una data, carico le
         // disponibilità speciali del lavoratore per quella data. Servono per
