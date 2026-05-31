@@ -20,7 +20,8 @@ import { ITALIAN_LOCATIONS, citiesForProvince, zonesForCity } from "@/lib/italia
 import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
-import { WorkerProfilePreviewDialog } from "@/components/WorkerProfilePreviewDialog";
+// Unified worker profile: all "Vedi profilo" entry points navigate to
+// /workers_/$id (same full profile used by "Cerca lavoratori").
 import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
@@ -472,7 +473,24 @@ function MapPage() {
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
   const [focusWorkerId, setFocusWorkerId] = useState<string | null>(null);
   const [focusWorkerNonce, setFocusWorkerNonce] = useState(0);
-  const [previewWorkerId, setPreviewWorkerId] = useState<string | null>(null);
+  const openWorkerProfile = (
+    workerId: string,
+    source: "lista_mappa" | "marker_mappa" | "foto_candidato",
+    workerName?: string | null,
+  ) => {
+    if (typeof console !== "undefined") {
+      console.log("[PUPILLO_WORKER_PROFILE_UNIFIED_OPEN_DEBUG]", {
+        pagina_di_origine: "mappa",
+        trigger: source === "lista_mappa" ? "bottone_vedi_profilo" : source === "foto_candidato" ? "click_foto" : "overlay_profilo",
+        worker_user_id: workerId,
+        profile_id: workerId,
+        nome: workerName ?? null,
+        componente_profilo_usato: "/workers_/$id (route page)",
+        target_route: `/workers_/${workerId}`,
+      });
+    }
+    navigate({ to: "/workers_/$id", params: { id: workerId } });
+  };
 
   const focusWorkerOnMap = (workerId: string) => {
     const located = locatedWorkers.find((x) => x.w.id === workerId);
@@ -1575,7 +1593,7 @@ function MapPage() {
                         ) : (
                           <Button size="sm" variant="outline" className="flex-1" disabled>Posizione non disponibile</Button>
                         )}
-                        <Button size="sm" onClick={() => setPreviewWorkerId(w.id)}>Vedi profilo</Button>
+                        <Button size="sm" onClick={() => openWorkerProfile(w.id, "lista_mappa", w.full_name)}>Vedi profilo</Button>
                       </div>
                     </li>
                   );
@@ -1678,7 +1696,7 @@ function MapPage() {
                   height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
                   focusId={focusWorkerId}
                   focusNonce={focusWorkerNonce}
-                  onViewProfile={(id) => setPreviewWorkerId(id)}
+                  onViewProfile={(id) => openWorkerProfile(id, "marker_mappa")}
                   onOpenChat={async (workerId) => {
                     if (!user) return;
                     const { data, error } = await supabase
@@ -1770,11 +1788,6 @@ function MapPage() {
           )}
         </div>
       </div>
-      <WorkerProfilePreviewDialog
-        workerId={previewWorkerId}
-        open={previewWorkerId !== null}
-        onOpenChange={(o) => { if (!o) setPreviewWorkerId(null); }}
-      />
     </AppShell>
   );
 }
