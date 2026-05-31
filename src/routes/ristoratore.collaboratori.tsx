@@ -62,11 +62,22 @@ function Page() {
     if (!user) return;
     setLoading(true);
     // 1) Shifts of this restaurant
+    // A worker becomes a "collaboratore" of the restaurant ONLY after at
+    // least one shift has been actually completed/closed. An assigned but
+    // not-yet-closed turn (status = "scheduled") is NOT enough.
     const { data: shifts } = await supabase
       .from("shifts")
       .select("worker_id, shift_date, status")
       .eq("restaurant_id", user.id)
-      .in("status", ["scheduled", "completed"]);
+      .eq("status", "completed");
+    try {
+      console.info("[PUPILLO_COLLABORATOR_BADGE_DEBUG]", {
+        page: "ristoratore.collaboratori",
+        restaurant_user_id: user.id,
+        completed_shifts_count: (shifts ?? []).length,
+        rule: "list shows only workers with at least one completed shift",
+      });
+    } catch {}
 
     const byWorker = new Map<string, { count: number; last: string | null }>();
     (shifts ?? []).forEach((s: any) => {

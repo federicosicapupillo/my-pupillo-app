@@ -21,7 +21,7 @@ import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { formatTariff, formatTotalService, computeDurationHours, formatAnnouncementLocation } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
-import { formatCandidateName, loadCollaboratedWorkerIds } from "@/lib/candidate-display";
+import { formatCandidateName, loadCollaboratedWorkerIds, loadCompletedCollaboratorWorkerIds } from "@/lib/candidate-display";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useRequiredReviews } from "@/lib/required-reviews";
@@ -414,6 +414,10 @@ function AnnouncementsPage() {
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
   const [assigned, setAssigned] = useState<Record<string, AssignedInfo>>({});
   const [collaboratedWorkerIds, setCollaboratedWorkerIds] = useState<Set<string>>(() => new Set());
+  // Workers that have ACTUALLY completed at least one shift with this
+  // restaurant. Only these may show the "Già collaboratore" badge — an
+  // assigned/confirmed turn that has not yet been closed must not.
+  const [completedCollabIds, setCompletedCollabIds] = useState<Set<string>>(() => new Set());
   const [selectedAnnId, setSelectedAnnId] = useState<string | null>(null);
   const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
   const [openCandidates, setOpenCandidates] = useState<Record<string, boolean>>({});
@@ -452,6 +456,19 @@ function AnnouncementsPage() {
       setItems(list);
       if (role === "restaurant" && list.length) {
         loadCollaboratedWorkerIds(user.id).then(setCollaboratedWorkerIds).catch(() => {});
+        loadCompletedCollaboratorWorkerIds(user.id)
+          .then((s) => {
+            setCompletedCollabIds(s);
+            try {
+              console.info("[PUPILLO_COLLABORATOR_BADGE_DEBUG]", {
+                restaurant_user_id: user.id,
+                completed_shifts_collaborator_ids: Array.from(s),
+                completed_shifts_count: s.size,
+                rule: "badge 'Già collaboratore' rendered ONLY for ids in this set",
+              });
+            } catch {}
+          })
+          .catch(() => {});
         const ids = list.map(a => a.id);
         const { data: apps } = await supabase
           .from("applications")
@@ -682,7 +699,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
               </div>
               <div className="mt-1 text-sm text-foreground">
                 Lavoratore: <span className="font-medium">{formatCandidateName(info.full_name, collaboratedWorkerIds.has(info.worker_id))}</span>
-                {collaboratedWorkerIds.has(info.worker_id) && (
+                {completedCollabIds.has(info.worker_id) && (
                   <span className="ml-2 inline-flex items-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
                 )}
               </div>
@@ -950,7 +967,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                                 <span className="text-sm font-semibold text-foreground truncate">
                                   {formatCandidateName(c.full_name, collaboratedWorkerIds.has(c.worker_id))}
                                 </span>
-                                {collaboratedWorkerIds.has(c.worker_id) && (
+                                {completedCollabIds.has(c.worker_id) && (
                                   <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
                                 )}
                                 {c.rating_avg != null && (
@@ -1041,7 +1058,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                       >
                         <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
                           {formatCandidateName(c.full_name, collaboratedWorkerIds.has(c.worker_id))}
-                          {collaboratedWorkerIds.has(c.worker_id) && (
+                          {completedCollabIds.has(c.worker_id) && (
                             <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
                           )}
                           {isAssigned && (
