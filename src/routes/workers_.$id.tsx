@@ -222,10 +222,10 @@ function WorkerDetailPage() {
           <WorkerReputationCard workerId={w.id} profile={w} />
 
           <Card title="Esperienza">
-            <Row label="Anni di esperienza" value={w.experience_years != null ? w.experience_years : "—"} />
-            <Row label="Livello" value={w.experience_level || "—"} />
-            <Row label="Tariffa oraria" value={w.hourly_rate != null ? (w.hourly_rate >= 21 ? "Oltre 20 €/h" : `€${w.hourly_rate}/h`) : "—"} />
-            <Row label="Automunito" value={w.is_motorized === true ? "Sì" : w.is_motorized === false ? "No" : "Non specificato"} />
+            <Row label="Anni di esperienza" value={fmtExperienceYears(w.experience_years)} />
+            <Row label="Livello" value={fmtExperienceLevel(w.experience_level)} />
+            <Row label="Tariffa oraria" value={fmtHourlyRate(w.hourly_rate)} />
+            <Row label="Automunito" value={fmtMotorized(w.is_motorized)} />
           </Card>
 
           <Card title="Lingue parlate">
