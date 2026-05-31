@@ -2529,7 +2529,7 @@ function WorkersMapSection({
     badge: w.badge,
     avatarUrl: avatars[w.id] ?? null,
     initials: initialsOf(displayWorkerName(w, !!rel[w.id]?.workedWith)),
-    link: `/workers_/${w.id}`,
+    link: `/workers/${w.id}`,
   }));
   // Center on the average position of located workers so the map frames them.
   const center: [number, number] =

@@ -21,7 +21,9 @@ import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 // Unified worker profile: all "Vedi profilo" entry points navigate to
-// /workers_/$id (same full profile used by "Cerca lavoratori").
+// /workers/$id (same full profile used by "Cerca lavoratori"). The file
+// is named workers_.$id.tsx only to escape layout nesting; the actual URL
+// served has no underscore — using "/workers_/..." literally would 404.
 import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
@@ -485,11 +487,12 @@ function MapPage() {
         worker_user_id: workerId,
         profile_id: workerId,
         nome: workerName ?? null,
-        componente_profilo_usato: "/workers_/$id (route page)",
-        target_route: `/workers_/${workerId}`,
+        componente_profilo_usato: "/workers/$id (route page, same as Cerca lavoratori)",
+        target_route: `/workers/${workerId}`,
+        stesso_metodo_cerca_lavoratori: true,
       });
     }
-    navigate({ to: "/workers_/$id", params: { id: workerId } });
+    navigate({ to: "/workers/$id", params: { id: workerId } });
   };
 
   const focusWorkerOnMap = (workerId: string) => {
@@ -1030,7 +1033,7 @@ function MapPage() {
         badge: w.badge,
         avatarUrl: workerAvatars[w.id] ?? null,
         initials: mapInitials(w.full_name),
-        link: `/workers_/${w.id}`,
+        link: `/workers/${w.id}`,
         known,
         completedShifts: known && w.completed_shifts != null ? Number(w.completed_shifts) : null,
         reliabilityPct: known && w.reliability_pct != null ? Number(w.reliability_pct) : null,
