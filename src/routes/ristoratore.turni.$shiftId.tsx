@@ -215,7 +215,7 @@ function ShiftDetailPage() {
         ? supabase.from("announcements").select("*").eq("id", s.announcement_id).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from("profiles")
-        .select("id, full_name, primary_role, professional_profile, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, languages, spoken_languages, phone_verified, profile_completed, id_document_path, is_deleted")
+        .select("id, full_name, first_name, last_name, primary_role, professional_profile, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, languages, spoken_languages, phone_verified, profile_completed, id_document_path, is_deleted, phone_full, phone")
         .eq("id", s.worker_id).maybeSingle(),
       supabase.from("profiles").select("id, business_name, full_name").eq("id", s.restaurant_id).maybeSingle(),
       s.announcement_id
