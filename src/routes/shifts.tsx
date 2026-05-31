@@ -894,9 +894,37 @@ function ShiftsPage() {
                         <Button size="sm" onClick={() => handleCloseShift(s)} className="gap-1">
                           <CheckCircle2 className="h-4 w-4" /> Completato
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setNoShowDialog(s); setNoShowNotes(""); }} className="gap-1">
-                          <AlertTriangle className="h-4 w-4" /> No-show
-                        </Button>
+                        {(() => {
+                          const noShowInfo = getNoShowAvailability(s, ann0?.service_time ?? null);
+                          if (typeof window !== "undefined") {
+                            console.log("[PUPILLO_NO_SHOW_AVAILABILITY_DEBUG]", {
+                              restaurant_user_id: s.restaurant_id,
+                              worker_user_id: s.worker_id,
+                              shift_id: s.id,
+                              announcement_id: s.announcement_id,
+                              shift_start_time: computeShiftStartDate(s.shift_date, ann0?.service_time ?? null)?.toISOString() ?? null,
+                              current_time: new Date().toISOString(),
+                              no_show_available_from: noShowInfo.availableFrom?.toISOString() ?? null,
+                              minutes_after_start: noShowInfo.minutesAfterStart,
+                              can_mark_no_show: noShowInfo.canMark,
+                              reason_if_disabled: noShowInfo.reasonIfDisabled,
+                              current_shift_status: s.status,
+                            });
+                          }
+                          return (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setNoShowDialog(s); setNoShowNotes(""); }}
+                              disabled={!noShowInfo.canMark}
+                              title={noShowInfo.disabledMessage ?? undefined}
+                              aria-label={noShowInfo.disabledMessage ?? "Segnala No-show"}
+                              className="gap-1"
+                            >
+                              <AlertTriangle className="h-4 w-4" /> No-show
+                            </Button>
+                          );
+                        })()}
                         <Button size="sm" variant="ghost" onClick={() => openCancelDialog(s)} className="gap-1">
                           <XCircle className="h-4 w-4" /> Annulla
                         </Button>
