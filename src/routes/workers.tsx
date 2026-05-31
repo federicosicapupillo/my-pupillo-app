@@ -1998,6 +1998,7 @@ function ContactedWorkerCard({
   specialBlock: { blocked: boolean; specials: AvailabilityExceptionRow[] } | null;
   onDetails: () => void;
 }) {
+  const openWorkerProfile = useOpenWorkerProfile();
   if (!isSafeSearchWorker(w)) {
     console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", {
       componente: "ContactedWorkerCard src/routes/workers.tsx",
@@ -2006,7 +2007,6 @@ function ContactedWorkerCard({
     });
     return null;
   }
-  const openWorkerProfile = useOpenWorkerProfile();
   const workedTogether = !!r?.workedWith;
   const displayName = displayWorkerName(w, workedTogether);
   // Stato del rapporto
