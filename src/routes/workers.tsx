@@ -2006,6 +2006,7 @@ function ContactedWorkerCard({
     });
     return null;
   }
+  const openWorkerProfile = useOpenWorkerProfile();
   const workedTogether = !!r?.workedWith;
   const displayName = displayWorkerName(w, workedTogether);
   // Stato del rapporto
