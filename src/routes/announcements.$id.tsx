@@ -83,7 +83,7 @@ type WorkerProfile = {
   id: string; full_name: string | null; age: number | null; city: string | null;
   professional_profile: string | null; languages: string[] | null;
   rating_avg: number | null; reviews_count: number | null; badge: string | null;
-  reliability_pct: number | null; experience_years: number | null;
+  reliability_pct: number | null; experience_years: string | null;
   completed_shifts: number | null;
   primary_role?: string | null;
   phone_verified?: boolean | null;
@@ -927,7 +927,7 @@ function AnnouncementDetail() {
                     <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
                       <Metric icon={Star} label="Rating" value={w?.rating_avg ? `${Number(w.rating_avg).toFixed(1)} (${w.reviews_count ?? 0})` : "—"} />
                       <Metric icon={Shield} label="Affidabilità" value={w?.reliability_pct != null ? `${w.reliability_pct}%` : "—"} />
-                      <Metric icon={Award} label="Esperienza" value={w?.experience_years != null ? `${w.experience_years}a` : (w?.completed_shifts ? `${w.completed_shifts} turni` : "—")} />
+                      <Metric icon={Award} label="Esperienza" value={w?.experience_years != null ? w.experience_years : (w?.completed_shifts ? `${w.completed_shifts} turni` : "—")} />
                     </div>
 
                     {w?.languages && w.languages.length > 0 && (

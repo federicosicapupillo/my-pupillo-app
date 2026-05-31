@@ -27,7 +27,7 @@ type Worker = {
   professional_profile: string | null;
   primary_role: string | null;
   secondary_roles: string[] | null;
-  experience_years: number | null;
+  experience_years: string | null;
   experience_level: string | null;
   languages: string[] | null;
   spoken_languages: any;
@@ -189,11 +189,10 @@ function WorkerDetailPage() {
           <WorkerReputationCard workerId={w.id} profile={w} />
 
           <Card title="Esperienza">
-            <Row label="Anni di esperienza" value={w.experience_years != null ? `${w.experience_years}` : "—"} />
+            <Row label="Anni di esperienza" value={w.experience_years != null ? w.experience_years : "—"} />
             <Row label="Livello" value={w.experience_level || "—"} />
-            <Row label="Tariffa oraria" value={w.hourly_rate != null ? `€${w.hourly_rate}/h` : "—"} />
-            <Row label="Automunito" value={w.is_motorized ? "Sì" : "No"} />
-            {w.short_bio && <p className="pt-2 border-t text-sm whitespace-pre-wrap">{w.short_bio}</p>}
+            <Row label="Tariffa oraria" value={w.hourly_rate != null ? (w.hourly_rate >= 21 ? "Oltre 20 €/h" : `€${w.hourly_rate}/h`) : "—"} />
+            <Row label="Automunito" value={w.is_motorized === true ? "Sì" : w.is_motorized === false ? "No" : "Non specificato"} />
           </Card>
 
           <Card title="Lingue parlate">

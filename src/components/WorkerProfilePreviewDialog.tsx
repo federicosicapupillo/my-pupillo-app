@@ -32,7 +32,7 @@ type WorkerProfile = {
   spoken_languages: any;
   languages: string[] | null;
   experience_level: string | null;
-  experience_years: number | null;
+  experience_years: string | null;
 };
 
 type Review = {
@@ -195,7 +195,7 @@ export function WorkerProfilePreviewDialog({
             {(w.experience_level || w.experience_years != null || langs) && (
               <section className="text-sm space-y-1">
                 {(w.experience_level || w.experience_years != null) && (
-                  <div><span className="text-muted-foreground">Esperienza: </span><span className="capitalize">{w.experience_level || ""}{w.experience_years != null ? ` · ${w.experience_years} anni` : ""}</span></div>
+                  <div><span className="text-muted-foreground">Esperienza: </span><span className="capitalize">{w.experience_level || ""}{w.experience_years != null ? ` · ${w.experience_years}` : ""}</span></div>
                 )}
                 {langs && (
                   <div><span className="text-muted-foreground">Lingue: </span>{langs}</div>
