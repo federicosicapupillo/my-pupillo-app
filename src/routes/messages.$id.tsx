@@ -427,6 +427,27 @@ function Thread() {
   const { user, role, profile, refresh: refreshAuth } = useAuth();
   const { requireComplete, ensureTargetComplete } = useProfileGate();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
+  // Ritorno dal flusso Stripe → mostra banner "Pagamento completato"
+  // (la conferma del lavoratore resta sempre manuale). Esegue una sola
+  // volta per evitare loop di refresh, poi ripulisce il query param.
+  const paymentSuccessHandledRef = useRef(false);
+  useEffect(() => {
+    if (paymentSuccessHandledRef.current) return;
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("payment_success") !== "1") return;
+    paymentSuccessHandledRef.current = true;
+    console.info("[PUPILLO_POST_PAYMENT_CHAT_RESUME_DEBUG]", {
+      restaurant_user_id: user?.id ?? null,
+      chat_id: id,
+      chat_opened: true,
+    });
+    toast.success("Pagamento completato", {
+      description: "Ora puoi confermare il lavoratore per questo turno.",
+    });
+    url.searchParams.delete("payment_success");
+    window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+  }, [id, user?.id]);
   const [counterofferOpen, setCounterofferOpen] = useState(false);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
