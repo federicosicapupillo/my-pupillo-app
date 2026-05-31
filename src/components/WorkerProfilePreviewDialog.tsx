@@ -243,15 +243,20 @@ export function WorkerProfilePreviewDialog({
               </section>
             )}
 
-            {/* Experience + langs */}
-            {(w.experience_level || w.experience_years != null || langs) && (
-              <section className="text-sm space-y-1">
-                {(w.experience_level || w.experience_years != null) && (
-                  <div><span className="text-muted-foreground">Esperienza: </span><span className="capitalize">{w.experience_level || ""}{w.experience_years != null ? ` · ${w.experience_years}` : ""}</span></div>
-                )}
-                {langs && (
-                  <div><span className="text-muted-foreground">Lingue: </span>{langs}</div>
-                )}
+            {/* Esperienza */}
+            <section className="text-sm space-y-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Esperienza</h3>
+              <div><span className="text-muted-foreground">Livello: </span><span className="capitalize">{w.experience_level || "—"}</span></div>
+              <div><span className="text-muted-foreground">Anni: </span>{fmtExperienceYears(w.experience_years) || "—"}</div>
+              <div><span className="text-muted-foreground">Tariffa oraria desiderata: </span>{w.hourly_rate != null ? `€ ${Number(w.hourly_rate).toFixed(0)}/h` : "—"}</div>
+              <div className="inline-flex items-center gap-1"><Car className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Automunito: </span>{w.is_motorized == null ? "Non specificato" : w.is_motorized ? "Sì" : "No"}</div>
+            </section>
+
+            {/* Lingue */}
+            {langs && (
+              <section className="text-sm">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Lingue</h3>
+                <p>{langs}</p>
               </section>
             )}
 
