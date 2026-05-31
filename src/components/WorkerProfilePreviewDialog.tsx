@@ -200,6 +200,18 @@ export function WorkerProfilePreviewDialog({
               <StatBox icon={<Briefcase className="h-3.5 w-3.5" />} label="Professionalità" value={w.avg_professionalism != null && Number(w.avg_professionalism) > 0 ? `${Number(w.avg_professionalism).toFixed(1)}/5` : "—"} />
             </div>
 
+            {/* Mansioni e ruoli */}
+            {roles.length > 0 && (
+              <section>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Mansioni e ruoli</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {roles.map((r) => (
+                    <Badge key={r} variant="secondary" className="capitalize text-[11px]">{r}</Badge>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Availability */}
             {(w.weekly_availability?.length || w.hourly_availability) && (
               <section>
