@@ -4,9 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, CheckCircle2 } from "lucide-react";
+import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, CheckCircle2, Car } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { displayWorkerName } from "@/lib/worker-display";
+import { formatWorkerLocation } from "@/lib/worker-location-summary";
 
 type WorkerProfile = {
   id: string;
@@ -15,6 +16,11 @@ type WorkerProfile = {
   secondary_roles: string[] | null;
   city: string | null;
   neighborhood: string | null;
+  province: string | null;
+  service_area_city: string | null;
+  service_area_district: string | null;
+  selected_zones: string[] | null;
+  all_zones: boolean | null;
   badge: string | null;
   rating_avg: number | null;
   reviews_count: number | null;
@@ -33,6 +39,7 @@ type WorkerProfile = {
   languages: string[] | null;
   experience_level: string | null;
   experience_years: string | null;
+  is_motorized: boolean | null;
 };
 
 type Review = {
