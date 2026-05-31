@@ -4,9 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, CheckCircle2 } from "lucide-react";
+import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, CheckCircle2, Car } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { displayWorkerName } from "@/lib/worker-display";
+import { formatWorkerLocation } from "@/lib/worker-location-summary";
 
 type WorkerProfile = {
   id: string;
@@ -15,6 +16,11 @@ type WorkerProfile = {
   secondary_roles: string[] | null;
   city: string | null;
   neighborhood: string | null;
+  province: string | null;
+  service_area_city: string | null;
+  service_area_district: string | null;
+  selected_zones: string[] | null;
+  all_zones: boolean | null;
   badge: string | null;
   rating_avg: number | null;
   reviews_count: number | null;
@@ -33,6 +39,7 @@ type WorkerProfile = {
   languages: string[] | null;
   experience_level: string | null;
   experience_years: string | null;
+  is_motorized: boolean | null;
 };
 
 type Review = {
@@ -57,14 +64,29 @@ function langsLabel(spoken: any, langs: string[] | null) {
   return (langs ?? []).join(", ");
 }
 
+const EXPERIENCE_YEARS_LABELS: Record<string, string> = {
+  prima_esperienza: "Prima esperienza",
+  meno_di_1: "Meno di 1 anno",
+  "1_2": "1-2 anni",
+  "3_5": "3-5 anni",
+  "6_10": "6-10 anni",
+  oltre_10: "Oltre 10 anni",
+};
+function fmtExperienceYears(v: string | null): string {
+  if (!v) return "";
+  return EXPERIENCE_YEARS_LABELS[v] ?? v;
+}
+
 export function WorkerProfilePreviewDialog({
   workerId,
   open,
   onOpenChange,
+  source,
 }: {
   workerId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  source?: string;
 }) {
   const { user, role } = useAuth();
   const [w, setW] = useState<WorkerProfile | null>(null);
@@ -82,7 +104,7 @@ export function WorkerProfilePreviewDialog({
     (async () => {
       const [{ data: profile }, { data: revs }] = await Promise.all([
         supabase.from("profiles").select(
-          "id,full_name,primary_role,secondary_roles,city,neighborhood,badge,rating_avg,reviews_count,reliability_pct,punctuality_pct,completion_pct,avg_professionalism,avg_competence,completed_shifts,hourly_rate,short_bio,weekly_availability,hourly_availability,reputation_level,spoken_languages,languages,experience_level,experience_years"
+          "id,full_name,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,selected_zones,all_zones,badge,rating_avg,reviews_count,reliability_pct,punctuality_pct,completion_pct,avg_professionalism,avg_competence,completed_shifts,hourly_rate,short_bio,weekly_availability,hourly_availability,reputation_level,spoken_languages,languages,experience_level,experience_years,is_motorized"
         ).eq("id", workerId).maybeSingle(),
         supabase.from("reviews").select(
           "id,rating,comment,created_at,punctuality,professionalism,competence,reliability,positive_tags,tags"
@@ -99,9 +121,20 @@ export function WorkerProfilePreviewDialog({
         if (!cancelled) setWorkedTogether(!!(sx && sx.length > 0));
       }
       setLoading(false);
+      if (typeof console !== "undefined") {
+        console.log("[PUPILLO_WORKER_PROFILE_MODAL_OPEN_DEBUG]", {
+          pagina_origine: source ?? "unknown",
+          worker_user_id: workerId,
+          profile_id: workerId,
+          nome_lavoratore: (profile as any)?.full_name ?? null,
+          popup_aperto: true,
+          dati_caricati: !!profile,
+          recensioni_caricate: revs?.length ?? 0,
+        });
+      }
     })();
     return () => { cancelled = true; };
-  }, [open, workerId, user?.id, role]);
+  }, [open, workerId, user?.id, role, source]);
 
   // Privacy: mostra Nome e Cognome solo se ristoratore ↔ lavoratore hanno
   // già completato almeno un turno. Altrimenti label anonima "ruolo verificato".
@@ -111,8 +144,9 @@ export function WorkerProfilePreviewDialog({
         ? displayWorkerName(w, workedTogether)
         : (w.full_name || "Lavoratore"))
     : "Lavoratore";
-  const zone = w ? [w.neighborhood, w.city].filter(Boolean).join(", ") || w.city || "—" : "—";
-  const roleLine = w ? [w.primary_role, ...(w.secondary_roles ?? [])].filter(Boolean).join(" · ") : "";
+  const zone = w ? (formatWorkerLocation(w) || "—") : "—";
+  const roles = (w ? [w.primary_role, ...((w.secondary_roles ?? []) as string[])].filter(Boolean) : []) as string[];
+  const roleLine = roles.join(" · ");
   const langs = w ? langsLabel(w.spoken_languages, w.languages) : "";
 
   return (
@@ -166,6 +200,18 @@ export function WorkerProfilePreviewDialog({
               <StatBox icon={<Briefcase className="h-3.5 w-3.5" />} label="Professionalità" value={w.avg_professionalism != null && Number(w.avg_professionalism) > 0 ? `${Number(w.avg_professionalism).toFixed(1)}/5` : "—"} />
             </div>
 
+            {/* Mansioni e ruoli */}
+            {roles.length > 0 && (
+              <section>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Mansioni e ruoli</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {roles.map((r) => (
+                    <Badge key={r} variant="secondary" className="capitalize text-[11px]">{r}</Badge>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Availability */}
             {(w.weekly_availability?.length || w.hourly_availability) && (
               <section>
@@ -183,6 +229,12 @@ export function WorkerProfilePreviewDialog({
               </section>
             )}
 
+            {/* Zona / Città */}
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Zona / Città</h3>
+              <p className="text-sm">{zone}</p>
+            </section>
+
             {/* Bio */}
             {w.short_bio && (
               <section>
@@ -191,15 +243,20 @@ export function WorkerProfilePreviewDialog({
               </section>
             )}
 
-            {/* Experience + langs */}
-            {(w.experience_level || w.experience_years != null || langs) && (
-              <section className="text-sm space-y-1">
-                {(w.experience_level || w.experience_years != null) && (
-                  <div><span className="text-muted-foreground">Esperienza: </span><span className="capitalize">{w.experience_level || ""}{w.experience_years != null ? ` · ${w.experience_years}` : ""}</span></div>
-                )}
-                {langs && (
-                  <div><span className="text-muted-foreground">Lingue: </span>{langs}</div>
-                )}
+            {/* Esperienza */}
+            <section className="text-sm space-y-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Esperienza</h3>
+              <div><span className="text-muted-foreground">Livello: </span><span className="capitalize">{w.experience_level || "—"}</span></div>
+              <div><span className="text-muted-foreground">Anni: </span>{fmtExperienceYears(w.experience_years) || "—"}</div>
+              <div><span className="text-muted-foreground">Tariffa oraria desiderata: </span>{w.hourly_rate != null ? `€ ${Number(w.hourly_rate).toFixed(0)}/h` : "—"}</div>
+              <div className="inline-flex items-center gap-1"><Car className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Automunito: </span>{w.is_motorized == null ? "Non specificato" : w.is_motorized ? "Sì" : "No"}</div>
+            </section>
+
+            {/* Lingue */}
+            {langs && (
+              <section className="text-sm">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Lingue</h3>
+                <p>{langs}</p>
               </section>
             )}
 

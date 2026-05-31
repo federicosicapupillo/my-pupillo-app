@@ -48,10 +48,17 @@ import {
   workerMatchesAnyRoleField,
 } from "@/lib/worker-role-normalization";
 import { loadRestaurantWorkerSearchResults, type WorkerSearchDebug } from "@/lib/worker-search.functions";
+import { WorkerProfileModalProvider, useOpenWorkerProfile } from "@/components/WorkerProfileModalProvider";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
-  component: () => <RequireAuth><WorkersPage /></RequireAuth>,
+  component: () => (
+    <RequireAuth>
+      <WorkerProfileModalProvider source="cerca_lavoratori">
+        <WorkersPage />
+      </WorkerProfileModalProvider>
+    </RequireAuth>
+  ),
 });
 
 type W = {
@@ -493,6 +500,7 @@ function computeSpecialBlock(
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const openWorkerProfile = useOpenWorkerProfile();
   const loadWorkerSearchData = useServerFn(loadRestaurantWorkerSearchResults);
   const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
@@ -1855,26 +1863,16 @@ function WorkersPage() {
                     <MessageSquare className="h-3.5 w-3.5" />
                     {hardBlocked ? "Non disponibile per questo turno" : "Invia proposta"}
                   </Button>
-                  <Link
-                    to="/workers/$id"
-                    params={{ id: w.id }}
-                    className="mt-2 block"
-                    onClick={() => {
-                      console.log("[PUPILLO_WORKER_PROFILE_BUTTON_DEBUG]", {
-                        pagina: "workers (Cerca lavoratori) - WorkersListCard",
-                        worker_user_id: w.id,
-                        profile_id: w.id,
-                        nome_lavoratore: w.full_name ?? null,
-                        pulsante_vedi_profilo_renderizzato: true,
-                        route_aperta_al_click: `/workers/${w.id}`,
-                      });
-                    }}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 w-full gap-1"
+                    onClick={() => openWorkerProfile({ workerId: w.id, workerName: w.full_name, trigger: "card_button" })}
                   >
-                    <Button size="sm" variant="outline" className="w-full gap-1">
-                      <User className="h-3.5 w-3.5" />
-                      Vedi profilo
-                    </Button>
-                  </Link>
+                    <User className="h-3.5 w-3.5" />
+                    Vedi profilo
+                  </Button>
                   {hardBlocked && (
                     <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
                       <p className="font-medium">Disponibilità speciale in un'altra città / orario</p>
@@ -2000,6 +1998,7 @@ function ContactedWorkerCard({
   specialBlock: { blocked: boolean; specials: AvailabilityExceptionRow[] } | null;
   onDetails: () => void;
 }) {
+  const openWorkerProfile = useOpenWorkerProfile();
   if (!isSafeSearchWorker(w)) {
     console.warn("[PUPILLO_BLOCKED_NON_WORKER_CARD_DEBUG]", {
       componente: "ContactedWorkerCard src/routes/workers.tsx",
@@ -2254,26 +2253,16 @@ function ContactedWorkerCard({
                 Apri storico chat
               </Button>
             )}
-            <Link
-              to="/workers/$id"
-              params={{ id: w.id }}
-              className="mt-2 block"
-              onClick={() => {
-                console.log("[PUPILLO_WORKER_PROFILE_BUTTON_DEBUG]", {
-                  pagina: "workers (Cerca lavoratori) - ContactedWorkerCard",
-                  worker_user_id: w.id,
-                  profile_id: w.id,
-                  nome_lavoratore: w.full_name ?? null,
-                  pulsante_vedi_profilo_renderizzato: true,
-                  route_aperta_al_click: `/workers/${w.id}`,
-                });
-              }}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-2 w-full gap-1"
+              onClick={() => openWorkerProfile({ workerId: w.id, workerName: w.full_name, trigger: "card_button" })}
             >
-              <Button size="sm" variant="outline" className="w-full gap-1">
-                <User className="h-3.5 w-3.5" />
-                Vedi profilo
-              </Button>
-            </Link>
+              <User className="h-3.5 w-3.5" />
+              Vedi profilo
+            </Button>
             {blockedReason && !activeAppForSelected && !hardBlocked && (
               <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 leading-snug">
                 {blockedReason}
@@ -2456,6 +2445,7 @@ function WorkersMapSection({
   inviteLabel: string;
   rel: Record<string, WorkerRel>;
 }) {
+  const openProfileFromMap = useOpenWorkerProfile();
   // Deduplicazione difensiva per `id` prima di renderizzare i marker.
   // La server function passa coordinate reali quando presenti oppure coordinate
   // approssimative derivate da città/zona salvate dal worker in onboarding.
@@ -2557,6 +2547,7 @@ function WorkersMapSection({
         onInvite={onInvite}
         inviteDisabled={inviteDisabled}
         inviteLabel={inviteLabel}
+        onViewProfile={(id) => openProfileFromMap({ workerId: id, trigger: "marker_button" })}
       />
       <div className="p-3 text-xs text-muted-foreground">
         {`${points.length} lavorator${points.length === 1 ? "e" : "i"} sulla mappa. La posizione è approssimativa per tutelare la privacy: non vengono mostrati indirizzi privati.`}
