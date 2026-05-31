@@ -18,6 +18,7 @@ import { ReviewLabelsPicker } from "@/components/ReviewLabelsPicker";
 import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehirePicker";
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { ReportDelayDialog, CancelPresenceDialog, type IncidentTarget } from "@/components/WorkerIncidentDialogs";
+import { formatShiftLocation, debugLocationFormat } from "@/lib/format-location";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -863,7 +864,13 @@ function ShiftsPage() {
                         <div>{ann.service_time.slice(0,5)}{ann.end_time && `–${ann.end_time.slice(0,5)}`}</div>
                       )}
                       {(ann.location_address || ann.job_address) && (
-                        <div className="truncate">{ann.location_address || `${ann.job_address}${ann.job_city ? `, ${ann.job_city}` : ""}`}</div>
+                        <div className="truncate">
+                          {debugLocationFormat(
+                            s.id,
+                            ann.location_address ||
+                              `${ann.job_address}${ann.job_city ? `, ${ann.job_city}` : ""}`,
+                          )}
+                        </div>
                       )}
                       {ann.tariff_amount != null && (
                         <div>€{Number(ann.tariff_amount).toFixed(2)} {ann.tariff_type === "hourly" ? "/ora" : "fisso"}</div>
@@ -925,8 +932,24 @@ function ShiftsPage() {
                             </Button>
                           );
                         })()}
-                        <Button size="sm" variant="ghost" onClick={() => openCancelDialog(s)} className="gap-1">
-                          <XCircle className="h-4 w-4" /> Annulla
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            console.log("[PUPILLO_CANCEL_SHIFT_BUTTON_UI_DEBUG]", {
+                              restaurant_user_id: s.restaurant_id,
+                              shift_id: s.id,
+                              old_label: "Annulla",
+                              new_label: "Annulla turno",
+                              destructive_style_applied: true,
+                              confirmation_modal_opened: true,
+                            });
+                            openCancelDialog(s);
+                          }}
+                          aria-label="Annulla turno"
+                          className="gap-1 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive focus-visible:ring-destructive"
+                        >
+                          <XCircle className="h-4 w-4" /> Annulla turno
                         </Button>
                       </>
                     )}
