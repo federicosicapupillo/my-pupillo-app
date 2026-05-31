@@ -2546,7 +2546,7 @@ function WorkersMapSection({
         onInvite={onInvite}
         inviteDisabled={inviteDisabled}
         inviteLabel={inviteLabel}
-        onViewProfile={(id) => openWorkerProfile({ workerId: id, trigger: "marker_button" })}
+        onViewProfile={onViewProfile}
       />
       <div className="p-3 text-xs text-muted-foreground">
         {`${points.length} lavorator${points.length === 1 ? "e" : "i"} sulla mappa. La posizione è approssimativa per tutelare la privacy: non vengono mostrati indirizzi privati.`}
