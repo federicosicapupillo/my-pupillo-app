@@ -22,6 +22,7 @@ export const Route = createFileRoute("/billing")({
     returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
     action: typeof search.action === "string" ? search.action : undefined,
     session_id: typeof search.session_id === "string" ? search.session_id : undefined,
+    checkout: typeof search.checkout === "string" ? search.checkout : undefined,
   }),
   component: () => <RequireAuth><Billing /></RequireAuth>,
 });
@@ -31,7 +32,7 @@ type Tx = { id: string; created_at: string; delta: number; balance_after: number
 function Billing() {
   const { profile, user, role, refresh } = useAuth();
   const navigate = useNavigate();
-  const { returnTo, action, session_id } = useSearch({ from: "/billing" });
+  const { returnTo, action, session_id, checkout } = useSearch({ from: "/billing" });
   const [tx, setTx] = useState<Tx[]>([]);
   const [checkoutKey, setCheckoutKey] = useState<string | null>(null);
   const [discountInput, setDiscountInput] = useState("");
@@ -157,6 +158,36 @@ function Billing() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, session_id]);
+
+  // "Attiva Basic" dal popup crediti insufficienti: apri subito il checkout
+  // Stripe del piano consigliato senza far passare il ristoratore dal billing.
+  // Mappiamo `checkout=basic` al pacchetto SMART (consigliato): è il pack
+  // "Più scelto" della pricing, già configurato in Stripe via `pack_smart_49`.
+  useEffect(() => {
+    if (!checkout) return;
+    if (checkoutKey) return;
+    const key =
+      checkout === "basic"
+        ? "pack_smart_49"
+        : (CREDIT_PACKS as any)[checkout] || (PLAN_PRICES as any)[checkout]
+        ? checkout
+        : null;
+    console.info("[PUPILLO_STRIPE_BASIC_REDIRECT_DEBUG]", {
+      restaurant_user_id: user?.id ?? null,
+      selected_plan: checkout,
+      stripe_price_id: key,
+      checkout_session_created: !!key,
+      redirect_started: !!key,
+      error: key ? null : `Nessun price configurato per "${checkout}"`,
+    });
+    if (!key) {
+      toast.error("Piano non disponibile. Scegli un pacchetto dalla lista.");
+      navigate({ to: "/billing", search: (prev: any) => ({ ...prev, checkout: undefined }), replace: true });
+      return;
+    }
+    setCheckoutKey(key);
+    navigate({ to: "/billing", search: (prev: any) => ({ ...prev, checkout: undefined }), replace: true });
+  }, [checkout, checkoutKey, navigate, user?.id]);
 
   if (role && role !== "restaurant") {
     return <AppShell><p className="text-muted-foreground">Sezione riservata ai ristoratori.</p></AppShell>;
