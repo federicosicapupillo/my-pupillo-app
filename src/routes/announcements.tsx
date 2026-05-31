@@ -699,7 +699,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
               </div>
               <div className="mt-1 text-sm text-foreground">
                 Lavoratore: <span className="font-medium">{formatCandidateName(info.full_name, collaboratedWorkerIds.has(info.worker_id))}</span>
-                {collaboratedWorkerIds.has(info.worker_id) && (
+                {completedCollabIds.has(info.worker_id) && (
                   <span className="ml-2 inline-flex items-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
                 )}
               </div>
@@ -967,7 +967,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                                 <span className="text-sm font-semibold text-foreground truncate">
                                   {formatCandidateName(c.full_name, collaboratedWorkerIds.has(c.worker_id))}
                                 </span>
-                                {collaboratedWorkerIds.has(c.worker_id) && (
+                                {completedCollabIds.has(c.worker_id) && (
                                   <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
                                 )}
                                 {c.rating_avg != null && (
@@ -1058,7 +1058,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                       >
                         <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
                           {formatCandidateName(c.full_name, collaboratedWorkerIds.has(c.worker_id))}
-                          {collaboratedWorkerIds.has(c.worker_id) && (
+                          {completedCollabIds.has(c.worker_id) && (
                             <span className="inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Già collaboratore</span>
                           )}
                           {isAssigned && (
