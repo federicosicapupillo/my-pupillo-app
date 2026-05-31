@@ -104,7 +104,7 @@ export function WorkerProfilePreviewDialog({
     (async () => {
       const [{ data: profile }, { data: revs }] = await Promise.all([
         supabase.from("profiles").select(
-          "id,full_name,primary_role,secondary_roles,city,neighborhood,badge,rating_avg,reviews_count,reliability_pct,punctuality_pct,completion_pct,avg_professionalism,avg_competence,completed_shifts,hourly_rate,short_bio,weekly_availability,hourly_availability,reputation_level,spoken_languages,languages,experience_level,experience_years"
+          "id,full_name,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,selected_zones,all_zones,badge,rating_avg,reviews_count,reliability_pct,punctuality_pct,completion_pct,avg_professionalism,avg_competence,completed_shifts,hourly_rate,short_bio,weekly_availability,hourly_availability,reputation_level,spoken_languages,languages,experience_level,experience_years,is_motorized"
         ).eq("id", workerId).maybeSingle(),
         supabase.from("reviews").select(
           "id,rating,comment,created_at,punctuality,professionalism,competence,reliability,positive_tags,tags"
