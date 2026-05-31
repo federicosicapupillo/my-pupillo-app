@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle, Zap } from "lucide-react";
@@ -40,6 +40,11 @@ function Billing() {
   const [discountBusy, setDiscountBusy] = useState(false);
   const [syncingPayment, setSyncingPayment] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
+  // Idempotency: ensure each Stripe session_id is processed only once,
+  // even if React re-runs the effect (e.g. after `refresh()` swaps the
+  // `user` reference). Without this guard, polling could restart and
+  // produce a refresh loop after returning from Stripe.
+  const processedSessionRef = useRef<string | null>(null);
 
   const openPortal = async () => {
     setPortalBusy(true);
@@ -91,17 +96,28 @@ function Billing() {
   // i crediti, così la top bar e le card crediti si aggiornano subito.
   useEffect(() => {
     if (!user || !session_id) return;
+    if (processedSessionRef.current === session_id) return;
+    processedSessionRef.current = session_id;
     let cancelled = false;
     let attempts = 0;
     const maxAttempts = 20; // ~40s
     const startCredits = profile?.credits ?? 0;
     const startPlan = profile?.plan ?? "free";
     setSyncingPayment(true);
+    const capturedReturnTo = returnTo;
+    const capturedSessionId = session_id;
+    console.info("[PUPILLO_STRIPE_RETURN_DEBUG]", {
+      session_id: capturedSessionId,
+      restaurant_user_id: user.id,
+      return_to: capturedReturnTo ?? null,
+      credits_before: startCredits,
+      already_processed: false,
+    });
 
     const stripParam = () => {
       navigate({
         to: "/billing",
-        search: (prev: any) => ({ ...prev, session_id: undefined }),
+        search: (prev: any) => ({ ...prev, session_id: undefined, action: undefined, returnTo: undefined }),
         replace: true,
       });
     };
@@ -128,7 +144,7 @@ function Billing() {
             .from("credit_transactions")
             .select("id")
             .eq("user_id", user.id)
-            .eq("reference_id", session_id)
+            .eq("reference_id", capturedSessionId)
             .maybeSingle(),
         ]);
         const newCredits = (prof as any)?.credits ?? startCredits;
@@ -136,12 +152,30 @@ function Billing() {
         const creditsUpdated = newCredits > startCredits || !!txRow;
         const planUpdated = newPlan !== startPlan && newPlan !== "free";
         if (creditsUpdated || planUpdated) {
+          // IMPORTANT: strip URL params BEFORE `refresh()` to prevent the
+          // effect from re-running on the new `user` reference with the
+          // session_id still in the URL → restarting polling = refresh loop.
+          stripParam();
           await refresh();
           await loadTx();
           if (!cancelled) {
             toast.success(planUpdated ? "Piano attivato" : "Ricarica completata");
             setSyncingPayment(false);
-            stripParam();
+            console.info("[PUPILLO_STRIPE_RETURN_DEBUG]", {
+              session_id: capturedSessionId,
+              credits_after: newCredits,
+              redirect_target: capturedReturnTo ?? "/billing",
+              already_processed: true,
+            });
+            // Riporta il ristoratore nella chat (o pagina) da cui era
+            // partito il flusso "Conferma lavoratore", marcando il
+            // ritorno con `payment_success=1` così la chat può mostrare
+            // il banner di sblocco. La conferma finale resta manuale.
+            if (capturedReturnTo) {
+              const sep = capturedReturnTo.includes("?") ? "&" : "?";
+              const target = `${capturedReturnTo}${sep}payment_success=1`;
+              navigate({ to: target as any, replace: true });
+            }
           }
           return;
         }
@@ -157,7 +191,7 @@ function Billing() {
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, session_id]);
+  }, [user?.id, session_id]);
 
   // "Attiva Basic" dal popup crediti insufficienti: apri subito il checkout
   // Stripe del piano consigliato senza far passare il ristoratore dal billing.
@@ -223,7 +257,11 @@ function Billing() {
             customerEmail={user?.email ?? undefined}
             userId={user?.id}
             discountCode={discountAppliesToCheckout ? discount!.code : undefined}
-            returnUrl={typeof window !== "undefined" ? `${window.location.origin}/billing?session_id={CHECKOUT_SESSION_ID}` : undefined}
+            returnUrl={typeof window !== "undefined"
+              ? `${window.location.origin}/billing?session_id={CHECKOUT_SESSION_ID}${
+                  returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""
+                }${action ? `&action=${encodeURIComponent(action)}` : ""}`
+              : undefined}
           />
         </div>
       </AppShell>
