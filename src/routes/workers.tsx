@@ -500,6 +500,7 @@ function computeSpecialBlock(
 function WorkersPage() {
   const { user, role, profile } = useAuth();
   const nav = useNavigate();
+  const openWorkerProfile = useOpenWorkerProfile();
   const loadWorkerSearchData = useServerFn(loadRestaurantWorkerSearchResults);
   const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { isBlocked, blockedCount, actionShifts } = useRequiredReviews();
