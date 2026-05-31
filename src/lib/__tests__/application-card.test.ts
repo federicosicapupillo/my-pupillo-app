@@ -27,7 +27,6 @@ describe("shouldShowNewApplicationCard", () => {
   });
 
   it.each<ApplicationStatus>([
-    "interested",
     "not_interested",
     "accepted",
     "rejected",
@@ -40,6 +39,16 @@ describe("shouldShowNewApplicationCard", () => {
         hasWorkerReputation: true,
       }),
     ).toBe(false);
+  });
+
+  it("è visibile per il ristoratore quando il lavoratore ha mostrato interesse (status=interested)", () => {
+    expect(
+      shouldShowNewApplicationCard({
+        role: "restaurant",
+        status: "interested",
+        hasWorkerReputation: true,
+      }),
+    ).toBe(true);
   });
 
   it("NON è visibile se la reputazione del lavoratore non è ancora caricata", () => {
