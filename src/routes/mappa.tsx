@@ -473,7 +473,24 @@ function MapPage() {
   const mapBoxRef = useRef<HTMLDivElement | null>(null);
   const [focusWorkerId, setFocusWorkerId] = useState<string | null>(null);
   const [focusWorkerNonce, setFocusWorkerNonce] = useState(0);
-  const [previewWorkerId, setPreviewWorkerId] = useState<string | null>(null);
+  const openWorkerProfile = (
+    workerId: string,
+    source: "lista_mappa" | "marker_mappa" | "foto_candidato",
+    workerName?: string | null,
+  ) => {
+    if (typeof console !== "undefined") {
+      console.log("[PUPILLO_WORKER_PROFILE_UNIFIED_OPEN_DEBUG]", {
+        pagina_di_origine: "mappa",
+        trigger: source === "lista_mappa" ? "bottone_vedi_profilo" : source === "foto_candidato" ? "click_foto" : "overlay_profilo",
+        worker_user_id: workerId,
+        profile_id: workerId,
+        nome: workerName ?? null,
+        componente_profilo_usato: "/workers_/$id (route page)",
+        target_route: `/workers_/${workerId}`,
+      });
+    }
+    navigate({ to: "/workers_/$id", params: { id: workerId } });
+  };
 
   const focusWorkerOnMap = (workerId: string) => {
     const located = locatedWorkers.find((x) => x.w.id === workerId);
