@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, MapPin, Euro, Clock, Users, Star, Shield,
   CheckCircle2, XCircle, MessageSquare, Award, Building2, Phone, Mail, Globe,
-  Languages as LanguagesIcon, IdCard, ListChecks, Sparkles, Info, User,
+  Languages as LanguagesIcon, IdCard, ListChecks, Sparkles, Info, User, Handshake,
 } from "lucide-react";
 import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
@@ -27,6 +27,7 @@ import { useProfileGate } from "@/components/ProfileGate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
+import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
@@ -168,6 +169,7 @@ function AnnouncementDetail() {
   const [fullDialogOpen, setFullDialogOpen] = useState(false);
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
+  const [counterofferAppId, setCounterofferAppId] = useState<string | null>(null);
   // Per-application: state of the most recent shift_proposal sent in this chat.
   // `waitingWorker` is true when the restaurant sent a proposal that the worker
   // has not yet answered → operational buttons must stay disabled.
@@ -620,6 +622,30 @@ function AnnouncementDetail() {
         currentCredits={creditsAvailable}
         returnTo={`/announcements/${id}`}
       />
+      {counterofferAppId && (() => {
+        const a = apps.find((x) => x.id === counterofferAppId);
+        if (!a || !ann) return null;
+        return (
+          <CounterofferDialog
+            open={true}
+            onOpenChange={(o) => { if (!o) setCounterofferAppId(null); }}
+            applicationId={a.id}
+            restaurantId={ann.restaurant_id}
+            workerId={a.worker_id}
+            announcement={{
+              id: ann.id,
+              service_date: ann.service_date ?? null,
+              service_time: ann.service_time ?? null,
+              end_time: ann.end_time ?? null,
+              tariff_amount: ann.tariff_amount ?? null,
+              tariff_type: ann.tariff_type ?? null,
+              professional_profile: ann.professional_profile ?? null,
+              notes: ann.notes ?? null,
+            }}
+            onSent={() => { void load(); }}
+          />
+        );
+      })()}
       <div className="mb-4">
         <Link to="/announcements"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Torna agli annunci</Button></Link>
       </div>
@@ -1012,6 +1038,16 @@ function AnnouncementDetail() {
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             {hasCounter ? `Accetta €${a.proposed_tariff}` : "Assegna"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 border-primary/40 text-primary hover:bg-primary/5"
+                            disabled={busyId === a.id}
+                            onClick={() => setCounterofferAppId(a.id)}
+                          >
+                            <Handshake className="h-3.5 w-3.5" />
+                            Invia controfferta
                           </Button>
                           <Button
                             size="sm"
