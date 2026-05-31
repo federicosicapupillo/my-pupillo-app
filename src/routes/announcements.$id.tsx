@@ -169,6 +169,7 @@ function AnnouncementDetail() {
   const [fullDialogOpen, setFullDialogOpen] = useState(false);
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [creditsAvailable, setCreditsAvailable] = useState(0);
+  const [counterofferAppId, setCounterofferAppId] = useState<string | null>(null);
   // Per-application: state of the most recent shift_proposal sent in this chat.
   // `waitingWorker` is true when the restaurant sent a proposal that the worker
   // has not yet answered → operational buttons must stay disabled.
