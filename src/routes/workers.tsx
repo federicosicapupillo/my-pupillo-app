@@ -48,6 +48,7 @@ import {
   workerMatchesAnyRoleField,
 } from "@/lib/worker-role-normalization";
 import { loadRestaurantWorkerSearchResults, type WorkerSearchDebug } from "@/lib/worker-search.functions";
+import { WorkerProfileModalProvider, useOpenWorkerProfile } from "@/components/WorkerProfileModalProvider";
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
