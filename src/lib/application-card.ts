@@ -16,8 +16,12 @@ export type Role = "restaurant" | "worker";
 export type DecisionAction = "accepted" | "rejected";
 
 /**
- * La card decisionale "Nuova candidatura" deve essere visibile SOLO al
- * ristoratore e SOLO finché la candidatura è in stato `pending`.
+ * La card decisionale "Nuova candidatura" deve essere visibile al
+ * ristoratore finché la candidatura è ancora "aperta" — cioè in stato
+ * `pending` (candidatura/proposta non ancora gestita) oppure `interested`
+ * (proposta inviata dal ristoratore e lavoratore che ha mostrato
+ * interesse). In entrambi i casi il ristoratore deve poter agire
+ * (Conferma / Rifiuta / Invia controfferta).
  */
 export function shouldShowNewApplicationCard(params: {
   role: Role;
@@ -26,7 +30,7 @@ export function shouldShowNewApplicationCard(params: {
 }): boolean {
   return (
     params.role === "restaurant" &&
-    params.status === "pending" &&
+    (params.status === "pending" || params.status === "interested") &&
     params.hasWorkerReputation === true
   );
 }
