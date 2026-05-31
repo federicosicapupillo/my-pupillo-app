@@ -21,7 +21,9 @@ import { lookupCityCoords, jitterCoords } from "@/lib/italian-city-coords";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 // Unified worker profile: all "Vedi profilo" entry points navigate to
-// /workers_/$id (same full profile used by "Cerca lavoratori").
+// /workers/$id (same full profile used by "Cerca lavoratori"). The file
+// is named workers_.$id.tsx only to escape layout nesting; the actual URL
+// served has no underscore — using "/workers_/..." literally would 404.
 import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
