@@ -51,7 +51,13 @@ import { loadRestaurantWorkerSearchResults, type WorkerSearchDebug } from "@/lib
 
 export const Route = createFileRoute("/workers")({
   head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
-  component: () => <RequireAuth><WorkersPage /></RequireAuth>,
+  component: () => (
+    <RequireAuth>
+      <WorkerProfileModalProvider source="cerca_lavoratori">
+        <WorkersPage />
+      </WorkerProfileModalProvider>
+    </RequireAuth>
+  ),
 });
 
 type W = {
