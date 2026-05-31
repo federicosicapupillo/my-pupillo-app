@@ -1031,7 +1031,7 @@ function MapPage() {
         badge: w.badge,
         avatarUrl: workerAvatars[w.id] ?? null,
         initials: mapInitials(w.full_name),
-        link: `/workers_/${w.id}`,
+        link: `/workers/${w.id}`,
         known,
         completedShifts: known && w.completed_shifts != null ? Number(w.completed_shifts) : null,
         reliabilityPct: known && w.reliability_pct != null ? Number(w.reliability_pct) : null,
