@@ -622,6 +622,30 @@ function AnnouncementDetail() {
         currentCredits={creditsAvailable}
         returnTo={`/announcements/${id}`}
       />
+      {counterofferAppId && (() => {
+        const a = apps.find((x) => x.id === counterofferAppId);
+        if (!a || !ann) return null;
+        return (
+          <CounterofferDialog
+            open={true}
+            onOpenChange={(o) => { if (!o) setCounterofferAppId(null); }}
+            applicationId={a.id}
+            restaurantId={ann.restaurant_id}
+            workerId={a.worker_id}
+            announcement={{
+              id: ann.id,
+              service_date: ann.service_date ?? null,
+              service_time: ann.service_time ?? null,
+              end_time: ann.end_time ?? null,
+              tariff_amount: ann.tariff_amount ?? null,
+              tariff_type: ann.tariff_type ?? null,
+              professional_profile: ann.professional_profile ?? null,
+              notes: ann.notes ?? null,
+            }}
+            onSent={() => { void load(); }}
+          />
+        );
+      })()}
       <div className="mb-4">
         <Link to="/announcements"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Torna agli annunci</Button></Link>
       </div>
