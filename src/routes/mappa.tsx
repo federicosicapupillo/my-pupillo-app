@@ -485,11 +485,12 @@ function MapPage() {
         worker_user_id: workerId,
         profile_id: workerId,
         nome: workerName ?? null,
-        componente_profilo_usato: "/workers_/$id (route page)",
-        target_route: `/workers_/${workerId}`,
+        componente_profilo_usato: "/workers/$id (route page, same as Cerca lavoratori)",
+        target_route: `/workers/${workerId}`,
+        stesso_metodo_cerca_lavoratori: true,
       });
     }
-    navigate({ to: "/workers_/$id", params: { id: workerId } });
+    navigate({ to: "/workers/$id", params: { id: workerId } });
   };
 
   const focusWorkerOnMap = (workerId: string) => {
