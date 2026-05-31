@@ -1282,12 +1282,7 @@ function Onboarding() {
             id_document_issuer: personal.id_document_issuer.trim(),
             ...serviceArea,
             // Campi facoltativi sezione "Esperienza e preferenze"
-            experience_years: (() => {
-              const v = optExp.experience_years.trim();
-              if (!v) return null;
-              const n = parseInt(v, 10);
-              return Number.isFinite(n) && n >= 0 ? n : null;
-            })(),
+            experience_years: optExp.experience_years.trim() || null,
             experience_level: optExp.experience_level || null,
             hourly_rate: (() => {
               const v = optExp.hourly_rate.trim().replace(",", ".");

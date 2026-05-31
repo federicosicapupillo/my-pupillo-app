@@ -503,41 +503,112 @@ function LanguagesBox({ profile, userId, onSaved }: { profile: any; userId: stri
 
 function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: string | null; onSaved: () => Promise<void> | void }) {
   const [editing, setEditing] = useState(false);
-  const initialBio = (profile?.short_bio ?? profile?.professional_profile ?? "") as string;
-  const initialLevel = (profile?.experience_level === "junior" || profile?.experience_level === "intermediate" || profile?.experience_level === "senior") ? profile.experience_level : "";
+  const initialLevel = (profile?.experience_level === "junior" || profile?.experience_level === "intermediate" || profile?.experience_level === "senior" || profile?.experience_level === "esperto" || profile?.experience_level === "prima_esperienza") ? profile.experience_level : "";
   const initialMotor = profile?.is_motorized === true ? "yes" : profile?.is_motorized === false ? "no" : "";
-  const [text, setText] = useState<string>(initialBio);
-  const [years, setYears] = useState<string>(profile?.experience_years != null ? String(profile.experience_years) : "");
-  const [level, setLevel] = useState<"" | "junior" | "intermediate" | "senior">(initialLevel as any);
+  const [years, setYears] = useState<string>(profile?.experience_years ?? "");
+  const [level, setLevel] = useState<string>(initialLevel);
   const [rate, setRate] = useState<string>(profile?.hourly_rate != null ? String(profile.hourly_rate) : "");
   const [motor, setMotor] = useState<"" | "yes" | "no">(initialMotor as any);
   const { saving, save } = useBoxSave(userId, onSaved);
 
   const start = () => {
-    setText(initialBio);
-    setYears(profile?.experience_years != null ? String(profile.experience_years) : "");
-    setLevel(initialLevel as any);
+    setYears(profile?.experience_years ?? "");
+    setLevel(initialLevel);
     setRate(profile?.hourly_rate != null ? String(profile.hourly_rate) : "");
     setMotor(initialMotor as any);
     setEditing(true);
   };
+
   const onSave = async () => {
-    const yearsNum = (() => { const v = years.trim(); if (!v) return null; const n = parseInt(v, 10); return Number.isFinite(n) && n >= 0 ? n : null; })();
-    const rateNum = (() => { const v = rate.trim().replace(",", "."); if (!v) return null; const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : null; })();
-    const bio = text.trim() ? text.trim().slice(0, 500) : null;
+    const rateVal = rate.trim();
+    const rateNum = (() => {
+      if (!rateVal) return null;
+      const n = Number(rateVal.replace(",", "."));
+      if (!Number.isFinite(n) || n < 9) return null;
+      return n;
+    })();
     const ok = await save({
-      professional_profile: bio,
-      short_bio: bio,
-      experience_years: yearsNum,
+      experience_years: years.trim() || null,
       experience_level: level || null,
       hourly_rate: rateNum,
       is_motorized: motor === "yes" ? true : motor === "no" ? false : null,
     });
+    if (typeof console !== "undefined") {
+      console.log("[PUPILLO_WORKER_EXPERIENCE_PREFERENCES_EDIT_DEBUG]", {
+        worker_user_id: userId,
+        years_experience: years.trim() || null,
+        experience_level: level || null,
+        desired_hourly_rate: rateNum,
+        has_vehicle: motor === "yes" ? true : motor === "no" ? false : null,
+        dati_salvati_correttamente: ok,
+      });
+    }
     if (ok) setEditing(false);
   };
 
-  const levelLabel = (l: string | null | undefined) => l === "junior" ? "Junior" : l === "intermediate" ? "Intermedio" : l === "senior" ? "Senior" : "—";
+  const levelLabel = (l: string | null | undefined) => {
+    if (!l) return "—";
+    const map: Record<string, string> = {
+      prima_esperienza: "Prima esperienza",
+      junior: "Junior",
+      intermediate: "Intermedio",
+      esperto: "Esperto",
+      senior: "Senior",
+    };
+    return map[l] || l;
+  };
   const motorLabel = profile?.is_motorized === true ? "Sì" : profile?.is_motorized === false ? "No" : "Non specificato";
+  const yearsLabel = (y: string | null | undefined) => {
+    if (!y) return "—";
+    const map: Record<string, string> = {
+      prima_esperienza: "Prima esperienza",
+      meno_di_1: "Meno di 1 anno",
+      oltre_10: "Oltre 10 anni",
+    };
+    return map[y] || y;
+  };
+  const rateLabel = (r: number | null) => {
+    if (r == null) return "—";
+    if (r >= 21) return "Oltre 20 €/h";
+    return `€${r}/h`;
+  };
+
+  const YEARS_OPTIONS = [
+    { value: "", label: "Non specificato" },
+    { value: "prima_esperienza", label: "Prima esperienza" },
+    { value: "meno_di_1", label: "Meno di 1 anno" },
+    { value: "1", label: "1 anno" },
+    { value: "2", label: "2 anni" },
+    { value: "3", label: "3 anni" },
+    { value: "4", label: "4 anni" },
+    { value: "5", label: "5 anni" },
+    { value: "6_10", label: "6-10 anni" },
+    { value: "oltre_10", label: "Oltre 10 anni" },
+  ];
+
+  const LEVEL_OPTIONS = [
+    { value: "", label: "Non specificato" },
+    { value: "prima_esperienza", label: "Prima esperienza" },
+    { value: "junior", label: "Junior" },
+    { value: "intermediate", label: "Intermedio" },
+    { value: "esperto", label: "Esperto" },
+    { value: "senior", label: "Senior" },
+  ];
+
+  const RATE_OPTIONS = [
+    { value: "", label: "Non specificato" },
+    { value: "9", label: "9 €/h" },
+    { value: "10", label: "10 €/h" },
+    { value: "11", label: "11 €/h" },
+    { value: "12", label: "12 €/h" },
+    { value: "13", label: "13 €/h" },
+    { value: "14", label: "14 €/h" },
+    { value: "15", label: "15 €/h" },
+    { value: "16", label: "16 €/h" },
+    { value: "18", label: "18 €/h" },
+    { value: "20", label: "20 €/h" },
+    { value: "oltre_20", label: "Oltre 20 €/h" },
+  ];
 
   return (
     <ProfileBox title="Esperienza e preferenze" editing={editing} saving={saving} onEdit={start} onCancel={() => setEditing(false)} onSave={onSave}>
@@ -546,23 +617,36 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <Label>Anni di esperienza</Label>
-              <Input type="number" min={0} inputMode="numeric" placeholder="Es. 2" value={years} onChange={(e) => setYears(e.target.value)} />
-            </div>
-            <div>
-              <Label>Livello di esperienza</Label>
-              <Select value={level || "none"} onValueChange={(v) => setLevel((v === "none" ? "" : v) as any)}>
+              <Select value={years || "none"} onValueChange={(v) => setYears(v === "none" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Nessuna selezione</SelectItem>
-                  <SelectItem value="junior">Junior</SelectItem>
-                  <SelectItem value="intermediate">Intermedio</SelectItem>
-                  <SelectItem value="senior">Senior</SelectItem>
+                  {YEARS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value || "none"} value={o.value || "none"}>{o.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Tariffa oraria desiderata (€/h)</Label>
-              <Input type="number" min={0} step="0.5" inputMode="decimal" placeholder="Es. 12" value={rate} onChange={(e) => setRate(e.target.value)} />
+              <Label>Livello di esperienza</Label>
+              <Select value={level || "none"} onValueChange={(v) => setLevel(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                <SelectContent>
+                  {LEVEL_OPTIONS.map((o) => (
+                    <SelectItem key={o.value || "none"} value={o.value || "none"}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tariffa oraria desiderata</Label>
+              <Select value={rate || "none"} onValueChange={(v) => setRate(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                <SelectContent>
+                  {RATE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value || "none"} value={o.value || "none"}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground mt-1">La tariffa è indicativa. Il compenso finale dipende dal turno proposto dal ristoratore.</p>
             </div>
             <div>
@@ -577,28 +661,13 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
               </Select>
             </div>
           </div>
-          <div>
-            <Label>Descrizione professionale</Label>
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={5}
-              maxLength={500}
-              placeholder="Scrivi in poche righe la tua esperienza, il tipo di locali in cui hai lavorato o i servizi che sai gestire."
-            />
-            <p className="text-xs text-muted-foreground mt-1">{text.length}/500 caratteri</p>
-          </div>
         </div>
       ) : (
         <div className="space-y-2 text-sm">
-          <Row label="Anni di esperienza" value={profile?.experience_years != null ? String(profile.experience_years) : null} />
+          <Row label="Anni di esperienza" value={yearsLabel(profile?.experience_years)} />
           <Row label="Livello" value={levelLabel(profile?.experience_level)} />
-          <Row label="Tariffa oraria desiderata" value={profile?.hourly_rate != null ? `${Number(profile.hourly_rate).toFixed(2)} €/h` : null} />
+          <Row label="Tariffa oraria desiderata" value={rateLabel(profile?.hourly_rate)} />
           <Row label="Automunito" value={motorLabel} />
-          <div className="pt-2">
-            <div className="text-xs text-muted-foreground mb-1">Descrizione professionale</div>
-            <p className="whitespace-pre-wrap text-muted-foreground">{initialBio || "Profilo non specificato"}</p>
-          </div>
         </div>
       )}
     </ProfileBox>

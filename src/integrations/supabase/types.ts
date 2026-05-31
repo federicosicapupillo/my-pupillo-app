@@ -849,7 +849,7 @@ export type Database = {
           experience_level:
             | Database["public"]["Enums"]["experience_level"]
             | null
-          experience_years: number | null
+          experience_years: string | null
           first_name: string | null
           full_name: string | null
           hourly_availability: string | null
@@ -1016,7 +1016,7 @@ export type Database = {
           experience_level?:
             | Database["public"]["Enums"]["experience_level"]
             | null
-          experience_years?: number | null
+          experience_years?: string | null
           first_name?: string | null
           full_name?: string | null
           hourly_availability?: string | null
@@ -1183,7 +1183,7 @@ export type Database = {
           experience_level?:
             | Database["public"]["Enums"]["experience_level"]
             | null
-          experience_years?: number | null
+          experience_years?: string | null
           first_name?: string | null
           full_name?: string | null
           hourly_availability?: string | null
@@ -2395,7 +2395,7 @@ export type Database = {
           experience_level:
             | Database["public"]["Enums"]["experience_level"]
             | null
-          experience_years: number | null
+          experience_years: string | null
           first_name: string | null
           full_name: string | null
           hourly_availability: string | null
