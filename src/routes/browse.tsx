@@ -328,6 +328,130 @@ function Browse() {
     return out;
   }, [items, roleF, speedF, q, maxKm, onlyNotApplied, onlyFav, sort, profile, appliedIds, favIds, restaurantsById]);
 
+  // Soft-matching: per ogni annuncio della lista calcoliamo la compatibilità
+  // rispetto alla disponibilità del lavoratore (settimanale + eccezioni
+  // speciali). NON è un filtro: gli annunci non compatibili restano
+  // visibili. Serve solo per dare priorità in lista e per il badge.
+  const compatById = useMemo(() => {
+    const map: Record<string, "compatible" | "partial" | "unknown" | "incompatible" | "other_city"> = {};
+    for (const a of items) {
+      const dayExc = (specialExceptions ?? []).filter((e) => e.date === a.service_date);
+      const block = computeSpecialAvailabilityBlock(specialExceptions, a);
+      if (block?.blocked) {
+        map[a.id] = "incompatible";
+        continue;
+      }
+      const hasWeekly = (weeklyAvailability ?? []).length > 0;
+      if (!hasWeekly && dayExc.length === 0) {
+        map[a.id] = "unknown";
+        continue;
+      }
+      const start = a.service_time ? a.service_time.slice(0, 5) : null;
+      const end = a.end_time ? a.end_time.slice(0, 5) : null;
+      const level = computeCompatibility(
+        weeklyAvailability ?? [],
+        dayExc,
+        a.service_date,
+        start,
+        end,
+        a.job_city ?? null,
+      );
+      if (level === "disponibile" || level === "compatibile") map[a.id] = "compatible";
+      else if (level === "parziale") map[a.id] = "partial";
+      else if (level === "non_disponibile") {
+        // distinguiamo "altra città" da "fuori disponibilità oraria"
+        const workerCities = new Set(
+          (weeklyAvailability ?? [])
+            .map((r) => (r.city ?? "").trim().toLowerCase())
+            .filter(Boolean),
+        );
+        const annCity = (a.job_city ?? "").trim().toLowerCase();
+        if (annCity && workerCities.size > 0 && !workerCities.has(annCity)) {
+          map[a.id] = "other_city";
+        } else {
+          map[a.id] = "incompatible";
+        }
+      } else map[a.id] = "unknown";
+    }
+    return map;
+  }, [items, weeklyAvailability, specialExceptions]);
+
+  // Ordina la lista filtrata: prima compatibili, poi parziali/unknown,
+  // poi non compatibili / altra città. Mai nascondere.
+  const tier = (id: string): number => {
+    const c = compatById[id];
+    if (c === "compatible") return 0;
+    if (c === "partial") return 1;
+    if (c === "unknown") return 2;
+    if (c === "other_city") return 3;
+    return 4; // incompatible
+  };
+  const orderedFiltered = useMemo(() => {
+    // Stable sort: applica solo se l'utente NON ha scelto un ordinamento
+    // esplicito alternativo (pay/date). Per "recent" usiamo il sort di
+    // affinità sopra l'ordine di arrivo già rispettato dalla query.
+    if (sort !== "recent") return filtered;
+    return [...filtered].sort((a, b) => tier(a.id) - tier(b.id));
+  }, [filtered, compatById, sort]);
+  const firstOtherIdx = useMemo(() => {
+    if (sort !== "recent") return -1;
+    const idx = orderedFiltered.findIndex((a) => tier(a.id) > 0);
+    return idx;
+  }, [orderedFiltered, compatById, sort]);
+  const hasCompatibleHeader =
+    sort === "recent" &&
+    firstOtherIdx > 0 &&
+    orderedFiltered.length - firstOtherIdx > 0;
+
+  useEffect(() => {
+    if (loading || !user) return;
+    const counts = { compatible: 0, partial: 0, unknown: 0, other_city: 0, incompatible: 0 };
+    for (const a of items) {
+      const k = compatById[a.id] ?? "unknown";
+      (counts as any)[k] = ((counts as any)[k] ?? 0) + 1;
+    }
+    const explicitFilters = {
+      role: roleF !== "any" ? roleF : null,
+      speed: speedF !== "any" ? speedF : null,
+      max_km: maxKm || null,
+      text: q || null,
+      only_not_applied: onlyNotApplied,
+      only_favorites: onlyFav,
+      sort,
+    };
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_VISIBILITY_NOT_HARD_FILTER_DEBUG]", {
+      page: "trova_offerte",
+      current_user_id: user.id,
+      selected_filters: explicitFilters,
+      worker_availability_city: (weeklyAvailability ?? []).map((r) => r.city).filter(Boolean),
+      worker_extra_availability_city: (specialExceptions ?? []).map((e) => e.city).filter(Boolean),
+      selected_announcement_city: null,
+      hard_filters_applied: false,
+      soft_matching_used: true,
+      total_items_before_filters: items.length,
+      total_items_after_filters: filtered.length,
+      total_items_final_rendered: orderedFiltered.length,
+    });
+    // eslint-disable-next-line no-console
+    console.log("[PUPILLO_WORKER_FIND_OFFERS_SOFT_MATCH_DEBUG]", {
+      worker_user_id: user.id,
+      worker_availability: (weeklyAvailability ?? []).map((r) => ({
+        day_of_week: r.day_of_week, city: r.city, district: r.district,
+      })),
+      worker_extra_availability: (specialExceptions ?? []).map((e) => ({
+        date: e.date, city: e.city, is_available: e.is_available,
+      })),
+      total_real_offers: items.length,
+      offers_compatible: counts.compatible,
+      offers_partial_or_unknown: counts.partial + counts.unknown,
+      offers_other_city: counts.other_city,
+      offers_not_compatible: counts.incompatible,
+      offers_final_rendered: orderedFiltered.length,
+      offer_excluded_reason: null, // mai escluse: filtro hard non applicato
+    });
+  }, [loading, user, items, filtered, orderedFiltered, compatById, weeklyAvailability, specialExceptions, roleF, speedF, maxKm, q, onlyNotApplied, onlyFav, sort]);
+
   const toggleFav = async (annId: string) => {
     if (!user) return;
     if (favIds.has(annId)) {
