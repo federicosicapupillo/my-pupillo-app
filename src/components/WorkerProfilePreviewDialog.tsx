@@ -121,9 +121,20 @@ export function WorkerProfilePreviewDialog({
         if (!cancelled) setWorkedTogether(!!(sx && sx.length > 0));
       }
       setLoading(false);
+      if (typeof console !== "undefined") {
+        console.log("[PUPILLO_WORKER_PROFILE_MODAL_OPEN_DEBUG]", {
+          pagina_origine: source ?? "unknown",
+          worker_user_id: workerId,
+          profile_id: workerId,
+          nome_lavoratore: (profile as any)?.full_name ?? null,
+          popup_aperto: true,
+          dati_caricati: !!profile,
+          recensioni_caricate: revs?.length ?? 0,
+        });
+      }
     })();
     return () => { cancelled = true; };
-  }, [open, workerId, user?.id, role]);
+  }, [open, workerId, user?.id, role, source]);
 
   // Privacy: mostra Nome e Cognome solo se ristoratore ↔ lavoratore hanno
   // già completato almeno un turno. Altrimenti label anonima "ruolo verificato".
