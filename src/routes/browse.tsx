@@ -153,8 +153,101 @@ function Browse() {
     // an application/shift on the announcement (enforced by RLS).
     // Vista nazionale: carichiamo tutti gli annunci attivi in Italia (rule 1-3).
     // L'ordinamento per compatibilità avviene client-side nel useMemo.
-    const { data: anns } = await (supabase as any).from("announcements_public").select("*").eq("status","active").order("created_at",{ascending:false}).limit(500);
-    const list = (anns as Ann[]) ?? [];
+    const { data: anns } = await (supabase as any)
+      .from("announcements_public")
+      .select("*")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const rawList = (anns as Ann[]) ?? [];
+    const supabaseCount = rawList.length;
+
+    // Filtro stato: solo "active" (già applicato dalla query), ma rimuoviamo
+    // difensivamente eventuali stati che NON devono comparire al lavoratore.
+    const HIDDEN_STATUSES = new Set([
+      "draft", "deleted", "archived", "closed", "cancelled",
+      "expired", "assigned", "completed",
+    ]);
+    const statusFiltered = rawList.filter((a) => !HIDDEN_STATUSES.has(String(a.status)));
+
+    // Carica i profili dei ristoratori per filtrare gli annunci orfani:
+    // - ristoratore eliminato (is_deleted)
+    // - ristoratore non esistente nel DB
+    // - utente che non ha ruolo "restaurant" (es. admin)
+    const restIdsAll = Array.from(new Set(statusFiltered.map((a) => a.restaurant_id))).filter(Boolean);
+    const validRestaurantIds = new Set<string>();
+    const restaurantsMeta: Record<string, { city: string | null; neighborhood: string | null }> = {};
+    if (restIdsAll.length) {
+      const [{ data: rs }, { data: roles }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, city, neighborhood, is_deleted")
+          .in("id", restIdsAll),
+        (supabase as any)
+          .from("user_roles")
+          .select("user_id, role")
+          .in("user_id", restIdsAll),
+      ]);
+      const restaurantRoleIds = new Set<string>();
+      const adminRoleIds = new Set<string>();
+      for (const r of ((roles ?? []) as any[])) {
+        if (r?.role === "restaurant" && r?.user_id) restaurantRoleIds.add(r.user_id);
+        if (r?.role === "admin" && r?.user_id) adminRoleIds.add(r.user_id);
+      }
+      const existingProfileIds = new Set<string>();
+      for (const r of ((rs ?? []) as any[])) {
+        existingProfileIds.add(r.id);
+        restaurantsMeta[r.id] = { city: r.city, neighborhood: r.neighborhood };
+        const notDeleted = r.is_deleted !== true;
+        const isRestaurant = restaurantRoleIds.has(r.id);
+        const isAdmin = adminRoleIds.has(r.id);
+        if (notDeleted && isRestaurant && !isAdmin) {
+          validRestaurantIds.add(r.id);
+        }
+      }
+      // Log offerte invalide (orfane / ristoratore eliminato / no role / admin)
+      for (const a of statusFiltered) {
+        if (validRestaurantIds.has(a.restaurant_id)) continue;
+        let reason = "unknown";
+        if (!existingProfileIds.has(a.restaurant_id)) reason = "ristoratore inesistente";
+        else if (!restaurantRoleIds.has(a.restaurant_id)) reason = "utente senza ruolo restaurant";
+        else if (adminRoleIds.has(a.restaurant_id)) reason = "utente con ruolo admin";
+        else reason = "ristoratore eliminato (is_deleted=true)";
+        console.log("[PUPILLO_WORKER_FIND_OFFERS_INVALID_OFFER_DEBUG]", {
+          announcement_id: a.id,
+          title: a.professional_profile,
+          restaurant_user_id: a.restaurant_id,
+          status: a.status,
+          service_date: a.service_date,
+          reason,
+        });
+      }
+    }
+    setRestaurantsById(restaurantsMeta);
+
+    const restaurantFiltered = statusFiltered.filter((a) => validRestaurantIds.has(a.restaurant_id));
+
+    // Deduplicazione per announcement_id (difensiva contro join doppi).
+    const seen = new Set<string>();
+    const list: Ann[] = [];
+    for (const a of restaurantFiltered) {
+      if (seen.has(a.id)) continue;
+      seen.add(a.id);
+      list.push(a);
+    }
+
+    console.log("[PUPILLO_WORKER_FIND_OFFERS_SOURCE_DEBUG]", {
+      worker_user_id: user?.id ?? null,
+      source: "supabase:announcements_public",
+      supabase_count: supabaseCount,
+      mock_count: 0,
+      after_status_filter: statusFiltered.length,
+      after_real_restaurant_filter: restaurantFiltered.length,
+      after_dedup: list.length,
+      final_rendered: list.length,
+      titles: list.map((a) => a.professional_profile),
+    });
+
     setItems(list);
     // Multi-position: load workers_needed per announcement and accepted count.
     const annIds = list.map(a => a.id);
@@ -173,14 +266,6 @@ function Browse() {
       });
       setWorkersNeededById(needMap);
       setFilledById(fillMap);
-    }
-    const restIds = Array.from(new Set(list.map(a => a.restaurant_id)));
-    if (restIds.length) {
-      const { data: rs } = await supabase.from("profiles")
-        .select("id, city, neighborhood").in("id", restIds);
-      const map: Record<string, { city: string | null; neighborhood: string | null }> = {};
-      for (const r of (rs ?? []) as any[]) map[r.id] = { city: r.city, neighborhood: r.neighborhood };
-      setRestaurantsById(map);
     }
     if (user) {
       const [{data:apps},{data:favs}] = await Promise.all([
