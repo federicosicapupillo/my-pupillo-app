@@ -22,6 +22,29 @@ Le due tabelle hanno molti campi sovrapposti (indirizzo, requisiti, dress code, 
 
 **Azione consigliata:** documentare il purpose di ciascuna (es. `job_requests` = bozza, `announcements` = pubblicato) e valutare merge/foreign key.
 
+**Stato confermato (utente):** entrambe sono in uso attivo nel codice
+(`job_requests` referenziata in `admin.backend.tsx`, `dashboard.tsx`,
+`ristoratore.annunci.nuovo.tsx`, `ristoratore.turni.$shiftId.tsx`,
+`messages.$id.tsx`, `announcements.$id.tsx`, e nelle funzioni
+`backup-system`, `backup-restore`, `cleanup-test-profiles`,
+`announcement-positions`). Nessuna delle due è da deprecare oggi: il
+merge va valutato in una fase di refactor dedicata, non in export.
+
+## 2bis. GitHub CI workflow
+
+`.github/workflows/ci.yml` è già configurato (lint + test + coverage su
+Bun, push/PR su `main`). Per Antigravity non servono modifiche: importare
+il repo conserva il workflow. Verificare solo che i secrets necessari
+(`SUPABASE_*`, `STRIPE_*`, `LOVABLE_API_KEY`) siano replicati in
+GitHub → Settings → Secrets se si vogliono eseguire test E2E in CI.
+
+## 2ter. `.env.example`
+
+Creato `.env.example` alla root con i nomi (senza valori) di tutte le
+variabili attese: Supabase client/server, Stripe sandbox/live, Lovable AI,
+e placeholder commentati per Twilio / Mapbox. Usarlo come riferimento
+quando si importa il progetto in Antigravity o altro ambiente.
+
 ## 3. File seed / demo / utility alla root
 
 File alla radice del progetto utili in dev ma fuori posto:
