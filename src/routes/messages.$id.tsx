@@ -750,17 +750,45 @@ function Thread() {
           .maybeSingle();
         setShift((sh as Shift | null) ?? null);
         if (sh && user) {
-          // Recupera la recensione del turno (visibile sia al ristoratore
-          // sia al lavoratore: serve a renderizzare la card "Turno chiuso
-          // e recensione ricevuta" anche lato lavoratore).
-          const { data: rev } = await supabase
-            .from("reviews")
-            .select("id, rating, comment, tags, created_at, author_id, target_id, shift_id, punctuality, professionalism, competence, reliability, teamwork, would_rehire, positive_tags, negative_tags")
-            .eq("shift_id", (sh as any).id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          setExistingReview((rev as Review | null) ?? null);
+          // Recupera ENTRAMBE le direzioni di recensione per il turno:
+          //   - restaurant_to_worker  (esistente: `existingReview`)
+          //   - worker_to_restaurant  (nuovo:    `workerToRestaurantReview`)
+          // Usare un'unica query "qualsiasi recensione del turno" porta al
+          // bug per cui lato ristoratore appare "Recensione inviata" non
+          // appena il LAVORATORE invia la sua recensione.
+          const reviewCols = "id, rating, comment, tags, created_at, author_id, target_id, shift_id, punctuality, professionalism, competence, reliability, teamwork, would_rehire, positive_tags, negative_tags";
+          const restaurantId = (sh as any).restaurant_id as string;
+          const workerId = (sh as any).worker_id as string;
+          const [{ data: rRev }, { data: wRev }] = await Promise.all([
+            supabase
+              .from("reviews")
+              .select(reviewCols)
+              .eq("shift_id", (sh as any).id)
+              .eq("author_id", restaurantId)
+              .eq("target_id", workerId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            supabase
+              .from("reviews")
+              .select(reviewCols)
+              .eq("shift_id", (sh as any).id)
+              .eq("author_id", workerId)
+              .eq("target_id", restaurantId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+          ]);
+          setExistingReview((rRev as Review | null) ?? null);
+          setWorkerToRestaurantReview((wRev as Review | null) ?? null);
+          if (typeof console !== "undefined") {
+            console.log("[PUPILLO_REVIEW_DIRECTION_CHECK]", {
+              shift_id: (sh as any).id,
+              restaurant_to_worker_review_id: (rRev as any)?.id ?? null,
+              worker_to_restaurant_review_id: (wRev as any)?.id ?? null,
+              viewer_role: role,
+            });
+          }
         }
       }
       setLoading(false);
