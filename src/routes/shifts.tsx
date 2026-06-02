@@ -661,6 +661,41 @@ function ShiftsPage() {
     scheduled: shifts.filter(s => s.status === "scheduled").length,
   }), [shifts]);
 
+  // Worker-side: choose the default tab by priority once shifts are loaded.
+  // Priority: no_show/segnalazioni → assigned → to-review → completed.
+  // Skipped when a URL ?tab=... was provided (e.g. notification redirect).
+  useEffect(() => {
+    if (loading) return;
+    if (role !== "worker") return;
+    if (defaultTabAppliedRef.current) return;
+    const next: typeof filter =
+      counts.noShow > 0 ? "no_show"
+      : counts.assigned > 0 ? "assigned"
+      : counts.toReview > 0 ? "to-review"
+      : counts.completed > 0 ? "completed"
+      : "assigned";
+    try {
+      const ctx = {
+        worker_id: user?.id ?? null,
+        count_segnalazioni: counts.noShow,
+        count_no_show: counts.noShow,
+        count_assegnati: counts.assigned,
+        count_da_recensire: counts.toReview,
+        count_conclusi: counts.completed,
+        selected_default_tab: next,
+      };
+      console.log("[PUPILLO_WORKER_MY_SHIFTS_DEFAULT_TAB_CHECK]", ctx);
+      console.log("[PUPILLO_WORKER_MY_SHIFTS_PRIORITY_COUNTS]", ctx);
+      console.log("[PUPILLO_WORKER_MY_SHIFTS_TAB_PRIORITY_APPLIED]", ctx);
+      if (next === "no_show") console.log("[PUPILLO_WORKER_MY_SHIFTS_OPEN_SEGNAZIONI]", ctx);
+      else if (next === "assigned") console.log("[PUPILLO_WORKER_MY_SHIFTS_OPEN_ASSIGNED]", ctx);
+      else if (next === "to-review") console.log("[PUPILLO_WORKER_MY_SHIFTS_OPEN_TO_REVIEW]", ctx);
+      else if (next === "completed") console.log("[PUPILLO_WORKER_MY_SHIFTS_OPEN_CONCLUDED]", ctx);
+    } catch { /* ignore */ }
+    defaultTabAppliedRef.current = true;
+    setFilter(next);
+  }, [loading, role, counts, user?.id]);
+
   return (
     <AppShell>
       <PageHeader
