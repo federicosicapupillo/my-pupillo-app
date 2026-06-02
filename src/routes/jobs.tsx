@@ -314,6 +314,7 @@ function Jobs() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Bucket>("nuove");
   const [sortMode, setSortMode] = useState<SortMode>("service_date");
+  const [reviewRow, setReviewRow] = useState<Row | null>(null);
   const [lastSeenAt] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     const raw = window.localStorage.getItem(SEEN_KEY);
@@ -645,11 +646,33 @@ function Jobs() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {filtered.map((r) => (
-              <OfferCard key={r.id} r={r} lastSeenAt={lastSeenAt} onRespond={respond} />
+              <OfferCard
+                key={r.id}
+                r={r}
+                lastSeenAt={lastSeenAt}
+                onRespond={respond}
+                onOpenReview={(row) => {
+                  console.log("[PUPILLO_WORKER_REVIEW_MODAL_OPEN]", {
+                    application_id: row.id,
+                    shift_id: row.shift?.id ?? null,
+                  });
+                  setReviewRow(row);
+                }}
+              />
             ))}
           </div>
         )}
       </div>
+      <WorkerReviewDialog
+        row={reviewRow}
+        onClose={() => setReviewRow(null)}
+        onSubmitted={(rowId) => {
+          setRows((prev) =>
+            prev.map((r) => (r.id === rowId ? { ...r, hasWorkerReview: true } : r)),
+          );
+          setReviewRow(null);
+        }}
+      />
     </AppShell>
   );
 }
@@ -658,10 +681,12 @@ function OfferCard({
   r,
   lastSeenAt,
   onRespond,
+  onOpenReview,
 }: {
   r: Row;
   lastSeenAt: number;
   onRespond: (id: string, status: "interested" | "not_interested") => void;
+  onOpenReview: (r: Row) => void;
 }) {
   const isNew = r.status === "pending" && new Date(r.created_at).getTime() > lastSeenAt;
   const badge = statusBadge(r, isNew);
