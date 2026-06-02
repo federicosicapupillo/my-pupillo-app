@@ -202,5 +202,7 @@ export async function navigateFromNotificationLink(
   }
   // Unknown link → safe role-aware fallback
   void search; void hash; void UUID_RE; // reserved for future use
+  try { console.warn("[PUPILLO_WORKER_NOTIFICATION_INVALID_ROUTE]", { ...ctx, parts }); } catch { /* ignore */ }
+  try { console.log("[PUPILLO_WORKER_NOTIFICATION_404_PREVENTED]", { ...ctx }); } catch { /* ignore */ }
   return safeHome();
 }
