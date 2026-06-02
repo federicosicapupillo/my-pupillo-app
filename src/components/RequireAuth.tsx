@@ -14,7 +14,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     // are signed in.
     if (loading) return;
     if (user) return;
-    const currentPath = `${loc.pathname}${loc.searchStr ?? ""}`;
+    const currentPath = (loc as { href?: string }).href ?? loc.pathname;
     try {
       console.info("[PUPILLO_AUTH_REDIRECT_DEBUG]", {
         current_path: currentPath,
@@ -26,7 +26,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
       });
     } catch { /* ignore */ }
     nav({ to: "/auth", search: { redirect: currentPath } as never });
-  }, [user, loading, nav, loc.pathname, loc.searchStr, profile]);
+  }, [user, loading, nav, loc.pathname, (loc as { href?: string }).href, profile]);
   useEffect(() => {
     // If the profile has been soft-deleted (anonymized), log the user out immediately.
     if (user && profile && ((profile as { is_deleted?: boolean }).is_deleted || (profile as { deleted_at?: string | null }).deleted_at)) {
