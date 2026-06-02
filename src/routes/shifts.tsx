@@ -141,6 +141,11 @@ function ShiftsPage() {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "assigned"
   );
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
+  // True once we've applied the worker auto-default-tab priority logic.
+  // Prevents resetting the tab after the user manually switches it.
+  const defaultTabAppliedRef = useRef<boolean>(
+    typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("tab")
+  );
   const focusRef = useRef<HTMLDivElement | null>(null);
   const [focusedShift, setFocusedShift] = useState<string | null>(initialFocusShift);
   // After the focused shift card mounts, scroll it into view and fade the
