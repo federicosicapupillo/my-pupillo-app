@@ -1414,8 +1414,8 @@ function Onboarding() {
             : "Completa il tuo profilo per candidarti agli annunci vicino a te."
         }
       />
-      <form onSubmit={submit} className="w-full max-w-7xl mx-auto space-y-5 rounded-2xl border bg-card p-4 sm:p-6">
-        <div id="sec-personal" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
+      <form onSubmit={submit} className="w-full max-w-5xl mx-auto space-y-4 rounded-2xl border bg-card p-4 sm:p-5">
+        <div id="sec-personal" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
           {role !== "worker" ? (
             <div>
               <Label>Nome e cognome</Label>
@@ -1445,7 +1445,7 @@ function Onboarding() {
               })()}
             </div>
           ) : null}
-          <div id="sec-phone" data-field="phone" className="scroll-mt-24 rounded-lg border bg-card/40 p-4 space-y-3">
+          <div id="sec-phone" data-field="phone" className="scroll-mt-24 rounded-lg border bg-card/40 p-3 space-y-2">
             <div>
               <Label className="text-base font-semibold">Numero di cellulare *</Label>
               <p className="text-xs text-muted-foreground mt-1">
@@ -1707,7 +1707,7 @@ function Onboarding() {
         </div>
         {role === "restaurant" ? (
           <>
-            <div id="sec-business" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
+            <div id="sec-business" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
               <div>
                 <Label>Nome locale</Label>
                 <Input
@@ -1799,7 +1799,7 @@ function Onboarding() {
                 </select>
               </div>
             </div>
-            <div id="sec-location" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
+            <div id="sec-location" className="grid gap-x-6 gap-y-4 md:grid-cols-[1fr_140px] items-start scroll-mt-24">
               <div>
                 <Label>Indirizzo *</Label>
                 <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} data-field="address" />
@@ -1812,7 +1812,7 @@ function Onboarding() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start">
               <div data-field="province" className="scroll-mt-24">
                 <Label>Provincia *</Label>
                 <select
@@ -1847,7 +1847,7 @@ function Onboarding() {
                 </select>
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-4 md:grid-cols-3 items-start">
               <div data-field="district" className="scroll-mt-24">
                  <Label>Zona / quartiere</Label>
                  <DistrictField
