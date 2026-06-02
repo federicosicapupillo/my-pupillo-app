@@ -141,6 +141,11 @@ function ShiftsPage() {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "assigned"
   );
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
+  // True once we've applied the worker auto-default-tab priority logic.
+  // Prevents resetting the tab after the user manually switches it.
+  const defaultTabAppliedRef = useRef<boolean>(
+    typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("tab")
+  );
   const focusRef = useRef<HTMLDivElement | null>(null);
   const [focusedShift, setFocusedShift] = useState<string | null>(initialFocusShift);
   // After the focused shift card mounts, scroll it into view and fade the
@@ -656,6 +661,41 @@ function ShiftsPage() {
     scheduled: shifts.filter(s => s.status === "scheduled").length,
   }), [shifts]);
 
+  // Worker-side: choose the default tab by priority once shifts are loaded.
+  // Priority: no_show/segnalazioni → assigned → to-review → completed.
+  // Skipped when a URL ?tab=... was provided (e.g. notification redirect).
+  useEffect(() => {
+    if (loading) return;
+    if (role !== "worker") return;
+    if (defaultTabAppliedRef.current) return;
+    const next: typeof filter =
+      counts.noShow > 0 ? "no_show"
+      : counts.assigned > 0 ? "assigned"
+      : counts.toReview > 0 ? "to-review"
+      : counts.completed > 0 ? "completed"
+      : "assigned";
+    try {
+      const ctx = {
+        worker_id: user?.id ?? null,
+        count_segnalazioni: counts.noShow,
+        count_no_show: counts.noShow,
+        count_assegnati: counts.assigned,
+        count_da_recensire: counts.toReview,
+        count_conclusi: counts.completed,
+        selected_default_tab: next,
+      };
+      console.log("[PUPILLO_WORKER_MY_SHIFTS_DEFAULT_TAB_CHECK]", ctx);
+      console.log("[PUPILLO_WORKER_MY_SHIFTS_PRIORITY_COUNTS]", ctx);
+      console.log("[PUPILLO_WORKER_MY_SHIFTS_TAB_PRIORITY_APPLIED]", ctx);
+      if (next === "no_show") console.log("[PUPILLO_WORKER_MY_SHIFTS_OPEN_SEGNAZIONI]", ctx);
+      else if (next === "assigned") console.log("[PUPILLO_WORKER_MY_SHIFTS_OPEN_ASSIGNED]", ctx);
+      else if (next === "to-review") console.log("[PUPILLO_WORKER_MY_SHIFTS_OPEN_TO_REVIEW]", ctx);
+      else if (next === "completed") console.log("[PUPILLO_WORKER_MY_SHIFTS_OPEN_CONCLUDED]", ctx);
+    } catch { /* ignore */ }
+    defaultTabAppliedRef.current = true;
+    setFilter(next);
+  }, [loading, role, counts, user?.id]);
+
   return (
     <AppShell>
       <PageHeader
@@ -671,16 +711,18 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["assigned", "upcoming", "completed", "to-review", "no_show", "past"] as const).map(f => {
+        {((role === "worker"
+          ? ["no_show", "assigned", "to-review", "completed"]
+          : ["assigned", "upcoming", "completed", "to-review", "no_show", "past"]) as Array<typeof filter>).map(f => {
           const label =
             f === "assigned" ? `Assegnati (${counts.assigned})`
             : f === "upcoming" ? `In attesa (${counts.pending})`
-            : f === "completed" ? `Completati (${counts.completed})`
+            : f === "completed" ? `Conclusi (${counts.completed})`
             : f === "past" ? `Archiviati / Passati (${counts.past})`
             : f === "no_show" ? `No show / Segnalazioni (${counts.noShow})`
             : `Da recensire (${counts.toReview})`;
           return (
-            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
+            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => { defaultTabAppliedRef.current = true; setFilter(f); }}>
               {label}
             </Button>
           );
