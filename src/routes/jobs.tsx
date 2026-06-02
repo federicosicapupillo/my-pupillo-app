@@ -22,6 +22,7 @@ import {
 import { formatTariff, formatTotalService, formatOfferDateTime } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
 import { venueTypeLabel } from "@/lib/venue-types";
+import { getShiftEndDate } from "@/lib/announcement-time";
 
 function roleEmoji(role: string | null | undefined): string {
   const r = (role || "").toLowerCase();
@@ -123,7 +124,14 @@ function isMutuallyConfirmed(r: Row): boolean {
 }
 
 function isCompleted(r: Row): boolean {
-  return r.shift?.status === "completed";
+  if (r.shift?.status === "completed") return true;
+  // Time-based completion: il turno è assegnato (shift esiste, non annullato)
+  // ma l'orario di fine effettiva è già passato → da recensire lato lavoratore.
+  if (r.shift && r.shift.status !== "cancelled" && r.announcement) {
+    const end = getShiftEndDate(r.announcement);
+    if (end && end.getTime() < Date.now()) return true;
+  }
+  return false;
 }
 
 function isCancelled(r: Row): boolean {
