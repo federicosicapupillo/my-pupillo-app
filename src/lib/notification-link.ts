@@ -73,7 +73,14 @@ export async function navigateFromNotificationLink(
   const search = rest.startsWith("?") ? rest.slice(1) : "";
   const hash = rest.startsWith("#") ? rest.slice(1) : raw.includes("#") ? raw.split("#")[1] : "";
   const path = pathOnly.replace(/\/+$/, "");
-  const parts = path.split("/").filter(Boolean);
+  let parts = path.split("/").filter(Boolean);
+  // Alias: /worker/shifts → /shifts (no /worker/* routes exist in this app)
+  if (parts[0] === "worker" && parts[1] === "shifts") parts = parts.slice(1);
+
+  // Parse search params once for routes that support tab/shift highlight.
+  const searchParams = new URLSearchParams(search);
+  const searchObj: Record<string, string> = {};
+  searchParams.forEach((v, k) => { searchObj[k] = v; });
 
   const seg = (i: number) => (parts[i] ?? "");
 
@@ -135,9 +142,23 @@ export async function navigateFromNotificationLink(
       }
       return navigate({ to: "/shifts" });
     }
-    // /shifts
+    // /shifts (preserve ?tab=to-review&shift=<id> from review notifications)
     if (parts.length === 1 && parts[0] === "shifts") {
-      return navigate({ to: "/shifts" });
+      const isReviewNotif = searchObj.tab === "to-review" || searchObj.tab === "da-recensire";
+      if (isReviewNotif) {
+        try {
+          console.log("[PUPILLO_WORKER_REVIEW_NOTIFICATION_CLICK]", { ...ctx });
+          console.log("[PUPILLO_WORKER_REVIEW_NOTIFICATION_TO_MY_SHIFTS]", {
+            ...ctx,
+            resolved_path: `/shifts?${searchParams.toString()}`,
+            shift_id: searchObj.shift ?? null,
+            fallback_used: false,
+          });
+        } catch { /* ignore */ }
+      }
+      // Normalize tab alias da-recensire → to-review (the real tab key)
+      if (searchObj.tab === "da-recensire") searchObj.tab = "to-review";
+      return navigate({ to: "/shifts", search: searchObj as never });
     }
     // /ristoratore/turni/<shiftId> — restaurant-only route.
     // Workers must never be sent here (would render "Permesso negato").
