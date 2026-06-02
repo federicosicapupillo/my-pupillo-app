@@ -2700,6 +2700,47 @@ function Onboarding() {
           {busy ? "Salvataggio in corso..." : "Salva e continua"}
         </Button>
       </form>
+      <Dialog
+        open={availabilityPromptOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAvailabilityPromptOpen(false);
+            nav({ to: "/dashboard" });
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Profilo completato!</DialogTitle>
+            <DialogDescription>
+              Ora puoi iniziare a ricevere proposte di lavoro. Imposta subito le tue disponibilità per farti trovare dai ristoratori e candidarti ai turni più adatti a te.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG] dismissed");
+                setAvailabilityPromptOpen(false);
+                nav({ to: "/dashboard" });
+              }}
+            >
+              Lo faccio dopo
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG] go to availability");
+                setAvailabilityPromptOpen(false);
+                nav({ to: "/availability" });
+              }}
+            >
+              Imposta disponibilità
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
