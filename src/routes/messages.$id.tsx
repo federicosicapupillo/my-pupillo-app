@@ -3890,23 +3890,17 @@ function ProposalCard(props: {
     "Ho già un altro impegno",
     "Altro motivo",
   ] as const;
-  // The proposal expires at the end of the shift (or, lacking end_time,
-  // at service_time + duration). After that it cannot be accepted/refused.
+  // The proposal expires at the SHIFT START (full local datetime). After the
+  // service has started, the worker can no longer accept/refuse — but until
+  // then the proposal must remain active even if end_time is "00:00" of the
+  // next day. Never compare bare HH:MM strings.
   const deadline = useMemo<Date | null>(() => {
     if (!ann?.service_date) return null;
-    const datePart = ann.service_date;
-    const endTime = (ann.end_time ?? "").slice(0, 5);
-    if (endTime) {
-      const d = new Date(`${datePart}T${endTime}:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
     const startTime = (ann.service_time ?? "").slice(0, 5);
     if (!startTime) return null;
-    const start = new Date(`${datePart}T${startTime}:00`);
-    if (isNaN(start.getTime())) return null;
-    const hours = Number(ann.duration_hours ?? 4) || 4;
-    return new Date(start.getTime() + hours * 60 * 60 * 1000);
-  }, [ann?.service_date, ann?.service_time, ann?.end_time, ann?.duration_hours]);
+    const start = new Date(`${ann.service_date}T${startTime}:00`);
+    return isNaN(start.getTime()) ? null : start;
+  }, [ann?.service_date, ann?.service_time]);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!deadline) return;
@@ -4102,7 +4096,7 @@ function ProposalCard(props: {
             <span>
               {expired
                 ? `Scaduta il ${deadline.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${deadline.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`
-                : `Valida fino al ${deadline.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${deadline.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`}
+                : `Scade il ${deadline.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${deadline.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`}
             </span>
           </div>
         )}
