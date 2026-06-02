@@ -956,9 +956,27 @@ function ShiftsPage() {
                 key={s.id}
                 ref={focusedShift === s.id ? focusRef : undefined}
                 className={`rounded-2xl border bg-card p-4 sm:p-5 transition ${
-                  focusedShift === s.id ? "ring-2 ring-primary border-primary/50 shadow-lg" : ""
+                  focusedShift === s.id && s.status === "no_show"
+                    ? "ring-2 ring-destructive border-destructive/60 shadow-lg bg-destructive/5 animate-pulse"
+                    : focusedShift === s.id
+                      ? "ring-2 ring-primary border-primary/50 shadow-lg"
+                      : ""
                 }`}
               >
+                {s.status === "no_show" && (
+                  <div className="mb-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-semibold flex items-center gap-2">
+                        <Badge variant="outline" className="border-destructive/40 bg-destructive/15 text-destructive text-[10px] uppercase tracking-wide">No show</Badge>
+                        Questo turno risulta segnalato come no show.
+                      </div>
+                      <div className="text-xs opacity-80 mt-0.5">
+                        Verifica i dettagli e contatta il ristoratore se non sei d'accordo.
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-medium truncate">{otherName}</div>
