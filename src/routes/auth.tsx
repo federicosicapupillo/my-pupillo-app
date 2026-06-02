@@ -32,6 +32,7 @@ export const Route = createFileRoute("/auth")({
     role: s.role === "worker" || s.role === "restaurant" ? s.role : undefined,
     ref: typeof s.ref === "string" ? s.ref : undefined,
     deleted: s.deleted === "1" ? "1" : undefined,
+    redirect: typeof s.redirect === "string" && s.redirect.startsWith("/") && !s.redirect.startsWith("//") ? s.redirect : undefined,
   }),
   component: AuthPage,
 });
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { user, role: userRole, profile, roleDebug, loading, extrasLoaded } = useAuth();
-  const { role: roleParam, ref: refParam, deleted: deletedParam } = Route.useSearch();
+  const { role: roleParam, ref: refParam, deleted: deletedParam, redirect: redirectParam } = Route.useSearch();
   const [tab, setTab] = useState<"login" | "signup">(roleParam ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -113,7 +114,12 @@ function AuthPage() {
     console.info("[PUPILLO_ROLE_FINAL_DEBUG] redirect decision", redirectDebug);
     // Admins bypass phone verification, onboarding and profile completion.
     if (finalRole === "admin") {
-      navigate({ to: "/admin" });
+      if (redirectParam) {
+        try { console.info("[PUPILLO_AUTH_REDIRECT_DEBUG]", { redirect_to: redirectParam, role: finalRole, reason: "after_login_deeplink" }); } catch { /* */ }
+        navigate({ to: redirectParam as never });
+      } else {
+        navigate({ to: "/admin" });
+      }
       return;
     }
     // Profile incomplete → onboarding (one onboarding route covers both roles)
@@ -121,7 +127,10 @@ function AuthPage() {
       navigate({ to: "/onboarding" });
       return;
     }
-    if (finalRole === "restaurant") navigate({ to: "/dashboard" });
+    if (redirectParam && (finalRole === "restaurant" || finalRole === "worker")) {
+      try { console.info("[PUPILLO_AUTH_REDIRECT_DEBUG]", { redirect_to: redirectParam, role: finalRole, reason: "after_login_deeplink" }); } catch { /* */ }
+      navigate({ to: redirectParam as never });
+    } else if (finalRole === "restaurant") navigate({ to: "/dashboard" });
     else if (finalRole === "worker") navigate({ to: "/jobs" });
     else if (finalRole === null) {
       // Authenticated but no role row in user_roles. Send the user to a
@@ -131,7 +140,7 @@ function AuthPage() {
       console.warn("[PUPILLO_ROLE_FINAL_DEBUG] redirecting to account-error", redirectDebug);
       navigate({ to: "/account-error" });
     }
-  }, [user, userRole, roleDebug, profile, loading, extrasLoaded, navigate, roleParam]);
+  }, [user, userRole, roleDebug, profile, loading, extrasLoaded, navigate, roleParam, redirectParam]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
