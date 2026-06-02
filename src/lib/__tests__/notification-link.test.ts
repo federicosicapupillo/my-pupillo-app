@@ -167,39 +167,15 @@ describe("navigateFromNotificationLink", () => {
       expect(nav.calls[0]).toEqual({ to: "/reviews/$id", params: { id: UUID_B } });
     });
 
-    it("resolves to the related chat for restaurants when review has an application_id", async () => {
+    it("opens the blind reciprocal popup route for restaurants", async () => {
+      // Restaurants land on /reviews/$id, where the BlindReciprocalReviewDialog
+      // enforces the "review-first, then unlock" rule. We no longer redirect
+      // to /messages or /ristoratore/turni from the notification.
       currentUserRole = "restaurant";
-      reviewLookup = { application_id: UUID_A, shift_id: null };
+      reviewLookup = { application_id: UUID_A, shift_id: UUID_A };
       const nav = makeNavigate();
       await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
-      expect(nav.calls[0]).toEqual({ to: "/messages/$id", params: { id: UUID_A } });
-    });
-
-    it("falls back to the shift detail for restaurants when only shift_id is present", async () => {
-      currentUserRole = "restaurant";
-      reviewLookup = { application_id: null, shift_id: UUID_A };
-      const nav = makeNavigate();
-      await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
-      expect(nav.calls[0]).toEqual({
-        to: "/ristoratore/turni/$shiftId",
-        params: { shiftId: UUID_A },
-      });
-    });
-
-    it("falls back to /shifts for restaurants when the review row has neither id", async () => {
-      currentUserRole = "restaurant";
-      reviewLookup = { application_id: null, shift_id: null };
-      const nav = makeNavigate();
-      await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
-      expect(nav.calls[0]).toEqual({ to: "/shifts" });
-    });
-
-    it("falls back to /shifts for restaurants when the review lookup throws", async () => {
-      currentUserRole = "restaurant";
-      reviewLookupShouldThrow = true;
-      const nav = makeNavigate();
-      await navigateFromNotificationLink(nav as any, `/reviews/${UUID_B}`);
-      expect(nav.calls[0]).toEqual({ to: "/shifts" });
+      expect(nav.calls[0]).toEqual({ to: "/reviews/$id", params: { id: UUID_B } });
     });
   });
 
