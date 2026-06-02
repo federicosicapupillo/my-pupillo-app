@@ -1589,6 +1589,13 @@ function AnnouncementDetailsDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {shiftStarted && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200 flex gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>Questo turno è già iniziato. L'annuncio può essere solo visualizzato.</span>
+          </div>
+        )}
+
         {!editing ? (
           <div className="space-y-5 text-sm">
             <Section title="1. Dettagli turno">
