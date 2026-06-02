@@ -46,8 +46,11 @@ export async function navigateFromNotificationLink(
   navigate: Navigate,
   link: string | null | undefined,
 ): Promise<void> {
+  const ctx: Record<string, unknown> = { link };
+  try { console.log("[PUPILLO_WORKER_NOTIFICATION_CLICK]", ctx); } catch { /* ignore */ }
   // Resolve role once; used for safe fallbacks and access checks.
   const role = await getCurrentRole();
+  ctx.role = role;
   const safeHome = () => {
     if (role === "restaurant") return navigate({ to: "/dashboard" });
     if (role === "worker") return navigate({ to: "/jobs" });
@@ -58,7 +61,10 @@ export async function navigateFromNotificationLink(
   // selezionare manualmente la conversazione invece di vedere una pagina
   // di errore o di finire in una sezione (es. "I miei turni") che non
   // contiene il messaggio del ristoratore.
-  const fallback = () => navigate({ to: "/messages" });
+  const fallback = () => {
+    try { console.log("[PUPILLO_WORKER_NOTIFICATION_FALLBACK_USED]", { ...ctx, fallback: "/messages" }); } catch { /* ignore */ }
+    return navigate({ to: "/messages" });
+  };
 
   if (!isValidId(link)) return fallback();
   const raw = String(link).trim();
@@ -148,6 +154,23 @@ export async function navigateFromNotificationLink(
     if (parts.length === 2 && parts[0] === "announcements") {
       const id = seg(1);
       if (!isValidId(id)) return fallback();
+      // Se l'annuncio non è più accessibile (cancellato, scaduto, RLS),
+      // evita di aprire una pagina vuota: manda il lavoratore alle offerte.
+      try {
+        const { data: annRow } = await supabase
+          .from("announcements")
+          .select("id")
+          .eq("id", id)
+          .maybeSingle();
+        if (!annRow) {
+          try { console.warn("[PUPILLO_WORKER_NOTIFICATION_TARGET_NOT_FOUND]", { ...ctx, target_type: "announcement", target_id: id }); } catch { /* ignore */ }
+          if (role === "worker") return navigate({ to: "/jobs" });
+          return navigate({ to: "/announcements" });
+        }
+      } catch {
+        if (role === "worker") return navigate({ to: "/jobs" });
+      }
+      try { console.log("[PUPILLO_WORKER_NOTIFICATION_REDIRECT_RESOLVED]", { ...ctx, resolved_path: `/announcements/${id}` }); } catch { /* ignore */ }
       return navigate({ to: "/announcements/$id", params: { id } });
     }
     if (parts.length === 1 && parts[0] === "announcements") {
