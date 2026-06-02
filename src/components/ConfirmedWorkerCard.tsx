@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Award, MessageSquare, Star, ShieldCheck, BadgeCheck, Phone, FileCheck2 } from "lucide-react";
+import { Award, MessageSquare, Star, ShieldCheck, BadgeCheck, Phone, FileCheck2, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -177,8 +177,12 @@ export function ConfirmedWorkerCard({ worker, applicationId, lastReview }: Props
           <Button size="sm" variant="outline">Vedi scheda</Button>
         </Link>
       </div>
-      <p className="mt-2 text-[11px] text-muted-foreground">
-        La comunicazione con il lavoratore avviene tramite la chat interna Pupillo.
+      <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+        <ShieldAlert className="h-3.5 w-3.5 mt-px shrink-0 opacity-70" aria-hidden="true" />
+        <span>
+          Ti consigliamo di utilizzare la chat interna Pupillo per mantenere tracciabili
+          le comunicazioni e tutelare entrambe le parti in caso di incomprensioni o contestazioni.
+        </span>
       </p>
     </div>
   );
