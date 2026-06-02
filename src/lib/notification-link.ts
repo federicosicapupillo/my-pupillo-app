@@ -115,32 +115,14 @@ export async function navigateFromNotificationLink(
       }
     }
     // /reviews/<reviewId> — dedicated popup route for the worker.
-    // For restaurants we resolve to the related chat/shift instead.
+    // For restaurants we keep them on the popup route too, where the
+    // BlindReciprocalReviewDialog enforces the "review-first, then unlock"
+    // flow (see src/components/BlindReciprocalReviewDialog.tsx).
     if (parts.length === 2 && parts[0] === "reviews") {
       const reviewId = seg(1);
       if (!isValidId(reviewId)) return fallback();
-      if (role !== "restaurant") {
-        // worker (or unknown) → open the review popup route
-        return navigate({ to: "/reviews/$id", params: { id: reviewId } });
-      }
-      try {
-        const { data } = await supabase
-          .from("reviews")
-          .select("application_id, shift_id")
-          .eq("id", reviewId)
-          .maybeSingle();
-        const appId = (data as { application_id?: string | null } | null)?.application_id;
-        if (isValidId(appId)) {
-          return navigate({ to: "/messages/$id", params: { id: appId } });
-        }
-        const shiftId = (data as { shift_id?: string | null } | null)?.shift_id;
-        if (isValidId(shiftId)) {
-          return navigate({ to: "/ristoratore/turni/$shiftId", params: { shiftId } });
-        }
-      } catch {
-        /* fall through to fallback */
-      }
-      return navigate({ to: "/shifts" });
+      try { console.log("[PUPILLO_RESTAURANT_RECEIVED_REVIEW_NOTIFICATION_CLICK]", { ...ctx, reviewId }); } catch { /* */ }
+      return navigate({ to: "/reviews/$id", params: { id: reviewId } });
     }
     // /shifts (preserve ?tab=to-review&shift=<id> from review notifications)
     if (parts.length === 1 && parts[0] === "shifts") {
