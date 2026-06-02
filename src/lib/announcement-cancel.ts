@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getShiftStartDate } from "@/lib/announcement-time";
+
+export const SHIFT_STARTED_ERROR = "Non puoi modificare o annullare un turno già iniziato.";
 
 export const CANCELLATION_REASONS = [
   { value: "non_necessario", label: "Turno non più necessario" },
@@ -60,13 +63,33 @@ export async function cancelAnnouncementWithNotifications(
   // Idempotency: refuse to cancel twice.
   const { data: current, error: fetchErr } = await supabase
     .from("announcements")
-    .select("id, status, assigned_worker_id, cancelled_at")
+    .select("id, status, assigned_worker_id, cancelled_at, service_date, service_time, end_date, end_time, duration_hours, shift_duration_hours")
     .eq("id", announcementId)
     .maybeSingle();
   if (fetchErr) throw new Error(fetchErr.message);
   if (!current) throw new Error("Annuncio non trovato.");
   if ((current as any).status === "cancelled" || (current as any).cancelled_at) {
     return { notified: 0 };
+  }
+
+  // Guard: once the shift has started (current_timestamp >= shift_start_datetime),
+  // the restaurant can no longer cancel. Block both UI and direct API calls.
+  const nowDate = new Date();
+  const startDate = getShiftStartDate(current as never);
+  if (startDate && nowDate.getTime() >= startDate.getTime()) {
+    try {
+      console.warn("[PUPILLO_SHIFT_STARTED_ACTION_BLOCKED]", {
+        restaurant_id: restaurantId,
+        announcement_id: announcementId,
+        shift_id: (current as any).id,
+        shift_start_datetime: startDate.toISOString(),
+        current_timestamp: nowDate.toISOString(),
+        action_requested: "cancel_announcement",
+        blocked: true,
+        reason: "shift_already_started",
+      });
+    } catch { /* */ }
+    throw new Error(SHIFT_STARTED_ERROR);
   }
 
   const nowIso = new Date().toISOString();
