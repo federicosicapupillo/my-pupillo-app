@@ -499,6 +499,10 @@ function Thread() {
   const [serverAssign, setServerAssign] = useState<{ canAssign: boolean; reason: string | null } | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // Recensione lasciata dal LAVORATORE al ristoratore (worker_to_restaurant).
+  // Distinta da `existingReview`, che rappresenta SOLO la recensione del
+  // ristoratore verso il lavoratore (restaurant_to_worker).
+  const [workerToRestaurantReview, setWorkerToRestaurantReview] = useState<Review | null>(null);
   const [delayOpen, setDelayOpen] = useState(false);
   const [cancelPresenceOpen, setCancelPresenceOpen] = useState(false);
   const [workerReviews, setWorkerReviews] = useState<WorkerReview[]>([]);
