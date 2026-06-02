@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Star, MessageSquare } from "lucide-react";
+import { Star, MessageSquare, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { BlindReciprocalReviewDialog } from "@/components/BlindReciprocalReviewDialog";
 
 export type RestaurantReceivedReview = {
   id: string;
@@ -130,6 +131,11 @@ export function RestaurantReceivedReviewsList({
   const [anns, setAnns] = useState<Record<string, AnnInfo>>({});
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("newest");
+  /** Map reviewId → true when the restaurant has already left the
+   *  restaurant_to_worker counter-review (review unlocked). */
+  const [unlocked, setUnlocked] = useState<Record<string, boolean>>({});
+  const [openBlind, setOpenBlind] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,11 +147,28 @@ export function RestaurantReceivedReviewsList({
       setWorkers(data.workers);
       setShifts(data.shifts);
       setAnns(data.anns);
+      // For each received review, check if restaurant_to_worker exists for
+      // the same shift+worker. Only then unlock the card.
+      const map: Record<string, boolean> = {};
+      await Promise.all(
+        data.rows.map(async (r) => {
+          if (!r.shift_id) { map[r.id] = true; return; }
+          const { data: rec } = await supabase
+            .from("reviews")
+            .select("id")
+            .eq("shift_id", r.shift_id)
+            .eq("author_id", restaurantId)
+            .eq("target_id", r.author_id)
+            .maybeSingle();
+          map[r.id] = !!rec;
+        }),
+      );
+      if (!cancelled) setUnlocked(map);
       try { console.log("[PUPILLO_RESTAURANT_RECEIVED_REVIEWS_LOADED]", { count: data.rows.length }); } catch { /* */ }
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [restaurantId]);
+  }, [restaurantId, reloadKey]);
 
   const filtered = useMemo(() => {
     let r = rows.slice();
@@ -219,6 +242,32 @@ export function RestaurantReceivedReviewsList({
             const shiftDate = shift?.shift_date ?? ann?.service_date ?? null;
             const positive = (r.positive_tags ?? []).concat((r.tags ?? []).filter((t) => !(r.positive_tags ?? []).includes(t) && !(r.negative_tags ?? []).includes(t)));
             const negative = r.negative_tags ?? [];
+            const isUnlocked = unlocked[r.id] !== false; // default true until checked
+            if (!isUnlocked) {
+              return (
+                <div key={r.id} className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Lock className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+                    Hai ricevuto una recensione
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Lascia la tua recensione al lavoratore per sbloccarla.
+                  </p>
+                  <div className="text-xs text-muted-foreground">
+                    {name}{roleLabel ? ` — ${roleLabel}` : ""} · Turno del {formatDate(shiftDate)}
+                  </div>
+                  <div className="flex items-center gap-0.5 blur-sm select-none pointer-events-none" aria-hidden>
+                    <Stars value={5} />
+                  </div>
+                  <p className="text-xs italic text-muted-foreground blur-sm select-none pointer-events-none">
+                    Commento e tag nascosti
+                  </p>
+                  <div className="pt-1">
+                    <Button size="sm" onClick={() => setOpenBlind(r.id)}>Recensisci e sblocca</Button>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div key={r.id} className="rounded-2xl border bg-card p-4 space-y-2">
                 <div className="flex items-start justify-between gap-3">
@@ -252,6 +301,14 @@ export function RestaurantReceivedReviewsList({
             );
           })}
         </div>
+      )}
+      {openBlind && (
+        <BlindReciprocalReviewDialog
+          reviewId={openBlind}
+          open={!!openBlind}
+          onOpenChange={(o) => { if (!o) setOpenBlind(null); }}
+          onUnlocked={() => { setReloadKey((k) => k + 1); }}
+        />
       )}
     </div>
   );
