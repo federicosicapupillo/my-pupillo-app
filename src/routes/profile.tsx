@@ -578,7 +578,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
   };
   const rateLabel = (r: number | null) => {
     if (r == null) return "—";
-    if (r >= 21) return "Oltre 20 €/h";
+    if (r >= 31) return "Oltre 30 €/h";
     return `€${r}/h`;
   };
 
@@ -606,6 +606,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
 
   const RATE_OPTIONS = [
     { value: "", label: "Non specificato" },
+    { value: "8", label: "8 €/h" },
     { value: "9", label: "9 €/h" },
     { value: "10", label: "10 €/h" },
     { value: "11", label: "11 €/h" },
@@ -616,7 +617,9 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
     { value: "16", label: "16 €/h" },
     { value: "18", label: "18 €/h" },
     { value: "20", label: "20 €/h" },
-    { value: "oltre_20", label: "Oltre 20 €/h" },
+    { value: "25", label: "25 €/h" },
+    { value: "30", label: "30 €/h" },
+    { value: "oltre_30", label: "Oltre 30 €/h" },
   ];
 
   return (
