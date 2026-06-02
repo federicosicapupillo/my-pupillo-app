@@ -79,6 +79,7 @@ import {
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton";
 import { scrollToField } from "@/lib/form-field-validation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 /**
  * Compute per-field error messages for the three worker date inputs.
@@ -262,6 +263,7 @@ function Onboarding() {
   // Hard guard against duplicate submissions (covers the small window between
   // the click and React flushing the `busy` state).
   const submittingRef = useRef(false);
+  const [availabilityPromptOpen, setAvailabilityPromptOpen] = useState(false);
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
   const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
   const [vatChecking, setVatChecking] = useState(false);
@@ -1352,6 +1354,31 @@ function Onboarding() {
       "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] tempo totale salvataggio (ms)",
       Math.round(performance.now() - t0),
     );
+    // Per il lavoratore: se il profilo è completo al 100% e non ha ancora
+    // impostato disponibilità attive, mostra il popup motivazionale che lo
+    // invita a configurarle subito.
+    if (role === "worker") {
+      try {
+        const { count, error: availErr } = await supabase
+          .from("worker_availability")
+          .select("id", { count: "exact", head: true })
+          .eq("worker_id", user.id);
+        const hasAvailability = !availErr && (count ?? 0) > 0;
+        console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG]", {
+          worker_user_id: user.id,
+          profile_completed: true,
+          has_availability: hasAvailability,
+          show_popup: !hasAvailability,
+        });
+        void refresh();
+        if (!hasAvailability) {
+          setAvailabilityPromptOpen(true);
+          return;
+        }
+      } catch (e) {
+        console.error("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG] check failed", e);
+      }
+    }
     // Naviga subito al dashboard senza attendere il refresh del contesto
     // auth: il refresh può essere lento e non è bloccante per l'UI. Il
     // contesto viene comunque rinfrescato in background.
@@ -2673,6 +2700,47 @@ function Onboarding() {
           {busy ? "Salvataggio in corso..." : "Salva e continua"}
         </Button>
       </form>
+      <Dialog
+        open={availabilityPromptOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAvailabilityPromptOpen(false);
+            nav({ to: "/dashboard" });
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Profilo completato!</DialogTitle>
+            <DialogDescription>
+              Ora puoi iniziare a ricevere proposte di lavoro. Imposta subito le tue disponibilità per farti trovare dai ristoratori e candidarti ai turni più adatti a te.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG] dismissed");
+                setAvailabilityPromptOpen(false);
+                nav({ to: "/dashboard" });
+              }}
+            >
+              Lo faccio dopo
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG] go to availability");
+                setAvailabilityPromptOpen(false);
+                nav({ to: "/availability" });
+              }}
+            >
+              Imposta disponibilità
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
