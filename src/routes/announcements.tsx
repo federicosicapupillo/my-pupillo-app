@@ -1481,6 +1481,23 @@ function AnnouncementDetailsDialog({
   };
 
   const doSave = async () => {
+    if (shiftStarted) {
+      try {
+        console.warn("[PUPILLO_SHIFT_EDIT_BLOCKED_AFTER_START]", {
+          announcement_id: ann.id,
+          shift_id: ann.id,
+          shift_start_datetime: getShiftStartDate(ann)?.toISOString() ?? null,
+          current_timestamp: new Date().toISOString(),
+          action_requested: "update_announcement",
+          blocked: true,
+          reason: "shift_already_started",
+        });
+      } catch { /* */ }
+      toast.error("Non puoi modificare o annullare un turno già iniziato.");
+      setEditing(false);
+      setConfirmOpen(false);
+      return;
+    }
     setSaving(true);
     const payload: any = {
       required_skills: form.required_skills,
