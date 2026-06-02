@@ -13,6 +13,7 @@ import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
+import { RestaurantReputationCard } from "@/components/RestaurantReputationCard";
 import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
 import {
   AlertDialog,
@@ -336,6 +337,18 @@ function DashboardInner() {
       )}
 
       {role === "restaurant" && <FavoriteWorkersSection />}
+
+      {role === "restaurant" && user && (
+        <section className="mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-primary" />
+              <h2 className="font-semibold">Reputation Score</h2>
+            </div>
+          </div>
+          <RestaurantReputationCard restaurantId={user.id} />
+        </section>
+      )}
 
       {role === "worker" && user && profile && (
         <div className="mt-6 space-y-6">
