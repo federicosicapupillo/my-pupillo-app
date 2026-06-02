@@ -92,6 +92,14 @@ export function NotificationBell() {
 
   const openItem = async (n: Notif) => {
     setOpen(false);
+    try {
+      console.info("[PUPILLO_NOTIFICATION_CLICK_DEBUG]", {
+        notification_id: n.id,
+        notification_type: (n as { type?: string }).type ?? null,
+        target_url: n.link ?? null,
+        user_id: user?.id ?? null,
+      });
+    } catch { /* ignore */ }
     if (!n.read) {
       // optimistic update
       setItems(prev => prev.map(i => i.id === n.id ? { ...i, read: true } : i));
