@@ -1850,6 +1850,7 @@ function Thread() {
     punctuality: number;
     professionalism: number;
     serviceQuality: number;
+    teamwork: number;
     comment: string;
     positiveLabels: string[];
     negativeLabels: string[];
@@ -1860,18 +1861,31 @@ function Thread() {
       toast.error("Solo il ristoratore può lasciare una recensione.");
       return;
     }
-    const { general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels, wouldRehire } = payload;
+    const { general, reliability, punctuality, professionalism, serviceQuality, teamwork, comment, positiveLabels, negativeLabels, wouldRehire } = payload;
     if (!general || !reliability || !punctuality || !professionalism || !serviceQuality) {
       toast.error("Completa tutte le valutazioni prima di inviare la recensione.");
       return;
     }
     if (!wouldRehire) {
-      toast.error("Indica se richiameresti questo lavoratore.");
+      toast.error("Seleziona se richiameresti questo lavoratore per un prossimo turno.");
       return;
     }
     const trimmed = comment.trim();
     if (trimmed.length > 500) {
       toast.error("Il commento può contenere al massimo 500 caratteri.");
+      return;
+    }
+
+    // Anti-duplicato lato client (DB ha vincolo uniq_reviews_shift_author come backstop)
+    if (existingReview) {
+      try {
+        console.log("[PUPILLO_REVIEW_ALREADY_EXISTS_BLOCKED]", {
+          restaurant_id: app.restaurant_id, worker_id: app.worker_id,
+          shift_id: shift?.id ?? null, review_id: existingReview.id,
+        });
+      } catch { /* */ }
+      toast.error("Hai già lasciato una recensione per questo turno.");
+      setReviewOpen(false);
       return;
     }
 
@@ -1924,7 +1938,7 @@ function Thread() {
       professionalism,
       competence: serviceQuality,
       reliability,
-      teamwork: serviceQuality,
+      teamwork,
       application_id: app.id,
       announcement_id: app.announcement_id,
       is_visible_to_restaurants: true,
@@ -1933,13 +1947,30 @@ function Thread() {
     } as never).select("*").single();
     if (error) {
       if (String(error.message).toLowerCase().includes("uniq_reviews_shift_author") || (error as any).code === "23505") {
-        toast.error("Hai già recensito questo turno.");
+        try { console.log("[PUPILLO_REVIEW_ALREADY_EXISTS_BLOCKED]", {
+          restaurant_id: app.restaurant_id, worker_id: app.worker_id, shift_id: shiftId,
+        }); } catch { /* */ }
+        toast.error("Hai già lasciato una recensione per questo turno.");
       } else {
         toast.error(error.message);
       }
       return;
     }
     setExistingReview(data as Review);
+    try {
+      console.log("[PUPILLO_REVIEW_SAVED_SUCCESS]", {
+        restaurant_id: app.restaurant_id, worker_id: app.worker_id,
+        shift_id: shiftId, review_id: (data as any)?.id ?? null,
+        review_saved: true,
+      });
+      if (workerToRestaurantReview) {
+        console.log("[PUPILLO_RECEIVED_REVIEW_UNLOCKED]", {
+          restaurant_id: app.restaurant_id, worker_id: app.worker_id,
+          shift_id: shiftId, received_review_id: workerToRestaurantReview.id,
+          received_review_unlocked: true,
+        });
+      }
+    } catch { /* */ }
     // UN SOLO messaggio di sistema combinato in chat ("Turno chiuso e
     // recensione ricevuta"), con anti-duplicato. Non inviare anche il
     // vecchio messaggio "Turno chiuso" — evita doppioni lato lavoratore.
@@ -3189,6 +3220,9 @@ function Thread() {
             endTime={ann?.end_time ?? null}
             venue={displayAddress}
             shiftStatus={shift?.status ?? null}
+            workerId={app.worker_id}
+            restaurantId={app.restaurant_id}
+            shiftId={shift?.id ?? null}
             onSubmit={submitReview}
           />
         )}
@@ -3653,24 +3687,28 @@ function ReviewDialog(props: {
   endTime: string | null;
   venue: string | null;
   shiftStatus: string | null;
+  workerId?: string | null;
+  restaurantId?: string | null;
+  shiftId?: string | null;
   onSubmit: (payload: {
     general: number;
     reliability: number;
     punctuality: number;
     professionalism: number;
     serviceQuality: number;
+    teamwork: number;
     comment: string;
     positiveLabels: string[];
     negativeLabels: string[];
     wouldRehire: "yes" | "maybe" | "no" | null;
   }) => Promise<void>;
 }) {
-  const { open, onOpenChange, workerName, workerRole, shiftDate, startTime, endTime, venue, shiftStatus, onSubmit } = props;
-  const [general, setGeneral] = useState(0);
-  const [reliability, setReliability] = useState(0);
-  const [punctuality, setPunctuality] = useState(0);
-  const [professionalism, setProfessionalism] = useState(0);
-  const [serviceQuality, setServiceQuality] = useState(0);
+  const { open, onOpenChange, workerName, workerRole, shiftDate, startTime, endTime, venue, shiftStatus, workerId, restaurantId, shiftId, onSubmit } = props;
+  const [reliability, setReliability] = useState(5);
+  const [punctuality, setPunctuality] = useState(5);
+  const [professionalism, setProfessionalism] = useState(5);
+  const [serviceQuality, setServiceQuality] = useState(5);
+  const [teamwork, setTeamwork] = useState(5);
   const [comment, setComment] = useState("");
   const [positiveLabels, setPositiveLabels] = useState<string[]>([]);
   const [negativeLabels, setNegativeLabels] = useState<string[]>([]);
@@ -3679,28 +3717,53 @@ function ReviewDialog(props: {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      setGeneral(0); setReliability(0); setPunctuality(0);
-      setProfessionalism(0); setServiceQuality(0); setComment(""); setError(null);
+    if (open) {
+      // Default: 5 stelle su ogni criterio
+      setReliability(5); setPunctuality(5); setProfessionalism(5);
+      setServiceQuality(5); setTeamwork(5);
+      try {
+        console.log("[PUPILLO_REVIEW_MODAL_OPENED]", {
+          restaurant_id: restaurantId ?? null,
+          worker_id: workerId ?? null,
+          shift_id: shiftId ?? null,
+        });
+        console.log("[PUPILLO_REVIEW_DEFAULT_STARS_SET]", {
+          puntualita: 5, professionalita: 5, qualita_servizio: 5,
+          affidabilita: 5, collaborazione_team: 5,
+        });
+      } catch { /* */ }
+    } else {
+      setComment(""); setError(null);
       setPositiveLabels([]); setNegativeLabels([]); setWouldRehire(null);
     }
-  }, [open]);
+  }, [open, restaurantId, workerId, shiftId]);
 
-  const allRated = general > 0 && reliability > 0 && punctuality > 0 && professionalism > 0 && serviceQuality > 0;
+  const allRated = reliability > 0 && punctuality > 0 && professionalism > 0 && serviceQuality > 0 && teamwork > 0;
 
   const handleSubmit = async () => {
+    try {
+      console.log("[PUPILLO_REVIEW_SUBMIT_ATTEMPT]", {
+        restaurant_id: restaurantId ?? null,
+        worker_id: workerId ?? null,
+        shift_id: shiftId ?? null,
+        default_ratings: { punctuality, professionalism, serviceQuality, reliability, teamwork },
+        would_rehire: wouldRehire,
+      });
+    } catch { /* */ }
     if (!allRated) {
       setError("Completa tutte le valutazioni prima di inviare la recensione.");
       return;
     }
     if (!wouldRehire) {
-      setError("Indica se richiameresti questo lavoratore.");
+      setError("Seleziona se richiameresti questo lavoratore per un prossimo turno.");
       return;
     }
     setError(null);
     setSubmitting(true);
     try {
-      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels, wouldRehire });
+      // "general" = media arrotondata dei 5 criteri (non più input separato)
+      const general = Math.round((reliability + punctuality + professionalism + serviceQuality + teamwork) / 5);
+      await onSubmit({ general, reliability, punctuality, professionalism, serviceQuality, teamwork, comment, positiveLabels, negativeLabels, wouldRehire });
     } finally { setSubmitting(false); }
   };
 
@@ -3711,24 +3774,26 @@ function ReviewDialog(props: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Chiudi turno e recensisci</DialogTitle>
+          <DialogTitle>Recensisci il lavoratore</DialogTitle>
           <DialogDescription>Valuta il lavoratore per il servizio appena concluso.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="rounded-xl border bg-secondary/30 p-3 text-sm space-y-1">
-            <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{workerName ?? "—"}</span></div>
-            {workerRole && <div><span className="text-muted-foreground">Ruolo:</span> {workerRole}</div>}
-            <div><span className="text-muted-foreground">Data:</span> {dateStr}</div>
-            <div><span className="text-muted-foreground">Orario:</span> {timeStr}</div>
-            {venue && <div><span className="text-muted-foreground">Locale:</span> {venue}</div>}
-            <div><span className="text-muted-foreground">Stato:</span> {shiftStatus ?? "in chiusura"}</div>
+          <div className="flex items-center gap-3 rounded-xl border bg-secondary/30 p-3">
+            {workerId && <UserAvatar userId={workerId} name={workerName ?? undefined} className="h-12 w-12 shrink-0" />}
+            <div className="min-w-0 flex-1 text-sm">
+              <div className="font-semibold text-base truncate">{workerName ?? "—"}</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {[workerRole, dateStr, timeStr].filter(Boolean).join(" · ")}
+              </div>
+              {venue && <div className="text-[11px] text-muted-foreground truncate">{venue}</div>}
+            </div>
           </div>
 
-          <CriterionRow label="Valutazione generale *" value={general} onChange={setGeneral} />
-          <CriterionRow label="Affidabilità *" value={reliability} onChange={setReliability} />
-          <CriterionRow label="Puntualità *" value={punctuality} onChange={setPunctuality} />
-          <CriterionRow label="Professionalità *" value={professionalism} onChange={setProfessionalism} />
-          <CriterionRow label="Qualità del servizio *" value={serviceQuality} onChange={setServiceQuality} />
+          <CriterionRow label="Puntualità" value={punctuality} onChange={setPunctuality} />
+          <CriterionRow label="Professionalità" value={professionalism} onChange={setProfessionalism} />
+          <CriterionRow label="Qualità del servizio" value={serviceQuality} onChange={setServiceQuality} />
+          <CriterionRow label="Affidabilità" value={reliability} onChange={setReliability} />
+          <CriterionRow label="Collaborazione con il team" value={teamwork} onChange={setTeamwork} />
 
           <div>
             <label className="block text-xs font-medium mb-1">Commento (opzionale)</label>
@@ -3762,7 +3827,7 @@ function ReviewDialog(props: {
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={submitting} className="gap-2">
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            Invia recensione e chiudi turno
+            Salva recensione
           </Button>
         </DialogFooter>
       </DialogContent>
