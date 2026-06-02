@@ -679,10 +679,15 @@ function Jobs() {
         row={reviewRow}
         onClose={() => setReviewRow(null)}
         onSubmitted={(rowId) => {
+          console.log("[PUPILLO_WORKER_OFFER_SET_TO_CONCLUDED_AFTER_REVIEW]", {
+            application_id: rowId,
+          });
           setRows((prev) =>
             prev.map((r) => (r.id === rowId ? { ...r, hasWorkerReview: true } : r)),
           );
+          console.log("[PUPILLO_WORKER_CONCLUDED_TAB_COUNTER_UPDATED]");
           setReviewRow(null);
+          toast.success("Recensione inviata. Turno concluso.");
         }}
       />
     </AppShell>
