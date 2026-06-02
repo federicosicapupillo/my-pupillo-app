@@ -263,6 +263,7 @@ function Onboarding() {
   // Hard guard against duplicate submissions (covers the small window between
   // the click and React flushing the `busy` state).
   const submittingRef = useRef(false);
+  const [availabilityPromptOpen, setAvailabilityPromptOpen] = useState(false);
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
   const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
   const [vatChecking, setVatChecking] = useState(false);
