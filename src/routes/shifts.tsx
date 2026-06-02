@@ -711,16 +711,18 @@ function ShiftsPage() {
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
-        {(["assigned", "upcoming", "completed", "to-review", "no_show", "past"] as const).map(f => {
+        {((role === "worker"
+          ? ["no_show", "assigned", "to-review", "completed"]
+          : ["assigned", "upcoming", "completed", "to-review", "no_show", "past"]) as Array<typeof filter>).map(f => {
           const label =
             f === "assigned" ? `Assegnati (${counts.assigned})`
             : f === "upcoming" ? `In attesa (${counts.pending})`
-            : f === "completed" ? `Completati (${counts.completed})`
+            : f === "completed" ? `Conclusi (${counts.completed})`
             : f === "past" ? `Archiviati / Passati (${counts.past})`
             : f === "no_show" ? `No show / Segnalazioni (${counts.noShow})`
             : `Da recensire (${counts.toReview})`;
           return (
-            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
+            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => { defaultTabAppliedRef.current = true; setFilter(f); }}>
               {label}
             </Button>
           );
