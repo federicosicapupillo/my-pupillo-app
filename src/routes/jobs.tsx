@@ -511,6 +511,7 @@ function Jobs() {
       rifiutate: 0,
       scadute: 0,
       da_recensire: 0,
+      concluse: 0,
     };
     for (const r of rows) for (const b of bucketsFor(r, lastSeenAt)) c[b] += 1;
     return c;
