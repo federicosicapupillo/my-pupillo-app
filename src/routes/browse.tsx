@@ -148,19 +148,28 @@ function Browse() {
 
   const load = async () => {
     setLoading(true);
+    console.log("[PUPILLO_WORKER_OFFERS_LOAD_START]", { worker_user_id: user?.id ?? null });
     // Use the PII-safe view for public browsing (excludes job contact details
     // and exact GPS). Workers only see full row via base table once they have
     // an application/shift on the announcement (enforced by RLS).
     // Vista nazionale: carichiamo tutti gli annunci attivi in Italia (rule 1-3).
     // L'ordinamento per compatibilità avviene client-side nel useMemo.
-    const { data: anns } = await (supabase as any)
+    const { data: anns, error: annsError } = await (supabase as any)
       .from("announcements_public")
       .select("*")
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(500);
+    if (annsError) {
+      console.log("[PUPILLO_WORKER_OFFERS_ERROR]", { stage: "load_announcements", error: annsError.message });
+    }
     const rawList = (anns as Ann[]) ?? [];
     const supabaseCount = rawList.length;
+    console.log("[PUPILLO_WORKER_OFFERS_QUERY_RESULT]", {
+      source: "announcements_public",
+      count: supabaseCount,
+      ids: rawList.map((a) => a.id),
+    });
 
     // Filtro stato: solo "active" (già applicato dalla query), ma rimuoviamo
     // difensivamente eventuali stati che NON devono comparire al lavoratore.
@@ -174,58 +183,46 @@ function Browse() {
     // - ristoratore eliminato (is_deleted)
     // - ristoratore non esistente nel DB
     // - utente che non ha ruolo "restaurant" (es. admin)
+    // NOTA: NON filtriamo per ruolo lato client perché la RLS di `user_roles`
+    // consente al lavoratore di vedere solo il PROPRIO ruolo. Qualunque join
+    // con `user_roles` lato lavoratore tornerebbe vuota e svuoterebbe la
+    // lista degli annunci. Filtriamo quindi solo per profilo esistente e
+    // non eliminato (is_deleted=true), che il lavoratore può leggere
+    // tramite la policy "Profiles viewable by all authenticated".
     const restIdsAll = Array.from(new Set(statusFiltered.map((a) => a.restaurant_id))).filter(Boolean);
-    const validRestaurantIds = new Set<string>();
     const restaurantsMeta: Record<string, { city: string | null; neighborhood: string | null }> = {};
+    const deletedRestaurantIds = new Set<string>();
+    const existingProfileIds = new Set<string>();
     if (restIdsAll.length) {
-      const [{ data: rs }, { data: roles }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, city, neighborhood, is_deleted")
-          .in("id", restIdsAll),
-        (supabase as any)
-          .from("user_roles")
-          .select("user_id, role")
-          .in("user_id", restIdsAll),
-      ]);
-      const restaurantRoleIds = new Set<string>();
-      const adminRoleIds = new Set<string>();
-      for (const r of ((roles ?? []) as any[])) {
-        if (r?.role === "restaurant" && r?.user_id) restaurantRoleIds.add(r.user_id);
-        if (r?.role === "admin" && r?.user_id) adminRoleIds.add(r.user_id);
-      }
-      const existingProfileIds = new Set<string>();
+      const { data: rs } = await supabase
+        .from("profiles")
+        .select("id, city, neighborhood, is_deleted")
+        .in("id", restIdsAll);
       for (const r of ((rs ?? []) as any[])) {
         existingProfileIds.add(r.id);
         restaurantsMeta[r.id] = { city: r.city, neighborhood: r.neighborhood };
-        const notDeleted = r.is_deleted !== true;
-        const isRestaurant = restaurantRoleIds.has(r.id);
-        const isAdmin = adminRoleIds.has(r.id);
-        if (notDeleted && isRestaurant && !isAdmin) {
-          validRestaurantIds.add(r.id);
-        }
+        if (r.is_deleted === true) deletedRestaurantIds.add(r.id);
       }
-      // Log offerte invalide (orfane / ristoratore eliminato / no role / admin)
       for (const a of statusFiltered) {
-        if (validRestaurantIds.has(a.restaurant_id)) continue;
-        let reason = "unknown";
-        if (!existingProfileIds.has(a.restaurant_id)) reason = "ristoratore inesistente";
-        else if (!restaurantRoleIds.has(a.restaurant_id)) reason = "utente senza ruolo restaurant";
-        else if (adminRoleIds.has(a.restaurant_id)) reason = "utente con ruolo admin";
-        else reason = "ristoratore eliminato (is_deleted=true)";
-        console.log("[PUPILLO_WORKER_FIND_OFFERS_INVALID_OFFER_DEBUG]", {
-          announcement_id: a.id,
-          title: a.professional_profile,
-          restaurant_user_id: a.restaurant_id,
-          status: a.status,
-          service_date: a.service_date,
-          reason,
-        });
+        if (!existingProfileIds.has(a.restaurant_id) || deletedRestaurantIds.has(a.restaurant_id)) {
+          console.log("[PUPILLO_WORKER_OFFERS_EMPTY_REASON]", {
+            announcement_id: a.id,
+            restaurant_user_id: a.restaurant_id,
+            reason: !existingProfileIds.has(a.restaurant_id)
+              ? "ristoratore inesistente"
+              : "ristoratore eliminato (is_deleted=true)",
+          });
+        }
       }
     }
     setRestaurantsById(restaurantsMeta);
 
-    const restaurantFiltered = statusFiltered.filter((a) => validRestaurantIds.has(a.restaurant_id));
+    // Mostriamo TUTTI gli annunci attivi, eccetto quelli del ristoratore
+    // eliminato. Se il profilo non è ancora caricato (es. errori RLS),
+    // teniamo comunque l'annuncio visibile per non nascondere offerte valide.
+    const restaurantFiltered = statusFiltered.filter(
+      (a) => !deletedRestaurantIds.has(a.restaurant_id),
+    );
 
     // Deduplicazione per announcement_id (difensiva contro join doppi).
     const seen = new Set<string>();
@@ -247,6 +244,16 @@ function Browse() {
       final_rendered: list.length,
       titles: list.map((a) => a.professional_profile),
     });
+    if (list.length === 0) {
+      console.log("[PUPILLO_WORKER_OFFERS_EMPTY_REASON]", {
+        reason: supabaseCount === 0
+          ? "nessun annuncio attivo restituito dalla query"
+          : "tutti gli annunci sono stati filtrati (status nascosto o ristoratore eliminato)",
+        supabase_count: supabaseCount,
+        after_status_filter: statusFiltered.length,
+        after_real_restaurant_filter: restaurantFiltered.length,
+      });
+    }
 
     setItems(list);
     // Multi-position: load workers_needed per announcement and accepted count.
