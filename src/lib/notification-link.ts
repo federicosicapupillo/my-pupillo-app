@@ -154,9 +154,9 @@ export async function navigateFromNotificationLink(
     if (parts.length === 2 && parts[0] === "announcements") {
       const id = seg(1);
       if (!isValidId(id)) return fallback();
-      // Se l'annuncio non è più accessibile (cancellato, scaduto, RLS),
-      // evita di aprire una pagina vuota: manda il lavoratore alle offerte.
-      try {
+      // Per il lavoratore: se l'annuncio non è più accessibile (cancellato,
+      // scaduto, RLS), evita di aprire una pagina vuota e manda alle offerte.
+      if (role === "worker") try {
         const { data: annRow } = await supabase
           .from("announcements")
           .select("id")
@@ -164,11 +164,10 @@ export async function navigateFromNotificationLink(
           .maybeSingle();
         if (!annRow) {
           try { console.warn("[PUPILLO_WORKER_NOTIFICATION_TARGET_NOT_FOUND]", { ...ctx, target_type: "announcement", target_id: id }); } catch { /* ignore */ }
-          if (role === "worker") return navigate({ to: "/jobs" });
-          return navigate({ to: "/announcements" });
+          return navigate({ to: "/jobs" });
         }
       } catch {
-        if (role === "worker") return navigate({ to: "/jobs" });
+        return navigate({ to: "/jobs" });
       }
       try { console.log("[PUPILLO_WORKER_NOTIFICATION_REDIRECT_RESOLVED]", { ...ctx, resolved_path: `/announcements/${id}` }); } catch { /* ignore */ }
       return navigate({ to: "/announcements/$id", params: { id } });
