@@ -327,6 +327,16 @@ function formatRange(a: Ann) {
 
 type EffectiveStatus = "active" | "soon" | "expired" | "completed" | "assigned" | "draft" | "cancelled";
 
+/**
+ * Returns true when current_timestamp >= shift_start_datetime.
+ * Uses getShiftStartDate (Europe/Rome) so it also covers shifts that cross midnight.
+ */
+function isShiftStarted(a: Ann, now: Date): boolean {
+  const start = getShiftStartDate(a);
+  if (!start) return false;
+  return now.getTime() >= start.getTime();
+}
+
 /** Determine the displayed status combining DB status with time-based expiry. */
 function computeEffectiveStatus(a: Ann, now: Date): { kind: EffectiveStatus; countdown: string | null } {
   if (a.status === "completed") return { kind: "completed", countdown: null };
