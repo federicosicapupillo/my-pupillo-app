@@ -23,6 +23,15 @@ import { formatTariff, formatTotalService, formatOfferDateTime } from "@/lib/for
 import { publicLocationLabel } from "@/lib/public-location";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { getShiftEndDate } from "@/lib/announcement-time";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 function roleEmoji(role: string | null | undefined): string {
   const r = (role || "").toLowerCase();
