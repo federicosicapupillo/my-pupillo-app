@@ -906,6 +906,32 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                 const eff = computeEffectiveStatus(a, now);
                 const canCancel = eff.kind !== "cancelled" && eff.kind !== "completed" && eff.kind !== "expired";
                 if (!canCancel) return null;
+                const started = isShiftStarted(a, now);
+                if (started) {
+                  try {
+                    console.info("[PUPILLO_RESTAURANT_CANCEL_DISABLED]", {
+                      restaurant_id: a.restaurant_id,
+                      announcement_id: a.id,
+                      shift_start_datetime: getShiftStartDate(a)?.toISOString() ?? null,
+                      current_timestamp: now.toISOString(),
+                      action_requested: "render_cancel_button",
+                      blocked: true,
+                      reason: "shift_already_started",
+                    });
+                  } catch { /* */ }
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      aria-disabled="true"
+                      title="Non puoi annullare un turno già iniziato."
+                      className="gap-2 text-destructive border-destructive/40 opacity-50 cursor-not-allowed"
+                    >
+                      <Trash2 className="h-3 w-3" /> Annulla turno
+                    </Button>
+                  );
+                }
                 return (
                   <Button
                     variant="outline"
@@ -913,7 +939,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                     className="gap-2 text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/5"
                     onClick={() => setCancelTarget(a)}
                   >
-                    <Trash2 className="h-3 w-3" /> Annulla annuncio
+                    <Trash2 className="h-3 w-3" /> Annulla turno
                   </Button>
                 );
               })()}
