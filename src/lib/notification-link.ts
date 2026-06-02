@@ -158,7 +158,9 @@ export async function navigateFromNotificationLink(
       }
       // Normalize tab alias da-recensire → to-review (the real tab key)
       if (searchObj.tab === "da-recensire") searchObj.tab = "to-review";
-      return navigate({ to: "/shifts", search: searchObj as never });
+      return Object.keys(searchObj).length > 0
+        ? navigate({ to: "/shifts", search: searchObj as never })
+        : navigate({ to: "/shifts" });
     }
     // /ristoratore/turni/<shiftId> — restaurant-only route.
     // Workers must never be sent here (would render "Permesso negato").
