@@ -1850,6 +1850,7 @@ function Thread() {
     punctuality: number;
     professionalism: number;
     serviceQuality: number;
+    teamwork: number;
     comment: string;
     positiveLabels: string[];
     negativeLabels: string[];
@@ -1860,18 +1861,31 @@ function Thread() {
       toast.error("Solo il ristoratore può lasciare una recensione.");
       return;
     }
-    const { general, reliability, punctuality, professionalism, serviceQuality, comment, positiveLabels, negativeLabels, wouldRehire } = payload;
+    const { general, reliability, punctuality, professionalism, serviceQuality, teamwork, comment, positiveLabels, negativeLabels, wouldRehire } = payload;
     if (!general || !reliability || !punctuality || !professionalism || !serviceQuality) {
       toast.error("Completa tutte le valutazioni prima di inviare la recensione.");
       return;
     }
     if (!wouldRehire) {
-      toast.error("Indica se richiameresti questo lavoratore.");
+      toast.error("Seleziona se richiameresti questo lavoratore per un prossimo turno.");
       return;
     }
     const trimmed = comment.trim();
     if (trimmed.length > 500) {
       toast.error("Il commento può contenere al massimo 500 caratteri.");
+      return;
+    }
+
+    // Anti-duplicato lato client (DB ha vincolo uniq_reviews_shift_author come backstop)
+    if (existingReview) {
+      try {
+        console.log("[PUPILLO_REVIEW_ALREADY_EXISTS_BLOCKED]", {
+          restaurant_id: app.restaurant_id, worker_id: app.worker_id,
+          shift_id: shift?.id ?? null, review_id: existingReview.id,
+        });
+      } catch { /* */ }
+      toast.error("Hai già lasciato una recensione per questo turno.");
+      setReviewOpen(false);
       return;
     }
 
@@ -1924,7 +1938,7 @@ function Thread() {
       professionalism,
       competence: serviceQuality,
       reliability,
-      teamwork: serviceQuality,
+      teamwork,
       application_id: app.id,
       announcement_id: app.announcement_id,
       is_visible_to_restaurants: true,
@@ -1933,13 +1947,30 @@ function Thread() {
     } as never).select("*").single();
     if (error) {
       if (String(error.message).toLowerCase().includes("uniq_reviews_shift_author") || (error as any).code === "23505") {
-        toast.error("Hai già recensito questo turno.");
+        try { console.log("[PUPILLO_REVIEW_ALREADY_EXISTS_BLOCKED]", {
+          restaurant_id: app.restaurant_id, worker_id: app.worker_id, shift_id: shiftId,
+        }); } catch { /* */ }
+        toast.error("Hai già lasciato una recensione per questo turno.");
       } else {
         toast.error(error.message);
       }
       return;
     }
     setExistingReview(data as Review);
+    try {
+      console.log("[PUPILLO_REVIEW_SAVED_SUCCESS]", {
+        restaurant_id: app.restaurant_id, worker_id: app.worker_id,
+        shift_id: shiftId, review_id: (data as any)?.id ?? null,
+        review_saved: true,
+      });
+      if (workerToRestaurantReview) {
+        console.log("[PUPILLO_RECEIVED_REVIEW_UNLOCKED]", {
+          restaurant_id: app.restaurant_id, worker_id: app.worker_id,
+          shift_id: shiftId, received_review_id: workerToRestaurantReview.id,
+          received_review_unlocked: true,
+        });
+      }
+    } catch { /* */ }
     // UN SOLO messaggio di sistema combinato in chat ("Turno chiuso e
     // recensione ricevuta"), con anti-duplicato. Non inviare anche il
     // vecchio messaggio "Turno chiuso" — evita doppioni lato lavoratore.
