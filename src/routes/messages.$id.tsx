@@ -4096,7 +4096,7 @@ function ProposalCard(props: {
             <span>
               {expired
                 ? `Scaduta il ${deadline.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${deadline.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`
-                : `Valida fino al ${deadline.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${deadline.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`}
+                : `Scade il ${deadline.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${deadline.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`}
             </span>
           </div>
         )}
