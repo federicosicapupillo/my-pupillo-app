@@ -1287,7 +1287,12 @@ function Onboarding() {
             experience_years: optExp.experience_years.trim() || null,
             experience_level: optExp.experience_level || null,
             hourly_rate: (() => {
-              const v = optExp.hourly_rate.trim().replace(",", ".");
+              const raw = optExp.hourly_rate.trim();
+              if (!raw) return null;
+              // Sentinel: "Oltre 30 €/h" salvato come 31 per restare coerente
+              // col tipo numerico della colonna hourly_rate.
+              if (raw === "oltre_30") return 31;
+              const v = raw.replace(",", ".");
               if (!v) return null;
               const n = Number(v);
               return Number.isFinite(n) && n >= 0 ? n : null;
