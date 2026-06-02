@@ -137,9 +137,20 @@ function ShiftsPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past">(
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "assigned"
-  );
+  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past">(() => {
+    if (typeof window === "undefined") return "assigned";
+    const raw = (new URLSearchParams(window.location.search).get("tab") || "").toLowerCase();
+    const map: Record<string, "assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past"> = {
+      "assigned": "assigned", "assegnati": "assigned",
+      "to-review": "to-review", "da-recensire": "to-review", "da_recensire": "to-review",
+      "completed": "completed", "conclusi": "completed", "completati": "completed", "concluso": "completed",
+      "no_show": "no_show", "noshow": "no_show", "no-show": "no_show",
+      "reports": "no_show", "segnalazioni": "no_show", "segnalazione": "no_show",
+      "past": "past", "archiviati": "past",
+      "upcoming": "upcoming",
+    };
+    return map[raw] ?? "assigned";
+  });
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
   // True once we've applied the worker auto-default-tab priority logic.
   // Prevents resetting the tab after the user manually switches it.
@@ -189,6 +200,83 @@ function ShiftsPage() {
   const [noShowSubmitting, setNoShowSubmitting] = useState(false);
   const [notEndedDialog, setNotEndedDialog] = useState<Shift | null>(null);
   const [reviewNotAvailableOpen, setReviewNotAvailableOpen] = useState(false);
+  // Worker-side popup (modale) per recensire il ristoratore. Vedi MODIFICA 8.
+  const [workerReviewDialog, setWorkerReviewDialog] = useState<Shift | null>(null);
+  const [workerDialogRating, setWorkerDialogRating] = useState<number>(0);
+  const [workerDialogComment, setWorkerDialogComment] = useState("");
+  const [workerDialogTags, setWorkerDialogTags] = useState<string[]>([]);
+  const [workerDialogSubmitting, setWorkerDialogSubmitting] = useState(false);
+  const [workerDialogError, setWorkerDialogError] = useState<string | null>(null);
+  const WORKER_REVIEW_TAGS = [
+    "Comunicazione chiara",
+    "Ambiente positivo",
+    "Pagamento corretto",
+    "Organizzazione buona",
+    "Istruzioni chiare",
+    "Rispetto degli accordi",
+    "Da migliorare organizzazione",
+    "Informazioni poco chiare",
+  ] as const;
+  const openWorkerReviewDialog = (s: Shift) => {
+    if (isShiftNotEnded(s)) { setReviewNotAvailableOpen(true); return; }
+    setWorkerDialogRating(0);
+    setWorkerDialogComment("");
+    setWorkerDialogTags([]);
+    setWorkerDialogError(null);
+    setWorkerReviewDialog(s);
+    try { console.log("[PUPILLO_WORKER_REVIEW_MODAL_OPEN]", { shift_id: s.id, worker_id: user?.id ?? null }); } catch { /* ignore */ }
+  };
+  const submitWorkerReviewDialog = async () => {
+    const s = workerReviewDialog;
+    if (!s || !user) return;
+    if (workerDialogRating < 1) { setWorkerDialogError("Seleziona una valutazione."); return; }
+    setWorkerDialogSubmitting(true);
+    setWorkerDialogError(null);
+    const tId = toast.loading("Invio recensione in corso…");
+    try {
+      const rating = Math.max(1, Math.min(5, Math.round(workerDialogRating)));
+      const payload: any = {
+        author_id: user.id,
+        target_id: s.restaurant_id,
+        shift_id: s.id,
+        announcement_id: s.announcement_id,
+        application_id: s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null,
+        rating,
+        comment: (workerDialogComment || "").trim().slice(0, 500) || null,
+        communication: rating,
+        professionalism: rating,
+        reliability: rating,
+        staff_collaboration: rating,
+        positive_tags: workerDialogTags,
+      };
+      try { console.log("[PUPILLO_WORKER_REVIEW_SUBMIT_WITH_OPTIONAL_COMMENT]", { shift_id: s.id, has_comment: (workerDialogComment || "").trim().length > 0, rating, tags: workerDialogTags }); } catch { /* ignore */ }
+      const { error } = await supabase.from("reviews").insert(payload);
+      if (error) {
+        const isDup = (error as any)?.code === "23505" || /duplicate|unique/i.test(error.message || "");
+        const msg = isDup ? "Hai già lasciato una recensione per questo turno." : (error.message || "Errore sconosciuto");
+        toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
+        setWorkerDialogError(msg);
+        try { console.warn("[PUPILLO_WORKER_REVIEW_SUBMIT_ERROR]", { shift_id: s.id, error: msg }); } catch { /* ignore */ }
+        return;
+      }
+      toast.success("Recensione inviata. Turno concluso.", { id: tId });
+      try {
+        console.log("[PUPILLO_WORKER_REVIEW_SUBMIT_SUCCESS]", { shift_id: s.id, rating });
+        console.log("[PUPILLO_WORKER_SHIFT_MOVED_TO_CONCLUDED_AFTER_REVIEW]", { shift_id: s.id });
+      } catch { /* ignore */ }
+      setReviewMap(prev => ({ ...prev, [s.id]: rating }));
+      refreshRequiredReviews();
+      setWorkerReviewDialog(null);
+      setFilter("completed");
+    } catch (e: any) {
+      const msg = e?.message ?? "Errore di rete";
+      toast.error(`Errore di rete: ${msg}`, { id: tId });
+      setWorkerDialogError(msg);
+      try { console.warn("[PUPILLO_WORKER_REVIEW_SUBMIT_ERROR]", { shift_id: s.id, error: msg }); } catch { /* ignore */ }
+    } finally {
+      setWorkerDialogSubmitting(false);
+    }
+  };
   // Criteri recensione lavoratore → ristoratore (form inline)
   const [workerCriteria, setWorkerCriteria] = useState({
     overall: 5,
