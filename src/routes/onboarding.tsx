@@ -667,7 +667,13 @@ function Onboarding() {
       setOptExp({
         experience_years: p.experience_years != null ? String(p.experience_years) : "",
         experience_level: (p.experience_level === "junior" || p.experience_level === "intermediate" || p.experience_level === "senior") ? p.experience_level : "",
-        hourly_rate: p.hourly_rate != null ? String(p.hourly_rate) : "",
+        hourly_rate: (() => {
+          if (p.hourly_rate == null) return "";
+          const n = Number(p.hourly_rate);
+          if (!Number.isFinite(n)) return "";
+          if (n >= 31) return "oltre_30";
+          return String(n);
+        })(),
         is_motorized: p.is_motorized === true ? "yes" : p.is_motorized === false ? "no" : "",
         short_bio: (p.short_bio ?? p.professional_profile ?? "") as string,
       });
