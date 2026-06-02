@@ -210,7 +210,7 @@ function AuthPage() {
           first_name: firstNameTrim,
           last_name: lastNameTrim,
           role,
-          representative_age: role === "restaurant" ? Number(repAge) : null,
+          representative_age: role === "restaurant" && repAge.trim() ? Number(repAge) : null,
         },
       },
     });
