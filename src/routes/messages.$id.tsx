@@ -1695,6 +1695,20 @@ function Thread() {
   const closureNoticeText = closureReason === "completed"
     ? "Questo turno è stato concluso. La chat è disponibile solo come storico."
     : "Questo turno è stato annullato. La chat è disponibile solo come storico.";
+  useEffect(() => {
+    if (!isConversationClosed || !app) return;
+    if (typeof window === "undefined") return;
+    if (role === "worker") {
+      console.log("[PUPILLO_WORKER_READONLY_CHAT_OPEN]", {
+        application_id: app.id,
+        shift_id: shift?.id ?? null,
+        closure: closureReason,
+      });
+      console.log("[PUPILLO_WORKER_CHAT_INPUT_DISABLED_AFTER_SHIFT_END]", {
+        application_id: app.id,
+      });
+    }
+  }, [isConversationClosed, app?.id, role, shift?.id, closureReason]);
   const closureSystemTemplateId = closureReason === "completed"
     ? "chat_closed_completed"
     : "chat_closed_cancelled";
