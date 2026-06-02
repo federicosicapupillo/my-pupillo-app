@@ -2959,6 +2959,57 @@ function Thread() {
             />
           </div>
         )}
+        {role === "restaurant" && app && workerToRestaurantReview && (() => {
+          if (typeof console !== "undefined") {
+            console.log("[PUPILLO_RESTAURANT_RECEIVED_REVIEW_LOADED]", {
+              review_id: workerToRestaurantReview.id,
+              shift_id: shift?.id ?? null,
+              author_id: workerToRestaurantReview.author_id,
+              target_id: workerToRestaurantReview.target_id,
+            });
+          }
+          const rev = workerToRestaurantReview;
+          const tags = [
+            ...((rev.positive_tags as string[] | null) ?? []),
+            ...((rev.negative_tags as string[] | null) ?? []),
+          ];
+          return (
+            <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Star className="h-4 w-4 text-emerald-600" fill="currentColor" />
+                Recensione ricevuta
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Il lavoratore ha lasciato una recensione per questo turno.
+              </p>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star
+                    key={n}
+                    className={`h-4 w-4 ${n <= (rev.rating ?? 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/40"}`}
+                    strokeWidth={1.5}
+                  />
+                ))}
+                <span className="ml-2 text-sm font-medium">{rev.rating}/5</span>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {tags.map((t) => (
+                    <span key={t} className="text-[11px] rounded-full bg-secondary px-2 py-0.5">{t}</span>
+                  ))}
+                </div>
+              )}
+              {rev.comment && (
+                <blockquote className="border-l-2 border-emerald-500/40 pl-3 text-sm italic text-muted-foreground">
+                  "{rev.comment}"
+                </blockquote>
+              )}
+              <div className="text-[11px] text-muted-foreground">
+                {new Date(rev.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+              </div>
+            </div>
+          );
+        })()}
         {role === "worker"
           && !isConversationClosed
           && app
