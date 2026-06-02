@@ -1745,19 +1745,35 @@ function AnnouncementDetailsDialog({
         )}
 
         <DialogFooter className="gap-2 flex-col sm:flex-row">
+          {shiftStarted && (() => {
+            try {
+              console.info("[PUPILLO_ANNOUNCEMENT_READONLY_PREVIEW]", {
+                announcement_id: ann.id,
+                shift_id: ann.id,
+                shift_start_datetime: getShiftStartDate(ann)?.toISOString() ?? null,
+                current_timestamp: new Date().toISOString(),
+                action_requested: "open_details_dialog",
+                blocked: true,
+                reason: "shift_already_started",
+              });
+            } catch { /* */ }
+            return null;
+          })()}
           {!editing ? (
             <>
               <Button variant="outline" className="gap-2" onClick={() => onDuplicate(ann)}>
                 <Copy className="h-4 w-4" /> Duplica annuncio
               </Button>
-              <Button className="gap-2" onClick={() => setEditing(true)}>
-                <Pencil className="h-4 w-4" /> Modifica annuncio
-              </Button>
+              {!shiftStarted && (
+                <Button className="gap-2" onClick={() => setEditing(true)}>
+                  <Pencil className="h-4 w-4" /> Modifica annuncio
+                </Button>
+              )}
             </>
           ) : (
             <>
               <Button variant="ghost" onClick={() => setEditing(false)} disabled={saving}>Annulla</Button>
-              <Button onClick={trySave} disabled={saving}>{saving ? "Salvataggio…" : "Salva modifiche"}</Button>
+              <Button onClick={trySave} disabled={saving || shiftStarted}>{saving ? "Salvataggio…" : "Salva modifiche"}</Button>
             </>
           )}
         </DialogFooter>
