@@ -722,6 +722,8 @@ function OfferCard({
     ? formatTariff(r.announcement.tariff_amount, r.announcement.tariff_type)
     : null;
   const receivedAt = new Date(r.created_at).toLocaleDateString("it-IT");
+  const completed = isCompleted(r);
+  const needsReview = completed && !r.hasWorkerReview;
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-3xl border border-white/[0.06] bg-card p-5 shadow-[0_20px_50px_-25px_oklch(0_0_0/0.6)] transition-shadow hover:shadow-[0_24px_60px_-25px_oklch(0.65_0.25_310/0.35)] sm:p-6">
@@ -853,28 +855,268 @@ function OfferCard({
             </Button>
           </>
         )}
-        {(r.status === "interested" || r.status === "counter_offer" || r.status === "accepted") && (
+        {needsReview && (
+          <Button
+            size="lg"
+            className="flex-1 gap-2 rounded-xl text-base"
+            onClick={() => onOpenReview(r)}
+          >
+            <Star className="h-4 w-4" />
+            Lascia recensione
+          </Button>
+        )}
+        {completed ? (
+          <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
+            <Button size="lg" variant="secondary" className="w-full gap-2 rounded-xl text-base">
+              <MessageSquare className="h-4 w-4" />
+              Apri chat
+            </Button>
+          </Link>
+        ) : (r.status === "interested" || r.status === "counter_offer" || r.status === "accepted") ? (
           <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
             <Button size="lg" className="w-full gap-2 rounded-xl text-base">
               <MessageSquare className="h-4 w-4" />
               Scrivi al ristoratore
             </Button>
           </Link>
-        )}
-        {isCompleted(r) && !r.hasWorkerReview && (
-          <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
-            <Button size="lg" className="w-full gap-2 rounded-xl text-base">
-              <Star className="h-4 w-4" />
-              Lascia recensione
-            </Button>
-          </Link>
-        )}
+        ) : null}
         <Link to="/messages/$id" params={{ id: r.id }} className="flex-1">
           <Button size="lg" variant="secondary" className="w-full gap-2 rounded-xl text-base">
             Apri dettagli
           </Button>
         </Link>
       </div>
+      {needsReview && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Il turno è stato concluso. Lascia una recensione per completare il servizio.
+        </p>
+      )}
     </div>
+  );
+}
+
+const POSITIVE_QUICK_TAGS = [
+  "Comunicazione chiara",
+  "Ambiente positivo",
+  "Pagamento corretto",
+  "Organizzazione buona",
+  "Istruzioni chiare",
+  "Rispetto degli accordi",
+] as const;
+
+const NEGATIVE_QUICK_TAGS = [
+  "Da migliorare organizzazione",
+  "Informazioni poco chiare",
+] as const;
+
+const RATING_LABELS: Record<number, string> = {
+  1: "Pessima esperienza",
+  2: "Da migliorare",
+  3: "Normale",
+  4: "Buona esperienza",
+  5: "Ottima esperienza",
+};
+
+function WorkerReviewDialog({
+  row,
+  onClose,
+  onSubmitted,
+}: {
+  row: Row | null;
+  onClose: () => void;
+  onSubmitted: (rowId: string) => void;
+}) {
+  const { user } = useAuth();
+  const [rating, setRating] = useState<number>(0);
+  const [positive, setPositive] = useState<string[]>([]);
+  const [negative, setNegative] = useState<string[]>([]);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (row) {
+      setRating(0);
+      setPositive([]);
+      setNegative([]);
+      setComment("");
+      setSubmitting(false);
+    }
+  }, [row?.id]);
+
+  const open = !!row;
+  const canSubmit = rating >= 1 && rating <= 5 && !submitting;
+
+  const toggleTag = (tag: string, kind: "pos" | "neg") => {
+    if (kind === "pos") {
+      setPositive((p) => (p.includes(tag) ? p.filter((t) => t !== tag) : [...p, tag]));
+    } else {
+      setNegative((p) => (p.includes(tag) ? p.filter((t) => t !== tag) : [...p, tag]));
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!row || !user || !canSubmit) return;
+    if (row.hasWorkerReview) {
+      toast.info("Hai già lasciato una recensione per questo turno.");
+      onClose();
+      return;
+    }
+    setSubmitting(true);
+    console.log("[PUPILLO_WORKER_REVIEW_MODAL_SUBMIT]", {
+      application_id: row.id,
+      shift_id: row.shift?.id ?? null,
+      rating,
+    });
+    try {
+      const { error } = await supabase.from("reviews").insert({
+        author_id: user.id,
+        target_id: row.restaurant_id,
+        shift_id: row.shift?.id ?? null,
+        announcement_id: row.announcement?.id ?? null,
+        application_id: row.id,
+        rating,
+        comment: comment.trim() || null,
+        positive_tags: positive,
+        negative_tags: negative,
+      } as never);
+      if (error) {
+        const isDup =
+          (error as { code?: string }).code === "23505" ||
+          /duplicate|unique/i.test(error.message || "");
+        if (isDup) {
+          toast.info("Hai già lasciato una recensione per questo turno.");
+          onSubmitted(row.id);
+          return;
+        }
+        console.warn("[PUPILLO_WORKER_REVIEW_MODAL_ERROR]", error.message);
+        toast.error("Non siamo riusciti a salvare la recensione. Riprova.");
+        setSubmitting(false);
+        return;
+      }
+      console.log("[PUPILLO_WORKER_REVIEW_MODAL_SUCCESS]", { application_id: row.id });
+      toast.success("Recensione inviata. Grazie!");
+      onSubmitted(row.id);
+    } catch (e) {
+      console.warn("[PUPILLO_WORKER_REVIEW_MODAL_ERROR]", e);
+      toast.error("Non siamo riusciti a salvare la recensione. Riprova.");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o && !submitting) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Com'è andato il turno?</DialogTitle>
+          <DialogDescription>
+            Lascia una recensione al ristoratore per completare il servizio.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          {/* Stars */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  aria-label={`${n} stelle`}
+                  onClick={() => setRating(n)}
+                  className="rounded-full p-1 transition hover:scale-110"
+                  disabled={submitting}
+                >
+                  <Star
+                    className={`h-9 w-9 ${
+                      n <= rating
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-muted-foreground/40"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+            <div className="text-sm text-muted-foreground min-h-[1.25rem]">
+              {rating > 0 ? RATING_LABELS[rating] : "Seleziona una valutazione"}
+            </div>
+          </div>
+
+          {/* Chips */}
+          <div className="space-y-3">
+            <div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Cosa è andato bene?
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {POSITIVE_QUICK_TAGS.map((t) => {
+                  const active = positive.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleTag(t, "pos")}
+                      disabled={submitting}
+                      className={`rounded-full border px-3 py-1 text-xs transition ${
+                        active
+                          ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                          : "border-border bg-secondary hover:bg-secondary/70"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Cosa si può migliorare?
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {NEGATIVE_QUICK_TAGS.map((t) => {
+                  const active = negative.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleTag(t, "neg")}
+                      disabled={submitting}
+                      className={`rounded-full border px-3 py-1 text-xs transition ${
+                        active
+                          ? "border-amber-500/60 bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                          : "border-border bg-secondary hover:bg-secondary/70"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Comment */}
+          <div>
+            <Textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Vuoi aggiungere qualcosa? Scrivi qui…"
+              rows={3}
+              maxLength={500}
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            Annulla
+          </Button>
+          <Button onClick={handleSubmit} disabled={!canSubmit}>
+            {submitting ? "Invio…" : "Invia recensione"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
