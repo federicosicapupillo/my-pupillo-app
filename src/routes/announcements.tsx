@@ -910,7 +910,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                 if (started) {
                   try {
                     console.info("[PUPILLO_RESTAURANT_CANCEL_DISABLED]", {
-                      restaurant_id: a.restaurant_id,
+                      restaurant_id: user?.id ?? null,
                       announcement_id: a.id,
                       shift_start_datetime: getShiftStartDate(a)?.toISOString() ?? null,
                       current_timestamp: now.toISOString(),
