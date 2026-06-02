@@ -675,7 +675,9 @@ function Browse() {
       </div>
 
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : orderedFiltered.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">Nessuna offerta corrisponde ai filtri.</div>
+        <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
+          Al momento non ci sono offerte disponibili. Torna più tardi o aggiorna i filtri.
+        </div>
       ) : view === "list" ? (
         <div className="space-y-6">
         {(() => {
