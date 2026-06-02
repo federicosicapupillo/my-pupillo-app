@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
 import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
 import { Flag } from "lucide-react";
+import { BlindReciprocalReviewDialog } from "@/components/BlindReciprocalReviewDialog";
 
 export const Route = createFileRoute("/reviews/$id")({
   head: () => ({ meta: [{ title: "Recensione ricevuta — Pupillo" }] }),
@@ -83,6 +84,8 @@ function ReviewPopupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  /** When the viewer is the RESTAURANT (target), use the blind reciprocal flow. */
+  const [viewerIsRestaurantTarget, setViewerIsRestaurantTarget] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +102,18 @@ function ReviewPopupPage() {
         return;
       }
       setReview(data as ReviewRow);
+      // Detect blind flow: viewer is the restaurant target of a worker→restaurant review.
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && (data as ReviewRow).target_id === user.id) {
+          const { data: roleRows } = await supabase
+            .from("user_roles").select("role").eq("user_id", user.id);
+          const roles = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);
+          if (roles.includes("restaurant")) {
+            if (!cancelled) setViewerIsRestaurantTarget(true);
+          }
+        }
+      } catch { /* */ }
       if ((data as ReviewRow).announcement_id) {
         const { data: a } = await supabase
           .from("announcements")
@@ -135,6 +150,22 @@ function ReviewPopupPage() {
     setOpen(false);
     setTimeout(() => navigate({ to: "/dashboard" }), 150);
   };
+
+  // Restaurant viewer → render the blind reciprocal popup instead of the
+  // standard "received review" worker UI. This enforces: cannot read the
+  // received review until the restaurant_to_worker counter-review is sent.
+  if (viewerIsRestaurantTarget) {
+    return (
+      <BlindReciprocalReviewDialog
+        reviewId={id}
+        open={open}
+        onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) setTimeout(() => navigate({ to: "/dashboard" }), 150);
+        }}
+      />
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
