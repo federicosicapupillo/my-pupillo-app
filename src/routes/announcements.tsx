@@ -1227,6 +1227,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
           venueName={(profile as any)?.business_name ?? null}
           statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
+          shiftStarted={detailsAnn ? isShiftStarted(detailsAnn, now) : false}
           onUpdated={handleAnnUpdated}
           onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
         />
