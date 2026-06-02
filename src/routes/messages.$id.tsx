@@ -2973,6 +2973,45 @@ function Thread() {
             ...((rev.positive_tags as string[] | null) ?? []),
             ...((rev.negative_tags as string[] | null) ?? []),
           ];
+          // BLIND rule: restaurant cannot read the received review until it
+          // has left its own restaurant_to_worker review for the same shift.
+          const restaurantHasReviewed = !!existingReview;
+          if (!restaurantHasReviewed) {
+            try { console.log("[PUPILLO_RESTAURANT_RECEIVED_REVIEW_LOCKED]", { review_id: rev.id, shift_id: shift?.id ?? null }); } catch { /* */ }
+            return (
+              <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Star className="h-4 w-4 text-amber-600" />
+                  Hai ricevuto una recensione
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Lascia la tua recensione al lavoratore per visualizzarla.
+                </p>
+                <div className="blur-sm select-none pointer-events-none">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star key={n} className="h-4 w-4 fill-yellow-400 text-yellow-400" strokeWidth={1.5} />
+                    ))}
+                    <span className="ml-2 text-sm font-medium">★/5</span>
+                  </div>
+                  <p className="text-xs italic text-muted-foreground mt-1">Commento e tag nascosti</p>
+                </div>
+                <div className="pt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setReviewOpen(true);
+                      setTimeout(() => {
+                        document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }, 60);
+                    }}
+                  >
+                    Recensisci e sblocca
+                  </Button>
+                </div>
+              </div>
+            );
+          }
           return (
             <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold">
