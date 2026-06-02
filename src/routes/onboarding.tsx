@@ -1354,6 +1354,31 @@ function Onboarding() {
       "[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] tempo totale salvataggio (ms)",
       Math.round(performance.now() - t0),
     );
+    // Per il lavoratore: se il profilo è completo al 100% e non ha ancora
+    // impostato disponibilità attive, mostra il popup motivazionale che lo
+    // invita a configurarle subito.
+    if (role === "worker") {
+      try {
+        const { count, error: availErr } = await supabase
+          .from("worker_availability")
+          .select("id", { count: "exact", head: true })
+          .eq("worker_id", user.id);
+        const hasAvailability = !availErr && (count ?? 0) > 0;
+        console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG]", {
+          worker_user_id: user.id,
+          profile_completed: true,
+          has_availability: hasAvailability,
+          show_popup: !hasAvailability,
+        });
+        void refresh();
+        if (!hasAvailability) {
+          setAvailabilityPromptOpen(true);
+          return;
+        }
+      } catch (e) {
+        console.error("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG] check failed", e);
+      }
+    }
     // Naviga subito al dashboard senza attendere il refresh del contesto
     // auth: il refresh può essere lento e non è bloccante per l'UI. Il
     // contesto viene comunque rinfrescato in background.
