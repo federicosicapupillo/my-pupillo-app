@@ -499,6 +499,10 @@ function Thread() {
   const [serverAssign, setServerAssign] = useState<{ canAssign: boolean; reason: string | null } | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // Recensione lasciata dal LAVORATORE al ristoratore (worker_to_restaurant).
+  // Distinta da `existingReview`, che rappresenta SOLO la recensione del
+  // ristoratore verso il lavoratore (restaurant_to_worker).
+  const [workerToRestaurantReview, setWorkerToRestaurantReview] = useState<Review | null>(null);
   const [delayOpen, setDelayOpen] = useState(false);
   const [cancelPresenceOpen, setCancelPresenceOpen] = useState(false);
   const [workerReviews, setWorkerReviews] = useState<WorkerReview[]>([]);
@@ -746,17 +750,45 @@ function Thread() {
           .maybeSingle();
         setShift((sh as Shift | null) ?? null);
         if (sh && user) {
-          // Recupera la recensione del turno (visibile sia al ristoratore
-          // sia al lavoratore: serve a renderizzare la card "Turno chiuso
-          // e recensione ricevuta" anche lato lavoratore).
-          const { data: rev } = await supabase
-            .from("reviews")
-            .select("id, rating, comment, tags, created_at, author_id, target_id, shift_id, punctuality, professionalism, competence, reliability, teamwork, would_rehire, positive_tags, negative_tags")
-            .eq("shift_id", (sh as any).id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          setExistingReview((rev as Review | null) ?? null);
+          // Recupera ENTRAMBE le direzioni di recensione per il turno:
+          //   - restaurant_to_worker  (esistente: `existingReview`)
+          //   - worker_to_restaurant  (nuovo:    `workerToRestaurantReview`)
+          // Usare un'unica query "qualsiasi recensione del turno" porta al
+          // bug per cui lato ristoratore appare "Recensione inviata" non
+          // appena il LAVORATORE invia la sua recensione.
+          const reviewCols = "id, rating, comment, tags, created_at, author_id, target_id, shift_id, punctuality, professionalism, competence, reliability, teamwork, would_rehire, positive_tags, negative_tags";
+          const restaurantId = (sh as any).restaurant_id as string;
+          const workerId = (sh as any).worker_id as string;
+          const [{ data: rRev }, { data: wRev }] = await Promise.all([
+            supabase
+              .from("reviews")
+              .select(reviewCols)
+              .eq("shift_id", (sh as any).id)
+              .eq("author_id", restaurantId)
+              .eq("target_id", workerId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            supabase
+              .from("reviews")
+              .select(reviewCols)
+              .eq("shift_id", (sh as any).id)
+              .eq("author_id", workerId)
+              .eq("target_id", restaurantId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+          ]);
+          setExistingReview((rRev as Review | null) ?? null);
+          setWorkerToRestaurantReview((wRev as Review | null) ?? null);
+          if (typeof console !== "undefined") {
+            console.log("[PUPILLO_REVIEW_DIRECTION_CHECK]", {
+              shift_id: (sh as any).id,
+              restaurant_to_worker_review_id: (rRev as any)?.id ?? null,
+              worker_to_restaurant_review_id: (wRev as any)?.id ?? null,
+              viewer_role: role,
+            });
+          }
         }
       }
       setLoading(false);
@@ -2927,6 +2959,57 @@ function Thread() {
             />
           </div>
         )}
+        {role === "restaurant" && app && workerToRestaurantReview && (() => {
+          if (typeof console !== "undefined") {
+            console.log("[PUPILLO_RESTAURANT_RECEIVED_REVIEW_LOADED]", {
+              review_id: workerToRestaurantReview.id,
+              shift_id: shift?.id ?? null,
+              author_id: workerToRestaurantReview.author_id,
+              target_id: workerToRestaurantReview.target_id,
+            });
+          }
+          const rev = workerToRestaurantReview;
+          const tags = [
+            ...((rev.positive_tags as string[] | null) ?? []),
+            ...((rev.negative_tags as string[] | null) ?? []),
+          ];
+          return (
+            <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Star className="h-4 w-4 text-emerald-600" fill="currentColor" />
+                Recensione ricevuta
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Il lavoratore ha lasciato una recensione per questo turno.
+              </p>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star
+                    key={n}
+                    className={`h-4 w-4 ${n <= (rev.rating ?? 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/40"}`}
+                    strokeWidth={1.5}
+                  />
+                ))}
+                <span className="ml-2 text-sm font-medium">{rev.rating}/5</span>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {tags.map((t) => (
+                    <span key={t} className="text-[11px] rounded-full bg-secondary px-2 py-0.5">{t}</span>
+                  ))}
+                </div>
+              )}
+              {rev.comment && (
+                <blockquote className="border-l-2 border-emerald-500/40 pl-3 text-sm italic text-muted-foreground">
+                  "{rev.comment}"
+                </blockquote>
+              )}
+              <div className="text-[11px] text-muted-foreground">
+                {new Date(rev.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+              </div>
+            </div>
+          );
+        })()}
         {role === "worker"
           && !isConversationClosed
           && app
