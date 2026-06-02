@@ -1632,6 +1632,81 @@ function ShiftsPage() {
           }
         }}
       />
+
+      <Dialog open={!!workerReviewDialog} onOpenChange={(open) => { if (!open && !workerDialogSubmitting) setWorkerReviewDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Com'è andato il turno?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Lascia una recensione al ristoratore per completare il servizio.
+            </p>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-label={`${n} stelle`}
+                    onClick={() => setWorkerDialogRating(n)}
+                    className="p-1 disabled:opacity-50"
+                    disabled={workerDialogSubmitting}
+                  >
+                    <Star className={`h-8 w-8 transition ${n <= workerDialogRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                  </button>
+                ))}
+              </div>
+              <div className="text-xs text-muted-foreground h-4">
+                {workerDialogRating === 1 && "Pessima esperienza"}
+                {workerDialogRating === 2 && "Da migliorare"}
+                {workerDialogRating === 3 && "Normale"}
+                {workerDialogRating === 4 && "Buona esperienza"}
+                {workerDialogRating === 5 && "Ottima esperienza"}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">Tag (facoltativi)</div>
+              <div className="flex flex-wrap gap-2">
+                {WORKER_REVIEW_TAGS.map(tag => {
+                  const active = workerDialogTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setWorkerDialogTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag])}
+                      disabled={workerDialogSubmitting}
+                      className={`text-xs rounded-full px-3 py-1 border transition ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"}`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <Textarea
+              placeholder="Vuoi aggiungere qualcosa? Facoltativo."
+              value={workerDialogComment}
+              onChange={e => setWorkerDialogComment(e.target.value.slice(0, 500))}
+              rows={3}
+              maxLength={500}
+              disabled={workerDialogSubmitting}
+            />
+            {workerDialogError && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="flex-1">{workerDialogError}</div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setWorkerReviewDialog(null)} disabled={workerDialogSubmitting}>Annulla</Button>
+              <Button size="sm" onClick={submitWorkerReviewDialog} disabled={workerDialogSubmitting || workerDialogRating < 1} className="gap-1.5">
+                {workerDialogSubmitting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Invio…</>) : "Invia recensione"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
