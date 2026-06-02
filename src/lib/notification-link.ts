@@ -193,6 +193,7 @@ export async function navigateFromNotificationLink(
       "/shifts": () => navigate({ to: "/shifts" }),
       "/messages": () => navigate({ to: "/messages" }),
       "/ristoratore/collaboratori": () => navigate({ to: "/ristoratore/collaboratori" }),
+      "/ristoratore/recensioni": () => navigate({ to: "/ristoratore/recensioni" }),
     };
     const flat = FLAT_SAFE["/" + parts.join("/")];
     if (flat) return flat();
