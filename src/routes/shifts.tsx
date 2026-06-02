@@ -1253,8 +1253,9 @@ function ShiftsPage() {
                           size="sm"
                           className="gap-1.5"
                           onClick={() => {
-                            if (role === "worker" && isShiftNotEnded(s)) {
-                              setReviewNotAvailableOpen(true);
+                            if (role === "worker") {
+                              try { console.log("[PUPILLO_WORKER_REVIEW_BUTTON_RENDERED]", { shift_id: s.id }); } catch { /* ignore */ }
+                              openWorkerReviewDialog(s);
                               return;
                             }
                             setReviewOpen(s.id);
