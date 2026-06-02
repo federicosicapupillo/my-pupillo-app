@@ -79,6 +79,7 @@ import {
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton";
 import { scrollToField } from "@/lib/form-field-validation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 /**
  * Compute per-field error messages for the three worker date inputs.
