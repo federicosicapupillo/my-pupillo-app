@@ -375,6 +375,64 @@ function Jobs() {
       }),
     );
     setLoading(false);
+
+    // Crea notifiche idempotenti "Lascia una recensione" per i turni assegnati
+    // la cui fine è passata e che non sono ancora stati recensiti dal lavoratore.
+    try {
+      const now = Date.now();
+      const toNotify: Array<{ applicationId: string; shiftId: string }> = [];
+      for (const a of apps ?? []) {
+        const ann = annMap.get(a.announcement_id);
+        const s = ann ? (shiftByAnn.get(ann.id) as ShiftLite | undefined) : null;
+        if (!ann || !s) continue;
+        if (s.status === "cancelled") continue;
+        if (reviewedAppIds.has(a.id)) continue;
+        const end = getShiftEndDate(ann);
+        if (!end || end.getTime() >= now) continue;
+        toNotify.push({ applicationId: a.id, shiftId: s.id });
+      }
+      console.log("[PUPILLO_WORKER_REVIEW_REQUIRED_CHECK]", {
+        worker_id: user.id,
+        candidates: toNotify.length,
+      });
+      if (toNotify.length > 0) {
+        const shiftIds = toNotify.map((t) => t.shiftId);
+        const { data: existingNotifs } = await supabase
+          .from("notifications")
+          .select("id, metadata")
+          .eq("user_id", user.id)
+          .contains("metadata", { kind: "worker_review_required" } as never);
+        const alreadyNotified = new Set(
+          ((existingNotifs ?? []) as any[])
+            .map((n) => n.metadata?.shift_id)
+            .filter(Boolean),
+        );
+        for (const t of toNotify) {
+          if (alreadyNotified.has(t.shiftId)) {
+            console.log("[PUPILLO_WORKER_REVIEW_ALREADY_EXISTS]", { shift_id: t.shiftId });
+            continue;
+          }
+          const { error: insErr } = await supabase.from("notifications").insert({
+            user_id: user.id,
+            title: "Lascia una recensione",
+            body: "Il turno si è concluso. Lascia una recensione al ristoratore per completare il servizio.",
+            link: `/messages/${t.applicationId}`,
+            metadata: {
+              kind: "worker_review_required",
+              shift_id: t.shiftId,
+              application_id: t.applicationId,
+            },
+          } as never);
+          if (insErr) {
+            console.warn("[PUPILLO_WORKER_REVIEW_NOTIFICATION_ERROR]", insErr.message);
+          } else {
+            console.log("[PUPILLO_WORKER_REVIEW_NOTIFICATION_CREATED]", { shift_id: t.shiftId });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[PUPILLO_WORKER_REVIEW_NOTIFICATION_ERROR]", e);
+    }
   };
 
   useEffect(() => {
