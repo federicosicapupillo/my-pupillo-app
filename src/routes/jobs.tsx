@@ -437,11 +437,16 @@ function Jobs() {
             user_id: user.id,
             title: "Lascia una recensione",
             body: "Il turno si è concluso. Lascia una recensione al ristoratore per completare il servizio.",
-            link: `/messages/${t.applicationId}`,
+            // Porta il lavoratore direttamente alla pagina "I miei turni",
+            // tab "Da recensire", con la card del turno evidenziata.
+            link: `/shifts?tab=to-review&shift=${t.shiftId}`,
             metadata: {
               kind: "worker_review_required",
               shift_id: t.shiftId,
               application_id: t.applicationId,
+              target_page: "worker_shifts",
+              target_tab: "da_recensire",
+              safe_redirect_path: `/shifts?tab=to-review&shift=${t.shiftId}`,
             },
           } as never);
           if (insErr) {
