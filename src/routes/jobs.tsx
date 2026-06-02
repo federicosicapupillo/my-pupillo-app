@@ -736,6 +736,13 @@ function OfferCard({
   const receivedAt = new Date(r.created_at).toLocaleDateString("it-IT");
   const completed = isCompleted(r);
   const needsReview = completed && !r.hasWorkerReview;
+  const concludedReviewed = completed && r.hasWorkerReview;
+  if (concludedReviewed) {
+    console.log("[PUPILLO_WORKER_CONCLUDED_CARD_RENDERED]", {
+      application_id: r.id,
+      shift_id: r.shift?.id ?? null,
+    });
+  }
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-3xl border border-white/[0.06] bg-card p-5 shadow-[0_20px_50px_-25px_oklch(0_0_0/0.6)] transition-shadow hover:shadow-[0_24px_60px_-25px_oklch(0.65_0.25_310/0.35)] sm:p-6">
@@ -901,6 +908,11 @@ function OfferCard({
       {needsReview && (
         <p className="mt-3 text-xs text-muted-foreground">
           Il turno è stato concluso. Lascia una recensione per completare il servizio.
+        </p>
+      )}
+      {concludedReviewed && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Turno concluso. Recensione inviata.
         </p>
       )}
     </div>
