@@ -122,7 +122,8 @@ type Bucket =
   | "accettate"
   | "rifiutate"
   | "scadute"
-  | "da_recensire";
+  | "da_recensire"
+  | "concluse";
 
 type SortMode = "service_date" | "received" | "tariff" | "role" | "status";
 
@@ -159,7 +160,7 @@ function bucketsFor(r: Row, lastSeenAt: number): Bucket[] {
   const out: Bucket[] = [];
   if (isCompleted(r)) {
     if (!r.hasWorkerReview) out.push("da_recensire");
-    else out.push("accettate");
+    else out.push("concluse");
     return out;
   }
   if (isCancelled(r)) {
@@ -193,7 +194,7 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   if (isCompleted(r)) {
     if (!r.hasWorkerReview)
       return { label: "Da recensire", cls: "bg-amber-100 text-amber-900 border-amber-200" };
-    return { label: "Completata", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
+    return { label: "Conclusa", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
   }
   if (r.shift?.status === "cancelled")
     return { label: "Annullata", cls: "bg-muted text-muted-foreground border-border" };
@@ -293,6 +294,16 @@ const TABS: {
       "bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100 dark:bg-violet-500/10 dark:text-violet-200 dark:border-violet-500/30 dark:hover:bg-violet-500/20",
     badgeActiveCls: "bg-white/25 text-white",
     badgeInactiveCls: "bg-violet-500/20 text-violet-900 dark:bg-violet-400/20 dark:text-violet-100",
+  },
+  {
+    key: "concluse",
+    label: "Concluse",
+    activeCls:
+      "bg-teal-500 text-white border-teal-500 shadow-md shadow-teal-500/30",
+    inactiveCls:
+      "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100 dark:bg-teal-500/10 dark:text-teal-200 dark:border-teal-500/30 dark:hover:bg-teal-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-teal-500/20 text-teal-900 dark:bg-teal-400/20 dark:text-teal-100",
   },
 ];
 
@@ -500,6 +511,7 @@ function Jobs() {
       rifiutate: 0,
       scadute: 0,
       da_recensire: 0,
+      concluse: 0,
     };
     for (const r of rows) for (const b of bucketsFor(r, lastSeenAt)) c[b] += 1;
     return c;
@@ -667,10 +679,15 @@ function Jobs() {
         row={reviewRow}
         onClose={() => setReviewRow(null)}
         onSubmitted={(rowId) => {
+          console.log("[PUPILLO_WORKER_OFFER_SET_TO_CONCLUDED_AFTER_REVIEW]", {
+            application_id: rowId,
+          });
           setRows((prev) =>
             prev.map((r) => (r.id === rowId ? { ...r, hasWorkerReview: true } : r)),
           );
+          console.log("[PUPILLO_WORKER_CONCLUDED_TAB_COUNTER_UPDATED]");
           setReviewRow(null);
+          toast.success("Recensione inviata. Turno concluso.");
         }}
       />
     </AppShell>
@@ -724,6 +741,13 @@ function OfferCard({
   const receivedAt = new Date(r.created_at).toLocaleDateString("it-IT");
   const completed = isCompleted(r);
   const needsReview = completed && !r.hasWorkerReview;
+  const concludedReviewed = completed && r.hasWorkerReview;
+  if (concludedReviewed) {
+    console.log("[PUPILLO_WORKER_CONCLUDED_CARD_RENDERED]", {
+      application_id: r.id,
+      shift_id: r.shift?.id ?? null,
+    });
+  }
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-3xl border border-white/[0.06] bg-card p-5 shadow-[0_20px_50px_-25px_oklch(0_0_0/0.6)] transition-shadow hover:shadow-[0_24px_60px_-25px_oklch(0.65_0.25_310/0.35)] sm:p-6">
@@ -891,6 +915,11 @@ function OfferCard({
           Il turno è stato concluso. Lascia una recensione per completare il servizio.
         </p>
       )}
+      {concludedReviewed && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Turno concluso. Recensione inviata.
+        </p>
+      )}
     </div>
   );
 }
@@ -994,7 +1023,6 @@ function WorkerReviewDialog({
         return;
       }
       console.log("[PUPILLO_WORKER_REVIEW_MODAL_SUCCESS]", { application_id: row.id });
-      toast.success("Recensione inviata. Grazie!");
       onSubmitted(row.id);
     } catch (e) {
       console.warn("[PUPILLO_WORKER_REVIEW_MODAL_ERROR]", e);
