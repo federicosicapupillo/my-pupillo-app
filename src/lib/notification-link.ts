@@ -127,6 +127,7 @@ export async function navigateFromNotificationLink(
     // /shifts (preserve ?tab=to-review&shift=<id> from review notifications)
     if (parts.length === 1 && parts[0] === "shifts") {
       const isReviewNotif = searchObj.tab === "to-review" || searchObj.tab === "da-recensire";
+      const isReportNotif = ["no_show", "no-show", "noshow", "reports", "segnalazioni", "segnalazione"].includes((searchObj.tab || "").toLowerCase());
       if (isReviewNotif) {
         try {
           console.log("[PUPILLO_WORKER_REVIEW_NOTIFICATION_CLICK]", { ...ctx });
@@ -137,6 +138,21 @@ export async function navigateFromNotificationLink(
             fallback_used: false,
           });
         } catch { /* ignore */ }
+      }
+      if (isReportNotif) {
+        try {
+          console.log("[PUPILLO_WORKER_REPORT_NOTIFICATION_CLICK]", { ...ctx });
+          console.log("[PUPILLO_WORKER_REPORT_NOTIFICATION_REDIRECT]", {
+            ...ctx,
+            resolved_path: `/shifts?tab=no_show${searchObj.shift ? `&shift=${searchObj.shift}` : ""}`,
+            shift_id: searchObj.shift ?? null,
+            fallback_used: false,
+          });
+          if (searchObj.shift) console.log("[PUPILLO_WORKER_REPORT_SHIFT_HIGHLIGHTED]", { ...ctx, shift_id: searchObj.shift });
+          else console.log("[PUPILLO_WORKER_REPORT_NOTIFICATION_FALLBACK_USED]", { ...ctx });
+          console.log("[PUPILLO_WORKER_REPORT_NOTIFICATION_404_PREVENTED]", { ...ctx });
+        } catch { /* ignore */ }
+        searchObj.tab = "no_show";
       }
       // Normalize tab alias da-recensire → to-review (the real tab key)
       if (searchObj.tab === "da-recensire") searchObj.tab = "to-review";
