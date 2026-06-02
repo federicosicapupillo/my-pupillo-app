@@ -23,15 +23,7 @@ installServerFnAuthFetch();
 function NotFoundComponent() {
   // Role-aware 404: lavoratore e ristoratore ricevono pulsanti utili
   // verso le loro sezioni principali invece di un semplice "Go home".
-  let role: "worker" | "restaurant" | "admin" | null = null;
-  try {
-    // useAuth è sempre montato dentro AuthProvider nel RootComponent.
-    // Su hard 404 fuori dal provider (rarissimo) cade nel catch.
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    role = (useAuth().role as typeof role) ?? null;
-  } catch {
-    role = null;
-  }
+  const { role } = useAuth();
   const isWorker = role === "worker";
   const isRestaurant = role === "restaurant";
   return (
