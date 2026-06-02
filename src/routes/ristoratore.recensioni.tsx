@@ -12,7 +12,7 @@ export const Route = createFileRoute("/ristoratore/recensioni")({
   head: () => ({ meta: [{ title: "Recensioni ricevute — Pupillo" }] }),
   component: () => (
     <RequireAuth>
-      <RequireRole role="restaurant">
+      <RequireRole allow={["restaurant"]}>
         <Page />
       </RequireRole>
     </RequireAuth>

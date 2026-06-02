@@ -34,6 +34,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AccountErrorRouteImport } from './routes/account-error'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkersIdRouteImport } from './routes/workers_.$id'
+import { Route as RistoratoreRecensioniRouteImport } from './routes/ristoratore.recensioni'
 import { Route as RistoratoreCollaboratoriRouteImport } from './routes/ristoratore.collaboratori'
 import { Route as ReviewsIdRouteImport } from './routes/reviews.$id'
 import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
@@ -172,6 +173,11 @@ const WorkersIdRoute = WorkersIdRouteImport.update({
   path: '/workers/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RistoratoreRecensioniRoute = RistoratoreRecensioniRouteImport.update({
+  id: '/ristoratore/recensioni',
+  path: '/ristoratore/recensioni',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RistoratoreCollaboratoriRoute =
   RistoratoreCollaboratoriRouteImport.update({
     id: '/ristoratore/collaboratori',
@@ -269,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/restaurants/$id': typeof RestaurantsIdRoute
   '/reviews/$id': typeof ReviewsIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
+  '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/restaurants/$id': typeof RestaurantsIdRoute
   '/reviews/$id': typeof ReviewsIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
+  '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
@@ -348,6 +356,7 @@ export interface FileRoutesById {
   '/restaurants/$id': typeof RestaurantsIdRoute
   '/reviews/$id': typeof ReviewsIdRoute
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
+  '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers_/$id': typeof WorkersIdRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
@@ -389,6 +398,7 @@ export interface FileRouteTypes {
     | '/restaurants/$id'
     | '/reviews/$id'
     | '/ristoratore/collaboratori'
+    | '/ristoratore/recensioni'
     | '/workers/$id'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/restaurants/$id'
     | '/reviews/$id'
     | '/ristoratore/collaboratori'
+    | '/ristoratore/recensioni'
     | '/workers/$id'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
@@ -467,6 +478,7 @@ export interface FileRouteTypes {
     | '/restaurants/$id'
     | '/reviews/$id'
     | '/ristoratore/collaboratori'
+    | '/ristoratore/recensioni'
     | '/workers_/$id'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
@@ -502,6 +514,7 @@ export interface RootRouteChildren {
   RestaurantsIdRoute: typeof RestaurantsIdRoute
   ReviewsIdRoute: typeof ReviewsIdRoute
   RistoratoreCollaboratoriRoute: typeof RistoratoreCollaboratoriRoute
+  RistoratoreRecensioniRoute: typeof RistoratoreRecensioniRoute
   WorkersIdRoute: typeof WorkersIdRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
@@ -686,6 +699,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ristoratore/recensioni': {
+      id: '/ristoratore/recensioni'
+      path: '/ristoratore/recensioni'
+      fullPath: '/ristoratore/recensioni'
+      preLoaderRoute: typeof RistoratoreRecensioniRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ristoratore/collaboratori': {
       id: '/ristoratore/collaboratori'
       path: '/ristoratore/collaboratori'
@@ -839,6 +859,7 @@ const rootRouteChildren: RootRouteChildren = {
   RestaurantsIdRoute: RestaurantsIdRoute,
   ReviewsIdRoute: ReviewsIdRoute,
   RistoratoreCollaboratoriRoute: RistoratoreCollaboratoriRoute,
+  RistoratoreRecensioniRoute: RistoratoreRecensioniRoute,
   WorkersIdRoute: WorkersIdRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
