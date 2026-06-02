@@ -3189,6 +3189,9 @@ function Thread() {
             endTime={ann?.end_time ?? null}
             venue={displayAddress}
             shiftStatus={shift?.status ?? null}
+            workerId={app.worker_id}
+            restaurantId={app.restaurant_id}
+            shiftId={shift?.id ?? null}
             onSubmit={submitReview}
           />
         )}
