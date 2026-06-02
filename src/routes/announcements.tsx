@@ -2059,7 +2059,10 @@ function CancelAnnouncementDialog({
       onCancelled(updated);
     } catch (e: any) {
       console.error("[cancelAnnouncement] failed", e);
-      toast.error("Non è stato possibile annullare l'annuncio. Riprova.");
+      const msg = typeof e?.message === "string" && e.message
+        ? e.message
+        : "Non è stato possibile annullare l'annuncio. Riprova.";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
