@@ -1023,7 +1023,6 @@ function WorkerReviewDialog({
         return;
       }
       console.log("[PUPILLO_WORKER_REVIEW_MODAL_SUCCESS]", { application_id: row.id });
-      toast.success("Recensione inviata. Grazie!");
       onSubmitted(row.id);
     } catch (e) {
       console.warn("[PUPILLO_WORKER_REVIEW_MODAL_ERROR]", e);
