@@ -327,6 +327,16 @@ function formatRange(a: Ann) {
 
 type EffectiveStatus = "active" | "soon" | "expired" | "completed" | "assigned" | "draft" | "cancelled";
 
+/**
+ * Returns true when current_timestamp >= shift_start_datetime.
+ * Uses getShiftStartDate (Europe/Rome) so it also covers shifts that cross midnight.
+ */
+function isShiftStarted(a: Ann, now: Date): boolean {
+  const start = getShiftStartDate(a);
+  if (!start) return false;
+  return now.getTime() >= start.getTime();
+}
+
 /** Determine the displayed status combining DB status with time-based expiry. */
 function computeEffectiveStatus(a: Ann, now: Date): { kind: EffectiveStatus; countdown: string | null } {
   if (a.status === "completed") return { kind: "completed", countdown: null };
@@ -896,6 +906,32 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                 const eff = computeEffectiveStatus(a, now);
                 const canCancel = eff.kind !== "cancelled" && eff.kind !== "completed" && eff.kind !== "expired";
                 if (!canCancel) return null;
+                const started = isShiftStarted(a, now);
+                if (started) {
+                  try {
+                    console.info("[PUPILLO_RESTAURANT_CANCEL_DISABLED]", {
+                      restaurant_id: user?.id ?? null,
+                      announcement_id: a.id,
+                      shift_start_datetime: getShiftStartDate(a)?.toISOString() ?? null,
+                      current_timestamp: now.toISOString(),
+                      action_requested: "render_cancel_button",
+                      blocked: true,
+                      reason: "shift_already_started",
+                    });
+                  } catch { /* */ }
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      aria-disabled="true"
+                      title="Non puoi annullare un turno già iniziato."
+                      className="gap-2 text-destructive border-destructive/40 opacity-50 cursor-not-allowed"
+                    >
+                      <Trash2 className="h-3 w-3" /> Annulla turno
+                    </Button>
+                  );
+                }
                 return (
                   <Button
                     variant="outline"
@@ -903,7 +939,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                     className="gap-2 text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/5"
                     onClick={() => setCancelTarget(a)}
                   >
-                    <Trash2 className="h-3 w-3" /> Annulla annuncio
+                    <Trash2 className="h-3 w-3" /> Annulla turno
                   </Button>
                 );
               })()}
@@ -1191,6 +1227,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
           venueName={(profile as any)?.business_name ?? null}
           statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
+          shiftStarted={detailsAnn ? isShiftStarted(detailsAnn, now) : false}
           onUpdated={handleAnnUpdated}
           onDuplicate={(a) => { setDetailsOpen(false); setRepublishAnn(a); setRepublishOpen(true); }}
         />
@@ -1393,7 +1430,7 @@ function SummaryRow({ icon: Icon, label, value }: { icon: typeof Calendar; label
 }
 
 function AnnouncementDetailsDialog({
-  open, onOpenChange, ann, candidatesCount, assignedCount, venueName, statusKind, onUpdated, onDuplicate,
+  open, onOpenChange, ann, candidatesCount, assignedCount, venueName, statusKind, shiftStarted = false, onUpdated, onDuplicate,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -1402,6 +1439,7 @@ function AnnouncementDetailsDialog({
   assignedCount: number;
   venueName: string | null;
   statusKind: EffectiveStatus;
+  shiftStarted?: boolean;
   onUpdated: (a: Ann) => void;
   onDuplicate: (a: Ann) => void;
 }) {
@@ -1443,6 +1481,23 @@ function AnnouncementDetailsDialog({
   };
 
   const doSave = async () => {
+    if (shiftStarted) {
+      try {
+        console.warn("[PUPILLO_SHIFT_EDIT_BLOCKED_AFTER_START]", {
+          announcement_id: ann.id,
+          shift_id: ann.id,
+          shift_start_datetime: getShiftStartDate(ann)?.toISOString() ?? null,
+          current_timestamp: new Date().toISOString(),
+          action_requested: "update_announcement",
+          blocked: true,
+          reason: "shift_already_started",
+        });
+      } catch { /* */ }
+      toast.error("Non puoi modificare o annullare un turno già iniziato.");
+      setEditing(false);
+      setConfirmOpen(false);
+      return;
+    }
     setSaving(true);
     const payload: any = {
       required_skills: form.required_skills,
@@ -1533,6 +1588,13 @@ function AnnouncementDetailsDialog({
               : "Tutti i dettagli del turno in un'unica vista."}
           </DialogDescription>
         </DialogHeader>
+
+        {shiftStarted && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200 flex gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>Questo turno è già iniziato. L'annuncio può essere solo visualizzato.</span>
+          </div>
+        )}
 
         {!editing ? (
           <div className="space-y-5 text-sm">
@@ -1690,19 +1752,35 @@ function AnnouncementDetailsDialog({
         )}
 
         <DialogFooter className="gap-2 flex-col sm:flex-row">
+          {shiftStarted && (() => {
+            try {
+              console.info("[PUPILLO_ANNOUNCEMENT_READONLY_PREVIEW]", {
+                announcement_id: ann.id,
+                shift_id: ann.id,
+                shift_start_datetime: getShiftStartDate(ann)?.toISOString() ?? null,
+                current_timestamp: new Date().toISOString(),
+                action_requested: "open_details_dialog",
+                blocked: true,
+                reason: "shift_already_started",
+              });
+            } catch { /* */ }
+            return null;
+          })()}
           {!editing ? (
             <>
               <Button variant="outline" className="gap-2" onClick={() => onDuplicate(ann)}>
                 <Copy className="h-4 w-4" /> Duplica annuncio
               </Button>
-              <Button className="gap-2" onClick={() => setEditing(true)}>
-                <Pencil className="h-4 w-4" /> Modifica annuncio
-              </Button>
+              {!shiftStarted && (
+                <Button className="gap-2" onClick={() => setEditing(true)}>
+                  <Pencil className="h-4 w-4" /> Modifica annuncio
+                </Button>
+              )}
             </>
           ) : (
             <>
               <Button variant="ghost" onClick={() => setEditing(false)} disabled={saving}>Annulla</Button>
-              <Button onClick={trySave} disabled={saving}>{saving ? "Salvataggio…" : "Salva modifiche"}</Button>
+              <Button onClick={trySave} disabled={saving || shiftStarted}>{saving ? "Salvataggio…" : "Salva modifiche"}</Button>
             </>
           )}
         </DialogFooter>
@@ -1981,7 +2059,10 @@ function CancelAnnouncementDialog({
       onCancelled(updated);
     } catch (e: any) {
       console.error("[cancelAnnouncement] failed", e);
-      toast.error("Non è stato possibile annullare l'annuncio. Riprova.");
+      const msg = typeof e?.message === "string" && e.message
+        ? e.message
+        : "Non è stato possibile annullare l'annuncio. Riprova.";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
