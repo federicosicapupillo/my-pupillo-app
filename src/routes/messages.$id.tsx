@@ -1673,8 +1673,24 @@ function Thread() {
     if (app?.status === "expired") return "cancelled";
     if (app?.status === "cancelled") return "cancelled";
     if (app?.status === "rejected") return "cancelled";
+    // Time-based closure: il turno è assegnato (shift esiste e non è
+    // annullato) e la fine effettiva del turno è già passata. La chat passa
+    // in sola lettura per entrambi i ruoli, lo storico resta visibile.
+    if (shift && shift.status !== "cancelled" && ann) {
+      const end = getShiftEndDate(ann);
+      if (end && end.getTime() < Date.now()) {
+        if (typeof window !== "undefined") {
+          console.log("[PUPILLO_CHAT_DISABLED_AFTER_SHIFT_END]", {
+            application_id: app?.id ?? null,
+            shift_id: shift.id,
+            end: end.toISOString(),
+          });
+        }
+        return "completed";
+      }
+    }
     return null;
-  }, [shift?.status, ann?.status, app?.status]);
+  }, [shift, ann, app?.status, app?.id]);
   const isConversationClosed = closureReason !== null;
   const closureNoticeText = closureReason === "completed"
     ? "Questo turno è stato concluso. La chat è disponibile solo come storico."
