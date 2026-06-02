@@ -667,7 +667,13 @@ function Onboarding() {
       setOptExp({
         experience_years: p.experience_years != null ? String(p.experience_years) : "",
         experience_level: (p.experience_level === "junior" || p.experience_level === "intermediate" || p.experience_level === "senior") ? p.experience_level : "",
-        hourly_rate: p.hourly_rate != null ? String(p.hourly_rate) : "",
+        hourly_rate: (() => {
+          if (p.hourly_rate == null) return "";
+          const n = Number(p.hourly_rate);
+          if (!Number.isFinite(n)) return "";
+          if (n >= 31) return "oltre_30";
+          return String(n);
+        })(),
         is_motorized: p.is_motorized === true ? "yes" : p.is_motorized === false ? "no" : "",
         short_bio: (p.short_bio ?? p.professional_profile ?? "") as string,
       });
@@ -1287,7 +1293,12 @@ function Onboarding() {
             experience_years: optExp.experience_years.trim() || null,
             experience_level: optExp.experience_level || null,
             hourly_rate: (() => {
-              const v = optExp.hourly_rate.trim().replace(",", ".");
+              const raw = optExp.hourly_rate.trim();
+              if (!raw) return null;
+              // Sentinel: "Oltre 30 €/h" salvato come 31 per restare coerente
+              // col tipo numerico della colonna hourly_rate.
+              if (raw === "oltre_30") return 31;
+              const v = raw.replace(",", ".");
               if (!v) return null;
               const n = Number(v);
               return Number.isFinite(n) && n >= 0 ? n : null;
@@ -2437,14 +2448,23 @@ function Onboarding() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Anni di esperienza</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    placeholder="Es. 2"
-                    value={optExp.experience_years}
-                    onChange={(e) => setOptExp({ ...optExp, experience_years: e.target.value })}
-                  />
+                  <Select
+                    value={optExp.experience_years || "none"}
+                    onValueChange={(v) => setOptExp({ ...optExp, experience_years: v === "none" ? "" : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Non specificato" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Non specificato</SelectItem>
+                      <SelectItem value="meno_di_1">Meno di 1 anno</SelectItem>
+                      <SelectItem value="1">1 anno</SelectItem>
+                      <SelectItem value="2">2 anni</SelectItem>
+                      <SelectItem value="3">3 anni</SelectItem>
+                      <SelectItem value="4">4 anni</SelectItem>
+                      <SelectItem value="5">5 anni</SelectItem>
+                      <SelectItem value="6_10">6-10 anni</SelectItem>
+                      <SelectItem value="oltre_10">Oltre 10 anni</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>Livello di esperienza</Label>
@@ -2463,15 +2483,29 @@ function Onboarding() {
                 </div>
                 <div>
                   <Label>Tariffa oraria desiderata (€/h)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.5"
-                    inputMode="decimal"
-                    placeholder="Es. 12"
-                    value={optExp.hourly_rate}
-                    onChange={(e) => setOptExp({ ...optExp, hourly_rate: e.target.value })}
-                  />
+                  <Select
+                    value={optExp.hourly_rate || "none"}
+                    onValueChange={(v) => setOptExp({ ...optExp, hourly_rate: v === "none" ? "" : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Non specificato" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Non specificato</SelectItem>
+                      <SelectItem value="8">8 €/h</SelectItem>
+                      <SelectItem value="9">9 €/h</SelectItem>
+                      <SelectItem value="10">10 €/h</SelectItem>
+                      <SelectItem value="11">11 €/h</SelectItem>
+                      <SelectItem value="12">12 €/h</SelectItem>
+                      <SelectItem value="13">13 €/h</SelectItem>
+                      <SelectItem value="14">14 €/h</SelectItem>
+                      <SelectItem value="15">15 €/h</SelectItem>
+                      <SelectItem value="16">16 €/h</SelectItem>
+                      <SelectItem value="18">18 €/h</SelectItem>
+                      <SelectItem value="20">20 €/h</SelectItem>
+                      <SelectItem value="25">25 €/h</SelectItem>
+                      <SelectItem value="30">30 €/h</SelectItem>
+                      <SelectItem value="oltre_30">Oltre 30 €/h</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground mt-1">
                     La tariffa è indicativa. Il compenso finale dipende dal turno proposto dal ristoratore.
                   </p>

@@ -507,14 +507,22 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
   const initialMotor = profile?.is_motorized === true ? "yes" : profile?.is_motorized === false ? "no" : "";
   const [years, setYears] = useState<string>(profile?.experience_years ?? "");
   const [level, setLevel] = useState<string>(initialLevel);
-  const [rate, setRate] = useState<string>(profile?.hourly_rate != null ? String(profile.hourly_rate) : "");
+  const [rate, setRate] = useState<string>(
+    profile?.hourly_rate != null
+      ? (Number(profile.hourly_rate) >= 31 ? "oltre_30" : String(profile.hourly_rate))
+      : "",
+  );
   const [motor, setMotor] = useState<"" | "yes" | "no">(initialMotor as any);
   const { saving, save } = useBoxSave(userId, onSaved);
 
   const start = () => {
     setYears(profile?.experience_years ?? "");
     setLevel(initialLevel);
-    setRate(profile?.hourly_rate != null ? String(profile.hourly_rate) : "");
+    setRate(
+      profile?.hourly_rate != null
+        ? (Number(profile.hourly_rate) >= 31 ? "oltre_30" : String(profile.hourly_rate))
+        : "",
+    );
     setMotor(initialMotor as any);
     setEditing(true);
   };
@@ -523,8 +531,9 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
     const rateVal = rate.trim();
     const rateNum = (() => {
       if (!rateVal) return null;
+      if (rateVal === "oltre_30") return 31;
       const n = Number(rateVal.replace(",", "."));
-      if (!Number.isFinite(n) || n < 9) return null;
+      if (!Number.isFinite(n) || n < 8) return null;
       return n;
     })();
     const ok = await save({
@@ -569,7 +578,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
   };
   const rateLabel = (r: number | null) => {
     if (r == null) return "—";
-    if (r >= 21) return "Oltre 20 €/h";
+    if (r >= 31) return "Oltre 30 €/h";
     return `€${r}/h`;
   };
 
@@ -597,6 +606,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
 
   const RATE_OPTIONS = [
     { value: "", label: "Non specificato" },
+    { value: "8", label: "8 €/h" },
     { value: "9", label: "9 €/h" },
     { value: "10", label: "10 €/h" },
     { value: "11", label: "11 €/h" },
@@ -607,7 +617,9 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
     { value: "16", label: "16 €/h" },
     { value: "18", label: "18 €/h" },
     { value: "20", label: "20 €/h" },
-    { value: "oltre_20", label: "Oltre 20 €/h" },
+    { value: "25", label: "25 €/h" },
+    { value: "30", label: "30 €/h" },
+    { value: "oltre_30", label: "Oltre 30 €/h" },
   ];
 
   return (
