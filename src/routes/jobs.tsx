@@ -122,7 +122,8 @@ type Bucket =
   | "accettate"
   | "rifiutate"
   | "scadute"
-  | "da_recensire";
+  | "da_recensire"
+  | "concluse";
 
 type SortMode = "service_date" | "received" | "tariff" | "role" | "status";
 
@@ -159,7 +160,7 @@ function bucketsFor(r: Row, lastSeenAt: number): Bucket[] {
   const out: Bucket[] = [];
   if (isCompleted(r)) {
     if (!r.hasWorkerReview) out.push("da_recensire");
-    else out.push("accettate");
+    else out.push("concluse");
     return out;
   }
   if (isCancelled(r)) {
@@ -193,7 +194,7 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   if (isCompleted(r)) {
     if (!r.hasWorkerReview)
       return { label: "Da recensire", cls: "bg-amber-100 text-amber-900 border-amber-200" };
-    return { label: "Completata", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
+    return { label: "Conclusa", cls: "bg-emerald-100 text-emerald-900 border-emerald-200" };
   }
   if (r.shift?.status === "cancelled")
     return { label: "Annullata", cls: "bg-muted text-muted-foreground border-border" };
@@ -293,6 +294,16 @@ const TABS: {
       "bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100 dark:bg-violet-500/10 dark:text-violet-200 dark:border-violet-500/30 dark:hover:bg-violet-500/20",
     badgeActiveCls: "bg-white/25 text-white",
     badgeInactiveCls: "bg-violet-500/20 text-violet-900 dark:bg-violet-400/20 dark:text-violet-100",
+  },
+  {
+    key: "concluse",
+    label: "Concluse",
+    activeCls:
+      "bg-teal-500 text-white border-teal-500 shadow-md shadow-teal-500/30",
+    inactiveCls:
+      "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100 dark:bg-teal-500/10 dark:text-teal-200 dark:border-teal-500/30 dark:hover:bg-teal-500/20",
+    badgeActiveCls: "bg-white/25 text-white",
+    badgeInactiveCls: "bg-teal-500/20 text-teal-900 dark:bg-teal-400/20 dark:text-teal-100",
   },
 ];
 
