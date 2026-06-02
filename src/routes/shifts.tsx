@@ -137,9 +137,20 @@ function ShiftsPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past">(
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "to-review" ? "to-review" : "assigned"
-  );
+  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past">(() => {
+    if (typeof window === "undefined") return "assigned";
+    const raw = (new URLSearchParams(window.location.search).get("tab") || "").toLowerCase();
+    const map: Record<string, "assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past"> = {
+      "assigned": "assigned", "assegnati": "assigned",
+      "to-review": "to-review", "da-recensire": "to-review", "da_recensire": "to-review",
+      "completed": "completed", "conclusi": "completed", "completati": "completed", "concluso": "completed",
+      "no_show": "no_show", "noshow": "no_show", "no-show": "no_show",
+      "reports": "no_show", "segnalazioni": "no_show", "segnalazione": "no_show",
+      "past": "past", "archiviati": "past",
+      "upcoming": "upcoming",
+    };
+    return map[raw] ?? "assigned";
+  });
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
   // True once we've applied the worker auto-default-tab priority logic.
   // Prevents resetting the tab after the user manually switches it.
@@ -189,6 +200,83 @@ function ShiftsPage() {
   const [noShowSubmitting, setNoShowSubmitting] = useState(false);
   const [notEndedDialog, setNotEndedDialog] = useState<Shift | null>(null);
   const [reviewNotAvailableOpen, setReviewNotAvailableOpen] = useState(false);
+  // Worker-side popup (modale) per recensire il ristoratore. Vedi MODIFICA 8.
+  const [workerReviewDialog, setWorkerReviewDialog] = useState<Shift | null>(null);
+  const [workerDialogRating, setWorkerDialogRating] = useState<number>(0);
+  const [workerDialogComment, setWorkerDialogComment] = useState("");
+  const [workerDialogTags, setWorkerDialogTags] = useState<string[]>([]);
+  const [workerDialogSubmitting, setWorkerDialogSubmitting] = useState(false);
+  const [workerDialogError, setWorkerDialogError] = useState<string | null>(null);
+  const WORKER_REVIEW_TAGS = [
+    "Comunicazione chiara",
+    "Ambiente positivo",
+    "Pagamento corretto",
+    "Organizzazione buona",
+    "Istruzioni chiare",
+    "Rispetto degli accordi",
+    "Da migliorare organizzazione",
+    "Informazioni poco chiare",
+  ] as const;
+  const openWorkerReviewDialog = (s: Shift) => {
+    if (isShiftNotEnded(s)) { setReviewNotAvailableOpen(true); return; }
+    setWorkerDialogRating(0);
+    setWorkerDialogComment("");
+    setWorkerDialogTags([]);
+    setWorkerDialogError(null);
+    setWorkerReviewDialog(s);
+    try { console.log("[PUPILLO_WORKER_REVIEW_MODAL_OPEN]", { shift_id: s.id, worker_id: user?.id ?? null }); } catch { /* ignore */ }
+  };
+  const submitWorkerReviewDialog = async () => {
+    const s = workerReviewDialog;
+    if (!s || !user) return;
+    if (workerDialogRating < 1) { setWorkerDialogError("Seleziona una valutazione."); return; }
+    setWorkerDialogSubmitting(true);
+    setWorkerDialogError(null);
+    const tId = toast.loading("Invio recensione in corso…");
+    try {
+      const rating = Math.max(1, Math.min(5, Math.round(workerDialogRating)));
+      const payload: any = {
+        author_id: user.id,
+        target_id: s.restaurant_id,
+        shift_id: s.id,
+        announcement_id: s.announcement_id,
+        application_id: s.announcement_id ? acceptedAppMap[s.announcement_id]?.id ?? null : null,
+        rating,
+        comment: (workerDialogComment || "").trim().slice(0, 500) || null,
+        communication: rating,
+        professionalism: rating,
+        reliability: rating,
+        staff_collaboration: rating,
+        positive_tags: workerDialogTags,
+      };
+      try { console.log("[PUPILLO_WORKER_REVIEW_SUBMIT_WITH_OPTIONAL_COMMENT]", { shift_id: s.id, has_comment: (workerDialogComment || "").trim().length > 0, rating, tags: workerDialogTags }); } catch { /* ignore */ }
+      const { error } = await supabase.from("reviews").insert(payload);
+      if (error) {
+        const isDup = (error as any)?.code === "23505" || /duplicate|unique/i.test(error.message || "");
+        const msg = isDup ? "Hai già lasciato una recensione per questo turno." : (error.message || "Errore sconosciuto");
+        toast.error(`Impossibile inviare la recensione: ${msg}`, { id: tId });
+        setWorkerDialogError(msg);
+        try { console.warn("[PUPILLO_WORKER_REVIEW_SUBMIT_ERROR]", { shift_id: s.id, error: msg }); } catch { /* ignore */ }
+        return;
+      }
+      toast.success("Recensione inviata. Turno concluso.", { id: tId });
+      try {
+        console.log("[PUPILLO_WORKER_REVIEW_SUBMIT_SUCCESS]", { shift_id: s.id, rating });
+        console.log("[PUPILLO_WORKER_SHIFT_MOVED_TO_CONCLUDED_AFTER_REVIEW]", { shift_id: s.id });
+      } catch { /* ignore */ }
+      setReviewMap(prev => ({ ...prev, [s.id]: rating }));
+      refreshRequiredReviews();
+      setWorkerReviewDialog(null);
+      setFilter("completed");
+    } catch (e: any) {
+      const msg = e?.message ?? "Errore di rete";
+      toast.error(`Errore di rete: ${msg}`, { id: tId });
+      setWorkerDialogError(msg);
+      try { console.warn("[PUPILLO_WORKER_REVIEW_SUBMIT_ERROR]", { shift_id: s.id, error: msg }); } catch { /* ignore */ }
+    } finally {
+      setWorkerDialogSubmitting(false);
+    }
+  };
   // Criteri recensione lavoratore → ristoratore (form inline)
   const [workerCriteria, setWorkerCriteria] = useState({
     overall: 5,
@@ -729,6 +817,15 @@ function ShiftsPage() {
         })}
       </div>
 
+      {role === "worker" && !loading && initialFocusShift && !shifts.some(s => s.id === initialFocusShift) && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+          <div className="flex-1 text-amber-900 dark:text-amber-200">
+            Il turno collegato alla notifica non è più disponibile o non può essere visualizzato.
+          </div>
+        </div>
+      )}
+
       {role === "restaurant" && <RequiredReviewsBanner />}
       {role === "restaurant" && actionShifts.length > 0 && (
         <div className={`mb-4 rounded-2xl border p-4 ${actionShifts.some((a) => a.is_overdue) ? "border-destructive/30 bg-destructive/5" : "border-amber-400/40 bg-amber-50 dark:bg-amber-500/10"}`}>
@@ -868,9 +965,27 @@ function ShiftsPage() {
                 key={s.id}
                 ref={focusedShift === s.id ? focusRef : undefined}
                 className={`rounded-2xl border bg-card p-4 sm:p-5 transition ${
-                  focusedShift === s.id ? "ring-2 ring-primary border-primary/50 shadow-lg" : ""
+                  focusedShift === s.id && s.status === "no_show"
+                    ? "ring-2 ring-destructive border-destructive/60 shadow-lg bg-destructive/5 animate-pulse"
+                    : focusedShift === s.id
+                      ? "ring-2 ring-primary border-primary/50 shadow-lg"
+                      : ""
                 }`}
               >
+                {s.status === "no_show" && (
+                  <div className="mb-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-semibold flex items-center gap-2">
+                        <Badge variant="outline" className="border-destructive/40 bg-destructive/15 text-destructive text-[10px] uppercase tracking-wide">No show</Badge>
+                        Questo turno risulta segnalato come no show.
+                      </div>
+                      <div className="text-xs opacity-80 mt-0.5">
+                        Verifica i dettagli e contatta il ristoratore se non sei d'accordo.
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-medium truncate">{otherName}</div>
@@ -1147,8 +1262,9 @@ function ShiftsPage() {
                           size="sm"
                           className="gap-1.5"
                           onClick={() => {
-                            if (role === "worker" && isShiftNotEnded(s)) {
-                              setReviewNotAvailableOpen(true);
+                            if (role === "worker") {
+                              try { console.log("[PUPILLO_WORKER_REVIEW_BUTTON_RENDERED]", { shift_id: s.id }); } catch { /* ignore */ }
+                              openWorkerReviewDialog(s);
                               return;
                             }
                             setReviewOpen(s.id);
@@ -1516,6 +1632,81 @@ function ShiftsPage() {
           }
         }}
       />
+
+      <Dialog open={!!workerReviewDialog} onOpenChange={(open) => { if (!open && !workerDialogSubmitting) setWorkerReviewDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Com'è andato il turno?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Lascia una recensione al ristoratore per completare il servizio.
+            </p>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-label={`${n} stelle`}
+                    onClick={() => setWorkerDialogRating(n)}
+                    className="p-1 disabled:opacity-50"
+                    disabled={workerDialogSubmitting}
+                  >
+                    <Star className={`h-8 w-8 transition ${n <= workerDialogRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                  </button>
+                ))}
+              </div>
+              <div className="text-xs text-muted-foreground h-4">
+                {workerDialogRating === 1 && "Pessima esperienza"}
+                {workerDialogRating === 2 && "Da migliorare"}
+                {workerDialogRating === 3 && "Normale"}
+                {workerDialogRating === 4 && "Buona esperienza"}
+                {workerDialogRating === 5 && "Ottima esperienza"}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">Tag (facoltativi)</div>
+              <div className="flex flex-wrap gap-2">
+                {WORKER_REVIEW_TAGS.map(tag => {
+                  const active = workerDialogTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setWorkerDialogTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag])}
+                      disabled={workerDialogSubmitting}
+                      className={`text-xs rounded-full px-3 py-1 border transition ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"}`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <Textarea
+              placeholder="Vuoi aggiungere qualcosa? Facoltativo."
+              value={workerDialogComment}
+              onChange={e => setWorkerDialogComment(e.target.value.slice(0, 500))}
+              rows={3}
+              maxLength={500}
+              disabled={workerDialogSubmitting}
+            />
+            {workerDialogError && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="flex-1">{workerDialogError}</div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setWorkerReviewDialog(null)} disabled={workerDialogSubmitting}>Annulla</Button>
+              <Button size="sm" onClick={submitWorkerReviewDialog} disabled={workerDialogSubmitting || workerDialogRating < 1} className="gap-1.5">
+                {workerDialogSubmitting ? (<><Loader2 className="h-4 w-4 animate-spin" /> Invio…</>) : "Invia recensione"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
