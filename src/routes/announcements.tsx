@@ -1430,7 +1430,7 @@ function SummaryRow({ icon: Icon, label, value }: { icon: typeof Calendar; label
 }
 
 function AnnouncementDetailsDialog({
-  open, onOpenChange, ann, candidatesCount, assignedCount, venueName, statusKind, onUpdated, onDuplicate,
+  open, onOpenChange, ann, candidatesCount, assignedCount, venueName, statusKind, shiftStarted = false, onUpdated, onDuplicate,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -1439,6 +1439,7 @@ function AnnouncementDetailsDialog({
   assignedCount: number;
   venueName: string | null;
   statusKind: EffectiveStatus;
+  shiftStarted?: boolean;
   onUpdated: (a: Ann) => void;
   onDuplicate: (a: Ann) => void;
 }) {
