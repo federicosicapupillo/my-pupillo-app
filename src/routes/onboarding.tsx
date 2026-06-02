@@ -1707,7 +1707,7 @@ function Onboarding() {
         </div>
         {role === "restaurant" ? (
           <>
-            <div id="sec-business" className="grid gap-4 md:grid-cols-2 scroll-mt-24">
+            <div id="sec-business" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
               <div>
                 <Label>Nome locale</Label>
                 <Input
@@ -1799,7 +1799,7 @@ function Onboarding() {
                 </select>
               </div>
             </div>
-            <div id="sec-location" className="grid gap-4 md:grid-cols-[1fr_140px] scroll-mt-24">
+            <div id="sec-location" className="grid gap-x-6 gap-y-4 md:grid-cols-[1fr_140px] items-start scroll-mt-24">
               <div>
                 <Label>Indirizzo *</Label>
                 <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} data-field="address" />
@@ -1812,7 +1812,7 @@ function Onboarding() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start">
               <div data-field="province" className="scroll-mt-24">
                 <Label>Provincia *</Label>
                 <select
@@ -1847,7 +1847,7 @@ function Onboarding() {
                 </select>
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-4 md:grid-cols-3 items-start">
               <div data-field="district" className="scroll-mt-24">
                  <Label>Zona / quartiere</Label>
                  <DistrictField
