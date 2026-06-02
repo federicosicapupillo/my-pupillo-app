@@ -507,14 +507,22 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
   const initialMotor = profile?.is_motorized === true ? "yes" : profile?.is_motorized === false ? "no" : "";
   const [years, setYears] = useState<string>(profile?.experience_years ?? "");
   const [level, setLevel] = useState<string>(initialLevel);
-  const [rate, setRate] = useState<string>(profile?.hourly_rate != null ? String(profile.hourly_rate) : "");
+  const [rate, setRate] = useState<string>(
+    profile?.hourly_rate != null
+      ? (Number(profile.hourly_rate) >= 31 ? "oltre_30" : String(profile.hourly_rate))
+      : "",
+  );
   const [motor, setMotor] = useState<"" | "yes" | "no">(initialMotor as any);
   const { saving, save } = useBoxSave(userId, onSaved);
 
   const start = () => {
     setYears(profile?.experience_years ?? "");
     setLevel(initialLevel);
-    setRate(profile?.hourly_rate != null ? String(profile.hourly_rate) : "");
+    setRate(
+      profile?.hourly_rate != null
+        ? (Number(profile.hourly_rate) >= 31 ? "oltre_30" : String(profile.hourly_rate))
+        : "",
+    );
     setMotor(initialMotor as any);
     setEditing(true);
   };
@@ -523,8 +531,9 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
     const rateVal = rate.trim();
     const rateNum = (() => {
       if (!rateVal) return null;
+      if (rateVal === "oltre_30") return 31;
       const n = Number(rateVal.replace(",", "."));
-      if (!Number.isFinite(n) || n < 9) return null;
+      if (!Number.isFinite(n) || n < 8) return null;
       return n;
     })();
     const ok = await save({
