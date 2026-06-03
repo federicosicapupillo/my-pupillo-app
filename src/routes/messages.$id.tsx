@@ -89,6 +89,11 @@ import {
   type SpecialAvailabilityBlock,
 } from "@/lib/worker-special-availability";
 import type { AvailabilityExceptionRow } from "@/lib/availability";
+import {
+  checkWorkerShiftConflict,
+  CONFLICT_WORKER_ACCEPT_MESSAGE,
+  CONFLICT_RESTAURANT_ASSIGN_MESSAGE,
+} from "@/lib/shift-conflict";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
@@ -1272,6 +1277,24 @@ function Thread() {
       if (isBlocked) {
         setBlockOpen(true);
         return;
+      }
+      // PUPILLO: regola di OCCUPAZIONE — prima di scalare crediti e
+      // confermare il turno, verifica che il lavoratore non abbia un altro
+      // turno gia' accettato in conflitto (buffer 1h). Sicurezza contro
+      // doppie conferme concorrenti tra ristoratori diversi.
+      try {
+        const conflict = await checkWorkerShiftConflict(
+          app.worker_id as string,
+          ann as any,
+          { ignoreApplicationId: app.id },
+        );
+        if (conflict) {
+          console.warn("[accept-candidature] worker busy conflict", { ...techCtx, conflictApp: conflict.applicationId });
+          toast.error(CONFLICT_RESTAURANT_ASSIGN_MESSAGE);
+          return;
+        }
+      } catch (e) {
+        console.error("[accept-candidature] conflict precheck failed", e);
       }
       // Pre-check credits to show a premium dialog instead of a generic toast.
       const { data: prof } = await supabase
@@ -2769,6 +2792,16 @@ function Thread() {
                       const fresh = await fetchSpecialAvailabilityBlock(user.id, ann);
                       if (fresh?.blocked) {
                         toast.error(SPECIAL_ACCEPT_INCOMPATIBLE_MESSAGE);
+                        return;
+                      }
+                      // PUPILLO: regola di OCCUPAZIONE — il lavoratore non
+                      // puo' accettare se ha gia' un altro turno confermato
+                      // in conflitto (buffer 1h post-fine).
+                      const conflict = await checkWorkerShiftConflict(user.id, ann as any, {
+                        ignoreApplicationId: id,
+                      });
+                      if (conflict) {
+                        toast.error(CONFLICT_WORKER_ACCEPT_MESSAGE);
                         return;
                       }
                     }

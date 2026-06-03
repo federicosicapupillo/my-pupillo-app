@@ -18,6 +18,10 @@ import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import {
+  checkWorkerShiftConflict,
+  CONFLICT_WORKER_APPLY_MESSAGE,
+} from "@/lib/shift-conflict";
+import {
   computeSpecialAvailabilityBlock,
   describeSpecialAvailability,
   fetchSpecialAvailabilityBlock,
@@ -547,6 +551,14 @@ function Browse() {
       counterValueNum = Math.round(v * 100) / 100;
     }
     setSubmitting(true);
+    // PUPILLO: regola di OCCUPAZIONE — blocco hard candidatura su conflitto
+    // con un turno già accettato dal lavoratore (buffer 1h post-fine).
+    const conflict = await checkWorkerShiftConflict(workerProfile.id, confirmAnn as any);
+    if (conflict) {
+      setSubmitting(false);
+      toast.error(CONFLICT_WORKER_APPLY_MESSAGE);
+      return;
+    }
     const insertPayload: any = {
       announcement_id: confirmAnn.id,
       worker_id: workerProfile.id,

@@ -31,6 +31,11 @@ import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import {
+  checkWorkerShiftConflict,
+  CONFLICT_WORKER_APPLY_MESSAGE,
+  CONFLICT_RESTAURANT_ASSIGN_MESSAGE,
+} from "@/lib/shift-conflict";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { computeProposalStatus, type ProposalState } from "@/lib/proposal-status";
 
@@ -398,6 +403,14 @@ function AnnouncementDetail() {
       setAlreadyContactAppId(contact.applicationId);
       return;
     }
+    // PUPILLO: regola di OCCUPAZIONE — blocca candidatura se in conflitto con
+    // un altro turno già accettato (buffer 1h post-fine).
+    const conflict = await checkWorkerShiftConflict(user.id, ann as any);
+    if (conflict) {
+      setApplying(false);
+      toast.error(CONFLICT_WORKER_APPLY_MESSAGE);
+      return;
+    }
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
       worker_id: user.id,
@@ -455,6 +468,23 @@ function AnnouncementDetail() {
       console.error("[accept] credits precheck failed", e);
     }
     setBusyId(app.id);
+    // PUPILLO: regola di OCCUPAZIONE — prima di scalare crediti e assegnare,
+    // verifica che il lavoratore non abbia ALTRI turni accettati in conflitto.
+    // Atomicità di sicurezza contro doppie conferme concorrenti.
+    try {
+      const otherConflict = await checkWorkerShiftConflict(
+        app.worker_id as string,
+        ann as any,
+        { ignoreApplicationId: app.id },
+      );
+      if (otherConflict) {
+        setBusyId(null);
+        toast.error(CONFLICT_RESTAURANT_ASSIGN_MESSAGE);
+        return;
+      }
+    } catch (e) {
+      console.error("[PUPILLO_SHIFT_CONFLICT] assign precheck failed", e);
+    }
     // Consume credits BEFORE flipping the status: the RPC is idempotent on
     // (user, reason, application_id), so a retry can't double-charge.
     const { consumeCredits } = await import("@/lib/credits");
