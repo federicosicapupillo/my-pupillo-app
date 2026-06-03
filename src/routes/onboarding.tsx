@@ -1417,7 +1417,7 @@ function Onboarding() {
       <form onSubmit={submit} className="w-full max-w-5xl mx-auto space-y-4 rounded-2xl border bg-card p-4 sm:p-5">
         <div id="sec-personal" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
           {role !== "worker" ? (
-            <div>
+            <div className="space-y-4">
               <Label>Nome e cognome</Label>
               {(() => {
                 const metaFirst = ((user as any)?.user_metadata?.first_name as string | undefined) ?? "";
@@ -1443,6 +1443,17 @@ function Onboarding() {
                   </>
                 );
               })()}
+              {role === "restaurant" ? (
+                <div>
+                  <Label>Nome locale</Label>
+                  <Input
+                    required
+                    value={form.business_name}
+                    onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                    data-field="business_name"
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div id="sec-phone" data-field="phone" className="scroll-mt-24 rounded-lg border bg-card/40 p-3 space-y-2">
