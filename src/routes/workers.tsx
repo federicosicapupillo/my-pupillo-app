@@ -1059,12 +1059,21 @@ function WorkersPage() {
         return;
       }
       const applicationId = created.id;
-      await sendShiftProposal({
-        applicationId,
-        announcementId: selected,
-        restaurantId: user.id,
-        workerId,
-      });
+      try {
+        await sendShiftProposal({
+          applicationId,
+          announcementId: selected,
+          restaurantId: user.id,
+          workerId,
+        });
+      } catch (err: any) {
+        if (err?.name === "WorkerBusyError") {
+          toast.error(err.message);
+          setSendingProposal(false);
+          return;
+        }
+        throw err;
+      }
       // La notifica al lavoratore viene creata automaticamente dal trigger
       // `notify_new_message` con titolo "Hai ricevuto una proposta di lavoro"
       // e link `/messages/<applicationId>` quando il messaggio è di tipo
