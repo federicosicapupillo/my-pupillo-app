@@ -795,6 +795,11 @@ function Onboarding() {
         scrollToField("address");
         return;
       }
+      if (!form.street_number.trim()) {
+        toast.error("Il numero civico è obbligatorio.");
+        scrollToField("street_number");
+        return;
+      }
       if (!form.province) {
         toast.error("Seleziona una provincia.");
         scrollToField("province");
