@@ -18,6 +18,10 @@ import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import {
+  checkWorkerShiftConflict,
+  CONFLICT_WORKER_APPLY_MESSAGE,
+} from "@/lib/shift-conflict";
+import {
   computeSpecialAvailabilityBlock,
   describeSpecialAvailability,
   fetchSpecialAvailabilityBlock,
