@@ -152,6 +152,7 @@ function ShiftsPage() {
     return map[raw] ?? "assigned";
   });
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
+  const initialReviewShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("review") : null;
   // True once we've applied the worker auto-default-tab priority logic.
   // Prevents resetting the tab after the user manually switches it.
   const defaultTabAppliedRef = useRef<boolean>(
@@ -297,6 +298,29 @@ function ShiftsPage() {
     requiredReviews.forEach((r) => { if (r.shift_id) m[r.shift_id] = { status: r.status, due_date: r.due_date }; });
     return m;
   }, [requiredReviews]);
+
+  // Apertura automatica del popup di recensione quando si arriva da una
+  // notifica reminder (link: /shifts?review=<shift_id>). Una sola volta
+  // per montaggio, e solo se il ristoratore non l'ha già recensito.
+  const reviewAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (reviewAutoOpenedRef.current) return;
+    if (!initialReviewShift) return;
+    if (role !== "restaurant") return;
+    const target = actionShifts.find((a) => a.shift_id === initialReviewShift);
+    if (!target) return;
+    reviewAutoOpenedRef.current = true;
+    setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+    setDialogComment("");
+    setDialogError(null);
+    setDialogPositive([]);
+    setDialogNegative([]);
+    setDialogWouldRehire(null);
+    setReviewDialog(target);
+    try {
+      console.info("[PUPILLO_REVIEW_REMINDER_AUTO_OPEN]", { shift_id: target.shift_id });
+    } catch { /* ignore */ }
+  }, [initialReviewShift, actionShifts, role]);
 
   const load = async () => {
     if (!user || !role) return;
