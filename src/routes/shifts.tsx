@@ -152,6 +152,7 @@ function ShiftsPage() {
     return map[raw] ?? "assigned";
   });
   const initialFocusShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shift") : null;
+  const initialReviewShift = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("review") : null;
   // True once we've applied the worker auto-default-tab priority logic.
   // Prevents resetting the tab after the user manually switches it.
   const defaultTabAppliedRef = useRef<boolean>(
