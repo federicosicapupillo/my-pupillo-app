@@ -89,6 +89,11 @@ import {
   type SpecialAvailabilityBlock,
 } from "@/lib/worker-special-availability";
 import type { AvailabilityExceptionRow } from "@/lib/availability";
+import {
+  checkWorkerShiftConflict,
+  CONFLICT_WORKER_ACCEPT_MESSAGE,
+  CONFLICT_RESTAURANT_ASSIGN_MESSAGE,
+} from "@/lib/shift-conflict";
 
 export const Route = createFileRoute("/messages/$id")({
   head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
