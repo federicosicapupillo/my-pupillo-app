@@ -1375,14 +1375,16 @@ function Onboarding() {
           .select("id", { count: "exact", head: true })
           .eq("worker_id", user.id);
         const hasAvailability = !availErr && (count ?? 0) > 0;
+        const promptDismissed = localStorage.getItem("pupillo_availability_prompt_dismissed") === "true";
         console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG]", {
           worker_user_id: user.id,
           profile_completed: true,
           has_availability: hasAvailability,
-          show_popup: !hasAvailability,
+          prompt_dismissed: promptDismissed,
+          show_popup: !hasAvailability && !promptDismissed,
         });
         void refresh();
-        if (!hasAvailability) {
+        if (!hasAvailability && !promptDismissed) {
           setAvailabilityPromptOpen(true);
           return;
         }
@@ -2749,9 +2751,9 @@ function Onboarding() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Profilo completato!</DialogTitle>
+            <DialogTitle>Vuoi impostare subito le tue disponibilità?</DialogTitle>
             <DialogDescription>
-              Ora puoi iniziare a ricevere proposte di lavoro. Imposta subito le tue disponibilità per farti trovare dai ristoratori e candidarti ai turni più adatti a te.
+              Profilo salvato correttamente. Imposta ora i giorni e gli orari in cui sei disponibile per iniziare subito a ricevere richieste di lavoro.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -2760,11 +2762,12 @@ function Onboarding() {
               variant="outline"
               onClick={() => {
                 console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG] dismissed");
+                localStorage.setItem("pupillo_availability_prompt_dismissed", "true");
                 setAvailabilityPromptOpen(false);
                 nav({ to: "/dashboard" });
               }}
             >
-              Lo faccio dopo
+              Lo farò più tardi
             </Button>
             <Button
               type="button"
