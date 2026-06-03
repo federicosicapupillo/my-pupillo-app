@@ -1721,15 +1721,6 @@ function Onboarding() {
         {role === "restaurant" ? (
           <>
             <div id="sec-business" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
-              <div>
-                <Label>Nome locale</Label>
-                <Input
-                  required
-                  value={form.business_name}
-                  onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-                  data-field="business_name"
-                />
-              </div>
               <div id="sec-vat" className="md:col-span-1 scroll-mt-24">
                 <Label>Partita IVA *</Label>
                 <div className="flex gap-2">
