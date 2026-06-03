@@ -1278,6 +1278,24 @@ function Thread() {
         setBlockOpen(true);
         return;
       }
+      // PUPILLO: regola di OCCUPAZIONE — prima di scalare crediti e
+      // confermare il turno, verifica che il lavoratore non abbia un altro
+      // turno gia' accettato in conflitto (buffer 1h). Sicurezza contro
+      // doppie conferme concorrenti tra ristoratori diversi.
+      try {
+        const conflict = await checkWorkerShiftConflict(
+          app.worker_id as string,
+          ann as any,
+          { ignoreApplicationId: app.id },
+        );
+        if (conflict) {
+          console.warn("[accept-candidature] worker busy conflict", { ...techCtx, conflictApp: conflict.applicationId });
+          toast.error(CONFLICT_RESTAURANT_ASSIGN_MESSAGE);
+          return;
+        }
+      } catch (e) {
+        console.error("[accept-candidature] conflict precheck failed", e);
+      }
       // Pre-check credits to show a premium dialog instead of a generic toast.
       const { data: prof } = await supabase
         .from("profiles")
