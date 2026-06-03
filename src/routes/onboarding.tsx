@@ -1418,8 +1418,9 @@ function Onboarding() {
         <div id="sec-personal" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
           {role !== "worker" ? (
             <div className="space-y-4">
-              <Label>Nome e cognome</Label>
-              {(() => {
+              <div>
+                <Label>Nome e cognome</Label>
+                {(() => {
                 const metaFirst = ((user as any)?.user_metadata?.first_name as string | undefined) ?? "";
                 const metaLast = ((user as any)?.user_metadata?.last_name as string | undefined) ?? "";
                 const first = ((profile as any)?.first_name ?? metaFirst ?? "").trim();
@@ -1442,7 +1443,8 @@ function Onboarding() {
                     </p>
                   </>
                 );
-              })()}
+                })()}
+              </div>
               {role === "restaurant" ? (
                 <div>
                   <Label>Nome locale</Label>
