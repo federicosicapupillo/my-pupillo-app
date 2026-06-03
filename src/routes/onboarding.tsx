@@ -795,6 +795,11 @@ function Onboarding() {
         scrollToField("address");
         return;
       }
+      if (!form.street_number.trim()) {
+        toast.error("Il numero civico è obbligatorio.");
+        scrollToField("street_number");
+        return;
+      }
       if (!form.province) {
         toast.error("Seleziona una provincia.");
         scrollToField("province");
@@ -1810,11 +1815,13 @@ function Onboarding() {
                 <Label>Indirizzo *</Label>
                 <Input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} data-field="address" />
               </div>
-              <div>
-                <Label>N. civico</Label>
+              <div data-field="street_number" className="scroll-mt-24">
+                <Label>N. civico *</Label>
                 <Input
+                  required
                   value={form.street_number}
                   onChange={(e) => setForm({ ...form, street_number: e.target.value })}
+                  data-field="street_number"
                 />
               </div>
             </div>
