@@ -403,6 +403,14 @@ function AnnouncementDetail() {
       setAlreadyContactAppId(contact.applicationId);
       return;
     }
+    // PUPILLO: regola di OCCUPAZIONE — blocca candidatura se in conflitto con
+    // un altro turno già accettato (buffer 1h post-fine).
+    const conflict = await checkWorkerShiftConflict(user.id, ann as any);
+    if (conflict) {
+      setApplying(false);
+      toast.error(CONFLICT_WORKER_APPLY_MESSAGE);
+      return;
+    }
     const { data: app, error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
       worker_id: user.id,
