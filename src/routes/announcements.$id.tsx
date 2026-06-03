@@ -31,6 +31,11 @@ import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import {
+  checkWorkerShiftConflict,
+  CONFLICT_WORKER_APPLY_MESSAGE,
+  CONFLICT_RESTAURANT_ASSIGN_MESSAGE,
+} from "@/lib/shift-conflict";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { computeProposalStatus, type ProposalState } from "@/lib/proposal-status";
 
