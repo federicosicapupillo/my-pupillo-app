@@ -2776,6 +2776,16 @@ function Thread() {
                         toast.error(SPECIAL_ACCEPT_INCOMPATIBLE_MESSAGE);
                         return;
                       }
+                      // PUPILLO: regola di OCCUPAZIONE — il lavoratore non
+                      // puo' accettare se ha gia' un altro turno confermato
+                      // in conflitto (buffer 1h post-fine).
+                      const conflict = await checkWorkerShiftConflict(user.id, ann as any, {
+                        ignoreApplicationId: id,
+                      });
+                      if (conflict) {
+                        toast.error(CONFLICT_WORKER_ACCEPT_MESSAGE);
+                        return;
+                      }
                     }
                     if (user) {
                       const { error: respErr } = await supabase.from("proposal_responses").insert({
