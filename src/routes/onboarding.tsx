@@ -1375,14 +1375,16 @@ function Onboarding() {
           .select("id", { count: "exact", head: true })
           .eq("worker_id", user.id);
         const hasAvailability = !availErr && (count ?? 0) > 0;
+        const promptDismissed = localStorage.getItem("pupillo_availability_prompt_dismissed") === "true";
         console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG]", {
           worker_user_id: user.id,
           profile_completed: true,
           has_availability: hasAvailability,
-          show_popup: !hasAvailability,
+          prompt_dismissed: promptDismissed,
+          show_popup: !hasAvailability && !promptDismissed,
         });
         void refresh();
-        if (!hasAvailability) {
+        if (!hasAvailability && !promptDismissed) {
           setAvailabilityPromptOpen(true);
           return;
         }
