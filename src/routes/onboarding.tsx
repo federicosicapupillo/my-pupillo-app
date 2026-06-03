@@ -1417,9 +1417,10 @@ function Onboarding() {
       <form onSubmit={submit} className="w-full max-w-5xl mx-auto space-y-4 rounded-2xl border bg-card p-4 sm:p-5">
         <div id="sec-personal" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
           {role !== "worker" ? (
-            <div>
-              <Label>Nome e cognome</Label>
-              {(() => {
+            <div className="space-y-4">
+              <div>
+                <Label>Nome e cognome</Label>
+                {(() => {
                 const metaFirst = ((user as any)?.user_metadata?.first_name as string | undefined) ?? "";
                 const metaLast = ((user as any)?.user_metadata?.last_name as string | undefined) ?? "";
                 const first = ((profile as any)?.first_name ?? metaFirst ?? "").trim();
@@ -1442,7 +1443,19 @@ function Onboarding() {
                     </p>
                   </>
                 );
-              })()}
+                })()}
+              </div>
+              {role === "restaurant" ? (
+                <div>
+                  <Label>Nome locale</Label>
+                  <Input
+                    required
+                    value={form.business_name}
+                    onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                    data-field="business_name"
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div id="sec-phone" data-field="phone" className="scroll-mt-24 rounded-lg border bg-card/40 p-3 space-y-2">
@@ -1708,15 +1721,6 @@ function Onboarding() {
         {role === "restaurant" ? (
           <>
             <div id="sec-business" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
-              <div>
-                <Label>Nome locale</Label>
-                <Input
-                  required
-                  value={form.business_name}
-                  onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-                  data-field="business_name"
-                />
-              </div>
               <div id="sec-vat" className="md:col-span-1 scroll-mt-24">
                 <Label>Partita IVA *</Label>
                 <div className="flex gap-2">
