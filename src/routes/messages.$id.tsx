@@ -3265,6 +3265,7 @@ function Thread() {
           onOpenChange={setInsufficientOpen}
           currentCredits={creditsAvailable}
           returnTo={`/messages/${id}`}
+          description="Per accettare questa candidatura devi ricaricare i crediti. Dopo il pagamento tornerai automaticamente in questa chat per completare l'accettazione."
         />
         {role === "restaurant" && app && ann && (
           <CounterofferDialog
