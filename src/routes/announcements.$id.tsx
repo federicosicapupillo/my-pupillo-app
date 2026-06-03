@@ -468,6 +468,23 @@ function AnnouncementDetail() {
       console.error("[accept] credits precheck failed", e);
     }
     setBusyId(app.id);
+    // PUPILLO: regola di OCCUPAZIONE — prima di scalare crediti e assegnare,
+    // verifica che il lavoratore non abbia ALTRI turni accettati in conflitto.
+    // Atomicità di sicurezza contro doppie conferme concorrenti.
+    try {
+      const otherConflict = await checkWorkerShiftConflict(
+        app.worker_id as string,
+        ann as any,
+        { ignoreApplicationId: app.id },
+      );
+      if (otherConflict) {
+        setBusyId(null);
+        toast.error(CONFLICT_RESTAURANT_ASSIGN_MESSAGE);
+        return;
+      }
+    } catch (e) {
+      console.error("[PUPILLO_SHIFT_CONFLICT] assign precheck failed", e);
+    }
     // Consume credits BEFORE flipping the status: the RPC is idempotent on
     // (user, reason, application_id), so a retry can't double-charge.
     const { consumeCredits } = await import("@/lib/credits");
