@@ -1,5 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateIT, formatTariff } from "@/lib/format";
+import {
+  checkWorkerShiftConflict,
+  CONFLICT_RESTAURANT_REQUEST_MESSAGE,
+} from "@/lib/shift-conflict";
+
+export class WorkerBusyError extends Error {
+  constructor(message = CONFLICT_RESTAURANT_REQUEST_MESSAGE) {
+    super(message);
+    this.name = "WorkerBusyError";
+  }
+}
 
 /**
  * Build a short, unambiguous preview text for the inbox list. Two distinct
@@ -107,6 +118,16 @@ export async function sendShiftProposal(params: {
       .eq("id", restaurantId)
       .maybeSingle(),
   ]);
+  // PUPILLO: regola di OCCUPAZIONE — non inviare proposta a un lavoratore
+  // gia' occupato in quella fascia oraria (con buffer 1h post-fine).
+  if (ann) {
+    const conflict = await checkWorkerShiftConflict(workerId, ann as any, {
+      ignoreApplicationId: applicationId,
+    });
+    if (conflict) {
+      throw new WorkerBusyError();
+    }
+  }
   const venueName = (prof as any)?.business_name || (prof as any)?.full_name || null;
   const body = buildProposalBody((ann as ProposalAnnouncement) ?? { id: announcementId, service_date: null, service_time: null, location_address: null }, venueName);
   const createdAt = new Date().toISOString();
