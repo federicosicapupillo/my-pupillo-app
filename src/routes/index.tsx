@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Trova camerieri, bartender, chef e personale extra per il tuo locale. Pubblica un turno, ricevi candidature e conferma profili verificati in pochi minuti.",
+          "Trova camerieri, bartender, chef e personale extra per il tuo locale. Pubblica un turno, ricevi candidature da profili con esperienze e recensioni e conferma il lavoratore più adatto in tempi rapidi.",
       },
     ],
   }),
@@ -151,9 +151,9 @@ function Index() {
 
             <p className={`mt-7 max-w-xl text-base leading-relaxed md:text-lg ${textSoft}`}>
               Con Pupillo pubblichi un turno, ricevi candidature da{" "}
-              <span style={{ color: NEON.lime }} className="font-semibold">profili verificati</span>{" "}
+              <span style={{ color: NEON.lime }} className="font-semibold">profili con esperienze e recensioni</span>{" "}
               e confermi il lavoratore più adatto in{" "}
-              <span style={{ color: NEON.magenta }} className="font-semibold">pochi minuti</span>.
+              <span style={{ color: NEON.magenta }} className="font-semibold">tempi rapidi</span>.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -369,13 +369,13 @@ function Index() {
               <span style={{ color: NEON.lime }}>passaparola e agenzie</span>
             </h2>
             <p className={`mx-auto mt-4 max-w-2xl text-base ${textSoft}`}>
-              Niente catene di messaggi, niente intermediari opachi, niente CV generici. Solo lavoratori reali, verificati e valutati.
+              Niente catene di messaggi, niente intermediari opachi, niente CV generici. Solo lavoratori reali, con profilo completo e recensioni.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: ShieldCheck, title: "Profili verificati", text: "Identità, esperienze e mansioni controllate prima di candidarsi.", color: NEON.lime },
+              { icon: ShieldCheck, title: "Profili con reputazione", text: "Numero di telefono verificato, esperienze, mansioni e recensioni visibili.", color: NEON.lime },
               { icon: Star, title: "Reputazione visibile", text: "Recensioni reali turno dopo turno, sia per locali che per lavoratori.", color: NEON.cyan },
               { icon: Zap, title: "Matching veloce", text: "Pubblica un turno e ricevi candidature in pochi minuti, non in giorni.", color: NEON.magenta },
               { icon: CheckCircle2, title: "Conferma tracciata", text: "Ogni accordo resta nello storico: chi, quando, a quale compenso.", color: NEON.violet },
