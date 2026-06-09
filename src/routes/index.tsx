@@ -122,25 +122,25 @@ function Index() {
               className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
               style={{ borderColor: `${NEON.lime}80`, color: NEON.lime, background: "rgba(216,255,54,0.06)" }}
             >
-              <Sparkles className="h-3.5 w-3.5" /> Per camerieri, bartender, chef ed extra
+              <Sparkles className="h-3.5 w-3.5" /> Per ristoranti, bar e locali Horeca
             </span>
 
             <h1 className="mt-6 text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
-              <span className="block">Trova turni</span>
-              <span className="block">di lavoro</span>
+              <span className="block">Trova personale</span>
+              <span className="block">extra per il tuo locale</span>
               <span
                 className="block bg-clip-text text-transparent"
                 style={{
                   backgroundImage: `linear-gradient(90deg, ${NEON.lime}, ${NEON.magenta}, ${NEON.violet})`,
                 }}
               >
-                vicino a te.
+                quando ti serve
               </span>
               <span
                 className="relative inline-block"
                 style={{ color: NEON.violet }}
               >
-                Anche oggi.
+                davvero.
                 <span
                   aria-hidden
                   className="absolute -bottom-2 left-0 h-2 w-full rounded-full"
@@ -150,14 +150,14 @@ function Index() {
             </h1>
 
             <p className={`mt-7 max-w-xl text-base leading-relaxed md:text-lg ${textSoft}`}>
-              Con Pupillo ti candidi ai turni pubblicati da ristoranti, bar e locali Horeca della tua
-              città. Vedi <span style={{ color: NEON.lime }} className="font-semibold">orari</span> e{" "}
-              <span style={{ color: NEON.magenta }} className="font-semibold">compensi stimati</span>{" "}
-              prima di accettare e costruisci il tuo profilo professionale, turno dopo turno.
+              Con Pupillo pubblichi un turno, ricevi candidature da{" "}
+              <span style={{ color: NEON.lime }} className="font-semibold">profili verificati</span>{" "}
+              e confermi il lavoratore più adatto in{" "}
+              <span style={{ color: NEON.magenta }} className="font-semibold">pochi minuti</span>.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link to="/auth" search={{ role: "worker" } as never}>
+              <Link to="/auth" search={{ role: "restaurant" } as never}>
                 <button
                   className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-extrabold transition active:scale-[0.98] sm:w-auto"
                   style={{
@@ -166,26 +166,35 @@ function Index() {
                     boxShadow: `0 0 0 2px #000, 0 10px 0 -3px ${NEON.violet}, 0 0 40px ${NEON.lime}55`,
                   }}
                 >
-                  <UserPlus className="h-5 w-5" />
-                  Registrati come lavoratore
+                  <Search className="h-5 w-5" />
+                  Trova personale ora
                 </button>
               </Link>
-              <a href="#come-funziona" className="w-full sm:w-auto">
+              <Link to="/auth" search={{ role: "worker" } as never} className="w-full sm:w-auto">
                 <button
                   className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 px-6 py-4 text-base font-bold transition active:scale-[0.98] sm:w-auto ${isLight ? "text-zinc-900 hover:bg-black/5" : "text-white hover:bg-white/5"}`}
                   style={{ borderColor: isLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)" }}
                 >
-                  <Play className="h-5 w-5" />
+                  <UserPlus className="h-5 w-5" />
+                  Cerco turni extra
+                </button>
+              </Link>
+              <a href="#come-funziona" className="w-full sm:w-auto">
+                <button
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold transition active:scale-[0.98] sm:w-auto ${textFaint} hover:opacity-80`}
+                >
+                  <Play className="h-4 w-4" />
                   Scopri come funziona
                 </button>
               </a>
             </div>
 
-            {/* Mini benefits */}
-            <div className="mt-8 grid grid-cols-3 gap-3">
-              <Benefit color={NEON.orange} icon={Euro} label="Gratis per i lavoratori" isLight={isLight} />
-              <Benefit color={NEON.violet} icon={Zap} label="Senza impegno" isLight={isLight} />
-              <Benefit color={NEON.cyan} icon={Clock} label="Pochi minuti per iniziare" isLight={isLight} />
+            {/* Trust microcopy */}
+            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TrustItem color={NEON.lime} label="Nessun costo per pubblicare un turno" isLight={isLight} />
+              <TrustItem color={NEON.magenta} label="Paghi solo quando confermi un lavoratore" isLight={isLight} />
+              <TrustItem color={NEON.cyan} label="Gratuito per i lavoratori, sempre" isLight={isLight} />
+              <TrustItem color={NEON.orange} label="Messaggi e proposte gestiti dentro Pupillo" isLight={isLight} />
             </div>
           </div>
         </div>
