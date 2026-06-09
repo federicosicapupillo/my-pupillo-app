@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Trova camerieri, bartender, chef e personale extra per il tuo locale. Pubblica un turno, ricevi candidature e conferma profili verificati in pochi minuti.",
+          "Trova camerieri, bartender, chef e personale extra per il tuo locale. Pubblica un turno, ricevi candidature da profili con esperienze e recensioni e conferma il lavoratore più adatto in tempi rapidi.",
       },
     ],
   }),
@@ -151,9 +151,9 @@ function Index() {
 
             <p className={`mt-7 max-w-xl text-base leading-relaxed md:text-lg ${textSoft}`}>
               Con Pupillo pubblichi un turno, ricevi candidature da{" "}
-              <span style={{ color: NEON.lime }} className="font-semibold">profili verificati</span>{" "}
+              <span style={{ color: NEON.lime }} className="font-semibold">profili con esperienze e recensioni</span>{" "}
               e confermi il lavoratore più adatto in{" "}
-              <span style={{ color: NEON.magenta }} className="font-semibold">pochi minuti</span>.
+              <span style={{ color: NEON.magenta }} className="font-semibold">tempi rapidi</span>.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
