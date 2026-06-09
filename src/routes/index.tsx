@@ -179,14 +179,14 @@ function Index() {
                   Cerco turni extra
                 </button>
               </Link>
-              <a href="#come-funziona" className="w-full sm:w-auto">
+              <Link to="/come-funziona" className="w-full sm:w-auto">
                 <button
                   className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold transition active:scale-[0.98] sm:w-auto ${textFaint} hover:opacity-80`}
                 >
                   <Play className="h-4 w-4" />
                   Scopri come funziona
                 </button>
-              </a>
+              </Link>
             </div>
 
             {/* Trust microcopy */}
