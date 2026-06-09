@@ -26,11 +26,11 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Pupillo — Trova turni di lavoro nella ristorazione" },
+      { title: "Pupillo | Personale extra per ristoranti, bar e locali" },
       {
         name: "description",
         content:
-          "Pupillo è l'app per i lavoratori Horeca: candidati ai turni vicino a te in ristoranti, bar, hotel ed eventi. Compensi chiari, registrazione veloce.",
+          "Trova camerieri, bartender, chef e personale extra per il tuo locale. Pubblica un turno, ricevi candidature e conferma profili verificati in pochi minuti.",
       },
     ],
   }),
