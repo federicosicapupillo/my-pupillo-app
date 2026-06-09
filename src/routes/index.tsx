@@ -301,6 +301,103 @@ function Index() {
         </div>
       </section>
 
+      {/* DUAL TARGET */}
+      <section className="relative z-10 py-12 md:py-16">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div
+              className="rounded-3xl p-6 md:p-8"
+              style={{ background: surfaceBg, border: `1.5px solid ${NEON.lime}40`, boxShadow: `0 0 30px ${NEON.lime}15` }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: NEON.lime, color: "#0A0A0A", boxShadow: `0 0 20px ${NEON.lime}80` }}>
+                  <ChefHat className="h-6 w-6" />
+                </div>
+                <h3 className="text-2xl font-extrabold">Per ristoratori</h3>
+              </div>
+              <p className={`mt-4 text-base ${textSoft}`}>
+                Copri assenze, picchi di lavoro e turni scoperti senza rincorrere gruppi WhatsApp.
+              </p>
+              <Link to="/auth" search={{ role: "restaurant" } as never}>
+                <button
+                  className="mt-6 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-extrabold active:scale-95"
+                  style={{ background: NEON.lime, color: "#0A0A0A", boxShadow: `0 0 0 2px #000, 0 6px 0 -2px ${NEON.violet}` }}
+                >
+                  <Search className="h-4 w-4" /> Trova personale ora
+                </button>
+              </Link>
+            </div>
+
+            <div
+              className="rounded-3xl p-6 md:p-8"
+              style={{ background: surfaceBg, border: `1.5px solid ${NEON.magenta}40`, boxShadow: `0 0 30px ${NEON.magenta}15` }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: NEON.magenta, color: "#0A0A0A", boxShadow: `0 0 20px ${NEON.magenta}80` }}>
+                  <Users className="h-6 w-6" />
+                </div>
+                <h3 className="text-2xl font-extrabold">Per lavoratori</h3>
+              </div>
+              <p className={`mt-4 text-base ${textSoft}`}>
+                Trova turni extra chiari, costruisci reputazione e fatti ricontattare dai locali.
+              </p>
+              <Link to="/auth" search={{ role: "worker" } as never}>
+                <button
+                  className={`mt-6 inline-flex items-center gap-2 rounded-2xl border-2 px-5 py-3 text-sm font-bold active:scale-95 ${isLight ? "text-zinc-900 hover:bg-black/5" : "text-white hover:bg-white/5"}`}
+                  style={{ borderColor: isLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)" }}
+                >
+                  <UserPlus className="h-4 w-4" /> Cerco turni extra
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DIFFERENTIATORS */}
+      <section className="relative z-10 py-12 md:py-16">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mb-10 text-center">
+            <span
+              className="inline-block rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider"
+              style={{ background: `${NEON.cyan}20`, color: NEON.cyan }}
+            >
+              Perché Pupillo
+            </span>
+            <h2 className="mt-4 text-3xl font-black md:text-5xl">
+              Diverso da gruppi WhatsApp,{" "}
+              <span style={{ color: NEON.lime }}>passaparola e agenzie</span>
+            </h2>
+            <p className={`mx-auto mt-4 max-w-2xl text-base ${textSoft}`}>
+              Niente catene di messaggi, niente intermediari opachi, niente CV generici. Solo lavoratori reali, verificati e valutati.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { icon: ShieldCheck, title: "Profili verificati", text: "Identità, esperienze e mansioni controllate prima di candidarsi.", color: NEON.lime },
+              { icon: Star, title: "Reputazione visibile", text: "Recensioni reali turno dopo turno, sia per locali che per lavoratori.", color: NEON.cyan },
+              { icon: Zap, title: "Matching veloce", text: "Pubblica un turno e ricevi candidature in pochi minuti, non in giorni.", color: NEON.magenta },
+              { icon: CheckCircle2, title: "Conferma tracciata", text: "Ogni accordo resta nello storico: chi, quando, a quale compenso.", color: NEON.violet },
+              { icon: Euro, title: "Gratuito per i lavoratori", text: "Nessuna commissione sul compenso, nessun abbonamento.", color: NEON.orange },
+              { icon: MessageCircle, title: "Paghi solo se confermi", text: "Pubblicare un turno è gratis. Il ristoratore paga solo a lavoratore confermato.", color: NEON.lime },
+            ].map(({ icon: Icon, title, text, color }) => (
+              <div
+                key={title}
+                className="rounded-2xl p-5"
+                style={{ background: surfaceBg, border: `1px solid ${color}40` }}
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${color}1f`, color, boxShadow: `inset 0 0 0 1.5px ${color}` }}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 text-lg font-extrabold">{title}</h3>
+                <p className={`mt-1.5 text-sm ${textDim}`}>{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* HOW IT WORKS */}
       <section id="come-funziona" className="relative z-10 py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4">
