@@ -447,6 +447,15 @@ function Benefit({ icon: Icon, label, color, isLight }: { icon: React.ComponentT
   );
 }
 
+function TrustItem({ label, color, isLight }: { label: string; color: string; isLight?: boolean }) {
+  return (
+    <div className="flex items-start gap-2">
+      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color }} />
+      <span className={`text-xs leading-snug sm:text-sm ${isLight ? "text-zinc-700" : "text-white/80"}`}>{label}</span>
+    </div>
+  );
+}
+
 function Sparkle({ className, color }: { className?: string; color: string }) {
   return (
     <svg className={className} width="40" height="40" viewBox="0 0 40 40" fill="none">
