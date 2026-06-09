@@ -14,6 +14,10 @@ import {
   Send,
   TrendingUp,
   CheckCircle2,
+  Search,
+  ShieldCheck,
+  MessageCircle,
+  Users,
 } from "lucide-react";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { useEffect, useState } from "react";
@@ -22,11 +26,11 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Pupillo — Trova turni di lavoro nella ristorazione" },
+      { title: "Pupillo | Personale extra per ristoranti, bar e locali" },
       {
         name: "description",
         content:
-          "Pupillo è l'app per i lavoratori Horeca: candidati ai turni vicino a te in ristoranti, bar, hotel ed eventi. Compensi chiari, registrazione veloce.",
+          "Trova camerieri, bartender, chef e personale extra per il tuo locale. Pubblica un turno, ricevi candidature e conferma profili verificati in pochi minuti.",
       },
     ],
   }),
@@ -118,25 +122,25 @@ function Index() {
               className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
               style={{ borderColor: `${NEON.lime}80`, color: NEON.lime, background: "rgba(216,255,54,0.06)" }}
             >
-              <Sparkles className="h-3.5 w-3.5" /> Per camerieri, bartender, chef ed extra
+              <Sparkles className="h-3.5 w-3.5" /> Per ristoranti, bar e locali Horeca
             </span>
 
             <h1 className="mt-6 text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
-              <span className="block">Trova turni</span>
-              <span className="block">di lavoro</span>
+              <span className="block">Trova personale</span>
+              <span className="block">extra per il tuo locale</span>
               <span
                 className="block bg-clip-text text-transparent"
                 style={{
                   backgroundImage: `linear-gradient(90deg, ${NEON.lime}, ${NEON.magenta}, ${NEON.violet})`,
                 }}
               >
-                vicino a te.
+                quando ti serve
               </span>
               <span
                 className="relative inline-block"
                 style={{ color: NEON.violet }}
               >
-                Anche oggi.
+                davvero.
                 <span
                   aria-hidden
                   className="absolute -bottom-2 left-0 h-2 w-full rounded-full"
@@ -146,14 +150,14 @@ function Index() {
             </h1>
 
             <p className={`mt-7 max-w-xl text-base leading-relaxed md:text-lg ${textSoft}`}>
-              Con Pupillo ti candidi ai turni pubblicati da ristoranti, bar e locali Horeca della tua
-              città. Vedi <span style={{ color: NEON.lime }} className="font-semibold">orari</span> e{" "}
-              <span style={{ color: NEON.magenta }} className="font-semibold">compensi stimati</span>{" "}
-              prima di accettare e costruisci il tuo profilo professionale, turno dopo turno.
+              Con Pupillo pubblichi un turno, ricevi candidature da{" "}
+              <span style={{ color: NEON.lime }} className="font-semibold">profili verificati</span>{" "}
+              e confermi il lavoratore più adatto in{" "}
+              <span style={{ color: NEON.magenta }} className="font-semibold">pochi minuti</span>.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link to="/auth" search={{ role: "worker" } as never}>
+              <Link to="/auth" search={{ role: "restaurant" } as never}>
                 <button
                   className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-extrabold transition active:scale-[0.98] sm:w-auto"
                   style={{
@@ -162,26 +166,35 @@ function Index() {
                     boxShadow: `0 0 0 2px #000, 0 10px 0 -3px ${NEON.violet}, 0 0 40px ${NEON.lime}55`,
                   }}
                 >
-                  <UserPlus className="h-5 w-5" />
-                  Registrati come lavoratore
+                  <Search className="h-5 w-5" />
+                  Trova personale ora
                 </button>
               </Link>
-              <a href="#come-funziona" className="w-full sm:w-auto">
+              <Link to="/auth" search={{ role: "worker" } as never} className="w-full sm:w-auto">
                 <button
                   className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 px-6 py-4 text-base font-bold transition active:scale-[0.98] sm:w-auto ${isLight ? "text-zinc-900 hover:bg-black/5" : "text-white hover:bg-white/5"}`}
                   style={{ borderColor: isLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)" }}
                 >
-                  <Play className="h-5 w-5" />
+                  <UserPlus className="h-5 w-5" />
+                  Cerco turni extra
+                </button>
+              </Link>
+              <a href="#come-funziona" className="w-full sm:w-auto">
+                <button
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold transition active:scale-[0.98] sm:w-auto ${textFaint} hover:opacity-80`}
+                >
+                  <Play className="h-4 w-4" />
                   Scopri come funziona
                 </button>
               </a>
             </div>
 
-            {/* Mini benefits */}
-            <div className="mt-8 grid grid-cols-3 gap-3">
-              <Benefit color={NEON.orange} icon={Euro} label="Gratis per i lavoratori" isLight={isLight} />
-              <Benefit color={NEON.violet} icon={Zap} label="Senza impegno" isLight={isLight} />
-              <Benefit color={NEON.cyan} icon={Clock} label="Pochi minuti per iniziare" isLight={isLight} />
+            {/* Trust microcopy */}
+            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TrustItem color={NEON.lime} label="Nessun costo per pubblicare un turno" isLight={isLight} />
+              <TrustItem color={NEON.magenta} label="Paghi solo quando confermi un lavoratore" isLight={isLight} />
+              <TrustItem color={NEON.cyan} label="Gratuito per i lavoratori, sempre" isLight={isLight} />
+              <TrustItem color={NEON.orange} label="Messaggi e proposte gestiti dentro Pupillo" isLight={isLight} />
             </div>
           </div>
         </div>
@@ -285,6 +298,103 @@ function Index() {
           {/* Side scribbles */}
           <Sparkle className="absolute -left-2 top-10" color={NEON.cyan} />
           <Sparkle className="absolute -right-2 top-32" color={NEON.orange} />
+        </div>
+      </section>
+
+      {/* DUAL TARGET */}
+      <section className="relative z-10 py-12 md:py-16">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div
+              className="rounded-3xl p-6 md:p-8"
+              style={{ background: surfaceBg, border: `1.5px solid ${NEON.lime}40`, boxShadow: `0 0 30px ${NEON.lime}15` }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: NEON.lime, color: "#0A0A0A", boxShadow: `0 0 20px ${NEON.lime}80` }}>
+                  <ChefHat className="h-6 w-6" />
+                </div>
+                <h3 className="text-2xl font-extrabold">Per ristoratori</h3>
+              </div>
+              <p className={`mt-4 text-base ${textSoft}`}>
+                Copri assenze, picchi di lavoro e turni scoperti senza rincorrere gruppi WhatsApp.
+              </p>
+              <Link to="/auth" search={{ role: "restaurant" } as never}>
+                <button
+                  className="mt-6 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-extrabold active:scale-95"
+                  style={{ background: NEON.lime, color: "#0A0A0A", boxShadow: `0 0 0 2px #000, 0 6px 0 -2px ${NEON.violet}` }}
+                >
+                  <Search className="h-4 w-4" /> Trova personale ora
+                </button>
+              </Link>
+            </div>
+
+            <div
+              className="rounded-3xl p-6 md:p-8"
+              style={{ background: surfaceBg, border: `1.5px solid ${NEON.magenta}40`, boxShadow: `0 0 30px ${NEON.magenta}15` }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: NEON.magenta, color: "#0A0A0A", boxShadow: `0 0 20px ${NEON.magenta}80` }}>
+                  <Users className="h-6 w-6" />
+                </div>
+                <h3 className="text-2xl font-extrabold">Per lavoratori</h3>
+              </div>
+              <p className={`mt-4 text-base ${textSoft}`}>
+                Trova turni extra chiari, costruisci reputazione e fatti ricontattare dai locali.
+              </p>
+              <Link to="/auth" search={{ role: "worker" } as never}>
+                <button
+                  className={`mt-6 inline-flex items-center gap-2 rounded-2xl border-2 px-5 py-3 text-sm font-bold active:scale-95 ${isLight ? "text-zinc-900 hover:bg-black/5" : "text-white hover:bg-white/5"}`}
+                  style={{ borderColor: isLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)" }}
+                >
+                  <UserPlus className="h-4 w-4" /> Cerco turni extra
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DIFFERENTIATORS */}
+      <section className="relative z-10 py-12 md:py-16">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mb-10 text-center">
+            <span
+              className="inline-block rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider"
+              style={{ background: `${NEON.cyan}20`, color: NEON.cyan }}
+            >
+              Perché Pupillo
+            </span>
+            <h2 className="mt-4 text-3xl font-black md:text-5xl">
+              Diverso da gruppi WhatsApp,{" "}
+              <span style={{ color: NEON.lime }}>passaparola e agenzie</span>
+            </h2>
+            <p className={`mx-auto mt-4 max-w-2xl text-base ${textSoft}`}>
+              Niente catene di messaggi, niente intermediari opachi, niente CV generici. Solo lavoratori reali, verificati e valutati.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { icon: ShieldCheck, title: "Profili verificati", text: "Identità, esperienze e mansioni controllate prima di candidarsi.", color: NEON.lime },
+              { icon: Star, title: "Reputazione visibile", text: "Recensioni reali turno dopo turno, sia per locali che per lavoratori.", color: NEON.cyan },
+              { icon: Zap, title: "Matching veloce", text: "Pubblica un turno e ricevi candidature in pochi minuti, non in giorni.", color: NEON.magenta },
+              { icon: CheckCircle2, title: "Conferma tracciata", text: "Ogni accordo resta nello storico: chi, quando, a quale compenso.", color: NEON.violet },
+              { icon: Euro, title: "Gratuito per i lavoratori", text: "Nessuna commissione sul compenso, nessun abbonamento.", color: NEON.orange },
+              { icon: MessageCircle, title: "Paghi solo se confermi", text: "Pubblicare un turno è gratis. Il ristoratore paga solo a lavoratore confermato.", color: NEON.lime },
+            ].map(({ icon: Icon, title, text, color }) => (
+              <div
+                key={title}
+                className="rounded-2xl p-5"
+                style={{ background: surfaceBg, border: `1px solid ${color}40` }}
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${color}1f`, color, boxShadow: `inset 0 0 0 1.5px ${color}` }}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 text-lg font-extrabold">{title}</h3>
+                <p className={`mt-1.5 text-sm ${textDim}`}>{text}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -430,6 +540,15 @@ function Benefit({ icon: Icon, label, color, isLight }: { icon: React.ComponentT
         <Icon className="h-5 w-5" />
       </div>
       <span className={`text-xs font-medium leading-tight sm:text-sm ${isLight ? "text-zinc-700" : "text-white/80"}`}>{label}</span>
+    </div>
+  );
+}
+
+function TrustItem({ label, color, isLight }: { label: string; color: string; isLight?: boolean }) {
+  return (
+    <div className="flex items-start gap-2">
+      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color }} />
+      <span className={`text-xs leading-snug sm:text-sm ${isLight ? "text-zinc-700" : "text-white/80"}`}>{label}</span>
     </div>
   );
 }
