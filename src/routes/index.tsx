@@ -14,6 +14,10 @@ import {
   Send,
   TrendingUp,
   CheckCircle2,
+  Search,
+  ShieldCheck,
+  MessageCircle,
+  Users,
 } from "lucide-react";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { useEffect, useState } from "react";
