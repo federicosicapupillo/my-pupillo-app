@@ -162,6 +162,12 @@ function ComeFunzionaPage() {
       {/* HERO */}
       <section className="border-b border-border bg-gradient-to-b from-muted/40 to-background">
         <div className="mx-auto max-w-5xl px-6 py-16 md:py-24">
+          <Link
+            to="/"
+            className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <span aria-hidden="true">←</span> Torna alla home
+          </Link>
           <Badge variant="secondary" className="mb-4">
             <Sparkles className="mr-1 h-3 w-3" /> Come funziona
           </Badge>
