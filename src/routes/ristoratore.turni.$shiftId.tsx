@@ -215,7 +215,7 @@ function ShiftDetailPage() {
       s.announcement_id
         ? (async () => {
             const { ANNOUNCEMENT_SAFE_COLUMNS } = await import("@/lib/announcement-columns");
-            return supabase.from("announcements").select(ANNOUNCEMENT_SAFE_COLUMNS).eq("id", s.announcement_id).maybeSingle();
+            return supabase.from("announcements").select(ANNOUNCEMENT_SAFE_COLUMNS).eq("id", s.announcement_id as string).maybeSingle();
           })()
         : Promise.resolve({ data: null }),
       supabase.from("profiles")
@@ -235,7 +235,7 @@ function ShiftDetailPage() {
         .eq("worker_user_id", s.worker_id)
         .maybeSingle(),
     ]);
-    setAnn((annRes.data as Announcement) ?? null);
+    setAnn((annRes.data as unknown as Announcement) ?? null);
     setWorker((workerRes.data as Worker) ?? null);
     if (s.worker_id) {
       const { data: rev } = await supabase
