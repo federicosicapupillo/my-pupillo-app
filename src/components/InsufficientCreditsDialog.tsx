@@ -13,11 +13,9 @@ type Props = {
   needed?: number;
   /** URL path to return to after purchase, e.g. `/messages/123` */
   returnTo?: string;
-  /** Optional custom description (overrides the default copy). */
-  description?: string;
 };
 
-export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, needed = CREDITS_PER_HIRE, returnTo, description }: Props) {
+export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, needed = CREDITS_PER_HIRE, returnTo }: Props) {
   const navigate = useNavigate();
   const [activatingBasic, setActivatingBasic] = useState(false);
   const [viewingPlans, setViewingPlans] = useState(false);
@@ -73,9 +71,7 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
           <DialogHeader className="text-center sm:text-center">
             <DialogTitle className="text-2xl font-bold text-center">Crediti insufficienti</DialogTitle>
             <DialogDescription className="text-center text-base">
-              {description ?? (
-                <>Hai terminato i crediti disponibili. Per continuare puoi attivare subito il piano <strong className="text-foreground">Basic</strong> oppure confrontare tutti i piani Pupillo.</>
-              )}
+              Hai terminato i crediti disponibili. Per continuare puoi attivare subito il piano <strong className="text-foreground">Basic</strong> oppure confrontare tutti i piani Pupillo.
             </DialogDescription>
           </DialogHeader>
         </div>
