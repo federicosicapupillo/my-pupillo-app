@@ -127,7 +127,12 @@ function NewAnn() {
   useEffect(() => {
     if (!reuse) return;
     (async () => {
-      const { data } = await supabase.from("announcements").select("*").eq("id", reuse).maybeSingle();
+      const { ANNOUNCEMENT_SAFE_COLUMNS } = await import("@/lib/announcement-columns");
+      const { data } = await supabase
+        .from("announcements")
+        .select(ANNOUNCEMENT_SAFE_COLUMNS)
+        .eq("id", reuse)
+        .maybeSingle() as { data: any };
       if (!data) return;
       // Contact person columns are denied at the column-grant level.
       // Fetch them via the SECURITY DEFINER RPC for the owning restaurant.
