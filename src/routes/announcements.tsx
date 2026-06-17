@@ -456,7 +456,7 @@ function AnnouncementsPage() {
     (async () => {
       const base = supabase.from("announcements").select(ANNOUNCEMENT_SAFE_COLUMNS);
       const { data } = role === "restaurant" ? await base.eq("restaurant_id", user.id) : await base.eq("status", "active");
-      const list = ((data as Ann[]) ?? []).sort((a, b) => {
+      const list = ((data as unknown as Ann[]) ?? []).sort((a, b) => {
         const sa = getShiftStartDate(a);
         const sb = getShiftStartDate(b);
         if (!sa && !sb) return 0;
@@ -1529,7 +1529,7 @@ function AnnouncementDetailsDialog({
     toast.success("Annuncio aggiornato correttamente.");
     setEditing(false);
     setConfirmOpen(false);
-    if (data) onUpdated(data as Ann);
+    if (data) onUpdated(data as unknown as Ann);
 
     // Fire-and-forget notification to accepted workers
     if (shouldNotifyWorkers) {
