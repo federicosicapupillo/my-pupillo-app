@@ -30,6 +30,7 @@ import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ANNOUNCEMENT_SAFE_COLUMNS } from "@/lib/announcement-columns";
 import {
   Dialog,
   DialogContent,
@@ -453,9 +454,9 @@ function AnnouncementsPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const base = supabase.from("announcements").select("*");
+      const base = supabase.from("announcements").select(ANNOUNCEMENT_SAFE_COLUMNS);
       const { data } = role === "restaurant" ? await base.eq("restaurant_id", user.id) : await base.eq("status", "active");
-      const list = ((data as Ann[]) ?? []).sort((a, b) => {
+      const list = ((data as unknown as Ann[]) ?? []).sort((a, b) => {
         const sa = getShiftStartDate(a);
         const sb = getShiftStartDate(b);
         if (!sa && !sb) return 0;
@@ -1521,14 +1522,14 @@ function AnnouncementDetailsDialog({
       .from("announcements")
       .update(payload)
       .eq("id", ann.id)
-      .select("*")
+      .select(ANNOUNCEMENT_SAFE_COLUMNS)
       .maybeSingle();
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Annuncio aggiornato correttamente.");
     setEditing(false);
     setConfirmOpen(false);
-    if (data) onUpdated(data as Ann);
+    if (data) onUpdated(data as unknown as Ann);
 
     // Fire-and-forget notification to accepted workers
     if (shouldNotifyWorkers) {

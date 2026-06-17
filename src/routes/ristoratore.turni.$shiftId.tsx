@@ -213,7 +213,10 @@ function ShiftDetailPage() {
     setShift(s);
     const [annRes, workerRes, restRes, appsRes, revsRes, reqRes] = await Promise.all([
       s.announcement_id
-        ? supabase.from("announcements").select("*").eq("id", s.announcement_id).maybeSingle()
+        ? (async () => {
+            const { ANNOUNCEMENT_SAFE_COLUMNS } = await import("@/lib/announcement-columns");
+            return supabase.from("announcements").select(ANNOUNCEMENT_SAFE_COLUMNS).eq("id", s.announcement_id as string).maybeSingle();
+          })()
         : Promise.resolve({ data: null }),
       supabase.from("profiles")
         .select("id, full_name, first_name, last_name, primary_role, professional_profile, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, languages, spoken_languages, phone_verified, profile_completed, id_document_path, is_deleted, phone_full, phone")
@@ -232,7 +235,7 @@ function ShiftDetailPage() {
         .eq("worker_user_id", s.worker_id)
         .maybeSingle(),
     ]);
-    setAnn((annRes.data as Announcement) ?? null);
+    setAnn((annRes.data as unknown as Announcement) ?? null);
     setWorker((workerRes.data as Worker) ?? null);
     if (s.worker_id) {
       const { data: rev } = await supabase
