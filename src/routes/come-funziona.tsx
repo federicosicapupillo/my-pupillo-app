@@ -3,365 +3,372 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Search,
-  UserPlus,
-  ClipboardList,
-  Inbox,
-  ShieldCheck,
-  CheckCircle2,
-  UserCircle2,
-  Compass,
+  AlertCircle,
   Send,
-  Star,
-  Euro,
-  MessageCircle,
-  CreditCard,
-  Sparkles,
-  MessagesSquare,
   Users,
+  Star,
+  CheckCircle2,
+  ClipboardCheck,
+  TrendingUp,
+  Sparkles,
+  Clock,
+  Film,
+  Mic,
+  Type,
+  Wand2,
+  Copy,
 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/come-funziona")({
   head: () => ({
     meta: [
-      {
-        title:
-          "Come funziona Pupillo | Turni extra per ristoranti e lavoratori Horeca",
-      },
+      { title: "Come funziona Pupillo — Script video promozionale" },
       {
         name: "description",
         content:
-          "Scopri come Pupillo aiuta ristoranti, bar e locali a trovare personale extra e permette ai lavoratori Horeca di candidarsi a turni chiari e tracciati.",
+          "Scopri come funziona Pupillo passo dopo passo: dal ristoratore che pubblica un turno al lavoratore che costruisce la sua reputazione. Include script video da 30 e 60 secondi.",
       },
-      {
-        property: "og:title",
-        content:
-          "Come funziona Pupillo | Turni extra per ristoranti e lavoratori Horeca",
-      },
+      { property: "og:title", content: "Come funziona Pupillo" },
       {
         property: "og:description",
         content:
-          "Scopri come Pupillo aiuta ristoranti, bar e locali a trovare personale extra e permette ai lavoratori Horeca di candidarsi a turni chiari e tracciati.",
+          "Pupillo aiuta i ristoratori a trovare personale extra in modo rapido e i lavoratori a candidarsi ai turni, costruendo una reputazione reale.",
       },
-      { property: "og:url", content: "https://pupillo.life/come-funziona" },
-    ],
-    links: [
-      { rel: "canonical", href: "https://pupillo.life/come-funziona" },
     ],
   }),
   component: ComeFunzionaPage,
 });
 
-type StepItem = {
-  n: string;
+type Step = {
+  n: number;
   title: string;
-  text: string;
-  icon: typeof Search;
+  icon: typeof AlertCircle;
+  voice: string;
+  onScreen: string;
+  scene: string;
+  animation: string;
 };
 
-const RESTAURANT_STEPS: StepItem[] = [
+const STEPS: Step[] = [
   {
-    n: "01",
-    title: "Pubblica il turno",
-    text: "Indichi ruolo, data, orario, compenso, luogo e dettagli utili.",
-    icon: ClipboardList,
+    n: 1,
+    title: "Problema",
+    icon: AlertCircle,
+    voice:
+      "Sabato sera, locale pieno. Un cameriere dà forfait. E adesso?",
+    onScreen: "Quando manca personale, ogni minuto conta.",
+    scene:
+      "Sala ristorante affollata, ristoratore con telefono in mano, espressione preoccupata.",
+    animation:
+      "Zoom rapido sul telefono, notifica rossa che pulsa, ticchettio di orologio.",
   },
   {
-    n: "02",
-    title: "Ricevi candidature",
-    text: "I lavoratori disponibili possono candidarsi o rispondere alle tue proposte.",
-    icon: Inbox,
-  },
-  {
-    n: "03",
-    title: "Valuti il profilo",
-    text: "Controlli esperienze, mansioni, recensioni e reputazione prima di confermare.",
-    icon: ShieldCheck,
-  },
-  {
-    n: "04",
-    title: "Confermi il lavoratore",
-    text: "Paghi solo quando confermi il lavoratore. Messaggi, proposta e conferma restano tracciati dentro Pupillo.",
-    icon: CheckCircle2,
-  },
-];
-
-const WORKER_STEPS: StepItem[] = [
-  {
-    n: "01",
-    title: "Completa il profilo",
-    text: "Inserisci ruoli, esperienze, disponibilità, zona e numero di telefono verificato.",
-    icon: UserCircle2,
-  },
-  {
-    n: "02",
-    title: "Trova turni extra",
-    text: "Vedi le opportunità compatibili con le tue mansioni e la tua disponibilità.",
-    icon: Compass,
-  },
-  {
-    n: "03",
-    title: "Candidati o accetta proposte",
-    text: "Puoi candidarti ai turni o rispondere alle proposte dei locali.",
+    n: 2,
+    title: "Soluzione",
     icon: Send,
+    voice: "Con Pupillo pubblichi il turno in pochi tocchi.",
+    onScreen: "Pubblica un turno in 30 secondi.",
+    scene:
+      "Mockup app: form veloce con ruolo, orario, paga. Tap finale su 'Pubblica'.",
+    animation:
+      "UI che si compila da sola con micro-bounce sui campi. Bottone 'Pubblica' con glow lime.",
   },
   {
-    n: "04",
-    title: "Costruisci reputazione",
-    text: "Dopo ogni turno puoi ricevere recensioni che aumentano la tua affidabilità sulla piattaforma.",
+    n: 3,
+    title: "Matching",
+    icon: Users,
+    voice:
+      "I lavoratori disponibili in zona ricevono subito la notifica e si candidano.",
+    onScreen: "I migliori candidati ti raggiungono in tempo reale.",
+    scene:
+      "Split-screen: mappa con pin che si accendono, telefoni dei lavoratori con notifica push.",
+    animation:
+      "Onde concentriche dalla posizione del locale, pin che fanno pop, card candidati che scorrono.",
+  },
+  {
+    n: 4,
+    title: "Scelta",
     icon: Star,
+    voice:
+      "Valuti profili, recensioni, badge e affidabilità. Scegli con sicurezza.",
+    onScreen: "Profili verificati. Recensioni reali. Badge di affidabilità.",
+    scene:
+      "Carosello di profili lavoratori con foto, stelle, badge 'Puntuale', 'Affidabile', 'Top servizio'.",
+    animation:
+      "Card che si girano mostrando il retro con le statistiche. Stelle che si riempiono.",
   },
-];
-
-const PRICING_POINTS = [
-  { icon: Inbox, text: "Pubblicare un turno non ha costo." },
-  { icon: MessageCircle, text: "I messaggi all’interno di Pupillo non hanno costo." },
-  { icon: Users, text: "Il lavoratore usa Pupillo gratuitamente." },
   {
+    n: 5,
+    title: "Conferma",
     icon: CheckCircle2,
-    text: "Il ristoratore paga solo quando conferma un lavoratore.",
+    voice: "Un tap e il turno è assegnato. Tutti allineati.",
+    onScreen: "Turno confermato.",
+    scene:
+      "Chat in-app: ristoratore e lavoratore si salutano. Calendario con turno evidenziato.",
+    animation:
+      "Check verde animato, conferma a doppio schermo, transizione swipe.",
   },
   {
-    icon: CreditCard,
-    text: "Il sistema a crediti serve a sbloccare e confermare il match operativo.",
+    n: 6,
+    title: "Completamento",
+    icon: ClipboardCheck,
+    voice:
+      "A fine turno, ristoratore e lavoratore si lasciano una recensione.",
+    onScreen: "Recensioni a doppio senso. Trasparenza vera.",
+    scene:
+      "Lavoratore esce sorridente dal locale. Schermata di recensione con 5 stelle.",
+    animation:
+      "Stelle che si riempiono una a una con suono soft 'ping'.",
+  },
+  {
+    n: 7,
+    title: "Reputazione",
+    icon: TrendingUp,
+    voice:
+      "Ogni turno completato costruisce la tua reputazione. E rende più sicura ogni nuova scelta.",
+    onScreen: "Più lavori. Più reputazione. Più opportunità.",
+    scene:
+      "Grafico Reputation Score che sale, badge che si sbloccano uno dopo l'altro.",
+    animation:
+      "Score counter che incrementa, badge che entrano con bounce, particelle lime.",
+  },
+  {
+    n: 8,
+    title: "Chiusura",
+    icon: Sparkles,
+    voice:
+      "Pupillo. Il modo più rapido e intelligente per trovare personale extra nella ristorazione.",
+    onScreen: "Pupillo — Trova chi ti serve. Quando ti serve.",
+    scene: "Logo Pupillo centrato su fondo scuro con accent lime.",
+    animation:
+      "Logo che si compone, glow finale, claim che appare in fade-up.",
   },
 ];
 
-const FAQS = [
-  {
-    q: "Pupillo è gratuito per i lavoratori?",
-    a: "Sì, i lavoratori possono creare il profilo, candidarsi e ricevere proposte gratuitamente.",
-  },
-  {
-    q: "Il ristoratore paga per pubblicare un turno?",
-    a: "No, la pubblicazione del turno e i messaggi sono gratuiti. Il pagamento avviene solo quando viene confermato un lavoratore.",
-  },
-  {
-    q: "I profili sono verificati?",
-    a: "Pupillo prevede la verifica del numero di telefono e mostra informazioni di profilo, esperienze, mansioni e recensioni.",
-  },
-  {
-    q: "Pupillo sostituisce un’agenzia interinale?",
-    a: "No. Pupillo è una piattaforma per facilitare il contatto e la gestione di turni extra tra locali e lavoratori disponibili.",
-  },
-  {
-    q: "Posso usare Pupillo per urgenze last-minute?",
-    a: "Sì, Pupillo è pensato anche per assenze, picchi di lavoro e turni scoperti, ma la disponibilità dipende dai lavoratori attivi nella zona.",
-  },
-];
+const SCRIPT_60 = `[0:00–0:05] PROBLEMA
+VO: "Sabato sera, locale pieno. Un cameriere dà forfait. E adesso?"
+TESTO: Quando manca personale, ogni minuto conta.
+
+[0:05–0:12] SOLUZIONE
+VO: "Con Pupillo pubblichi il turno in pochi tocchi."
+TESTO: Pubblica un turno in 30 secondi.
+
+[0:12–0:20] MATCHING
+VO: "I lavoratori disponibili in zona ricevono subito la notifica e si candidano."
+TESTO: I migliori candidati ti raggiungono in tempo reale.
+
+[0:20–0:30] SCELTA
+VO: "Valuti profili, recensioni, badge e affidabilità. Scegli con sicurezza."
+TESTO: Profili verificati. Recensioni reali. Badge di affidabilità.
+
+[0:30–0:36] CONFERMA
+VO: "Un tap e il turno è assegnato. Tutti allineati."
+TESTO: Turno confermato.
+
+[0:36–0:44] COMPLETAMENTO
+VO: "A fine turno, ristoratore e lavoratore si lasciano una recensione."
+TESTO: Recensioni a doppio senso. Trasparenza vera.
+
+[0:44–0:54] REPUTAZIONE
+VO: "Ogni turno completato costruisce la tua reputazione. E rende più sicura ogni nuova scelta."
+TESTO: Più lavori. Più reputazione. Più opportunità.
+
+[0:54–1:00] CHIUSURA
+VO: "Pupillo. Il modo più rapido e intelligente per trovare personale extra nella ristorazione."
+TESTO: Pupillo — Scarica ora.
+CTA: pupillo.app`;
+
+const SCRIPT_30 = `[0:00–0:04] PROBLEMA
+VO: "Manca personale. Sabato sera. Panico."
+TESTO: Ogni minuto conta.
+
+[0:04–0:10] SOLUZIONE + MATCHING
+VO: "Con Pupillo pubblichi il turno e i lavoratori in zona si candidano subito."
+TESTO: Pubblica. Ricevi candidati. In tempo reale.
+
+[0:10–0:18] SCELTA + CONFERMA
+VO: "Scegli in base a recensioni, badge e affidabilità. Un tap e il turno è assegnato."
+TESTO: Profili verificati. Scelta sicura.
+
+[0:18–0:25] REPUTAZIONE
+VO: "Ogni servizio completato costruisce reputazione vera, per tutti."
+TESTO: Recensioni reali. Reputazione che cresce.
+
+[0:25–0:30] CHIUSURA
+VO: "Pupillo. Personale extra, in un attimo."
+TESTO: Pupillo — Scaricala ora.
+CTA: pupillo.app`;
+
+const RUNWAY_PROMPT = `PROGETTO: Spot promozionale "Pupillo" — 60 secondi
+STILE: Moderno, giovane, energico. Palette dark con accent lime neon (#D8FF36). Mockup app realistici. Transizioni dinamiche tipo swipe e zoom.
+MUSICA: Beat elettronico upbeat, 110-120 BPM, crescendo finale.
+VOCE: Narratore italiano, tono affidabile e amichevole, ritmo deciso.
+
+SCENE:
+1) (0-5s) Interno ristorante affollato. Close-up ristoratore preoccupato con telefono. Notifica rossa pulsante.
+2) (5-12s) Mockup smartphone: form Pupillo che si compila da solo. Tap su "Pubblica" con flash lime.
+3) (12-20s) Mappa animata con pin che si accendono a onde. Split con telefoni che ricevono push.
+4) (20-30s) Carosello profili lavoratori: foto, 5 stelle, badge "Puntuale", "Affidabile", "Top servizio". Card che ruotano.
+5) (30-36s) Chat in-app, doppio schermo ristoratore/lavoratore, check verde animato.
+6) (36-44s) Lavoratore esce dal locale soddisfatto. Schermata recensione con stelle che si riempiono.
+7) (44-54s) Dashboard Reputation Score in salita, badge che si sbloccano con particelle lime.
+8) (54-60s) Logo Pupillo su fondo nero con glow lime. Claim: "Trova chi ti serve. Quando ti serve."
+
+CTA FINALE: "Scarica Pupillo — pupillo.app"`;
 
 function ComeFunzionaPage() {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copy = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(key);
+      toast.success("Copiato negli appunti");
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      toast.error("Impossibile copiare");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* HERO */}
+      {/* Hero */}
       <section className="border-b border-border bg-gradient-to-b from-muted/40 to-background">
         <div className="mx-auto max-w-5xl px-6 py-16 md:py-24">
-          <Link
-            to="/"
-            className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <span aria-hidden="true">←</span> Torna alla home
-          </Link>
           <Badge variant="secondary" className="mb-4">
-            <Sparkles className="mr-1 h-3 w-3" /> Come funziona
+            <Film className="mr-1 h-3 w-3" /> Script video promozionale
           </Badge>
           <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
             Come funziona <span className="text-primary">Pupillo</span>
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-muted-foreground md:text-xl">
-            Pupillo collega ristoratori e lavoratori extra in modo semplice:
-            pubblichi un turno, ricevi candidature, scegli il profilo più adatto
-            e gestisci tutto dentro la piattaforma.
+            Il modo più rapido e intelligente per trovare personale extra nella
+            ristorazione. Qui sotto trovi la struttura completa dello spot, gli
+            script da 30 e 60 secondi e un prompt pronto per Runway / CapCut.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link to="/auth" search={{ role: "restaurant" } as never}>
-                <Search className="mr-2 h-4 w-4" /> Trova personale ora
-              </Link>
+              <Link to="/auth">Inizia ora</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="/auth" search={{ role: "worker" } as never}>
-                <UserPlus className="mr-2 h-4 w-4" /> Cerco turni extra
-              </Link>
+              <a href="#script-60">Vai allo script</a>
             </Button>
           </div>
         </div>
       </section>
 
-      {/* PER RISTORATORI */}
-      <section className="mx-auto max-w-5xl px-6 py-14 md:py-20">
-        <div className="mb-10 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <Badge className="mb-3">Per ristoratori</Badge>
-            <h2 className="text-3xl font-bold md:text-4xl">
-              Dal turno scoperto al lavoratore confermato
-            </h2>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Quattro passaggi semplici per coprire assenze, picchi di lavoro e
-              turni scoperti senza inseguire chat sparse.
-            </p>
-          </div>
-          <Button asChild variant="default" className="self-start md:self-auto">
-            <Link to="/auth" search={{ role: "restaurant" } as never}>
-              <Search className="mr-2 h-4 w-4" /> Trova personale ora
-            </Link>
-          </Button>
+      {/* Concept */}
+      <section className="mx-auto max-w-5xl px-6 py-12">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { icon: Wand2, label: "Tono", value: "Moderno, giovane, energico, affidabile" },
+            { icon: Clock, label: "Durate", value: "Versione 30s + versione 60s" },
+            { icon: Sparkles, label: "Messaggio", value: "Personale extra in pochi tap, reputazione reale" },
+          ].map(({ icon: Icon, label, value }) => (
+            <Card key={label} className="p-5">
+              <div className="mb-2 flex items-center gap-2 text-primary">
+                <Icon className="h-4 w-4" />
+                <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
+              </div>
+              <p className="text-sm text-foreground">{value}</p>
+            </Card>
+          ))}
         </div>
-
-        <StepGrid steps={RESTAURANT_STEPS} accent="primary" />
       </section>
 
-      {/* PER LAVORATORI */}
-      <section className="border-t border-border bg-muted/30">
-        <div className="mx-auto max-w-5xl px-6 py-14 md:py-20">
-          <div className="mb-10 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      {/* Steps */}
+      <section className="mx-auto max-w-5xl px-6 py-8">
+        <h2 className="mb-6 text-2xl font-bold md:text-3xl">Struttura del video — 8 scene</h2>
+        <div className="space-y-4">
+          {STEPS.map((s) => {
+            const Icon = s.icon;
+            return (
+              <Card key={s.n} className="overflow-hidden">
+                <div className="grid md:grid-cols-[auto_1fr] md:gap-6">
+                  <div className="flex items-center gap-3 bg-muted/50 p-5 md:flex-col md:items-start md:justify-start md:p-6">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Scena {s.n}
+                      </div>
+                      <div className="text-lg font-bold">{s.title}</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 p-5 md:p-6 md:pl-0">
+                    <Row icon={Mic} label="Voce narrante" text={s.voice} />
+                    <Row icon={Type} label="Testo a schermo" text={s.onScreen} />
+                    <Row icon={Film} label="Scena consigliata" text={s.scene} />
+                    <Row icon={Wand2} label="Animazione" text={s.animation} />
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Scripts */}
+      <section id="script-60" className="mx-auto max-w-5xl px-6 py-12">
+        <h2 className="mb-6 text-2xl font-bold md:text-3xl">Script pronti all'uso</h2>
+        <div className="grid gap-6 md:grid-cols-2">
+          <ScriptCard
+            title="Versione 60 secondi"
+            subtitle="Spot completo"
+            content={SCRIPT_60}
+            onCopy={() => copy(SCRIPT_60, "60")}
+            copied={copied === "60"}
+          />
+          <ScriptCard
+            title="Versione 30 secondi"
+            subtitle="Versione breve per social"
+            content={SCRIPT_30}
+            onCopy={() => copy(SCRIPT_30, "30")}
+            copied={copied === "30"}
+          />
+        </div>
+      </section>
+
+      {/* Runway prompt */}
+      <section className="mx-auto max-w-5xl px-6 py-12">
+        <Card className="overflow-hidden border-primary/30">
+          <div className="flex items-center justify-between gap-4 border-b border-border bg-primary/5 p-5">
             <div>
-              <Badge variant="secondary" className="mb-3">
-                Per lavoratori
-              </Badge>
-              <h2 className="text-3xl font-bold md:text-4xl">
-                Trova turni extra e costruisci reputazione
-              </h2>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
-                Profilo chiaro, opportunità in linea con le tue disponibilità,
-                recensioni che pesano davvero.
+              <Badge className="mb-2">Pronto da incollare</Badge>
+              <h3 className="text-xl font-bold">Prompt per Runway / CapCut</h3>
+              <p className="text-sm text-muted-foreground">
+                Copia e incolla nel prompt del tuo strumento di generazione video.
               </p>
             </div>
-            <Button asChild variant="outline" className="self-start md:self-auto">
-              <Link to="/auth" search={{ role: "worker" } as never}>
-                <UserPlus className="mr-2 h-4 w-4" /> Cerco turni extra
-              </Link>
+            <Button onClick={() => copy(RUNWAY_PROMPT, "runway")} variant="default">
+              <Copy className="mr-2 h-4 w-4" />
+              {copied === "runway" ? "Copiato!" : "Copia prompt"}
             </Button>
           </div>
-
-          <StepGrid steps={WORKER_STEPS} accent="secondary" />
-        </div>
-      </section>
-
-      {/* QUANTO COSTA */}
-      <section className="mx-auto max-w-5xl px-6 py-14 md:py-20">
-        <div className="mb-8">
-          <Badge className="mb-3">
-            <Euro className="mr-1 h-3 w-3" /> Quanto costa
-          </Badge>
-          <h2 className="text-3xl font-bold md:text-4xl">
-            Trasparente per chi pubblica e per chi lavora
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Nessun abbonamento per iniziare. Il ristoratore paga solo quando
-            ottiene un valore reale: la conferma di un lavoratore.
-          </p>
-        </div>
-
-        <Card className="overflow-hidden">
-          <ul className="divide-y divide-border">
-            {PRICING_POINTS.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-start gap-3 p-5">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                  <Icon className="h-4 w-4" />
-                </div>
-                <p className="text-sm leading-relaxed md:text-base">{text}</p>
-              </li>
-            ))}
-          </ul>
+          <pre className="overflow-x-auto whitespace-pre-wrap p-6 text-sm leading-relaxed text-foreground">
+            {RUNWAY_PROMPT}
+          </pre>
         </Card>
       </section>
 
-      {/* PERCHÉ NON BASTA WHATSAPP */}
+      {/* CTA */}
       <section className="border-t border-border bg-muted/30">
-        <div className="mx-auto max-w-5xl px-6 py-14 md:py-20">
-          <div className="mb-8">
-            <Badge variant="secondary" className="mb-3">
-              <MessagesSquare className="mr-1 h-3 w-3" /> Perché non basta WhatsApp
-            </Badge>
-            <h2 className="text-3xl font-bold md:text-4xl">
-              Più chiaro di una chat, più misurabile del passaparola
-            </h2>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="p-6">
-              <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                WhatsApp e passaparola
-              </div>
-              <ul className="space-y-3 text-sm leading-relaxed md:text-base">
-                <li className="flex gap-2">
-                  <span className="text-muted-foreground">•</span>
-                  Su WhatsApp perdi tempo tra chat sparse e risposte incomplete.
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-muted-foreground">•</span>
-                  Il passaparola è veloce ma poco controllabile.
-                </li>
-              </ul>
-            </Card>
-
-            <Card className="border-primary/40 p-6">
-              <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary">
-                Con Pupillo
-              </div>
-              <ul className="space-y-3 text-sm leading-relaxed md:text-base">
-                <li className="flex gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  Profili ordinati, reputazione visibile e conferme tracciate.
-                </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  Un processo più chiaro, misurabile e professionale.
-                </li>
-              </ul>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="mx-auto max-w-3xl px-6 py-14 md:py-20">
-        <div className="mb-8 text-center">
-          <Badge className="mb-3">FAQ</Badge>
-          <h2 className="text-3xl font-bold md:text-4xl">Domande frequenti</h2>
-        </div>
-
-        <Accordion type="single" collapsible className="w-full">
-          {FAQS.map((f, i) => (
-            <AccordionItem key={f.q} value={`item-${i}`}>
-              <AccordionTrigger className="text-left text-base font-semibold">
-                {f.q}
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                {f.a}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </section>
-
-      {/* CTA FINALE */}
-      <section className="border-t border-border bg-gradient-to-b from-background to-muted/40">
-        <div className="mx-auto max-w-3xl px-6 py-16 text-center md:py-20">
+        <div className="mx-auto max-w-3xl px-6 py-16 text-center">
           <h2 className="text-3xl font-bold md:text-4xl">
-            Pronto a coprire il prossimo turno scoperto?
+            Pronto a usare Pupillo davvero?
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Pubblica un turno o candidati al prossimo servizio: bastano pochi
-            tap e gestisci tutto dentro Pupillo.
+            Pubblica il primo turno o candidati al prossimo servizio. Bastano pochi tap.
           </p>
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg">
-              <Link to="/auth" search={{ role: "restaurant" } as never}>
-                <Search className="mr-2 h-4 w-4" /> Trova personale ora
-              </Link>
+              <Link to="/auth">Crea il tuo account</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="/auth" search={{ role: "worker" } as never}>
-                <UserPlus className="mr-2 h-4 w-4" /> Cerco turni extra
-              </Link>
+              <Link to="/">Torna alla home</Link>
             </Button>
           </div>
         </div>
@@ -370,39 +377,58 @@ function ComeFunzionaPage() {
   );
 }
 
-function StepGrid({
-  steps,
-  accent,
+function Row({
+  icon: Icon,
+  label,
+  text,
 }: {
-  steps: StepItem[];
-  accent: "primary" | "secondary";
+  icon: typeof Mic;
+  label: string;
+  text: string;
 }) {
-  const dot =
-    accent === "primary"
-      ? "bg-primary/15 text-primary"
-      : "bg-secondary text-secondary-foreground";
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {steps.map(({ n, title, text, icon: Icon }) => (
-        <Card key={n} className="p-6">
-          <div className="flex items-start gap-4">
-            <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${dot}`}
-            >
-              <Icon className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Step {n}
-              </div>
-              <h3 className="mt-1 text-lg font-bold">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {text}
-              </p>
-            </div>
-          </div>
-        </Card>
-      ))}
+    <div className="grid grid-cols-[auto_1fr] gap-3">
+      <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </div>
+        <p className="text-sm text-foreground">{text}</p>
+      </div>
     </div>
+  );
+}
+
+function ScriptCard({
+  title,
+  subtitle,
+  content,
+  onCopy,
+  copied,
+}: {
+  title: string;
+  subtitle: string;
+  content: string;
+  onCopy: () => void;
+  copied: boolean;
+}) {
+  return (
+    <Card className="flex flex-col overflow-hidden">
+      <div className="flex items-start justify-between gap-4 border-b border-border p-5">
+        <div>
+          <h3 className="text-lg font-bold">{title}</h3>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={onCopy}>
+          <Copy className="mr-2 h-3.5 w-3.5" />
+          {copied ? "Copiato!" : "Copia"}
+        </Button>
+      </div>
+      <pre className="flex-1 overflow-x-auto whitespace-pre-wrap p-5 text-xs leading-relaxed text-foreground">
+        {content}
+      </pre>
+    </Card>
   );
 }

@@ -216,9 +216,9 @@ function VerifyPhonePage() {
       // Invio reale della mail di conferma SUBITO dopo la verifica WhatsApp.
       // Solo in caso di invio riuscito mostriamo il popup informativo.
       const email = user?.email ?? null;
-      // Se l'email è già confermata (es. Supabase "Confirm email" OFF), salta
-      // popup e resend e prosegui direttamente alla destinazione.
-      if (!email || (user as any)?.email_confirmed_at) {
+      if (!email) {
+        // Senza email non possiamo confermare nulla: vai direttamente alla
+        // destinazione e non mostrare il popup.
         nav({ to: dest as any });
         return;
       }

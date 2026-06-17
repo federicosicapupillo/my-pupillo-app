@@ -251,14 +251,6 @@ function AuthPage() {
     });
     setBusy(false);
     justSignedUpRef.current = false;
-    // Se Supabase ha già creato una sessione valida (es. "Confirm email" OFF),
-    // non mostrare il popup di conferma email: l'utente può proseguire subito.
-    // L'eventuale verifica email è gestita interamente da Supabase Auth.
-    if (data?.session) {
-      console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] session valida, popup saltato");
-      toast.success("Account creato. Reindirizzamento in corso…");
-      return;
-    }
     setConfirmationEmail(emailTrim);
     setConfirmationOpen(true);
     console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] popup shown");
