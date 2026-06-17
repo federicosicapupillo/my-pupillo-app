@@ -196,6 +196,25 @@ function AnnouncementDetail() {
         .maybeSingle();
       a = pub ?? null;
     }
+    // Contact person columns are denied at the column-grant level.
+    // Fetch them via the SECURITY DEFINER RPC, which only returns rows
+    // for the owning restaurant, the assigned worker, or accepted apps.
+    if (a) {
+      try {
+        const { data: contactRows } = await supabase.rpc(
+          "get_announcement_contact",
+          { _announcement_id: id as string },
+        );
+        const contact = Array.isArray(contactRows) ? contactRows[0] : contactRows;
+        if (contact) {
+          (a as any).job_contact_person_name = (contact as any).job_contact_person_name ?? null;
+          (a as any).job_contact_person_phone = (contact as any).job_contact_person_phone ?? null;
+          (a as any).job_contact_person_email = (contact as any).job_contact_person_email ?? null;
+        }
+      } catch {
+        // Caller not allowed to see contact details — leave them null.
+      }
+    }
     setAnn(a as Ann | null);
     if (!a) { setLoading(false); return; }
     const { data: r } = await supabase.from("profiles")

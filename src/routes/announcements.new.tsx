@@ -129,6 +129,23 @@ function NewAnn() {
     (async () => {
       const { data } = await supabase.from("announcements").select("*").eq("id", reuse).maybeSingle();
       if (!data) return;
+      // Contact person columns are denied at the column-grant level.
+      // Fetch them via the SECURITY DEFINER RPC for the owning restaurant.
+      let contactName: string | null = null;
+      let contactPhone: string | null = null;
+      let contactEmail: string | null = null;
+      try {
+        const { data: contactRows } = await supabase.rpc(
+          "get_announcement_contact",
+          { _announcement_id: reuse as string },
+        );
+        const c = Array.isArray(contactRows) ? contactRows[0] : contactRows;
+        contactName = (c as any)?.job_contact_person_name ?? null;
+        contactPhone = (c as any)?.job_contact_person_phone ?? null;
+        contactEmail = (c as any)?.job_contact_person_email ?? null;
+      } catch {
+        // Owner mismatch / RLS — leave defaults.
+      }
       setF((prev) => ({
         ...prev,
         service_date: (() => {
@@ -159,9 +176,9 @@ function NewAnn() {
         job_access_restrictions: (data as any).job_access_restrictions ?? prev.job_access_restrictions,
         job_additional_directions: (data as any).job_additional_directions ?? prev.job_additional_directions,
         job_location_notes: (data as any).job_location_notes ?? prev.job_location_notes,
-        job_contact_person_name: (data as any).job_contact_person_name ?? prev.job_contact_person_name,
-        job_contact_person_phone: (data as any).job_contact_person_phone ?? prev.job_contact_person_phone,
-        job_contact_person_email: (data as any).job_contact_person_email ?? prev.job_contact_person_email,
+        job_contact_person_name: contactName ?? prev.job_contact_person_name,
+        job_contact_person_phone: contactPhone ?? prev.job_contact_person_phone,
+        job_contact_person_email: contactEmail ?? prev.job_contact_person_email,
       }));
       setLanguageReqs((data as any).language_requirements ?? []);
       setSkills((data as any).required_skills ?? []);
