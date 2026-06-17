@@ -187,7 +187,12 @@ function AnnouncementDetail() {
     // worker who applied, and admins (they get full row incl. PII). Workers
     // who have not applied yet are blocked by RLS, so we fall back to the
     // PII-safe view to render the public detail page.
-    let { data: a } = await supabase.from("announcements").select("*").eq("id", id).maybeSingle();
+    const { ANNOUNCEMENT_SAFE_COLUMNS } = await import("@/lib/announcement-columns");
+    let { data: a } = await supabase
+      .from("announcements")
+      .select(ANNOUNCEMENT_SAFE_COLUMNS)
+      .eq("id", id)
+      .maybeSingle() as { data: any };
     if (!a) {
       const { data: pub } = await (supabase as any)
         .from("announcements_public")
