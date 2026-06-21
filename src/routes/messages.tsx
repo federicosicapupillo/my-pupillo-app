@@ -377,21 +377,60 @@ function MessagesLayout() {
     acc[t.status] = (acc[t.status] ?? 0) + 1;
     return acc;
   }, {});
+  // Restaurant operational categorization.
+  const threadCategory = (t: Thread): "candidature" | "confermati" | "turni" | "archiviati" => {
+    if (shiftByApp.has(t.id)) return "turni";
+    if (t.status === "accepted") return "confermati";
+    if (t.status === "rejected" || t.status === "expired") return "archiviati";
+    return "candidature";
+  };
+  const catCounts = {
+    all: threads.length,
+    unread: totalUnread,
+    candidature: threads.filter((t) => threadCategory(t) === "candidature").length,
+    confermati: threads.filter((t) => threadCategory(t) === "confermati").length,
+    turni: threads.filter((t) => threadCategory(t) === "turni").length,
+    archiviati: threads.filter((t) => threadCategory(t) === "archiviati").length,
+  };
+  const passesCategory = (t: Thread) => {
+    if (role !== "restaurant") return true;
+    if (category === "all") return true;
+    if (category === "unread") return t.unread > 0;
+    return threadCategory(t) === category;
+  };
   const visible = threads.filter((t) => {
     if (filter === "unread" && t.unread === 0) return false;
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (withUser && t.other.id !== withUser) return false;
+    if (!passesCategory(t)) return false;
     return true;
   });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
 
   // Build groups by other-user (visual only) when no specific user is focused
-  const groups = groupThreadsByOther(threads);
+  const groups = groupThreadsByOther(threads.filter(passesCategory));
   const visibleGroups = groups.filter((g) => {
     if (filter === "unread" && g.unread === 0) return false;
     if (statusFilter !== "all" && !g.items.some((t) => t.status === statusFilter)) return false;
     return true;
   });
+
+  // Mark all messages in this conversation as read for the current user.
+  const markThreadRead = async (applicationId: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("application_id", applicationId)
+      .neq("sender_id", user.id)
+      .is("read_at", null);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setThreads((prev) => clearThreadUnread(prev as any, applicationId) as typeof prev);
+    toast.success("Segnato come letto");
+  };
   const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "");
   // Build the inbox label so two applications with the same role but
   // different shift dates are visually distinguishable. Includes role,
