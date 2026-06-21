@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
+import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
