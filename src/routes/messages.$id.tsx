@@ -1803,9 +1803,6 @@ function Thread() {
     return null;
   }, [shift, ann, app?.status, app?.id]);
   const isConversationClosed = closureReason !== null;
-  const closureNoticeText = closureReason === "completed"
-    ? "Questo turno è stato concluso. La chat è disponibile solo come storico."
-    : "Questo turno è stato annullato. La chat è disponibile solo come storico.";
   useEffect(() => {
     if (!isConversationClosed || !app) return;
     if (typeof window === "undefined") return;
@@ -1820,62 +1817,7 @@ function Thread() {
       });
     }
   }, [isConversationClosed, app?.id, role, shift?.id, closureReason]);
-  const closureSystemTemplateId = closureReason === "completed"
-    ? "chat_closed_completed"
-    : "chat_closed_cancelled";
-  const closureSystemBody = closureReason === "completed"
-    ? "Il turno è stato concluso. Questa chat è ora disponibile solo come storico."
-    : "Il turno è stato annullato. Questa chat è ora disponibile solo come storico.";
 
-  // Anti-duplicato: inserisce UNA sola volta il messaggio di sistema di
-  // chiusura nella chat. Idempotente lato client (controllo in-memory dei
-  // messaggi caricati) e lato server (chiave template_id + select prima
-  // dell'insert). Funziona indipendentemente da dove è stata triggerata
-  // la chiusura (pagina turno, annullamento annuncio, chat).
-  const closureInsertedRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!user || !app || !closureReason) return;
-    const alreadyInMsgs = msgs.some(
-      (m) => m.template_id === "chat_closed_completed" || m.template_id === "chat_closed_cancelled",
-    );
-    if (alreadyInMsgs) return;
-    const key = `${app.id}:${closureSystemTemplateId}`;
-    if (closureInsertedRef.current === key) return;
-    closureInsertedRef.current = key;
-    (async () => {
-      try {
-        const { data: existing } = await supabase
-          .from("messages")
-          .select("id")
-          .eq("application_id", app.id)
-          .in("template_id", ["chat_closed_completed", "chat_closed_cancelled"])
-          .limit(1)
-          .maybeSingle();
-        if (existing) return;
-        const receiverId = app.restaurant_id === user.id ? app.worker_id : app.restaurant_id;
-        const createdAt = new Date().toISOString();
-        const { data, error } = await supabase.from("messages").insert({
-          application_id: app.id,
-          sender_id: user.id,
-          receiver_id: receiverId,
-          body: closureSystemBody,
-          created_at: createdAt,
-          read_at: null,
-          template_id: closureSystemTemplateId,
-          message_type: "system",
-          action_type: null,
-        } as never).select("*").single();
-        if (error) {
-          // Non bloccante: la chat resta comunque chiusa lato UI/DB.
-          console.warn("[chat-closure] insert system message failed", error);
-          return;
-        }
-        if (data) pushMessage(data as Msg);
-      } catch (e) {
-        console.warn("[chat-closure] unexpected error", e);
-      }
-    })();
-  }, [user, app, closureReason, closureSystemTemplateId, closureSystemBody, msgs]);
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
   const canSeeAddress = canSeePreciseAddress({
@@ -2782,6 +2724,12 @@ function Thread() {
             // sopra la conversazione. Lo nascondiamo qui senza cancellare
             // il record dal DB.
             if (m.action_type === "instructions_acknowledged") {
+              return null;
+            }
+            // I messaggi di chiusura chat (turno annullato/concluso) non vengono
+            // più mostrati come bubble nella conversazione; lo stato del turno
+            // rimane visibile nelle card "Dettagli turno" / "Istruzioni operative".
+            if (m.template_id === "chat_closed_cancelled" || m.template_id === "chat_closed_completed") {
               return null;
             }
             if (isSystem) {
