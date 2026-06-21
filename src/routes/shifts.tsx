@@ -1198,6 +1198,43 @@ function ShiftsPage() {
                   </div>
                 )}
 
+                {role === "restaurant" && (() => {
+                  const isArchived = !!s.restaurant_archived_at;
+                  const archivable = !isArchived && (
+                    s.status === "completed" ||
+                    s.status === "cancelled" ||
+                    s.status === "no_show" ||
+                    (s.status === "scheduled" && s.shift_date < today)
+                  );
+                  if (!archivable && !isArchived) return null;
+                  return (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {archivable && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => setArchiveDialog(s)}
+                          aria-label="Archivia turno"
+                        >
+                          <Archive className="h-4 w-4" /> Archivia
+                        </Button>
+                      )}
+                      {isArchived && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                          onClick={() => restoreShift(s)}
+                          aria-label="Ripristina turno"
+                        >
+                          <RotateCcw className="h-4 w-4" /> Ripristina
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {s.status === "completed" && (
                   <div className="mt-4 border-t border-white/5 pt-4">
                     {role === "restaurant" && reqByShift[s.id] && reqByShift[s.id].status !== "completed" && (() => {
