@@ -2760,12 +2760,9 @@ function Thread() {
               </button>
             </div>
           )}
-          {!hasMore && msgs.length > 0 && (
-            <div className="flex justify-center pb-2">
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Inizio della conversazione</span>
-            </div>
+          {msgs.length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">Nessun messaggio. Scrivi qui sotto per iniziare.</p>
           )}
-          {msgs.length === 0 && <p className="text-center text-sm text-muted-foreground py-8">Inizia la conversazione.</p>}
           {msgs.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             // Card combinata "Turno chiuso e recensione ricevuta" — UN SOLO
