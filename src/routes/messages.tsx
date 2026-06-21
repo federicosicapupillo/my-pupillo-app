@@ -271,6 +271,30 @@ function MessagesLayout() {
     } else {
       setPendingReviewAppIds(new Set());
     }
+    // Restaurant: build (announcement_id + worker_id) -> shift_id map for
+    // the "Vai al turno" quick action on accepted candidatures.
+    if (role === "restaurant" && annIds.length) {
+      const { data: sh } = await supabase
+        .from("shifts")
+        .select("id, announcement_id, worker_id")
+        .eq("restaurant_id", user.id)
+        .in("announcement_id", annIds);
+      const sMap = new Map<string, string>();
+      const keyOf = (annId: string, wId: string) => `${annId}::${wId}`;
+      const idx = new Map<string, string>();
+      for (const s of (sh ?? []) as any[]) {
+        if (s.announcement_id && s.worker_id && s.id) {
+          idx.set(keyOf(s.announcement_id, s.worker_id), s.id);
+        }
+      }
+      for (const a of list) {
+        const sid = idx.get(keyOf(a.announcement_id, a.worker_id));
+        if (sid) sMap.set(a.id, sid);
+      }
+      setShiftByApp(sMap);
+    } else {
+      setShiftByApp(new Map());
+    }
     setLoading(false);
   };
 
