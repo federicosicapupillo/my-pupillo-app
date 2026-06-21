@@ -857,6 +857,44 @@ function MessagesLayout() {
                                 </div>
                               </div>
                             </Link>
+                            {role === "restaurant" && (
+                              <div className="mt-1 flex flex-wrap gap-1 px-1 pb-1">
+                                <Link
+                                  to="/messages/$id"
+                                  params={{ id: t.id }}
+                                  className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                                >
+                                  <MessageSquare className="h-3 w-3" aria-hidden /> Apri conversazione
+                                </Link>
+                                {t.announcementId && (
+                                  <Link
+                                    to="/announcements/$id"
+                                    params={{ id: t.announcementId }}
+                                    className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                                  >
+                                    <ExternalLink className="h-3 w-3" aria-hidden /> Vedi annuncio
+                                  </Link>
+                                )}
+                                {shiftByApp.get(t.id) && (
+                                  <Link
+                                    to="/ristoratore/turni/$shiftId"
+                                    params={{ shiftId: shiftByApp.get(t.id)! }}
+                                    className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/25"
+                                  >
+                                    <Briefcase className="h-3 w-3" aria-hidden /> Vai al turno
+                                  </Link>
+                                )}
+                                {isUnread && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); markThreadRead(t.id); }}
+                                    className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                                  >
+                                    <CheckCheck className="h-3 w-3" aria-hidden /> Segna come letto
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </li>
                         );
                       })}
@@ -872,6 +910,36 @@ function MessagesLayout() {
         <section className={`${selectedId ? "block" : "hidden lg:block"} min-w-0`} aria-label="Chat conversazione">
           {selectedId ? (
             <Outlet />
+          ) : role === "restaurant" ? (
+            <div className="rounded-2xl border bg-card p-6">
+              <h2 className="text-base font-semibold text-foreground">Centro comunicazioni</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Qui vedi candidature, conferme e messaggi dei lavoratori. Seleziona una card a sinistra per leggere o rispondere, oppure usa i filtri per concentrarti su ciò che richiede attenzione.
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <button type="button" onClick={() => setCategory("unread")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Non letti</div>
+                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.unread}</div>
+                </button>
+                <button type="button" onClick={() => setCategory("candidature")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Candidature</div>
+                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.candidature}</div>
+                </button>
+                <button type="button" onClick={() => setCategory("confermati")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Confermati</div>
+                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.confermati}</div>
+                </button>
+                <button type="button" onClick={() => setCategory("turni")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Turni</div>
+                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.turni}</div>
+                </button>
+              </div>
+              {threads.length === 0 && (
+                <div className="mt-6 rounded-xl border border-dashed bg-background/50 p-6 text-center text-sm text-muted-foreground">
+                  Qui vedrai candidature, conferme e messaggi dei lavoratori.
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex min-h-[520px] items-center justify-center rounded-2xl border bg-card p-10 text-center text-muted-foreground">
               Seleziona una conversazione per iniziare.
