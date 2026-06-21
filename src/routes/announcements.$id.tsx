@@ -31,6 +31,8 @@ import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
+import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
@@ -415,16 +417,20 @@ function AnnouncementDetail() {
 
   const [applying, setApplying] = useState(false);
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
+  const [selfCancelledOpen, setSelfCancelledOpen] = useState(false);
   const applyAsWorker = async () => {
     if (!user || !ann) return;
     setApplying(true);
-    const contact = await checkExistingContact({
-      announcementId: ann.id,
-      workerId: user.id,
-    });
-    if (contact.existing) {
+    // Gate worker-side re-apply: a worker that previously self-cancelled
+    // (status `not_interested`) cannot re-apply to the same announcement.
+    const decision = await canWorkerApplyToAnnouncement(user.id, ann.id);
+    if (!decision.allowed) {
       setApplying(false);
-      setAlreadyContactAppId(contact.applicationId);
+      if (decision.reason === "self_cancelled") {
+        setSelfCancelledOpen(true);
+      } else {
+        setAlreadyContactAppId(decision.applicationId);
+      }
       return;
     }
     // PUPILLO: regola di OCCUPAZIONE — blocca candidatura se in conflitto con
@@ -656,6 +662,10 @@ function AnnouncementDetail() {
         open={!!alreadyContactAppId}
         applicationId={alreadyContactAppId}
         onClose={() => setAlreadyContactAppId(null)}
+      />
+      <WorkerSelfCancelledDialog
+        open={selfCancelledOpen}
+        onClose={() => setSelfCancelledOpen(false)}
       />
       <Dialog open={fullDialogOpen} onOpenChange={setFullDialogOpen}>
         <DialogContent>

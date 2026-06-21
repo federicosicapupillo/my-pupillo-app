@@ -41,6 +41,7 @@ import type { AvailabilityRow, AvailabilityExceptionRow, CompatibilityLevel } fr
 import { computeCompatibility, SLOT_LABELS } from "@/lib/availability";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import { canRestaurantInviteWorker } from "@/lib/application-reapply";
 import {
   collectWorkerCompetenceValues,
   collectWorkerRoleValues,
@@ -1043,36 +1044,61 @@ function WorkersPage() {
           }
         }
       }
-      // Anti-doppio contatto: blocca se esiste già una candidatura/proposta
-      // attiva tra questo ristoratore e questo lavoratore per lo stesso annuncio.
-      const contact = await checkExistingContact({
-        announcementId: selected,
-        workerId,
-      });
-      if (contact.existing) {
+      // Anti-doppio contatto + supporto "Invita di nuovo":
+      // - blocca se esiste già una candidatura/proposta ATTIVA per questo
+      //   ristoratore e lavoratore sullo stesso annuncio;
+      // - se invece esiste una vecchia richiesta CHIUSA (annullata dal
+      //   lavoratore, rifiutata dal ristoratore, scaduta, ecc.), il
+      //   ristoratore può ri-invitare: riusiamo la riga esistente
+      //   portandola di nuovo a `pending` (la tabella ha UNIQUE su
+      //   (announcement_id, worker_id), quindi non possiamo creare un
+      //   secondo record; preserviamo così anche lo storico chat).
+      const inviteDecision = await canRestaurantInviteWorker(workerId, selected);
+      if (!inviteDecision.allowed) {
         setProposalWorker(null);
-        setAlreadyContactAppId(contact.applicationId);
+        setAlreadyContactAppId(inviteDecision.applicationId);
         setSendingProposal(false);
         return;
       }
-      const { data: created, error } = await supabase
-        .from("applications")
-        .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
-        .select("id")
-        .single();
-      if (error || !created) {
-        if (error && isDuplicateContactError(error)) {
-          const c = await checkExistingContact({ announcementId: selected, workerId });
-          setProposalWorker(null);
-          setAlreadyContactAppId(c.existing ? c.applicationId : null);
+      let applicationId: string;
+      if (inviteDecision.mode === "reactivate") {
+        const { data: updated, error: reErr } = await supabase
+          .from("applications")
+          .update({
+            status: "pending",
+            restaurant_id: user.id,
+            proposed_tariff: null,
+            worker_response_at: null,
+          } as never)
+          .eq("id", inviteDecision.applicationId)
+          .select("id")
+          .single();
+        if (reErr || !updated) {
+          toast.error(reErr?.message ?? "Impossibile riattivare la richiesta.");
           setSendingProposal(false);
           return;
         }
-        toast.error(error?.message ?? "Errore");
-        setSendingProposal(false);
-        return;
+        applicationId = (updated as { id: string }).id;
+      } else {
+        const { data: created, error } = await supabase
+          .from("applications")
+          .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
+          .select("id")
+          .single();
+        if (error || !created) {
+          if (error && isDuplicateContactError(error)) {
+            const c = await checkExistingContact({ announcementId: selected, workerId });
+            setProposalWorker(null);
+            setAlreadyContactAppId(c.existing ? c.applicationId : null);
+            setSendingProposal(false);
+            return;
+          }
+          toast.error(error?.message ?? "Errore");
+          setSendingProposal(false);
+          return;
+        }
+        applicationId = created.id;
       }
-      const applicationId = created.id;
       try {
         await sendShiftProposal({
           applicationId,
