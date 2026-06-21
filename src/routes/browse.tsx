@@ -730,6 +730,10 @@ function Browse() {
                 : compatTag === "incompatible"
                 ? { text: "Fuori disponibilità", cls: "bg-muted text-foreground/70" }
                 : null;
+            // Role-compatibility chip: confronta la mansione richiesta
+            // dall'annuncio con le mansioni dichiarate dal lavoratore.
+            const _roleRc = getRoleCompatibility(profile as any, a.professional_profile);
+            const roleCompatBadge = getRoleCompatibilityBadge(_roleRc);
             const loc = publicLocationLabel({
               job_city: a.job_city,
               city: restaurantsById[a.restaurant_id]?.city,
