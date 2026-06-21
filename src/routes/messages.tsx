@@ -714,23 +714,10 @@ function MessagesLayout() {
                 </p>
               )}
             </div>
-          ) : (withUser ? visible.length === 0 : visibleGroups.length === 0) ? (
+          ) : (withUser ? visible.length === 0 : sortedGroups.length === 0) ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
               Nessuna conversazione corrisponde ai filtri selezionati.
             </div>
-          ) : role === "restaurant" && !withUser ? (
-            <RestaurantDashboard
-              threads={threads.filter(passesCategory)}
-              category={category}
-              setCategory={setCategory}
-              shiftByApp={shiftByApp}
-              pendingReviewAppIds={pendingReviewAppIds}
-              restaurantPhase={restaurantPhase}
-              categoryToPhase={categoryToPhase}
-              selectedId={selectedId}
-              fmtThreadLabel={fmtThreadLabel}
-              markThreadRead={markThreadRead}
-            />
           ) : withUser ? (
             <div className="space-y-2">
               {visible.map((t) => {
