@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
@@ -484,6 +485,17 @@ function Browse() {
       toast.error(SPECIAL_INCOMPATIBLE_MESSAGE);
       return;
     }
+    // Avvisa il lavoratore se sta per candidarsi a un annuncio con una
+    // mansione che NON ha selezionato nel proprio profilo. Non blocca.
+    const rc = getRoleCompatibility(profile as any, a.professional_profile);
+    if (rc.status === "not_compatible") {
+      const ok = typeof window !== "undefined"
+        ? window.confirm(
+            `Questo annuncio richiede "${rc.requiredRoleLabel}" che non hai selezionato tra le tue mansioni. Vuoi candidarti comunque?`,
+          )
+        : true;
+      if (!ok) return;
+    }
     setConfirmAnn(a);
   };
 
@@ -718,6 +730,10 @@ function Browse() {
                 : compatTag === "incompatible"
                 ? { text: "Fuori disponibilità", cls: "bg-muted text-foreground/70" }
                 : null;
+            // Role-compatibility chip: confronta la mansione richiesta
+            // dall'annuncio con le mansioni dichiarate dal lavoratore.
+            const _roleRc = getRoleCompatibility(profile as any, a.professional_profile);
+            const roleCompatBadge = getRoleCompatibilityBadge(_roleRc);
             const loc = publicLocationLabel({
               job_city: a.job_city,
               city: restaurantsById[a.restaurant_id]?.city,
@@ -761,6 +777,20 @@ function Browse() {
                       {compatChip && (
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${compatChip.cls}`}>
                           {compatChip.text}
+                        </span>
+                      )}
+                      {roleCompatBadge && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${roleCompatBadge.cls}`}
+                          title={_roleRc.status === "not_compatible"
+                            ? `Nel tuo profilo non hai selezionato "${_roleRc.requiredRoleLabel}".`
+                            : undefined}
+                        >
+                          {_roleRc.status === "not_compatible"
+                            ? "Fuori dalle tue mansioni"
+                            : _roleRc.status === "compatible"
+                              ? "Compatibile con il tuo profilo"
+                              : roleCompatBadge.text}
                         </span>
                       )}
                     </div>

@@ -28,6 +28,7 @@ import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announc
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/format";
+import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
 import { summarizeWeeklyAvailability, formatAvailabilitySlotsForDay } from "@/lib/availability-summary";
@@ -985,6 +986,19 @@ function WorkersPage() {
   // Apre il dialog di conferma proposta (oppure il dialog "seleziona annuncio" se mancante).
   const openProposalDialog = (worker: W) => {
     if (!selected) { setMissingAnnOpen(true); return; }
+    // Warn the restaurant if the worker hasn't selected the announcement's
+    // role among their declared mansioni. Non blocking: they can proceed.
+    const ann = anns.find((a) => a.id === selected) ?? selectedAnn;
+    const requiredRole = ann?.professional_profile ?? null;
+    const rc = getRoleCompatibility(worker, requiredRole);
+    if (rc.status === "not_compatible") {
+      const ok = typeof window !== "undefined"
+        ? window.confirm(
+            `Questo lavoratore non ha indicato "${rc.requiredRoleLabel}" tra le sue mansioni. Vuoi procedere comunque?`,
+          )
+        : true;
+      if (!ok) return;
+    }
     setProposalWorker(worker);
   };
 
@@ -1146,7 +1160,10 @@ function WorkersPage() {
     switch (cat) {
       case "all": return true; // sub controls sort, not filter
       case "name_profile": return true; // sub determines which field free-text targets
-      case "role": return s === "altro ruolo" || (roleAliases[s] ?? [s]).some((alias) => f.roles.includes(alias));
+      // PUPILLO: per la categoria "Ruolo" non escludiamo: la card mostrerà
+      // un badge "Compatibile" o "Fuori mansione". Mantenuto solo come
+      // info, l'ordinamento porta i compatibili in cima.
+      case "role": return true;
       case "skill": return s === "altro" || (skillAliases[s] ?? [s]).some((alias) => (f.title + " " + f.description + " " + f.roles).includes(alias));
       case "language": return s === "altro" ? true : f.langs.includes(s);
       case "location":
@@ -1249,12 +1266,10 @@ function WorkersPage() {
       : null;
   const activeRoleContext: string | null = advancedRole ?? announcementRole ?? null;
   const filtered = workers.filter((worker) => {
-    // Anche in modalità ricerca avanzata, se l'utente ha scelto un ruolo
-    // specifico nel filtro avanzato, scartiamo i lavoratori che non lo
-    // hanno davvero tra primary/secondary roles. `matchesSubcategory` qui
-    // sotto fa già un controllo testuale, ma usiamo la regola stretta
-    // per evitare falsi positivi (es. "sala" che matcha "addetto sala").
-    if (advancedRole && !workerMatchesRole(worker, advancedRole)) return false;
+    // PUPILLO: anche se l'utente ha scelto un ruolo specifico nella
+    // ricerca avanzata, NON nascondiamo i lavoratori che non lo hanno tra
+    // le mansioni dichiarate. Restano visibili in coda con un badge
+    // "Fuori mansione" così il ristoratore può comunque contattarli.
     if (!matchesSubcategory(worker, category, subcategory)) return false;
     if (!matchesText(worker, q, category, subcategory)) return false;
     if (lang) {
@@ -1350,12 +1365,13 @@ function WorkersPage() {
         return score(b) - score(a);
       }
     }
-    // Quando c'è un annuncio selezionato, i lavoratori il cui ruolo
-    // combacia col ruolo richiesto dall'annuncio vanno SEMPRE prima di
-    // quelli che non combaciano. I non compatibili restano visibili.
-    if (selectedAnn && announcementRole) {
-      const ra = workerMatchesRole(a, announcementRole) ? 0 : 1;
-      const rb = workerMatchesRole(b, announcementRole) ? 0 : 1;
+    // Quando c'è un ruolo "attivo" (ricerca avanzata oppure annuncio
+    // selezionato), i lavoratori COMPATIBILI con quella mansione vanno
+    // SEMPRE prima dei NON compatibili. I non compatibili restano visibili
+    // e mostrano un badge "Fuori mansione".
+    if (activeRoleContext) {
+      const ra = workerMatchesRole(a, activeRoleContext) ? 0 : 1;
+      const rb = workerMatchesRole(b, activeRoleContext) ? 0 : 1;
       if (ra !== rb) return ra - rb;
     }
     // Penalizzazione affidabilità (3+ ritardi confermati): i lavoratori
@@ -1797,6 +1813,23 @@ function WorkersPage() {
                 </span>
               </div>
             )}
+            {(() => {
+              const rc = getRoleCompatibility(w, activeRoleContext);
+              const b = getRoleCompatibilityBadge(rc);
+              if (!b) return null;
+              return (
+                <div className="mt-2">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${b.cls}`}
+                    title={rc.status === "not_compatible"
+                      ? `Questo lavoratore non ha indicato "${rc.requiredRoleLabel}" tra le mansioni disponibili.`
+                      : undefined}
+                  >
+                    {b.text}
+                  </span>
+                </div>
+              );
+            })()}
             {w.search_penalty_active && (
               <div className="mt-2">
                 <span
@@ -2147,6 +2180,23 @@ function ContactedWorkerCard({
           </span>
         </div>
       )}
+      {(() => {
+        const rc = getRoleCompatibility(w, activeRoleContext);
+        const b = getRoleCompatibilityBadge(rc);
+        if (!b) return null;
+        return (
+          <div className="mt-2">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${b.cls}`}
+              title={rc.status === "not_compatible"
+                ? `Questo lavoratore non ha indicato "${rc.requiredRoleLabel}" tra le mansioni disponibili.`
+                : undefined}
+            >
+              {b.text}
+            </span>
+          </div>
+        );
+      })()}
       {w.search_penalty_active && (
         <div className="mt-2">
           <span
