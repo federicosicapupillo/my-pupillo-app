@@ -45,7 +45,7 @@ import { formatDateIT, formatTariff, formatOfferDateTime, formatJobLocation } fr
 import { getShiftEndDate } from "@/lib/announcement-time";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock, Phone, User as UserIcon, Navigation, ExternalLink } from "lucide-react";
-import { ShieldAlert, Unlock } from "lucide-react";
+import { ShieldAlert, Unlock, FileText } from "lucide-react";
 import {
   labelOf, labelsOf,
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
