@@ -1,4 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import {
+  isShiftDateStillFuture,
+  notifyPreviousCandidatesOfReopen,
+} from "@/lib/announcement-reopen";
 
 export const DELAY_REASONS = [
   { value: "traffico", label: "Traffico" },
@@ -210,10 +214,18 @@ export async function cancelPresence(input: CancelPresenceInput): Promise<void> 
   }
 
   // 3) Re-open the announcement so the restaurant can search a new worker.
-  if (announcementId) {
+  // Solo se il turno è ancora futuro: turni passati/archiviati non
+  // devono tornare disponibili.
+  const shiftIsFuture = isShiftDateStillFuture(context.date);
+  if (announcementId && shiftIsFuture) {
     await supabase
       .from("announcements")
-      .update({ assigned_worker_id: null, status: "active" } as never)
+      .update({
+        assigned_worker_id: null,
+        status: "active",
+        reopened_after_worker_cancellation: true,
+        reopened_at: new Date().toISOString(),
+      } as never)
       .eq("id", announcementId)
       .eq("restaurant_id", restaurantId);
   }
@@ -244,16 +256,36 @@ export async function cancelPresence(input: CancelPresenceInput): Promise<void> 
   // 5) Notify restaurant.
   await supabase.from("notifications").insert({
     user_id: restaurantId,
-    title: "Presenza annullata dal lavoratore",
-    body: `Il lavoratore ha annullato la propria presenza per il ${descriptor}.`,
-    link: applicationId ? `/messages/${applicationId}` : `/shifts?shift=${shiftId}`,
+    title: "Il lavoratore ha annullato il turno",
+    body: shiftIsFuture
+      ? "Il turno è tornato disponibile. Puoi scegliere un altro candidato tra quelli che si erano già candidati oppure cercare nuovi lavoratori."
+      : `Il lavoratore ha annullato la propria presenza per il ${descriptor}.`,
+    link: announcementId
+      ? `/announcements/${announcementId}`
+      : applicationId ? `/messages/${applicationId}` : `/shifts?shift=${shiftId}`,
     metadata: {
       kind: "worker_presence_cancelled",
       shift_id: shiftId,
       announcement_id: announcementId,
+      cancelled_application_id: applicationId ?? null,
+      reopened: shiftIsFuture,
       reason,
     },
   } as never);
+
+  // 5b) Notify previous candidates (idempotent) that the announcement is
+  //     back on the market. Only when there's something to reopen.
+  if (announcementId && applicationId && shiftIsFuture) {
+    try {
+      await notifyPreviousCandidatesOfReopen({
+        announcementId,
+        cancelledApplicationId: applicationId,
+        cancellingWorkerId: workerId,
+      });
+    } catch (e) {
+      console.error("[cancelPresence] notifyPreviousCandidates failed", e);
+    }
+  }
 
   // 6) Activity log.
   await supabase.from("activity_logs").insert({
