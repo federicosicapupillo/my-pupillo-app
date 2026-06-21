@@ -4415,10 +4415,11 @@ function ConfirmationCard(props: {
   announcementId: string | null;
   isWorker: boolean;
   acknowledged?: boolean;
+  acknowledgedAt?: string | null;
   arrivalAdvanceMinutes?: number | null;
   onAcknowledge?: () => Promise<void> | void;
 }) {
-  const { ann, venueName, applicationId, isWorker, acknowledged = false, arrivalAdvanceMinutes, onAcknowledge } = props;
+  const { ann, venueName, applicationId, isWorker, acknowledged = false, acknowledgedAt = null, arrivalAdvanceMinutes, onAcknowledge } = props;
   const [ackBusy, setAckBusy] = useState(false);
   const clean = (v: unknown): string => {
     if (v == null) return "";
