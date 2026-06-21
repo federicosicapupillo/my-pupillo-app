@@ -453,21 +453,9 @@ function MessagesLayout() {
   };
 
 
-  // Auto-expand any partner group that contains more than one application,
-  // so two distinct candidatures for the same worker are immediately visible
-  // instead of hidden behind a collapsed row. Honors manual collapse/expand.
-  useEffect(() => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      for (const g of groupThreadsByOther(threads)) {
-        if (g.items.length > 1 && !userToggledRef.current.has(g.id)) {
-          next.add(g.id);
-        }
-      }
-      return next;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads.length, threads.map((t) => t.id).join("|")]);
+  // No auto-expansion: when the user opens the Messages page every group
+  // starts collapsed. Cards expand only on explicit user click via
+  // toggleGroup, so the inbox always opens in a clean state.
 
   // Load last-selected announcement context for restaurant quick-reuse.
   useEffect(() => {
