@@ -2209,7 +2209,7 @@ function Onboarding() {
             <div id="sec-documento" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">🪪 Documento di identità *</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                <div>
+                <div data-field="id_document_type">
                   <Label>Tipo documento *</Label>
                   <Select
                     value={personal.id_document_type}
@@ -2231,7 +2231,7 @@ function Onboarding() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div data-field="id_document_number">
                   <Label>Numero documento *</Label>
                   <Input
                     required
@@ -2299,7 +2299,7 @@ function Onboarding() {
                       </p>
                     )}
                 </div>
-                <div>
+                <div data-field="id_document_issued_at">
                   <Label>Data rilascio *</Label>
                   <DateField
                     required
@@ -2315,7 +2315,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div>
+                <div data-field="id_document_expires_at">
                   <Label>Data scadenza *</Label>
                   <DateField
                     required
@@ -2332,7 +2332,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2" data-field="id_document_issuer">
                   <Label>Ente di rilascio *</Label>
                   {(() => {
                     const ISSUER_OPTIONS = [
