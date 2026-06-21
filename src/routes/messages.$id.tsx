@@ -1113,7 +1113,6 @@ function Thread() {
 
   // Inserisce UN SOLO messaggio combinato "Turno chiuso e recensione ricevuta"
   // in chat, evitando duplicati se già presente per la stessa application.
-  const SHIFT_REVIEW_TEMPLATE_ID = "shift_closed_with_review";
   const insertShiftClosedWithReview = async () => {
     if (!user || !app) return;
     // Anti-duplicato lato client: se esiste già il messaggio combinato per
