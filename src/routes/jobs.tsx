@@ -417,44 +417,26 @@ function Jobs() {
         candidates: toNotify.length,
       });
       if (toNotify.length > 0) {
-        const shiftIds = toNotify.map((t) => t.shiftId);
-        const { data: existingNotifs } = await supabase
-          .from("notifications")
-          .select("id, metadata")
-          .eq("user_id", user.id)
-          .contains("metadata", { kind: "worker_review_required" } as never);
-        const alreadyNotified = new Set(
-          ((existingNotifs ?? []) as any[])
-            .map((n) => n.metadata?.shift_id)
-            .filter(Boolean),
-        );
-        for (const t of toNotify) {
-          if (alreadyNotified.has(t.shiftId)) {
-            console.log("[PUPILLO_WORKER_REVIEW_ALREADY_EXISTS]", { shift_id: t.shiftId });
-            continue;
-          }
-          const { error: insErr } = await supabase.from("notifications").insert({
-            user_id: user.id,
-            title: "Lascia una recensione",
-            body: "Il turno si è concluso. Lascia una recensione al ristoratore per completare il servizio.",
-            // Porta il lavoratore direttamente alla pagina "I miei turni",
-            // tab "Da recensire", con la card del turno evidenziata.
-            link: `/shifts?tab=to-review&shift=${t.shiftId}`,
-            metadata: {
-              kind: "worker_review_required",
-              shift_id: t.shiftId,
-              application_id: t.applicationId,
-              target_page: "worker_shifts",
-              target_tab: "da_recensire",
-              safe_redirect_path: `/shifts?tab=to-review&shift=${t.shiftId}`,
-            },
-          } as never);
-          if (insErr) {
-            console.warn("[PUPILLO_WORKER_REVIEW_NOTIFICATION_ERROR]", insErr.message);
-          } else {
-            console.log("[PUPILLO_WORKER_REVIEW_NOTIFICATION_CREATED]", { shift_id: t.shiftId });
-          }
-        }
+        // Idempotent: the partial unique index on (user_id, dedupe_key) makes
+        // this safe to re-run on every page refresh / StrictMode remount.
+        const { insertNotifications } = await import("@/lib/notifications");
+        const { error: insErr } = await insertNotifications(supabase, toNotify.map((t) => ({
+          userId: user.id,
+          kind: "worker_review_required",
+          entityId: t.shiftId,
+          title: "Lascia una recensione",
+          body: "Il turno si è concluso. Lascia una recensione al ristoratore per completare il servizio.",
+          link: `/shifts?tab=to-review&shift=${t.shiftId}`,
+          metadata: {
+            shift_id: t.shiftId,
+            application_id: t.applicationId,
+            target_page: "worker_shifts",
+            target_tab: "da_recensire",
+            safe_redirect_path: `/shifts?tab=to-review&shift=${t.shiftId}`,
+          },
+        })));
+        if (insErr) console.warn("[PUPILLO_WORKER_REVIEW_NOTIFICATION_ERROR]", insErr);
+        else console.log("[PUPILLO_WORKER_REVIEW_NOTIFICATION_CREATED]", { count: toNotify.length });
       }
     } catch (e) {
       console.warn("[PUPILLO_WORKER_REVIEW_NOTIFICATION_ERROR]", e);
