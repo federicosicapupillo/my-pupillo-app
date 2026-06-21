@@ -1854,7 +1854,10 @@ function Thread() {
   const realConversationMessages = useMemo(() => msgs.filter(isRealChatMessage), [msgs]);
   const displayableConversationMessages = useMemo(() => msgs.filter(isDisplayableConversationMessage), [msgs]);
   const canWriteNewMessage = !!app && !!user && !isConversationClosed;
-  const shouldRenderConversation = realConversationMessages.length > 0 || canWriteNewMessage;
+  // La sezione conversazione viene renderizzata solo quando contiene messaggi
+  // effettivamente visibili. Non mostriamo più il grande box vuoto per chat
+  // chiuse (annullate/completate) o per chat attive senza messaggi.
+  const shouldRenderConversation = displayableConversationMessages.length > 0;
 
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
