@@ -444,6 +444,10 @@ function RestaurantDetailPage() {
         applicationId={alreadyContactAppId}
         onClose={() => setAlreadyContactAppId(null)}
       />
+      <WorkerSelfCancelledDialog
+        open={selfCancelledOpen}
+        onClose={() => setSelfCancelledOpen(false)}
+      />
     </AppShell>
   );
 }
