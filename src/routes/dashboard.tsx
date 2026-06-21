@@ -13,6 +13,7 @@ import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
+import { WorkerAvailabilitySummary } from "@/components/WorkerAvailabilitySummary";
 import { RestaurantReputationCard } from "@/components/RestaurantReputationCard";
 import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
 import {
