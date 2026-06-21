@@ -588,6 +588,11 @@ function NewRestaurantJobRequest() {
 
   const save = async (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
+    const workersCount = Number(f.workers_needed);
+    if (!Number.isInteger(workersCount) || workersCount < 1 || workersCount > 9) {
+      toast.error("Seleziona un numero di lavoratori tra 1 e 9.");
+      return;
+    }
     setBusy(true);
     clearAll();
     const accessText = accessChoice === "15"
