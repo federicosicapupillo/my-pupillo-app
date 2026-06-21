@@ -1569,6 +1569,7 @@ export type Database = {
           hours: number
           id: string
           is_demo: boolean
+          restaurant_archived_at: string | null
           restaurant_id: string
           reviewed_at: string | null
           reviewed_by_restaurant_user_id: string | null
@@ -1585,6 +1586,7 @@ export type Database = {
           hours?: number
           id?: string
           is_demo?: boolean
+          restaurant_archived_at?: string | null
           restaurant_id: string
           reviewed_at?: string | null
           reviewed_by_restaurant_user_id?: string | null
@@ -1601,6 +1603,7 @@ export type Database = {
           hours?: number
           id?: string
           is_demo?: boolean
+          restaurant_archived_at?: string | null
           restaurant_id?: string
           reviewed_at?: string | null
           reviewed_by_restaurant_user_id?: string | null

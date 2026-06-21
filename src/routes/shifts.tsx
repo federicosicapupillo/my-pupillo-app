@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, MessageSquare, Clock, Eye, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Archive, RotateCcw } from "lucide-react";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
 import { getShiftEndDate } from "@/lib/announcement-time";
@@ -35,6 +36,7 @@ type Shift = {
   amount: number | null;
   status: "scheduled" | "completed" | "no_show" | "cancelled";
   created_at: string;
+  restaurant_archived_at?: string | null;
 };
 type Profile = { id: string; full_name: string | null; business_name: string | null; city: string | null };
 
@@ -137,16 +139,17 @@ function ShiftsPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past">(() => {
+  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past" | "archived">(() => {
     if (typeof window === "undefined") return "assigned";
     const raw = (new URLSearchParams(window.location.search).get("tab") || "").toLowerCase();
-    const map: Record<string, "assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past"> = {
+    const map: Record<string, "assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past" | "archived"> = {
       "assigned": "assigned", "assegnati": "assigned",
       "to-review": "to-review", "da-recensire": "to-review", "da_recensire": "to-review",
       "completed": "completed", "conclusi": "completed", "completati": "completed", "concluso": "completed",
       "no_show": "no_show", "noshow": "no_show", "no-show": "no_show",
       "reports": "no_show", "segnalazioni": "no_show", "segnalazione": "no_show",
-      "past": "past", "archiviati": "past",
+      "past": "past",
+      "archived": "archived", "archiviati": "archived", "archivio": "archived",
       "upcoming": "upcoming",
     };
     return map[raw] ?? "assigned";
@@ -290,6 +293,8 @@ function ShiftsPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [archiveDialog, setArchiveDialog] = useState<Shift | null>(null);
+  const [archiveSubmitting, setArchiveSubmitting] = useState(false);
   const [delayTarget, setDelayTarget] = useState<IncidentTarget | null>(null);
   const [workerCancelTarget, setWorkerCancelTarget] = useState<IncidentTarget | null>(null);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
@@ -499,6 +504,41 @@ function ShiftsPage() {
     } finally {
       setCancelSubmitting(false);
     }
+  };
+
+  const confirmArchive = async () => {
+    const s = archiveDialog;
+    if (!s) return;
+    setArchiveSubmitting(true);
+    try {
+      const now = new Date().toISOString();
+      const { error } = await (supabase as any)
+        .from("shifts")
+        .update({ restaurant_archived_at: now })
+        .eq("id", s.id);
+      if (error) {
+        toast.error(error.message || "Impossibile archiviare il turno.");
+        return;
+      }
+      setShifts(prev => prev.map(x => x.id === s.id ? { ...x, restaurant_archived_at: now } : x));
+      toast.success("Turno archiviato. Lo trovi nella sezione Archiviati.");
+      setArchiveDialog(null);
+    } finally {
+      setArchiveSubmitting(false);
+    }
+  };
+
+  const restoreShift = async (s: Shift) => {
+    const { error } = await (supabase as any)
+      .from("shifts")
+      .update({ restaurant_archived_at: null })
+      .eq("id", s.id);
+    if (error) {
+      toast.error(error.message || "Impossibile ripristinare il turno.");
+      return;
+    }
+    setShifts(prev => prev.map(x => x.id === s.id ? { ...x, restaurant_archived_at: null } : x));
+    toast.success("Turno ripristinato.");
   };
 
   const submitReview = async (s: Shift) => {
@@ -726,31 +766,44 @@ function ShiftsPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // For restaurants, archived shifts are hidden from every operational tab
+  // and surface only under the dedicated "Archiviati" tab. Workers are not
+  // affected by this field.
+  const isArchivedForRestaurant = (s: Shift) =>
+    role === "restaurant" && !!s.restaurant_archived_at;
+
   const filtered = useMemo(() => {
     if (filter === "upcoming") return [] as Shift[]; // pending applications rendered separately
-    if (filter === "assigned") return shifts.filter(s => s.status === "scheduled" && s.shift_date >= today);
-    if (filter === "completed") return shifts.filter(s => s.status === "completed");
-    if (filter === "past") return shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled");
+    if (filter === "archived") {
+      if (role !== "restaurant") return [] as Shift[];
+      return shifts.filter(s => !!s.restaurant_archived_at);
+    }
+    const base = shifts.filter(s => !isArchivedForRestaurant(s));
+    if (filter === "assigned") return base.filter(s => s.status === "scheduled" && s.shift_date >= today);
+    if (filter === "completed") return base.filter(s => s.status === "completed");
+    if (filter === "past") return base.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled");
     if (filter === "to-review") {
       if (role === "worker") {
-        return shifts.filter(s => s.status === "completed" && !reviewMap[s.id]);
+        return base.filter(s => s.status === "completed" && !reviewMap[s.id]);
       }
-      return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
+      return base.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
     }
-    if (filter === "no_show") return shifts.filter(s => s.status === "no_show");
-    return shifts;
+    if (filter === "no_show") return base.filter(s => s.status === "no_show");
+    return base;
   }, [shifts, filter, reqByShift, today, role, reviewMap]);
 
   const counts = useMemo(() => {
-    const assigned = shifts.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
-    const past = shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled").length;
-    const completed = shifts.filter(s => s.status === "completed").length;
+    const base = shifts.filter(s => !isArchivedForRestaurant(s));
+    const assigned = base.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
+    const past = base.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled").length;
+    const completed = base.filter(s => s.status === "completed").length;
     const toReview = role === "worker"
-      ? shifts.filter(s => s.status === "completed" && !reviewMap[s.id]).length
-      : shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
-    const noShow = shifts.filter(s => s.status === "no_show").length;
+      ? base.filter(s => s.status === "completed" && !reviewMap[s.id]).length
+      : base.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
+    const noShow = base.filter(s => s.status === "no_show").length;
     const pending = role === "restaurant" ? pendingApps.length : 0;
-    return { pending, assigned, completed, past, toReview, noShow };
+    const archived = role === "restaurant" ? shifts.filter(s => !!s.restaurant_archived_at).length : 0;
+    return { pending, assigned, completed, past, toReview, noShow, archived };
   }, [shifts, pendingApps, reqByShift, role, today, reviewMap]);
 
   const displayShifts = useMemo(() => {
@@ -825,12 +878,13 @@ function ShiftsPage() {
       <div className="flex gap-2 mb-4 overflow-x-auto">
         {((role === "worker"
           ? ["no_show", "assigned", "to-review", "completed"]
-          : ["assigned", "upcoming", "completed", "to-review", "no_show", "past"]) as Array<typeof filter>).map(f => {
+          : ["assigned", "upcoming", "completed", "to-review", "no_show", "past", "archived"]) as Array<typeof filter>).map(f => {
           const label =
             f === "assigned" ? `Assegnati (${counts.assigned})`
             : f === "upcoming" ? `In attesa (${counts.pending})`
             : f === "completed" ? `Conclusi (${counts.completed})`
-            : f === "past" ? `Archiviati / Passati (${counts.past})`
+            : f === "past" ? `Scaduti / Annullati (${counts.past})`
+            : f === "archived" ? `Archiviati (${counts.archived})`
             : f === "no_show" ? `No show / Segnalazioni (${counts.noShow})`
             : `Da recensire (${counts.toReview})`;
           return (
@@ -1143,6 +1197,43 @@ function ShiftsPage() {
                     )}
                   </div>
                 )}
+
+                {role === "restaurant" && (() => {
+                  const isArchived = !!s.restaurant_archived_at;
+                  const archivable = !isArchived && (
+                    s.status === "completed" ||
+                    s.status === "cancelled" ||
+                    s.status === "no_show" ||
+                    (s.status === "scheduled" && s.shift_date < today)
+                  );
+                  if (!archivable && !isArchived) return null;
+                  return (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {archivable && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => setArchiveDialog(s)}
+                          aria-label="Archivia turno"
+                        >
+                          <Archive className="h-4 w-4" /> Archivia
+                        </Button>
+                      )}
+                      {isArchived && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                          onClick={() => restoreShift(s)}
+                          aria-label="Ripristina turno"
+                        >
+                          <RotateCcw className="h-4 w-4" /> Ripristina
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {s.status === "completed" && (
                   <div className="mt-4 border-t border-white/5 pt-4">
@@ -1646,6 +1737,30 @@ function ShiftsPage() {
         onClose={() => setDelayTarget(null)}
         onDone={() => { /* incident persisted; shift status unchanged */ }}
       />
+
+      <Dialog
+        open={!!archiveDialog}
+        onOpenChange={(open) => { if (!open && !archiveSubmitting) setArchiveDialog(null); }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Archiviare questo turno?</DialogTitle>
+            <DialogDescription>
+              Vuoi archiviare questo turno? Potrai ritrovarlo nella sezione Archiviati.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setArchiveDialog(null)} disabled={archiveSubmitting}>
+              Annulla
+            </Button>
+            <Button onClick={confirmArchive} disabled={archiveSubmitting} className="gap-1">
+              {archiveSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              <Archive className="h-4 w-4" /> Archivia
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <CancelPresenceDialog
         open={!!workerCancelTarget}
         target={workerCancelTarget}

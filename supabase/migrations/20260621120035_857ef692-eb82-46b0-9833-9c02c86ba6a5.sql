@@ -1,0 +1,2 @@
+ALTER TABLE public.shifts ADD COLUMN IF NOT EXISTS restaurant_archived_at timestamptz NULL;
+CREATE INDEX IF NOT EXISTS idx_shifts_restaurant_archived_at ON public.shifts(restaurant_id) WHERE restaurant_archived_at IS NOT NULL;
