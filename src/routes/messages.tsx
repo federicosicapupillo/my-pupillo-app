@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock, CheckCheck, ExternalLink, Inbox, UserCheck, Archive, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -138,6 +138,14 @@ function MessagesLayout() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Higher-level operational category filter, restaurant only.
+  // candidature = pending/interested/counter_offer
+  // confermati = accepted
+  // turni = there is a shift row for (announcement, worker)
+  // archiviati = rejected/expired
+  const [category, setCategory] = useState<"all" | "unread" | "candidature" | "confermati" | "turni" | "archiviati">("all");
+  // Map applicationId -> shiftId for restaurant quick "Vai al turno" links.
+  const [shiftByApp, setShiftByApp] = useState<Map<string, string>>(new Map());
   const [pendingReviewAppIds, setPendingReviewAppIds] = useState<Set<string>>(new Set());
   const [lastAnn, setLastAnn] = useState<{
     id: string;
