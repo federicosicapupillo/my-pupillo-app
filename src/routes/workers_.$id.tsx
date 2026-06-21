@@ -15,6 +15,7 @@ import { displayWorkerName } from "@/lib/worker-display";
 import { formatWorkerLocation, resolveWorkerCity, resolveWorkerZone } from "@/lib/worker-location-summary";
 import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summary";
 import type { AvailabilityRow } from "@/lib/availability";
+import { reliabilityDisplayValue } from "@/lib/worker-reliability";
 
 export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
