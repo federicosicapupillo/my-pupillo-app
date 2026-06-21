@@ -141,7 +141,6 @@ function MessagesLayout() {
   // Higher-level operational category filter, restaurant only.
   // candidature = pending/interested/counter_offer
   // confermati = accepted
-  // turni = there is a shift row for (announcement, worker)
   // archiviati = rejected/expired
   const [category, setCategory] = useState<"all" | "unread" | "candidature" | "confermati" | "archiviati">("all");
   // Map applicationId -> shiftId for restaurant quick "Vai al turno" links.
