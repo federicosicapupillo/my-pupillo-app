@@ -51,13 +51,22 @@ function classifyType(n: Notif): Exclude<TypeFilter, "all"> {
 function dedupeNotifs(list: Notif[]): Notif[] {
   const seen = new Set<string>();
   const out: Notif[] = [];
+  const REVIEW_KINDS = new Set([
+    "shift_completed_review",
+    "shift_completed",
+    "worker_review_required",
+    "review_reminder_shift_end",
+  ]);
   for (const n of list) {
     const m = (n.metadata ?? {}) as Record<string, unknown>;
-    const key =
-      n.dedupe_key ||
-      (m.kind && (m.shift_id || m.application_id || m.announcement_id)
-        ? `${m.kind}:${m.shift_id ?? m.application_id ?? m.announcement_id}`
-        : `${n.title}|${n.body ?? ""}|${n.link ?? ""}`);
+    const kind = String(m.kind ?? "");
+    const shiftId = m.shift_id as string | undefined;
+    const key = REVIEW_KINDS.has(kind) && shiftId
+      ? `shift_completed_review:${shiftId}`
+      : (n.dedupe_key ||
+          (m.kind && (shiftId || m.application_id || m.announcement_id)
+            ? `${m.kind}:${shiftId ?? m.application_id ?? m.announcement_id}`
+            : `${n.title}|${n.body ?? ""}|${n.link ?? ""}`));
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(n);

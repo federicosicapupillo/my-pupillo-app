@@ -109,7 +109,10 @@ export async function navigateFromNotificationLink(
         }
       }
       try {
-        return navigate({ to: "/messages/$id", params: { id } });
+        // Preserve query (e.g. ?action=review) and hash for deep-links.
+        return Object.keys(searchObj).length > 0
+          ? navigate({ to: "/messages/$id", params: { id }, search: searchObj as never, hash: hash || undefined })
+          : navigate({ to: "/messages/$id", params: { id }, hash: hash || undefined });
       } catch {
         return fallback();
       }

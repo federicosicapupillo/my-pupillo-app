@@ -419,20 +419,22 @@ function Jobs() {
       if (toNotify.length > 0) {
         // Idempotent: the partial unique index on (user_id, dedupe_key) makes
         // this safe to re-run on every page refresh / StrictMode remount.
+        // Notifica unica "Turno completato — lascia una recensione" allineata
+        // al trigger DB `notify_shift_status` per evitare duplicati separati
+        // ("Turno completato" + "Lascia una recensione"). Stesso kind, stessa
+        // dedupe_key, stesso link verso la chat.
         const { insertNotifications } = await import("@/lib/notifications");
         const { error: insErr } = await insertNotifications(supabase, toNotify.map((t) => ({
           userId: user.id,
-          kind: "worker_review_required",
+          kind: "shift_completed_review",
           entityId: t.shiftId,
-          title: "Lascia una recensione",
-          body: "Il turno si è concluso. Lascia una recensione al ristoratore per completare il servizio.",
-          link: `/shifts?tab=to-review&shift=${t.shiftId}`,
+          title: "Turno completato — lascia una recensione",
+          body: "Il turno è stato completato. Hai 3 giorni per lasciare una recensione.",
+          link: `/messages/${t.applicationId}?action=review`,
           metadata: {
             shift_id: t.shiftId,
             application_id: t.applicationId,
-            target_page: "worker_shifts",
-            target_tab: "da_recensire",
-            safe_redirect_path: `/shifts?tab=to-review&shift=${t.shiftId}`,
+            action: "review",
           },
         })));
         if (insErr) console.warn("[PUPILLO_WORKER_REVIEW_NOTIFICATION_ERROR]", insErr);

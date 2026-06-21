@@ -152,7 +152,7 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
               const shiftIds = ended.map((s) => s.id)
               const workerIds = Array.from(new Set(ended.map((s) => s.worker_id))) as string[]
 
-              const [{ data: existingReviews }, { data: workerProfs }] = await Promise.all([
+              const [{ data: existingReviews }, { data: workerProfs }, { data: appsForShifts }] = await Promise.all([
                 supabaseAdmin
                   .from('reviews')
                   .select('shift_id, author_id')
@@ -163,6 +163,10 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
                       .select('id, full_name, first_name, last_name')
                       .in('id', workerIds)
                   : Promise.resolve({ data: [] as any[] }),
+                supabaseAdmin
+                  .from('applications')
+                  .select('id, announcement_id, worker_id, restaurant_id, created_at')
+                  .in('announcement_id', Array.from(new Set(ended.map((s) => s.announcement_id).filter(Boolean))) as string[]),
               ])
 
               // Set of "shift_id|author_id" già recensiti
@@ -174,26 +178,42 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
               const profMap = new Map<string, any>()
               ;((workerProfs ?? []) as any[]).forEach((p) => profMap.set(p.id, p))
 
+              // application_id più recente per (announcement_id, worker_id, restaurant_id)
+              const appKey = (a: { announcement_id: string; worker_id: string; restaurant_id: string }) =>
+                `${a.announcement_id}|${a.worker_id}|${a.restaurant_id}`
+              const appMap = new Map<string, string>()
+              ;((appsForShifts ?? []) as any[])
+                .sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))
+                .forEach((a) => { const k = appKey(a); if (!appMap.has(k)) appMap.set(k, a.id) })
+
               const toInsert: any[] = []
               for (const s of ended) {
                 if (reviewedKey.has(`${s.id}|${s.restaurant_id}`)) continue
-                const p = profMap.get(s.worker_id)
-                const workerName =
-                  (p?.full_name as string | null) ||
-                  [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim() ||
-                  'il lavoratore'
+                // Notifica unica combinata, allineata al trigger DB e a jobs.tsx,
+                // così le 3 sorgenti collassano sulla stessa dedupe_key.
+                void profMap.get(s.worker_id)
+                const appId = appMap.get(appKey({
+                  announcement_id: s.announcement_id,
+                  worker_id: s.worker_id,
+                  restaurant_id: s.restaurant_id,
+                })) ?? null
+                const link = appId
+                  ? `/messages/${appId}?action=review`
+                  : `/shifts?tab=to-review&shift=${s.id}`
                 toInsert.push({
                   user_id: s.restaurant_id,
-                  title: 'Turno concluso: lascia una recensione',
-                  body: `Il turno con ${workerName} è terminato. Lascia una recensione per completare la valutazione e contribuire alla reputazione su Pupillo.`,
-                  link: `/shifts?tab=to-review&shift=${s.id}&review=${s.id}`,
+                  title: 'Turno completato — lascia una recensione',
+                  body: 'Il turno è stato completato. Hai 3 giorni per lasciare una recensione.',
+                  link,
                   metadata: {
-                    kind: 'review_reminder_shift_end',
+                    kind: 'shift_completed_review',
                     shift_id: s.id,
                     worker_id: s.worker_id,
                     announcement_id: s.announcement_id,
+                    application_id: appId,
+                    action: 'review',
                   },
-                  dedupe_key: `review_reminder_shift_end:${s.id}:${s.restaurant_id}`,
+                  dedupe_key: `shift_completed_review:${s.id}:${s.restaurant_id}`,
                 })
               }
 
