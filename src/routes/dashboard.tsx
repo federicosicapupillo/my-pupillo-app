@@ -13,6 +13,7 @@ import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
+import { WorkerAvailabilitySummary } from "@/components/WorkerAvailabilitySummary";
 import { RestaurantReputationCard } from "@/components/RestaurantReputationCard";
 import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
 import {
@@ -370,16 +371,7 @@ function DashboardInner() {
                 </Button>
               </Link>
             </div>
-            <div className="rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
-              Indica i giorni e gli orari in cui sei disponibile per ricevere proposte di lavoro più adatte ai tuoi orari.
-              <div className="mt-3">
-                <Link to="/availability">
-                  <Button size="sm" className="gap-2">
-                    <CalendarDays className="h-4 w-4" /> Imposta disponibilità
-                  </Button>
-                </Link>
-              </div>
-            </div>
+            <WorkerAvailabilitySummary workerId={user.id} />
           </section>
 
           <section>
