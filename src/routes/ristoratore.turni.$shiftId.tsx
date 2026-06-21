@@ -664,6 +664,16 @@ function ShiftDetailPage() {
               <CheckCheck className="h-4 w-4" /> Concludi turno
             </Button>
           )}
+          {shift.status === "scheduled" && (
+            <Button
+              variant="outline"
+              onClick={() => setCancelOpen(true)}
+              className="gap-1 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive focus-visible:ring-destructive"
+              aria-label="Annulla turno"
+            >
+              <XCircle className="h-4 w-4" /> Annulla turno
+            </Button>
+          )}
           {shift.status === "cancelled" && (
             <span className="text-sm text-muted-foreground">Turno annullato</span>
           )}
