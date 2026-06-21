@@ -293,6 +293,8 @@ function ShiftsPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [archiveDialog, setArchiveDialog] = useState<Shift | null>(null);
+  const [archiveSubmitting, setArchiveSubmitting] = useState(false);
   const [delayTarget, setDelayTarget] = useState<IncidentTarget | null>(null);
   const [workerCancelTarget, setWorkerCancelTarget] = useState<IncidentTarget | null>(null);
   const { items: requiredReviews, actionShifts, refresh: refreshRequiredReviews } = useRequiredReviews();
