@@ -21,6 +21,8 @@ import {
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
+import { PreviousCandidatesSection } from "@/components/PreviousCandidatesSection";
+import { isShiftDateStillFuture } from "@/lib/announcement-reopen";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
@@ -543,6 +545,31 @@ function ShiftDetailPage() {
           </>
         )}
       </div>
+
+      {/* Card — Candidati precedenti, mostrata quando il turno è stato annullato
+          dal lavoratore e l'annuncio è tornato disponibile (futuro + active). */}
+      {shift.status === "cancelled" &&
+        ann &&
+        ann.status === "active" &&
+        isShiftDateStillFuture(shift.shift_date) &&
+        shift.announcement_id && (
+          <div className="mt-4">
+            <div className="rounded-2xl border border-amber-300/60 bg-amber-50/60 dark:bg-amber-900/10 p-4 mb-3">
+              <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                Turno tornato disponibile
+              </div>
+              <p className="text-xs text-amber-900/80 dark:text-amber-200/80 mt-1">
+                Il lavoratore selezionato ha annullato. Puoi scegliere un altro
+                candidato tra quelli che si erano già candidati oppure cercare
+                nuovi lavoratori.
+              </p>
+            </div>
+            <PreviousCandidatesSection
+              announcementId={shift.announcement_id}
+              excludeWorkerId={shift.worker_id}
+            />
+          </div>
+        )}
 
       {/* Card 3 — Annuncio collegato */}
       {ann && (
