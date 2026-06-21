@@ -663,6 +663,10 @@ function AnnouncementDetail() {
         applicationId={alreadyContactAppId}
         onClose={() => setAlreadyContactAppId(null)}
       />
+      <WorkerSelfCancelledDialog
+        open={selfCancelledOpen}
+        onClose={() => setSelfCancelledOpen(false)}
+      />
       <Dialog open={fullDialogOpen} onOpenChange={setFullDialogOpen}>
         <DialogContent>
           <DialogHeader>
