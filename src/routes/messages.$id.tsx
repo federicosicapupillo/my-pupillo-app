@@ -3248,52 +3248,6 @@ function Thread() {
             </div>
           );
         })()}
-        <div id="chat-composer">
-        {isConversationClosed ? (
-          <div className="mt-4 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 p-4 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 px-3 py-1 text-xs font-semibold mb-2">
-              <Ban className="h-3.5 w-3.5" />
-              {closureReason === "completed" ? "Turno concluso" : "Turno annullato"}
-            </div>
-            <p className="text-sm text-foreground/90">{closureNoticeText}</p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Non puoi inviare messaggi perché questo turno è stato chiuso o annullato.
-            </p>
-          </div>
-        ) : (
-        <div className="mt-4 rounded-2xl border bg-card p-3 space-y-2">
-          <Textarea
-            value={composerText}
-            onChange={(e) => setComposerText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                requireComplete(() => { void sendFreeMessage(); })();
-              }
-            }}
-            placeholder="Scrivi un messaggio…"
-            rows={3}
-            maxLength={2000}
-            disabled={sending}
-            aria-label="Scrivi un messaggio"
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              {composerText.length}/2000
-            </span>
-            <Button
-              type="button"
-              onClick={requireComplete(() => { void sendFreeMessage(); })}
-              disabled={!composerText.trim() || sending}
-              className="gap-2"
-            >
-              <Send className="h-4 w-4" />
-              {sending ? "Invio in corso…" : "Invia"}
-            </Button>
-          </div>
-        </div>
-        )}
-        </div>
 
         {role === "restaurant" && tplCategory === "post_shift" && app && (
           <ReviewBlock
