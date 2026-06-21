@@ -1146,7 +1146,10 @@ function WorkersPage() {
     switch (cat) {
       case "all": return true; // sub controls sort, not filter
       case "name_profile": return true; // sub determines which field free-text targets
-      case "role": return s === "altro ruolo" || (roleAliases[s] ?? [s]).some((alias) => f.roles.includes(alias));
+      // PUPILLO: per la categoria "Ruolo" non escludiamo: la card mostrerà
+      // un badge "Compatibile" o "Fuori mansione". Mantenuto solo come
+      // info, l'ordinamento porta i compatibili in cima.
+      case "role": return true;
       case "skill": return s === "altro" || (skillAliases[s] ?? [s]).some((alias) => (f.title + " " + f.description + " " + f.roles).includes(alias));
       case "language": return s === "altro" ? true : f.langs.includes(s);
       case "location":
