@@ -926,7 +926,7 @@ function MessagesLayout() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Qui vedi candidature, conferme e messaggi dei lavoratori. Seleziona una card a sinistra per leggere o rispondere, oppure usa i filtri per concentrarti su ciò che richiede attenzione.
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <button type="button" onClick={() => setCategory("unread")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Non letti</div>
                   <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.unread}</div>
@@ -938,10 +938,6 @@ function MessagesLayout() {
                 <button type="button" onClick={() => setCategory("confermati")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Confermati</div>
                   <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.confermati}</div>
-                </button>
-                <button type="button" onClick={() => setCategory("turni")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Turni</div>
-                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.turni}</div>
                 </button>
               </div>
               {threads.length === 0 && (
