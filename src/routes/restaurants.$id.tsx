@@ -15,6 +15,8 @@ import { priceRangeLabel } from "@/lib/price-range";
 import { formatTariff } from "@/lib/format";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
+import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 
 export const Route = createFileRoute("/restaurants/$id")({
   head: () => ({ meta: [{ title: "Dettaglio ristoratore — Pupillo" }] }),
@@ -57,6 +59,7 @@ function RestaurantDetailPage() {
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
+  const [selfCancelledOpen, setSelfCancelledOpen] = useState(false);
   const [bookingResult, setBookingResult] = useState<null | {
     applicationId: string;
     annTitle: string;
@@ -108,14 +111,15 @@ function RestaurantDetailPage() {
   const submitBooking = async () => {
     if (!user || !confirmAnn) return;
     setSubmitting(true);
-    const contact = await checkExistingContact({
-      announcementId: confirmAnn.id,
-      workerId: user.id,
-    });
-    if (contact.existing) {
+    const decision = await canWorkerApplyToAnnouncement(user.id, confirmAnn.id);
+    if (!decision.allowed) {
       setSubmitting(false);
       setConfirmAnn(null);
-      setAlreadyContactAppId(contact.applicationId);
+      if (decision.reason === "self_cancelled") {
+        setSelfCancelledOpen(true);
+      } else {
+        setAlreadyContactAppId(decision.applicationId);
+      }
       return;
     }
     const { data: app, error } = await supabase.from("applications").insert({
