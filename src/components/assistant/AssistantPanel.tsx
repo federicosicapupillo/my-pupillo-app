@@ -53,11 +53,12 @@ export function AssistantPanel({
   const faqs = useMemo(() => getContextualFaqs(loc.pathname, role), [loc.pathname, role]);
   const visibleFaqs = showAllFaqs ? faqs : faqs.slice(0, 6);
 
-  // Reset when reopening on a different page
+  // Reset when reopening on a different page or when opening the panel
   useEffect(() => {
     if (open) {
       setShowAllFaqs(false);
-      setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
+      setMessages([]);
+      setTimeout(() => scrollRef.current?.scrollTo({ top: 0 }), 50);
     }
   }, [open, loc.pathname]);
 
