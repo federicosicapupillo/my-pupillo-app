@@ -139,16 +139,17 @@ function ShiftsPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past">(() => {
+  const [filter, setFilter] = useState<"assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past" | "archived">(() => {
     if (typeof window === "undefined") return "assigned";
     const raw = (new URLSearchParams(window.location.search).get("tab") || "").toLowerCase();
-    const map: Record<string, "assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past"> = {
+    const map: Record<string, "assigned" | "upcoming" | "completed" | "to-review" | "no_show" | "past" | "archived"> = {
       "assigned": "assigned", "assegnati": "assigned",
       "to-review": "to-review", "da-recensire": "to-review", "da_recensire": "to-review",
       "completed": "completed", "conclusi": "completed", "completati": "completed", "concluso": "completed",
       "no_show": "no_show", "noshow": "no_show", "no-show": "no_show",
       "reports": "no_show", "segnalazioni": "no_show", "segnalazione": "no_show",
-      "past": "past", "archiviati": "past",
+      "past": "past",
+      "archived": "archived", "archiviati": "archived", "archivio": "archived",
       "upcoming": "upcoming",
     };
     return map[raw] ?? "assigned";
