@@ -1060,6 +1060,7 @@ function Onboarding() {
       if (!avatarFile && !avatarUrl) {
         setBusy(false); submittingRef.current = false;
         toast.error("Carica una foto profilo per completare il profilo.");
+        scrollToField("avatar");
         return;
       }
       if (idDocFile) {
