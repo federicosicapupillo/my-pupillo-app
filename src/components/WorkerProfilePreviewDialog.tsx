@@ -8,6 +8,7 @@ import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, CheckCircle2, Car }
 import { useAuth } from "@/lib/auth-context";
 import { displayWorkerName } from "@/lib/worker-display";
 import { formatWorkerLocation } from "@/lib/worker-location-summary";
+import { reliabilityDisplayValue } from "@/lib/worker-reliability";
 
 type WorkerProfile = {
   id: string;
