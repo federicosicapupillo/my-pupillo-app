@@ -487,6 +487,7 @@ function Thread() {
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
   const [sending, setSending] = useState(false);
+  const [composerText, setComposerText] = useState("");
   const [shift, setShift] = useState<Shift | null>(null);
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, "accepted" | "rejected">>({});
   // Disponibilità speciale del lavoratore per la data dell'annuncio: se
