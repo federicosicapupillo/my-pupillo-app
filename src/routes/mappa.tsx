@@ -1887,6 +1887,59 @@ function Dot({ color }: { color: string }) {
   return <span style={{ background: color, width: 10, height: 10, borderRadius: 9999, display: "inline-block" }} />;
 }
 
+function MapInteractionShell({
+  isMobile,
+  active,
+  onActivate,
+  onDeactivate,
+  mobileHeight,
+  children,
+}: {
+  isMobile: boolean;
+  active: boolean;
+  onActivate: () => void;
+  onDeactivate: () => void;
+  mobileHeight: number;
+  children: React.ReactNode;
+}) {
+  // On desktop the map is always interactive: just render children.
+  if (!isMobile) return <>{children}</>;
+  return (
+    <div className="relative" style={{ minHeight: mobileHeight }}>
+      <div
+        style={{
+          pointerEvents: active ? "auto" : "none",
+          touchAction: active ? "auto" : "pan-y",
+        }}
+        aria-hidden={!active}
+      >
+        {children}
+      </div>
+      {!active && (
+        <button
+          type="button"
+          onClick={onActivate}
+          className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/40 backdrop-blur-[1px]"
+          aria-label="Attiva la mappa"
+        >
+          <span className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background shadow-lg">
+            Tocca per usare la mappa
+          </span>
+        </button>
+      )}
+      {active && (
+        <button
+          type="button"
+          onClick={onDeactivate}
+          className="absolute right-2 top-2 z-20 rounded-full bg-foreground/90 px-3 py-1.5 text-xs font-semibold text-background shadow-lg"
+        >
+          Torna allo scroll
+        </button>
+      )}
+    </div>
+  );
+}
+
 function mapInitials(name: string | null | undefined): string {
   if (!name) return "?";
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("") || "?";
