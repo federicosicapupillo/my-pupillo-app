@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
