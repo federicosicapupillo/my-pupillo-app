@@ -539,6 +539,21 @@ function Thread() {
   const [serverAssign, setServerAssign] = useState<{ canAssign: boolean; reason: string | null } | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // Deep-link: when the URL contains `?action=review` (notifica unica
+  // "Turno completato — lascia una recensione"), apri direttamente il blocco
+  // recensione una volta che la conversazione è caricata.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("action") !== "review") return;
+    setTplCategory("post_shift");
+    setReviewOpen(true);
+    const t = window.setTimeout(() => {
+      document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 250);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Recensione lasciata dal LAVORATORE al ristoratore (worker_to_restaurant).
   // Distinta da `existingReview`, che rappresenta SOLO la recensione del
   // ristoratore verso il lavoratore (restaurant_to_worker).
