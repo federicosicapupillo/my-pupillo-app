@@ -1249,12 +1249,10 @@ function WorkersPage() {
       : null;
   const activeRoleContext: string | null = advancedRole ?? announcementRole ?? null;
   const filtered = workers.filter((worker) => {
-    // Anche in modalità ricerca avanzata, se l'utente ha scelto un ruolo
-    // specifico nel filtro avanzato, scartiamo i lavoratori che non lo
-    // hanno davvero tra primary/secondary roles. `matchesSubcategory` qui
-    // sotto fa già un controllo testuale, ma usiamo la regola stretta
-    // per evitare falsi positivi (es. "sala" che matcha "addetto sala").
-    if (advancedRole && !workerMatchesRole(worker, advancedRole)) return false;
+    // PUPILLO: anche se l'utente ha scelto un ruolo specifico nella
+    // ricerca avanzata, NON nascondiamo i lavoratori che non lo hanno tra
+    // le mansioni dichiarate. Restano visibili in coda con un badge
+    // "Fuori mansione" così il ristoratore può comunque contattarli.
     if (!matchesSubcategory(worker, category, subcategory)) return false;
     if (!matchesText(worker, q, category, subcategory)) return false;
     if (lang) {
