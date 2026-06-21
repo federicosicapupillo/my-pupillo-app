@@ -503,6 +503,7 @@ function NewRestaurantJobRequest() {
     const errs: Record<string, string> = {};
     const order: string[] = [
       "role_required",
+      "workers_needed",
       "shift_date",
       "start_time",
       "end_date",
@@ -530,6 +531,10 @@ function NewRestaurantJobRequest() {
       "required_skills",
     ];
     if (!f.role_required) errs.role_required = "Seleziona il ruolo cercato.";
+    const workersCount = Number(f.workers_needed);
+    if (!f.workers_needed || !Number.isInteger(workersCount) || workersCount < 1 || workersCount > 9) {
+      errs.workers_needed = "Seleziona un numero di lavoratori tra 1 e 9.";
+    }
     if (!f.shift_date) errs.shift_date = "Inserisci la data di inizio turno.";
     else if (f.shift_date < todayISO) errs.shift_date = "Non puoi selezionare una data passata.";
     if (!f.start_time) errs.start_time = "Inserisci l'orario di inizio turno.";
@@ -583,6 +588,11 @@ function NewRestaurantJobRequest() {
 
   const save = async (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
+    const workersCount = Number(f.workers_needed);
+    if (!Number.isInteger(workersCount) || workersCount < 1 || workersCount > 9) {
+      toast.error("Seleziona un numero di lavoratori tra 1 e 9.");
+      return;
+    }
     setBusy(true);
     clearAll();
     const accessText = accessChoice === "15"
@@ -806,7 +816,16 @@ function NewRestaurantJobRequest() {
                 <SelectContent>{ROLE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
+            <Field label="Numero lavoratori richiesti" required name="workers_needed" error={errors.workers_needed}>
+              <Select value={f.workers_needed} onValueChange={v => setField("workers_needed", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona da 1 a 9" /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                    <SelectItem key={num} value={String(num)}>{num}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Tariffa oraria" required name="hourly_rate" error={errors.hourly_rate}>
               <Select value={f.hourly_rate} onValueChange={v => setField("hourly_rate", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona tariffa" /></SelectTrigger>
