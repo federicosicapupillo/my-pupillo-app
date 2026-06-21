@@ -2716,9 +2716,11 @@ function Thread() {
           const venueName = role === "worker"
             ? displayOtherName
             : (profile?.business_name || profile?.full_name || null);
-          const hasAcknowledged = msgs.some(
+          const ackMsg = msgs.find(
             (mm) => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
           );
+          const hasAcknowledged = !!ackMsg;
+          const acknowledgedAt = ackMsg?.created_at ?? null;
           return (
             <div className="mb-3" id="instructions-card" data-instructions-card>
               <ConfirmationCard
@@ -2728,6 +2730,7 @@ function Thread() {
                 announcementId={app?.announcement_id ?? null}
                 isWorker={role === "worker"}
                 acknowledged={hasAcknowledged}
+                acknowledgedAt={acknowledgedAt}
                 arrivalAdvanceMinutes={restaurantArrivalAdvance}
                 onAcknowledge={acknowledgeInstructions}
               />
@@ -2773,6 +2776,13 @@ function Thread() {
                   <ShiftClosedWithReviewCard review={existingReview} />
                 </div>
               );
+            }
+            // L'evento "lettura istruzioni" non è un vero messaggio chat:
+            // viene mostrato come stato nella card "Istruzioni operative"
+            // sopra la conversazione. Lo nascondiamo qui senza cancellare
+            // il record dal DB.
+            if (m.action_type === "instructions_acknowledged") {
+              return null;
             }
             if (isSystem) {
               const isAccept = m.action_type === "accept_application";
