@@ -167,6 +167,7 @@ function ShiftDetailPage() {
   const [favLoading, setFavLoading] = useState(false);
   const reviewRef = useRef<HTMLDivElement | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const toggleFavorite = async () => {
     if (!user || !shift?.worker_id) return;
