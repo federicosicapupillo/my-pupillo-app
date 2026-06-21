@@ -657,7 +657,6 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
     <div className="w-full sm:w-auto inline-flex flex-col items-center sm:items-end justify-center gap-0.5 rounded-2xl bg-primary/10 px-4 py-2.5 ring-1 ring-primary/30 max-w-full sm:max-w-[180px]">
       <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">Costo servizio</span>
       <div className="flex items-center gap-1">
-        <Euro className="h-4 w-4 text-primary shrink-0" />
         <span className="text-xl font-extrabold tracking-tight text-primary tabular-nums">{totalDisplay}</span>
       </div>
       {hourlyRate != null && finalDuration != null && (
