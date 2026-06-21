@@ -22,6 +22,8 @@ type Notif = {
   read: boolean | null;
   created_at: string;
   read_at?: string | null;
+  dedupe_key?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 type Filter = "all" | "unread" | "read";
@@ -40,6 +42,27 @@ function classifyType(n: Notif): Exclude<TypeFilter, "all"> {
     t.includes("aggiornamento")
   ) return "status_change";
   return "other";
+}
+
+/**
+ * Defensive collapse of legacy duplicates that predate the database
+ * `dedupe_key` partial unique index.
+ */
+function dedupeNotifs(list: Notif[]): Notif[] {
+  const seen = new Set<string>();
+  const out: Notif[] = [];
+  for (const n of list) {
+    const m = (n.metadata ?? {}) as Record<string, unknown>;
+    const key =
+      n.dedupe_key ||
+      (m.kind && (m.shift_id || m.application_id || m.announcement_id)
+        ? `${m.kind}:${m.shift_id ?? m.application_id ?? m.announcement_id}`
+        : `${n.title}|${n.body ?? ""}|${n.link ?? ""}`);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(n);
+  }
+  return out;
 }
 
 const TYPE_LABELS: Record<TypeFilter, string> = {
@@ -77,7 +100,7 @@ function NotificationsPage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(200);
-      setItems((data as Notif[]) || []);
+      setItems(dedupeNotifs((data as Notif[]) || []));
       setLoading(false);
     })();
   }, [user?.id]);
@@ -87,7 +110,7 @@ function NotificationsPage() {
     const ch = supabase
       .channel(`notif-page-${user.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        (p) => { const n = p.new as Notif; setItems(prev => prev.some(i => i.id === n.id) ? prev : [n, ...prev]); })
+        (p) => { const n = p.new as Notif; setItems(prev => prev.some(i => i.id === n.id) ? prev : dedupeNotifs([n, ...prev])); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
         (p) => {
           const n = p.new as Notif;
