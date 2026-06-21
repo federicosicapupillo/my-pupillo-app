@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
 import type { MapPoint } from "@/components/MapViewInner";
 import { useAuth } from "@/lib/auth-context";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { priceRangeLabel } from "@/lib/price-range";
 import { ITALIAN_LOCATIONS, citiesForProvince, zonesForCity } from "@/lib/italian-locations";
