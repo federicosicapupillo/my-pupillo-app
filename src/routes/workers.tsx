@@ -2167,6 +2167,23 @@ function ContactedWorkerCard({
           </span>
         </div>
       )}
+      {(() => {
+        const rc = getRoleCompatibility(w, activeRoleContext);
+        const b = getRoleCompatibilityBadge(rc);
+        if (!b) return null;
+        return (
+          <div className="mt-2">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${b.cls}`}
+              title={rc.status === "not_compatible"
+                ? `Questo lavoratore non ha indicato "${rc.requiredRoleLabel}" tra le mansioni disponibili.`
+                : undefined}
+            >
+              {b.text}
+            </span>
+          </div>
+        );
+      })()}
       {w.search_penalty_active && (
         <div className="mt-2">
           <span
