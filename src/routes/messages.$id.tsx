@@ -4452,138 +4452,98 @@ function ConfirmationCard(props: {
   })();
   const showAckButton = isWorker && !shiftEnded;
 
+  const orarioValue = start ? `${start} – ${end ?? ""}`.trim().replace(/–\s*$/, "") : CONFIRMATION_EMPTY_LABELS.endTime;
+  const entryValue = entryTime
+    ? `${entryTime} (presentati ${advMin} min prima)`
+    : `Presentati ${advMin} minuti prima dell'inizio del turno`;
+
   return (
-    <div className="flex justify-center my-2">
-      <div className="w-full max-w-md rounded-2xl border-2 border-emerald-500/40 bg-card shadow-[0_8px_30px_-12px_rgb(16_185_129/0.45)] overflow-hidden">
-        <div className="bg-emerald-500/10 px-4 py-3 border-b border-emerald-500/30">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase tracking-wide">
-              <Check className="h-3 w-3" />Confermato
-            </span>
-            <h4 className="font-bold text-sm">Candidatura confermata</h4>
+    <div className="my-2 space-y-3">
+      {/* Card 1 — Dettagli turno */}
+      <section className="rounded-2xl border border-border bg-card/60 p-4 sm:p-5">
+        <header className="mb-4 flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
+          <h3 className="text-base font-semibold">Dettagli turno</h3>
+        </header>
+        <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+          <InfoField icon={Building2} label="Locale / Annuncio" value={venue} />
+          <InfoField icon={MapPin} label="Indirizzo" value={fullAddress} />
+          <InfoField icon={Briefcase} label="Ruolo" value={role} />
+          <InfoField icon={UserIcon} label="Referente" value={contactName || CONFIRMATION_EMPTY_LABELS.contactPerson} muted={!contactName} />
+          <InfoField icon={Calendar} label="Data" value={ann?.service_date ? formatDateIT(ann.service_date) : "—"} />
+          <InfoField icon={Phone} label="Telefono" value={contactPhone || CONFIRMATION_EMPTY_LABELS.phone} muted={!contactPhone} />
+          <InfoField icon={Clock} label="Orario" value={orarioValue} />
+          <InfoField icon={Euro} label="Compenso" value={tariff || "—"} />
+          <div className="sm:col-span-2">
+            <InfoField icon={AlarmClock} label="Orario ingresso" value={entryValue} />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {isWorker
-              ? "Il ristoratore ha confermato la tua candidatura per questo servizio. Leggi attentamente le istruzioni operative prima del turno: sono informazioni importanti per presentarti nel modo corretto."
-              : (acknowledged
-                  ? "Il lavoratore ha confermato la lettura delle istruzioni."
-                  : "In attesa di conferma lettura istruzioni da parte del lavoratore.")}
-          </p>
         </div>
-        <dl className="px-4 py-3 space-y-2 text-sm">
-          <ProposalRow icon={Building2} label="Locale" value={venue} />
-          <ProposalRow icon={Briefcase} label="Ruolo" value={role} />
-          {ann?.service_date && (
-            <ProposalRow icon={Calendar} label="Data" value={formatDateIT(ann.service_date)} />
-          )}
-          <ProposalRow
-            icon={Clock}
-            label="Orario"
-            value={start ? `${start}${end ? ` - ${end}` : ""}` : CONFIRMATION_EMPTY_LABELS.endTime}
-          />
-          {entryTime && (
-            <ProposalRow
-              icon={AlarmClock}
-              label="Orario ingresso"
-              value={`${entryTime} · presentati ${advMin} minuti prima`}
-            />
-          )}
-          <ProposalRow icon={MapPin} label="Indirizzo" value={fullAddress} />
-          <ProposalRow
-            icon={UserIcon}
-            label="Referente"
-            value={contactName || CONFIRMATION_EMPTY_LABELS.contactPerson}
-          />
-          {contactPhone && (
-            <ProposalRow icon={Phone} label="Telefono" value={contactPhone} />
-          )}
-          <ProposalRow
-            icon={Shirt}
-            label="Dress code"
-            value={dressValue || CONFIRMATION_EMPTY_LABELS.dressCode}
-          />
-          {skills.length > 0 && (
-            <ProposalRow icon={ListChecks} label="Mansioni" value={skills.join(", ")} />
-          )}
-          {tariff && <ProposalRow icon={Euro} label="Compenso" value={tariff} />}
-          <ProposalRow
-            icon={Info}
-            label="Istruzioni per l'arrivo"
-            value={directions || CONFIRMATION_EMPTY_LABELS.directions}
-          />
-          <ProposalRow
-            icon={StickyNote}
-            label="Note operative"
-            value={notes || CONFIRMATION_EMPTY_LABELS.notes}
-          />
-        </dl>
-        <div className="mx-4 mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
-          Ti consigliamo di arrivare almeno 10 minuti prima dell'orario di ingresso.
+      </section>
+
+      {/* Card 2 — Istruzioni operative */}
+      <section className="rounded-2xl border border-border bg-card/60 p-4 sm:p-5">
+        <header className="mb-4 flex items-center gap-2">
+          <Info className="h-4 w-4 text-primary" />
+          <h3 className="text-base font-semibold">Istruzioni operative</h3>
+        </header>
+        <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+          <InfoField icon={Shirt} label="Dress code" value={dressValue || CONFIRMATION_EMPTY_LABELS.dressCode} muted={!dressValue} />
+          <InfoField icon={StickyNote} label="Note operative" value={notes || CONFIRMATION_EMPTY_LABELS.notes} muted={!notes} />
+          <InfoField icon={ListChecks} label="Mansioni" value={skills.length > 0 ? skills.join(", ") : "Mansioni non specificate"} muted={skills.length === 0} />
+          <InfoField icon={Navigation} label="Istruzioni per l'arrivo" value={directions || CONFIRMATION_EMPTY_LABELS.directions} muted={!directions} />
         </div>
-        {acknowledged && (
-          <div className="mx-4 mb-3 flex items-center justify-center gap-2 rounded-lg border-2 border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-            <BadgeCheck className="h-5 w-5" />
-            Istruzioni confermate
+
+        <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+          Ti consigliamo di arrivare almeno {advMin} minuti prima dell'orario di ingresso.
+        </div>
+
+        {(showAckButton || acknowledged || !isWorker) && (
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              {isWorker
+                ? (acknowledged
+                    ? "Hai confermato la lettura delle istruzioni."
+                    : "Conferma di aver letto le istruzioni prima del turno.")
+                : (acknowledged
+                    ? "Il lavoratore ha confermato la lettura delle istruzioni."
+                    : "In attesa di conferma lettura istruzioni da parte del lavoratore.")}
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="gap-2 border-primary/60 text-primary hover:bg-primary/10"
+              >
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                  <Navigation className="h-4 w-4" />
+                  Apri in mappa
+                </a>
+              </Button>
+              {showAckButton && (
+                <Button
+                  size="sm"
+                  disabled={acknowledged || ackBusy}
+                  className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={async () => {
+                    if (acknowledged || ackBusy || !onAcknowledge) return;
+                    setAckBusy(true);
+                    try { await onAcknowledge(); } finally { setAckBusy(false); }
+                  }}
+                >
+                  {acknowledged ? (
+                    <><BadgeCheck className="h-4 w-4" />Istruzioni confermate</>
+                  ) : ackBusy ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Registrazione…</>
+                  ) : (
+                    <><Check className="h-4 w-4" />Ho letto e confermo</>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         )}
-        <div className="px-4 py-4 border-t bg-secondary/20 flex flex-col gap-3">
-          {showAckButton && (
-            <Button
-              size="lg"
-              disabled={acknowledged || ackBusy}
-              className="w-full h-12 text-base font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
-              onClick={async () => {
-                if (acknowledged || ackBusy || !onAcknowledge) return;
-                setAckBusy(true);
-                try { await onAcknowledge(); } finally { setAckBusy(false); }
-              }}
-            >
-              {acknowledged ? (
-                <>
-                  <BadgeCheck className="h-5 w-5" />
-                  Istruzioni confermate
-                </>
-              ) : ackBusy ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Registrazione…
-                </>
-              ) : (
-                <>
-                  <Check className="h-5 w-5" />
-                  Ho letto e confermo le istruzioni
-                </>
-              )}
-            </Button>
-          )}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="flex-1 h-11 text-sm font-semibold gap-2 border-2 border-primary/60 text-primary hover:bg-primary/10"
-            >
-              <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
-                <Navigation className="h-4 w-4" />
-                Indicazioni
-              </a>
-            </Button>
-            {isWorker && (
-              <Button
-                size="lg"
-                variant="outline"
-                className="flex-1 h-11 text-sm font-semibold gap-2 border-2 border-primary/60 text-primary hover:bg-primary/10"
-                onClick={() => {
-                  document.getElementById(`thread-template-picker-${applicationId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
-              >
-                <Send className="h-4 w-4" />
-                Scrivi al ristoratore
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
