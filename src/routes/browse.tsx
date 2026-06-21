@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
+import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import {
   checkWorkerShiftConflict,
@@ -120,6 +122,7 @@ function Browse() {
   const [applyMode, setApplyMode] = useState<"accept" | "counter">("accept");
   const [counterAmount, setCounterAmount] = useState<string>("");
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
+  const [selfCancelledOpen, setSelfCancelledOpen] = useState(false);
   // Disponibilità speciali del lavoratore: se per la data dell'annuncio
   // esistono entry "speciali", quelle prevalgono sempre sulla disponibilità
   // abituale. Se nessuna è compatibile con città/orario dell'annuncio,
@@ -528,13 +531,20 @@ function Browse() {
       toast.error("Turno non valido.");
       return;
     }
-    const contact = await checkExistingContact({
-      announcementId: confirmAnn.id,
-      workerId: workerProfile.id,
-    });
-    if (contact.existing) {
+    // Gate worker-side re-apply: a worker that previously self-cancelled
+    // (status `not_interested`) cannot re-apply to the same announcement.
+    const decision = await canWorkerApplyToAnnouncement(workerProfile.id, confirmAnn.id);
+    if (!decision.allowed) {
       setConfirmAnn(null);
-      setAlreadyContactAppId(contact.applicationId);
+      if (decision.reason === "self_cancelled") {
+        setSelfCancelledOpen(true);
+      } else if (decision.reason === "active_exists") {
+        setAlreadyContactAppId(decision.applicationId);
+      } else {
+        // Previously closed by restaurant/system: surface as "already in contact"
+        // so the worker can open the existing thread instead of duplicating.
+        setAlreadyContactAppId(decision.applicationId);
+      }
       return;
     }
     const needed = Math.max(1, Number(availability.workers_needed ?? workersNeededById[confirmAnn.id] ?? 1) || 1);
@@ -1136,6 +1146,10 @@ function Browse() {
         open={!!alreadyContactAppId}
         applicationId={alreadyContactAppId}
         onClose={() => setAlreadyContactAppId(null)}
+      />
+      <WorkerSelfCancelledDialog
+        open={selfCancelledOpen}
+        onClose={() => setSelfCancelledOpen(false)}
       />
     </AppShell>
   );
