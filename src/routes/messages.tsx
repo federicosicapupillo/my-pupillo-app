@@ -760,7 +760,7 @@ function MessagesLayout() {
             </div>
           ) : (
             <div className="space-y-2">
-              {visibleGroups.map((g) => {
+              {sortedGroups.map((g) => {
                 const last = g.items[0];
                 const hasPendingReview = g.items.some((t) => pendingReviewAppIds.has(t.id));
                 const latestStatus = last?.status ?? null;
