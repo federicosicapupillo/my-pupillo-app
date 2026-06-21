@@ -1852,6 +1852,11 @@ function Thread() {
     }
   }, [isConversationClosed, app?.id, role, shift?.id, closureReason]);
 
+  const realConversationMessages = useMemo(() => msgs.filter(isRealChatMessage), [msgs]);
+  const displayableConversationMessages = useMemo(() => msgs.filter(isDisplayableConversationMessage), [msgs]);
+  const canWriteNewMessage = !!app && !!user && !isConversationClosed;
+  const shouldRenderConversation = realConversationMessages.length > 0 || canWriteNewMessage;
+
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
   const canSeeAddress = canSeePreciseAddress({
