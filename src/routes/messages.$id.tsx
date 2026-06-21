@@ -4372,6 +4372,32 @@ function ProposalRow({ icon: Icon, label, value }: { icon: typeof Send; label: s
   );
 }
 
+function InfoField({
+  icon: Icon,
+  label,
+  value,
+  muted = false,
+}: {
+  icon: typeof Send;
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3 min-w-0">
+      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-primary/30 bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className={`text-sm leading-snug break-words ${muted ? "text-muted-foreground italic" : "font-medium"}`}>
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ConfirmationCard(props: {
   ann: Ann | null;
   venueName: string | null;
