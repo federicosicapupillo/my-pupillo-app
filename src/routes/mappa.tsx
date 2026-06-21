@@ -1759,10 +1759,17 @@ function MapPage() {
               </div>
             ) : (
               <>
+                <MapInteractionShell
+                  isMobile={isMobile}
+                  active={mapActive}
+                  onActivate={() => setMapActive(true)}
+                  onDeactivate={() => setMapActive(false)}
+                  mobileHeight={320}
+                >
                 <WorkersMap
                   points={workerMapPoints}
                   center={center}
-                  height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
+                  height={isMobile ? 320 : (typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600)}
                   focusId={focusWorkerId}
                   focusNonce={focusWorkerNonce}
                   onViewProfile={(id) => openWorkerProfile(id, "marker_mappa")}
@@ -1782,6 +1789,7 @@ function MapPage() {
                     navigate({ to: "/messages/$id", params: { id: data[0].id as string } });
                   }}
                 />
+                </MapInteractionShell>
                 <div className="mt-2 text-xs text-muted-foreground">
                   {workerMapPoints.length} lavorator{workerMapPoints.length === 1 ? "e" : "i"} sulla mappa · posizione approssimativa per tutela privacy · OpenStreetMap
                 </div>
@@ -1839,16 +1847,24 @@ function MapPage() {
               </div>
             </div>
           ) : (
-            <Suspense fallback={<div className="rounded-xl bg-muted animate-pulse" style={{ height: 600 }} />}>
-              <MapViewInner
-                points={points}
-                height={typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600}
-                center={center}
-                focusZoom={focusZoom}
-                me={ref}
-                radiusKm={radiusKm !== "any" ? Number(radiusKm) : null}
-              />
-            </Suspense>
+            <MapInteractionShell
+              isMobile={isMobile}
+              active={mapActive}
+              onActivate={() => setMapActive(true)}
+              onDeactivate={() => setMapActive(false)}
+              mobileHeight={320}
+            >
+              <Suspense fallback={<div className="rounded-xl bg-muted animate-pulse" style={{ height: isMobile ? 320 : 600 }} />}>
+                <MapViewInner
+                  points={points}
+                  height={isMobile ? 320 : (typeof window !== "undefined" ? Math.max(500, Math.min(window.innerHeight * 0.75, 700)) : 600)}
+                  center={center}
+                  focusZoom={focusZoom}
+                  me={ref}
+                  radiusKm={radiusKm !== "any" ? Number(radiusKm) : null}
+                />
+              </Suspense>
+            </MapInteractionShell>
           )}
           {!isRestaurant && (
           <div className="mt-2 text-xs text-muted-foreground">
