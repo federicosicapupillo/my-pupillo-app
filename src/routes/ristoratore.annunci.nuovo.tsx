@@ -811,7 +811,16 @@ function NewRestaurantJobRequest() {
                 <SelectContent>{ROLE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Numero lavoratori richiesti"><Input type="number" min="1" value={f.workers_needed} onChange={e => setField("workers_needed", e.target.value)} /></Field>
+            <Field label="Numero lavoratori richiesti" required name="workers_needed" error={errors.workers_needed}>
+              <Select value={f.workers_needed} onValueChange={v => setField("workers_needed", v)}>
+                <SelectTrigger><SelectValue placeholder="Seleziona da 1 a 9" /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                    <SelectItem key={num} value={String(num)}>{num}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Tariffa oraria" required name="hourly_rate" error={errors.hourly_rate}>
               <Select value={f.hourly_rate} onValueChange={v => setField("hourly_rate", v)}>
                 <SelectTrigger className="h-12"><SelectValue placeholder="Seleziona tariffa" /></SelectTrigger>
