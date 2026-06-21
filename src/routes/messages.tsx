@@ -141,9 +141,8 @@ function MessagesLayout() {
   // Higher-level operational category filter, restaurant only.
   // candidature = pending/interested/counter_offer
   // confermati = accepted
-  // turni = there is a shift row for (announcement, worker)
   // archiviati = rejected/expired
-  const [category, setCategory] = useState<"all" | "unread" | "candidature" | "confermati" | "turni" | "archiviati">("all");
+  const [category, setCategory] = useState<"all" | "unread" | "candidature" | "confermati" | "archiviati">("all");
   // Map applicationId -> shiftId for restaurant quick "Vai al turno" links.
   const [shiftByApp, setShiftByApp] = useState<Map<string, string>>(new Map());
   const [pendingReviewAppIds, setPendingReviewAppIds] = useState<Set<string>>(new Set());
@@ -378,8 +377,7 @@ function MessagesLayout() {
     return acc;
   }, {});
   // Restaurant operational categorization.
-  const threadCategory = (t: Thread): "candidature" | "confermati" | "turni" | "archiviati" => {
-    if (shiftByApp.has(t.id)) return "turni";
+  const threadCategory = (t: Thread): "candidature" | "confermati" | "archiviati" => {
     if (t.status === "accepted") return "confermati";
     if (t.status === "rejected" || t.status === "expired") return "archiviati";
     return "candidature";
@@ -389,7 +387,6 @@ function MessagesLayout() {
     unread: totalUnread,
     candidature: threads.filter((t) => threadCategory(t) === "candidature").length,
     confermati: threads.filter((t) => threadCategory(t) === "confermati").length,
-    turni: threads.filter((t) => threadCategory(t) === "turni").length,
     archiviati: threads.filter((t) => threadCategory(t) === "archiviati").length,
   };
   const passesCategory = (t: Thread) => {
@@ -554,7 +551,6 @@ function MessagesLayout() {
               { k: "unread", label: "Non letti", icon: MessageSquare, count: catCounts.unread },
               { k: "candidature", label: "Candidature", icon: UserCheck, count: catCounts.candidature },
               { k: "confermati", label: "Confermati", icon: CheckCheck, count: catCounts.confermati },
-              { k: "turni", label: "Turni", icon: Briefcase, count: catCounts.turni },
               { k: "archiviati", label: "Archiviati", icon: Archive, count: catCounts.archiviati },
             ] as const).map((c) => {
               const active = category === c.k;
@@ -929,7 +925,7 @@ function MessagesLayout() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Qui vedi candidature, conferme e messaggi dei lavoratori. Seleziona una card a sinistra per leggere o rispondere, oppure usa i filtri per concentrarti su ciò che richiede attenzione.
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <button type="button" onClick={() => setCategory("unread")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Non letti</div>
                   <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.unread}</div>
@@ -941,10 +937,6 @@ function MessagesLayout() {
                 <button type="button" onClick={() => setCategory("confermati")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Confermati</div>
                   <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.confermati}</div>
-                </button>
-                <button type="button" onClick={() => setCategory("turni")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Turni</div>
-                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.turni}</div>
                 </button>
               </div>
               {threads.length === 0 && (
