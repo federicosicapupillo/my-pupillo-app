@@ -779,6 +779,20 @@ function Browse() {
                           {compatChip.text}
                         </span>
                       )}
+                      {roleCompatBadge && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${roleCompatBadge.cls}`}
+                          title={_roleRc.status === "not_compatible"
+                            ? `Nel tuo profilo non hai selezionato "${_roleRc.requiredRoleLabel}".`
+                            : undefined}
+                        >
+                          {_roleRc.status === "not_compatible"
+                            ? "Fuori dalle tue mansioni"
+                            : _roleRc.status === "compatible"
+                              ? "Compatibile con il tuo profilo"
+                              : roleCompatBadge.text}
+                        </span>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">Ristorante partner</p>
                   </div>
