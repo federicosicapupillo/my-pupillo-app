@@ -143,7 +143,7 @@ function MessagesLayout() {
   // confermati = accepted
   // turni = there is a shift row for (announcement, worker)
   // archiviati = rejected/expired
-  const [category, setCategory] = useState<"all" | "unread" | "candidature" | "confermati" | "turni" | "archiviati">("all");
+  const [category, setCategory] = useState<"all" | "unread" | "candidature" | "confermati" | "archiviati">("all");
   // Map applicationId -> shiftId for restaurant quick "Vai al turno" links.
   const [shiftByApp, setShiftByApp] = useState<Map<string, string>>(new Map());
   const [pendingReviewAppIds, setPendingReviewAppIds] = useState<Set<string>>(new Set());
@@ -378,8 +378,7 @@ function MessagesLayout() {
     return acc;
   }, {});
   // Restaurant operational categorization.
-  const threadCategory = (t: Thread): "candidature" | "confermati" | "turni" | "archiviati" => {
-    if (shiftByApp.has(t.id)) return "turni";
+  const threadCategory = (t: Thread): "candidature" | "confermati" | "archiviati" => {
     if (t.status === "accepted") return "confermati";
     if (t.status === "rejected" || t.status === "expired") return "archiviati";
     return "candidature";
@@ -389,7 +388,6 @@ function MessagesLayout() {
     unread: totalUnread,
     candidature: threads.filter((t) => threadCategory(t) === "candidature").length,
     confermati: threads.filter((t) => threadCategory(t) === "confermati").length,
-    turni: threads.filter((t) => threadCategory(t) === "turni").length,
     archiviati: threads.filter((t) => threadCategory(t) === "archiviati").length,
   };
   const passesCategory = (t: Thread) => {
@@ -554,7 +552,6 @@ function MessagesLayout() {
               { k: "unread", label: "Non letti", icon: MessageSquare, count: catCounts.unread },
               { k: "candidature", label: "Candidature", icon: UserCheck, count: catCounts.candidature },
               { k: "confermati", label: "Confermati", icon: CheckCheck, count: catCounts.confermati },
-              { k: "turni", label: "Turni", icon: Briefcase, count: catCounts.turni },
               { k: "archiviati", label: "Archiviati", icon: Archive, count: catCounts.archiviati },
             ] as const).map((c) => {
               const active = category === c.k;
