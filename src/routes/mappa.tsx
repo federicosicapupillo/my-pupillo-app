@@ -8,7 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Locate, MapPin, Coins, Briefcase, Star, AlertTriangle, Info, MapPinOff, Settings2 } from "lucide-react";
+import { Locate, MapPin, Coins, Briefcase, Star, AlertTriangle, Info, MapPinOff, Settings2, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
@@ -442,6 +443,7 @@ function MapPage() {
   const [wMinReliab, setWMinReliab] = useState("any");
   const [wExp, setWExp] = useState("any");
   const [view, setView] = useState<"restaurants" | "workers">("restaurants");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // For restaurant accounts: never display other restaurants on the map
   useEffect(() => {
@@ -1343,122 +1345,173 @@ function MapPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Mappa" subtitle="Ristoratori, lavoratori e richieste attive in tempo reale" />
+      <PageHeader
+        title="Mappa"
+        subtitle="Ristoratori, lavoratori e richieste attive in tempo reale"
+        action={
+          <div className="inline-flex rounded-lg border bg-card p-0.5 shadow-sm">
+            {!isRestaurant && (
+              <Button
+                size="sm"
+                variant={view === "restaurants" ? "secondary" : "ghost"}
+                className="h-8 px-3 text-xs"
+                onClick={() => setView("restaurants")}
+              >
+                Ristoratori
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant={view === "workers" ? "secondary" : "ghost"}
+              className="h-8 px-3 text-xs"
+              onClick={() => setView("workers")}
+            >
+              Lavoratori
+            </Button>
+          </div>
+        }
+      />
 
       {/* FILTERS */}
-      <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
-        <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); setDistrict(""); }}>
-          <SelectTrigger><SelectValue placeholder="Provincia" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Tutte le province</SelectItem>
-            {ITALIAN_LOCATIONS.map((p) => <SelectItem key={p.province_code} value={p.province}>{p.province}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={city} onValueChange={(v) => { setCity(v); setDistrict(""); }}>
-          <SelectTrigger><SelectValue placeholder="Città" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Tutte le città</SelectItem>
-            {(province !== "any" ? citiesForProvince(province) : cities).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select
-          value={district === "" ? "__all__" : district}
-          onValueChange={(v) => setDistrict(v === "__all__" ? "" : v)}
-        >
-          <SelectTrigger><SelectValue placeholder="Zona / quartiere" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">Tutte le zone</SelectItem>
-            {(city !== "any" ? zonesForCity(city) : []).map((z) => (
-              <SelectItem key={z} value={z}>{z}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={radiusKm} onValueChange={setRadiusKm}>
-          <SelectTrigger><SelectValue placeholder="Raggio" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Qualsiasi distanza</SelectItem>
-            <SelectItem value="1">Entro 1 km</SelectItem>
-            <SelectItem value="3">Entro 3 km</SelectItem>
-            <SelectItem value="5">Entro 5 km</SelectItem>
-            <SelectItem value="10">Entro 10 km</SelectItem>
-            <SelectItem value="20">Entro 20 km</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="rounded-2xl border bg-card p-3 mb-3 space-y-3">
+        {/* Primary filters */}
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <Select value={province} onValueChange={(v) => { setProvince(v); setCity("any"); setDistrict(""); }}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Provincia" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Tutte le province</SelectItem>
+              {ITALIAN_LOCATIONS.map((p) => <SelectItem key={p.province_code} value={p.province}>{p.province}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={city} onValueChange={(v) => { setCity(v); setDistrict(""); }}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Città" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Tutte le città</SelectItem>
+              {(province !== "any" ? citiesForProvince(province) : cities).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select
+            value={district === "" ? "__all__" : district}
+            onValueChange={(v) => setDistrict(v === "__all__" ? "" : v)}
+          >
+            <SelectTrigger className="h-9"><SelectValue placeholder="Zona / quartiere" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Tutte le zone</SelectItem>
+              {(city !== "any" ? zonesForCity(city) : []).map((z) => (
+                <SelectItem key={z} value={z}>{z}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={radiusKm} onValueChange={setRadiusKm}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Distanza" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Qualsiasi distanza</SelectItem>
+              <SelectItem value="1">Entro 1 km</SelectItem>
+              <SelectItem value="3">Entro 3 km</SelectItem>
+              <SelectItem value="5">Entro 5 km</SelectItem>
+              <SelectItem value="10">Entro 10 km</SelectItem>
+              <SelectItem value="20">Entro 20 km</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <div className="md:col-span-3 flex flex-wrap items-center gap-4 pt-2 border-t">
-          <Button size="sm" variant="outline" onClick={locateMe} disabled={locating} className="gap-2">
+        {/* Quick actions + layer toggles */}
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          <Button size="sm" variant="outline" onClick={locateMe} disabled={locating} className="h-8 gap-2">
             <Locate className="h-4 w-4" />{locating ? "Rilevo…" : me ? "Aggiorna posizione" : "Usa la mia posizione"}
           </Button>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex h-8 cursor-pointer items-center gap-2 rounded-md border bg-background px-2.5 text-xs font-medium">
             <Checkbox checked={withRequests} onCheckedChange={v => setWithRequests(!!v)} />
             Solo con richieste attive
           </label>
-          <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <span className="hidden text-[10px] uppercase tracking-wide text-muted-foreground sm:inline">Layer</span>
             {!isRestaurant && !isWorker && (
-              <label className="flex items-center gap-2"><Checkbox checked={showR} onCheckedChange={v=>setShowR(!!v)} /><Dot color="#4f46e5" /> Ristoratori</label>
+              <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md border bg-background px-2 text-xs font-medium">
+                <Checkbox checked={showR} onCheckedChange={v=>setShowR(!!v)} /><Dot color="#4f46e5" />Ristoratori
+              </label>
             )}
             {!isWorker && (
-              <label className="flex items-center gap-2"><Checkbox checked={showW} onCheckedChange={v=>setShowW(!!v)} /><Dot color="#22c55e" /> Lavoratori</label>
+              <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md border bg-background px-2 text-xs font-medium">
+                <Checkbox checked={showW} onCheckedChange={v=>setShowW(!!v)} /><Dot color="#22c55e" />Lavoratori
+              </label>
             )}
-            <label className="flex items-center gap-2"><Checkbox checked={showA} onCheckedChange={v=>setShowA(!!v)} /><Dot color="#06b6d4" /> Richieste</label>
+            <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md border bg-background px-2 text-xs font-medium">
+              <Checkbox checked={showA} onCheckedChange={v=>setShowA(!!v)} /><Dot color="#06b6d4" />Richieste
+            </label>
           </div>
         </div>
-      </div>
 
-      {/* WORKER FILTERS */}
-      {showW && !isWorker && (
-        <div className="rounded-2xl border bg-card p-4 mb-4 grid gap-3 md:grid-cols-3">
-          <Select value={wRole} onValueChange={setWRole}>
-            <SelectTrigger><SelectValue placeholder="Ruolo lavoratore" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Tutti i ruoli</SelectItem>
-              {workerRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={wBadge} onValueChange={setWBadge}>
-            <SelectTrigger><SelectValue placeholder="Badge" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Tutti i badge</SelectItem>
-              <SelectItem value="basic">Basic</SelectItem>
-              <SelectItem value="pro">Pro</SelectItem>
-              <SelectItem value="elite">Elite</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={wExp} onValueChange={setWExp}>
-            <SelectTrigger><SelectValue placeholder="Esperienza" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Qualsiasi esperienza</SelectItem>
-              <SelectItem value="junior">Junior</SelectItem>
-              <SelectItem value="middle">Middle</SelectItem>
-              <SelectItem value="senior">Senior</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={wMinRating} onValueChange={setWMinRating}>
-            <SelectTrigger><SelectValue placeholder="Rating minimo" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Qualsiasi rating</SelectItem>
-              <SelectItem value="3">≥ 3.0</SelectItem>
-              <SelectItem value="4">≥ 4.0</SelectItem>
-              <SelectItem value="4.5">≥ 4.5</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={wMinReliab} onValueChange={setWMinReliab}>
-            <SelectTrigger><SelectValue placeholder="Affidabilità minima" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Qualsiasi affidabilità</SelectItem>
-              <SelectItem value="70">≥ 70%</SelectItem>
-              <SelectItem value="85">≥ 85%</SelectItem>
-              <SelectItem value="95">≥ 95%</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-2 text-sm">
-            {!isRestaurant && (
-              <Button size="sm" variant={view === "restaurants" ? "secondary" : "ghost"} onClick={() => setView("restaurants")}>Lista ristoratori</Button>
-            )}
-            <Button size="sm" variant={view === "workers" ? "secondary" : "ghost"} onClick={() => setView("workers")}>Lista lavoratori</Button>
-          </div>
-        </div>
-      )}
+        {/* Advanced filters */}
+        {showW && !isWorker && (() => {
+          const advCount = [wRole, wBadge, wExp, wMinRating, wMinReliab].filter(v => v !== "any").length;
+          return (
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="border-t pt-3">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-md px-1 py-1 text-sm font-medium hover:text-primary"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Settings2 className="h-4 w-4" /> Filtri avanzati
+                    {advCount > 0 && (
+                      <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        {advCount} {advCount === 1 ? "attivo" : "attivi"}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <Select value={wRole} onValueChange={setWRole}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Ruolo lavoratore" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Tutti i ruoli</SelectItem>
+                    {workerRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={wBadge} onValueChange={setWBadge}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Badge" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Tutti i badge</SelectItem>
+                    <SelectItem value="basic">Basic</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="elite">Elite</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={wExp} onValueChange={setWExp}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Esperienza" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Qualsiasi esperienza</SelectItem>
+                    <SelectItem value="junior">Junior</SelectItem>
+                    <SelectItem value="middle">Middle</SelectItem>
+                    <SelectItem value="senior">Senior</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={wMinRating} onValueChange={setWMinRating}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Rating minimo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Qualsiasi rating</SelectItem>
+                    <SelectItem value="3">≥ 3.0</SelectItem>
+                    <SelectItem value="4">≥ 4.0</SelectItem>
+                    <SelectItem value="4.5">≥ 4.5</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={wMinReliab} onValueChange={setWMinReliab}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Affidabilità minima" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Qualsiasi affidabilità</SelectItem>
+                    <SelectItem value="70">≥ 70%</SelectItem>
+                    <SelectItem value="85">≥ 85%</SelectItem>
+                    <SelectItem value="95">≥ 95%</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })()}
+      </div>
 
       {/* LAYOUT: list + map */}
       <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
