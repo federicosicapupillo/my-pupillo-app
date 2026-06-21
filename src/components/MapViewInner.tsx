@@ -304,7 +304,12 @@ export default function MapViewInner({ points, height, center, focusZoom, me, ra
                       <div>Anche: {p.meta.secondaryRoles.join(", ")}</div>
                     )}
                     {p.meta.rating != null && <div>⭐ {Number(p.meta.rating).toFixed(1)}</div>}
-                    {p.meta.reliability != null && <div>Affidabilità: {p.meta.reliability}%</div>}
+                    {(() => {
+                      const c = Number(p.meta?.completedShifts ?? 0);
+                      if (c <= 0) return <div>Affidabilità: Nuovo profilo</div>;
+                      if (c < 3) return <div>Affidabilità: In valutazione</div>;
+                      return p.meta?.reliability != null ? <div>Affidabilità: {p.meta.reliability}%</div> : null;
+                    })()}
                     {p.meta.completedShifts != null && <div>Turni: {p.meta.completedShifts}</div>}
                     {p.meta.hourlyRate != null && <div>Tariffa: € {Number(p.meta.hourlyRate).toFixed(0)}/h</div>}
                     {p.meta.availability && p.meta.availability.length > 0 && (

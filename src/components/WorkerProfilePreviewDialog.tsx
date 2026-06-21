@@ -8,6 +8,7 @@ import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, CheckCircle2, Car }
 import { useAuth } from "@/lib/auth-context";
 import { displayWorkerName } from "@/lib/worker-display";
 import { formatWorkerLocation } from "@/lib/worker-location-summary";
+import { reliabilityDisplayValue } from "@/lib/worker-reliability";
 
 type WorkerProfile = {
   id: string;
@@ -195,7 +196,7 @@ export function WorkerProfilePreviewDialog({
             {/* Stats grid */}
             <div className="grid grid-cols-2 gap-2">
               <StatBox icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Turni completati" value={`${w.completed_shifts ?? 0}`} />
-              <StatBox icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Affidabilità" value={w.reliability_pct != null ? `${w.reliability_pct}%` : "—"} />
+              <StatBox icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Affidabilità" value={reliabilityDisplayValue(w.reliability_pct, w.completed_shifts)} />
               <StatBox icon={<Clock className="h-3.5 w-3.5" />} label="Puntualità" value={w.punctuality_pct ? `${w.punctuality_pct}%` : "—"} />
               <StatBox icon={<Briefcase className="h-3.5 w-3.5" />} label="Professionalità" value={w.avg_professionalism != null && Number(w.avg_professionalism) > 0 ? `${Number(w.avg_professionalism).toFixed(1)}/5` : "—"} />
             </div>

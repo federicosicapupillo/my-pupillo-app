@@ -189,7 +189,12 @@ export default function WorkersMapInner({
                     color: "#374151",
                   }}>
                     <div><b>Turni:</b> {p.completedShifts != null ? p.completedShifts : "Dato non disponibile"}</div>
-                    <div><b>Affidabilità:</b> {p.reliabilityPct != null ? `${p.reliabilityPct}%` : "Dato non disponibile"}</div>
+                    <div><b>Affidabilità:</b> {(() => {
+                      const c = Number(p.completedShifts ?? 0);
+                      if (c <= 0) return "Nuovo profilo";
+                      if (c < 3) return "In valutazione";
+                      return p.reliabilityPct != null ? `${p.reliabilityPct}%` : "Dato non disponibile";
+                    })()}</div>
                     <div><b>Puntualità:</b> {p.punctualityPct != null ? `${p.punctualityPct}%` : "Dato non disponibile"}</div>
                     <div><b>Professionalità:</b> {p.professionalismAvg != null ? `${p.professionalismAvg.toFixed(1)}/5` : "Dato non disponibile"}</div>
                     {p.lastReviewComment ? (

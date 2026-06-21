@@ -15,6 +15,7 @@ import { displayWorkerName } from "@/lib/worker-display";
 import { formatWorkerLocation, resolveWorkerCity, resolveWorkerZone } from "@/lib/worker-location-summary";
 import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summary";
 import type { AvailabilityRow } from "@/lib/availability";
+import { reliabilityDisplayValue } from "@/lib/worker-reliability";
 
 export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
@@ -213,7 +214,7 @@ function WorkerDetailPage() {
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2 w-full text-xs">
             <Metric icon={Star} label="Rating" value={w.rating_avg ? `${Number(w.rating_avg).toFixed(1)}` : "—"} sub={w.reviews_count ? `${w.reviews_count} rec.` : undefined} />
-            <Metric icon={Shield} label="Affidab." value={w.reliability_pct != null ? `${w.reliability_pct}%` : "—"} />
+            <Metric icon={Shield} label="Affidab." value={reliabilityDisplayValue(w.reliability_pct, w.completed_shifts)} />
             <Metric icon={Briefcase} label="Turni" value={w.completed_shifts != null ? String(w.completed_shifts) : "—"} />
           </div>
         </div>
