@@ -841,12 +841,13 @@ function ShiftsPage() {
       <div className="flex gap-2 mb-4 overflow-x-auto">
         {((role === "worker"
           ? ["no_show", "assigned", "to-review", "completed"]
-          : ["assigned", "upcoming", "completed", "to-review", "no_show", "past"]) as Array<typeof filter>).map(f => {
+          : ["assigned", "upcoming", "completed", "to-review", "no_show", "past", "archived"]) as Array<typeof filter>).map(f => {
           const label =
             f === "assigned" ? `Assegnati (${counts.assigned})`
             : f === "upcoming" ? `In attesa (${counts.pending})`
             : f === "completed" ? `Conclusi (${counts.completed})`
-            : f === "past" ? `Archiviati / Passati (${counts.past})`
+            : f === "past" ? `Scaduti / Annullati (${counts.past})`
+            : f === "archived" ? `Archiviati (${counts.archived})`
             : f === "no_show" ? `No show / Segnalazioni (${counts.noShow})`
             : `Da recensire (${counts.toReview})`;
           return (
