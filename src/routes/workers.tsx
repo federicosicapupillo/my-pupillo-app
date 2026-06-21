@@ -28,6 +28,7 @@ import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announc
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { formatDateIT, formatTariff, formatAnnouncementLabel } from "@/lib/format";
+import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
 import { summarizeWeeklyAvailability, formatAvailabilitySlotsForDay } from "@/lib/availability-summary";
