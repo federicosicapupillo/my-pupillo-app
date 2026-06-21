@@ -1227,6 +1227,58 @@ function Thread() {
     }
   };
 
+  const sendFreeMessage = async () => {
+    if (sending) return;
+    if (!app) {
+      toast.error("Seleziona una conversazione prima di inviare un messaggio.");
+      return;
+    }
+    if (!user) {
+      toast.error("Accedi per inviare un messaggio.");
+      return;
+    }
+    const body = composerText.trim();
+    if (!body) return;
+    if (body.length > 2000) {
+      toast.error("Il messaggio è troppo lungo (massimo 2000 caratteri).");
+      return;
+    }
+    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+    if (!receiverId || receiverId === user.id) {
+      toast.error("Seleziona una conversazione prima di inviare un messaggio.");
+      return;
+    }
+    if (other && !ensureTargetComplete(other.profile_completed)) return;
+    setSending(true);
+    try {
+      const createdAt = new Date().toISOString();
+      const { data, error } = await supabase.from("messages").insert({
+        application_id: app.id,
+        sender_id: user.id,
+        receiver_id: receiverId,
+        body,
+        created_at: createdAt,
+        read_at: null,
+        template_id: null,
+        message_type: "user",
+        action_type: null,
+      } as never).select("*").single();
+      if (error) throw error;
+      if (data) pushMessage(data as Msg);
+      const { error: conversationError } = await supabase.from("applications").update({
+        last_message_preview: body,
+        last_message_at: createdAt,
+      } as never).eq("id", app.id);
+      if (conversationError) throw conversationError;
+      setComposerText("");
+    } catch (error) {
+      console.error("Errore invio messaggio", error);
+      toast.error("Errore durante l'invio del messaggio. Riprova.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const transition = async (
     next: "interested" | "not_interested" | "accepted" | "rejected",
     extra?: Record<string, unknown>,
