@@ -963,6 +963,9 @@ function Onboarding() {
         } else if (firstEmpty) {
           toast.error("Campo obbligatorio mancante.");
           scrollToField(firstEmpty);
+        } else if (!cfOk) {
+          toast.error("Codice fiscale non valido.");
+          scrollToField("tax_code");
         } else {
           toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
         }
