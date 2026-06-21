@@ -3261,34 +3261,37 @@ function Thread() {
             </p>
           </div>
         ) : (
-        <TemplatePicker
-          role={role === "restaurant" ? "restaurant" : "worker"}
-          category={tplCategory}
-          setCategory={(c) => {
-            setTplCategory(c);
-            if (role === "restaurant" && c === "post_shift") {
-              setReviewOpen(true);
-              setTimeout(() => {
-                document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }, 60);
-            }
-          }}
-          selected={selectedTpl}
-          setSelected={setSelectedTpl}
-          onSend={requireComplete(() => {
-            // Blocca l'invio se il TARGET ha profilo incompleto.
-            // Se `other` non è ancora caricato, evitiamo di mostrare il popup
-            // per non confondere l'utente: l'invio resta bloccato sotto da
-            // altri stati (es. sending/disabled).
-            if (other && !ensureTargetComplete(other.profile_completed)) return;
-            void sendTemplate();
-          })}
-          sending={sending}
-          ann={ann}
-          otherName={venueName ?? null}
-          addressOverride={displayAddress}
-          disabled={isConversationClosed}
-        />
+        <div className="mt-4 rounded-2xl border bg-card p-3 space-y-2">
+          <Textarea
+            value={composerText}
+            onChange={(e) => setComposerText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                requireComplete(() => { void sendFreeMessage(); })();
+              }
+            }}
+            placeholder="Scrivi un messaggio…"
+            rows={3}
+            maxLength={2000}
+            disabled={sending}
+            aria-label="Scrivi un messaggio"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {composerText.length}/2000
+            </span>
+            <Button
+              type="button"
+              onClick={requireComplete(() => { void sendFreeMessage(); })}
+              disabled={!composerText.trim() || sending}
+              className="gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {sending ? "Invio in corso…" : "Invia"}
+            </Button>
+          </div>
+        </div>
         )}
         </div>
 
