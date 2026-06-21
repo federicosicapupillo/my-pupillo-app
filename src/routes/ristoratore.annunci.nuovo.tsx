@@ -503,6 +503,7 @@ function NewRestaurantJobRequest() {
     const errs: Record<string, string> = {};
     const order: string[] = [
       "role_required",
+      "workers_needed",
       "shift_date",
       "start_time",
       "end_date",
@@ -530,6 +531,10 @@ function NewRestaurantJobRequest() {
       "required_skills",
     ];
     if (!f.role_required) errs.role_required = "Seleziona il ruolo cercato.";
+    const workersCount = Number(f.workers_needed);
+    if (!f.workers_needed || !Number.isInteger(workersCount) || workersCount < 1 || workersCount > 9) {
+      errs.workers_needed = "Seleziona un numero di lavoratori tra 1 e 9.";
+    }
     if (!f.shift_date) errs.shift_date = "Inserisci la data di inizio turno.";
     else if (f.shift_date < todayISO) errs.shift_date = "Non puoi selezionare una data passata.";
     if (!f.start_time) errs.start_time = "Inserisci l'orario di inizio turno.";
