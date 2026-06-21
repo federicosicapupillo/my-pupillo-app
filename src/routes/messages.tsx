@@ -443,6 +443,26 @@ function MessagesLayout() {
     return parts.join(" · ");
   };
 
+  // Restaurant-only: compute the workflow phase of each thread.
+  // Phases are surfaced as dashboard sections so the restaurateur sees
+  // only the key milestones (new application → confirmed → shift →
+  // review/archive). Pure derivation from existing data — no logic
+  // change, no extra fetch.
+  type RestPhase = "new" | "confirmed" | "shift" | "review" | "archived";
+  const restaurantPhase = (t: Thread): RestPhase => {
+    if (pendingReviewAppIds.has(t.id)) return "review";
+    if (shiftByApp.has(t.id)) return "shift";
+    if (t.status === "accepted") return "confirmed";
+    if (t.status === "rejected" || t.status === "expired") return "archived";
+    return "new";
+  };
+  const categoryToPhase: Partial<Record<typeof category, RestPhase>> = {
+    candidature: "new",
+    confermati: "confirmed",
+    turni: "shift",
+    archiviati: "archived",
+  };
+
   // Auto-expand any partner group that contains more than one application,
   // so two distinct candidatures for the same worker are immediately visible
   // instead of hidden behind a collapsed row. Honors manual collapse/expand.
