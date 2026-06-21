@@ -2703,7 +2703,7 @@ function Thread() {
           const hasAcknowledged = !!ackMsg;
           const acknowledgedAt = ackMsg?.created_at ?? null;
           return (
-            <div className="mb-3" id="instructions-card" data-instructions-card>
+            <div className={shouldRenderConversation ? "mb-3" : undefined} id="instructions-card" data-instructions-card>
               <ConfirmationCard
                 ann={ann}
                 venueName={venueName}
@@ -2718,36 +2718,35 @@ function Thread() {
             </div>
           );
         })()}
-        <div
-          ref={scrollRef}
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-            nearBottomRef.current = dist < 80;
-            if (nearBottomRef.current && newCount > 0) setNewCount(0);
-            // Load older messages when the user reaches the top.
-            if (el.scrollTop < 80 && hasMore && !loadingMore) {
-              loadOlder();
-            }
-          }}
-          className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2"
-        >
-          {hasMore && (
-            <div className="flex justify-center pb-2">
-              <button
-                type="button"
-                onClick={loadOlder}
-                disabled={loadingMore}
-                className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline disabled:opacity-60"
-              >
-                {loadingMore ? "Caricamento…" : "Carica messaggi precedenti"}
-              </button>
-            </div>
-          )}
-          {msgs.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8">Nessun messaggio. Scrivi qui sotto per iniziare.</p>
-          )}
-          {msgs.map(m => {
+        {shouldRenderConversation && (
+        <>
+          <div
+            ref={scrollRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+              nearBottomRef.current = dist < 80;
+              if (nearBottomRef.current && newCount > 0) setNewCount(0);
+              // Load older messages when the user reaches the top.
+              if (el.scrollTop < 80 && hasMore && !loadingMore) {
+                loadOlder();
+              }
+            }}
+            className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2"
+          >
+            {hasMore && (
+              <div className="flex justify-center pb-2">
+                <button
+                  type="button"
+                  onClick={loadOlder}
+                  disabled={loadingMore}
+                  className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline disabled:opacity-60"
+                >
+                  {loadingMore ? "Caricamento…" : "Carica messaggi precedenti"}
+                </button>
+              </div>
+            )}
+            {displayableConversationMessages.map(m => {
             const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
             // Card combinata "Turno chiuso e recensione ricevuta" — UN SOLO
             // messaggio visibile sia al ristoratore sia al lavoratore.
@@ -2990,20 +2989,22 @@ function Thread() {
                 )}
               </div>
             );
-          })}
-          <div ref={endRef} />
-        </div>
-        {newCount > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              endRef.current?.scrollIntoView({ behavior: "smooth" });
-              setNewCount(0);
-            }}
-            className="absolute left-1/2 -translate-x-1/2 bottom-3 z-10 rounded-full bg-primary text-primary-foreground text-xs px-3 py-1 shadow"
-          >
-            {newCount === 1 ? "1 nuovo messaggio" : `${newCount} nuovi messaggi`} ↓
-          </button>
+            })}
+            <div ref={endRef} />
+          </div>
+          {newCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                endRef.current?.scrollIntoView({ behavior: "smooth" });
+                setNewCount(0);
+              }}
+              className="absolute left-1/2 -translate-x-1/2 bottom-3 z-10 rounded-full bg-primary text-primary-foreground text-xs px-3 py-1 shadow"
+            >
+              {newCount === 1 ? "1 nuovo messaggio" : `${newCount} nuovi messaggi`} ↓
+            </button>
+          )}
+        </>
         )}
         </div>
         {role === "restaurant" && app && shift && (() => {
