@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
+import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
@@ -166,6 +167,7 @@ function ShiftDetailPage() {
   const [favLoading, setFavLoading] = useState(false);
   const reviewRef = useRef<HTMLDivElement | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const toggleFavorite = async () => {
     if (!user || !shift?.worker_id) return;
@@ -662,6 +664,16 @@ function ShiftDetailPage() {
               <CheckCheck className="h-4 w-4" /> Concludi turno
             </Button>
           )}
+          {shift.status === "scheduled" && (
+            <Button
+              variant="outline"
+              onClick={() => setCancelOpen(true)}
+              className="gap-1 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive focus-visible:ring-destructive"
+              aria-label="Annulla turno"
+            >
+              <XCircle className="h-4 w-4" /> Annulla turno
+            </Button>
+          )}
           {shift.status === "cancelled" && (
             <span className="text-sm text-muted-foreground">Turno annullato</span>
           )}
@@ -723,6 +735,18 @@ function ShiftDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CancelShiftDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        shiftId={shift?.id ?? null}
+        restaurantId={shift?.restaurant_id ?? null}
+        workerId={shift?.worker_id ?? null}
+        applicationId={appId}
+        onCancelled={() => {
+          if (shift) setShift({ ...shift, status: "cancelled" });
+        }}
+      />
     </AppShell>
   );
 }

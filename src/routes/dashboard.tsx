@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation";
+import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -330,6 +331,11 @@ function DashboardInner() {
                 key={a.ann_id}
                 item={a}
                 onClose={() => setClosingItem(a)}
+                onCancelled={(annId) => {
+                  setAssignedList((prev) =>
+                    prev.map((x) => (x.ann_id === annId ? { ...x, shift_status: "cancelled" } : x)),
+                  );
+                }}
               />
             ))}
           </ul>
@@ -493,7 +499,9 @@ function StatCard({ icon: Icon, label, value, highlight }: { icon: typeof Briefc
   );
 }
 
-function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () => void }) {
+function AssignedShiftCard({ item, onClose, onCancelled }: { item: AssignedItem; onClose: () => void; onCancelled?: (annId: string) => void }) {
+  const { user } = useAuth();
+  const [cancelOpen, setCancelOpen] = useState(false);
   const dateLabel = new Date(item.service_date).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" });
   const timeLabel = item.service_time ? item.service_time.slice(0, 5) : null;
   // Compute end time label: prefer explicit end_time, otherwise derive from duration.
@@ -582,6 +590,17 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
             >
               <CheckCheck className="h-4 w-4" /> Concludi turno
             </Button>
+            {item.shift_id && !afterEnd && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCancelOpen(true)}
+                className="gap-1 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive focus-visible:ring-destructive"
+                aria-label="Annulla turno"
+              >
+                <XCircle className="h-4 w-4" /> Annulla turno
+              </Button>
+            )}
             <span className="text-[11px] text-muted-foreground">
               {beforeStart && "Potrai concludere il turno dopo la fine del servizio."}
               {inProgress && (endTime ? `Turno in corso. Potrai concluderlo alle ${endTime}.` : "Turno in corso. Potrai concluderlo dopo la fine.")}
@@ -630,6 +649,17 @@ function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () 
           </Link>
         )}
       </div>
+      {item.shift_id && (
+        <CancelShiftDialog
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+          shiftId={item.shift_id}
+          restaurantId={user?.id ?? null}
+          workerId={item.worker_id}
+          applicationId={item.app_id}
+          onCancelled={() => onCancelled?.(item.ann_id)}
+        />
+      )}
     </li>
   );
 }
