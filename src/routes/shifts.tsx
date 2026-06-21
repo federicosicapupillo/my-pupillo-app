@@ -1737,6 +1737,30 @@ function ShiftsPage() {
         onClose={() => setDelayTarget(null)}
         onDone={() => { /* incident persisted; shift status unchanged */ }}
       />
+
+      <Dialog
+        open={!!archiveDialog}
+        onOpenChange={(open) => { if (!open && !archiveSubmitting) setArchiveDialog(null); }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Archiviare questo turno?</DialogTitle>
+            <DialogDescription>
+              Vuoi archiviare questo turno? Potrai ritrovarlo nella sezione Archiviati.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setArchiveDialog(null)} disabled={archiveSubmitting}>
+              Annulla
+            </Button>
+            <Button onClick={confirmArchive} disabled={archiveSubmitting} className="gap-1">
+              {archiveSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              <Archive className="h-4 w-4" /> Archivia
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <CancelPresenceDialog
         open={!!workerCancelTarget}
         target={workerCancelTarget}
