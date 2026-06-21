@@ -590,6 +590,17 @@ function AssignedShiftCard({ item, onClose, onCancelled }: { item: AssignedItem;
             >
               <CheckCheck className="h-4 w-4" /> Concludi turno
             </Button>
+            {item.shift_id && !afterEnd && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCancelOpen(true)}
+                className="gap-1 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive focus-visible:ring-destructive"
+                aria-label="Annulla turno"
+              >
+                <XCircle className="h-4 w-4" /> Annulla turno
+              </Button>
+            )}
             <span className="text-[11px] text-muted-foreground">
               {beforeStart && "Potrai concludere il turno dopo la fine del servizio."}
               {inProgress && (endTime ? `Turno in corso. Potrai concluderlo alle ${endTime}.` : "Turno in corso. Potrai concluderlo dopo la fine.")}
@@ -638,6 +649,17 @@ function AssignedShiftCard({ item, onClose, onCancelled }: { item: AssignedItem;
           </Link>
         )}
       </div>
+      {item.shift_id && (
+        <CancelShiftDialog
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+          shiftId={item.shift_id}
+          restaurantId={user?.id ?? null}
+          workerId={item.worker_id}
+          applicationId={item.app_id}
+          onCancelled={() => onCancelled?.(item.ann_id)}
+        />
+      )}
     </li>
   );
 }
