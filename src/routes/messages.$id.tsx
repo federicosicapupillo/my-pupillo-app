@@ -487,6 +487,7 @@ function Thread() {
   const [tplCategory, setTplCategory] = useState<TemplateCategory>("application");
   const [selectedTpl, setSelectedTpl] = useState<MsgTemplate | null>(null);
   const [sending, setSending] = useState(false);
+  const [composerText, setComposerText] = useState("");
   const [shift, setShift] = useState<Shift | null>(null);
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, "accepted" | "rejected">>({});
   // Disponibilità speciale del lavoratore per la data dell'annuncio: se
@@ -1109,6 +1110,7 @@ function Thread() {
   };
 
   const sendTemplate = async () => {
+    // legacy template sender kept for internal flows; UI uses free text
     if (sending) return;
     if (!app) {
       toast.error("Seleziona una conversazione prima di inviare un messaggio.");
@@ -1220,6 +1222,58 @@ function Thread() {
     } catch (error) {
       console.error("Errore invio messaggio template", error);
       toast.error("Errore durante l’invio del messaggio. Riprova.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const sendFreeMessage = async () => {
+    if (sending) return;
+    if (!app) {
+      toast.error("Seleziona una conversazione prima di inviare un messaggio.");
+      return;
+    }
+    if (!user) {
+      toast.error("Accedi per inviare un messaggio.");
+      return;
+    }
+    const body = composerText.trim();
+    if (!body) return;
+    if (body.length > 2000) {
+      toast.error("Il messaggio è troppo lungo (massimo 2000 caratteri).");
+      return;
+    }
+    const receiverId = otherId ?? (app.restaurant_id === user.id ? app.worker_id : app.restaurant_id);
+    if (!receiverId || receiverId === user.id) {
+      toast.error("Seleziona una conversazione prima di inviare un messaggio.");
+      return;
+    }
+    if (other && !ensureTargetComplete(other.profile_completed)) return;
+    setSending(true);
+    try {
+      const createdAt = new Date().toISOString();
+      const { data, error } = await supabase.from("messages").insert({
+        application_id: app.id,
+        sender_id: user.id,
+        receiver_id: receiverId,
+        body,
+        created_at: createdAt,
+        read_at: null,
+        template_id: null,
+        message_type: "user",
+        action_type: null,
+      } as never).select("*").single();
+      if (error) throw error;
+      if (data) pushMessage(data as Msg);
+      const { error: conversationError } = await supabase.from("applications").update({
+        last_message_preview: body,
+        last_message_at: createdAt,
+      } as never).eq("id", app.id);
+      if (conversationError) throw conversationError;
+      setComposerText("");
+    } catch (error) {
+      console.error("Errore invio messaggio", error);
+      toast.error("Errore durante l'invio del messaggio. Riprova.");
     } finally {
       setSending(false);
     }
@@ -3207,34 +3261,37 @@ function Thread() {
             </p>
           </div>
         ) : (
-        <TemplatePicker
-          role={role === "restaurant" ? "restaurant" : "worker"}
-          category={tplCategory}
-          setCategory={(c) => {
-            setTplCategory(c);
-            if (role === "restaurant" && c === "post_shift") {
-              setReviewOpen(true);
-              setTimeout(() => {
-                document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }, 60);
-            }
-          }}
-          selected={selectedTpl}
-          setSelected={setSelectedTpl}
-          onSend={requireComplete(() => {
-            // Blocca l'invio se il TARGET ha profilo incompleto.
-            // Se `other` non è ancora caricato, evitiamo di mostrare il popup
-            // per non confondere l'utente: l'invio resta bloccato sotto da
-            // altri stati (es. sending/disabled).
-            if (other && !ensureTargetComplete(other.profile_completed)) return;
-            void sendTemplate();
-          })}
-          sending={sending}
-          ann={ann}
-          otherName={venueName ?? null}
-          addressOverride={displayAddress}
-          disabled={isConversationClosed}
-        />
+        <div className="mt-4 rounded-2xl border bg-card p-3 space-y-2">
+          <Textarea
+            value={composerText}
+            onChange={(e) => setComposerText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                requireComplete(() => { void sendFreeMessage(); })();
+              }
+            }}
+            placeholder="Scrivi un messaggio…"
+            rows={3}
+            maxLength={2000}
+            disabled={sending}
+            aria-label="Scrivi un messaggio"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {composerText.length}/2000
+            </span>
+            <Button
+              type="button"
+              onClick={requireComplete(() => { void sendFreeMessage(); })}
+              disabled={!composerText.trim() || sending}
+              className="gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {sending ? "Invio in corso…" : "Invia"}
+            </Button>
+          </div>
+        </div>
         )}
         </div>
 
@@ -3542,102 +3599,6 @@ function Thread() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-  );
-}
-
-function TemplatePicker(props: {
-  role: "restaurant" | "worker";
-  category: TemplateCategory;
-  setCategory: (c: TemplateCategory) => void;
-  selected: MsgTemplate | null;
-  setSelected: (t: MsgTemplate | null) => void;
-  onSend: () => void;
-  sending: boolean;
-  ann: Ann | null;
-  otherName: string | null;
-  addressOverride?: string | null;
-  disabled?: boolean;
-}) {
-  const { role, category, setCategory, selected, setSelected, onSend, sending, ann, otherName, addressOverride, disabled } = props;
-  const available = TEMPLATES.filter(t => (t.role === role || t.role === "both") && t.category !== "post_shift");
-  const categories = Array.from(new Set(available.map(t => t.category))) as TemplateCategory[];
-  const inCat = available.filter(t => t.category === category);
-  const isClosureForRestaurant = role === "restaurant" && category === "post_shift";
-
-  return (
-    <div className="mt-4 rounded-2xl border bg-card p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-primary" />
-        <h3 className="font-semibold text-sm">Scegli un messaggio</h3>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Per la sicurezza di tutti, in chat si possono inviare solo messaggi preimpostati. Non è possibile scrivere testo libero.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {categories.map(c => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => { setCategory(c); setSelected(null); }}
-            className={`text-xs rounded-full px-3 py-1 border transition ${category === c ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground hover:bg-secondary/80"}`}
-          >
-            {CATEGORY_LABELS[c]}
-          </button>
-        ))}
-      </div>
-      {isClosureForRestaurant ? (
-        <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm">
-          <div className="font-semibold mb-1">Chiusura turno</div>
-          <p className="text-muted-foreground text-xs">
-            Conferma la fine del servizio e lascia una recensione al lavoratore nel blocco qui sotto.
-          </p>
-        </div>
-      ) : inCat.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4 text-center">
-          Nessun messaggio preimpostato disponibile per questa fase.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {inCat.map(t => {
-            const isSelected = selected?.key === t.key;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setSelected(t)}
-                className={`text-left text-sm rounded-xl border px-3 py-2 transition ${isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary/40"}`}
-              >
-                {renderTemplate(t.text, ann, otherName, addressOverride)}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {selected && !isClosureForRestaurant && (
-        <div className="rounded-xl border bg-secondary/30 p-3 text-sm">
-          <div className="text-xs text-muted-foreground mb-1">Anteprima:</div>
-          {renderTemplate(selected.text, ann, otherName, addressOverride)}
-        </div>
-      )}
-      {!isClosureForRestaurant && (
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          onClick={onSend}
-          disabled={!selected || sending || disabled}
-          className="gap-2"
-        >
-          <Send className="h-4 w-4" />
-          {sending ? "Invio in corso…" : "Invia messaggio"}
-        </Button>
-      </div>
-      )}
-      {disabled && (
-        <p className="text-xs text-muted-foreground text-center">
-          Conversazione chiusa: non è possibile inviare nuovi messaggi.
-        </p>
-      )}
-    </div>
   );
 }
 
