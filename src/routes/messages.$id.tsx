@@ -2706,6 +2706,34 @@ function Thread() {
         )}
 
         <div className="relative">
+        {(() => {
+          // Lift the "Candidatura confermata" instructions summary OUT of
+          // the chat scroll: render it as a sticky, always-visible card
+          // above the conversation so the worker/restaurant can read it
+          // without scrolling through messages.
+          const confMsg = msgs.find((m) => m.template_id === CONFIRMATION_TEMPLATE_ID);
+          if (!confMsg) return null;
+          const venueName = role === "worker"
+            ? displayOtherName
+            : (profile?.business_name || profile?.full_name || null);
+          const hasAcknowledged = msgs.some(
+            (mm) => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
+          );
+          return (
+            <div className="sticky top-2 z-20 mb-3" id="instructions-card" data-instructions-card>
+              <ConfirmationCard
+                ann={ann}
+                venueName={venueName}
+                applicationId={id}
+                announcementId={app?.announcement_id ?? null}
+                isWorker={role === "worker"}
+                acknowledged={hasAcknowledged}
+                arrivalAdvanceMinutes={restaurantArrivalAdvance}
+                onAcknowledge={acknowledgeInstructions}
+              />
+            </div>
+          );
+        })()}
         <div
           ref={scrollRef}
           onScroll={(e) => {
@@ -2776,26 +2804,10 @@ function Thread() {
               );
             }
             if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
-              const venueName = role === "worker"
-                ? displayOtherName
-                : (profile?.business_name || profile?.full_name || null);
-              const hasAcknowledged = msgs.some(
-                mm => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
-              );
-              return (
-                <div key={m.id} id="instructions-card" data-instructions-card>
-                  <ConfirmationCard
-                    ann={ann}
-                    venueName={venueName}
-                    applicationId={id}
-                    announcementId={app?.announcement_id ?? null}
-                    isWorker={role === "worker"}
-                    acknowledged={hasAcknowledged}
-                    arrivalAdvanceMinutes={restaurantArrivalAdvance}
-                    onAcknowledge={acknowledgeInstructions}
-                  />
-                </div>
-              );
+              // Rendered as a sticky card above the chat scroll instead
+              // of inline within the message list. Skip the in-chat copy
+              // to avoid duplicate riepilogo.
+              return null;
             }
             if (m.template_id === PROPOSAL_TEMPLATE_ID) {
               const ownStatus = proposalStatuses[m.id];
