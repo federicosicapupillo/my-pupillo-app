@@ -484,6 +484,17 @@ function Browse() {
       toast.error(SPECIAL_INCOMPATIBLE_MESSAGE);
       return;
     }
+    // Avvisa il lavoratore se sta per candidarsi a un annuncio con una
+    // mansione che NON ha selezionato nel proprio profilo. Non blocca.
+    const rc = getRoleCompatibility(profile as any, a.professional_profile);
+    if (rc.status === "not_compatible") {
+      const ok = typeof window !== "undefined"
+        ? window.confirm(
+            `Questo annuncio richiede "${rc.requiredRoleLabel}" che non hai selezionato tra le tue mansioni. Vuoi candidarti comunque?`,
+          )
+        : true;
+      if (!ok) return;
+    }
     setConfirmAnn(a);
   };
 
