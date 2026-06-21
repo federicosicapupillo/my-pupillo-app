@@ -2720,7 +2720,7 @@ function Thread() {
             (mm) => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
           );
           return (
-            <div className="sticky top-2 z-20 mb-3" id="instructions-card" data-instructions-card>
+            <div className="mb-3" id="instructions-card" data-instructions-card>
               <ConfirmationCard
                 ann={ann}
                 venueName={venueName}
