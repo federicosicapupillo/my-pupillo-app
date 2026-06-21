@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation";
+import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -330,6 +331,11 @@ function DashboardInner() {
                 key={a.ann_id}
                 item={a}
                 onClose={() => setClosingItem(a)}
+                onCancelled={(annId) => {
+                  setAssignedList((prev) =>
+                    prev.map((x) => (x.ann_id === annId ? { ...x, shift_status: "cancelled" } : x)),
+                  );
+                }}
               />
             ))}
           </ul>
