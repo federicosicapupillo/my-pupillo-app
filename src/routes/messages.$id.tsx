@@ -2804,26 +2804,10 @@ function Thread() {
               );
             }
             if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
-              const venueName = role === "worker"
-                ? displayOtherName
-                : (profile?.business_name || profile?.full_name || null);
-              const hasAcknowledged = msgs.some(
-                mm => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
-              );
-              return (
-                <div key={m.id} id="instructions-card" data-instructions-card>
-                  <ConfirmationCard
-                    ann={ann}
-                    venueName={venueName}
-                    applicationId={id}
-                    announcementId={app?.announcement_id ?? null}
-                    isWorker={role === "worker"}
-                    acknowledged={hasAcknowledged}
-                    arrivalAdvanceMinutes={restaurantArrivalAdvance}
-                    onAcknowledge={acknowledgeInstructions}
-                  />
-                </div>
-              );
+              // Rendered as a sticky card above the chat scroll instead
+              // of inline within the message list. Skip the in-chat copy
+              // to avoid duplicate riepilogo.
+              return null;
             }
             if (m.template_id === PROPOSAL_TEMPLATE_ID) {
               const ownStatus = proposalStatuses[m.id];
