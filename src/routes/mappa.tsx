@@ -445,6 +445,9 @@ function MapPage() {
   const [wExp, setWExp] = useState("any");
   const [view, setView] = useState<"restaurants" | "workers">("restaurants");
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const [mapActive, setMapActive] = useState(false);
+  useEffect(() => { if (!isMobile) setMapActive(true); else setMapActive(false); }, [isMobile]);
 
   // For restaurant accounts: never display other restaurants on the map
   useEffect(() => {
