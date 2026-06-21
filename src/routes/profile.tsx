@@ -38,6 +38,8 @@ export const Route = createFileRoute("/profile")({
 
 function Profile() {
   const { profile, role, user, refresh } = useAuth();
+  const [currentPwd, setCurrentPwd] = useState("");
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [pwd, setPwd] = useState("");
   const [pwdConfirm, setPwdConfirm] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -47,14 +49,33 @@ function Profile() {
 
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pwd.length < 6) { toast.error("La password deve avere almeno 6 caratteri"); return; }
+    if (!currentPwd) { toast.error("Inserisci la password corrente."); return; }
+    if (pwd.length < 6) { toast.error("La nuova password non rispetta i requisiti di sicurezza richiesti."); return; }
     if (!pwdConfirm) { toast.error("Conferma la nuova password"); return; }
-    if (pwd !== pwdConfirm) { toast.error("Le password non coincidono."); return; }
+    if (pwd !== pwdConfirm) { toast.error("Le nuove password non coincidono."); return; }
+    if (pwd === currentPwd) { toast.error("La nuova password deve essere diversa da quella corrente."); return; }
+    const email = user?.email;
+    if (!email) { toast.error("Utente non autenticato."); return; }
     setBusy(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPwd,
+    });
+    if (signInError) {
+      setBusy(false);
+      toast.error("La password corrente non è corretta.");
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: pwd });
     setBusy(false);
-    if (error) toast.error(error.message);
-    else { toast.success("Password aggiornata correttamente."); setPwd(""); setPwdConfirm(""); }
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password aggiornata correttamente.");
+      setCurrentPwd("");
+      setPwd("");
+      setPwdConfirm("");
+    }
   };
 
   // Account deletion is handled by DeleteAccountDialog (multi-step flow + RPC).
@@ -80,6 +101,29 @@ function Profile() {
         <h2 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4" />Cambia password</h2>
         <form onSubmit={changePassword} className="mt-3 space-y-3">
           <div>
+            <Label htmlFor="current-pwd">Password corrente *</Label>
+            <div className="relative mt-1">
+              <Input
+                id="current-pwd"
+                type={showCurrentPwd ? "text" : "password"}
+                required
+                autoComplete="current-password"
+                placeholder="Password corrente"
+                value={currentPwd}
+                onChange={e => setCurrentPwd(e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPwd(v => !v)}
+                aria-label={showCurrentPwd ? "Nascondi password" : "Mostra password"}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+              >
+                {showCurrentPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
             <Label htmlFor="new-pwd">Nuova password *</Label>
             <div className="relative mt-1">
               <Input
@@ -87,6 +131,7 @@ function Profile() {
                 type={showPwd ? "text" : "password"}
                 minLength={6}
                 required
+                autoComplete="new-password"
                 placeholder="Nuova password"
                 value={pwd}
                 onChange={e => setPwd(e.target.value)}
@@ -125,11 +170,11 @@ function Profile() {
               </button>
             </div>
             {pwdConfirm && pwd !== pwdConfirm && (
-              <p className="mt-1 text-xs text-destructive">Le password non coincidono.</p>
+              <p className="mt-1 text-xs text-destructive">Le nuove password non coincidono.</p>
             )}
           </div>
-          <Button type="submit" disabled={busy || !pwd || !pwdConfirm || pwd !== pwdConfirm}>
-            Aggiorna password
+          <Button type="submit" disabled={busy || !currentPwd || !pwd || !pwdConfirm || pwd !== pwdConfirm}>
+            {busy ? "Aggiornamento..." : "Aggiorna password"}
           </Button>
         </form>
       </div>
