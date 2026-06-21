@@ -64,13 +64,16 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
 
         // Notify restaurants of expired announcements
         if (expiredAnn && expiredAnn.length > 0) {
-          await supabaseAdmin.from('notifications').insert(
+          await (supabaseAdmin.from('notifications') as any).upsert(
             expiredAnn.map((a: any) => ({
               user_id: a.restaurant_id,
               title: 'Annuncio scaduto',
               body: 'Il tuo annuncio è scaduto senza essere assegnato.',
               link: '/announcements',
-            }))
+              metadata: { kind: 'announcement_expired', announcement_id: a.id },
+              dedupe_key: `announcement_expired:${a.id}:${a.restaurant_id}`,
+            })),
+            { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true }
           )
         }
 
@@ -82,15 +85,21 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
               title: 'Candidatura scaduta',
               body: 'Non hai risposto entro 24h. La candidatura è scaduta.',
               link: '/messages/' + a.id,
+              metadata: { kind: 'application_expired', application_id: a.id },
+              dedupe_key: `application_expired:${a.id}:${a.worker_id}`,
             },
             {
               user_id: a.restaurant_id,
               title: 'Candidatura scaduta',
               body: 'Il lavoratore non ha risposto in tempo.',
               link: '/messages/' + a.id,
+              metadata: { kind: 'application_expired', application_id: a.id },
+              dedupe_key: `application_expired:${a.id}:${a.restaurant_id}`,
             },
           ])
-          await supabaseAdmin.from('notifications').insert(notifs)
+          await (supabaseAdmin.from('notifications') as any).upsert(notifs, {
+            onConflict: 'user_id,dedupe_key', ignoreDuplicates: true,
+          })
         }
 
         // ---------------------------------------------------------------
@@ -162,28 +171,12 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
                 reviewedKey.add(`${r.shift_id}|${r.author_id}`),
               )
 
-              // Dedup notifiche già esistenti per (user_id, shift_id)
-              const { data: existingNotifs } = await supabaseAdmin
-                .from('notifications')
-                .select('user_id, metadata')
-                .contains('metadata', { kind: 'review_reminder_shift_end' })
-                .in(
-                  'user_id',
-                  Array.from(new Set(ended.map((s) => s.restaurant_id))) as string[],
-                )
-              const notifiedKey = new Set<string>()
-              ;((existingNotifs ?? []) as any[]).forEach((n) => {
-                const sid = n?.metadata?.shift_id
-                if (sid) notifiedKey.add(`${n.user_id}|${sid}`)
-              })
-
               const profMap = new Map<string, any>()
               ;((workerProfs ?? []) as any[]).forEach((p) => profMap.set(p.id, p))
 
               const toInsert: any[] = []
               for (const s of ended) {
                 if (reviewedKey.has(`${s.id}|${s.restaurant_id}`)) continue
-                if (notifiedKey.has(`${s.restaurant_id}|${s.id}`)) continue
                 const p = profMap.get(s.worker_id)
                 const workerName =
                   (p?.full_name as string | null) ||
@@ -200,13 +193,13 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
                     worker_id: s.worker_id,
                     announcement_id: s.announcement_id,
                   },
+                  dedupe_key: `review_reminder_shift_end:${s.id}:${s.restaurant_id}`,
                 })
               }
 
               if (toInsert.length > 0) {
-                const { error: insErr } = await supabaseAdmin
-                  .from('notifications')
-                  .insert(toInsert)
+                const { error: insErr } = await (supabaseAdmin.from('notifications') as any)
+                  .upsert(toInsert, { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true })
                 if (insErr) {
                   console.error('[PUPILLO_REVIEW_REMINDER_INSERT_ERROR]', insErr)
                 } else {
