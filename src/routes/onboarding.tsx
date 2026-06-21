@@ -2036,7 +2036,7 @@ function Onboarding() {
                     Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
                   </p>
                 </div>
-                <div>
+                <div data-field="birth_date">
                   <Label>Data di nascita *</Label>
                   <BirthDateSelect
                     value={personal.birth_date}
@@ -2047,11 +2047,11 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div>
+                <div data-field="birth_place">
                   <Label>Luogo di nascita *</Label>
                   <Input required value={personal.birth_place} onChange={(e) => setPersonal({ ...personal, birth_place: e.target.value })} />
                 </div>
-                <div>
+                <div data-field="tax_code">
                   <Label>Codice fiscale *</Label>
                   <Input
                     required
@@ -2063,7 +2063,7 @@ function Onboarding() {
                     <p className="text-xs text-destructive mt-1">Codice fiscale non valido.</p>
                   )}
                 </div>
-                <div>
+                <div data-field="nationality">
                   <Label>Nazionalità *</Label>
                   {(() => {
                     const NATIONALITIES = [
@@ -2107,7 +2107,7 @@ function Onboarding() {
                     );
                   })()}
                 </div>
-                <div>
+                <div data-field="residence_city">
                   <Label>Città di residenza *</Label>
                   <SearchableSelect
                     options={ALL_CITIES_WITH_PROVINCE.map((c) => ({
@@ -2130,7 +2130,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div>
+                <div data-field="residence_province">
                   <Label>Provincia *</Label>
                   <Input
                     value={personal.residence_province}
@@ -2140,7 +2140,7 @@ function Onboarding() {
                     aria-readonly="true"
                   />
                 </div>
-                <div>
+                <div data-field="residence_postal_code">
                   <Label>CAP *</Label>
                   <SearchableSelect
                     options={capsForCity(
@@ -2160,7 +2160,7 @@ function Onboarding() {
                     }
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2" data-field="residence_street">
                   <Label>Via / Indirizzo *</Label>
                   <Input
                     required
@@ -2176,7 +2176,7 @@ function Onboarding() {
                     }
                   />
                 </div>
-                <div>
+                <div data-field="residence_street_number">
                   <Label>Numero civico *</Label>
                   <Input
                     required
