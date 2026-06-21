@@ -456,7 +456,7 @@ function MessagesLayout() {
     if (t.status === "rejected" || t.status === "expired") return "archived";
     return "new";
   };
-  const categoryToPhase: Partial<Record<typeof category, RestPhase>> = {
+  const categoryToPhase: Record<string, RestPhase | undefined> = {
     candidature: "new",
     confermati: "confirmed",
     turni: "shift",
