@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock, CheckCheck, ExternalLink, Inbox, UserCheck, Archive, Briefcase, Star, ChevronRight } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock, CheckCheck, ExternalLink, Inbox, UserCheck, Archive, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
