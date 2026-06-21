@@ -117,13 +117,15 @@ const STATUS_LABEL: Record<string, string> = {
   draft: "Bozza", active: "Pubblicato", assigned: "Assegnato",
   completed: "Completato", cancelled: "Annullato", expired: "Scaduto",
 };
+// Aligned with "I miei turni" (src/routes/shifts.tsx `statusMeta`):
+// outline badge with `bg-{tone}-500/10 text-{tone}-700 border-{tone}-500/30`.
 const STATUS_CLS: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  active: "bg-emerald-500/15 text-emerald-700",
-  assigned: "bg-blue-500/15 text-blue-700",
-  completed: "bg-violet-500/15 text-violet-700",
-  cancelled: "bg-red-500/15 text-red-700",
-  expired: "bg-amber-500/15 text-amber-700",
+  draft: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  active: "bg-blue-500/10 text-blue-700 border-blue-500/30",
+  assigned: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  completed: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  cancelled: "bg-red-500/10 text-red-700 border-red-500/30",
+  expired: "bg-gray-500/10 text-gray-700 border-gray-500/30",
 };
 
 const APP_STATUS_LABEL: Record<string, string> = {
@@ -718,9 +720,9 @@ function AnnouncementDetail() {
         title={jobRequest?.role_required || ann.professional_profile || jobRequest?.title || `Servizio ${ann.speed} · ${ann.duration_hours}h`}
         subtitle={canSeeAddress ? (jobRequest?.restaurant_name || restaurantName) : `${publicVenueName} · Locale verificato · Nome visibile dopo conferma`}
         action={
-          <span className={`text-xs rounded-full px-3 py-1 ${STATUS_CLS[ann.status] ?? "bg-muted text-muted-foreground"}`}>
+          <Badge variant="outline" className={STATUS_CLS[ann.status] ?? "bg-muted text-muted-foreground"}>
             {STATUS_LABEL[ann.status] ?? ann.status}
-          </span>
+          </Badge>
         }
       />
 

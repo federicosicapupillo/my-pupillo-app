@@ -6,6 +6,7 @@ import { Component, Fragment, useEffect, useMemo, useState, type ReactNode } fro
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
@@ -396,14 +397,17 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Annullato",
 };
 
+// Status badge palette unified with "I miei turni" (src/routes/shifts.tsx
+// `statusMeta`): outline badge with `bg-{tone}-500/10 text-{tone}-700
+// border-{tone}-500/30` so announcements and shifts share the same look.
 const STATUS_CLS: Record<string, string> = {
-  draft: "bg-amber-100 text-amber-800",
-  active: "bg-green-100 text-green-800",
-  soon: "bg-yellow-100 text-yellow-900 border border-yellow-300",
-  assigned: "bg-blue-100 text-blue-800",
-  completed: "bg-blue-100 text-blue-800",
-  expired: "bg-red-100 text-red-800 border border-red-300",
-  cancelled: "bg-red-100 text-red-800",
+  draft: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  active: "bg-blue-500/10 text-blue-700 border-blue-500/30",
+  soon: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+  assigned: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  completed: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  expired: "bg-gray-500/10 text-gray-700 border-gray-500/30",
+  cancelled: "bg-red-500/10 text-red-700 border-red-500/30",
 };
 
 const STATUS_TABS: { key: "active" | "draft" | "assigned" | "completed" | "expired" | "cancelled"; label: string; activeClass: string; inactiveClass: string; badgeClass: string }[] = [
@@ -621,9 +625,9 @@ function AnnouncementsPage() {
               <span className="truncate">{formatRange(a)}</span>
             </div>
           </div>
-          <span className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 font-medium ${STATUS_CLS[eff.kind] ?? "bg-muted text-muted-foreground"}`}>
+          <Badge variant="outline" className={`shrink-0 ${STATUS_CLS[eff.kind] ?? "bg-muted text-muted-foreground"}`}>
             {STATUS_LABEL[eff.kind] ?? eff.kind}
-          </span>
+          </Badge>
         </div>
         <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${candCount > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
@@ -768,9 +772,9 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
             const eff = computeEffectiveStatus(a, now);
             return (
           <div className="flex flex-col items-end gap-1">
-            <span className={`text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[eff.kind] ?? 'bg-muted text-muted-foreground'}`}>
+            <Badge variant="outline" className={STATUS_CLS[eff.kind] ?? 'bg-muted text-muted-foreground'}>
               {STATUS_LABEL[eff.kind] ?? eff.kind}
-            </span>
+            </Badge>
             {role === "restaurant" && (
               <span
                 className={`inline-flex items-center gap-1 text-[11px] rounded-full px-2 py-0.5 font-medium ${(counts[a.id] ?? 0) > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
@@ -1650,9 +1654,9 @@ function AnnouncementDetailsDialog({
             </Section>
 
             <Section title="8. Stato annuncio">
-              <span className={`inline-block text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[statusKind] ?? "bg-muted"}`}>
+              <Badge variant="outline" className={STATUS_CLS[statusKind] ?? "bg-muted"}>
                 {STATUS_LABEL[statusKind] ?? statusKind}
-              </span>
+              </Badge>
             </Section>
 
             <Section title="9. Candidati e confermati">
@@ -1968,9 +1972,9 @@ function ProposalConfirmDialog({
           </Section>
 
           <Section title="7. Stato annuncio">
-            <span className={`inline-block text-xs rounded-full px-2 py-1 font-medium ${STATUS_CLS[statusKind] ?? "bg-muted"}`}>
+            <Badge variant="outline" className={STATUS_CLS[statusKind] ?? "bg-muted"}>
               {STATUS_LABEL[statusKind] ?? statusKind}
-            </span>
+            </Badge>
           </Section>
         </div>
 
