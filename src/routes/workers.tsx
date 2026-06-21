@@ -1351,12 +1351,13 @@ function WorkersPage() {
         return score(b) - score(a);
       }
     }
-    // Quando c'è un annuncio selezionato, i lavoratori il cui ruolo
-    // combacia col ruolo richiesto dall'annuncio vanno SEMPRE prima di
-    // quelli che non combaciano. I non compatibili restano visibili.
-    if (selectedAnn && announcementRole) {
-      const ra = workerMatchesRole(a, announcementRole) ? 0 : 1;
-      const rb = workerMatchesRole(b, announcementRole) ? 0 : 1;
+    // Quando c'è un ruolo "attivo" (ricerca avanzata oppure annuncio
+    // selezionato), i lavoratori COMPATIBILI con quella mansione vanno
+    // SEMPRE prima dei NON compatibili. I non compatibili restano visibili
+    // e mostrano un badge "Fuori mansione".
+    if (activeRoleContext) {
+      const ra = workerMatchesRole(a, activeRoleContext) ? 0 : 1;
+      const rb = workerMatchesRole(b, activeRoleContext) ? 0 : 1;
       if (ra !== rb) return ra - rb;
     }
     // Penalizzazione affidabilità (3+ ritardi confermati): i lavoratori
