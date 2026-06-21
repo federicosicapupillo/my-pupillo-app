@@ -4,7 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock, CheckCheck, ExternalLink, Inbox, UserCheck, Archive, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -138,6 +138,14 @@ function MessagesLayout() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Higher-level operational category filter, restaurant only.
+  // candidature = pending/interested/counter_offer
+  // confermati = accepted
+  // turni = there is a shift row for (announcement, worker)
+  // archiviati = rejected/expired
+  const [category, setCategory] = useState<"all" | "unread" | "candidature" | "confermati" | "turni" | "archiviati">("all");
+  // Map applicationId -> shiftId for restaurant quick "Vai al turno" links.
+  const [shiftByApp, setShiftByApp] = useState<Map<string, string>>(new Map());
   const [pendingReviewAppIds, setPendingReviewAppIds] = useState<Set<string>>(new Set());
   const [lastAnn, setLastAnn] = useState<{
     id: string;
@@ -263,6 +271,30 @@ function MessagesLayout() {
     } else {
       setPendingReviewAppIds(new Set());
     }
+    // Restaurant: build (announcement_id + worker_id) -> shift_id map for
+    // the "Vai al turno" quick action on accepted candidatures.
+    if (role === "restaurant" && annIds.length) {
+      const { data: sh } = await supabase
+        .from("shifts")
+        .select("id, announcement_id, worker_id")
+        .eq("restaurant_id", user.id)
+        .in("announcement_id", annIds);
+      const sMap = new Map<string, string>();
+      const keyOf = (annId: string, wId: string) => `${annId}::${wId}`;
+      const idx = new Map<string, string>();
+      for (const s of (sh ?? []) as any[]) {
+        if (s.announcement_id && s.worker_id && s.id) {
+          idx.set(keyOf(s.announcement_id, s.worker_id), s.id);
+        }
+      }
+      for (const a of list) {
+        const sid = idx.get(keyOf(a.announcement_id, a.worker_id));
+        if (sid) sMap.set(a.id, sid);
+      }
+      setShiftByApp(sMap);
+    } else {
+      setShiftByApp(new Map());
+    }
     setLoading(false);
   };
 
@@ -345,21 +377,60 @@ function MessagesLayout() {
     acc[t.status] = (acc[t.status] ?? 0) + 1;
     return acc;
   }, {});
+  // Restaurant operational categorization.
+  const threadCategory = (t: Thread): "candidature" | "confermati" | "turni" | "archiviati" => {
+    if (shiftByApp.has(t.id)) return "turni";
+    if (t.status === "accepted") return "confermati";
+    if (t.status === "rejected" || t.status === "expired") return "archiviati";
+    return "candidature";
+  };
+  const catCounts = {
+    all: threads.length,
+    unread: totalUnread,
+    candidature: threads.filter((t) => threadCategory(t) === "candidature").length,
+    confermati: threads.filter((t) => threadCategory(t) === "confermati").length,
+    turni: threads.filter((t) => threadCategory(t) === "turni").length,
+    archiviati: threads.filter((t) => threadCategory(t) === "archiviati").length,
+  };
+  const passesCategory = (t: Thread) => {
+    if (role !== "restaurant") return true;
+    if (category === "all") return true;
+    if (category === "unread") return t.unread > 0;
+    return threadCategory(t) === category;
+  };
   const visible = threads.filter((t) => {
     if (filter === "unread" && t.unread === 0) return false;
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (withUser && t.other.id !== withUser) return false;
+    if (!passesCategory(t)) return false;
     return true;
   });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
 
   // Build groups by other-user (visual only) when no specific user is focused
-  const groups = groupThreadsByOther(threads);
+  const groups = groupThreadsByOther(threads.filter(passesCategory));
   const visibleGroups = groups.filter((g) => {
     if (filter === "unread" && g.unread === 0) return false;
     if (statusFilter !== "all" && !g.items.some((t) => t.status === statusFilter)) return false;
     return true;
   });
+
+  // Mark all messages in this conversation as read for the current user.
+  const markThreadRead = async (applicationId: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("application_id", applicationId)
+      .neq("sender_id", user.id)
+      .is("read_at", null);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setThreads((prev) => clearThreadUnread(prev as any, applicationId) as typeof prev);
+    toast.success("Segnato come letto");
+  };
   const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "");
   // Build the inbox label so two applications with the same role but
   // different shift dates are visually distinguishable. Includes role,
@@ -462,7 +533,39 @@ function MessagesLayout() {
           </div>
         </div>
       )}
-      <div className={`${selectedId ? "hidden lg:block" : "block"} mb-4`} aria-label="Filtri conversazioni">
+      {role === "restaurant" && (
+        <div className={`${selectedId ? "hidden lg:block" : "block"} mb-3`} aria-label="Categorie comunicazioni">
+          <div className="flex flex-wrap gap-2">
+            {([
+              { k: "all", label: "Tutti", icon: Inbox, count: catCounts.all },
+              { k: "unread", label: "Non letti", icon: MessageSquare, count: catCounts.unread },
+              { k: "candidature", label: "Candidature", icon: UserCheck, count: catCounts.candidature },
+              { k: "confermati", label: "Confermati", icon: CheckCheck, count: catCounts.confermati },
+              { k: "turni", label: "Turni", icon: Briefcase, count: catCounts.turni },
+              { k: "archiviati", label: "Archiviati", icon: Archive, count: catCounts.archiviati },
+            ] as const).map((c) => {
+              const active = category === c.k;
+              const Icon = c.icon;
+              return (
+                <button
+                  key={c.k}
+                  type="button"
+                  onClick={() => setCategory(c.k)}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition whitespace-nowrap ${active ? "bg-primary text-primary-foreground border-primary shadow-neon" : "bg-card text-foreground border-border hover:bg-accent"}`}
+                  aria-pressed={active}
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                  {c.label}
+                  <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                    {c.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <div className={`${selectedId ? "hidden lg:block" : "block"} mb-4 ${role === "restaurant" ? "hidden" : ""}`} aria-label="Filtri conversazioni">
         <div className="flex flex-wrap gap-2 pb-1">
               {/* Tutte */}
               <button
@@ -754,6 +857,44 @@ function MessagesLayout() {
                                 </div>
                               </div>
                             </Link>
+                            {role === "restaurant" && (
+                              <div className="mt-1 flex flex-wrap gap-1 px-1 pb-1">
+                                <Link
+                                  to="/messages/$id"
+                                  params={{ id: t.id }}
+                                  className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                                >
+                                  <MessageSquare className="h-3 w-3" aria-hidden /> Apri conversazione
+                                </Link>
+                                {t.announcementId && (
+                                  <Link
+                                    to="/announcements/$id"
+                                    params={{ id: t.announcementId }}
+                                    className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                                  >
+                                    <ExternalLink className="h-3 w-3" aria-hidden /> Vedi annuncio
+                                  </Link>
+                                )}
+                                {shiftByApp.get(t.id) && (
+                                  <Link
+                                    to="/ristoratore/turni/$shiftId"
+                                    params={{ shiftId: shiftByApp.get(t.id)! }}
+                                    className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/25"
+                                  >
+                                    <Briefcase className="h-3 w-3" aria-hidden /> Vai al turno
+                                  </Link>
+                                )}
+                                {isUnread && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); markThreadRead(t.id); }}
+                                    className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
+                                  >
+                                    <CheckCheck className="h-3 w-3" aria-hidden /> Segna come letto
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </li>
                         );
                       })}
@@ -769,6 +910,36 @@ function MessagesLayout() {
         <section className={`${selectedId ? "block" : "hidden lg:block"} min-w-0`} aria-label="Chat conversazione">
           {selectedId ? (
             <Outlet />
+          ) : role === "restaurant" ? (
+            <div className="rounded-2xl border bg-card p-6">
+              <h2 className="text-base font-semibold text-foreground">Centro comunicazioni</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Qui vedi candidature, conferme e messaggi dei lavoratori. Seleziona una card a sinistra per leggere o rispondere, oppure usa i filtri per concentrarti su ciò che richiede attenzione.
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <button type="button" onClick={() => setCategory("unread")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Non letti</div>
+                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.unread}</div>
+                </button>
+                <button type="button" onClick={() => setCategory("candidature")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Candidature</div>
+                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.candidature}</div>
+                </button>
+                <button type="button" onClick={() => setCategory("confermati")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Confermati</div>
+                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.confermati}</div>
+                </button>
+                <button type="button" onClick={() => setCategory("turni")} className="rounded-xl border bg-background p-3 text-left hover:bg-accent">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Turni</div>
+                  <div className="mt-1 text-2xl font-bold text-foreground">{catCounts.turni}</div>
+                </button>
+              </div>
+              {threads.length === 0 && (
+                <div className="mt-6 rounded-xl border border-dashed bg-background/50 p-6 text-center text-sm text-muted-foreground">
+                  Qui vedrai candidature, conferme e messaggi dei lavoratori.
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex min-h-[520px] items-center justify-center rounded-2xl border bg-card p-10 text-center text-muted-foreground">
               Seleziona una conversazione per iniziare.
