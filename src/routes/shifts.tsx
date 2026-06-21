@@ -729,31 +729,44 @@ function ShiftsPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // For restaurants, archived shifts are hidden from every operational tab
+  // and surface only under the dedicated "Archiviati" tab. Workers are not
+  // affected by this field.
+  const isArchivedForRestaurant = (s: Shift) =>
+    role === "restaurant" && !!s.restaurant_archived_at;
+
   const filtered = useMemo(() => {
     if (filter === "upcoming") return [] as Shift[]; // pending applications rendered separately
-    if (filter === "assigned") return shifts.filter(s => s.status === "scheduled" && s.shift_date >= today);
-    if (filter === "completed") return shifts.filter(s => s.status === "completed");
-    if (filter === "past") return shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled");
+    if (filter === "archived") {
+      if (role !== "restaurant") return [] as Shift[];
+      return shifts.filter(s => !!s.restaurant_archived_at);
+    }
+    const base = shifts.filter(s => !isArchivedForRestaurant(s));
+    if (filter === "assigned") return base.filter(s => s.status === "scheduled" && s.shift_date >= today);
+    if (filter === "completed") return base.filter(s => s.status === "completed");
+    if (filter === "past") return base.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled");
     if (filter === "to-review") {
       if (role === "worker") {
-        return shifts.filter(s => s.status === "completed" && !reviewMap[s.id]);
+        return base.filter(s => s.status === "completed" && !reviewMap[s.id]);
       }
-      return shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
+      return base.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed");
     }
-    if (filter === "no_show") return shifts.filter(s => s.status === "no_show");
-    return shifts;
+    if (filter === "no_show") return base.filter(s => s.status === "no_show");
+    return base;
   }, [shifts, filter, reqByShift, today, role, reviewMap]);
 
   const counts = useMemo(() => {
-    const assigned = shifts.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
-    const past = shifts.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled").length;
-    const completed = shifts.filter(s => s.status === "completed").length;
+    const base = shifts.filter(s => !isArchivedForRestaurant(s));
+    const assigned = base.filter(s => s.status === "scheduled" && s.shift_date >= today).length;
+    const past = base.filter(s => (s.status === "scheduled" && s.shift_date < today) || s.status === "cancelled").length;
+    const completed = base.filter(s => s.status === "completed").length;
     const toReview = role === "worker"
-      ? shifts.filter(s => s.status === "completed" && !reviewMap[s.id]).length
-      : shifts.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
-    const noShow = shifts.filter(s => s.status === "no_show").length;
+      ? base.filter(s => s.status === "completed" && !reviewMap[s.id]).length
+      : base.filter(s => s.status === "completed" && reqByShift[s.id] && reqByShift[s.id].status !== "completed").length;
+    const noShow = base.filter(s => s.status === "no_show").length;
     const pending = role === "restaurant" ? pendingApps.length : 0;
-    return { pending, assigned, completed, past, toReview, noShow };
+    const archived = role === "restaurant" ? shifts.filter(s => !!s.restaurant_archived_at).length : 0;
+    return { pending, assigned, completed, past, toReview, noShow, archived };
   }, [shifts, pendingApps, reqByShift, role, today, reviewMap]);
 
   const displayShifts = useMemo(() => {
