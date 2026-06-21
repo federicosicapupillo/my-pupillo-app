@@ -2726,6 +2726,12 @@ function Thread() {
             if (m.action_type === "instructions_acknowledged") {
               return null;
             }
+            // I messaggi di chiusura chat (turno annullato/concluso) non vengono
+            // più mostrati come bubble nella conversazione; lo stato del turno
+            // rimane visibile nelle card "Dettagli turno" / "Istruzioni operative".
+            if (m.template_id === "chat_closed_cancelled" || m.template_id === "chat_closed_completed") {
+              return null;
+            }
             if (isSystem) {
               const isAccept = m.action_type === "accept_application";
               const isReject = m.action_type === "reject_application";
