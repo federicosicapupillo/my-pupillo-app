@@ -1668,69 +1668,20 @@ function ShiftsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <CancelShiftDialog
         open={!!cancelDialog}
-        onOpenChange={(open) => {
-          if (!open && !cancelSubmitting) {
-            setCancelDialog(null);
-            setCancelReason("");
-            setCancelError(null);
+        onOpenChange={(o) => { if (!o) { setCancelDialog(null); } }}
+        shiftId={cancelDialog?.id ?? null}
+        restaurantId={user?.id ?? null}
+        workerId={cancelDialog?.worker_id ?? null}
+        applicationId={cancelDialog?.announcement_id ? acceptedAppMap[cancelDialog.announcement_id]?.id ?? null : null}
+        onCancelled={() => {
+          if (cancelDialog) {
+            const id = cancelDialog.id;
+            setShifts(prev => prev.map(x => x.id === id ? { ...x, status: "cancelled" as const } : x));
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confermi l'annullamento del servizio?</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <p>Stai annullando un turno già assegnato.</p>
-            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-400">
-              L'annullamento non prevede alcun rimborso dei crediti o dei costi già sostenuti.
-            </p>
-            <p>Per correttezza verso il lavoratore, devi indicare una motivazione. La motivazione sarà inviata al lavoratore insieme alla comunicazione di annullamento.</p>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">
-              Motivo dell'annullamento <span className="text-destructive">*</span>
-            </label>
-            <Textarea
-              value={cancelReason}
-              onChange={(e) => { setCancelReason(e.target.value); if (cancelError) setCancelError(null); }}
-              placeholder="Scrivi il motivo dell'annullamento del servizio..."
-              rows={4}
-              maxLength={1000}
-              disabled={cancelSubmitting}
-            />
-            <div className="text-xs text-muted-foreground">
-              Minimo 10 caratteri ({cancelReason.trim().length}/10).
-            </div>
-          </div>
-          {cancelError && (
-            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="flex-1">{cancelError}</div>
-            </div>
-          )}
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              variant="outline"
-              onClick={() => { setCancelDialog(null); setCancelReason(""); setCancelError(null); }}
-              disabled={cancelSubmitting}
-            >
-              Torna indietro
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmCancel}
-              disabled={cancelSubmitting || cancelReason.trim().length < 10}
-              className="gap-1"
-            >
-              {cancelSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Conferma annullamento
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      />
 
       <ReportDelayDialog
         open={!!delayTarget}
