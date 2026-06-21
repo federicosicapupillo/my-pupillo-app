@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Phone, Shield, Star, Users } from "lucide-react";
+import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Shield, Star, Users } from "lucide-react";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
