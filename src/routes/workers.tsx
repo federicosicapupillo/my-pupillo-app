@@ -1157,8 +1157,8 @@ function WorkersPage() {
         if (s === "rating minimo 3+") return (w.rating_avg ?? 0) >= 3;
         if (s === "rating minimo 4+") return (w.rating_avg ?? 0) >= 4;
         if (s === "rating minimo 4.5+") return (w.rating_avg ?? 0) >= 4.5;
-        if (s === "affidabilità 80%+") return (w.reliability_pct ?? 0) >= 80;
-        if (s === "affidabilità 90%+") return (w.reliability_pct ?? 0) >= 90;
+        if (s === "affidabilità 80%+") return (w.completed_shifts ?? 0) >= 3 && (w.reliability_pct ?? 0) >= 80;
+        if (s === "affidabilità 90%+") return (w.completed_shifts ?? 0) >= 3 && (w.reliability_pct ?? 0) >= 90;
         if (s === "nessun no-show") return (w.no_shows ?? 0) === 0;
         return true;
       case "availability": {
@@ -1341,7 +1341,14 @@ function WorkersPage() {
     if (category === "all") {
       if (subcategory === "Ultimi attivi") return (new Date(b.last_active_at ?? 0).getTime()) - (new Date(a.last_active_at ?? 0).getTime());
       if (subcategory === "Miglior rating") return (b.rating_avg ?? 0) - (a.rating_avg ?? 0);
-      if (subcategory === "Più affidabili") return (b.reliability_pct ?? 0) - (a.reliability_pct ?? 0);
+      if (subcategory === "Più affidabili") {
+        // Profiles with fewer than 3 completed shifts don't yet have a
+        // credible reliability score; treat them as neutral (-1) so they
+        // sort after profiles that DO have a real score.
+        const score = (w: typeof a) =>
+          (w.completed_shifts ?? 0) >= 3 ? (w.reliability_pct ?? 0) : -1;
+        return score(b) - score(a);
+      }
     }
     // Quando c'è un annuncio selezionato, i lavoratori il cui ruolo
     // combacia col ruolo richiesto dall'annuncio vanno SEMPRE prima di
