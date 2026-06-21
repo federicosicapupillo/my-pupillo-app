@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CalendarClock, CheckCircle2, XCircle, AlertTriangle, Wifi, Star, MessageSquare, Clock, Eye, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Archive, RotateCcw } from "lucide-react";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { useRequiredReviews, type ActionShift } from "@/lib/required-reviews";
 import { getShiftEndDate } from "@/lib/announcement-time";
@@ -35,6 +36,7 @@ type Shift = {
   amount: number | null;
   status: "scheduled" | "completed" | "no_show" | "cancelled";
   created_at: string;
+  restaurant_archived_at?: string | null;
 };
 type Profile = { id: string; full_name: string | null; business_name: string | null; city: string | null };
 
