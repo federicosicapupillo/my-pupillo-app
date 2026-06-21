@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Bot, AlertTriangle, MessageCircle, X } from "lucide-react";
+import { Send, Bot, AlertTriangle, MessageCircle, X, ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -53,11 +53,12 @@ export function AssistantPanel({
   const faqs = useMemo(() => getContextualFaqs(loc.pathname, role), [loc.pathname, role]);
   const visibleFaqs = showAllFaqs ? faqs : faqs.slice(0, 6);
 
-  // Reset when reopening on a different page
+  // Reset when reopening on a different page or when opening the panel
   useEffect(() => {
     if (open) {
       setShowAllFaqs(false);
-      setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
+      setMessages([]);
+      setTimeout(() => scrollRef.current?.scrollTo({ top: 0 }), 50);
     }
   }, [open, loc.pathname]);
 
@@ -109,6 +110,20 @@ export function AssistantPanel({
 
   const body = (
     <div className="flex h-full flex-col">
+      {/* Back to topics */}
+      {messages.length > 0 && (
+        <div className="border-b bg-background px-3 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setMessages([])}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Torna agli argomenti
+          </Button>
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {/* Welcome */}
         <div className="flex items-start gap-2">
