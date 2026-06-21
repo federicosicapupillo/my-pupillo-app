@@ -18,6 +18,7 @@ import { useRequiredReviews } from "@/lib/required-reviews";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
+import { canRestaurantInviteWorker } from "@/lib/application-reapply";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -221,35 +222,52 @@ function Page() {
     if (!inviteFor || !user) return;
     setInviteSubmitting(true);
     try {
-      // Blocca se esiste già una candidatura/proposta attiva per questo annuncio.
-      const contact = await checkExistingContact({
-        announcementId: annId,
-        workerId: inviteFor.worker_id,
-      });
-      if (contact.existing) {
+      // Blocca duplicati attivi; consenti "Invita di nuovo" se esiste solo
+      // una vecchia richiesta chiusa (annullata dal lavoratore/ristoratore o
+      // scaduta): riusiamo la riga esistente per rispettare il vincolo
+      // UNIQUE(announcement_id, worker_id) e preservare lo storico chat.
+      const inviteDecision = await canRestaurantInviteWorker(inviteFor.worker_id, annId);
+      if (!inviteDecision.allowed) {
         setInviteFor(null);
-        setAlreadyContactAppId(contact.applicationId);
+        setAlreadyContactAppId(inviteDecision.applicationId);
         setInviteSubmitting(false);
         return;
       }
-      const { data: ins, error } = await supabase.from("applications")
-        .insert({
-          announcement_id: annId,
-          worker_id: inviteFor.worker_id,
-          restaurant_id: user.id,
-          status: "pending",
-        }).select("id").single();
-      if (error) {
-        if (isDuplicateContactError(error)) {
-          const c = await checkExistingContact({ announcementId: annId, workerId: inviteFor.worker_id });
-          setInviteFor(null);
-          setAlreadyContactAppId(c.existing ? c.applicationId : null);
-          setInviteSubmitting(false);
-          return;
+      let appId: string;
+      if (inviteDecision.mode === "reactivate") {
+        const { data: updated, error: reErr } = await supabase
+          .from("applications")
+          .update({
+            status: "pending",
+            restaurant_id: user.id,
+            proposed_tariff: null,
+            worker_response_at: null,
+          } as never)
+          .eq("id", inviteDecision.applicationId)
+          .select("id")
+          .single();
+        if (reErr || !updated) throw reErr ?? new Error("Impossibile riattivare la richiesta.");
+        appId = (updated as { id: string }).id;
+      } else {
+        const { data: ins, error } = await supabase.from("applications")
+          .insert({
+            announcement_id: annId,
+            worker_id: inviteFor.worker_id,
+            restaurant_id: user.id,
+            status: "pending",
+          }).select("id").single();
+        if (error) {
+          if (isDuplicateContactError(error)) {
+            const c = await checkExistingContact({ announcementId: annId, workerId: inviteFor.worker_id });
+            setInviteFor(null);
+            setAlreadyContactAppId(c.existing ? c.applicationId : null);
+            setInviteSubmitting(false);
+            return;
+          }
+          throw error;
         }
-        throw error;
+        appId = ins!.id as string;
       }
-      const appId = ins!.id as string;
       // Auto-message: graphical shift proposal pre-filled with announcement details.
       await sendShiftProposal({
         applicationId: appId,
