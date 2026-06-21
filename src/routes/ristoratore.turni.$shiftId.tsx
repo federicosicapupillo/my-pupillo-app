@@ -735,6 +735,18 @@ function ShiftDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CancelShiftDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        shiftId={shift?.id ?? null}
+        restaurantId={shift?.restaurant_id ?? null}
+        workerId={shift?.worker_id ?? null}
+        applicationId={appId}
+        onCancelled={() => {
+          if (shift) setShift({ ...shift, status: "cancelled" });
+        }}
+      />
     </AppShell>
   );
 }
