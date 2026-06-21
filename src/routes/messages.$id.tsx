@@ -2716,9 +2716,11 @@ function Thread() {
           const venueName = role === "worker"
             ? displayOtherName
             : (profile?.business_name || profile?.full_name || null);
-          const hasAcknowledged = msgs.some(
+          const ackMsg = msgs.find(
             (mm) => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
           );
+          const hasAcknowledged = !!ackMsg;
+          const acknowledgedAt = ackMsg?.created_at ?? null;
           return (
             <div className="mb-3" id="instructions-card" data-instructions-card>
               <ConfirmationCard
@@ -2728,6 +2730,7 @@ function Thread() {
                 announcementId={app?.announcement_id ?? null}
                 isWorker={role === "worker"}
                 acknowledged={hasAcknowledged}
+                acknowledgedAt={acknowledgedAt}
                 arrivalAdvanceMinutes={restaurantArrivalAdvance}
                 onAcknowledge={acknowledgeInstructions}
               />
@@ -2773,6 +2776,13 @@ function Thread() {
                   <ShiftClosedWithReviewCard review={existingReview} />
                 </div>
               );
+            }
+            // L'evento "lettura istruzioni" non è un vero messaggio chat:
+            // viene mostrato come stato nella card "Istruzioni operative"
+            // sopra la conversazione. Lo nascondiamo qui senza cancellare
+            // il record dal DB.
+            if (m.action_type === "instructions_acknowledged") {
+              return null;
             }
             if (isSystem) {
               const isAccept = m.action_type === "accept_application";
@@ -4405,10 +4415,11 @@ function ConfirmationCard(props: {
   announcementId: string | null;
   isWorker: boolean;
   acknowledged?: boolean;
+  acknowledgedAt?: string | null;
   arrivalAdvanceMinutes?: number | null;
   onAcknowledge?: () => Promise<void> | void;
 }) {
-  const { ann, venueName, applicationId, isWorker, acknowledged = false, arrivalAdvanceMinutes, onAcknowledge } = props;
+  const { ann, venueName, applicationId, isWorker, acknowledged = false, acknowledgedAt = null, arrivalAdvanceMinutes, onAcknowledge } = props;
   const [ackBusy, setAckBusy] = useState(false);
   const clean = (v: unknown): string => {
     if (v == null) return "";
@@ -4497,15 +4508,31 @@ function ConfirmationCard(props: {
           Ti consigliamo di arrivare almeno {advMin} minuti prima dell'orario di ingresso.
         </div>
 
+        {acknowledged && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+            <BadgeCheck className="h-4 w-4 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <div className="font-semibold">
+                {isWorker ? "Hai letto le istruzioni" : "Il lavoratore ha letto le istruzioni"}
+              </div>
+              {acknowledgedAt && (
+                <div className="text-xs opacity-80">
+                  Letto il {formatDateIT(acknowledgedAt)} alle {new Date(acknowledgedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {(showAckButton || acknowledged || !isWorker) && (
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-muted-foreground">
               {isWorker
                 ? (acknowledged
-                    ? "Hai confermato la lettura delle istruzioni."
+                    ? "Lettura registrata. Grazie!"
                     : "Conferma di aver letto le istruzioni prima del turno.")
                 : (acknowledged
-                    ? "Il lavoratore ha confermato la lettura delle istruzioni."
+                    ? "Lettura confermata."
                     : "In attesa di conferma lettura istruzioni da parte del lavoratore.")}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
