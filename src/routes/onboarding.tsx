@@ -902,8 +902,26 @@ function Onboarding() {
         (!idDocBackFile && !idDocBackPath)
       ) {
         setBusy(false); submittingRef.current = false;
-        // Surface the issued-specific message before the generic copy so
-        // the user knows exactly which date is missing.
+        // Generic banner + specific message + scroll to first missing field.
+        toast.error("Completa i campi obbligatori evidenziati.");
+        // Detect first missing required field (ordered as they appear on page).
+        const firstEmpty = ([
+          ["first_name", !personal.first_name.trim()],
+          ["last_name", !personal.last_name.trim()],
+          ["birth_date", !personal.birth_date],
+          ["birth_place", !personal.birth_place.trim()],
+          ["tax_code", !personal.tax_code.trim()],
+          ["nationality", !personal.nationality.trim()],
+          ["residence_city", !personal.residence_city.trim()],
+          ["residence_postal_code", !personal.residence_postal_code.trim()],
+          ["residence_street", !personal.residence_street.trim()],
+          ["residence_street_number", !personal.residence_street_number.trim()],
+          ["id_document_type", !personal.id_document_type],
+          ["id_document_number", !personal.id_document_number.trim()],
+          ["id_document_issued_at", !personal.id_document_issued_at],
+          ["id_document_expires_at", !personal.id_document_expires_at],
+          ["id_document_issuer", !personal.id_document_issuer.trim()],
+        ] as const).find(([, missing]) => missing)?.[0] ?? null;
         if (personal.birth_date && !birthOk) {
           const birthMsg =
             (isValidISODate(personal.birth_date)
@@ -911,12 +929,14 @@ function Onboarding() {
               : null) ?? "Data di nascita non valida.";
           setDateFieldErrors((prev) => ({ ...prev, birth_date: birthMsg }));
           toast.error(birthMsg);
+          scrollToField("birth_date");
         } else if (!personal.birth_date) {
           setDateFieldErrors((prev) => ({
             ...prev,
             birth_date: "Inserisci la tua data di nascita.",
           }));
           toast.error("Inserisci la tua data di nascita.");
+          scrollToField("birth_date");
         } else if (!personal.id_document_issued_at) {
           setDateFieldErrors((prev) => ({
             ...prev,
@@ -924,16 +944,28 @@ function Onboarding() {
               "Inserisci la data di rilascio del documento.",
           }));
           toast.error("Inserisci la data di rilascio del documento.");
+          scrollToField("id_document_issued_at");
         } else if (!cityEntry) {
           toast.error("Seleziona una città di residenza dall'elenco.");
+          scrollToField("residence_city");
         } else if (!capOk) {
           toast.error("Seleziona un CAP valido per la città scelta.");
+          scrollToField("residence_postal_code");
         } else if (!civicOk) {
           toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
+          scrollToField("residence_street_number");
         } else if (!idDocFile && !idDocPath) {
           toast.error("Carica il fronte del documento.");
+          scrollToField("sec-id-document");
         } else if (!idDocBackFile && !idDocBackPath) {
           toast.error("Carica il retro del documento.");
+          scrollToField("sec-id-document");
+        } else if (firstEmpty) {
+          toast.error("Campo obbligatorio mancante.");
+          scrollToField(firstEmpty);
+        } else if (!cfOk) {
+          toast.error("Codice fiscale non valido.");
+          scrollToField("tax_code");
         } else {
           toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
         }
@@ -1031,6 +1063,7 @@ function Onboarding() {
       if (!avatarFile && !avatarUrl) {
         setBusy(false); submittingRef.current = false;
         toast.error("Carica una foto profilo per completare il profilo.");
+        scrollToField("avatar");
         return;
       }
       if (idDocFile) {
@@ -1991,7 +2024,7 @@ function Onboarding() {
           </>
         ) : role === "worker" ? (
           <>
-            <div id="sec-avatar" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+            <div id="sec-avatar" data-field="avatar" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <Label className="font-semibold">Foto profilo *</Label>
               <p className="text-xs text-muted-foreground">
                 La foto verrà mostrata sulla tua scheda, nelle candidature e in chat.
@@ -2036,7 +2069,7 @@ function Onboarding() {
                     Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
                   </p>
                 </div>
-                <div>
+                <div data-field="birth_date">
                   <Label>Data di nascita *</Label>
                   <BirthDateSelect
                     value={personal.birth_date}
@@ -2047,11 +2080,11 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div>
+                <div data-field="birth_place">
                   <Label>Luogo di nascita *</Label>
                   <Input required value={personal.birth_place} onChange={(e) => setPersonal({ ...personal, birth_place: e.target.value })} />
                 </div>
-                <div>
+                <div data-field="tax_code">
                   <Label>Codice fiscale *</Label>
                   <Input
                     required
@@ -2063,7 +2096,7 @@ function Onboarding() {
                     <p className="text-xs text-destructive mt-1">Codice fiscale non valido.</p>
                   )}
                 </div>
-                <div>
+                <div data-field="nationality">
                   <Label>Nazionalità *</Label>
                   {(() => {
                     const NATIONALITIES = [
@@ -2107,7 +2140,7 @@ function Onboarding() {
                     );
                   })()}
                 </div>
-                <div>
+                <div data-field="residence_city">
                   <Label>Città di residenza *</Label>
                   <SearchableSelect
                     options={ALL_CITIES_WITH_PROVINCE.map((c) => ({
@@ -2130,7 +2163,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div>
+                <div data-field="residence_province">
                   <Label>Provincia *</Label>
                   <Input
                     value={personal.residence_province}
@@ -2140,7 +2173,7 @@ function Onboarding() {
                     aria-readonly="true"
                   />
                 </div>
-                <div>
+                <div data-field="residence_postal_code">
                   <Label>CAP *</Label>
                   <SearchableSelect
                     options={capsForCity(
@@ -2160,7 +2193,7 @@ function Onboarding() {
                     }
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2" data-field="residence_street">
                   <Label>Via / Indirizzo *</Label>
                   <Input
                     required
@@ -2176,7 +2209,7 @@ function Onboarding() {
                     }
                   />
                 </div>
-                <div>
+                <div data-field="residence_street_number">
                   <Label>Numero civico *</Label>
                   <Input
                     required
@@ -2209,7 +2242,7 @@ function Onboarding() {
             <div id="sec-documento" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">🪪 Documento di identità *</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                <div>
+                <div data-field="id_document_type">
                   <Label>Tipo documento *</Label>
                   <Select
                     value={personal.id_document_type}
@@ -2231,7 +2264,7 @@ function Onboarding() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div data-field="id_document_number">
                   <Label>Numero documento *</Label>
                   <Input
                     required
@@ -2299,7 +2332,7 @@ function Onboarding() {
                       </p>
                     )}
                 </div>
-                <div>
+                <div data-field="id_document_issued_at">
                   <Label>Data rilascio *</Label>
                   <DateField
                     required
@@ -2315,7 +2348,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div>
+                <div data-field="id_document_expires_at">
                   <Label>Data scadenza *</Label>
                   <DateField
                     required
@@ -2332,7 +2365,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2" data-field="id_document_issuer">
                   <Label>Ente di rilascio *</Label>
                   {(() => {
                     const ISSUER_OPTIONS = [
