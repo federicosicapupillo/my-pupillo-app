@@ -1110,6 +1110,7 @@ function Thread() {
   };
 
   const sendTemplate = async () => {
+    // legacy template sender kept for internal flows; UI uses free text
     if (sending) return;
     if (!app) {
       toast.error("Seleziona una conversazione prima di inviare un messaggio.");
