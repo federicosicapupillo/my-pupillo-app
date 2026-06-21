@@ -533,7 +533,39 @@ function MessagesLayout() {
           </div>
         </div>
       )}
-      <div className={`${selectedId ? "hidden lg:block" : "block"} mb-4`} aria-label="Filtri conversazioni">
+      {role === "restaurant" && (
+        <div className={`${selectedId ? "hidden lg:block" : "block"} mb-3`} aria-label="Categorie comunicazioni">
+          <div className="flex flex-wrap gap-2">
+            {([
+              { k: "all", label: "Tutti", icon: Inbox, count: catCounts.all },
+              { k: "unread", label: "Non letti", icon: MessageSquare, count: catCounts.unread },
+              { k: "candidature", label: "Candidature", icon: UserCheck, count: catCounts.candidature },
+              { k: "confermati", label: "Confermati", icon: CheckCheck, count: catCounts.confermati },
+              { k: "turni", label: "Turni", icon: Briefcase, count: catCounts.turni },
+              { k: "archiviati", label: "Archiviati", icon: Archive, count: catCounts.archiviati },
+            ] as const).map((c) => {
+              const active = category === c.k;
+              const Icon = c.icon;
+              return (
+                <button
+                  key={c.k}
+                  type="button"
+                  onClick={() => setCategory(c.k)}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition whitespace-nowrap ${active ? "bg-primary text-primary-foreground border-primary shadow-neon" : "bg-card text-foreground border-border hover:bg-accent"}`}
+                  aria-pressed={active}
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                  {c.label}
+                  <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                    {c.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <div className={`${selectedId ? "hidden lg:block" : "block"} mb-4 ${role === "restaurant" ? "hidden" : ""}`} aria-label="Filtri conversazioni">
         <div className="flex flex-wrap gap-2 pb-1">
               {/* Tutte */}
               <button
