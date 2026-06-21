@@ -443,6 +443,7 @@ function MapPage() {
   const [wMinReliab, setWMinReliab] = useState("any");
   const [wExp, setWExp] = useState("any");
   const [view, setView] = useState<"restaurants" | "workers">("restaurants");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // For restaurant accounts: never display other restaurants on the map
   useEffect(() => {
