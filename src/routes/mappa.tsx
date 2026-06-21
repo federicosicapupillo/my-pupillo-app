@@ -1750,8 +1750,6 @@ function MapPage() {
 
         {/* MAP */}
         <div ref={mapBoxRef} className="order-1 lg:order-2">
-          {(() => { return null; })()}
-          {(() => null)()}
           {loading ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground" style={{ minHeight: 500 }}>Caricamento mappa…</div>
           ) : isRestaurant ? (
