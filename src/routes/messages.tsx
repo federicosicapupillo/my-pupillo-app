@@ -407,12 +407,24 @@ function MessagesLayout() {
   });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
 
-  // Build groups by other-user (visual only) when no specific user is focused
+  // Build groups by other-user (visual only) when no specific user is focused.
+  // Restaurant and worker both see conversations grouped by partner name,
+  // with groups needing a reply (unread or open candidature) kept at the top.
   const groups = groupThreadsByOther(threads.filter(passesCategory));
   const visibleGroups = groups.filter((g) => {
     if (filter === "unread" && g.unread === 0) return false;
     if (statusFilter !== "all" && !g.items.some((t) => t.status === statusFilter)) return false;
     return true;
+  });
+  const needsReplyGroup = (g: ThreadGroup<Thread>) => {
+    if (g.unread > 0) return true;
+    return g.items.some((t) => t.status === "pending" || t.status === "interested" || t.status === "counter_offer");
+  };
+  const sortedGroups = [...visibleGroups].sort((a, b) => {
+    const aReply = needsReplyGroup(a) ? 1 : 0;
+    const bReply = needsReplyGroup(b) ? 1 : 0;
+    if (aReply !== bReply) return bReply - aReply;
+    return (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.name.localeCompare(b.name);
   });
 
   // Mark all messages in this conversation as read for the current user.
