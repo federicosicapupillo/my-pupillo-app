@@ -110,6 +110,20 @@ export function AssistantPanel({
 
   const body = (
     <div className="flex h-full flex-col">
+      {/* Back to topics */}
+      {messages.length > 0 && (
+        <div className="border-b bg-background px-3 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setMessages([])}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Torna agli argomenti
+          </Button>
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {/* Welcome */}
         <div className="flex items-start gap-2">
