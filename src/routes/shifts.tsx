@@ -20,6 +20,7 @@ import { WouldRehirePicker, type WouldRehireValue } from "@/components/WouldRehi
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { ReportDelayDialog, CancelPresenceDialog, type IncidentTarget } from "@/components/WorkerIncidentDialogs";
 import { formatShiftLocation, debugLocationFormat } from "@/lib/format-location";
+import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
