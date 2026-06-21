@@ -4,13 +4,13 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock, CheckCheck, ExternalLink, Inbox, UserCheck, Archive, Briefcase, Star, ChevronRight } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock, CheckCheck, ExternalLink, Inbox, UserCheck, Archive, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
-import { otherColumnForRole, groupThreadsByOther } from "@/lib/messages-grouping";
+import { otherColumnForRole, groupThreadsByOther, ThreadGroup } from "@/lib/messages-grouping";
 import {
   mergeThreadUpdate,
   previewChanged,
@@ -407,12 +407,24 @@ function MessagesLayout() {
   });
   const focusedName = withUser ? threads.find((t) => t.other.id === withUser)?.other.name : null;
 
-  // Build groups by other-user (visual only) when no specific user is focused
+  // Build groups by other-user (visual only) when no specific user is focused.
+  // Restaurant and worker both see conversations grouped by partner name,
+  // with groups needing a reply (unread or open candidature) kept at the top.
   const groups = groupThreadsByOther(threads.filter(passesCategory));
   const visibleGroups = groups.filter((g) => {
     if (filter === "unread" && g.unread === 0) return false;
     if (statusFilter !== "all" && !g.items.some((t) => t.status === statusFilter)) return false;
     return true;
+  });
+  const needsReplyGroup = (g: ThreadGroup<Thread>) => {
+    if (g.unread > 0) return true;
+    return g.items.some((t) => t.status === "pending" || t.status === "interested" || t.status === "counter_offer");
+  };
+  const sortedGroups = [...visibleGroups].sort((a, b) => {
+    const aReply = needsReplyGroup(a) ? 1 : 0;
+    const bReply = needsReplyGroup(b) ? 1 : 0;
+    if (aReply !== bReply) return bReply - aReply;
+    return (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.name.localeCompare(b.name);
   });
 
   // Mark all messages in this conversation as read for the current user.
@@ -443,25 +455,6 @@ function MessagesLayout() {
     return parts.join(" · ");
   };
 
-  // Restaurant-only: compute the workflow phase of each thread.
-  // Phases are surfaced as dashboard sections so the restaurateur sees
-  // only the key milestones (new application → confirmed → shift →
-  // review/archive). Pure derivation from existing data — no logic
-  // change, no extra fetch.
-  type RestPhase = "new" | "confirmed" | "shift" | "review" | "archived";
-  const restaurantPhase = (t: Thread): RestPhase => {
-    if (pendingReviewAppIds.has(t.id)) return "review";
-    if (shiftByApp.has(t.id)) return "shift";
-    if (t.status === "accepted") return "confirmed";
-    if (t.status === "rejected" || t.status === "expired") return "archived";
-    return "new";
-  };
-  const categoryToPhase: Record<string, RestPhase | undefined> = {
-    candidature: "new",
-    confermati: "confirmed",
-    turni: "shift",
-    archiviati: "archived",
-  };
 
   // Auto-expand any partner group that contains more than one application,
   // so two distinct candidatures for the same worker are immediately visible
@@ -702,23 +695,10 @@ function MessagesLayout() {
                 </p>
               )}
             </div>
-          ) : (withUser ? visible.length === 0 : visibleGroups.length === 0) ? (
+          ) : (withUser ? visible.length === 0 : sortedGroups.length === 0) ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
               Nessuna conversazione corrisponde ai filtri selezionati.
             </div>
-          ) : role === "restaurant" && !withUser ? (
-            <RestaurantDashboard
-              threads={threads.filter(passesCategory)}
-              category={category}
-              setCategory={setCategory}
-              shiftByApp={shiftByApp}
-              pendingReviewAppIds={pendingReviewAppIds}
-              restaurantPhase={restaurantPhase}
-              categoryToPhase={categoryToPhase}
-              selectedId={selectedId}
-              fmtThreadLabel={fmtThreadLabel}
-              markThreadRead={markThreadRead}
-            />
           ) : withUser ? (
             <div className="space-y-2">
               {visible.map((t) => {
@@ -761,7 +741,7 @@ function MessagesLayout() {
             </div>
           ) : (
             <div className="space-y-2">
-              {visibleGroups.map((g) => {
+              {sortedGroups.map((g) => {
                 const last = g.items[0];
                 const hasPendingReview = g.items.some((t) => pendingReviewAppIds.has(t.id));
                 const latestStatus = last?.status ?? null;
@@ -984,225 +964,3 @@ function MessagesLayout() {
   );
 }
 
-type RestPhaseKey = "review" | "new" | "confirmed" | "shift" | "archived";
-
-const PHASE_META: Record<RestPhaseKey, {
-  label: string;
-  desc: string;
-  Icon: typeof Star;
-  accent: string; // tailwind classes for the section header chip
-  step: string;   // short step label, e.g. "Step 1"
-}> = {
-  review: {
-    label: "Recensioni da inviare",
-    desc: "Turni conclusi in attesa della tua recensione.",
-    Icon: Star,
-    accent: "bg-amber-500/15 text-amber-700 border-amber-500/30",
-    step: "Step 4",
-  },
-  new: {
-    label: "Nuove candidature",
-    desc: "Candidati in attesa di una tua risposta.",
-    Icon: UserCheck,
-    accent: "bg-sky-500/15 text-sky-700 border-sky-500/30",
-    step: "Step 1",
-  },
-  confirmed: {
-    label: "Candidature confermate",
-    desc: "Hai accettato il candidato. Prossimo passo: turno.",
-    Icon: CheckCheck,
-    accent: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
-    step: "Step 2",
-  },
-  shift: {
-    label: "Turni assegnati",
-    desc: "Turni in corso o programmati con il lavoratore.",
-    Icon: Briefcase,
-    accent: "bg-primary/15 text-primary border-primary/30",
-    step: "Step 3",
-  },
-  archived: {
-    label: "Archivio",
-    desc: "Candidature rifiutate o scadute.",
-    Icon: Archive,
-    accent: "bg-muted text-muted-foreground border-border",
-    step: "—",
-  },
-};
-
-function RestaurantDashboard(props: {
-  threads: Thread[];
-  category: "all" | "unread" | "candidature" | "confermati" | "turni" | "archiviati";
-  setCategory: (c: "all" | "unread" | "candidature" | "confermati" | "turni" | "archiviati") => void;
-  shiftByApp: Map<string, string>;
-  pendingReviewAppIds: Set<string>;
-  restaurantPhase: (t: Thread) => RestPhaseKey;
-  categoryToPhase: Record<string, RestPhaseKey | undefined>;
-  selectedId: string;
-  fmtThreadLabel: (t: Thread) => string;
-  markThreadRead: (applicationId: string) => Promise<void> | void;
-}) {
-  const {
-    threads, category, shiftByApp, pendingReviewAppIds,
-    restaurantPhase, categoryToPhase, selectedId, fmtThreadLabel, markThreadRead,
-  } = props;
-
-  const byPhase: Record<RestPhaseKey, Thread[]> = {
-    review: [], new: [], confirmed: [], shift: [], archived: [],
-  };
-  for (const t of threads) byPhase[restaurantPhase(t)].push(t);
-  // sort within phase: unread first, then most recent.
-  (Object.keys(byPhase) as RestPhaseKey[]).forEach((k) => {
-    byPhase[k].sort((a, b) => {
-      if ((b.unread > 0 ? 1 : 0) !== (a.unread > 0 ? 1 : 0)) {
-        return (b.unread > 0 ? 1 : 0) - (a.unread > 0 ? 1 : 0);
-      }
-      return (b.lastAt ?? "").localeCompare(a.lastAt ?? "");
-    });
-  });
-
-  const onlyPhase = categoryToPhase[category];
-  const phaseOrder: RestPhaseKey[] = ["review", "new", "confirmed", "shift", "archived"];
-  const visiblePhases = phaseOrder.filter((p) => {
-    if (byPhase[p].length === 0) return false;
-    if (category === "unread") return byPhase[p].some((t) => t.unread > 0);
-    if (onlyPhase) return p === onlyPhase;
-    return true;
-  });
-
-  if (visiblePhases.length === 0) {
-    return (
-      <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
-        Nessuna comunicazione in questa sezione.
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {visiblePhases.map((phase) => {
-        const meta = PHASE_META[phase];
-        const items = category === "unread"
-          ? byPhase[phase].filter((t) => t.unread > 0)
-          : byPhase[phase];
-        if (items.length === 0) return null;
-        const Icon = meta.Icon;
-        return (
-          <section key={phase} aria-label={meta.label} className="space-y-2">
-            <header className="flex items-center justify-between gap-3">
-              <div className="min-w-0 flex items-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${meta.accent}`}>
-                  <Icon className="h-3.5 w-3.5" aria-hidden />
-                  {meta.step}
-                </span>
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold text-foreground">{meta.label}</h3>
-                  <p className="truncate text-xs text-muted-foreground">{meta.desc}</p>
-                </div>
-              </div>
-              <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-foreground">
-                {items.length}
-              </span>
-            </header>
-            <ul className="space-y-2" role="list">
-              {items.map((t) => {
-                const active = selectedId === t.id;
-                const isUnread = t.unread > 0;
-                const shiftId = shiftByApp.get(t.id) ?? null;
-                const needsReview = pendingReviewAppIds.has(t.id);
-                return (
-                  <li
-                    key={t.id}
-                    className={`rounded-2xl border transition ${active ? "border-primary/50 bg-primary/5" : isUnread ? "border-primary/40 bg-primary/5" : "border-border bg-card hover:bg-accent/40"}`}
-                  >
-                    <Link
-                      to="/messages/$id"
-                      params={{ id: t.id }}
-                      className="flex items-center gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
-                      aria-current={active ? "page" : undefined}
-                    >
-                      <div className="relative shrink-0">
-                        <UserAvatar userId={t.other.id} name={t.other.name} className="h-10 w-10" />
-                        {isUnread && (
-                          <span
-                            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-card flex items-center justify-center"
-                            aria-label={`${t.unread} non letti`}
-                          >
-                            {t.unread > 9 ? "9+" : t.unread}
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className={`min-w-0 truncate text-sm ${isUnread ? "font-semibold" : "font-medium"} text-foreground`}>
-                            {t.other.name}
-                          </div>
-                          <div className="shrink-0 text-[11px] text-muted-foreground">{formatWhen(t.lastAt)}</div>
-                        </div>
-                        <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {fmtThreadLabel(t)}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-1">
-                          <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
-                            {STATUS_LABELS[t.status] || t.status}
-                          </span>
-                          {needsReview && (
-                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                              Recensione
-                            </span>
-                          )}
-                          {shiftId && (
-                            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                              Turno assegnato
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="hidden sm:block shrink-0 h-4 w-4 text-muted-foreground" aria-hidden />
-                    </Link>
-                    <div className="flex flex-wrap gap-1 border-t px-3 py-2">
-                      <Link
-                        to="/messages/$id"
-                        params={{ id: t.id }}
-                        className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
-                      >
-                        <MessageSquare className="h-3 w-3" aria-hidden /> Apri
-                      </Link>
-                      {t.announcementId && (
-                        <Link
-                          to="/announcements/$id"
-                          params={{ id: t.announcementId }}
-                          className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
-                        >
-                          <ExternalLink className="h-3 w-3" aria-hidden /> Annuncio
-                        </Link>
-                      )}
-                      {shiftId && (
-                        <Link
-                          to="/ristoratore/turni/$shiftId"
-                          params={{ shiftId }}
-                          className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/25"
-                        >
-                          <Briefcase className="h-3 w-3" aria-hidden /> Turno
-                        </Link>
-                      )}
-                      {isUnread && (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); void markThreadRead(t.id); }}
-                          className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-[11px] font-medium hover:bg-accent"
-                        >
-                          <CheckCheck className="h-3 w-3" aria-hidden /> Letto
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
-    </div>
-  );
-}
