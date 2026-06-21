@@ -499,7 +499,9 @@ function StatCard({ icon: Icon, label, value, highlight }: { icon: typeof Briefc
   );
 }
 
-function AssignedShiftCard({ item, onClose }: { item: AssignedItem; onClose: () => void }) {
+function AssignedShiftCard({ item, onClose, onCancelled }: { item: AssignedItem; onClose: () => void; onCancelled?: (annId: string) => void }) {
+  const { user } = useAuth();
+  const [cancelOpen, setCancelOpen] = useState(false);
   const dateLabel = new Date(item.service_date).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" });
   const timeLabel = item.service_time ? item.service_time.slice(0, 5) : null;
   // Compute end time label: prefer explicit end_time, otherwise derive from duration.
