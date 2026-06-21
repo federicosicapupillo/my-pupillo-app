@@ -361,6 +361,40 @@ type LogEvent = {
 };
 
 const TERMINAL = ["accepted", "rejected", "expired", "cancelled"];
+const SHIFT_REVIEW_TEMPLATE_ID = "shift_closed_with_review";
+const CHAT_CLOSED_TEMPLATE_IDS = new Set(["chat_closed_cancelled", "chat_closed_completed"]);
+
+function isSystemChatEvent(m: Msg) {
+  const body = (m.body ?? "").toLowerCase();
+  return (
+    m.message_type === "system" ||
+    m.body?.startsWith("⚙️ Sistema:") ||
+    m.action_type === "instructions_acknowledged" ||
+    m.template_id === CONFIRMATION_TEMPLATE_ID ||
+    m.template_id === SHIFT_REVIEW_TEMPLATE_ID ||
+    (m.template_id != null && CHAT_CLOSED_TEMPLATE_IDS.has(m.template_id)) ||
+    body.includes("ho confermato di aver letto le istruzioni del servizio") ||
+    body.includes("lettura confermata") ||
+    body.includes("questa chat è ora disponibile solo come storico")
+  );
+}
+
+function isRealChatMessage(m: Msg) {
+  return (
+    !isSystemChatEvent(m) &&
+    !m.template_id &&
+    !m.action_type &&
+    (m.message_type === "user" || !m.message_type) &&
+    !!m.body?.trim()
+  );
+}
+
+function isDisplayableConversationMessage(m: Msg) {
+  if (isSystemChatEvent(m)) return false;
+  if (m.template_id === PROPOSAL_TEMPLATE_ID) return true;
+  if (m.template_id || m.message_type === "template") return false;
+  return !!m.body?.trim();
+}
 
 type TimelineEvent = { at: string; label: string; note?: string; tone: "neutral" | "success" | "error" };
 
