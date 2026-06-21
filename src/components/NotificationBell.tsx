@@ -10,7 +10,39 @@ import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { navigateFromNotificationLink } from "@/lib/notification-link";
 
-type Notif = { id: string; title: string; body: string | null; link: string | null; read: boolean | null; created_at: string };
+type Notif = {
+  id: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read: boolean | null;
+  created_at: string;
+  dedupe_key?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+/**
+ * Collapse legacy duplicates that predate the database `dedupe_key` index.
+ * For new rows the partial unique index already blocks duplicates at the
+ * source; this is a defensive UI safety net so old rows do not appear
+ * twice in the panel.
+ */
+function dedupeNotifs(list: Notif[]): Notif[] {
+  const seen = new Set<string>();
+  const out: Notif[] = [];
+  for (const n of list) {
+    const m = (n.metadata ?? {}) as Record<string, unknown>;
+    const key =
+      n.dedupe_key ||
+      (m.kind && (m.shift_id || m.application_id || m.announcement_id)
+        ? `${m.kind}:${m.shift_id ?? m.application_id ?? m.announcement_id}`
+        : `${n.title}|${n.body ?? ""}|${n.link ?? ""}`);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(n);
+  }
+  return out;
+}
 
 function canUseBrowserPush() {
   return typeof window !== "undefined" && "Notification" in window;
@@ -36,7 +68,7 @@ export function NotificationBell() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
-    setItems((data as Notif[]) ?? []);
+    setItems(dedupeNotifs((data as Notif[]) ?? []));
   };
 
   useEffect(() => { load(); }, [user?.id]);
@@ -49,7 +81,7 @@ export function NotificationBell() {
         const n = p.new as Notif;
         if (toastedRef.current.has(n.id)) return;
         toastedRef.current.add(n.id);
-        setItems(prev => prev.some(i => i.id === n.id) ? prev : [n, ...prev]);
+        setItems(prev => prev.some(i => i.id === n.id) ? prev : dedupeNotifs([n, ...prev]));
         // In-app toast
         toast.message(n.title, {
           description: n.body || undefined,
