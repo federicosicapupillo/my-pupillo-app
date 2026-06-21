@@ -775,7 +775,14 @@ function MapPage() {
       if (wBadge !== "any" && w.badge !== wBadge) return false;
       if (wExp !== "any" && w.experience_level !== wExp) return false;
       if (wMinRating !== "any" && Number(w.rating_avg || 0) < Number(wMinRating)) return false;
-      if (wMinReliab !== "any" && Number(w.reliability_pct || 0) < Number(wMinReliab)) return false;
+      if (wMinReliab !== "any") {
+        // New / under-evaluation profiles (< 3 completed shifts) are
+        // excluded from "minimum reliability" filters because their
+        // raw reliability_pct value isn't statistically meaningful yet.
+        const completed = Number(w.completed_shifts ?? 0);
+        if (completed < 3) return false;
+        if (Number(w.reliability_pct || 0) < Number(wMinReliab)) return false;
+      }
       const coords = getWorkerCoordinates(w);
       if (max != null && ref && coords.hasValidCoordinates && coords.lat != null && coords.lng != null) {
         if (distKm(ref.lat, ref.lng, coords.lat, coords.lng) > max) return false;
@@ -1577,7 +1584,12 @@ function MapPage() {
                             ratingAvg={w.rating_avg}
                             reviewsCount={w.reviews_count ?? null}
                           />
-                          {w.reliability_pct != null && <span>{w.reliability_pct}% affid.</span>}
+                          {(() => {
+                            const c = Number(w.completed_shifts ?? 0);
+                            if (c <= 0) return <span>Nuovo profilo</span>;
+                            if (c < 3) return <span>In valutazione</span>;
+                            return w.reliability_pct != null ? <span>{w.reliability_pct}% affid.</span> : null;
+                          })()}
                           {w.hourly_rate != null && <span>€ {Number(w.hourly_rate).toFixed(0)}/h</span>}
                         </div>
                       </div>
