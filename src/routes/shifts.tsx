@@ -506,6 +506,41 @@ function ShiftsPage() {
     }
   };
 
+  const confirmArchive = async () => {
+    const s = archiveDialog;
+    if (!s) return;
+    setArchiveSubmitting(true);
+    try {
+      const now = new Date().toISOString();
+      const { error } = await (supabase as any)
+        .from("shifts")
+        .update({ restaurant_archived_at: now })
+        .eq("id", s.id);
+      if (error) {
+        toast.error(error.message || "Impossibile archiviare il turno.");
+        return;
+      }
+      setShifts(prev => prev.map(x => x.id === s.id ? { ...x, restaurant_archived_at: now } : x));
+      toast.success("Turno archiviato. Lo trovi nella sezione Archiviati.");
+      setArchiveDialog(null);
+    } finally {
+      setArchiveSubmitting(false);
+    }
+  };
+
+  const restoreShift = async (s: Shift) => {
+    const { error } = await (supabase as any)
+      .from("shifts")
+      .update({ restaurant_archived_at: null })
+      .eq("id", s.id);
+    if (error) {
+      toast.error(error.message || "Impossibile ripristinare il turno.");
+      return;
+    }
+    setShifts(prev => prev.map(x => x.id === s.id ? { ...x, restaurant_archived_at: null } : x));
+    toast.success("Turno ripristinato.");
+  };
+
   const submitReview = async (s: Shift) => {
     if (!user) return;
     if (submittingReview) return;
