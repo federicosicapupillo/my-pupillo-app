@@ -902,8 +902,26 @@ function Onboarding() {
         (!idDocBackFile && !idDocBackPath)
       ) {
         setBusy(false); submittingRef.current = false;
-        // Surface the issued-specific message before the generic copy so
-        // the user knows exactly which date is missing.
+        // Generic banner + specific message + scroll to first missing field.
+        toast.error("Completa i campi obbligatori evidenziati.");
+        // Detect first missing required field (ordered as they appear on page).
+        const firstEmpty = ([
+          ["first_name", !personal.first_name.trim()],
+          ["last_name", !personal.last_name.trim()],
+          ["birth_date", !personal.birth_date],
+          ["birth_place", !personal.birth_place.trim()],
+          ["tax_code", !personal.tax_code.trim()],
+          ["nationality", !personal.nationality.trim()],
+          ["residence_city", !personal.residence_city.trim()],
+          ["residence_postal_code", !personal.residence_postal_code.trim()],
+          ["residence_street", !personal.residence_street.trim()],
+          ["residence_street_number", !personal.residence_street_number.trim()],
+          ["id_document_type", !personal.id_document_type],
+          ["id_document_number", !personal.id_document_number.trim()],
+          ["id_document_issued_at", !personal.id_document_issued_at],
+          ["id_document_expires_at", !personal.id_document_expires_at],
+          ["id_document_issuer", !personal.id_document_issuer.trim()],
+        ] as const).find(([, missing]) => missing)?.[0] ?? null;
         if (personal.birth_date && !birthOk) {
           const birthMsg =
             (isValidISODate(personal.birth_date)
@@ -911,12 +929,14 @@ function Onboarding() {
               : null) ?? "Data di nascita non valida.";
           setDateFieldErrors((prev) => ({ ...prev, birth_date: birthMsg }));
           toast.error(birthMsg);
+          scrollToField("birth_date");
         } else if (!personal.birth_date) {
           setDateFieldErrors((prev) => ({
             ...prev,
             birth_date: "Inserisci la tua data di nascita.",
           }));
           toast.error("Inserisci la tua data di nascita.");
+          scrollToField("birth_date");
         } else if (!personal.id_document_issued_at) {
           setDateFieldErrors((prev) => ({
             ...prev,
@@ -924,16 +944,25 @@ function Onboarding() {
               "Inserisci la data di rilascio del documento.",
           }));
           toast.error("Inserisci la data di rilascio del documento.");
+          scrollToField("id_document_issued_at");
         } else if (!cityEntry) {
           toast.error("Seleziona una città di residenza dall'elenco.");
+          scrollToField("residence_city");
         } else if (!capOk) {
           toast.error("Seleziona un CAP valido per la città scelta.");
+          scrollToField("residence_postal_code");
         } else if (!civicOk) {
           toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
+          scrollToField("residence_street_number");
         } else if (!idDocFile && !idDocPath) {
           toast.error("Carica il fronte del documento.");
+          scrollToField("sec-id-document");
         } else if (!idDocBackFile && !idDocBackPath) {
           toast.error("Carica il retro del documento.");
+          scrollToField("sec-id-document");
+        } else if (firstEmpty) {
+          toast.error("Campo obbligatorio mancante.");
+          scrollToField(firstEmpty);
         } else {
           toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
         }
