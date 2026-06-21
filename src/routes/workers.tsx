@@ -986,6 +986,19 @@ function WorkersPage() {
   // Apre il dialog di conferma proposta (oppure il dialog "seleziona annuncio" se mancante).
   const openProposalDialog = (worker: W) => {
     if (!selected) { setMissingAnnOpen(true); return; }
+    // Warn the restaurant if the worker hasn't selected the announcement's
+    // role among their declared mansioni. Non blocking: they can proceed.
+    const ann = anns.find((a) => a.id === selected) ?? selectedAnn;
+    const requiredRole = ann?.professional_profile ?? null;
+    const rc = getRoleCompatibility(worker, requiredRole);
+    if (rc.status === "not_compatible") {
+      const ok = typeof window !== "undefined"
+        ? window.confirm(
+            `Questo lavoratore non ha indicato "${rc.requiredRoleLabel}" tra le sue mansioni. Vuoi procedere comunque?`,
+          )
+        : true;
+      if (!ok) return;
+    }
     setProposalWorker(worker);
   };
 
