@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Phone, Shield, Star, Users } from "lucide-react";
+import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Shield, Star, Users } from "lucide-react";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
@@ -255,14 +255,8 @@ function WorkerDetailPage() {
             </div>
           </Card>
 
-          {contactAllowed && (w.phone || w.email) && (
+          {contactAllowed && w.email && (
             <Card title="Contatti">
-              {w.phone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${w.phone}`} className="text-primary hover:underline">{w.phone}</a>
-                </div>
-              )}
               {w.email && (
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
@@ -272,7 +266,7 @@ function WorkerDetailPage() {
             </Card>
           )}
           {!contactAllowed && (
-            <p className="text-xs text-muted-foreground">I contatti diretti del lavoratore sono visibili solo dopo aver accettato la candidatura.</p>
+            <p className="text-xs text-muted-foreground">Le comunicazioni avvengono tramite la chat interna Pupillo.</p>
           )}
         </div>
       </div>

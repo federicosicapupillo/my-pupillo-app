@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Award, MessageSquare, Star, ShieldCheck, BadgeCheck, Phone, FileCheck2, ShieldAlert } from "lucide-react";
+import { Award, MessageSquare, Star, ShieldCheck, BadgeCheck, Phone, FileCheck2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -51,9 +51,6 @@ export function ConfirmedWorkerCard({ worker, applicationId, lastReview }: Props
   const rating = worker.rating_avg != null ? Number(worker.rating_avg) : null;
   const reviewsCount = worker.reviews_count ?? 0;
   const completed = worker.completed_shifts ?? 0;
-  const rawPhone = worker.is_deleted ? null : (worker.phone_full || worker.phone || null);
-  const phoneDisplay = rawPhone ? formatPhoneDisplay(rawPhone) : null;
-  const waUrl = rawPhone && worker.phone_verified ? buildWhatsAppUrl(rawPhone) : null;
 
   return (
     <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-5">
@@ -142,19 +139,6 @@ export function ConfirmedWorkerCard({ worker, applicationId, lastReview }: Props
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t">
-        {phoneDisplay && (
-          <div className="w-full mb-1 rounded-lg border bg-card p-3 text-sm">
-            <div className="text-xs text-muted-foreground mb-1">Contatto diretto</div>
-            <div className="font-medium inline-flex items-center gap-2">
-              <Phone className="h-4 w-4 text-emerald-600" /> {phoneDisplay}
-              {worker.phone_verified ? (
-                <Badge variant="outline" className="border-emerald-500/40 text-emerald-700">verificato</Badge>
-              ) : (
-                <Badge variant="outline" className="border-amber-500/40 text-amber-700">non verificato</Badge>
-              )}
-            </div>
-          </div>
-        )}
         {applicationId ? (
           <Link to="/messages/$id" params={{ id: applicationId }}>
             <Button size="sm" className="gap-1">
@@ -166,47 +150,10 @@ export function ConfirmedWorkerCard({ worker, applicationId, lastReview }: Props
             <MessageSquare className="h-4 w-4" /> Chat non disponibile
           </Button>
         )}
-        {waUrl && (
-          <a href={waUrl} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="outline" className="gap-1 border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10">
-              <MessageSquare className="h-4 w-4" /> Scrivi su WhatsApp
-            </Button>
-          </a>
-        )}
         <Link to="/workers/$id" params={{ id: worker.id }}>
           <Button size="sm" variant="outline">Vedi scheda</Button>
         </Link>
       </div>
-      <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
-        <ShieldAlert className="h-3.5 w-3.5 mt-px shrink-0 opacity-70" aria-hidden="true" />
-        <span>
-          Ti consigliamo di utilizzare la chat interna Pupillo per mantenere tracciabili
-          le comunicazioni e tutelare entrambe le parti in caso di incomprensioni o contestazioni.
-        </span>
-      </p>
     </div>
   );
-}
-
-/** Normalize a phone string to digits-only with country code, for wa.me. */
-function buildWhatsAppUrl(phone: string): string | null {
-  let digits = String(phone).replace(/[^\d+]/g, "");
-  if (digits.startsWith("+")) digits = digits.slice(1);
-  else if (digits.startsWith("00")) digits = digits.slice(2);
-  // If looks like an Italian local number (no country code), prepend 39.
-  if (digits.length === 10 && (digits.startsWith("3") || digits.startsWith("0"))) {
-    digits = `39${digits}`;
-  }
-  if (digits.length < 8) return null;
-  return `https://wa.me/${digits}`;
-}
-
-/** Human-friendly phone display, with leading + for international numbers. */
-function formatPhoneDisplay(phone: string): string {
-  const raw = String(phone).trim();
-  if (raw.startsWith("+")) return raw;
-  const digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("00")) return `+${digits.slice(2)}`;
-  if (digits.length > 10) return `+${digits}`;
-  return raw;
 }
