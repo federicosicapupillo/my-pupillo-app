@@ -22,7 +22,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy, Sparkles, Wand2, CalendarIcon, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CalendarDays, Save, Plus, Trash2, Zap, MapPin, Copy, Sparkles, Wand2, CalendarIcon, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
