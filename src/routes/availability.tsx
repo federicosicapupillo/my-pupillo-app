@@ -1029,23 +1029,25 @@ function AvailabilityPage() {
                 </label>
 
                 {d.slots.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {d.slots.map((s) => (
-                      <div key={s.time_slot} className="rounded-lg border p-3 space-y-2">
+                      <div key={s.time_slot} className="rounded-xl border border-border/80 bg-card/50 p-3.5 sm:p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <Badge variant="secondary">{SLOT_LABELS[s.time_slot]}</Badge>
+                          <Badge variant="secondary" className="font-medium">
+                            {SLOT_LABELS[s.time_slot]}
+                          </Badge>
                           {s.time_slot === "last_minute" && (
                             <span className="text-xs text-muted-foreground">Nessun orario fisso</span>
                           )}
                         </div>
                         {s.time_slot !== "last_minute" && (
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-xs text-muted-foreground mb-1">Dalle</label>
+                              <label className="block text-xs text-muted-foreground mb-1.5">Dalle</label>
                               <Input type="time" value={s.start_time ?? ""} onChange={(e) => updateSlotTime(i, s.time_slot, "start_time", e.target.value)} />
                             </div>
                             <div>
-                              <label className="block text-xs text-muted-foreground mb-1">Alle</label>
+                              <label className="block text-xs text-muted-foreground mb-1.5">Alle</label>
                               <Input type="time" value={s.end_time ?? ""} onChange={(e) => updateSlotTime(i, s.time_slot, "end_time", e.target.value)} />
                             </div>
                           </div>
@@ -1055,17 +1057,18 @@ function AvailabilityPage() {
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Note sulla disponibilità (facoltative)</label>
+                <div className="space-y-2">
+                  <label className="text-xs text-muted-foreground">Note sulla disponibilità (facoltative)</label>
                   <Textarea
                     value={d.notes}
                     onChange={(e) => updateDay(i, { notes: e.target.value })}
                     placeholder="Es. Preferisco turni serali in zona centro"
                     rows={2}
+                    className="bg-card/50"
                   />
                 </div>
 
-                <div className="flex flex-wrap justify-end gap-2 pt-1">
+                <div className="flex flex-col-reverse sm:flex-row sm:flex-wrap justify-end gap-2 pt-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -1079,7 +1082,7 @@ function AvailabilityPage() {
                   <Button
                     type="button"
                     size="sm"
-                    className={`gap-2 ${gatedOpacity}`}
+                    className={cn("gap-2", gatedOpacity)}
                     onClick={() => requireCompleteForAvailability(() => saveAndClose(i))()}
                     disabled={saving || copying}
                   >
