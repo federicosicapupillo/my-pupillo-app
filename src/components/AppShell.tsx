@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createDebouncedReload } from "@/lib/inbox-realtime";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { AssistantFab } from "@/components/assistant/AssistantFab";
+import { GuidedTour } from "@/components/GuidedTour";
 
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -27,19 +28,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const items = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    role === "restaurant" && { to: "/announcements", label: "I miei annunci", icon: Briefcase },
-    role === "restaurant" && { to: "/workers", label: "Cerca lavoratori", icon: Search },
+    role === "restaurant" && { to: "/announcements", label: "I miei annunci", icon: Briefcase, tour: "restaurant-announcements" },
+    role === "restaurant" && { to: "/workers", label: "Cerca lavoratori", icon: Search, tour: "restaurant-candidates" },
     role === "restaurant" && { to: "/ristoratore/collaboratori", label: "Collaboratori", icon: Users },
     role === "worker" && { to: "/jobs", label: "Offerte ricevute", icon: Briefcase },
     role === "worker" && { to: "/browse", label: "Trova offerte", icon: Compass },
-    role === "worker" && { to: "/availability", label: "Disponibilità", icon: CalendarDays },
-    (role === "worker" || role === "restaurant") && { to: "/shifts", label: "I miei turni", icon: CalendarClock },
+    role === "worker" && { to: "/availability", label: "Disponibilità", icon: CalendarDays, tour: "worker-availability" },
+    (role === "worker" || role === "restaurant") && { to: "/shifts", label: "I miei turni", icon: CalendarClock, tour: role === "worker" ? "worker-shifts" : undefined },
     (role === "worker" || role === "restaurant") && { to: "/mappa", label: "Mappa", icon: MapIcon },
-    { to: "/messages", label: "Messaggi", icon: MessageSquare },
+    { to: "/messages", label: "Messaggi", icon: MessageSquare, tour: "messages" },
     role === "restaurant" && { to: "/billing", label: "Crediti", icon: Coins },
-    { to: "/profile", label: "Profilo", icon: Settings },
+    { to: "/profile", label: "Profilo", icon: Settings, tour: "profile" },
     role === "admin" && { to: "/admin", label: "Admin", icon: Shield },
-  ].filter(Boolean) as { to: string; label: string; icon: typeof LayoutDashboard }[];
+  ].filter(Boolean) as { to: string; label: string; icon: typeof LayoutDashboard; tour?: string }[];
 
   // Breadcrumbs basati sul path corrente
   const labelByPath: Record<string, string> = items.reduce((acc, i) => ({ ...acc, [i.to]: i.label }), {} as Record<string, string>);
@@ -171,7 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <div className="hidden md:flex items-center gap-1">
             {items.map((i) => (
-              <Link key={i.to} to={i.to as never}>
+              <Link key={i.to} to={i.to as never} data-tour={i.tour}>
                 <Button variant={loc.pathname.startsWith(i.to) ? "secondary" : "ghost"} size="sm" className="gap-2">
                   <i.icon className="h-4 w-4" />{i.label}
                   {i.to === "/messages" && unreadMsgs > 0 && (
@@ -246,6 +247,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   role="menuitem"
                   aria-current={isActive ? "page" : undefined}
                   className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  data-tour={i.tour}
                   onClick={() => setMobileOpen(false)}
                 >
                   <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap">
@@ -292,6 +294,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
       <main className="mx-auto max-w-7xl px-3 sm:px-4 py-4 sm:py-8">{children}</main>
       <AssistantFab />
+      <GuidedTour />
     </div>
   );
 }
