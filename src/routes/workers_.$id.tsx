@@ -147,10 +147,10 @@ function WorkerDetailPage() {
     if (!l) return "—";
     const map: Record<string, string> = {
       prima_esperienza: "Prima esperienza",
-      junior: "Junior",
-      intermediate: "Intermedio",
-      esperto: "Esperto",
+      junior: "Basic",
+      intermediate: "Pro",
       senior: "Senior",
+      esperto: "Esperto",
     };
     return map[l] || l;
   };

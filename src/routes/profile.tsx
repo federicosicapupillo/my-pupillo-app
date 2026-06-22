@@ -604,10 +604,10 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
     if (!l) return "—";
     const map: Record<string, string> = {
       prima_esperienza: "Prima esperienza",
-      junior: "Junior",
-      intermediate: "Intermedio",
-      esperto: "Esperto",
+      junior: "Basic",
+      intermediate: "Pro",
       senior: "Senior",
+      esperto: "Esperto",
     };
     return map[l] || l;
   };
@@ -642,11 +642,10 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
 
   const LEVEL_OPTIONS = [
     { value: "", label: "Non specificato" },
-    { value: "prima_esperienza", label: "Prima esperienza" },
-    { value: "junior", label: "Junior" },
-    { value: "intermediate", label: "Intermedio" },
-    { value: "esperto", label: "Esperto" },
+    { value: "junior", label: "Basic" },
+    { value: "intermediate", label: "Pro" },
     { value: "senior", label: "Senior" },
+    { value: "esperto", label: "Esperto" },
   ];
 
   const RATE_OPTIONS = [
