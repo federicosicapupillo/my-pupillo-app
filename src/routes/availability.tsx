@@ -1373,15 +1373,20 @@ function AvailabilityPage() {
           </CardContent>
         </Card>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           {exceptions.length === 0 && (
-            <div className="rounded-xl border border-dashed p-6 text-center">
-              <Sparkles className="h-6 w-6 mx-auto text-muted-foreground/50" />
-              <p className="mt-2 text-sm text-muted-foreground">Nessuna disponibilità speciale impostata.</p>
+            <div className="rounded-xl border border-dashed border-border/80 bg-card/40 p-7 sm:p-8 text-center">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-muted">
+                <Sparkles className="h-5 w-5 text-muted-foreground/70" />
+              </div>
+              <p className="mt-3 text-sm font-medium">Nessuna disponibilità speciale</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Aggiungi eccezioni per date specifiche, ad esempio festivi o giorni fuori routine.
+              </p>
             </div>
           )}
           {exceptions.map((e) => (
-            <div key={e.id} className="rounded-lg border p-3 flex flex-wrap items-center gap-3 text-sm">
+            <div key={e.id} className="rounded-xl border border-border/80 bg-card/60 p-3.5 sm:p-4 flex flex-wrap items-center gap-3 text-sm transition-colors hover:bg-card/80">
               <Badge variant={e.is_available ? "default" : "destructive"}>
                 {e.is_available ? "Disponibile" : "Non disponibile"}
               </Badge>
@@ -1490,17 +1495,29 @@ function AvailabilityPage() {
       </div>
 
       {/* ───────── Sticky save bar (mobile) ───────── */}
-      <div className="sm:hidden h-20" aria-hidden />
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3">
+      <div className="sm:hidden h-24" aria-hidden />
+      <div className={cn(
+        "sm:hidden fixed bottom-0 inset-x-0 z-40 border-t p-4 transition-colors",
+        dirty
+          ? "border-amber-500/30 bg-background/98 backdrop-blur supports-[backdrop-filter]:bg-background/90 shadow-[0_-8px_30px_-10px_rgba(0,0,0,0.3)]"
+          : "border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      )}>
         <div className="flex items-center gap-3">
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium shrink-0", SAVE_PILL.cls)}>
+          <span className={cn(
+            "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold shrink-0",
+            SAVE_PILL.cls
+          )}>
             <SAVE_PILL.Icon className={cn("h-3 w-3", SAVE_PILL.spin && "animate-spin")} />
-            <span className="truncate max-w-[110px]">{SAVE_PILL.label}</span>
+            <span className="truncate max-w-[120px]">{SAVE_PILL.label}</span>
           </span>
           <Button
             onClick={saveGated}
             disabled={saving || loading || !dirty}
-            className={cn("flex-1 gap-2 h-11 text-base", gatedOpacity)}
+            className={cn(
+              "flex-1 gap-2 h-12 text-base font-semibold",
+              gatedOpacity,
+              dirty && "shadow-neon"
+            )}
           >
             <Save className="h-4 w-4" />
             {saving ? "Salvataggio..." : "Salva disponibilità"}
