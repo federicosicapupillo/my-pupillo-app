@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { RequireRole } from "@/components/RequireRole";
-import { AppShell, PageHeader } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -22,7 +22,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CalendarDays, Save, Plus, Trash2, Zap, Info, MapPin, Copy, Pencil, ChevronDown, Sparkles, Wand2, CalendarIcon } from "lucide-react";
+import { CalendarDays, Save, Plus, Trash2, Zap, MapPin, Copy, Sparkles, Wand2, CalendarIcon, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
@@ -184,6 +184,7 @@ function AvailabilityPage() {
   type PresetType = "all" | "weekend" | "cena" | "pranzo";
   const [confirmPreset, setConfirmPreset] = useState<{ type: PresetType; title: string; message: string } | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [copying, setCopying] = useState(false);
   const [addingException, setAddingException] = useState(false);
   type ExcErrors = Partial<Record<"date" | "is_available" | "time_slot" | "city" | "district" | "radius_km" | "time", string>>;
@@ -523,6 +524,7 @@ function AvailabilityPage() {
         if (insErr) throw insErr;
       }
       setDirty(false);
+      setLastSavedAt(new Date());
       if (!opts.silent) toast.success("Disponibilità salvate");
       return true;
     } catch (e: unknown) {
@@ -677,39 +679,108 @@ function AvailabilityPage() {
   const toggleAvailableNowGated = requireCompleteForAvailability(toggleAvailableNow);
   const gatedOpacity = canPerformOperationalAction ? "" : "opacity-70";
 
+  // Derived save status for the header pill / sticky CTA
+  const saveStatus: "saving" | "dirty" | "saved" | "idle" =
+    saving ? "saving" : dirty ? "dirty" : lastSavedAt ? "saved" : "idle";
+
+  const SAVE_PILL = {
+    saving: { label: "Salvataggio…", cls: "border-primary/40 bg-primary/10 text-primary", Icon: Loader2, spin: true },
+    dirty: { label: "Modifiche non salvate", cls: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400", Icon: AlertCircle, spin: false },
+    saved: { label: "Tutto salvato", cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", Icon: CheckCircle2, spin: false },
+    idle: { label: "Nessuna modifica", cls: "border-border bg-muted text-muted-foreground", Icon: CheckCircle2, spin: false },
+  }[saveStatus];
+
+  // Default the weekly editor to "today" on first load so the user never lands
+  // on an empty agenda. DAY_LABELS is Mon-first; JS getDay() is Sun-first.
+  useEffect(() => {
+    if (loading) return;
+    if (editingDay != null) return;
+    const dow = new Date().getDay();
+    const idx = dow === 0 ? 6 : dow - 1;
+    setEditingDay(idx);
+  }, [loading, editingDay]);
+
   return (
     <AppShell>
-      <PageHeader
-        title="Le mie disponibilità"
-        subtitle="Indica quando e dove sei disponibile a ricevere proposte di lavoro."
-        action={
-          <Button onClick={saveGated} disabled={saving || loading} className={`gap-2 ${gatedOpacity}`}>
-            <Save className="h-4 w-4" /> {saving ? "Salvataggio..." : "Salva disponibilità settimanale"}
-          </Button>
-        }
-      />
+      {/* ───────── HERO HEADER: titolo, riepilogo, stato e CTA primaria ───────── */}
+      <header className="mb-6 rounded-2xl border bg-card/60 p-5 sm:p-6 shadow-sm">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl sm:text-3xl font-bold tracking-tight">Le mie disponibilità</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tocca un giorno per modificarlo. Salva quando hai finito.
+            </p>
+          </div>
+          <div className="hidden sm:flex shrink-0 items-center gap-3">
+            <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", SAVE_PILL.cls)}>
+              <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
+              {SAVE_PILL.label}
+            </span>
+            <Button
+              onClick={saveGated}
+              disabled={saving || loading || !dirty}
+              size="lg"
+              className={cn("gap-2 shadow-sm", gatedOpacity)}
+            >
+              <Save className="h-4 w-4" />
+              {saving ? "Salvataggio..." : "Salva disponibilità"}
+            </Button>
+          </div>
+        </div>
 
-      {/* Available now */}
-      <Card className="mb-6">
-        <CardContent className="p-5 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-3 flex-1 min-w-[220px]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Zap className="h-5 w-5" />
+        {/* Riepilogo sintetico */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1 text-xs">
+            <CalendarDays className="h-3.5 w-3.5 text-primary" />
+            <strong className="tabular-nums">{summary.active}</strong>/7 giorni
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1 text-xs">
+            <Zap className="h-3.5 w-3.5 text-primary" />
+            <strong className="tabular-nums">{summary.totalSlots}</strong> {summary.totalSlots === 1 ? "fascia" : "fasce"}
+          </span>
+          {summary.prevalentCity && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-foreground">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              <strong>{summary.prevalentCity}</strong>
+            </span>
+          )}
+          {summary.nextSpecial && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1 text-xs text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              Speciale {new Date(summary.nextSpecial.date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+              {summary.nextSpecial.city ? ` · ${summary.nextSpecial.city}` : ""}
+            </span>
+          )}
+        </div>
+
+        {/* Mobile: pill stato (CTA è nella bottom bar sticky) */}
+        <div className="sm:hidden mt-4">
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", SAVE_PILL.cls)}>
+            <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
+            {SAVE_PILL.label}
+          </span>
+        </div>
+      </header>
+
+      {/* ───────── DISPONIBILE ORA — funzione veloce e separata ───────── */}
+      <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+        <CardContent className="p-4 sm:p-5 grid grid-cols-[auto_minmax(0,1fr)_auto] sm:flex sm:flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Zap className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 sm:flex-1">
+            <div className="font-semibold">Disponibile ora</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">
+              Attiva per ricevere proposte immediate, a prescindere dalla settimana.
             </div>
-            <div>
-              <div className="font-semibold">Disponibile ora</div>
-              <div className="text-sm text-muted-foreground">
-                Attiva questa opzione se puoi ricevere proposte di lavoro immediate.
+            {availableNow && availableNowUntil && (
+              <div className="text-xs text-primary mt-1">
+                Attivo fino alle {new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
               </div>
-              {availableNow && availableNowUntil && (
-                <div className="text-xs text-primary mt-1">
-                  Attivo fino alle {new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
-                </div>
-              )}
-            </div>
+            )}
           </div>
           <Select value={availableNowDuration} onValueChange={(v) => setAvailableNowDuration(v as "2h" | "today" | "tonight")}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="col-span-3 sm:col-auto sm:w-[170px] order-3 sm:order-none"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="2h">Prossime 2 ore</SelectItem>
               <SelectItem value="today">Disponibile oggi</SelectItem>
@@ -720,123 +791,84 @@ function AvailabilityPage() {
         </CardContent>
       </Card>
 
-      {/* Summary */}
-      <div className="mb-6 rounded-2xl border bg-card p-4 flex flex-wrap items-center gap-3 text-sm">
-        <CalendarDays className="h-4 w-4 text-primary" />
-        <span className="font-medium">Riepilogo settimanale:</span>
-        <span className="text-muted-foreground">
-          {summary.active} {summary.active === 1 ? "giorno disponibile" : "giorni disponibili"} · {summary.totalSlots} {summary.totalSlots === 1 ? "fascia" : "fasce"}
-        </span>
-        {summary.prevalentCity && (
-          <span className="inline-flex items-center gap-1 text-foreground">
-            <MapPin className="h-3.5 w-3.5 text-primary" /> Principalmente su <strong>{summary.prevalentCity}</strong>
-          </span>
-        )}
-        {summary.nextSpecial && (
-          <span className="text-xs text-muted-foreground">
-            Prossima speciale: {new Date(summary.nextSpecial.date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long" })}
-            {summary.nextSpecial.city ? ` · ${summary.nextSpecial.city}` : ""}
-          </span>
-        )}
-        <span className="ml-auto text-xs text-muted-foreground inline-flex items-center gap-1">
-          <Info className="h-3.5 w-3.5" />
-          Inserire città e orario aumenta le proposte coerenti.
-        </span>
-      </div>
-
       {isEmpty && (
         <Card className="mb-6 border-dashed">
-          <CardContent className="p-8 text-center space-y-3">
-            <CalendarDays className="h-10 w-10 mx-auto text-muted-foreground" />
-            <div className="font-semibold text-lg">Non hai ancora inserito le tue disponibilità.</div>
+          <CardContent className="p-6 sm:p-8 text-center space-y-2">
+            <CalendarDays className="h-9 w-9 mx-auto text-muted-foreground" />
+            <div className="font-semibold">Nessuna disponibilità impostata</div>
             <p className="text-sm text-muted-foreground">
-              Inseriscile per ricevere proposte di lavoro coerenti con i tuoi giorni, orari e zone.
+              Imposta i tuoi giorni per ricevere proposte coerenti con orari e zone.
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Quick actions */}
-      <Card className="mb-6 border bg-card">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-              <Wand2 className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-semibold">Imposta rapidamente la tua disponibilità</div>
-              <p className="text-sm text-muted-foreground">
-                Queste azioni compilano automaticamente più giorni o fasce orarie per aiutarti a impostare la tua disponibilità più velocemente. Non sono filtri.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "all", title: "Imposta tutta la settimana", message: "Questa azione imposterà la disponibilità su tutti i giorni della settimana. Vuoi continuare?" })}>
-              <Wand2 className="h-3.5 w-3.5" /> Imposta tutta la settimana
-            </Button>
-            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "weekend", title: "Imposta solo weekend", message: "Questa azione imposterà la disponibilità su Sabato e Domenica. Vuoi continuare?" })}>
-              <Wand2 className="h-3.5 w-3.5" /> Imposta solo weekend
-            </Button>
-            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "cena", title: "Imposta solo sere", message: "Questa azione imposterà la fascia oraria 'Cena' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
-              <Wand2 className="h-3.5 w-3.5" /> Imposta solo sere
-            </Button>
-            <Button type="button" size="sm" className={`gap-1.5 ${gatedOpacity}`} onClick={() => setConfirmPreset({ type: "pranzo", title: "Imposta solo pranzo", message: "Questa azione imposterà la fascia oraria 'Pranzo' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
-              <Wand2 className="h-3.5 w-3.5" /> Imposta solo pranzo
-            </Button>
-            <div className="flex-1" />
-            <Button type="button" size="sm" variant="outline" className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive" onClick={() => setConfirmClear(true)}>
-              <Trash2 className="h-3.5 w-3.5" /> Cancella tutte le disponibilità
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ───────── AGENDA SETTIMANALE: tab giorni + pannello editor ───────── */}
+      <section className="mb-8">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-semibold">Agenda settimanale</h2>
+          <span className="hidden sm:inline text-xs text-muted-foreground">Tocca un giorno per modificarlo</span>
+        </div>
 
-      {/* Weekly grid: compact cards, one editable at a time */}
-      <div className="grid gap-3 md:grid-cols-2">
-        {days.map((d, i) => {
-          const isEditing = editingDay === i;
+        {/* Day tabs — sostituisce la griglia di 7 card */}
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-4">
+          {days.map((d, i) => {
+            const active = editingDay === i;
+            const has = d.is_available;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setEditingDay(i)}
+                aria-pressed={active}
+                className={cn(
+                  "group relative flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 sm:py-3 text-xs font-semibold transition-all",
+                  active && "border-primary bg-primary/15 text-foreground ring-2 ring-primary/40 shadow-sm",
+                  !active && has && "border-primary/40 bg-primary/5 text-foreground hover:border-primary/60",
+                  !active && !has && "border-border bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                )}
+              >
+                <span className="uppercase tracking-wide">{DAY_LABELS[i].slice(0, 3)}</span>
+                <span className={cn("h-1.5 w-1.5 rounded-full", has ? "bg-primary" : "bg-muted-foreground/30")} aria-hidden />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Pannello giorno selezionato */}
+        {editingDay != null && (() => {
+          const i = editingDay;
+          const d = days[i];
           const sum = daySummary(d);
           return (
-          <Card key={i} className={`${d.is_available ? "" : "opacity-90"} ${isEditing ? "ring-1 ring-primary/40" : ""}`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-3">
-              <div className="min-w-0">
-                <CardTitle className="text-base leading-tight">{DAY_LABELS[i]}</CardTitle>
-                <div className={`text-xs mt-0.5 ${d.is_available ? "text-primary" : "text-muted-foreground"}`}>
-                  {d.is_available ? "Disponibile" : "Non disponibile"}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={d.is_available}
-                  onCheckedChange={(v) => { toggleDay(i, v); if (!v && isEditing) setEditingDay(null); }}
-                  aria-label={`Disponibile ${DAY_LABELS[i]}`}
-                />
-              </div>
-            </CardHeader>
-
-            {!isEditing && (
-              <CardContent className="pt-0 pb-3">
-                {d.is_available ? (
-                  <div className="space-y-1 text-sm">
-                    <div className="inline-flex items-center gap-1 text-foreground">
-                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="truncate">{sum.location}</span>
-                    </div>
-                    <div className="text-muted-foreground">{sum.hours}</div>
+            <Card className="border-primary/20">
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
+                <div className="min-w-0">
+                  <CardTitle className="text-lg">{DAY_LABELS[i]}</CardTitle>
+                  <div className={cn("text-xs mt-0.5", d.is_available ? "text-primary" : "text-muted-foreground")}>
+                    {d.is_available
+                      ? <>Disponibile · <span className="text-muted-foreground">{sum.hours}</span></>
+                      : "Non disponibile"}
                   </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">Nessuna disponibilità impostata per questo giorno.</div>
-                )}
-                <div className="mt-3 flex justify-end">
-                  <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditingDay(i); if (!d.is_available) toggleDay(i, true); }}>
-                    <Pencil className="h-3.5 w-3.5" /> Modifica
-                  </Button>
                 </div>
-              </CardContent>
-            )}
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="hidden sm:inline text-xs text-muted-foreground">Attiva</span>
+                  <Switch
+                    checked={d.is_available}
+                    onCheckedChange={(v) => toggleDay(i, v)}
+                    aria-label={`Disponibile ${DAY_LABELS[i]}`}
+                  />
+                </div>
+              </CardHeader>
 
-            {isEditing && d.is_available && (
-              <CardContent className="space-y-4">
+              {!d.is_available && (
+                <CardContent className="pt-0 pb-5 text-sm text-muted-foreground">
+                  Attiva il toggle per impostare città, fasce e orari di {DAY_LABELS[i]}.
+                </CardContent>
+              )}
+
+              {d.is_available && (
+                <CardContent className="space-y-4">
                 {/* Location */}
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
@@ -996,40 +1028,55 @@ function AvailabilityPage() {
                     <Save className="h-3.5 w-3.5" /> {saving ? "Salvataggio…" : "Salva e chiudi"}
                   </Button>
                 </div>
-              </CardContent>
-            )}
-          </Card>
+                </CardContent>
+              )}
+            </Card>
           );
-        })}
-      </div>
+        })()}
+      </section>
 
-      <div className="mt-6 flex justify-end">
-        <Button onClick={saveGated} disabled={saving || loading} className={`gap-2 ${gatedOpacity}`}>
-          <Save className="h-4 w-4" /> {saving ? "Salvataggio..." : "Salva disponibilità settimanale"}
-        </Button>
-      </div>
+      {/* ───────── AZIONI RAPIDE — secondarie rispetto al salvataggio ───────── */}
+      <section className="mb-10">
+        <div className="mb-2 flex items-center gap-2">
+          <Wand2 className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Azioni rapide</h3>
+        </div>
+        <div className="rounded-2xl border bg-card/40 p-3 sm:p-4">
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "all", title: "Imposta tutta la settimana", message: "Questa azione imposterà la disponibilità su tutti i giorni della settimana. Vuoi continuare?" })}>
+              Tutta la settimana
+            </Button>
+            <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "weekend", title: "Imposta solo weekend", message: "Questa azione imposterà la disponibilità su Sabato e Domenica. Vuoi continuare?" })}>
+              Solo weekend
+            </Button>
+            <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "pranzo", title: "Imposta solo pranzo", message: "Questa azione imposterà la fascia oraria 'Pranzo' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
+              Solo pranzo
+            </Button>
+            <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "cena", title: "Imposta solo sere", message: "Questa azione imposterà la fascia oraria 'Cena' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
+              Solo sera
+            </Button>
+          </div>
+          <div className="mt-3 pt-3 border-t border-dashed flex justify-end">
+            <Button type="button" size="sm" variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setConfirmClear(true)}>
+              <Trash2 className="h-3.5 w-3.5" /> Cancella tutte le disponibilità
+            </Button>
+          </div>
+        </div>
+      </section>
 
       {/* Special dates */}
-      <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-2">Disponibilità speciale</h2>
-
-        {/* Info box */}
-        <Card className="mb-4 border-primary/30 bg-primary/5">
-          <CardContent className="p-4 flex gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <Info className="h-4 w-4" />
+      <section className="mt-12 pt-6 border-t border-dashed">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-lg font-semibold">Disponibilità speciale</h2>
             </div>
-            <div className="space-y-1 text-sm">
-              <div className="font-semibold text-foreground">Disponibilità speciale</div>
-              <p className="text-foreground/90">
-                Usa questa sezione per indicare disponibilità diverse dalla tua settimana abituale. Ad esempio, se in una data specifica sei disponibile a pranzo in una città e a cena in un'altra, puoi inserirlo qui.
-              </p>
-              <p className="text-muted-foreground">
-                Le disponibilità speciali aiutano i ristoratori a trovarti meglio per turni specifici.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Eccezioni alla tua agenda settimanale per date specifiche.
+            </p>
+          </div>
+        </div>
 
         <Card>
           <CardContent className="p-4 grid gap-3 md:grid-cols-6">
@@ -1267,7 +1314,10 @@ function AvailabilityPage() {
 
         <div className="mt-4 space-y-2">
           {exceptions.length === 0 && (
-            <p className="text-sm text-muted-foreground italic">Nessuna disponibilità speciale impostata.</p>
+            <div className="rounded-xl border border-dashed p-6 text-center">
+              <Sparkles className="h-6 w-6 mx-auto text-muted-foreground/50" />
+              <p className="mt-2 text-sm text-muted-foreground">Nessuna disponibilità speciale impostata.</p>
+            </div>
           )}
           {exceptions.map((e) => (
             <div key={e.id} className="rounded-lg border p-3 flex flex-wrap items-center gap-3 text-sm">
@@ -1376,6 +1426,25 @@ function AvailabilityPage() {
         <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
           ← Torna alla dashboard
         </Link>
+      </div>
+
+      {/* ───────── Sticky save bar (mobile) ───────── */}
+      <div className="sm:hidden h-20" aria-hidden />
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3">
+        <div className="flex items-center gap-3">
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium shrink-0", SAVE_PILL.cls)}>
+            <SAVE_PILL.Icon className={cn("h-3 w-3", SAVE_PILL.spin && "animate-spin")} />
+            <span className="truncate max-w-[110px]">{SAVE_PILL.label}</span>
+          </span>
+          <Button
+            onClick={saveGated}
+            disabled={saving || loading || !dirty}
+            className={cn("flex-1 gap-2 h-11 text-base", gatedOpacity)}
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Salvataggio..." : "Salva disponibilità"}
+          </Button>
+        </div>
       </div>
     </AppShell>
   );
