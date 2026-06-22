@@ -6,7 +6,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart, Store, BadgeCheck, CalendarDays } from "lucide-react";
+import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2, Calendar, MapPin, ArrowRight, Star, Clock, XCircle, AlertTriangle, CheckCheck, Heart, Store, BadgeCheck, CalendarDays, Sparkles, UserCircle2, Gift, ChevronRight, ShieldCheck } from "lucide-react";
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
@@ -304,16 +304,18 @@ function DashboardInner() {
         </div>
       )}
 
-      <div className={`grid gap-4 ${role === "restaurant" ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
-        <StatCard icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? stats.active : stats.applications} />
-        {role === "restaurant" && (
-          <Link to="/announcements" search={{ status: "assigned" } as never} className="block">
-            <StatCard icon={CheckCircle2} label="Annunci assegnati" value={stats.assigned} highlight />
-          </Link>
-        )}
-        <StatCard icon={Users} label="Candidature totali" value={stats.applications} />
-        <StatCard icon={MessageSquare} label="Messaggi" value={stats.messages} />
-      </div>
+      {role !== "worker" && (
+        <div className={`grid gap-4 ${role === "restaurant" ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+          <StatCard icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? stats.active : stats.applications} />
+          {role === "restaurant" && (
+            <Link to="/announcements" search={{ status: "assigned" } as never} className="block">
+              <StatCard icon={CheckCircle2} label="Annunci assegnati" value={stats.assigned} highlight />
+            </Link>
+          )}
+          <StatCard icon={Users} label="Candidature totali" value={stats.applications} />
+          <StatCard icon={MessageSquare} label="Messaggi" value={stats.messages} />
+        </div>
+      )}
 
       {role === "restaurant" && assignedList.length > 0 && (
         <div className="mt-6 rounded-2xl border bg-card p-5">
@@ -358,55 +360,12 @@ function DashboardInner() {
       )}
 
       {role === "worker" && user && profile && (
-        <div className="mt-6 space-y-6">
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold">Le mie disponibilità</h2>
-              </div>
-              <Link to="/availability">
-                <Button variant="ghost" size="sm" className="gap-1">
-                  Gestisci <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            </div>
-            <WorkerAvailabilitySummary workerId={user.id} />
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold">La mia reputazione</h2>
-              </div>
-              <Link to="/profile">
-                <Button variant="ghost" size="sm" className="gap-1">
-                  Apri profilo <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            </div>
-            <WorkerReputationCard workerId={user.id} profile={profile as never} showTips />
-            <p className="mt-2 text-xs text-muted-foreground italic">
-              Più turni completi con buone recensioni, più aumenta la tua visibilità verso i ristoratori.
-            </p>
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold">Le mie recensioni</h2>
-              </div>
-              <Link to="/profile">
-                <Button variant="ghost" size="sm" className="gap-1">
-                  Vedi tutte le recensioni <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            </div>
-            <WorkerMyReviews workerId={user.id} limit={3} />
-          </section>
-        </div>
+        <WorkerHome
+          userId={user.id}
+          profile={profile}
+          applications={stats.applications}
+          messages={stats.messages}
+        />
       )}
 
       <AlertDialog open={!!closingItem} onOpenChange={(o) => !o && !closing && setClosingItem(null)}>
@@ -455,26 +414,25 @@ function DashboardInner() {
         </div>
       )}
 
-      <div className="mt-8 rounded-2xl border bg-card p-6">
-        <h2 className="font-semibold mb-2">Cosa puoi fare ora</h2>
-        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-          {role === "restaurant" && <>
-            <li>Crea un nuovo annuncio per il prossimo servizio</li>
-            <li>Cerca lavoratori disponibili nella tua zona</li>
-            <li>Chatta con i candidati interessati</li>
-          </>}
-          {role === "worker" && <>
-            <li>Aggiorna il tuo profilo professionale</li>
-            <li>Rispondi alle offerte ricevute</li>
-            <li>Imposta la tua zona di interesse</li>
-          </>}
-          {role === "admin" && <li>Apri il pannello Admin per gestire utenti e annunci</li>}
-        </ul>
-      </div>
+      {role !== "worker" && (
+        <div className="mt-8 rounded-2xl border bg-card p-6">
+          <h2 className="font-semibold mb-2">Cosa puoi fare ora</h2>
+          <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+            {role === "restaurant" && <>
+              <li>Crea un nuovo annuncio per il prossimo servizio</li>
+              <li>Cerca lavoratori disponibili nella tua zona</li>
+              <li>Chatta con i candidati interessati</li>
+            </>}
+            {role === "admin" && <li>Apri il pannello Admin per gestire utenti e annunci</li>}
+          </ul>
+        </div>
+      )}
 
-      <div className="mt-6">
-        <ReferralCard />
-      </div>
+      {role !== "worker" && (
+        <div className="mt-6">
+          <ReferralCard />
+        </div>
+      )}
     </AppShell>
   );
 }
