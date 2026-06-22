@@ -1065,26 +1065,18 @@ function AvailabilityPage() {
       </section>
 
       {/* Special dates */}
-      <section className="mt-10">
-        <h2 className="text-xl font-semibold mb-2">Disponibilità speciale</h2>
-
-        {/* Info box */}
-        <Card className="mb-4 border-primary/30 bg-primary/5">
-          <CardContent className="p-4 flex gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <Info className="h-4 w-4" />
+      <section className="mt-12 pt-6 border-t border-dashed">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-lg font-semibold">Disponibilità speciale</h2>
             </div>
-            <div className="space-y-1 text-sm">
-              <div className="font-semibold text-foreground">Disponibilità speciale</div>
-              <p className="text-foreground/90">
-                Usa questa sezione per indicare disponibilità diverse dalla tua settimana abituale. Ad esempio, se in una data specifica sei disponibile a pranzo in una città e a cena in un'altra, puoi inserirlo qui.
-              </p>
-              <p className="text-muted-foreground">
-                Le disponibilità speciali aiutano i ristoratori a trovarti meglio per turni specifici.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Eccezioni alla tua agenda settimanale per date specifiche.
+            </p>
+          </div>
+        </div>
 
         <Card>
           <CardContent className="p-4 grid gap-3 md:grid-cols-6">
@@ -1322,7 +1314,10 @@ function AvailabilityPage() {
 
         <div className="mt-4 space-y-2">
           {exceptions.length === 0 && (
-            <p className="text-sm text-muted-foreground italic">Nessuna disponibilità speciale impostata.</p>
+            <div className="rounded-xl border border-dashed p-6 text-center">
+              <Sparkles className="h-6 w-6 mx-auto text-muted-foreground/50" />
+              <p className="mt-2 text-sm text-muted-foreground">Nessuna disponibilità speciale impostata.</p>
+            </div>
           )}
           {exceptions.map((e) => (
             <div key={e.id} className="rounded-lg border p-3 flex flex-wrap items-center gap-3 text-sm">
@@ -1431,6 +1426,25 @@ function AvailabilityPage() {
         <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
           ← Torna alla dashboard
         </Link>
+      </div>
+
+      {/* ───────── Sticky save bar (mobile) ───────── */}
+      <div className="sm:hidden h-20" aria-hidden />
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3">
+        <div className="flex items-center gap-3">
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium shrink-0", SAVE_PILL.cls)}>
+            <SAVE_PILL.Icon className={cn("h-3 w-3", SAVE_PILL.spin && "animate-spin")} />
+            <span className="truncate max-w-[110px]">{SAVE_PILL.label}</span>
+          </span>
+          <Button
+            onClick={saveGated}
+            disabled={saving || loading || !dirty}
+            className={cn("flex-1 gap-2 h-11 text-base", gatedOpacity)}
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Salvataggio..." : "Salva disponibilità"}
+          </Button>
+        </div>
       </div>
     </AppShell>
   );
