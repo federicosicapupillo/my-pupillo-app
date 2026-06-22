@@ -862,7 +862,7 @@ function AvailabilityPage() {
                 aria-pressed={active}
                 className={cn(
                   "group relative flex flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  active && "border-primary bg-primary/15 text-foreground shadow-[0_0_0_2px_hsl(var(--primary)/0.25)]",
+                  active && "border-primary bg-primary/15 text-foreground ring-2 ring-primary/50 shadow-sm",
                   !active && has && "border-primary/40 bg-primary/5 text-foreground hover:border-primary/70 hover:bg-primary/10",
                   !active && !has && "border-border bg-card/60 text-muted-foreground hover:border-foreground/25 hover:bg-card hover:text-foreground",
                 )}
