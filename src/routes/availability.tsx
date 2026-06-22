@@ -184,6 +184,7 @@ function AvailabilityPage() {
   type PresetType = "all" | "weekend" | "cena" | "pranzo";
   const [confirmPreset, setConfirmPreset] = useState<{ type: PresetType; title: string; message: string } | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [copying, setCopying] = useState(false);
   const [addingException, setAddingException] = useState(false);
   type ExcErrors = Partial<Record<"date" | "is_available" | "time_slot" | "city" | "district" | "radius_km" | "time", string>>;
@@ -523,6 +524,7 @@ function AvailabilityPage() {
         if (insErr) throw insErr;
       }
       setDirty(false);
+      setLastSavedAt(new Date());
       if (!opts.silent) toast.success("Disponibilità salvate");
       return true;
     } catch (e: unknown) {
