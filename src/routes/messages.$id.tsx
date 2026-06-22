@@ -2583,59 +2583,69 @@ function Thread() {
         {canChangeStatus && app && (
           <div className="mb-4 space-y-2">
             <div className="flex flex-wrap gap-2">
-              {role === "worker" && app.status === "pending" && (<>
-                <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => setInterestConfirmOpen(true)}>
-                  {transitioning === "interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
-                  {transitioning === "interested" ? "Invio in corso…" : "Sono interessato"}
-                </Button>
-                <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("not_interested")}>
-                  {transitioning === "not_interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsDown className="h-4 w-4" />}
-                  {transitioning === "not_interested" ? "Invio in corso…" : "Non interessato"}
-                </Button>
-                {(() => {
-                  // CASO A — Proposta inviata dal ristoratore al lavoratore:
-                  // se in chat esiste già un messaggio "shift_proposal" inviato
-                  // dal ristoratore e il worker non ha ancora risposto (status
-                  // ancora "pending"), allora non è una candidatura del
-                  // lavoratore: nascondiamo "Annulla candidatura".
-                  const restaurantId = app?.restaurant_id;
-                  const hasRestaurantProposal = msgs.some(
-                    (m) => m.template_id === PROPOSAL_TEMPLATE_ID && m.sender_id === restaurantId,
-                  );
-                  const shiftBlocks = shift && (shift.status === "scheduled" || shift.status === "completed");
-                  const show = !hasRestaurantProposal && !shiftBlocks;
-                  if (typeof window !== "undefined") {
-                    // eslint-disable-next-line no-console
-                    console.log("[PUPILLO_CHAT_ACTION_BUTTONS_DEBUG]", {
-                      worker_user_id: app?.worker_id,
-                      restaurant_user_id: restaurantId,
-                      application_id: app?.id,
-                      source: hasRestaurantProposal ? "restaurant_proposal" : "worker_application",
-                      application_status: app?.status,
-                      buttons_rendered: show
-                        ? ["Sono interessato", "Non interessato", "Annulla candidatura"]
-                        : ["Sono interessato", "Non interessato"],
-                      cancel_hidden_reason: show
-                        ? null
-                        : hasRestaurantProposal
-                          ? "restaurant_proposal_pending"
-                          : "shift_scheduled_or_completed",
-                    });
-                  }
-                  if (!show) return null;
-                  return (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="gap-2 text-muted-foreground hover:text-destructive"
-                      disabled={transitioning !== null || cancelling}
-                      onClick={() => setCancelConfirmOpen(true)}
-                    >
-                      <Ban className="h-4 w-4" />Annulla candidatura
-                    </Button>
-                  );
-                })()}
-              </>)}
+              {role === "worker" && app.status === "pending" && (() => {
+                // Determina la direzione della richiesta:
+                // - restaurant_proposal: il ristoratore ha inviato una proposta/offerta al lavoratore
+                //   → mostra "Accetta offerta" / "Rifiuta offerta"
+                // - worker_application: il lavoratore si è candidato a un annuncio
+                //   → mostra solo "Annulla candidatura" (non riproporre interesse)
+                const restaurantId = app?.restaurant_id;
+                const hasRestaurantProposal = msgs.some(
+                  (m) => m.template_id === PROPOSAL_TEMPLATE_ID && m.sender_id === restaurantId,
+                );
+                const shiftBlocks = shift && (shift.status === "scheduled" || shift.status === "completed");
+                const source: "restaurant_proposal" | "worker_application" =
+                  hasRestaurantProposal ? "restaurant_proposal" : "worker_application";
+                const showCancel = source === "worker_application" && !shiftBlocks;
+                const showDecision = source === "restaurant_proposal";
+                if (typeof window !== "undefined") {
+                  // eslint-disable-next-line no-console
+                  console.log("[PUPILLO_CHAT_ACTION_BUTTONS_DEBUG]", {
+                    worker_user_id: app?.worker_id,
+                    restaurant_user_id: restaurantId,
+                    application_id: app?.id,
+                    source,
+                    application_status: app?.status,
+                    buttons_rendered: showDecision
+                      ? ["Accetta offerta", "Rifiuta offerta"]
+                      : showCancel
+                        ? ["Annulla candidatura"]
+                        : [],
+                    cancel_hidden_reason: showCancel
+                      ? null
+                      : source === "restaurant_proposal"
+                        ? "restaurant_proposal_pending"
+                        : "shift_scheduled_or_completed",
+                  });
+                }
+                return (
+                  <>
+                    {showDecision && (
+                      <>
+                        <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => setInterestConfirmOpen(true)}>
+                          {transitioning === "interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
+                          {transitioning === "interested" ? "Invio in corso…" : "Accetta offerta"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("not_interested")}>
+                          {transitioning === "not_interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsDown className="h-4 w-4" />}
+                          {transitioning === "not_interested" ? "Invio in corso…" : "Rifiuta offerta"}
+                        </Button>
+                      </>
+                    )}
+                    {showCancel && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-2 text-muted-foreground hover:text-destructive"
+                        disabled={transitioning !== null || cancelling}
+                        onClick={() => setCancelConfirmOpen(true)}
+                      >
+                        <Ban className="h-4 w-4" />Annulla candidatura
+                      </Button>
+                    )}
+                  </>
+                );
+              })()}
               {role === "restaurant" && app.status === "counter_offer" && ann?.tariff_amount != null && (
                 <Button
                   size="sm"
