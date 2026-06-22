@@ -909,8 +909,10 @@ function AvailabilityPage() {
               </CardHeader>
 
               {!d.is_available && (
-                <CardContent className="pt-0 pb-5 text-sm text-muted-foreground">
-                  Attiva il toggle per impostare città, fasce e orari di {DAY_LABELS[i]}.
+                <CardContent className="pt-0 pb-6 text-sm text-muted-foreground">
+                  <div className="rounded-lg border border-dashed bg-muted/40 px-4 py-4 text-center">
+                    Attiva il toggle per impostare città, fasce e orari di {DAY_LABELS[i]}.
+                  </div>
                 </CardContent>
               )}
 
@@ -987,34 +989,43 @@ function AvailabilityPage() {
                 </div>
 
                 {/* Slots */}
-                <div className="flex flex-wrap gap-2">
-                  {ALL_SLOTS.map((slot) => {
-                    const active = !!d.slots.find((s) => s.time_slot === slot);
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => toggleSlot(i, slot)}
-                        className={`text-xs rounded-full px-3 py-1.5 border transition-colors ${
-                          active
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background hover:bg-accent border-border text-foreground"
-                        }`}
-                      >
-                        {SLOT_LABELS[slot]}
-                      </button>
-                    );
-                  })}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-foreground">Fasce orarie</label>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_SLOTS.map((slot) => {
+                      const active = !!d.slots.find((s) => s.time_slot === slot);
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => toggleSlot(i, slot)}
+                          className={cn(
+                            "text-xs rounded-full px-3.5 py-2 border transition-all focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                            active
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-card hover:bg-muted border-border text-foreground hover:border-primary/40",
+                          )}
+                        >
+                          {SLOT_LABELS[slot]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {d.slots.length === 0 && !d.flexible && (
+                    <p className="text-xs text-muted-foreground">
+                      Seleziona una fascia o attiva "Disponibile, ma valuto in base alla proposta".
+                    </p>
+                  )}
                 </div>
 
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-3 rounded-lg border border-border bg-card/50 px-3 py-2.5 text-sm cursor-pointer transition-colors hover:border-primary/30 hover:bg-card">
                   <input
                     type="checkbox"
                     checked={d.flexible}
                     onChange={(e) => setFlexible(i, e.target.checked)}
-                    className="h-4 w-4"
+                    className="h-4 w-4 shrink-0"
                   />
-                  Disponibile, ma valuto in base alla proposta
+                  <span className="text-foreground">Disponibile, ma valuto in base alla proposta</span>
                 </label>
 
                 {d.slots.length > 0 && (
