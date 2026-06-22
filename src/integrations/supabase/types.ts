@@ -2629,7 +2629,7 @@ export type Database = {
       credit_tx_kind: "purchase" | "grant" | "consume" | "refund" | "plan_bonus"
       discount_applies_to: "credits" | "premium" | "all"
       discount_type: "percentage" | "fixed_amount" | "free_credits"
-      experience_level: "junior" | "intermediate" | "senior"
+      experience_level: "junior" | "intermediate" | "senior" | "esperto"
       phone_verification_status:
         | "pending"
         | "sent"
@@ -2798,7 +2798,7 @@ export const Constants = {
       credit_tx_kind: ["purchase", "grant", "consume", "refund", "plan_bonus"],
       discount_applies_to: ["credits", "premium", "all"],
       discount_type: ["percentage", "fixed_amount", "free_credits"],
-      experience_level: ["junior", "intermediate", "senior"],
+      experience_level: ["junior", "intermediate", "senior", "esperto"],
       phone_verification_status: [
         "pending",
         "sent",

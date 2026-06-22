@@ -287,7 +287,7 @@ function Onboarding() {
   // Tutti i campi sono opzionali: non bloccano salvataggio né completamento.
   const [optExp, setOptExp] = useState<{
     experience_years: string;
-    experience_level: "" | "junior" | "intermediate" | "senior";
+    experience_level: "" | "junior" | "intermediate" | "senior" | "esperto";
     hourly_rate: string;
     is_motorized: "" | "yes" | "no";
     short_bio: string;
@@ -666,7 +666,7 @@ function Onboarding() {
       const p = profile as any;
       setOptExp({
         experience_years: p.experience_years != null ? String(p.experience_years) : "",
-        experience_level: (p.experience_level === "junior" || p.experience_level === "intermediate" || p.experience_level === "senior") ? p.experience_level : "",
+        experience_level: (p.experience_level === "junior" || p.experience_level === "intermediate" || p.experience_level === "senior" || p.experience_level === "esperto") ? p.experience_level : "",
         hourly_rate: (() => {
           if (p.hourly_rate == null) return "";
           const n = Number(p.hourly_rate);
@@ -2514,9 +2514,10 @@ function Onboarding() {
                     <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuna selezione</SelectItem>
-                      <SelectItem value="junior">Junior</SelectItem>
-                      <SelectItem value="intermediate">Intermedio</SelectItem>
+                      <SelectItem value="junior">Basic</SelectItem>
+                      <SelectItem value="intermediate">Pro</SelectItem>
                       <SelectItem value="senior">Senior</SelectItem>
+                      <SelectItem value="esperto">Esperto</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

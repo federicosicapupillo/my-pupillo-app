@@ -1,0 +1,1 @@
+ALTER TYPE public.experience_level ADD VALUE IF NOT EXISTS 'esperto';

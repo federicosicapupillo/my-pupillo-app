@@ -1488,9 +1488,10 @@ function MapPage() {
                   <SelectTrigger className="h-9"><SelectValue placeholder="Esperienza" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="any">Qualsiasi esperienza</SelectItem>
-                    <SelectItem value="junior">Junior</SelectItem>
-                    <SelectItem value="middle">Middle</SelectItem>
+                    <SelectItem value="junior">Basic</SelectItem>
+                    <SelectItem value="intermediate">Pro</SelectItem>
                     <SelectItem value="senior">Senior</SelectItem>
+                    <SelectItem value="esperto">Esperto</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={wMinRating} onValueChange={setWMinRating}>
