@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -14,10 +14,11 @@ import {
 
 type Rect = { top: number; left: number; width: number; height: number };
 
-const PANEL_MAX_WIDTH = 440;
+const PANEL_MAX_WIDTH = 460;
 const PANEL_MARGIN = 16;
-const PANEL_ESTIMATED_HEIGHT = 230;
+const PANEL_ESTIMATED_HEIGHT = 260;
 const HIGHLIGHT_CLASS = "pupillo-tour-active";
+const SPOTLIGHT_PADDING = 8;
 
 /**
  * GuidedTour — global tour runner mounted inside AppShell.
@@ -226,26 +227,50 @@ export function GuidedTour() {
 
   const { w: vw, h: vh } = viewport;
   const hasTarget = !!rect && currentStep.placement !== "center";
+  const isCenterStep = currentStep.placement === "center" || !hasTarget;
 
   // Decide if panel sits at bottom (default) or flips to top when the
   // target sits in the lower half of the viewport.
-  const panelAtBottom = !hasTarget
+  // Center steps (welcome / done) get a perfectly centered modal.
+  // Other steps get a stable bottom-or-top panel that flips if it would
+  // cover the target.
+  const panelAtBottom = isCenterStep
     ? true
     : (rect!.top + rect!.height / 2) < vh - PANEL_ESTIMATED_HEIGHT - 40;
 
-  const panelStyle: React.CSSProperties = {
-    position: "fixed",
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: `min(${PANEL_MAX_WIDTH}px, calc(100vw - ${PANEL_MARGIN * 2}px))`,
-    ...(panelAtBottom
-      ? { bottom: `max(${PANEL_MARGIN}px, env(safe-area-inset-bottom, 0px))` }
-      : { top: `${PANEL_MARGIN}px` }),
-  };
+  const panelStyle: React.CSSProperties = isCenterStep
+    ? {
+        position: "fixed",
+        left: "50%",
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+        width: `min(${PANEL_MAX_WIDTH}px, calc(100vw - ${PANEL_MARGIN * 2}px))`,
+      }
+    : {
+        position: "fixed",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: `min(${PANEL_MAX_WIDTH}px, calc(100vw - ${PANEL_MARGIN * 2}px))`,
+        ...(panelAtBottom
+          ? { bottom: `max(${PANEL_MARGIN}px, env(safe-area-inset-bottom, 0px))` }
+          : { top: `${PANEL_MARGIN}px` }),
+      };
+
+  // Spotlight rectangle (a transparent box with a glowing ring) drawn
+  // exactly over the target. The actual element gets z-index 10001 via
+  // the highlight class so it visually pops above the overlay.
+  const spotlight = hasTarget
+    ? {
+        top: rect!.top - SPOTLIGHT_PADDING,
+        left: rect!.left - SPOTLIGHT_PADDING,
+        width: rect!.width + SPOTLIGHT_PADDING * 2,
+        height: rect!.height + SPOTLIGHT_PADDING * 2,
+      }
+    : null;
 
   // Connector line from panel edge to the target center.
   let connector: { x1: number; y1: number; x2: number; y2: number } | null = null;
-  if (hasTarget) {
+  if (hasTarget && !isCenterStep) {
     const panelCenterX = vw / 2;
     const panelEdgeY = panelAtBottom
       ? vh - PANEL_ESTIMATED_HEIGHT - PANEL_MARGIN
@@ -269,12 +294,28 @@ export function GuidedTour() {
         type="button"
         aria-label="Chiudi tour"
         onClick={() => finish(true)}
-        className="fixed inset-0 h-full w-full cursor-default bg-black/75 backdrop-blur-[2px] outline-none"
+        className="fixed inset-0 h-full w-full cursor-default bg-black/70 backdrop-blur-[3px] outline-none animate-in fade-in duration-200"
         style={{ zIndex: 9998 }}
       />
 
+      {/* Spotlight ring drawn over the target (under the target itself
+          so the target stays interactive-looking and on top). */}
+      {spotlight && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed rounded-2xl transition-all duration-300 ease-out"
+          style={{
+            ...spotlight,
+            zIndex: 9999,
+            boxShadow:
+              "0 0 0 2px hsl(var(--primary) / 0.9), 0 0 0 7px hsl(var(--primary) / 0.25), 0 0 32px 4px hsl(var(--primary) / 0.45)",
+            animation: "pupillo-tour-pulse 2.4s ease-in-out infinite",
+          }}
+        />
+      )}
+
       {/* Connector line from panel to target (above overlay, below panel) */}
-      {hasTarget && connector && (
+      {connector && (
         <svg
           aria-hidden="true"
           className="pointer-events-none fixed inset-0 h-full w-full"
@@ -287,77 +328,113 @@ export function GuidedTour() {
             y2={connector.y2}
             stroke="hsl(var(--primary))"
             strokeWidth={2}
-            strokeDasharray="6 6"
+            strokeDasharray="5 6"
             strokeLinecap="round"
-            opacity={0.85}
+            opacity={0.7}
           />
           <circle
             cx={connector.x2}
             cy={connector.y2}
-            r={5}
+            r={4}
             fill="hsl(var(--primary))"
           />
         </svg>
       )}
 
-      {/* Global styles for the highlighted target */}
+      {/* Global styles for the highlighted target.
+          The target sits above overlay+spotlight (z 10001) so it stays
+          fully legible; the spotlight ring around it (z 9999) sits below
+          it but above the overlay (z 9998) to create the focus halo. */}
       <style>{`
         .${HIGHLIGHT_CLASS} {
           position: relative !important;
-          z-index: 10000 !important;
-          display: inline-block;
+          z-index: 10001 !important;
           border-radius: 12px;
           background: hsl(var(--background)) !important;
-          box-shadow:
-            0 0 0 3px hsl(var(--primary)),
-            0 0 0 8px hsl(var(--primary) / 0.25),
-            0 18px 48px -8px hsl(var(--primary) / 0.55);
-          transform: scale(1.06);
-          transition: transform 220ms ease-out, box-shadow 220ms ease-out;
-          animation: pupillo-tour-pulse 2.2s ease-in-out infinite;
+          transform: scale(1.04);
+          transform-origin: center;
+          transition: transform 260ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms ease-out;
+          will-change: transform;
         }
-        .${HIGHLIGHT_CLASS} * {
-          color: inherit;
+        .${HIGHLIGHT_CLASS} > * {
+          position: relative;
+          z-index: 1;
         }
         @keyframes pupillo-tour-pulse {
           0%, 100% {
             box-shadow:
-              0 0 0 3px hsl(var(--primary)),
-              0 0 0 8px hsl(var(--primary) / 0.22),
-              0 18px 48px -8px hsl(var(--primary) / 0.50);
+              0 0 0 2px hsl(var(--primary) / 0.9),
+              0 0 0 7px hsl(var(--primary) / 0.22),
+              0 0 28px 4px hsl(var(--primary) / 0.40);
           }
           50% {
             box-shadow:
-              0 0 0 3px hsl(var(--primary)),
-              0 0 0 12px hsl(var(--primary) / 0.14),
-              0 22px 56px -8px hsl(var(--primary) / 0.65);
+              0 0 0 2px hsl(var(--primary)),
+              0 0 0 11px hsl(var(--primary) / 0.14),
+              0 0 40px 8px hsl(var(--primary) / 0.55);
           }
+        }
+        @keyframes pupillo-tour-card-in {
+          from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(.98); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1);   }
         }
       `}</style>
 
       {/* Fixed guide panel */}
       <div
-        style={panelStyle}
-        className="fixed rounded-2xl border border-border/60 bg-card/95 text-card-foreground shadow-2xl backdrop-blur-md overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
+        style={{ ...panelStyle, zIndex: 10002 }}
+        className="fixed rounded-3xl border border-primary/15 bg-card/95 text-card-foreground shadow-[0_24px_60px_-12px_hsl(var(--primary)/0.45),0_8px_24px_-8px_rgba(0,0,0,0.55)] backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
+        {/* Decorative gradient top accent */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), transparent)",
+          }}
+        />
+
         {/* Top progress bar */}
         <div className="h-1 w-full bg-muted/40">
           <div
-            className="h-full bg-primary transition-all duration-300 ease-out"
+            className="h-full bg-gradient-to-r from-primary/70 via-primary to-primary/70 transition-all duration-500 ease-out"
             style={{ width: `${((stepIndex + 1) / total) * 100}%` }}
           />
         </div>
 
         <div className="p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
-              Passo {stepIndex + 1} / {total}
-            </span>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+                {isLast && !isCenterStep ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                Passo {stepIndex + 1} / {total}
+              </span>
+              {/* step dots */}
+              <div className="hidden sm:flex items-center gap-1 ml-1">
+                {tour.steps.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === stepIndex
+                        ? "w-4 bg-primary"
+                        : i < stepIndex
+                          ? "w-1.5 bg-primary/60"
+                          : "w-1.5 bg-muted-foreground/25"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => finish(true)}
               aria-label="Chiudi tour"
-              className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+              className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition shrink-0"
             >
               <X className="h-4 w-4" />
             </button>
@@ -371,12 +448,12 @@ export function GuidedTour() {
           </p>
 
           {/* Footer actions */}
-          <div className="mt-5 flex items-center justify-between gap-2 flex-wrap">
+          <div className="mt-6 flex items-center justify-between gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => finish(true)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground -ml-2"
             >
               {isLast ? "Chiudi" : "Salta"}
             </Button>
@@ -387,20 +464,26 @@ export function GuidedTour() {
                   size="sm"
                   onClick={prev}
                   className="gap-1"
+                  aria-label="Indietro"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  <span className="hidden xs:inline sm:inline">Indietro</span>
+                  <span className="hidden sm:inline">Indietro</span>
                 </Button>
               )}
-              <Button size="sm" onClick={next} className="gap-1 max-w-full truncate">
+              <Button
+                size="sm"
+                onClick={next}
+                className="gap-1 max-w-full shadow-md shadow-primary/30"
+              >
                 <span className="truncate">
                   {isLast
                     ? "Inizia a usare Pupillo"
                     : isFirst
-                      ? "Inizia"
+                      ? "Inizia il tour"
                       : "Avanti"}
                 </span>
                 {!isLast && <ChevronRight className="h-4 w-4 shrink-0" />}
+                {isLast && <Check className="h-4 w-4 shrink-0" />}
               </Button>
             </div>
           </div>
