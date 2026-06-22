@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { RequireRole } from "@/components/RequireRole";
-import { AppShell, PageHeader } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
