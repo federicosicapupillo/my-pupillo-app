@@ -818,13 +818,20 @@ function AvailabilityPage() {
       </Card>
 
       {isEmpty && (
-        <Card className="mb-6 border-dashed">
-          <CardContent className="p-6 sm:p-8 text-center space-y-2">
-            <CalendarDays className="h-9 w-9 mx-auto text-muted-foreground" />
-            <div className="font-semibold">Nessuna disponibilità impostata</div>
-            <p className="text-sm text-muted-foreground">
-              Imposta i tuoi giorni per ricevere proposte coerenti con orari e zone.
+        <Card className="mb-6 border-dashed border-2 bg-card/40">
+          <CardContent className="p-8 sm:p-10 text-center space-y-3">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+              <CalendarDays className="h-7 w-7 text-primary" />
+            </div>
+            <div className="font-semibold text-lg">Nessuna disponibilità impostata</div>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Scegli i giorni della settimana, le fasce orarie e le zone in cui vuoi lavorare per ricevere proposte mirate.
             </p>
+            <div className="pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setEditingDay(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)}>
+                Inizia dalla settimana
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -836,8 +843,8 @@ function AvailabilityPage() {
           <span className="hidden sm:inline text-xs text-muted-foreground">Tocca un giorno per modificarlo</span>
         </div>
 
-        {/* Day tabs — sostituisce la griglia di 7 card */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-4">
+        {/* Day tabs — navigazione settimanale compatta e leggibile */}
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 mb-5">
           {days.map((d, i) => {
             const active = editingDay === i;
             const has = d.is_available;
@@ -848,14 +855,23 @@ function AvailabilityPage() {
                 onClick={() => setEditingDay(i)}
                 aria-pressed={active}
                 className={cn(
-                  "group relative flex flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2.5 sm:py-3 text-xs font-semibold transition-all",
-                  active && "border-primary bg-primary/15 text-foreground ring-2 ring-primary/40 shadow-sm",
-                  !active && has && "border-primary/40 bg-primary/5 text-foreground hover:border-primary/60",
-                  !active && !has && "border-border bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                  "group relative flex flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  active && "border-primary bg-primary/15 text-foreground shadow-[0_0_0_2px_hsl(var(--primary)/0.25)]",
+                  !active && has && "border-primary/40 bg-primary/5 text-foreground hover:border-primary/70 hover:bg-primary/10",
+                  !active && !has && "border-border bg-card/60 text-muted-foreground hover:border-foreground/25 hover:bg-card hover:text-foreground",
                 )}
               >
-                <span className="uppercase tracking-wide">{DAY_LABELS[i].slice(0, 3)}</span>
-                <span className={cn("h-1.5 w-1.5 rounded-full", has ? "bg-primary" : "bg-muted-foreground/30")} aria-hidden />
+                <span className="uppercase tracking-wider">{DAY_LABELS[i].slice(0, 3)}</span>
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full transition-colors",
+                    has ? "bg-primary" : "bg-muted-foreground/25 group-hover:bg-muted-foreground/40",
+                  )}
+                  aria-hidden
+                />
+                {active && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full bg-primary" aria-hidden />
+                )}
               </button>
             );
           })}
@@ -867,18 +883,23 @@ function AvailabilityPage() {
           const d = days[i];
           const sum = daySummary(d);
           return (
-            <Card className="border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
+            <Card className={cn("border transition-colors", d.is_available ? "border-primary/25 bg-card/80" : "border-border bg-card/60")}>
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-4">
                 <div className="min-w-0">
-                  <CardTitle className="text-lg">{DAY_LABELS[i]}</CardTitle>
-                  <div className={cn("text-xs mt-0.5", d.is_available ? "text-primary" : "text-muted-foreground")}>
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    {DAY_LABELS[i]}
+                    {d.is_available && (
+                      <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden />
+                    )}
+                  </CardTitle>
+                  <div className={cn("text-xs mt-1", d.is_available ? "text-primary" : "text-muted-foreground")}>
                     {d.is_available
                       ? <>Disponibile · <span className="text-muted-foreground">{sum.hours}</span></>
                       : "Non disponibile"}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="hidden sm:inline text-xs text-muted-foreground">Attiva</span>
+                  <span className="hidden sm:inline text-xs font-medium text-muted-foreground">Attiva</span>
                   <Switch
                     checked={d.is_available}
                     onCheckedChange={(v) => toggleDay(i, v)}
