@@ -31,7 +31,8 @@ const POPOVER_OFFSET = 14;
  */
 export function GuidedTour() {
   const { user, role, extrasLoaded } = useAuth();
-  const tour = useMemo(() => getTourForRole(role), [role]);
+  const tourRole = role === "worker" || role === "restaurant" ? role : null;
+  const tour = useMemo(() => getTourForRole(tourRole), [tourRole]);
 
   const [running, setRunning] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -58,14 +59,14 @@ export function GuidedTour() {
   useEffect(() => {
     const onStart = (ev: Event) => {
       const detail = (ev as CustomEvent<TourStartDetail>).detail ?? {};
-      const targetTour = getTourForRole(detail.role ?? role ?? null);
+      const targetTour = getTourForRole(detail.role ?? tourRole);
       if (!targetTour) return;
       setStepIndex(0);
       setRunning(true);
     };
     window.addEventListener(TOUR_START_EVENT, onStart);
     return () => window.removeEventListener(TOUR_START_EVENT, onStart);
-  }, [role]);
+  }, [tourRole]);
 
   /* ---------- measure target + auto-scroll ---------- */
 
