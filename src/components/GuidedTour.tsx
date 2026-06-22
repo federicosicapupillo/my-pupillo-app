@@ -305,13 +305,13 @@ export function GuidedTour() {
         .${HIGHLIGHT_CLASS} {
           position: relative !important;
           z-index: 10000 !important;
+          display: inline-block;
           border-radius: 12px;
           background: hsl(var(--background)) !important;
           box-shadow:
             0 0 0 3px hsl(var(--primary)),
             0 0 0 8px hsl(var(--primary) / 0.25),
-            0 18px 48px -8px hsl(var(--primary) / 0.55),
-            0 0 0 9999px transparent;
+            0 18px 48px -8px hsl(var(--primary) / 0.55);
           transform: scale(1.06);
           transition: transform 220ms ease-out, box-shadow 220ms ease-out;
           animation: pupillo-tour-pulse 2.2s ease-in-out infinite;
