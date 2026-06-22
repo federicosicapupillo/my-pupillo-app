@@ -18,6 +18,7 @@ const PANEL_MAX_WIDTH = 460;
 const PANEL_MARGIN = 16;
 const PANEL_ESTIMATED_HEIGHT = 260;
 const HIGHLIGHT_CLASS = "pupillo-tour-active";
+const TARGET_ACTIVE_CLASS = "tour-target-active";
 const SPOTLIGHT_PADDING = 8;
 
 /**
@@ -104,12 +105,14 @@ export function GuidedTour() {
       // Clear previous
       if (highlightedRef.current) {
         highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
+        highlightedRef.current.classList.remove(TARGET_ACTIVE_CLASS);
         highlightedRef.current = null;
       }
       if (!currentStep.target || currentStep.placement === "center") return;
       const el = findVisibleTarget(currentStep.target);
       if (el) {
         el.classList.add(HIGHLIGHT_CLASS);
+        el.classList.add(TARGET_ACTIVE_CLASS);
         highlightedRef.current = el;
       } else if (attempts < 8) {
         attempts += 1;
@@ -121,6 +124,7 @@ export function GuidedTour() {
       cancelled = true;
       if (highlightedRef.current) {
         highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
+        highlightedRef.current.classList.remove(TARGET_ACTIVE_CLASS);
         highlightedRef.current = null;
       }
     };
@@ -294,7 +298,7 @@ export function GuidedTour() {
         type="button"
         aria-label="Chiudi tour"
         onClick={() => finish(true)}
-        className="fixed inset-0 h-full w-full cursor-default bg-black/70 backdrop-blur-[3px] outline-none animate-in fade-in duration-200"
+        className="fixed inset-0 h-full w-full cursor-default bg-background/45 backdrop-blur-[1px] outline-none animate-in fade-in duration-200"
         style={{ zIndex: 9998 }}
       />
 
