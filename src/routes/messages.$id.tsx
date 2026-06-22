@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, CheckCheck, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2 } from "lucide-react";
-import { MessageSquare } from "lucide-react";
+
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -2475,7 +2475,7 @@ function Thread() {
                       worker_interested: workerInterested,
                       can_confirm: workerInterested && transitioning === null,
                       can_send_counteroffer: !!restaurantProposalMsg && transitioning === null,
-                      buttons_rendered: ["Chatta", "Rifiuta", restaurantProposalMsg ? "Conferma lavoratore" : "Accetta candidatura", restaurantProposalMsg ? "Invia controfferta" : null].filter(Boolean),
+                      buttons_rendered: ["Rifiuta", restaurantProposalMsg ? "Conferma lavoratore" : "Accetta candidatura", restaurantProposalMsg ? "Invia controfferta" : null].filter(Boolean),
                       credits_balance: creditsAvailable,
                       credits_required: CREDITS_PER_HIRE,
                     });
@@ -2493,17 +2493,6 @@ function Thread() {
                     Il lavoratore ha confermato la disponibilità per questa proposta. Ora puoi confermare il servizio oppure inviare una controfferta.
                   </div>
                 )}
-                <Button
-                  variant="outline"
-                  className="gap-2 w-full"
-                  onClick={() => {
-                    document.getElementById("chat-composer")?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }}
-                  disabled={transitioning !== null}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Chatta
-                </Button>
                 <Button
                   variant="secondary"
                   className="gap-2 w-full"
