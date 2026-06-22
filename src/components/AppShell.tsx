@@ -172,7 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <div className="hidden md:flex items-center gap-1">
             {items.map((i) => (
-              <Link key={i.to} to={i.to as never} data-tour={i.tour}>
+              <Link key={i.to} to={i.to as never} data-tour={i.tour} className="inline-flex rounded-md">
                 <Button variant={loc.pathname.startsWith(i.to) ? "secondary" : "ghost"} size="sm" className="gap-2">
                   <i.icon className="h-4 w-4" />{i.label}
                   {i.to === "/messages" && unreadMsgs > 0 && (

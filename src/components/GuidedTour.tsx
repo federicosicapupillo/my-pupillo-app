@@ -18,6 +18,8 @@ const PANEL_MAX_WIDTH = 460;
 const PANEL_MARGIN = 16;
 const PANEL_ESTIMATED_HEIGHT = 260;
 const HIGHLIGHT_CLASS = "pupillo-tour-active";
+const TARGET_ACTIVE_CLASS = "tour-target-active";
+const STACK_LIFT_CLASS = "pupillo-tour-stack-lift";
 const SPOTLIGHT_PADDING = 8;
 
 /**
@@ -40,6 +42,7 @@ export function GuidedTour() {
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const highlightedRef = useRef<HTMLElement | null>(null);
+  const liftedAncestorsRef = useRef<HTMLElement[]>([]);
   const [viewport, setViewport] = useState<{ w: number; h: number }>(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1024,
     h: typeof window !== "undefined" ? window.innerHeight : 768,
@@ -94,6 +97,36 @@ export function GuidedTour() {
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
   }, [currentStep]);
 
+  const clearActiveTarget = useCallback(() => {
+    if (highlightedRef.current) {
+      highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
+      highlightedRef.current.classList.remove(TARGET_ACTIVE_CLASS);
+      highlightedRef.current = null;
+    }
+    liftedAncestorsRef.current.forEach((node) => node.classList.remove(STACK_LIFT_CLASS));
+    liftedAncestorsRef.current = [];
+  }, []);
+
+  const liftStackingAncestors = useCallback((el: HTMLElement) => {
+    const lifted: HTMLElement[] = [];
+    let node = el.parentElement;
+    while (node && node !== document.body && node !== document.documentElement) {
+      const style = window.getComputedStyle(node);
+      const createsStack =
+        (style.position !== "static" && style.zIndex !== "auto") ||
+        style.transform !== "none" ||
+        style.filter !== "none" ||
+        style.backdropFilter !== "none" ||
+        Number(style.opacity) < 1;
+      if (createsStack || node.tagName.toLowerCase() === "header") {
+        node.classList.add(STACK_LIFT_CLASS);
+        lifted.push(node);
+      }
+      node = node.parentElement;
+    }
+    liftedAncestorsRef.current = lifted;
+  }, []);
+
   // Apply / clean up the highlight class on the current target element.
   useEffect(() => {
     if (!running || !currentStep) return;
@@ -102,14 +135,13 @@ export function GuidedTour() {
     const apply = () => {
       if (cancelled) return;
       // Clear previous
-      if (highlightedRef.current) {
-        highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
-        highlightedRef.current = null;
-      }
+      clearActiveTarget();
       if (!currentStep.target || currentStep.placement === "center") return;
       const el = findVisibleTarget(currentStep.target);
       if (el) {
         el.classList.add(HIGHLIGHT_CLASS);
+        el.classList.add(TARGET_ACTIVE_CLASS);
+        liftStackingAncestors(el);
         highlightedRef.current = el;
       } else if (attempts < 8) {
         attempts += 1;
@@ -119,12 +151,9 @@ export function GuidedTour() {
     apply();
     return () => {
       cancelled = true;
-      if (highlightedRef.current) {
-        highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
-        highlightedRef.current = null;
-      }
+      clearActiveTarget();
     };
-  }, [running, stepIndex, currentStep]);
+  }, [running, stepIndex, currentStep, clearActiveTarget, liftStackingAncestors]);
 
   // When step changes: scroll target into view, then measure (with retries
   // to account for late-rendered elements / hidden mobile nav).
@@ -294,7 +323,7 @@ export function GuidedTour() {
         type="button"
         aria-label="Chiudi tour"
         onClick={() => finish(true)}
-        className="fixed inset-0 h-full w-full cursor-default bg-black/70 backdrop-blur-[3px] outline-none animate-in fade-in duration-200"
+        className="fixed inset-0 h-full w-full cursor-default bg-background/45 backdrop-blur-[1px] outline-none animate-in fade-in duration-200"
         style={{ zIndex: 9998 }}
       />
 
@@ -306,7 +335,7 @@ export function GuidedTour() {
           className="pointer-events-none fixed rounded-2xl transition-all duration-300 ease-out"
           style={{
             ...spotlight,
-            zIndex: 9999,
+            zIndex: 10000,
             boxShadow:
               "0 0 0 2px hsl(var(--primary) / 0.9), 0 0 0 7px hsl(var(--primary) / 0.25), 0 0 32px 4px hsl(var(--primary) / 0.45)",
             animation: "pupillo-tour-pulse 2.4s ease-in-out infinite",
@@ -349,16 +378,48 @@ export function GuidedTour() {
         .${HIGHLIGHT_CLASS} {
           position: relative !important;
           z-index: 10001 !important;
-          border-radius: 12px;
-          background: hsl(var(--background)) !important;
-          transform: scale(1.04);
+          display: inline-flex !important;
+          align-items: center;
+          border-radius: 14px;
+          background: hsl(var(--card)) !important;
+          color: hsl(var(--foreground)) !important;
+          transform: scale(1.07);
           transform-origin: center;
-          transition: transform 260ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms ease-out;
-          will-change: transform;
+          transition: transform 260ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms ease-out, background-color 260ms ease-out;
+          will-change: transform, box-shadow;
+          box-shadow:
+            0 0 0 2px hsl(var(--primary)),
+            0 0 0 8px hsl(var(--primary) / 0.20),
+            0 18px 42px -18px hsl(var(--primary) / 0.65),
+            0 10px 28px -12px rgba(0,0,0,0.55) !important;
+        }
+        .${HIGHLIGHT_CLASS} button,
+        .${HIGHLIGHT_CLASS} a,
+        .${HIGHLIGHT_CLASS} span,
+        .${HIGHLIGHT_CLASS} svg {
+          color: hsl(var(--foreground)) !important;
+          opacity: 1 !important;
+        }
+        .${HIGHLIGHT_CLASS} > button,
+        .${HIGHLIGHT_CLASS} > [role="button"] {
+          background: hsl(var(--card)) !important;
+          color: hsl(var(--foreground)) !important;
+          border-radius: 12px;
+          min-height: 40px;
+          padding-inline: 14px;
+        }
+        .${HIGHLIGHT_CLASS}[role="menuitem"] {
+          display: flex !important;
+          width: 100%;
         }
         .${HIGHLIGHT_CLASS} > * {
           position: relative;
           z-index: 1;
+        }
+        .${STACK_LIFT_CLASS} {
+          position: relative !important;
+          z-index: 10000 !important;
+          isolation: auto !important;
         }
         @keyframes pupillo-tour-pulse {
           0%, 100% {
