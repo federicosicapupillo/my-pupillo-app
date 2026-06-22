@@ -323,24 +323,66 @@ export function GuidedTour() {
         type="button"
         aria-label="Chiudi tour"
         onClick={() => finish(true)}
-        className="fixed inset-0 h-full w-full cursor-default bg-background/45 backdrop-blur-[1px] outline-none animate-in fade-in duration-200"
+        className="fixed inset-0 h-full w-full cursor-default bg-background/65 backdrop-blur-[2px] outline-none animate-in fade-in duration-200"
         style={{ zIndex: 9998 }}
       />
 
       {/* Spotlight ring drawn over the target (under the target itself
           so the target stays interactive-looking and on top). */}
       {spotlight && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed rounded-2xl transition-all duration-300 ease-out"
-          style={{
-            ...spotlight,
-            zIndex: 10000,
-            boxShadow:
-              "0 0 0 2px hsl(var(--primary) / 0.9), 0 0 0 7px hsl(var(--primary) / 0.25), 0 0 32px 4px hsl(var(--primary) / 0.45)",
-            animation: "pupillo-tour-pulse 2.4s ease-in-out infinite",
-          }}
-        />
+        <>
+          {/* Soft outer halo glow */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed rounded-[20px] transition-all duration-300 ease-out"
+            style={{
+              top: spotlight.top - 14,
+              left: spotlight.left - 14,
+              width: spotlight.width + 28,
+              height: spotlight.height + 28,
+              zIndex: 9999,
+              background:
+                "radial-gradient(closest-side, hsl(var(--primary) / 0.35), transparent 75%)",
+              filter: "blur(8px)",
+              animation: "pupillo-tour-halo 2.4s ease-in-out infinite",
+            }}
+          />
+          {/* Crisp focus ring */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed rounded-2xl transition-all duration-300 ease-out"
+            style={{
+              ...spotlight,
+              zIndex: 10000,
+              boxShadow:
+                "0 0 0 3px hsl(var(--primary)), 0 0 0 10px hsl(var(--primary) / 0.30), 0 0 44px 8px hsl(var(--primary) / 0.55)",
+              animation: "pupillo-tour-pulse 2.4s ease-in-out infinite",
+            }}
+          />
+          {/* "Qui" badge above the target */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed flex items-center justify-center transition-all duration-300 ease-out"
+            style={{
+              top: Math.max(6, spotlight.top - 30),
+              left: spotlight.left + spotlight.width / 2,
+              transform: "translateX(-50%)",
+              zIndex: 10002,
+            }}
+          >
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-lg"
+              style={{
+                boxShadow:
+                  "0 6px 18px -4px hsl(var(--primary) / 0.75), 0 0 0 2px hsl(var(--background))",
+                animation: "pupillo-tour-badge 2.4s ease-in-out infinite",
+              }}
+            >
+              <Sparkles className="h-3 w-3" />
+              Qui
+            </span>
+          </div>
+        </>
       )}
 
       {/* Connector line from panel to target (above overlay, below panel) */}
@@ -383,15 +425,16 @@ export function GuidedTour() {
           border-radius: 14px;
           background: hsl(var(--card)) !important;
           color: hsl(var(--foreground)) !important;
-          transform: scale(1.07);
+          transform: scale(1.10);
           transform-origin: center;
           transition: transform 260ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms ease-out, background-color 260ms ease-out;
           will-change: transform, box-shadow;
           box-shadow:
-            0 0 0 2px hsl(var(--primary)),
-            0 0 0 8px hsl(var(--primary) / 0.20),
-            0 18px 42px -18px hsl(var(--primary) / 0.65),
-            0 10px 28px -12px rgba(0,0,0,0.55) !important;
+            0 0 0 3px hsl(var(--primary)),
+            0 0 0 10px hsl(var(--primary) / 0.28),
+            0 0 32px 4px hsl(var(--primary) / 0.55),
+            0 18px 42px -18px hsl(var(--primary) / 0.7),
+            0 12px 30px -10px rgba(0,0,0,0.65) !important;
         }
         .${HIGHLIGHT_CLASS} button,
         .${HIGHLIGHT_CLASS} a,
@@ -402,11 +445,12 @@ export function GuidedTour() {
         }
         .${HIGHLIGHT_CLASS} > button,
         .${HIGHLIGHT_CLASS} > [role="button"] {
-          background: hsl(var(--card)) !important;
+          background: linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--card))) !important;
           color: hsl(var(--foreground)) !important;
           border-radius: 12px;
           min-height: 40px;
           padding-inline: 14px;
+          font-weight: 600;
         }
         .${HIGHLIGHT_CLASS}[role="menuitem"] {
           display: flex !important;
@@ -424,16 +468,24 @@ export function GuidedTour() {
         @keyframes pupillo-tour-pulse {
           0%, 100% {
             box-shadow:
-              0 0 0 2px hsl(var(--primary) / 0.9),
-              0 0 0 7px hsl(var(--primary) / 0.22),
-              0 0 28px 4px hsl(var(--primary) / 0.40);
+              0 0 0 3px hsl(var(--primary)),
+              0 0 0 9px hsl(var(--primary) / 0.26),
+              0 0 36px 6px hsl(var(--primary) / 0.50);
           }
           50% {
             box-shadow:
-              0 0 0 2px hsl(var(--primary)),
-              0 0 0 11px hsl(var(--primary) / 0.14),
-              0 0 40px 8px hsl(var(--primary) / 0.55);
+              0 0 0 3px hsl(var(--primary)),
+              0 0 0 14px hsl(var(--primary) / 0.18),
+              0 0 52px 12px hsl(var(--primary) / 0.65);
           }
+        }
+        @keyframes pupillo-tour-halo {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%      { opacity: 0.95; transform: scale(1.06); }
+        }
+        @keyframes pupillo-tour-badge {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50%      { transform: translateX(-50%) translateY(-3px); }
         }
         @keyframes pupillo-tour-card-in {
           from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(.98); }
