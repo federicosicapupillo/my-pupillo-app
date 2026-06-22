@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Bot, AlertTriangle, MessageCircle, X, ArrowLeft } from "lucide-react";
+import { Send, Bot, AlertTriangle, MessageCircle, X, ArrowLeft, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
 import { askAssistant, type AssistantReply } from "@/lib/assistant.functions";
 import { ReportProblemDialog } from "@/components/assistant/ReportProblemDialog";
 import { cn } from "@/lib/utils";
+import { dispatchStartTour } from "@/lib/guided-tour";
 
 type ChatMessage = {
   id: string;
@@ -207,6 +208,21 @@ export function AssistantPanel({
       </div>
 
       <div className="border-t bg-background p-3 space-y-2">
+        {(role === "worker" || role === "restaurant") && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-center gap-1.5 text-xs"
+            onClick={() => {
+              onOpenChange(false);
+              // Defer so the sheet/drawer can close before the tour overlay opens.
+              setTimeout(() => dispatchStartTour({ force: true }), 200);
+            }}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Rivedi guida
+          </Button>
+        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
