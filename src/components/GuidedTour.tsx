@@ -15,8 +15,9 @@ import {
 type Rect = { top: number; left: number; width: number; height: number };
 
 const PADDING = 8;
-const POPOVER_WIDTH = 320;
-const POPOVER_OFFSET = 14;
+const PANEL_MAX_WIDTH = 440;
+const PANEL_MARGIN = 16;
+const PANEL_ESTIMATED_HEIGHT = 230;
 
 /**
  * GuidedTour — global tour runner mounted inside AppShell.
@@ -37,6 +38,10 @@ export function GuidedTour() {
   const [running, setRunning] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [viewport, setViewport] = useState<{ w: number; h: number }>(() => ({
+    w: typeof window !== "undefined" ? window.innerWidth : 1024,
+    h: typeof window !== "undefined" ? window.innerHeight : 768,
+  }));
   const autoStartedRef = useRef(false);
 
   /* ---------- start triggers ---------- */
@@ -119,7 +124,10 @@ export function GuidedTour() {
   // Re-measure on resize / scroll while running.
   useEffect(() => {
     if (!running) return;
-    const onChange = () => measure();
+    const onChange = () => {
+      setViewport({ w: window.innerWidth, h: window.innerHeight });
+      measure();
+    };
     window.addEventListener("resize", onChange);
     window.addEventListener("scroll", onChange, true);
     return () => {
@@ -176,42 +184,44 @@ export function GuidedTour() {
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === total - 1;
 
-  /* ---------- popover positioning ---------- */
+  /* ---------- fixed panel positioning ----------
+   * The panel always sits at the bottom-center of the viewport.
+   * If the highlighted target would be covered by the panel, we flip
+   * the panel to the top instead. The target itself never moves the
+   * panel around — only top/bottom flip happens.
+   */
 
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1024;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 768;
+  const { w: vw, h: vh } = viewport;
+  const hasTarget = !!rect && currentStep.placement !== "center";
 
-  let popoverStyle: React.CSSProperties;
-  let centered = false;
+  // Decide if panel sits at bottom (default) or flips to top when the
+  // target sits in the lower half of the viewport.
+  const panelAtBottom = !hasTarget
+    ? true
+    : (rect!.top + rect!.height / 2) < vh - PANEL_ESTIMATED_HEIGHT - 40;
 
-  if (!rect || currentStep.placement === "center") {
-    centered = true;
-    popoverStyle = {
-      position: "fixed",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      width: `min(${POPOVER_WIDTH}px, calc(100vw - 32px))`,
-    };
-  } else {
-    // Decide vertical placement based on available room.
-    const spaceBelow = vh - (rect.top + rect.height);
-    const spaceAbove = rect.top;
-    const placeBelow = currentStep.placement === "bottom"
-      ? spaceBelow > 180 || spaceBelow > spaceAbove
-      : spaceBelow > spaceAbove;
-    const top = placeBelow
-      ? Math.min(rect.top + rect.height + POPOVER_OFFSET, vh - 220)
-      : Math.max(16, rect.top - POPOVER_OFFSET - 200);
-    // Horizontal: try to center on the target, clamp to viewport.
-    const idealLeft = rect.left + rect.width / 2 - POPOVER_WIDTH / 2;
-    const left = Math.max(16, Math.min(idealLeft, vw - POPOVER_WIDTH - 16));
-    popoverStyle = {
-      position: "fixed",
-      top,
-      left,
-      width: `min(${POPOVER_WIDTH}px, calc(100vw - 32px))`,
-    };
+  const panelStyle: React.CSSProperties = {
+    position: "fixed",
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: `min(${PANEL_MAX_WIDTH}px, calc(100vw - ${PANEL_MARGIN * 2}px))`,
+    ...(panelAtBottom
+      ? { bottom: `max(${PANEL_MARGIN}px, env(safe-area-inset-bottom, 0px))` }
+      : { top: `${PANEL_MARGIN}px` }),
+  };
+
+  // Connector line from panel edge to the target center.
+  let connector: { x1: number; y1: number; x2: number; y2: number } | null = null;
+  if (hasTarget) {
+    const panelCenterX = vw / 2;
+    const panelEdgeY = panelAtBottom
+      ? vh - PANEL_ESTIMATED_HEIGHT - PANEL_MARGIN
+      : PANEL_MARGIN + PANEL_ESTIMATED_HEIGHT;
+    const tx = rect!.left + rect!.width / 2;
+    const ty = panelAtBottom
+      ? rect!.top + rect!.height + PADDING + 4
+      : rect!.top - PADDING - 4;
+    connector = { x1: panelCenterX, y1: panelEdgeY, x2: tx, y2: ty };
   }
 
   return (
@@ -226,84 +236,128 @@ export function GuidedTour() {
         type="button"
         aria-label="Chiudi tour"
         onClick={() => finish(true)}
-        className="absolute inset-0 h-full w-full cursor-default bg-black/55 backdrop-blur-[1px] outline-none"
+        className="absolute inset-0 h-full w-full cursor-default bg-black/70 backdrop-blur-[2px] outline-none"
       />
 
-      {/* Spotlight cutout via box-shadow trick */}
-      {rect && !centered && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute rounded-xl ring-2 ring-primary/80 transition-all duration-200"
-          style={{
-            top: rect.top - PADDING,
-            left: rect.left - PADDING,
-            width: rect.width + PADDING * 2,
-            height: rect.height + PADDING * 2,
-            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
-          }}
-        />
+      {/* Spotlight: target stays visually punched-through with a scale + ring */}
+      {hasTarget && (
+        <>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute rounded-2xl ring-2 ring-primary transition-all duration-300 ease-out"
+            style={{
+              top: rect!.top - PADDING,
+              left: rect!.left - PADDING,
+              width: rect!.width + PADDING * 2,
+              height: rect!.height + PADDING * 2,
+              boxShadow:
+                "0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 4px hsl(var(--primary) / 0.25), 0 20px 60px -10px hsl(var(--primary) / 0.45)",
+              transform: "scale(1.03)",
+              transformOrigin: `${rect!.left + rect!.width / 2}px ${rect!.top + rect!.height / 2}px`,
+              animation: "pupillo-tour-pulse 2.2s ease-in-out infinite",
+            }}
+          />
+          {/* Connector line from panel to target */}
+          {connector && (
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              style={{ overflow: "visible" }}
+            >
+              <line
+                x1={connector.x1}
+                y1={connector.y1}
+                x2={connector.x2}
+                y2={connector.y2}
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                strokeDasharray="6 6"
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+              <circle
+                cx={connector.x2}
+                cy={connector.y2}
+                r={5}
+                fill="hsl(var(--primary))"
+              />
+            </svg>
+          )}
+          <style>{`@keyframes pupillo-tour-pulse {
+            0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 4px hsl(var(--primary) / 0.25), 0 20px 60px -10px hsl(var(--primary) / 0.45); }
+            50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 8px hsl(var(--primary) / 0.18), 0 20px 60px -10px hsl(var(--primary) / 0.55); }
+          }`}</style>
+        </>
       )}
 
-      {/* Popover */}
+      {/* Fixed guide panel */}
       <div
-        style={popoverStyle}
-        className="rounded-2xl border border-border bg-card text-card-foreground shadow-2xl p-4 sm:p-5"
+        style={panelStyle}
+        className="rounded-2xl border border-border/60 bg-card/95 text-card-foreground shadow-2xl backdrop-blur-md overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
       >
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="text-xs font-medium text-muted-foreground">
-            {stepIndex + 1} di {total}
+        {/* Top progress bar */}
+        <div className="h-1 w-full bg-muted/40">
+          <div
+            className="h-full bg-primary transition-all duration-300 ease-out"
+            style={{ width: `${((stepIndex + 1) / total) * 100}%` }}
+          />
+        </div>
+
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              Passo {stepIndex + 1} / {total}
+            </span>
+            <button
+              type="button"
+              onClick={() => finish(true)}
+              aria-label="Chiudi tour"
+              className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => finish(true)}
-            aria-label="Chiudi tour"
-            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <h2 className="text-base sm:text-lg font-semibold leading-tight">{currentStep.title}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{currentStep.body}</p>
 
-        {/* Progress dots */}
-        <div className="mt-4 flex items-center justify-center gap-1.5" aria-hidden="true">
-          {tour.steps.map((s, i) => (
-            <span
-              key={s.id}
-              className={
-                "h-1.5 rounded-full transition-all " +
-                (i === stepIndex ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/30")
-              }
-            />
-          ))}
-        </div>
+          <h2 className="text-lg sm:text-xl font-semibold leading-tight tracking-tight">
+            {currentStep.title}
+          </h2>
+          <p className="mt-2 text-sm sm:text-[15px] leading-relaxed text-muted-foreground">
+            {currentStep.body}
+          </p>
 
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => finish(true)}
-            className="text-muted-foreground"
-          >
-            {isLast ? "Chiudi" : "Salta"}
-          </Button>
-          <div className="flex items-center gap-2">
-            {!isFirst && (
-              <Button variant="outline" size="sm" onClick={prev} className="gap-1">
-                <ChevronLeft className="h-4 w-4" />
-                Indietro
-              </Button>
-            )}
-            <Button size="sm" onClick={next} className="gap-1">
-              {isLast
-                ? role === "restaurant"
-                  ? "Inizia"
-                  : "Inizia a usare Pupillo"
-                : isFirst
-                  ? "Inizia"
-                  : "Avanti"}
-              {!isLast && <ChevronRight className="h-4 w-4" />}
+          {/* Footer actions */}
+          <div className="mt-5 flex items-center justify-between gap-2 flex-wrap">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => finish(true)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              {isLast ? "Chiudi" : "Salta"}
             </Button>
+            <div className="flex items-center gap-2 min-w-0">
+              {!isFirst && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={prev}
+                  className="gap-1"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden xs:inline sm:inline">Indietro</span>
+                </Button>
+              )}
+              <Button size="sm" onClick={next} className="gap-1 max-w-full truncate">
+                <span className="truncate">
+                  {isLast
+                    ? "Inizia a usare Pupillo"
+                    : isFirst
+                      ? "Inizia"
+                      : "Avanti"}
+                </span>
+                {!isLast && <ChevronRight className="h-4 w-4 shrink-0" />}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
