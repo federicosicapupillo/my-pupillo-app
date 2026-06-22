@@ -335,7 +335,7 @@ export function GuidedTour() {
           className="pointer-events-none fixed rounded-2xl transition-all duration-300 ease-out"
           style={{
             ...spotlight,
-            zIndex: 9999,
+            zIndex: 10000,
             boxShadow:
               "0 0 0 2px hsl(var(--primary) / 0.9), 0 0 0 7px hsl(var(--primary) / 0.25), 0 0 32px 4px hsl(var(--primary) / 0.45)",
             animation: "pupillo-tour-pulse 2.4s ease-in-out infinite",
@@ -407,6 +407,10 @@ export function GuidedTour() {
           border-radius: 12px;
           min-height: 40px;
           padding-inline: 14px;
+        }
+        .${HIGHLIGHT_CLASS}[role="menuitem"] {
+          display: flex !important;
+          width: 100%;
         }
         .${HIGHLIGHT_CLASS} > * {
           position: relative;
