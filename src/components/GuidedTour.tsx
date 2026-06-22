@@ -412,6 +412,11 @@ export function GuidedTour() {
           position: relative;
           z-index: 1;
         }
+        .${STACK_LIFT_CLASS} {
+          position: relative !important;
+          z-index: 10000 !important;
+          isolation: auto !important;
+        }
         @keyframes pupillo-tour-pulse {
           0%, 100% {
             box-shadow:
