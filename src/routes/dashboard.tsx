@@ -657,8 +657,9 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
             </Link>
           }
         />
-        <WorkerAvailabilitySummary workerId={userId} />
+        <WorkerAvailabilitySummary workerId={userId} collapsible />
       </section>
+
 
       {/* 5. REPUTAZIONE */}
       <section>
