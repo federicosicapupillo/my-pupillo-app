@@ -498,9 +498,13 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
 }
 
 function RolesBox({ profile, userId, onSaved }: { profile: any; userId: string | null; onSaved: () => Promise<void> | void }) {
+  // Show the union of primary + secondary roles. We don't pull from the
+  // legacy `professional_profile` column on read: after save we keep it in
+  // sync with primary_role so all downstream views (ristoratore card,
+  // matchers, listing filters) read a single source of truth.
   const initial = Array.from(new Set([
-    ...((profile?.secondary_roles as string[] | null | undefined) ?? []),
     ...(profile?.primary_role ? [profile.primary_role] : []),
+    ...((profile?.secondary_roles as string[] | null | undefined) ?? []),
   ].filter(Boolean)));
   const [editing, setEditing] = useState(false);
   const [roles, setRoles] = useState<string[]>(initial);
@@ -508,7 +512,17 @@ function RolesBox({ profile, userId, onSaved }: { profile: any; userId: string |
 
   const start = () => { setRoles(initial); setEditing(true); };
   const onSave = async () => {
-    const ok = await save({ primary_role: roles[0] ?? null, secondary_roles: roles });
+    // Dedupe + keep the legacy `professional_profile` column aligned with
+    // the new primary so ristoratore-side views (cards, filters, role
+    // matchers in worker-role-normalization) cannot show a removed role.
+    const unique = Array.from(new Set(roles.filter(Boolean)));
+    const primary = unique[0] ?? null;
+    const secondary = unique.slice(1);
+    const ok = await save({
+      primary_role: primary,
+      secondary_roles: secondary,
+      professional_profile: primary,
+    });
     if (ok) setEditing(false);
   };
 
