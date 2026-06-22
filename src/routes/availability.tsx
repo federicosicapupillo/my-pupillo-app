@@ -684,9 +684,9 @@ function AvailabilityPage() {
     saving ? "saving" : dirty ? "dirty" : lastSavedAt ? "saved" : "idle";
 
   const SAVE_PILL = {
-    saving: { label: "Salvataggio…", cls: "border-primary/40 bg-primary/10 text-primary", Icon: Loader2, spin: true },
-    dirty: { label: "Modifiche non salvate", cls: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400", Icon: AlertCircle, spin: false },
-    saved: { label: "Tutto salvato", cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", Icon: CheckCircle2, spin: false },
+    saving: { label: "Salvataggio…", cls: "border-primary/50 bg-primary/15 text-primary", Icon: Loader2, spin: true },
+    dirty: { label: "Modifiche non salvate", cls: "border-amber-500/60 bg-amber-500/15 text-amber-700 dark:text-amber-300", Icon: AlertCircle, spin: false },
+    saved: { label: "Tutto salvato", cls: "border-emerald-500/50 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300", Icon: CheckCircle2, spin: false },
     idle: { label: "Nessuna modifica", cls: "border-border bg-muted text-muted-foreground", Icon: CheckCircle2, spin: false },
   }[saveStatus];
 
