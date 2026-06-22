@@ -702,17 +702,20 @@ function AvailabilityPage() {
 
   return (
     <AppShell>
-      {/* ───────── HERO HEADER: titolo, riepilogo, stato e CTA primaria ───────── */}
-      <header className="mb-6 rounded-2xl border bg-card/60 p-5 sm:p-6 shadow-sm">
+      {/* ───────── HERO HEADER ───────── */}
+      <header className="mb-6 rounded-2xl border bg-card/70 p-5 sm:p-6 shadow-sm">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h1 className="truncate text-2xl sm:text-3xl font-bold tracking-tight">Le mie disponibilità</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Tocca un giorno per modificarlo. Salva quando hai finito.
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Tocca un giorno per modificarlo, poi salva la settimana.
             </p>
           </div>
           <div className="hidden sm:flex shrink-0 items-center gap-3">
-            <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", SAVE_PILL.cls)}>
+            <span className={cn(
+              "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+              SAVE_PILL.cls
+            )}>
               <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
               {SAVE_PILL.label}
             </span>
@@ -720,7 +723,7 @@ function AvailabilityPage() {
               onClick={saveGated}
               disabled={saving || loading || !dirty}
               size="lg"
-              className={cn("gap-2 shadow-sm", gatedOpacity)}
+              className={cn("gap-2 shadow-sm min-w-[180px]", gatedOpacity)}
             >
               <Save className="h-4 w-4" />
               {saving ? "Salvataggio..." : "Salva disponibilità"}
@@ -729,23 +732,23 @@ function AvailabilityPage() {
         </div>
 
         {/* Riepilogo sintetico */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1 text-xs">
+        <div className="mt-5 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs">
             <CalendarDays className="h-3.5 w-3.5 text-primary" />
             <strong className="tabular-nums">{summary.active}</strong>/7 giorni
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1 text-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs">
             <Zap className="h-3.5 w-3.5 text-primary" />
             <strong className="tabular-nums">{summary.totalSlots}</strong> {summary.totalSlots === 1 ? "fascia" : "fasce"}
           </span>
           {summary.prevalentCity && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-foreground">
               <MapPin className="h-3.5 w-3.5 text-primary" />
               <strong>{summary.prevalentCity}</strong>
             </span>
           )}
           {summary.nextSpecial && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
               Speciale {new Date(summary.nextSpecial.date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
               {summary.nextSpecial.city ? ` · ${summary.nextSpecial.city}` : ""}
@@ -755,12 +758,35 @@ function AvailabilityPage() {
 
         {/* Mobile: pill stato (CTA è nella bottom bar sticky) */}
         <div className="sm:hidden mt-4">
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", SAVE_PILL.cls)}>
+          <span className={cn(
+            "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+            SAVE_PILL.cls
+          )}>
             <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
             {SAVE_PILL.label}
           </span>
         </div>
       </header>
+
+      {/* Banner modifiche non salvate — molto evidente */}
+      {dirty && (
+        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex items-start gap-3">
+            <span className="relative flex h-2.5 w-2.5 shrink-0 mt-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                Hai modifiche non salvate
+              </p>
+              <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+                Ricorda di premere "Salva disponibilità" prima di uscire dalla pagina.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ───────── DISPONIBILE ORA — funzione veloce e separata ───────── */}
       <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
