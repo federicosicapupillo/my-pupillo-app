@@ -14,10 +14,10 @@ import {
 
 type Rect = { top: number; left: number; width: number; height: number };
 
-const PADDING = 8;
 const PANEL_MAX_WIDTH = 440;
 const PANEL_MARGIN = 16;
 const PANEL_ESTIMATED_HEIGHT = 230;
+const HIGHLIGHT_CLASS = "pupillo-tour-active";
 
 /**
  * GuidedTour — global tour runner mounted inside AppShell.
@@ -38,6 +38,7 @@ export function GuidedTour() {
   const [running, setRunning] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  const highlightedRef = useRef<HTMLElement | null>(null);
   const [viewport, setViewport] = useState<{ w: number; h: number }>(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1024,
     h: typeof window !== "undefined" ? window.innerHeight : 768,
@@ -91,6 +92,38 @@ export function GuidedTour() {
     const r = el.getBoundingClientRect();
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
   }, [currentStep]);
+
+  // Apply / clean up the highlight class on the current target element.
+  useEffect(() => {
+    if (!running || !currentStep) return;
+    let cancelled = false;
+    let attempts = 0;
+    const apply = () => {
+      if (cancelled) return;
+      // Clear previous
+      if (highlightedRef.current) {
+        highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
+        highlightedRef.current = null;
+      }
+      if (!currentStep.target || currentStep.placement === "center") return;
+      const el = findVisibleTarget(currentStep.target);
+      if (el) {
+        el.classList.add(HIGHLIGHT_CLASS);
+        highlightedRef.current = el;
+      } else if (attempts < 8) {
+        attempts += 1;
+        setTimeout(apply, 150);
+      }
+    };
+    apply();
+    return () => {
+      cancelled = true;
+      if (highlightedRef.current) {
+        highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
+        highlightedRef.current = null;
+      }
+    };
+  }, [running, stepIndex, currentStep]);
 
   // When step changes: scroll target into view, then measure (with retries
   // to account for late-rendered elements / hidden mobile nav).
@@ -219,8 +252,8 @@ export function GuidedTour() {
       : PANEL_MARGIN + PANEL_ESTIMATED_HEIGHT;
     const tx = rect!.left + rect!.width / 2;
     const ty = panelAtBottom
-      ? rect!.top + rect!.height + PADDING + 4
-      : rect!.top - PADDING - 4;
+      ? rect!.top + rect!.height + 8
+      : rect!.top - 8;
     connector = { x1: panelCenterX, y1: panelEdgeY, x2: tx, y2: ty };
   }
 
@@ -229,71 +262,83 @@ export function GuidedTour() {
       aria-live="polite"
       role="dialog"
       aria-label={currentStep.title}
-      className="fixed inset-0 z-[80]"
+      className="pupillo-tour-root"
     >
-      {/* Dim overlay; click = skip */}
+      {/* Dim overlay; click = skip. Sits BELOW the highlighted target. */}
       <button
         type="button"
         aria-label="Chiudi tour"
         onClick={() => finish(true)}
-        className="absolute inset-0 h-full w-full cursor-default bg-black/70 backdrop-blur-[2px] outline-none"
+        className="fixed inset-0 h-full w-full cursor-default bg-black/75 backdrop-blur-[2px] outline-none"
+        style={{ zIndex: 9998 }}
       />
 
-      {/* Spotlight: target stays visually punched-through with a scale + ring */}
-      {hasTarget && (
-        <>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute rounded-2xl ring-2 ring-primary transition-all duration-300 ease-out"
-            style={{
-              top: rect!.top - PADDING,
-              left: rect!.left - PADDING,
-              width: rect!.width + PADDING * 2,
-              height: rect!.height + PADDING * 2,
-              boxShadow:
-                "0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 4px hsl(var(--primary) / 0.25), 0 20px 60px -10px hsl(var(--primary) / 0.45)",
-              transform: "scale(1.03)",
-              transformOrigin: `${rect!.left + rect!.width / 2}px ${rect!.top + rect!.height / 2}px`,
-              animation: "pupillo-tour-pulse 2.2s ease-in-out infinite",
-            }}
+      {/* Connector line from panel to target (above overlay, below panel) */}
+      {hasTarget && connector && (
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 h-full w-full"
+          style={{ overflow: "visible", zIndex: 10001 }}
+        >
+          <line
+            x1={connector.x1}
+            y1={connector.y1}
+            x2={connector.x2}
+            y2={connector.y2}
+            stroke="hsl(var(--primary))"
+            strokeWidth={2}
+            strokeDasharray="6 6"
+            strokeLinecap="round"
+            opacity={0.85}
           />
-          {/* Connector line from panel to target */}
-          {connector && (
-            <svg
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              style={{ overflow: "visible" }}
-            >
-              <line
-                x1={connector.x1}
-                y1={connector.y1}
-                x2={connector.x2}
-                y2={connector.y2}
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                strokeDasharray="6 6"
-                strokeLinecap="round"
-                opacity={0.85}
-              />
-              <circle
-                cx={connector.x2}
-                cy={connector.y2}
-                r={5}
-                fill="hsl(var(--primary))"
-              />
-            </svg>
-          )}
-          <style>{`@keyframes pupillo-tour-pulse {
-            0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 4px hsl(var(--primary) / 0.25), 0 20px 60px -10px hsl(var(--primary) / 0.45); }
-            50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.72), 0 0 0 8px hsl(var(--primary) / 0.18), 0 20px 60px -10px hsl(var(--primary) / 0.55); }
-          }`}</style>
-        </>
+          <circle
+            cx={connector.x2}
+            cy={connector.y2}
+            r={5}
+            fill="hsl(var(--primary))"
+          />
+        </svg>
       )}
+
+      {/* Global styles for the highlighted target */}
+      <style>{`
+        .${HIGHLIGHT_CLASS} {
+          position: relative !important;
+          z-index: 10000 !important;
+          display: inline-block;
+          border-radius: 12px;
+          background: hsl(var(--background)) !important;
+          box-shadow:
+            0 0 0 3px hsl(var(--primary)),
+            0 0 0 8px hsl(var(--primary) / 0.25),
+            0 18px 48px -8px hsl(var(--primary) / 0.55);
+          transform: scale(1.06);
+          transition: transform 220ms ease-out, box-shadow 220ms ease-out;
+          animation: pupillo-tour-pulse 2.2s ease-in-out infinite;
+        }
+        .${HIGHLIGHT_CLASS} * {
+          color: inherit;
+        }
+        @keyframes pupillo-tour-pulse {
+          0%, 100% {
+            box-shadow:
+              0 0 0 3px hsl(var(--primary)),
+              0 0 0 8px hsl(var(--primary) / 0.22),
+              0 18px 48px -8px hsl(var(--primary) / 0.50);
+          }
+          50% {
+            box-shadow:
+              0 0 0 3px hsl(var(--primary)),
+              0 0 0 12px hsl(var(--primary) / 0.14),
+              0 22px 56px -8px hsl(var(--primary) / 0.65);
+          }
+        }
+      `}</style>
 
       {/* Fixed guide panel */}
       <div
         style={panelStyle}
-        className="rounded-2xl border border-border/60 bg-card/95 text-card-foreground shadow-2xl backdrop-blur-md overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
+        className="fixed rounded-2xl border border-border/60 bg-card/95 text-card-foreground shadow-2xl backdrop-blur-md overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
       >
         {/* Top progress bar */}
         <div className="h-1 w-full bg-muted/40">
