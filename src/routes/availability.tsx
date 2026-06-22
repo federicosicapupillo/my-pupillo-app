@@ -790,30 +790,36 @@ function AvailabilityPage() {
 
       {/* ───────── DISPONIBILE ORA — funzione veloce e separata ───────── */}
       <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-        <CardContent className="p-4 sm:p-5 grid grid-cols-[auto_minmax(0,1fr)_auto] sm:flex sm:flex-wrap items-center gap-3 sm:gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-            <Zap className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 sm:flex-1">
-            <div className="font-semibold">Disponibile ora</div>
-            <div className="text-xs sm:text-sm text-muted-foreground">
-              Attiva per ricevere proposte immediate, a prescindere dalla settimana.
-            </div>
-            {availableNow && availableNowUntil && (
-              <div className="text-xs text-primary mt-1">
-                Attivo fino alle {new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-3 sm:flex-1 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <Zap className="h-5 w-5" />
               </div>
-            )}
+              <div className="min-w-0">
+                <div className="font-semibold">Disponibile ora</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">
+                  Attiva per ricevere proposte immediate, a prescindere dalla settimana.
+                </div>
+                {availableNow && availableNowUntil && (
+                  <div className="text-xs text-primary mt-1">
+                    Attivo fino alle {new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 sm:shrink-0">
+              <Select value={availableNowDuration} onValueChange={(v) => setAvailableNowDuration(v as "2h" | "today" | "tonight")}>
+                <SelectTrigger className="w-full sm:w-[170px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2h">Prossime 2 ore</SelectItem>
+                  <SelectItem value="today">Disponibile oggi</SelectItem>
+                  <SelectItem value="tonight">Questa sera</SelectItem>
+                </SelectContent>
+              </Select>
+              <Switch checked={availableNow} onCheckedChange={toggleAvailableNowGated} aria-label="Disponibile ora" />
+            </div>
           </div>
-          <Select value={availableNowDuration} onValueChange={(v) => setAvailableNowDuration(v as "2h" | "today" | "tonight")}>
-            <SelectTrigger className="col-span-3 sm:col-auto sm:w-[170px] order-3 sm:order-none"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="2h">Prossime 2 ore</SelectItem>
-              <SelectItem value="today">Disponibile oggi</SelectItem>
-              <SelectItem value="tonight">Questa sera</SelectItem>
-            </SelectContent>
-          </Select>
-          <Switch checked={availableNow} onCheckedChange={toggleAvailableNowGated} aria-label="Disponibile ora" />
         </CardContent>
       </Card>
 
@@ -1096,32 +1102,34 @@ function AvailabilityPage() {
         })()}
       </section>
 
-      {/* ───────── AZIONI RAPIDE — secondarie rispetto al salvataggio ───────── */}
+      {/* ───────── AZIONI RAPIDE ───────── */}
       <section className="mb-10">
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-3 flex items-center gap-2">
           <Wand2 className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Azioni rapide</h3>
         </div>
-        <div className="rounded-2xl border bg-card/40 p-3 sm:p-4">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "all", title: "Imposta tutta la settimana", message: "Questa azione imposterà la disponibilità su tutti i giorni della settimana. Vuoi continuare?" })}>
-              Tutta la settimana
-            </Button>
-            <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "weekend", title: "Imposta solo weekend", message: "Questa azione imposterà la disponibilità su Sabato e Domenica. Vuoi continuare?" })}>
-              Solo weekend
-            </Button>
-            <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "pranzo", title: "Imposta solo pranzo", message: "Questa azione imposterà la fascia oraria 'Pranzo' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
-              Solo pranzo
-            </Button>
-            <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "cena", title: "Imposta solo sere", message: "Questa azione imposterà la fascia oraria 'Cena' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
-              Solo sera
-            </Button>
-          </div>
-          <div className="mt-3 pt-3 border-t border-dashed flex justify-end">
-            <Button type="button" size="sm" variant="ghost" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setConfirmClear(true)}>
-              <Trash2 className="h-3.5 w-3.5" /> Cancella tutte le disponibilità
-            </Button>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "all", title: "Imposta tutta la settimana", message: "Questa azione imposterà la disponibilità su tutti i giorni della settimana. Vuoi continuare?" })}>
+            Tutta la settimana
+          </Button>
+          <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "weekend", title: "Imposta solo weekend", message: "Questa azione imposterà la disponibilità su Sabato e Domenica. Vuoi continuare?" })}>
+            Solo weekend
+          </Button>
+          <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "pranzo", title: "Imposta solo pranzo", message: "Questa azione imposterà la fascia oraria 'Pranzo' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
+            Solo pranzo
+          </Button>
+          <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "cena", title: "Imposta solo sere", message: "Questa azione imposterà la fascia oraria 'Cena' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
+            Solo sera
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="gap-1.5 text-destructive/80 hover:text-destructive hover:bg-destructive/10 ml-auto"
+            onClick={() => setConfirmClear(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Cancella tutto
+          </Button>
         </div>
       </section>
 
