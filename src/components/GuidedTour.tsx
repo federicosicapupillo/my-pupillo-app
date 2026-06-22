@@ -353,12 +353,35 @@ export function GuidedTour() {
         .${HIGHLIGHT_CLASS} {
           position: relative !important;
           z-index: 10001 !important;
-          border-radius: 12px;
-          background: hsl(var(--background)) !important;
-          transform: scale(1.04);
+          display: inline-flex !important;
+          align-items: center;
+          border-radius: 14px;
+          background: hsl(var(--card)) !important;
+          color: hsl(var(--foreground)) !important;
+          transform: scale(1.07);
           transform-origin: center;
-          transition: transform 260ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms ease-out;
-          will-change: transform;
+          transition: transform 260ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms ease-out, background-color 260ms ease-out;
+          will-change: transform, box-shadow;
+          box-shadow:
+            0 0 0 2px hsl(var(--primary)),
+            0 0 0 8px hsl(var(--primary) / 0.20),
+            0 18px 42px -18px hsl(var(--primary) / 0.65),
+            0 10px 28px -12px rgba(0,0,0,0.55) !important;
+        }
+        .${HIGHLIGHT_CLASS} button,
+        .${HIGHLIGHT_CLASS} a,
+        .${HIGHLIGHT_CLASS} span,
+        .${HIGHLIGHT_CLASS} svg {
+          color: hsl(var(--foreground)) !important;
+          opacity: 1 !important;
+        }
+        .${HIGHLIGHT_CLASS} > button,
+        .${HIGHLIGHT_CLASS} > [role="button"] {
+          background: hsl(var(--card)) !important;
+          color: hsl(var(--foreground)) !important;
+          border-radius: 12px;
+          min-height: 40px;
+          padding-inline: 14px;
         }
         .${HIGHLIGHT_CLASS} > * {
           position: relative;
