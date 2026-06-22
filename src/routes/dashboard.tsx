@@ -449,6 +449,363 @@ function StatCard({ icon: Icon, label, value, highlight }: { icon: typeof Briefc
   );
 }
 
+type WorkerHomeProps = {
+  userId: string;
+  profile: any;
+  applications: number;
+  messages: number;
+};
+
+function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps) {
+  const fullName: string = profile?.full_name ?? "";
+  const firstName = fullName ? fullName.split(" ")[0] : "lavoratore";
+  const phoneOk = !!profile?.phone_verified;
+  const profileOk = !!profile?.profile_completed;
+  const isReady = phoneOk && profileOk;
+  const completedShifts = Number(profile?.completed_shifts ?? 0) || 0;
+  const reputationLevel = profile?.reputation_level ?? "new";
+
+  const tasks: Array<{
+    icon: typeof Briefcase;
+    title: string;
+    desc: string;
+    to: any;
+    cta: string;
+    priority: "high" | "normal";
+  }> = [];
+
+  if (!phoneOk) {
+    tasks.push({
+      icon: ShieldCheck,
+      title: "Verifica il tuo numero",
+      desc: "Sblocca le candidature e la chat con i ristoratori.",
+      to: { to: "/onboarding" },
+      cta: "Verifica ora",
+      priority: "high",
+    });
+  }
+  if (!profileOk) {
+    tasks.push({
+      icon: UserCircle2,
+      title: "Completa il profilo professionale",
+      desc: "Ruoli, esperienza e zona: i ristoratori ti trovano più facilmente.",
+      to: { to: "/onboarding" },
+      cta: "Completa profilo",
+      priority: "high",
+    });
+  }
+  if (messages > 0) {
+    tasks.push({
+      icon: MessageSquare,
+      title: `${messages} ${messages === 1 ? "messaggio da leggere" : "messaggi da leggere"}`,
+      desc: "Rispondi velocemente: i ristoratori scelgono chi è reattivo.",
+      to: { to: "/messages" },
+      cta: "Apri inbox",
+      priority: "high",
+    });
+  }
+  tasks.push({
+    icon: CalendarDays,
+    title: "Aggiorna le tue disponibilità",
+    desc: "Tieni la settimana sempre fresca per ricevere più offerte.",
+    to: { to: "/availability" },
+    cta: "Gestisci",
+    priority: "normal",
+  });
+  tasks.push({
+    icon: Briefcase,
+    title: "Esplora le offerte vicine",
+    desc: "Scopri gli annunci attivi nella tua zona.",
+    to: { to: "/announcements" },
+    cta: "Vedi offerte",
+    priority: "normal",
+  });
+
+  const topTasks = tasks.slice(0, 4);
+
+  return (
+    <div className="mt-6 space-y-8">
+      {/* 1. HERO / STATO UTENTE */}
+      <section
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-primary/5 p-5 sm:p-7"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/15 blur-3xl"
+        />
+        <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">
+              Home operativa
+            </div>
+            <h1 className="mt-1 truncate text-2xl font-bold sm:text-3xl">
+              Ciao {firstName} 👋
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isReady
+                ? "Sei pronto a lavorare. Tieni d'occhio offerte e messaggi."
+                : "Completa i passi qui sotto per iniziare a ricevere offerte."}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <StatusPill
+                ok={phoneOk}
+                okLabel="Numero verificato"
+                koLabel="Numero da verificare"
+              />
+              <StatusPill
+                ok={profileOk}
+                okLabel="Profilo completo"
+                koLabel="Profilo da completare"
+              />
+              {isReady && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                  <Sparkles className="h-3 w-3" /> Pronto a lavorare
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="shrink-0">
+            {isReady ? (
+              <Link to="/announcements">
+                <Button size="sm" className="gap-1.5">
+                  <Briefcase className="h-4 w-4" /> Vedi offerte
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/onboarding">
+                <Button size="sm" className="gap-1.5">
+                  Completa <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 2. KPI OPERATIVI */}
+      <section className="grid grid-cols-3 gap-2 sm:gap-3">
+        <KpiTile
+          icon={Users}
+          label="Candidature"
+          value={applications}
+          to={{ to: "/announcements" }}
+        />
+        <KpiTile
+          icon={MessageSquare}
+          label="Messaggi"
+          value={messages}
+          highlight={messages > 0}
+          to={{ to: "/messages" }}
+        />
+        <KpiTile
+          icon={CheckCircle2}
+          label="Turni completati"
+          value={completedShifts}
+        />
+      </section>
+
+      {/* 3. QUICK ACTIONS */}
+      <section>
+        <SectionHeader
+          icon={Sparkles}
+          title="Cosa fare ora"
+          subtitle="Le prossime azioni utili per il tuo profilo"
+        />
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          {topTasks.map((t, i) => (
+            <Link key={i} {...t.to} className="group block">
+              <div
+                className={`flex h-full items-center gap-3 rounded-2xl border p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md ${
+                  t.priority === "high"
+                    ? "border-primary/30 bg-primary/5"
+                    : "bg-card"
+                }`}
+              >
+                <div
+                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                    t.priority === "high"
+                      ? "bg-primary/15 text-primary"
+                      : "bg-muted text-foreground"
+                  }`}
+                >
+                  <t.icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{t.title}</div>
+                  <div className="line-clamp-1 text-xs text-muted-foreground">
+                    {t.desc}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* 4. DISPONIBILITÀ */}
+      <section>
+        <SectionHeader
+          icon={CalendarDays}
+          title="Le mie disponibilità"
+          subtitle="Riepilogo settimanale"
+          action={
+            <Link to="/availability">
+              <Button variant="ghost" size="sm" className="gap-1">
+                Gestisci <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          }
+        />
+        <WorkerAvailabilitySummary workerId={userId} />
+      </section>
+
+      {/* 5. REPUTAZIONE */}
+      <section>
+        <SectionHeader
+          icon={Star}
+          title="La mia reputazione"
+          subtitle={
+            completedShifts >= 3
+              ? "Il tuo punteggio basato su servizi reali"
+              : "In costruzione — completa i primi servizi"
+          }
+          action={
+            <Link to="/profile">
+              <Button variant="ghost" size="sm" className="gap-1">
+                Profilo <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          }
+        />
+        <WorkerReputationCard workerId={userId} profile={profile as never} showTips />
+      </section>
+
+      {/* 6. RECENSIONI */}
+      <section>
+        <SectionHeader
+          icon={MessageSquare}
+          title="Le mie recensioni"
+          action={
+            <Link to="/profile">
+              <Button variant="ghost" size="sm" className="gap-1">
+                Vedi tutte <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          }
+        />
+        <WorkerMyReviews workerId={userId} limit={3} />
+      </section>
+
+      {/* 7. REFERRAL */}
+      <section>
+        <SectionHeader
+          icon={Gift}
+          title="Presenta un amico"
+          subtitle="Più amici inviti, più cresce la community"
+        />
+        <ReferralCard />
+      </section>
+
+      <div aria-hidden className="h-2" />
+      {/* keep level reference for future use */}
+      <span className="hidden" data-reputation-level={reputationLevel} />
+    </div>
+  );
+}
+
+function StatusPill({
+  ok,
+  okLabel,
+  koLabel,
+}: {
+  ok: boolean;
+  okLabel: string;
+  koLabel: string;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
+        ok
+          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+          : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+      }`}
+    >
+      {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+      {ok ? okLabel : koLabel}
+    </span>
+  );
+}
+
+function KpiTile({
+  icon: Icon,
+  label,
+  value,
+  highlight,
+  to,
+}: {
+  icon: typeof Briefcase;
+  label: string;
+  value: number;
+  highlight?: boolean;
+  to?: any;
+}) {
+  const inner = (
+    <div
+      className={`group h-full rounded-2xl border p-3.5 transition-all sm:p-4 ${
+        highlight
+          ? "border-primary/40 bg-primary/5"
+          : "bg-card hover:border-primary/30 hover:bg-primary/[0.03]"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
+        <Icon
+          className={`h-3.5 w-3.5 ${highlight ? "text-primary" : "text-muted-foreground"}`}
+        />
+      </div>
+      <div
+        className={`mt-1 text-2xl font-bold tabular-nums sm:text-3xl ${
+          highlight ? "text-primary" : "text-foreground"
+        }`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+  if (to) return <Link {...to} className="block">{inner}</Link>;
+  return inner;
+}
+
+function SectionHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  action,
+}: {
+  icon: typeof Briefcase;
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 shrink-0 text-primary" />
+          <h2 className="truncate text-base font-semibold">{title}</h2>
+        </div>
+        {subtitle && (
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</p>
+        )}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
+
 function AssignedShiftCard({ item, onClose, onCancelled }: { item: AssignedItem; onClose: () => void; onCancelled?: (annId: string) => void }) {
   const { user } = useAuth();
   const [cancelOpen, setCancelOpen] = useState(false);
