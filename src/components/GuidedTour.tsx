@@ -19,6 +19,7 @@ const PANEL_MARGIN = 16;
 const PANEL_ESTIMATED_HEIGHT = 260;
 const HIGHLIGHT_CLASS = "pupillo-tour-active";
 const TARGET_ACTIVE_CLASS = "tour-target-active";
+const STACK_LIFT_CLASS = "pupillo-tour-stack-lift";
 const SPOTLIGHT_PADDING = 8;
 
 /**
@@ -41,6 +42,7 @@ export function GuidedTour() {
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const highlightedRef = useRef<HTMLElement | null>(null);
+  const liftedAncestorsRef = useRef<HTMLElement[]>([]);
   const [viewport, setViewport] = useState<{ w: number; h: number }>(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1024,
     h: typeof window !== "undefined" ? window.innerHeight : 768,
@@ -95,6 +97,36 @@ export function GuidedTour() {
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
   }, [currentStep]);
 
+  const clearActiveTarget = useCallback(() => {
+    if (highlightedRef.current) {
+      highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
+      highlightedRef.current.classList.remove(TARGET_ACTIVE_CLASS);
+      highlightedRef.current = null;
+    }
+    liftedAncestorsRef.current.forEach((node) => node.classList.remove(STACK_LIFT_CLASS));
+    liftedAncestorsRef.current = [];
+  }, []);
+
+  const liftStackingAncestors = useCallback((el: HTMLElement) => {
+    const lifted: HTMLElement[] = [];
+    let node = el.parentElement;
+    while (node && node !== document.body && node !== document.documentElement) {
+      const style = window.getComputedStyle(node);
+      const createsStack =
+        (style.position !== "static" && style.zIndex !== "auto") ||
+        style.transform !== "none" ||
+        style.filter !== "none" ||
+        style.backdropFilter !== "none" ||
+        Number(style.opacity) < 1;
+      if (createsStack || node.tagName.toLowerCase() === "header") {
+        node.classList.add(STACK_LIFT_CLASS);
+        lifted.push(node);
+      }
+      node = node.parentElement;
+    }
+    liftedAncestorsRef.current = lifted;
+  }, []);
+
   // Apply / clean up the highlight class on the current target element.
   useEffect(() => {
     if (!running || !currentStep) return;
@@ -103,16 +135,13 @@ export function GuidedTour() {
     const apply = () => {
       if (cancelled) return;
       // Clear previous
-      if (highlightedRef.current) {
-        highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
-        highlightedRef.current.classList.remove(TARGET_ACTIVE_CLASS);
-        highlightedRef.current = null;
-      }
+      clearActiveTarget();
       if (!currentStep.target || currentStep.placement === "center") return;
       const el = findVisibleTarget(currentStep.target);
       if (el) {
         el.classList.add(HIGHLIGHT_CLASS);
         el.classList.add(TARGET_ACTIVE_CLASS);
+        liftStackingAncestors(el);
         highlightedRef.current = el;
       } else if (attempts < 8) {
         attempts += 1;
@@ -122,13 +151,9 @@ export function GuidedTour() {
     apply();
     return () => {
       cancelled = true;
-      if (highlightedRef.current) {
-        highlightedRef.current.classList.remove(HIGHLIGHT_CLASS);
-        highlightedRef.current.classList.remove(TARGET_ACTIVE_CLASS);
-        highlightedRef.current = null;
-      }
+      clearActiveTarget();
     };
-  }, [running, stepIndex, currentStep]);
+  }, [running, stepIndex, currentStep, clearActiveTarget, liftStackingAncestors]);
 
   // When step changes: scroll target into view, then measure (with retries
   // to account for late-rendered elements / hidden mobile nav).
