@@ -294,6 +294,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
       <main className="mx-auto max-w-7xl px-3 sm:px-4 py-4 sm:py-8">{children}</main>
       <AssistantFab />
+      <GuidedTour />
     </div>
   );
 }
