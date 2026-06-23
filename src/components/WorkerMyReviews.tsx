@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Star, MessageSquare } from "lucide-react";
+import { Star, MessageSquare, Lock } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 type ReviewRow = {
   id: string;
@@ -20,6 +22,19 @@ type AuthorInfo = { id: string; business_name: string | null; full_name: string 
 type ShiftInfo = { id: string; restaurant_id: string | null };
 type AnnInfo = { id: string; professional_profile: string | null; job_city: string | null };
 type AppInfo = { id: string; announcement_id: string | null; status: string | null };
+
+/**
+ * Locked received-review descriptor. Built from `notifications.metadata`
+ * because RLS hides the review row itself from the recipient until they
+ * have left their own reciprocal review (Phase 3 of the blind system).
+ */
+type PendingReceived = {
+  notificationId: string;
+  reviewId: string | null;
+  shiftId: string | null;
+  applicationId: string | null;
+  receivedAt: string;
+};
 
 function Stars({ value }: { value: number }) {
   const v = Math.max(0, Math.min(5, Math.round(value)));
@@ -41,12 +56,14 @@ function formatDate(iso: string) {
 }
 
 export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?: number }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [authors, setAuthors] = useState<Record<string, AuthorInfo>>({});
   const [shifts, setShifts] = useState<Record<string, ShiftInfo>>({});
   const [apps, setApps] = useState<Record<string, AppInfo>>({});
   const [anns, setAnns] = useState<Record<string, AnnInfo>>({});
+  const [pending, setPending] = useState<PendingReceived[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +119,61 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
           setAnns(annMap);
         }
       }
+
+      // "In attesa di sblocco" — locked received reviews. RLS hides the
+      // review row, so we surface them via `notifications` (kind =
+      // 'review_received') and drop the ones the worker has already
+      // reciprocated (a row in `reviews` authored by the worker for the
+      // same shift/application).
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.id === workerId) {
+          const { data: notifs } = await supabase
+            .from("notifications")
+            .select("id, metadata, created_at")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(50);
+          const candidates: PendingReceived[] = ((notifs ?? []) as { id: string; metadata: Record<string, unknown> | null; created_at: string }[])
+            .filter((n) => (n.metadata?.kind ?? n.metadata?.type) === "review_received")
+            .map((n) => ({
+              notificationId: n.id,
+              reviewId: (n.metadata?.review_id as string | undefined) ?? null,
+              shiftId: (n.metadata?.shift_id as string | undefined) ?? null,
+              applicationId: (n.metadata?.application_id as string | undefined) ?? null,
+              receivedAt: n.created_at,
+            }));
+
+          // Drop candidates the worker already reciprocated.
+          const myShiftIds = Array.from(new Set(candidates.map((c) => c.shiftId).filter(Boolean) as string[]));
+          const myAppIds = Array.from(new Set(candidates.map((c) => c.applicationId).filter(Boolean) as string[]));
+          const reciprocatedShifts = new Set<string>();
+          const reciprocatedApps = new Set<string>();
+          if (myShiftIds.length) {
+            const { data: mine } = await supabase
+              .from("reviews")
+              .select("shift_id")
+              .eq("author_id", user.id)
+              .in("shift_id", myShiftIds);
+            ((mine ?? []) as { shift_id: string | null }[]).forEach((r) => { if (r.shift_id) reciprocatedShifts.add(r.shift_id); });
+          }
+          if (myAppIds.length) {
+            const { data: mine2 } = await supabase
+              .from("reviews")
+              .select("application_id")
+              .eq("author_id", user.id)
+              .in("application_id", myAppIds);
+            ((mine2 ?? []) as { application_id: string | null }[]).forEach((r) => { if (r.application_id) reciprocatedApps.add(r.application_id); });
+          }
+          const stillPending = candidates.filter((c) => {
+            if (c.shiftId && reciprocatedShifts.has(c.shiftId)) return false;
+            if (c.applicationId && reciprocatedApps.has(c.applicationId)) return false;
+            return true;
+          });
+          if (!cancelled) setPending(stillPending);
+        }
+      } catch { /* non-blocking */ }
+
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -116,7 +188,7 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
     );
   }
 
-  if (reviews.length === 0) {
+  if (reviews.length === 0 && pending.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed bg-card p-8 text-center">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
@@ -134,7 +206,56 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
+      {pending.length > 0 && (
+        <section className="space-y-2" aria-labelledby="worker-pending-reviews-heading">
+          <h3
+            id="worker-pending-reviews-heading"
+            className="text-sm font-semibold text-foreground/80"
+          >
+            In attesa di sblocco
+          </h3>
+          <div className="space-y-2">
+            {pending.map((p) => (
+              <div
+                key={p.notificationId}
+                className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2"
+              >
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Lock className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+                  Recensione ricevuta — visibile dopo la tua recensione.
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Per leggerla, lascia anche tu la tua recensione: appena entrambe sono inviate diventano visibili.
+                </p>
+                <div className="flex items-center gap-0.5 blur-sm select-none pointer-events-none" aria-hidden>
+                  <Stars value={5} />
+                </div>
+                <div className="pt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (p.applicationId) {
+                        navigate({
+                          to: "/messages/$id",
+                          params: { id: p.applicationId },
+                          search: { action: "review" } as never,
+                        });
+                      } else {
+                        navigate({ to: "/messages" });
+                      }
+                    }}
+                  >
+                    Lascia la tua recensione
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="space-y-3">
       {reviews.map((r) => {
         const author = authors[r.author_id];
         const shift = r.shift_id ? shifts[r.shift_id] : null;
@@ -177,6 +298,7 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
