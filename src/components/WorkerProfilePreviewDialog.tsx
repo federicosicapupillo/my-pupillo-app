@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { displayWorkerName } from "@/lib/worker-display";
 import { formatWorkerLocation } from "@/lib/worker-location-summary";
 import { reliabilityDisplayValue } from "@/lib/worker-reliability";
+import { formatDisplayLabel } from "@/lib/format-label";
 
 type WorkerProfile = {
   id: string;
