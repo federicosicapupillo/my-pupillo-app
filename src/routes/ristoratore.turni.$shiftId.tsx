@@ -19,6 +19,7 @@ import {
   Flag, ThumbsUp, ThumbsDown, HelpCircle,
 } from "lucide-react";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
+import { WorkerContactCard } from "@/components/WorkerContactCard";
 import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 import { PreviousCandidatesSection } from "@/components/PreviousCandidatesSection";
