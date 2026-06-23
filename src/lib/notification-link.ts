@@ -93,6 +93,37 @@ export async function navigateFromNotificationLink(
     if (parts.length === 2 && parts[0] === "messages") {
       const id = seg(1);
       if (!isValidId(id)) return fallback();
+      // Blind-review upgrade: when the notification link is
+      // `/messages/<app>?action=review` and the recipient HAS already
+      // submitted their side of the reciprocal review, jump straight to
+      // the unlocked review they received instead of re-opening the
+      // chat's review form.
+      if (searchObj.action === "review") {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: mine } = await supabase
+              .from("reviews")
+              .select("id")
+              .eq("application_id", id)
+              .eq("author_id", user.id)
+              .limit(1)
+              .maybeSingle();
+            if (mine) {
+              const { data: received } = await supabase
+                .from("reviews")
+                .select("id")
+                .eq("application_id", id)
+                .eq("target_id", user.id)
+                .limit(1)
+                .maybeSingle();
+              if (received?.id) {
+                return navigate({ to: "/reviews/$id", params: { id: received.id as string } });
+              }
+            }
+          }
+        } catch { /* fall through to chat */ }
+      }
       // For both worker and restaurant, the notification destination is the
       // chat thread. Validate visibility first to avoid a 404; if the chat
       // is not reachable (e.g. RLS denies access), fall back to a safe page.
