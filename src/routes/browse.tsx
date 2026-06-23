@@ -24,6 +24,9 @@ import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-comp
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
+  conflictsWithBusyWindows,
+  fetchWorkerBusyWindows,
+  type BusyWindow,
 } from "@/lib/shift-conflict";
 import {
   computeSpecialAvailabilityBlock,
@@ -134,6 +137,9 @@ function Browse() {
   // speciale per quella data. Serve a ordinare la lista nazionale per
   // affinità (rule 5) e a mostrare i badge "Compatibile…" (rule 8-11).
   const [weeklyAvailability, setWeeklyAvailability] = useState<AvailabilityRow[]>([]);
+  // Turni già confermati dal lavoratore (con buffer 1h): usati per disabilitare
+  // in lista le offerte con conflitto orario senza dover aprire il dialog.
+  const [busyWindows, setBusyWindows] = useState<BusyWindow[]>([]);
   // Filtri aggiuntivi richiesti dal contratto "Trova offerte":
   // città, data, fascia oraria, tariffa minima, solo compatibili (rule 12).
   const [cityF, setCityF] = useState<string>("any");
@@ -312,9 +318,18 @@ function Browse() {
         .select("*")
         .eq("worker_id", user.id);
       setWeeklyAvailability((weekly as AvailabilityRow[] | null) ?? []);
+      // Carica le finestre "occupato" (turni accettati + buffer 1h).
+      try {
+        const busy = await fetchWorkerBusyWindows(user.id);
+        setBusyWindows(busy);
+      } catch (e) {
+        console.warn("[PUPILLO_WORKER_OFFERS_LOAD] busy windows failed", e);
+        setBusyWindows([]);
+      }
     } else {
       setSpecialExceptions([]);
       setWeeklyAvailability([]);
+      setBusyWindows([]);
     }
     setLoading(false);
   };
@@ -730,6 +745,9 @@ function Browse() {
             const role = a.professional_profile || "ruolo";
             const specialBlock = computeSpecialAvailabilityBlock(specialExceptions, a);
             const incompatibleSpecial = !!specialBlock?.blocked;
+            // Conflitto con un turno già confermato (regola: almeno 1h libera
+            // tra fine di un turno e inizio del successivo).
+            const scheduleConflict = conflictsWithBusyWindows(a as any, busyWindows);
             const compatTag = compatById[a.id];
             const compatChip =
               compatTag === "compatible"
@@ -885,6 +903,16 @@ function Browse() {
                       {specialBlock?.specials.map((e) => (
                         <p key={e.id} className="mt-0.5 opacity-90">· {describeSpecialAvailability(e)}</p>
                       ))}
+                    </div>
+                  ) : scheduleConflict ? (
+                    <div className="flex-1 rounded-xl border-2 border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                      <Button size="lg" disabled className="w-full rounded-xl gap-2 mb-1.5" variant="secondary">
+                        <Clock className="h-4 w-4" />
+                        Orario non disponibile
+                      </Button>
+                      <p className="opacity-90">
+                        Hai già un turno confermato in un orario incompatibile. Puoi candidarti solo a turni con almeno 1 ora di distanza.
+                      </p>
                     </div>
                   ) : (
                     <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={() => apply(a)}>
