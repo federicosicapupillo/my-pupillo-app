@@ -38,6 +38,7 @@ export function GuidedTour() {
   const [running, setRunning] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [visible, setVisible] = useState(true);
   const highlightedRef = useRef<HTMLElement | null>(null);
   const liftedAncestorsRef = useRef<HTMLElement[]>([]);
   const [viewport, setViewport] = useState<{ w: number; h: number }>(() => ({
@@ -219,6 +220,34 @@ export function GuidedTour() {
 
   const prev = useCallback(() => setStepIndex((i) => Math.max(0, i - 1)), []);
 
+  // Wrap step transitions with a quick fade-out → step change → fade-in
+  // so the card doesn't snap between steps. The highlight effect on
+  // stepIndex re-runs after the state update and re-applies the glow.
+  const transitionTimerRef = useRef<number[]>([]);
+  const handleStepChange = useCallback(
+    (stepFn: () => void) => {
+      transitionTimerRef.current.forEach((id) => window.clearTimeout(id));
+      transitionTimerRef.current = [];
+      clearActiveTarget();
+      setVisible(false);
+      const t1 = window.setTimeout(() => {
+        stepFn();
+      }, 130);
+      const t2 = window.setTimeout(() => {
+        setVisible(true);
+      }, 140);
+      transitionTimerRef.current = [t1, t2];
+    },
+    [clearActiveTarget],
+  );
+
+  useEffect(() => {
+    return () => {
+      transitionTimerRef.current.forEach((id) => window.clearTimeout(id));
+      transitionTimerRef.current = [];
+    };
+  }, []);
+
   // ESC = skip
   useEffect(() => {
     if (!running) return;
@@ -228,15 +257,20 @@ export function GuidedTour() {
         finish(true);
       } else if (e.key === "ArrowRight" || e.key === "Enter") {
         e.preventDefault();
-        next();
+        const last = (tour?.steps.length ?? 1) - 1;
+        if (stepIndex >= last) {
+          finish(true);
+        } else {
+          handleStepChange(() => setStepIndex((i) => i + 1));
+        }
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
-        prev();
+        if (stepIndex > 0) handleStepChange(() => setStepIndex((i) => Math.max(0, i - 1)));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [running, next, prev, finish]);
+  }, [running, finish, handleStepChange, stepIndex, tour]);
 
   if (!running || !tour || !currentStep) return null;
 
@@ -314,7 +348,7 @@ export function GuidedTour() {
             0 0 0 6px rgba(212,255,0,0.10),
             0 0 32px rgba(212,255,0,0.30),
             0 0 80px rgba(212,255,0,0.12) !important;
-          animation: tourHighlightPulse 1.8s ease-in-out infinite !important;
+          animation: tourHighlightPulse 1.8s ease-in-out 2 !important;
           transform: none !important;
         }
         .${TARGET_ACTIVE_CLASS} { /* hook for external styling */ }
@@ -348,9 +382,19 @@ export function GuidedTour() {
       `}</style>
 
       {/* Fixed guide panel */}
+      {(() => {
+        const baseTransform = isCenterStep
+          ? `translate(-50%, ${visible ? "-50%" : "calc(-50% - 8px)"})`
+          : `translateX(-50%) translateY(${visible ? "0" : "-8px"})`;
+        const { transform: _ignored, ...restPanel } = panelStyle as React.CSSProperties & { transform?: string };
+        void _ignored;
+        return (
       <div
         style={{
-          ...panelStyle,
+          ...restPanel,
+          transform: baseTransform,
+          opacity: visible ? 1 : 0,
+          transition: "opacity 0.18s ease, transform 0.18s ease",
           zIndex: 10002,
           background: "#1a1a24",
           border: "1px solid rgba(255,255,255,0.07)",
@@ -359,9 +403,6 @@ export function GuidedTour() {
           color: "#ffffff",
           boxShadow:
             "0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,255,0,0.06)",
-          animation: isCenterStep
-            ? "tourCardIn .22s ease-out"
-            : "tourCardIn .22s ease-out",
         }}
         className="fixed"
       >
@@ -445,7 +486,7 @@ export function GuidedTour() {
                 style={{
                   width: active ? 26 : 7,
                   height: 7,
-                  background: active ? "#D4FF00" : "#2e2e3e",
+                  background: active ? "#D4FF00" : "#333344",
                   borderRadius: active ? 999 : "50%",
                   transition:
                     "width .3s cubic-bezier(0.4,0,0.2,1), background-color .3s ease",
@@ -490,7 +531,7 @@ export function GuidedTour() {
             {!isFirst && !isCenterStep && (
               <button
                 type="button"
-                onClick={prev}
+                onClick={() => handleStepChange(() => prev())}
                 className="tour-back-btn"
                 style={{
                   border: "1.5px solid rgba(255,255,255,0.15)",
@@ -509,7 +550,13 @@ export function GuidedTour() {
             )}
             <button
               type="button"
-              onClick={next}
+              onClick={() => {
+                if (isLast) {
+                  finish(true);
+                } else {
+                  handleStepChange(() => setStepIndex((i) => i + 1));
+                }
+              }}
               className="tour-next-btn"
               style={{
                 background: "#D4FF00",
@@ -538,6 +585,8 @@ export function GuidedTour() {
           .tour-next-btn:hover  { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(212,255,0,0.35), 0 0 0 1px rgba(212,255,0,0.25) !important; }
         `}</style>
       </div>
+        );
+      })()}
     </div>
   );
 }
