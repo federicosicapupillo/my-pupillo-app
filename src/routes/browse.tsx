@@ -318,9 +318,18 @@ function Browse() {
         .select("*")
         .eq("worker_id", user.id);
       setWeeklyAvailability((weekly as AvailabilityRow[] | null) ?? []);
+      // Carica le finestre "occupato" (turni accettati + buffer 1h).
+      try {
+        const busy = await fetchWorkerBusyWindows(user.id);
+        setBusyWindows(busy);
+      } catch (e) {
+        console.warn("[PUPILLO_WORKER_OFFERS_LOAD] busy windows failed", e);
+        setBusyWindows([]);
+      }
     } else {
       setSpecialExceptions([]);
       setWeeklyAvailability([]);
+      setBusyWindows([]);
     }
     setLoading(false);
   };
