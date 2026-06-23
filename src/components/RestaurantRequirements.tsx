@@ -12,6 +12,7 @@ import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
 } from "@/lib/announcement-requirements";
+import { formatDisplayLabel } from "@/lib/format-label";
 
 const LANG_FLAG: Record<string, string> = {
   italiano: "🇮🇹",
