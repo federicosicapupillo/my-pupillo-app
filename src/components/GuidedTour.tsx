@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, X, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import {
   TOUR_START_EVENT,
@@ -14,13 +12,12 @@ import {
 
 type Rect = { top: number; left: number; width: number; height: number };
 
-const PANEL_MAX_WIDTH = 460;
+const PANEL_MAX_WIDTH = 420;
 const PANEL_MARGIN = 16;
-const PANEL_ESTIMATED_HEIGHT = 260;
+const PANEL_ESTIMATED_HEIGHT = 280;
 const HIGHLIGHT_CLASS = "pupillo-tour-active";
 const TARGET_ACTIVE_CLASS = "tour-target-active";
 const STACK_LIFT_CLASS = "pupillo-tour-stack-lift";
-const SPOTLIGHT_PADDING = 8;
 
 /**
  * GuidedTour — global tour runner mounted inside AppShell.
@@ -285,31 +282,9 @@ export function GuidedTour() {
           : { top: `${PANEL_MARGIN}px` }),
       };
 
-  // Spotlight rectangle (a transparent box with a glowing ring) drawn
-  // exactly over the target. The actual element gets z-index 10001 via
-  // the highlight class so it visually pops above the overlay.
-  const spotlight = hasTarget
-    ? {
-        top: rect!.top - SPOTLIGHT_PADDING,
-        left: rect!.left - SPOTLIGHT_PADDING,
-        width: rect!.width + SPOTLIGHT_PADDING * 2,
-        height: rect!.height + SPOTLIGHT_PADDING * 2,
-      }
-    : null;
-
-  // Connector line from panel edge to the target center.
-  let connector: { x1: number; y1: number; x2: number; y2: number } | null = null;
-  if (hasTarget && !isCenterStep) {
-    const panelCenterX = vw / 2;
-    const panelEdgeY = panelAtBottom
-      ? vh - PANEL_ESTIMATED_HEIGHT - PANEL_MARGIN
-      : PANEL_MARGIN + PANEL_ESTIMATED_HEIGHT;
-    const tx = rect!.left + rect!.width / 2;
-    const ty = panelAtBottom
-      ? rect!.top + rect!.height + 8
-      : rect!.top - 8;
-    connector = { x1: panelCenterX, y1: panelEdgeY, x2: tx, y2: ty };
-  }
+  // (vw/vh available for future use; spotlight halo/badge/connector layers removed.)
+  void vw;
+  void vh;
 
   return (
     <div
@@ -323,284 +298,245 @@ export function GuidedTour() {
         type="button"
         aria-label="Chiudi tour"
         onClick={() => finish(true)}
-        className="fixed inset-0 h-full w-full cursor-default bg-background/65 backdrop-blur-[2px] outline-none animate-in fade-in duration-200"
-        style={{ zIndex: 9998 }}
+        className="fixed inset-0 h-full w-full cursor-default outline-none animate-in fade-in duration-200"
+        style={{ zIndex: 9998, background: "rgba(0,0,0,0.88)" }}
       />
 
-      {/* Spotlight ring drawn over the target (under the target itself
-          so the target stays interactive-looking and on top). */}
-      {spotlight && (
-        <>
-          {/* Soft outer halo glow */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed rounded-[20px] transition-all duration-300 ease-out"
-            style={{
-              top: spotlight.top - 14,
-              left: spotlight.left - 14,
-              width: spotlight.width + 28,
-              height: spotlight.height + 28,
-              zIndex: 9999,
-              background:
-                "radial-gradient(closest-side, hsl(var(--primary) / 0.35), transparent 75%)",
-              filter: "blur(8px)",
-              animation: "pupillo-tour-halo 2.4s ease-in-out infinite",
-            }}
-          />
-          {/* Crisp focus ring */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed rounded-2xl transition-all duration-300 ease-out"
-            style={{
-              ...spotlight,
-              zIndex: 10000,
-              boxShadow:
-                "0 0 0 3px hsl(var(--primary)), 0 0 0 10px hsl(var(--primary) / 0.30), 0 0 44px 8px hsl(var(--primary) / 0.55)",
-              animation: "pupillo-tour-pulse 2.4s ease-in-out infinite",
-            }}
-          />
-          {/* "Qui" badge above the target */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed flex items-center justify-center transition-all duration-300 ease-out"
-            style={{
-              top: Math.max(6, spotlight.top - 30),
-              left: spotlight.left + spotlight.width / 2,
-              transform: "translateX(-50%)",
-              zIndex: 10002,
-            }}
-          >
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-lg"
-              style={{
-                boxShadow:
-                  "0 6px 18px -4px hsl(var(--primary) / 0.75), 0 0 0 2px hsl(var(--background))",
-                animation: "pupillo-tour-badge 2.4s ease-in-out infinite",
-              }}
-            >
-              <Sparkles className="h-3 w-3" />
-              Qui
-            </span>
-          </div>
-        </>
-      )}
-
-      {/* Connector line from panel to target (above overlay, below panel) */}
-      {connector && (
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-0 h-full w-full"
-          style={{ overflow: "visible", zIndex: 10001 }}
-        >
-          <line
-            x1={connector.x1}
-            y1={connector.y1}
-            x2={connector.x2}
-            y2={connector.y2}
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            strokeDasharray="5 6"
-            strokeLinecap="round"
-            opacity={0.7}
-          />
-          <circle
-            cx={connector.x2}
-            cy={connector.y2}
-            r={4}
-            fill="hsl(var(--primary))"
-          />
-        </svg>
-      )}
-
-      {/* Global styles for the highlighted target.
-          The target sits above overlay+spotlight (z 10001) so it stays
-          fully legible; the spotlight ring around it (z 9999) sits below
-          it but above the overlay (z 9998) to create the focus halo. */}
+      {/* Global styles for highlight + lifted ancestors + keyframes */}
       <style>{`
         .${HIGHLIGHT_CLASS} {
           position: relative !important;
           z-index: 10001 !important;
-          display: inline-flex !important;
-          align-items: center;
-          border-radius: 14px;
-          background: hsl(var(--card)) !important;
-          color: hsl(var(--foreground)) !important;
-          transform: scale(1.10);
-          transform-origin: center;
-          transition: transform 260ms cubic-bezier(.2,.8,.2,1), box-shadow 260ms ease-out, background-color 260ms ease-out;
-          will-change: transform, box-shadow;
+          outline: 2px solid #D4FF00 !important;
+          outline-offset: 6px !important;
+          border-radius: 14px !important;
           box-shadow:
-            0 0 0 3px hsl(var(--primary)),
-            0 0 0 10px hsl(var(--primary) / 0.28),
-            0 0 32px 4px hsl(var(--primary) / 0.55),
-            0 18px 42px -18px hsl(var(--primary) / 0.7),
-            0 12px 30px -10px rgba(0,0,0,0.65) !important;
+            0 0 0 6px rgba(212,255,0,0.10),
+            0 0 32px rgba(212,255,0,0.30),
+            0 0 80px rgba(212,255,0,0.12) !important;
+          animation: tourHighlightPulse 1.8s ease-in-out infinite !important;
+          transform: none !important;
         }
-        .${HIGHLIGHT_CLASS} button,
-        .${HIGHLIGHT_CLASS} a,
-        .${HIGHLIGHT_CLASS} span,
-        .${HIGHLIGHT_CLASS} svg {
-          color: hsl(var(--foreground)) !important;
-          opacity: 1 !important;
-        }
-        .${HIGHLIGHT_CLASS} > button,
-        .${HIGHLIGHT_CLASS} > [role="button"] {
-          background: linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--card))) !important;
-          color: hsl(var(--foreground)) !important;
-          border-radius: 12px;
-          min-height: 40px;
-          padding-inline: 14px;
-          font-weight: 600;
-        }
-        .${HIGHLIGHT_CLASS}[role="menuitem"] {
-          display: flex !important;
-          width: 100%;
-        }
-        .${HIGHLIGHT_CLASS} > * {
-          position: relative;
-          z-index: 1;
-        }
+        .${TARGET_ACTIVE_CLASS} { /* hook for external styling */ }
         .${STACK_LIFT_CLASS} {
           position: relative !important;
           z-index: 10000 !important;
           isolation: auto !important;
         }
-        @keyframes pupillo-tour-pulse {
+        @keyframes tourHighlightPulse {
           0%, 100% {
             box-shadow:
-              0 0 0 3px hsl(var(--primary)),
-              0 0 0 9px hsl(var(--primary) / 0.26),
-              0 0 36px 6px hsl(var(--primary) / 0.50);
+              0 0 0 6px rgba(212,255,0,0.10),
+              0 0 32px rgba(212,255,0,0.30),
+              0 0 80px rgba(212,255,0,0.12);
           }
           50% {
             box-shadow:
-              0 0 0 3px hsl(var(--primary)),
-              0 0 0 14px hsl(var(--primary) / 0.18),
-              0 0 52px 12px hsl(var(--primary) / 0.65);
+              0 0 0 10px rgba(212,255,0,0.06),
+              0 0 50px rgba(212,255,0,0.45),
+              0 0 100px rgba(212,255,0,0.18);
           }
         }
-        @keyframes pupillo-tour-halo {
-          0%, 100% { opacity: 0.55; transform: scale(1); }
-          50%      { opacity: 0.95; transform: scale(1.06); }
+        @keyframes tourCardIn {
+          from { opacity: 0; transform: translate(-50%, 8px); }
+          to   { opacity: 1; transform: translate(-50%, 0);   }
         }
-        @keyframes pupillo-tour-badge {
-          0%, 100% { transform: translateX(-50%) translateY(0); }
-          50%      { transform: translateX(-50%) translateY(-3px); }
-        }
-        @keyframes pupillo-tour-card-in {
-          from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(.98); }
-          to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1);   }
+        @keyframes tourCardInCenter {
+          from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(.98); }
+          to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         }
       `}</style>
 
       {/* Fixed guide panel */}
       <div
-        style={{ ...panelStyle, zIndex: 10002 }}
-        className="fixed rounded-3xl border border-primary/15 bg-card/95 text-card-foreground shadow-[0_24px_60px_-12px_hsl(var(--primary)/0.45),0_8px_24px_-8px_rgba(0,0,0,0.55)] backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        style={{
+          ...panelStyle,
+          zIndex: 10002,
+          background: "#1a1a24",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 22,
+          padding: 28,
+          color: "#ffffff",
+          boxShadow:
+            "0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,255,0,0.06)",
+          animation: isCenterStep
+            ? "tourCardIn .22s ease-out"
+            : "tourCardIn .22s ease-out",
+        }}
+        className="fixed"
       >
-        {/* Decorative gradient top accent */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-0 top-0 h-px"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), transparent)",
-          }}
-        />
-
-        {/* Top progress bar */}
-        <div className="h-1 w-full bg-muted/40">
-          <div
-            className="h-full bg-gradient-to-r from-primary/70 via-primary to-primary/70 transition-all duration-500 ease-out"
-            style={{ width: `${((stepIndex + 1) / total) * 100}%` }}
-          />
+        {/* [A] Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <span
+            style={{
+              fontSize: 11,
+              color: "#D4FF00",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Step {stepIndex + 1} di {total}
+          </span>
+          <button
+            type="button"
+            onClick={() => finish(true)}
+            aria-label="Chiudi tour"
+            className="tour-close-btn"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "transparent",
+              border: "none",
+              color: "#7a7a8c",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 20,
+              lineHeight: 1,
+              transition: "color .2s ease, background-color .2s ease",
+            }}
+          >
+            ×
+          </button>
         </div>
 
-        <div className="p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
-                {isLast && !isCenterStep ? (
-                  <Check className="h-3 w-3" />
-                ) : (
-                  <Sparkles className="h-3 w-3" />
-                )}
-                Passo {stepIndex + 1} / {total}
-              </span>
-              {/* step dots */}
-              <div className="hidden sm:flex items-center gap-1 ml-1">
-                {tour.steps.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i === stepIndex
-                        ? "w-4 bg-primary"
-                        : i < stepIndex
-                          ? "w-1.5 bg-primary/60"
-                          : "w-1.5 bg-muted-foreground/25"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
+        {/* [B] Title */}
+        <h2
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: "#ffffff",
+            marginTop: 16,
+            lineHeight: 1.2,
+          }}
+        >
+          {currentStep.title}
+        </h2>
+
+        {/* [C] Body */}
+        <p
+          style={{
+            fontSize: 14,
+            color: "#7a7a8c",
+            marginTop: 10,
+            lineHeight: 1.6,
+          }}
+        >
+          {currentStep.body}
+        </p>
+
+        {/* [D] Progress dots */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 24,
+          }}
+        >
+          {tour.steps.map((_, i) => {
+            const active = i === stepIndex;
+            return (
+              <span
+                key={i}
+                style={{
+                  width: active ? 26 : 7,
+                  height: 7,
+                  background: active ? "#D4FF00" : "#2e2e3e",
+                  borderRadius: active ? 999 : "50%",
+                  transition:
+                    "width .3s cubic-bezier(0.4,0,0.2,1), background-color .3s ease",
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {/* [E] Footer CTA */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginTop: 24,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            {!isLast && (
+              <button
+                type="button"
+                onClick={() => finish(true)}
+                className="tour-skip-btn"
+                style={{
+                  color: "#7a7a8c",
+                  fontSize: 13,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  padding: 0,
+                  transition: "color .2s ease",
+                }}
+              >
+                Salta
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {!isFirst && !isCenterStep && (
+              <button
+                type="button"
+                onClick={prev}
+                className="tour-back-btn"
+                style={{
+                  border: "1.5px solid rgba(255,255,255,0.15)",
+                  borderRadius: 999,
+                  padding: "10px 20px",
+                  color: "#ffffff",
+                  background: "transparent",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "border-color .2s ease",
+                }}
+              >
+                ‹ Indietro
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => finish(true)}
-              aria-label="Chiudi tour"
-              className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition shrink-0"
+              onClick={next}
+              className="tour-next-btn"
+              style={{
+                background: "#D4FF00",
+                color: "#13131a",
+                border: "none",
+                borderRadius: 999,
+                padding: "12px 22px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow:
+                  "0 8px 24px rgba(212,255,0,0.25), 0 0 0 1px rgba(212,255,0,0.15)",
+                transition: "transform .15s ease, box-shadow .2s ease",
+              }}
             >
-              <X className="h-4 w-4" />
+              {isLast ? "Inizia a usare Pupillo" : isFirst ? "Inizia il tour ›" : "Avanti ›"}
             </button>
           </div>
-
-          <h2 className="text-lg sm:text-xl font-semibold leading-tight tracking-tight">
-            {currentStep.title}
-          </h2>
-          <p className="mt-2 text-sm sm:text-[15px] leading-relaxed text-muted-foreground">
-            {currentStep.body}
-          </p>
-
-          {/* Footer actions */}
-          <div className="mt-6 flex items-center justify-between gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => finish(true)}
-              className="text-muted-foreground hover:text-foreground -ml-2"
-            >
-              {isLast ? "Chiudi" : "Salta"}
-            </Button>
-            <div className="flex items-center gap-2 min-w-0">
-              {!isFirst && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={prev}
-                  className="gap-1"
-                  aria-label="Indietro"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline">Indietro</span>
-                </Button>
-              )}
-              <Button
-                size="sm"
-                onClick={next}
-                className="gap-1 max-w-full shadow-md shadow-primary/30"
-              >
-                <span className="truncate">
-                  {isLast
-                    ? "Inizia a usare Pupillo"
-                    : isFirst
-                      ? "Inizia il tour"
-                      : "Avanti"}
-                </span>
-                {!isLast && <ChevronRight className="h-4 w-4 shrink-0" />}
-                {isLast && <Check className="h-4 w-4 shrink-0" />}
-              </Button>
-            </div>
-          </div>
         </div>
+
+        {/* hover states for raw buttons (no Tailwind hover for inline-styled) */}
+        <style>{`
+          .tour-close-btn:hover { color: #fff !important; background: rgba(255,255,255,0.05) !important; }
+          .tour-skip-btn:hover  { color: #fff !important; }
+          .tour-back-btn:hover  { border-color: rgba(255,255,255,0.35) !important; }
+          .tour-next-btn:hover  { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(212,255,0,0.35), 0 0 0 1px rgba(212,255,0,0.25) !important; }
+        `}</style>
       </div>
     </div>
   );
