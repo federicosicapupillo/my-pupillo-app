@@ -137,6 +137,9 @@ function Browse() {
   // speciale per quella data. Serve a ordinare la lista nazionale per
   // affinità (rule 5) e a mostrare i badge "Compatibile…" (rule 8-11).
   const [weeklyAvailability, setWeeklyAvailability] = useState<AvailabilityRow[]>([]);
+  // Turni già confermati dal lavoratore (con buffer 1h): usati per disabilitare
+  // in lista le offerte con conflitto orario senza dover aprire il dialog.
+  const [busyWindows, setBusyWindows] = useState<BusyWindow[]>([]);
   // Filtri aggiuntivi richiesti dal contratto "Trova offerte":
   // città, data, fascia oraria, tariffa minima, solo compatibili (rule 12).
   const [cityF, setCityF] = useState<string>("any");
