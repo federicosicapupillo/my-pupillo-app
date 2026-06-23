@@ -11,6 +11,7 @@ import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/Spok
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
+import { WorkerContactCard } from "@/components/WorkerContactCard";
 import { displayWorkerName } from "@/lib/worker-display";
 import { formatWorkerLocation, resolveWorkerCity, resolveWorkerZone } from "@/lib/worker-location-summary";
 import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summary";
@@ -264,6 +265,13 @@ function WorkerDetailPage() {
                 </div>
               )}
             </Card>
+          )}
+          {contactAllowed && user && (
+            <WorkerContactCard
+              workerId={w.id}
+              restaurantId={user.id}
+              workerName={shownName}
+            />
           )}
           {!contactAllowed && (
             <p className="text-xs text-muted-foreground">Le comunicazioni avvengono tramite la chat interna Pupillo.</p>
