@@ -257,7 +257,8 @@ export function GuidedTour() {
         finish(true);
       } else if (e.key === "ArrowRight" || e.key === "Enter") {
         e.preventDefault();
-        if (stepIndex >= total - 1) {
+        const last = (tour?.steps.length ?? 1) - 1;
+        if (stepIndex >= last) {
           finish(true);
         } else {
           handleStepChange(() => setStepIndex((i) => i + 1));
@@ -269,7 +270,7 @@ export function GuidedTour() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [running, finish, handleStepChange, stepIndex]);
+  }, [running, finish, handleStepChange, stepIndex, tour]);
 
   if (!running || !tour || !currentStep) return null;
 
