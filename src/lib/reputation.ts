@@ -156,3 +156,21 @@ export function scoreColorClass(score: number): string {
   if (score > 0) return "text-rose-600 dark:text-rose-400";
   return "text-muted-foreground";
 }
+
+/**
+ * Blind reciprocal review: a restaurant→worker review only contributes to
+ * the public worker rating after both sides have reviewed each other.
+ * Locked reviews are hidden by RLS for everyone except the author, so
+ * callers that aggregate or display a public rating must drop any row
+ * whose `visible_at` is `null` (or `is_visible_to_worker === false`).
+ */
+export type WorkerReviewVisibilityFields = {
+  visible_at?: string | null;
+  is_visible_to_worker?: boolean | null;
+};
+
+export function isWorkerReviewVisibleForPublic(r: WorkerReviewVisibilityFields): boolean {
+  if (r.visible_at === null) return false;
+  if (r.is_visible_to_worker === false) return false;
+  return true;
+}
