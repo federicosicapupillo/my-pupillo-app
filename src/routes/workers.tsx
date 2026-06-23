@@ -2464,7 +2464,7 @@ function ProposalConfirmDialog({
   if (totalEstimate != null) lines.push(`Totale stimato: € ${totalEstimate.toFixed(2)}`);
   if (dress.length || dressNotes) {
     lines.push("");
-    lines.push(`Dress code: ${[dress.join(", "), dressNotes].filter(Boolean).join(" — ")}`);
+    lines.push(`Dress code: ${[formatDisplayLabels(dress).join(", "), dressNotes].filter(Boolean).join(" — ")}`);
   }
   lines.push("");
   lines.push(`Presentarsi: ${arrivalMin} minuti prima dell'ingresso.`);
@@ -2501,7 +2501,7 @@ function ProposalConfirmDialog({
               {dress.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {dress.map((d) => (
-                    <span key={d} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{d}</span>
+                    <span key={d} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{formatDisplayLabel(d)}</span>
                   ))}
                 </div>
               )}
@@ -2522,12 +2522,12 @@ function ProposalConfirmDialog({
               {skills.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-1">
                   {skills.map((s) => (
-                    <span key={s} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{s}</span>
+                    <span key={s} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">{formatDisplayLabel(s)}</span>
                   ))}
                 </div>
               )}
-              {langs.length > 0 && <p className="text-xs text-muted-foreground">Lingue: {langs.join(", ")}</p>}
-              {license && <p className="text-xs text-muted-foreground">Patente: {license}</p>}
+              {langs.length > 0 && <p className="text-xs text-muted-foreground">Lingue: {formatDisplayLabels(langs).join(", ")}</p>}
+              {license && <p className="text-xs text-muted-foreground">Patente: {formatDisplayLabel(license)}</p>}
             </div>
           )}
 
