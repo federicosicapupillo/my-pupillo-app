@@ -1483,6 +1483,7 @@ export type Database = {
           communication: number | null
           competence: number | null
           created_at: string
+          direction: string
           id: string
           is_demo: boolean
           is_visible_to_restaurants: boolean
@@ -1501,6 +1502,7 @@ export type Database = {
           target_id: string
           teamwork: number | null
           updated_at: string
+          visible_at: string | null
           would_rehire: string | null
         }
         Insert: {
@@ -1512,6 +1514,7 @@ export type Database = {
           communication?: number | null
           competence?: number | null
           created_at?: string
+          direction: string
           id?: string
           is_demo?: boolean
           is_visible_to_restaurants?: boolean
@@ -1530,6 +1533,7 @@ export type Database = {
           target_id: string
           teamwork?: number | null
           updated_at?: string
+          visible_at?: string | null
           would_rehire?: string | null
         }
         Update: {
@@ -1541,6 +1545,7 @@ export type Database = {
           communication?: number | null
           competence?: number | null
           created_at?: string
+          direction?: string
           id?: string
           is_demo?: boolean
           is_visible_to_restaurants?: boolean
@@ -1559,6 +1564,7 @@ export type Database = {
           target_id?: string
           teamwork?: number | null
           updated_at?: string
+          visible_at?: string | null
           would_rehire?: string | null
         }
         Relationships: []
