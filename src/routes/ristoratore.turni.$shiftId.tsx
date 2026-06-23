@@ -19,6 +19,7 @@ import {
   Flag, ThumbsUp, ThumbsDown, HelpCircle,
 } from "lucide-react";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
+import { WorkerContactCard } from "@/components/WorkerContactCard";
 import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 import { PreviousCandidatesSection } from "@/components/PreviousCandidatesSection";
@@ -528,6 +529,15 @@ function ShiftDetailPage() {
               applicationId={appId}
               lastReview={lastReview}
             />
+            {(shift.status === "scheduled" || shift.status === "completed") && (
+              <div className="mt-3">
+                <WorkerContactCard
+                  workerId={shift.worker_id}
+                  restaurantId={shift.restaurant_id}
+                  workerName={worker?.full_name ?? undefined}
+                />
+              </div>
+            )}
             {shift.status === "completed" && (
               <div className="mt-3">
                 <Button
