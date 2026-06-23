@@ -2184,6 +2184,7 @@ function Thread() {
               worker={confirmedWorker}
               applicationId={app.id}
               lastReview={confirmedWorkerLastReview}
+              hideChatButton
             />
           </div>
         )}
