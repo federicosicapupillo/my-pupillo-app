@@ -18,6 +18,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
+import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
