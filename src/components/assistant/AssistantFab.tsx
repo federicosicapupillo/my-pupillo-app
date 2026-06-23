@@ -13,7 +13,7 @@ export function AssistantFab() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Apri assistenza"
-        data-tour="help"
+        data-tour="help-button"
         className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg hover:bg-primary/90 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:bottom-6 sm:right-6"
       >
         <HelpCircle className="h-4 w-4" />
