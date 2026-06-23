@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Award, MessageSquare, Star, ShieldCheck, BadgeCheck, Phone, FileCheck2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
+import { supabase } from "@/integrations/supabase/client";
 
 export type ConfirmedWorkerProfile = {
   id: string;
@@ -33,6 +35,11 @@ interface Props {
   worker: ConfirmedWorkerProfile;
   applicationId?: string | null;
   lastReview?: ConfirmedWorkerLastReview | null;
+  /**
+   * Hide the "Apri chat" button when the card is rendered inside the
+   * conversation itself (would be redundant navigation).
+   */
+  hideChatButton?: boolean;
 }
 
 /**
@@ -41,7 +48,7 @@ interface Props {
  * shift). Does NOT expose phone, documents, IBAN or other non-operational
  * data. Internal Pupillo chat is the only contact channel.
  */
-export function ConfirmedWorkerCard({ worker, applicationId, lastReview }: Props) {
+export function ConfirmedWorkerCard({ worker, applicationId, lastReview, hideChatButton }: Props) {
   const fullName =
     worker.is_deleted ? "Utente eliminato" :
     worker.full_name ||
@@ -51,6 +58,24 @@ export function ConfirmedWorkerCard({ worker, applicationId, lastReview }: Props
   const rating = worker.rating_avg != null ? Number(worker.rating_avg) : null;
   const reviewsCount = worker.reviews_count ?? 0;
   const completed = worker.completed_shifts ?? 0;
+
+  // Server-side authorized phone lookup. The RPC `get_counterparty_phone`
+  // returns NULL unless the caller (auth.uid()) is the restaurant with a
+  // confirmed shift (scheduled/completed) with this worker. Privacy is
+  // enforced server-side — this fetch is just the UI surface.
+  const [phone, setPhone] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    if (worker.is_deleted) { setPhone(null); return; }
+    (async () => {
+      const { data, error } = await supabase.rpc("get_counterparty_phone", {
+        other_user_id: worker.id,
+      });
+      if (cancelled) return;
+      setPhone(error ? null : ((data as string | null) ?? null));
+    })();
+    return () => { cancelled = true; };
+  }, [worker.id, worker.is_deleted]);
 
   return (
     <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-5">
@@ -138,20 +163,42 @@ export function ConfirmedWorkerCard({ worker, applicationId, lastReview }: Props
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t">
-        {applicationId ? (
-          <Link to="/messages/$id" params={{ id: applicationId }}>
-            <Button size="sm" className="gap-1">
-              <MessageSquare className="h-4 w-4" /> Apri chat
-            </Button>
-          </Link>
+      <div className="mt-3 rounded-lg border bg-card p-3 text-xs">
+        <div className="flex items-center gap-1 text-muted-foreground mb-1">
+          <Phone className="h-3 w-3" /> Telefono
+        </div>
+        {phone === undefined ? (
+          <span className="text-muted-foreground">Verifica in corso…</span>
+        ) : phone ? (
+          <div className="space-y-0.5">
+            <a href={`tel:${phone}`} className="font-medium text-foreground hover:underline">
+              {phone}
+            </a>
+            <div className="text-[11px] text-muted-foreground">
+              Contatti sbloccati dopo la conferma del turno.
+            </div>
+          </div>
         ) : (
-          <Button size="sm" disabled className="gap-1">
-            <MessageSquare className="h-4 w-4" /> Chat non disponibile
-          </Button>
+          <span className="text-muted-foreground">Numero non inserito dal lavoratore</span>
+        )}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t">
+        {!hideChatButton && (
+          applicationId ? (
+            <Link to="/messages/$id" params={{ id: applicationId }}>
+              <Button size="sm" className="gap-1">
+                <MessageSquare className="h-4 w-4" /> Apri chat
+              </Button>
+            </Link>
+          ) : (
+            <Button size="sm" disabled className="gap-1">
+              <MessageSquare className="h-4 w-4" /> Chat non disponibile
+            </Button>
+          )
         )}
         <Link to="/workers/$id" params={{ id: worker.id }}>
-          <Button size="sm" variant="outline">Vedi scheda</Button>
+          <Button size="sm" variant="outline">Vedi profilo</Button>
         </Link>
       </div>
     </div>
