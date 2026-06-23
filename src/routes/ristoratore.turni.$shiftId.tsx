@@ -23,6 +23,7 @@ import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionD
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 import { PreviousCandidatesSection } from "@/components/PreviousCandidatesSection";
 import { isShiftDateStillFuture } from "@/lib/announcement-reopen";
+import { formatDisplayLabels } from "@/lib/format-label";
 
 export const Route = createFileRoute("/ristoratore/turni/$shiftId")({
   head: () => ({ meta: [{ title: "Dettaglio turno — Pupillo" }] }),
@@ -586,13 +587,13 @@ function ShiftDetailPage() {
           {(ann.dress_code_items?.length || ann.dress_code_notes || ann.required_skills?.length || ann.language_requirements?.length || ann.job_access_restrictions) && (
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {ann.dress_code_items && ann.dress_code_items.length > 0 && (
-                <Field label="Dress code" value={ann.dress_code_items.join(", ")} />
+                <Field label="Dress code" value={formatDisplayLabels(ann.dress_code_items).join(", ")} />
               )}
               {ann.required_skills && ann.required_skills.length > 0 && (
-                <Field label="Competenze richieste" value={ann.required_skills.join(", ")} />
+                <Field label="Competenze richieste" value={formatDisplayLabels(ann.required_skills).join(", ")} />
               )}
               {ann.language_requirements && ann.language_requirements.length > 0 && (
-                <Field label="Lingue richieste" value={ann.language_requirements.join(", ")} />
+                <Field label="Lingue richieste" value={formatDisplayLabels(ann.language_requirements).join(", ")} />
               )}
               {ann.job_access_restrictions && (
                 <Field label="Accesso al locale" value={ann.job_access_restrictions} />
