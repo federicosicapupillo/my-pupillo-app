@@ -2549,6 +2549,10 @@ export type Database = {
         Returns: boolean
       }
       is_confirmed_delay: { Args: { _status: string }; Returns: boolean }
+      is_review_visible_to: {
+        Args: { _review_id: string; _user_id: string }
+        Returns: boolean
+      }
       list_worker_user_ids: {
         Args: never
         Returns: {
