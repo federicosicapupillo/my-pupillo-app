@@ -24,6 +24,9 @@ import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-comp
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
+  conflictsWithBusyWindows,
+  fetchWorkerBusyWindows,
+  type BusyWindow,
 } from "@/lib/shift-conflict";
 import {
   computeSpecialAvailabilityBlock,
