@@ -384,6 +384,7 @@ async function seedAnnouncementsApplicationsShiftsReviews(
             shift_id: shiftData.id,
             announcement_id: ann.id,
             rating,
+            direction: "restaurant_to_worker",
             punctuality: punct,
             professionalism: prof,
             competence: comp,
