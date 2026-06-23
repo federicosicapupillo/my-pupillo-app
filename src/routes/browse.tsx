@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
+import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
 import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import {
@@ -1270,7 +1271,7 @@ function ApplyConfirmDialog({
                   {dressCodeItems.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {dressCodeItems.map((d) => (
-                        <span key={d} className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{d}</span>
+                        <span key={d} className="rounded-full bg-muted px-2 py-0.5 text-xs">{formatDisplayLabel(d)}</span>
                       ))}
                     </div>
                   )}
@@ -1301,18 +1302,18 @@ function ApplyConfirmDialog({
                 {requiredSkills.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {requiredSkills.map((s) => (
-                      <span key={s} className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{s}</span>
+                      <span key={s} className="rounded-full bg-muted px-2 py-0.5 text-xs">{formatDisplayLabel(s)}</span>
                     ))}
                   </div>
                 )}
                 {languageReqs.length > 0 && (
                   <div className="text-xs text-muted-foreground">
-                    Lingue: <span className="text-foreground">{languageReqs.join(", ")}</span>
+                    Lingue: <span className="text-foreground">{formatDisplayLabels(languageReqs).join(", ")}</span>
                   </div>
                 )}
                 {ann.license_requirement && (
                   <div className="text-xs text-muted-foreground">
-                    Patente/mezzo: <span className="text-foreground">{ann.license_requirement}</span>
+                    Patente/mezzo: <span className="text-foreground">{formatDisplayLabel(ann.license_requirement)}</span>
                   </div>
                 )}
               </div>
