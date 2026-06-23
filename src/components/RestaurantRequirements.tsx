@@ -12,6 +12,7 @@ import {
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS,
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, labelOf, labelsOf,
 } from "@/lib/announcement-requirements";
+import { formatDisplayLabel } from "@/lib/format-label";
 
 const LANG_FLAG: Record<string, string> = {
   italiano: "🇮🇹",
@@ -295,7 +296,7 @@ export function RestaurantRequirementsView({ value }: { value: RestaurantRequire
             <p className="text-sm text-muted-foreground">—</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {skills.map(s => <span key={s} className="text-xs rounded-full border bg-card px-2 py-1">{s}</span>)}
+              {skills.map(s => <span key={s} className="text-xs rounded-full border bg-card px-2 py-1">{formatDisplayLabel(s)}</span>)}
             </div>
           )}
         </div>

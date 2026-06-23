@@ -31,6 +31,7 @@ import { WORKER_ROLES } from "@/lib/worker-roles";
 import { workerMatchesAnyRoleField, normalizeRole, collectWorkerRoleValues, collectWorkerCompetenceValues } from "@/lib/worker-role-normalization";
 import { summarizeWeeklyAvailability } from "@/lib/availability-summary";
 import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summary";
+import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
 import type { AvailabilityRow } from "@/lib/availability";
 import {
   readKnownRestaurantsCache,
@@ -1224,9 +1225,9 @@ function MapPage() {
           || null;
         const venueLabel = rest?.venue_type || "Locale";
         const requirements = [
-          ...(a.required_skills || []),
-          ...(a.language_requirements?.map(l => `Lingua: ${l}`) || []),
-          ...(a.dress_code_items?.length ? [`Dress code: ${a.dress_code_items.join(", ")}`] : []),
+          ...formatDisplayLabels(a.required_skills || []),
+          ...((a.language_requirements || []).map(l => `Lingua: ${formatDisplayLabel(l)}`)),
+          ...(a.dress_code_items?.length ? [`Dress code: ${formatDisplayLabels(a.dress_code_items).join(", ")}`] : []),
         ];
 
         pts.push({
