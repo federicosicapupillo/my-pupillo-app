@@ -613,7 +613,7 @@ function Thread() {
         const [{ data: p }, { data: an }] = await Promise.all([
           // NOTE: `id_document_path` and other PII are denied to authenticated
           // at the column-grant level — never select them cross-user here.
-          supabase.from("profiles").select("full_name, first_name, last_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, default_arrival_advance_minutes, phone_full, phone, primary_role, professional_profile, badge, is_deleted").eq("id", otherId).maybeSingle(),
+          supabase.from("profiles").select("full_name, first_name, last_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, default_arrival_advance_minutes, primary_role, professional_profile, badge, is_deleted").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, service_date, service_time, end_time, end_date, duration_hours, location_address, tariff_amount, tariff_type, job_city, job_province, restaurant_id, status, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address").eq("id", a.announcement_id).maybeSingle(),
         ]);
         // Contact person is restricted at the DB level. Fetch via the
@@ -683,8 +683,6 @@ function Thread() {
             profile_completed: !!pp.profile_completed,
             id_document_path: pp.id_document_path ?? null,
             is_deleted: !!pp.is_deleted,
-            phone_full: pp.phone_full ?? null,
-            phone: pp.phone ?? null,
           });
           try {
             const { data: rev } = await supabase
@@ -1431,7 +1429,7 @@ function Thread() {
           .from("profiles").select("credits").eq("id", user.id).maybeSingle();
         const { data: wp } = await supabase
           .from("profiles")
-          .select("first_name,last_name,phone_full,phone,phone_verified")
+          .select("first_name,last_name,phone_verified")
           .eq("id", app.worker_id)
           .maybeSingle();
         const wp2: any = wp ?? {};
@@ -1450,7 +1448,6 @@ function Thread() {
           privacy_unlocked: true,
           worker_first_name: wp2.first_name ?? null,
           worker_last_name: wp2.last_name ?? null,
-          worker_phone_present: !!(wp2.phone_full || wp2.phone),
           worker_phone_verified: !!wp2.phone_verified,
         });
       } catch (e) {
