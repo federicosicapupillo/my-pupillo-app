@@ -2282,6 +2282,10 @@ export type Database = {
           workers_needed: number
         }[]
       }
+      get_counterparty_phone: {
+        Args: { other_user_id: string }
+        Returns: string
+      }
       get_my_job_request: {
         Args: { _announcement_id: string }
         Returns: {
