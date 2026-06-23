@@ -33,7 +33,23 @@ export type RestaurantReviewLike = {
   positive_tags?: string[] | null;
   negative_tags?: string[] | null;
   tags?: string[] | null;
+  /**
+   * Blind-review visibility. A review only counts toward the public
+   * Reputation Score after both parties have left their review (Phase 2
+   * trigger sets `visible_at` and flips `is_visible_to_restaurants` to
+   * `true`). Locked rows are excluded from the aggregate so a single
+   * unreciprocated review can never sway the score.
+   */
+  visible_at?: string | null;
+  is_visible_to_restaurants?: boolean | null;
 };
+
+/** Whether a worker→restaurant review can contribute to the public score. */
+export function isRestaurantReviewVisibleForPublic(r: RestaurantReviewLike): boolean {
+  if (r.visible_at === null) return false;
+  if (r.is_visible_to_restaurants === false) return false;
+  return true;
+}
 
 export type ShiftReliabilityInput = {
   total: number;
@@ -91,7 +107,9 @@ export function calculateRestaurantReputationScore(
   reviews: RestaurantReviewLike[],
   reliability: ShiftReliabilityInput = { total: 0, completed: 0, cancelled: 0 },
 ): RestaurantReputationResult {
-  const validRatings = reviews
+  // Blind reciprocal review: only count rows the DB has already unlocked.
+  const publicReviews = reviews.filter(isRestaurantReviewVisibleForPublic);
+  const validRatings = publicReviews
     .map((r) => Number(r.rating ?? 0))
     .filter((n) => n > 0);
   const reviewsCount = validRatings.length;
@@ -118,7 +136,7 @@ export function calculateRestaurantReputationScore(
   const negCount: Record<string, number> = {};
   let posTotal = 0;
   let negTotal = 0;
-  for (const r of reviews) {
+  for (const r of publicReviews) {
     const all = [
       ...(r.positive_tags ?? []),
       ...(r.negative_tags ?? []),
