@@ -282,10 +282,10 @@ export function WorkerProfilePreviewDialog({
                       {((r.positive_tags?.length ?? 0) > 0 || (r.tags?.length ?? 0) > 0) && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {(r.positive_tags ?? []).slice(0, 4).map(t => (
-                            <span key={`p-${t}`} className="text-[10px] rounded-full bg-primary/10 text-primary px-1.5 py-0.5">{t}</span>
+                            <span key={`p-${t}`} className="text-[10px] rounded-full bg-primary/10 text-primary px-1.5 py-0.5">{formatDisplayLabel(t)}</span>
                           ))}
                           {(r.tags ?? []).slice(0, 4).map(t => (
-                            <span key={`t-${t}`} className="text-[10px] rounded-full bg-secondary px-1.5 py-0.5">{t}</span>
+                            <span key={`t-${t}`} className="text-[10px] rounded-full bg-secondary px-1.5 py-0.5">{formatDisplayLabel(t)}</span>
                           ))}
                         </div>
                       )}
