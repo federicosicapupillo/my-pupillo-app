@@ -1,4 +1,5 @@
 import { formatDateIT, formatTariff } from "@/lib/format";
+import { formatDisplayLabel } from "@/lib/format-label";
 
 /**
  * Identifier for the "Conferma turno" message sent automatically to the
@@ -107,7 +108,7 @@ export function buildConfirmationBody(
   // fallback chiaro "non indicato" anziché omettere la riga.
   lines.push(`Referente: ${ref || "non indicato"}${phone ? ` (${phone})` : ""}`);
   if (phone) lines.push(`Telefono: ${phone}`);
-  const dressItems = (ann?.dress_code_items ?? []).map(clean).filter(Boolean);
+  const dressItems = (ann?.dress_code_items ?? []).map((v) => formatDisplayLabel(clean(v))).filter(Boolean);
   const dressNotes = clean(ann?.dress_code_notes);
   const dress = [dressItems.join(", "), dressNotes].filter(Boolean).join(" — ");
   if (dress) lines.push(`Dress code: ${dress}`);
