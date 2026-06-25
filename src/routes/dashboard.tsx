@@ -109,7 +109,7 @@ function DashboardInner() {
           .is("read_at", null);
         return new Set((rows ?? []).map((r: any) => r.application_id)).size;
       };
-      const PENDING_STATUSES = ["pending", "interested", "counter_offer"];
+      const PENDING_STATUSES = ["pending", "interested", "counter_offer"] as const;
       if (role === "restaurant") {
         const { count: active } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "active");
         const { count: assignedCount } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "assigned");
