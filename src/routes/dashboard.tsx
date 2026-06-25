@@ -321,18 +321,33 @@ function DashboardInner() {
         </div>
       )}
 
-      {role !== "worker" && (
-        <div className={`grid gap-4 ${role === "restaurant" ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
-          <StatCard icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? stats.active : stats.applications} />
-          {role === "restaurant" && (
-            <Link to="/announcements" search={{ status: "assigned" } as never} className="block">
+      {role !== "worker" && (() => {
+        const showApps = role === "restaurant" && stats.applications > 0;
+        const showMsgs = stats.messages > 0;
+        const cards: ReactNode[] = [];
+        cards.push(
+          <StatCard key="active" icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? stats.active : stats.applications} />,
+        );
+        if (role === "restaurant") {
+          cards.push(
+            <Link key="assigned" to="/announcements" search={{ status: "assigned" } as never} className="block">
               <StatCard icon={CheckCircle2} label="Annunci assegnati" value={stats.assigned} highlight />
-            </Link>
-          )}
-          <StatCard icon={Users} label="Candidature totali" value={stats.applications} />
-          <StatCard icon={MessageSquare} label="Chat con messaggi da leggere" value={stats.messages} />
-        </div>
-      )}
+            </Link>,
+          );
+        }
+        if (showApps) {
+          cards.push(
+            <StatCard key="apps" icon={Users} label="Candidature da valutare" value={stats.applications} />,
+          );
+        }
+        if (showMsgs) {
+          cards.push(
+            <StatCard key="msgs" icon={MessageSquare} label="Chat con messaggi da leggere" value={stats.messages} />,
+          );
+        }
+        const cols = cards.length >= 4 ? "md:grid-cols-4" : cards.length === 3 ? "md:grid-cols-3" : cards.length === 2 ? "md:grid-cols-2" : "md:grid-cols-1";
+        return <div className={`grid gap-4 ${cols}`}>{cards}</div>;
+      })()}
 
       {role === "restaurant" && assignedList.length > 0 && (
         <div className="mt-6 rounded-2xl border bg-card p-5">
