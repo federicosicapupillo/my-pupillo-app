@@ -14,6 +14,10 @@ export function ProfileStatusBanner() {
   const allDone = phoneVerified && profileCompleted;
   const role = (profile as any).role as "restaurant" | "worker" | "admin" | undefined;
 
+  // Quando tutto è a posto non mostriamo il banner: la dashboard resta pulita
+  // e gli avvisi compaiono solo quando serve un'azione dall'utente.
+  if (allDone) return null;
+
   // Whitelist: route "fuori dal flusso operativo" da cui ha senso suggerire
   // "Vai alla dashboard". Su qualsiasi altra route (dashboard, jobs, browse,
   // messages, shifts, ecc.) il CTA resta contestuale al ruolo per evitare
