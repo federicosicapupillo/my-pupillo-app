@@ -1,6 +1,6 @@
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
@@ -109,17 +109,26 @@ function DashboardInner() {
           .is("read_at", null);
         return new Set((rows ?? []).map((r: any) => r.application_id)).size;
       };
+      const PENDING_STATUSES = ["pending", "interested", "counter_offer"] as const;
       if (role === "restaurant") {
         const { count: active } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "active");
         const { count: assignedCount } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "assigned");
-        const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id);
+        const { count: apps } = await supabase
+          .from("applications")
+          .select("*", { count: "exact", head: true })
+          .eq("restaurant_id", user.id)
+          .in("status", PENDING_STATUSES);
         const { data: appIds } = await supabase.from("applications").select("id").eq("restaurant_id", user.id);
         const ids = (appIds ?? []).map((a) => a.id);
         const msgs = await countUnreadChats(ids);
         setStats({ active: active ?? 0, assigned: assignedCount ?? 0, applications: apps ?? 0, messages: msgs });
         await loadAssigned(user.id);
       } else if (role === "worker") {
-        const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("worker_id", user.id);
+        const { count: apps } = await supabase
+          .from("applications")
+          .select("*", { count: "exact", head: true })
+          .eq("worker_id", user.id)
+          .in("status", PENDING_STATUSES);
         const { data: appIds } = await supabase.from("applications").select("id").eq("worker_id", user.id);
         const ids = (appIds ?? []).map((a) => a.id);
         const msgs = await countUnreadChats(ids);
@@ -312,18 +321,33 @@ function DashboardInner() {
         </div>
       )}
 
-      {role !== "worker" && (
-        <div className={`grid gap-4 ${role === "restaurant" ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
-          <StatCard icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? stats.active : stats.applications} />
-          {role === "restaurant" && (
-            <Link to="/announcements" search={{ status: "assigned" } as never} className="block">
+      {role !== "worker" && (() => {
+        const showApps = role === "restaurant" && stats.applications > 0;
+        const showMsgs = stats.messages > 0;
+        const cards: ReactNode[] = [];
+        cards.push(
+          <StatCard key="active" icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? stats.active : stats.applications} />,
+        );
+        if (role === "restaurant") {
+          cards.push(
+            <Link key="assigned" to="/announcements" search={{ status: "assigned" } as never} className="block">
               <StatCard icon={CheckCircle2} label="Annunci assegnati" value={stats.assigned} highlight />
-            </Link>
-          )}
-          <StatCard icon={Users} label="Candidature totali" value={stats.applications} />
-          <StatCard icon={MessageSquare} label="Chat con messaggi da leggere" value={stats.messages} />
-        </div>
-      )}
+            </Link>,
+          );
+        }
+        if (showApps) {
+          cards.push(
+            <StatCard key="apps" icon={Users} label="Candidature da valutare" value={stats.applications} />,
+          );
+        }
+        if (showMsgs) {
+          cards.push(
+            <StatCard key="msgs" icon={MessageSquare} label="Chat con messaggi da leggere" value={stats.messages} />,
+          );
+        }
+        const cols = cards.length >= 4 ? "md:grid-cols-4" : cards.length === 3 ? "md:grid-cols-3" : cards.length === 2 ? "md:grid-cols-2" : "md:grid-cols-1";
+        return <div className={`grid gap-4 ${cols}`}>{cards}</div>;
+      })()}
 
       {role === "restaurant" && assignedList.length > 0 && (
         <div className="mt-6 rounded-2xl border bg-card p-5">
@@ -510,22 +534,16 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
       priority: "high",
     });
   }
-  tasks.push({
-    icon: CalendarDays,
-    title: "Aggiorna le tue disponibilità",
-    desc: "Tieni la settimana sempre fresca per ricevere più offerte.",
-    to: { to: "/availability" },
-    cta: "Gestisci",
-    priority: "normal",
-  });
-  tasks.push({
-    icon: Briefcase,
-    title: "Esplora le offerte vicine",
-    desc: "Scopri gli annunci attivi nella tua zona.",
-    to: { to: "/announcements" },
-    cta: "Vedi offerte",
-    priority: "normal",
-  });
+  if (applications > 0) {
+    tasks.push({
+      icon: Users,
+      title: `${applications} ${applications === 1 ? "candidatura in attesa" : "candidature in attesa"}`,
+      desc: "Tieni d'occhio le risposte dei ristoratori.",
+      to: { to: "/messages" },
+      cta: "Vedi",
+      priority: "high",
+    });
+  }
 
   const topTasks = tasks.slice(0, 4);
 
@@ -587,26 +605,42 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
       </section>
 
       {/* 2. KPI OPERATIVI */}
-      <section className="grid grid-cols-3 gap-2 sm:gap-3">
-        <KpiTile
-          icon={Users}
-          label="Candidature"
-          value={applications}
-          to={{ to: "/announcements" }}
-        />
-        <KpiTile
-          icon={MessageSquare}
-          label="Chat da leggere"
-          value={messages}
-          highlight={messages > 0}
-          to={{ to: "/messages" }}
-        />
-        <KpiTile
-          icon={CheckCircle2}
-          label="Turni completati"
-          value={completedShifts}
-        />
-      </section>
+      {(() => {
+        const tiles: ReactNode[] = [];
+        if (applications > 0) {
+          tiles.push(
+            <KpiTile
+              key="apps"
+              icon={Users}
+              label="Candidature in attesa"
+              value={applications}
+              to={{ to: "/messages" }}
+            />,
+          );
+        }
+        if (messages > 0) {
+          tiles.push(
+            <KpiTile
+              key="msgs"
+              icon={MessageSquare}
+              label="Chat da leggere"
+              value={messages}
+              highlight
+              to={{ to: "/messages" }}
+            />,
+          );
+        }
+        tiles.push(
+          <KpiTile
+            key="done"
+            icon={CheckCircle2}
+            label="Turni completati"
+            value={completedShifts}
+          />,
+        );
+        const cols = tiles.length === 1 ? "grid-cols-1" : tiles.length === 2 ? "grid-cols-2" : "grid-cols-3";
+        return <section className={`grid ${cols} gap-2 sm:gap-3`}>{tiles}</section>;
+      })()}
 
       {/* 3. QUICK ACTIONS */}
       <section>
@@ -616,6 +650,11 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
           subtitle="Le prossime azioni utili per il tuo profilo"
         />
         <div className="grid gap-2.5 sm:grid-cols-2">
+          {topTasks.length === 0 && (
+            <div className="sm:col-span-2 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
+              Tutto aggiornato. Non hai azioni urgenti da completare.
+            </div>
+          )}
           {topTasks.map((t, i) => (
             <Link key={i} {...t.to} className="group block">
               <div

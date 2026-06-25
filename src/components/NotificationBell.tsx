@@ -66,6 +66,7 @@ export function NotificationBell() {
   const nav = useNavigate();
   const [items, setItems] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">(
     canUseBrowserPush() ? Notification.permission : "unsupported"
   );
@@ -82,6 +83,12 @@ export function NotificationBell() {
       .order("created_at", { ascending: false })
       .limit(20);
     setItems(dedupeNotifs((data as Notif[]) ?? []));
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+    setUnreadCount(count ?? 0);
   };
 
   useEffect(() => { load(); }, [user?.id]);
@@ -95,6 +102,7 @@ export function NotificationBell() {
         if (toastedRef.current.has(n.id)) return;
         toastedRef.current.add(n.id);
         setItems(prev => prev.some(i => i.id === n.id) ? prev : dedupeNotifs([n, ...prev]));
+        if (!n.read) setUnreadCount(c => c + 1);
         // In-app toast
         toast.message(n.title, {
           description: n.body || undefined,
@@ -115,6 +123,10 @@ export function NotificationBell() {
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
         const n = p.new as Notif;
+        const old = p.old as Notif;
+        if (old && old.read !== n.read) {
+          setUnreadCount(c => Math.max(0, c + (n.read ? -1 : 1)));
+        }
         setItems(prev => {
           const idx = prev.findIndex(i => i.id === n.id);
           if (idx === -1) return prev;
@@ -128,12 +140,13 @@ export function NotificationBell() {
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
         const old = p.old as Notif;
         setItems(prev => prev.filter(i => i.id !== old.id));
+        if (old && !old.read) setUnreadCount(c => Math.max(0, c - 1));
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
-  const unread = items.filter(i => !i.read).length;
+  const unread = unreadCount;
 
   const openItem = async (n: Notif) => {
     setOpen(false);
@@ -153,6 +166,8 @@ export function NotificationBell() {
         // rollback on failure
         setItems(prev => prev.map(i => i.id === n.id ? { ...i, read: false } : i));
         toast.error("Impossibile segnare come letta");
+      } else {
+        setUnreadCount(c => Math.max(0, c - 1));
       }
     }
     if (n.link) await navigateFromNotificationLink(nav, n.link);
@@ -163,6 +178,7 @@ export function NotificationBell() {
     if (!user) return;
     await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
     setItems(prev => prev.map(i => ({ ...i, read: true })));
+    setUnreadCount(0);
   };
 
   const requestPush = async () => {
