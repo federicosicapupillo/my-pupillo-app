@@ -534,22 +534,16 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
       priority: "high",
     });
   }
-  tasks.push({
-    icon: CalendarDays,
-    title: "Aggiorna le tue disponibilità",
-    desc: "Tieni la settimana sempre fresca per ricevere più offerte.",
-    to: { to: "/availability" },
-    cta: "Gestisci",
-    priority: "normal",
-  });
-  tasks.push({
-    icon: Briefcase,
-    title: "Esplora le offerte vicine",
-    desc: "Scopri gli annunci attivi nella tua zona.",
-    to: { to: "/announcements" },
-    cta: "Vedi offerte",
-    priority: "normal",
-  });
+  if (applications > 0) {
+    tasks.push({
+      icon: Users,
+      title: `${applications} ${applications === 1 ? "candidatura in attesa" : "candidature in attesa"}`,
+      desc: "Tieni d'occhio le risposte dei ristoratori.",
+      to: { to: "/messages" },
+      cta: "Vedi",
+      priority: "high",
+    });
+  }
 
   const topTasks = tasks.slice(0, 4);
 
