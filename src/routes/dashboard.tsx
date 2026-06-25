@@ -109,17 +109,26 @@ function DashboardInner() {
           .is("read_at", null);
         return new Set((rows ?? []).map((r: any) => r.application_id)).size;
       };
+      const PENDING_STATUSES = ["pending", "interested", "counter_offer"];
       if (role === "restaurant") {
         const { count: active } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "active");
         const { count: assignedCount } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "assigned");
-        const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id);
+        const { count: apps } = await supabase
+          .from("applications")
+          .select("*", { count: "exact", head: true })
+          .eq("restaurant_id", user.id)
+          .in("status", PENDING_STATUSES);
         const { data: appIds } = await supabase.from("applications").select("id").eq("restaurant_id", user.id);
         const ids = (appIds ?? []).map((a) => a.id);
         const msgs = await countUnreadChats(ids);
         setStats({ active: active ?? 0, assigned: assignedCount ?? 0, applications: apps ?? 0, messages: msgs });
         await loadAssigned(user.id);
       } else if (role === "worker") {
-        const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("worker_id", user.id);
+        const { count: apps } = await supabase
+          .from("applications")
+          .select("*", { count: "exact", head: true })
+          .eq("worker_id", user.id)
+          .in("status", PENDING_STATUSES);
         const { data: appIds } = await supabase.from("applications").select("id").eq("worker_id", user.id);
         const ids = (appIds ?? []).map((a) => a.id);
         const msgs = await countUnreadChats(ids);
