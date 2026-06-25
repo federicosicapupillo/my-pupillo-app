@@ -538,31 +538,29 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
             <div className="text-xs uppercase tracking-wider text-muted-foreground">
               Home operativa
             </div>
-            <h1 className="mt-1 truncate text-2xl font-bold sm:text-3xl">
-              Ciao {firstName} 👋
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               {isReady
                 ? "Sei pronto a lavorare. Tieni d'occhio offerte e messaggi."
                 : "Completa i passi qui sotto per iniziare a ricevere offerte."}
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <StatusPill
-                ok={phoneOk}
-                okLabel="Numero verificato"
-                koLabel="Numero da verificare"
-              />
-              <StatusPill
-                ok={profileOk}
-                okLabel="Profilo completo"
-                koLabel="Profilo da completare"
-              />
-              {isReady && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-                  <Sparkles className="h-3 w-3" /> Pronto a lavorare
-                </span>
-              )}
-            </div>
+            {!isReady && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {!phoneOk && (
+                  <StatusPill
+                    ok={false}
+                    okLabel="Numero verificato"
+                    koLabel="Numero da verificare"
+                  />
+                )}
+                {!profileOk && (
+                  <StatusPill
+                    ok={false}
+                    okLabel="Profilo completo"
+                    koLabel="Profilo da completare"
+                  />
+                )}
+              </div>
+            )}
           </div>
           <div className="shrink-0">
             {isReady ? (
