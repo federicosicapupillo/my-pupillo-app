@@ -102,6 +102,7 @@ export function NotificationBell() {
         if (toastedRef.current.has(n.id)) return;
         toastedRef.current.add(n.id);
         setItems(prev => prev.some(i => i.id === n.id) ? prev : dedupeNotifs([n, ...prev]));
+        if (!n.read) setUnreadCount(c => c + 1);
         // In-app toast
         toast.message(n.title, {
           description: n.body || undefined,
@@ -122,6 +123,10 @@ export function NotificationBell() {
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
         const n = p.new as Notif;
+        const old = p.old as Notif;
+        if (old && old.read !== n.read) {
+          setUnreadCount(c => Math.max(0, c + (n.read ? -1 : 1)));
+        }
         setItems(prev => {
           const idx = prev.findIndex(i => i.id === n.id);
           if (idx === -1) return prev;
@@ -135,6 +140,7 @@ export function NotificationBell() {
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, (p) => {
         const old = p.old as Notif;
         setItems(prev => prev.filter(i => i.id !== old.id));
+        if (old && !old.read) setUnreadCount(c => Math.max(0, c - 1));
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
