@@ -457,8 +457,6 @@ type WorkerHomeProps = {
 };
 
 function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps) {
-  const fullName: string = profile?.full_name ?? "";
-  const firstName = fullName ? fullName.split(" ")[0] : "lavoratore";
   const phoneOk = !!profile?.phone_verified;
   const profileOk = !!profile?.profile_completed;
   const isReady = phoneOk && profileOk;
