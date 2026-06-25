@@ -66,6 +66,7 @@ export function NotificationBell() {
   const nav = useNavigate();
   const [items, setItems] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">(
     canUseBrowserPush() ? Notification.permission : "unsupported"
   );
@@ -82,6 +83,12 @@ export function NotificationBell() {
       .order("created_at", { ascending: false })
       .limit(20);
     setItems(dedupeNotifs((data as Notif[]) ?? []));
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+    setUnreadCount(count ?? 0);
   };
 
   useEffect(() => { load(); }, [user?.id]);
@@ -133,7 +140,7 @@ export function NotificationBell() {
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
-  const unread = items.filter(i => !i.read).length;
+  const unread = unreadCount;
 
   const openItem = async (n: Notif) => {
     setOpen(false);
@@ -153,6 +160,8 @@ export function NotificationBell() {
         // rollback on failure
         setItems(prev => prev.map(i => i.id === n.id ? { ...i, read: false } : i));
         toast.error("Impossibile segnare come letta");
+      } else {
+        setUnreadCount(c => Math.max(0, c - 1));
       }
     }
     if (n.link) await navigateFromNotificationLink(nav, n.link);
@@ -163,6 +172,7 @@ export function NotificationBell() {
     if (!user) return;
     await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
     setItems(prev => prev.map(i => ({ ...i, read: true })));
+    setUnreadCount(0);
   };
 
   const requestPush = async () => {
