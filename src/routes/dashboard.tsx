@@ -605,26 +605,42 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
       </section>
 
       {/* 2. KPI OPERATIVI */}
-      <section className="grid grid-cols-3 gap-2 sm:gap-3">
-        <KpiTile
-          icon={Users}
-          label="Candidature"
-          value={applications}
-          to={{ to: "/announcements" }}
-        />
-        <KpiTile
-          icon={MessageSquare}
-          label="Chat da leggere"
-          value={messages}
-          highlight={messages > 0}
-          to={{ to: "/messages" }}
-        />
-        <KpiTile
-          icon={CheckCircle2}
-          label="Turni completati"
-          value={completedShifts}
-        />
-      </section>
+      {(() => {
+        const tiles: ReactNode[] = [];
+        if (applications > 0) {
+          tiles.push(
+            <KpiTile
+              key="apps"
+              icon={Users}
+              label="Candidature in attesa"
+              value={applications}
+              to={{ to: "/messages" }}
+            />,
+          );
+        }
+        if (messages > 0) {
+          tiles.push(
+            <KpiTile
+              key="msgs"
+              icon={MessageSquare}
+              label="Chat da leggere"
+              value={messages}
+              highlight
+              to={{ to: "/messages" }}
+            />,
+          );
+        }
+        tiles.push(
+          <KpiTile
+            key="done"
+            icon={CheckCircle2}
+            label="Turni completati"
+            value={completedShifts}
+          />,
+        );
+        const cols = tiles.length === 1 ? "grid-cols-1" : tiles.length === 2 ? "grid-cols-2" : "grid-cols-3";
+        return <section className={`grid ${cols} gap-2 sm:gap-3`}>{tiles}</section>;
+      })()}
 
       {/* 3. QUICK ACTIONS */}
       <section>
@@ -634,6 +650,11 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
           subtitle="Le prossime azioni utili per il tuo profilo"
         />
         <div className="grid gap-2.5 sm:grid-cols-2">
+          {topTasks.length === 0 && (
+            <div className="sm:col-span-2 rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
+              Tutto aggiornato. Non hai azioni urgenti da completare.
+            </div>
+          )}
           {topTasks.map((t, i) => (
             <Link key={i} {...t.to} className="group block">
               <div
