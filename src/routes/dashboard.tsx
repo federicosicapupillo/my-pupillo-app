@@ -97,25 +97,33 @@ function DashboardInner() {
   useEffect(() => {
     if (!user || !role) return;
     (async () => {
+      // Metric: number of threads (applications) with at least one message
+      // received and not yet read by the current user.
+      const countUnreadChats = async (appIds: string[]) => {
+        if (appIds.length === 0) return 0;
+        const { data: rows } = await supabase
+          .from("messages")
+          .select("application_id")
+          .in("application_id", appIds)
+          .neq("sender_id", user.id)
+          .is("read_at", null);
+        return new Set((rows ?? []).map((r: any) => r.application_id)).size;
+      };
       if (role === "restaurant") {
         const { count: active } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "active");
         const { count: assignedCount } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "assigned");
         const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id);
         const { data: appIds } = await supabase.from("applications").select("id").eq("restaurant_id", user.id);
         const ids = (appIds ?? []).map((a) => a.id);
-        const { count: msgs } = ids.length
-          ? await supabase.from("messages").select("*", { count: "exact", head: true }).in("application_id", ids)
-          : { count: 0 };
-        setStats({ active: active ?? 0, assigned: assignedCount ?? 0, applications: apps ?? 0, messages: msgs ?? 0 });
+        const msgs = await countUnreadChats(ids);
+        setStats({ active: active ?? 0, assigned: assignedCount ?? 0, applications: apps ?? 0, messages: msgs });
         await loadAssigned(user.id);
       } else if (role === "worker") {
         const { count: apps } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("worker_id", user.id);
         const { data: appIds } = await supabase.from("applications").select("id").eq("worker_id", user.id);
         const ids = (appIds ?? []).map((a) => a.id);
-        const { count: msgs } = ids.length
-          ? await supabase.from("messages").select("*", { count: "exact", head: true }).in("application_id", ids)
-          : { count: 0 };
-        setStats({ active: 0, assigned: 0, applications: apps ?? 0, messages: msgs ?? 0 });
+        const msgs = await countUnreadChats(ids);
+        setStats({ active: 0, assigned: 0, applications: apps ?? 0, messages: msgs });
       }
     })();
   }, [user, role]);
@@ -313,7 +321,7 @@ function DashboardInner() {
             </Link>
           )}
           <StatCard icon={Users} label="Candidature totali" value={stats.applications} />
-          <StatCard icon={MessageSquare} label="Messaggi" value={stats.messages} />
+          <StatCard icon={MessageSquare} label="Chat con messaggi da leggere" value={stats.messages} />
         </div>
       )}
 
@@ -495,7 +503,7 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
   if (messages > 0) {
     tasks.push({
       icon: MessageSquare,
-      title: `${messages} ${messages === 1 ? "messaggio da leggere" : "messaggi da leggere"}`,
+      title: `${messages} ${messages === 1 ? "chat con messaggi da leggere" : "chat con messaggi da leggere"}`,
       desc: "Rispondi velocemente: i ristoratori scelgono chi è reattivo.",
       to: { to: "/messages" },
       cta: "Apri inbox",
@@ -588,7 +596,7 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
         />
         <KpiTile
           icon={MessageSquare}
-          label="Messaggi"
+          label="Chat da leggere"
           value={messages}
           highlight={messages > 0}
           to={{ to: "/messages" }}

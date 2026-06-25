@@ -69,7 +69,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const mobileToggleRef = useRef<HTMLButtonElement | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Unread messages count (across all the user's applications)
+  // Unread chats count: number of threads (applications) with at least one
+  // message received and not yet read by the current user.
   const [unreadMsgs, setUnreadMsgs] = useState(0);
   useEffect(() => {
     if (!user) { setUnreadMsgs(0); return; }
@@ -82,13 +83,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         .eq(col, user.id);
       const ids = (apps ?? []).map((a: any) => a.id);
       if (ids.length === 0) { if (!cancelled) setUnreadMsgs(0); return; }
-      const { count } = await supabase
+      const { data: rows } = await supabase
         .from("messages")
-        .select("id", { count: "exact", head: true })
+        .select("application_id")
         .in("application_id", ids)
         .neq("sender_id", user.id)
         .is("read_at", null);
-      if (!cancelled) setUnreadMsgs((prev) => (prev === (count ?? 0) ? prev : (count ?? 0)));
+      const distinct = new Set((rows ?? []).map((r: any) => r.application_id)).size;
+      if (!cancelled) setUnreadMsgs((prev) => (prev === distinct ? prev : distinct));
     };
     load();
     const reloader = createDebouncedReload(() => { load(); }, 300);
