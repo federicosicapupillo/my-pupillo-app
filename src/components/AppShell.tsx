@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { createDebouncedReload } from "@/lib/inbox-realtime";
+import { countUnreadChats } from "@/lib/unread-chats";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { AssistantFab } from "@/components/assistant/AssistantFab";
 import { GuidedTour } from "@/components/GuidedTour";
