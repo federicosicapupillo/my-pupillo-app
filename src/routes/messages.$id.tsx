@@ -410,8 +410,11 @@ const ACTION_LABELS: Record<string, { label: string; tone: TimelineEvent["tone"]
 };
 
 function formatTs(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  // Canonical Italian date+time: "dd/MM/yyyy HH:mm" (two-digit day &
+  // month, four-digit year, colon-separated time). Mirrors the offer
+  // detail UI so card / modale / riepiloghi stay coherent and we never
+  // surface mixed formats like "26 / Giugno, 20.30".
+  return formatDateTimeIT(iso);
 }
 
 function buildEventList(app: App, events: LogEvent[]): TimelineEvent[] {
@@ -425,7 +428,7 @@ function buildEventList(app: App, events: LogEvent[]): TimelineEvent[] {
     const tariff = e.metadata?.tariff;
     const note = [
       role && `da ${role === "restaurant" ? "ristoratore" : role === "worker" ? "lavoratore" : role}`,
-      tariff != null && `€${tariff}`,
+      tariff != null && `${tariff} €`,
       e.metadata?.note,
     ].filter(Boolean).join(" · ") || undefined;
     out.push({ at: e.created_at, label: meta.label, tone: meta.tone, note });
