@@ -807,7 +807,7 @@ function OfferCard({
             </div>
             {hourlyRate != null && durationH != null && (
               <span className="text-[10px] text-primary/70">
-                Calcolato su €{hourlyRate}/ora per {durationH}h
+                Calcolato su {hourlyRate} €/ora per {durationH}h
               </span>
             )}
           </div>
