@@ -697,6 +697,17 @@ function OfferCard({
   const isNew = r.status === "pending" && new Date(r.created_at).getTime() > lastSeenAt;
   const badge = statusBadge(r, isNew);
   const confirmed = isMutuallyConfirmed(r) || isCompleted(r);
+  // The "Nome locale visibile dopo conferma" hint must appear ONLY when
+  // the offer can still potentially reach the mutual-confirmation step.
+  // For final / non-confirmable states (rifiutata, annullata, scaduta,
+  // turno annullato, ecc.) the message is misleading: there will never
+  // be a future confirmation, so it must be hidden.
+  const canStillConfirm =
+    !confirmed &&
+    !isCancelled(r) &&
+    (r.status === "pending" ||
+      r.status === "interested" ||
+      r.status === "counter_offer");
   const venue = venueTypeLabel(r.restaurant?.venue_type, r.restaurant?.venue_type_other);
   const zone = publicLocationLabel({
     job_city: r.announcement?.job_city ?? null,
@@ -796,7 +807,7 @@ function OfferCard({
             </div>
             {hourlyRate != null && durationH != null && (
               <span className="text-[10px] text-primary/70">
-                Calcolato su €{hourlyRate}/ora per {durationH}h
+                Calcolato su {hourlyRate} €/ora per {durationH}h
               </span>
             )}
           </div>
@@ -840,11 +851,15 @@ function OfferCard({
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" /> Ricevuta il {receivedAt}
         </span>
-        {!confirmed && (
+        {canStillConfirm ? (
           <span className="inline-flex items-center gap-1">
             <Info className="h-3 w-3" /> Nome locale visibile dopo conferma
           </span>
-        )}
+        ) : !confirmed ? (
+          <span className="inline-flex items-center gap-1">
+            <Info className="h-3 w-3" /> Locale non visibile
+          </span>
+        ) : null}
       </div>
 
       {/* Actions */}

@@ -41,7 +41,7 @@ import {
   DEFAULT_ARRIVAL_ADVANCE_MINUTES,
 } from "@/lib/shift-confirmation";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
-import { formatDateIT, formatTariff, formatOfferDateTime, formatJobLocation } from "@/lib/format";
+import { formatDateIT, formatDateTimeIT, formatTariff, formatOfferDateTime, formatJobLocation } from "@/lib/format";
 import { getShiftEndDate } from "@/lib/announcement-time";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock, Phone, User as UserIcon, Navigation, ExternalLink } from "lucide-react";
@@ -410,8 +410,11 @@ const ACTION_LABELS: Record<string, { label: string; tone: TimelineEvent["tone"]
 };
 
 function formatTs(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  // Canonical Italian date+time: "dd/MM/yyyy HH:mm" (two-digit day &
+  // month, four-digit year, colon-separated time). Mirrors the offer
+  // detail UI so card / modale / riepiloghi stay coherent and we never
+  // surface mixed formats like "26 / Giugno, 20.30".
+  return formatDateTimeIT(iso);
 }
 
 function buildEventList(app: App, events: LogEvent[]): TimelineEvent[] {
@@ -425,7 +428,7 @@ function buildEventList(app: App, events: LogEvent[]): TimelineEvent[] {
     const tariff = e.metadata?.tariff;
     const note = [
       role && `da ${role === "restaurant" ? "ristoratore" : role === "worker" ? "lavoratore" : role}`,
-      tariff != null && `€${tariff}`,
+      tariff != null && `${tariff} €`,
       e.metadata?.note,
     ].filter(Boolean).join(" · ") || undefined;
     out.push({ at: e.created_at, label: meta.label, tone: meta.tone, note });
@@ -2158,11 +2161,9 @@ function Thread() {
                 )}
                 {currentTariff != null && (
                   <div className="flex items-center gap-1">
-                    <Euro className="h-3 w-3 shrink-0" />
                     <span className="whitespace-nowrap">
                       <span className="text-foreground/80">Tariffa:</span>{" "}
-                      €{currentTariff}
-                      {ann?.tariff_type === "hourly" ? "/ora" : " a servizio"}
+                      {currentTariff} €{ann?.tariff_type === "hourly" ? "/ora" : " (a servizio)"}
                     </span>
                     {app?.proposed_tariff != null && (
                       <span className="ml-1 text-primary">(controfferta)</span>
@@ -2681,15 +2682,15 @@ function Thread() {
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <div>
                     <div className="text-[11px] text-muted-foreground">Tariffa proposta</div>
-                    <div className="font-semibold">€ {ann.tariff_amount}{ann.tariff_type === "hourly" ? "/h" : ""}</div>
+                    <div className="font-semibold">{ann.tariff_amount} €{ann.tariff_type === "hourly" ? "/ora" : ""}</div>
                   </div>
                   <div>
                     <div className="text-[11px] text-muted-foreground">Richiesta lavoratore</div>
-                    <div className="font-semibold text-primary">€ {app.proposed_tariff}{ann.tariff_type === "hourly" ? "/h" : ""}</div>
+                    <div className="font-semibold text-primary">{app.proposed_tariff} €{ann.tariff_type === "hourly" ? "/ora" : ""}</div>
                   </div>
                   <div>
                     <div className="text-[11px] text-muted-foreground">Differenza</div>
-                    <div className="font-semibold">+ € {(Number(app.proposed_tariff) - Number(ann.tariff_amount)).toFixed(2)}</div>
+                    <div className="font-semibold">+ {(Number(app.proposed_tariff) - Number(ann.tariff_amount)).toFixed(2)} €</div>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">

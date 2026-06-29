@@ -204,7 +204,13 @@ export function formatAnnouncementLabel(a: {
 }
 
 
-/** Format an announcement tariff for display: "12 EUR/h" or "12 EUR (a servizio)". */
+/**
+ * Format an announcement tariff for display in Italian style, with the
+ * euro symbol AFTER the amount and a single, non-duplicated symbol:
+ *   "10 €/ora"            (hourly)
+ *   "10 € (a servizio)"   (flat)
+ * Never produces `€10`, `€ 10`, `10€` or duplicated euro symbols.
+ */
 export function formatTariff(
   amount: number | string | null | undefined,
   type?: string | null,
@@ -213,8 +219,8 @@ export function formatTariff(
   const n = typeof amount === "number" ? amount : Number(amount);
   if (!Number.isFinite(n)) return "—";
   const pretty = Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
-  if (type === "hourly" || type == null) return `${pretty} EUR/h`;
-  return `${pretty} EUR (a servizio)`;
+  if (type === "hourly" || type == null) return `${pretty} €/ora`;
+  return `${pretty} € (a servizio)`;
 }
 
 /** Format an ISO yyyy-mm-dd (or Date) as dd/MM/yyyy (it-IT). */
@@ -223,6 +229,37 @@ export function formatDateIT(value: string | Date | null | undefined): string {
   const d = typeof value === "string" ? new Date(value.length === 10 ? value + "T00:00:00" : value) : value;
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+/**
+ * Format an ISO timestamp as the canonical Italian "dd/MM/yyyy HH:mm".
+ * Always two-digit day/month, four-digit year, colon-separated time.
+ * Use this everywhere an offer / shift / event date+time is rendered so
+ * the UI stays consistent (avoid `toLocaleString("it-IT", ...)` which
+ * may emit "26 giu, 20.30" depending on the runtime).
+ */
+export function formatDateTimeIT(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const d = typeof value === "string" ? new Date(value.length === 10 ? value + "T00:00:00" : value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = String(d.getFullYear());
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hh}:${mm}`;
+}
+
+/**
+ * Format a euro amount in Italian style with the symbol AFTER the
+ * number and a single space: "10 €", "12,50 €". Never `€10` or `€ 10`.
+ */
+export function formatEuro(amount: number | string | null | undefined): string {
+  if (amount == null || amount === "") return "—";
+  const n = typeof amount === "number" ? amount : Number(amount);
+  if (!Number.isFinite(n)) return "—";
+  const pretty = Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+  return `${pretty} €`;
 }
 
 /** Convert a Date to ISO yyyy-mm-dd (local time). */
@@ -280,7 +317,7 @@ export function computeServiceTotal(
   return Math.round(amount * dur * 100) / 100;
 }
 
-/** Format total service for display: e.g. "€60". */
+/** Format total service for display in Italian style: e.g. "60 €". */
 export function formatTotalService(
   amount: number,
   type: string,
@@ -290,6 +327,5 @@ export function formatTotalService(
 ): string | null {
   const total = computeServiceTotal(amount, type, durationHours, start, end);
   if (total == null) return null;
-  const pretty = Number.isInteger(total) ? String(total) : total.toFixed(2).replace(/\.?0+$/, "");
-  return `€${pretty}`;
+  return formatEuro(total);
 }
