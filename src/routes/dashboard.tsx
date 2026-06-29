@@ -29,6 +29,8 @@ import {
 import { toast } from "sonner";
 import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation";
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
+import { countUnreadChats } from "@/lib/unread-chats";
+import { createDebouncedReload } from "@/lib/inbox-realtime";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -96,19 +98,12 @@ function DashboardInner() {
 
   useEffect(() => {
     if (!user || !role) return;
-    (async () => {
+    let cancelled = false;
+    const run = async () => {
       // Metric: number of threads (applications) with at least one message
-      // received and not yet read by the current user.
-      const countUnreadChats = async (appIds: string[]) => {
-        if (appIds.length === 0) return 0;
-        const { data: rows } = await supabase
-          .from("messages")
-          .select("application_id")
-          .in("application_id", appIds)
-          .neq("sender_id", user.id)
-          .is("read_at", null);
-        return new Set((rows ?? []).map((r: any) => r.application_id)).size;
-      };
+      // received and not yet read by the current user. Uses the shared
+      // `countUnreadChats` helper so the dashboard, navbar badge and the
+      // /messages page all show the SAME number.
       const PENDING_STATUSES = ["pending", "interested", "counter_offer"] as const;
       if (role === "restaurant") {
         const { count: active } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "active");
@@ -118,9 +113,8 @@ function DashboardInner() {
           .select("*", { count: "exact", head: true })
           .eq("restaurant_id", user.id)
           .in("status", PENDING_STATUSES);
-        const { data: appIds } = await supabase.from("applications").select("id").eq("restaurant_id", user.id);
-        const ids = (appIds ?? []).map((a) => a.id);
-        const msgs = await countUnreadChats(ids);
+        const msgs = await countUnreadChats(user.id, role);
+        if (cancelled) return;
         setStats({ active: active ?? 0, assigned: assignedCount ?? 0, applications: apps ?? 0, messages: msgs });
         await loadAssigned(user.id);
       } else if (role === "worker") {
@@ -129,12 +123,33 @@ function DashboardInner() {
           .select("*", { count: "exact", head: true })
           .eq("worker_id", user.id)
           .in("status", PENDING_STATUSES);
-        const { data: appIds } = await supabase.from("applications").select("id").eq("worker_id", user.id);
-        const ids = (appIds ?? []).map((a) => a.id);
-        const msgs = await countUnreadChats(ids);
+        const msgs = await countUnreadChats(user.id, role);
+        if (cancelled) return;
         setStats({ active: 0, assigned: 0, applications: apps ?? 0, messages: msgs });
       }
-    })();
+    };
+    const refreshUnread = async () => {
+      const msgs = await countUnreadChats(user.id, role);
+      if (cancelled) return;
+      setStats((s) => (s.messages === msgs ? s : { ...s, messages: msgs }));
+    };
+    run();
+    // Keep the counter in sync with the /messages page: any insert/update/
+    // delete on messages (e.g. a chat opened and read_at filled in) refreshes
+    // the dashboard badge without requiring a full reload.
+    const reloader = createDebouncedReload(() => { refreshUnread(); }, 300);
+    const ch = supabase
+      .channel(`dashboard-unread-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => reloader.schedule())
+      .subscribe();
+    const onVisible = () => { if (document.visibilityState === "visible") refreshUnread(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      reloader.cancel();
+      supabase.removeChannel(ch);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [user, role]);
 
   const loadAssigned = async (uid: string) => {
