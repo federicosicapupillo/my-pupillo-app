@@ -165,8 +165,29 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
               .in("application_id", myAppIds);
             ((mine2 ?? []) as { application_id: string | null }[]).forEach((r) => { if (r.application_id) reciprocatedApps.add(r.application_id); });
           }
+          // Verify the candidate is still actionable: the linked shift must
+          // exist, belong to this worker, and be in `completed` status
+          // (the only state from which a worker can leave a review). This
+          // prevents "phantom" notices that point to a cancelled/expired
+          // shift with no review form to open.
+          const reviewableShifts = new Set<string>();
+          if (myShiftIds.length) {
+            const { data: shiftRows } = await supabase
+              .from("shifts")
+              .select("id, status, worker_id")
+              .in("id", myShiftIds);
+            ((shiftRows ?? []) as { id: string; status: string | null; worker_id: string | null }[])
+              .forEach((s) => {
+                if (s.worker_id === user.id && s.status === "completed") {
+                  reviewableShifts.add(s.id);
+                }
+              });
+          }
           const stillPending = candidates.filter((c) => {
-            if (c.shiftId && reciprocatedShifts.has(c.shiftId)) return false;
+            // Must have a reviewable (completed) shift the worker can recensire.
+            if (!c.shiftId || !reviewableShifts.has(c.shiftId)) return false;
+            // Drop those the worker already reciprocated.
+            if (reciprocatedShifts.has(c.shiftId)) return false;
             if (c.applicationId && reciprocatedApps.has(c.applicationId)) return false;
             return true;
           });
@@ -235,14 +256,16 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
                   <Button
                     size="sm"
                     onClick={() => {
-                      if (p.applicationId) {
+                      // Worker review form lives in /shifts (tab "to-review").
+                      // Use ?review=<shiftId> to auto-open the dialog on the
+                      // exact shift, so the CTA never lands on an empty page.
+                      if (p.shiftId) {
                         navigate({
-                          to: "/messages/$id",
-                          params: { id: p.applicationId },
-                          search: { action: "review" } as never,
+                          to: "/shifts",
+                          search: { tab: "to-review", review: p.shiftId, shift: p.shiftId } as never,
                         });
                       } else {
-                        navigate({ to: "/messages" });
+                        navigate({ to: "/shifts", search: { tab: "to-review" } as never });
                       }
                     }}
                   >

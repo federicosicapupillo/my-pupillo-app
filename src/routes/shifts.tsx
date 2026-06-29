@@ -309,21 +309,39 @@ function ShiftsPage() {
   useEffect(() => {
     if (reviewAutoOpenedRef.current) return;
     if (!initialReviewShift) return;
-    if (role !== "restaurant") return;
-    const target = actionShifts.find((a) => a.shift_id === initialReviewShift);
-    if (!target) return;
-    reviewAutoOpenedRef.current = true;
-    setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
-    setDialogComment("");
-    setDialogError(null);
-    setDialogPositive([]);
-    setDialogNegative([]);
-    setDialogWouldRehire(null);
-    setReviewDialog(target);
-    try {
-      console.info("[PUPILLO_REVIEW_REMINDER_AUTO_OPEN]", { shift_id: target.shift_id });
-    } catch { /* ignore */ }
-  }, [initialReviewShift, actionShifts, role]);
+    if (role === "restaurant") {
+      const target = actionShifts.find((a) => a.shift_id === initialReviewShift);
+      if (!target) return;
+      reviewAutoOpenedRef.current = true;
+      setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+      setDialogComment("");
+      setDialogError(null);
+      setDialogPositive([]);
+      setDialogNegative([]);
+      setDialogWouldRehire(null);
+      setReviewDialog(target);
+      try {
+        console.info("[PUPILLO_REVIEW_REMINDER_AUTO_OPEN]", { shift_id: target.shift_id });
+      } catch { /* ignore */ }
+      return;
+    }
+    if (role === "worker") {
+      // Worker arrives from WorkerMyReviews / blind-review CTA with
+      // /shifts?tab=to-review&review=<shiftId>: auto-open the worker
+      // recensione dialog on the exact shift so the CTA never lands on
+      // an empty page.
+      const s = shifts.find((x) => x.id === initialReviewShift);
+      if (!s) return;
+      if (s.status !== "completed") return;
+      if (reviewMap[s.id]) return; // already reviewed by this worker
+      reviewAutoOpenedRef.current = true;
+      openWorkerReviewDialog(s);
+      try {
+        console.info("[PUPILLO_WORKER_REVIEW_REMINDER_AUTO_OPEN]", { shift_id: s.id });
+      } catch { /* ignore */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialReviewShift, actionShifts, shifts, reviewMap, role]);
 
   const load = async () => {
     if (!user || !role) return;
