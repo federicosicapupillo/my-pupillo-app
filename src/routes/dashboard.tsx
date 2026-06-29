@@ -11,8 +11,6 @@ import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
-import { WorkerReputationCard } from "@/components/WorkerReputationCard";
-import { WorkerMyReviews } from "@/components/WorkerMyReviews";
 import { WorkerAvailabilitySummary } from "@/components/WorkerAvailabilitySummary";
 import { RestaurantReputationCard } from "@/components/RestaurantReputationCard";
 import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
@@ -719,42 +717,6 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
       </section>
 
 
-      {/* 5. REPUTAZIONE */}
-      <section>
-        <SectionHeader
-          icon={Star}
-          title="La mia reputazione"
-          subtitle={
-            completedShifts >= 3
-              ? "Il tuo punteggio basato su servizi reali"
-              : "In costruzione — completa i primi servizi"
-          }
-          action={
-            <Link to="/profile">
-              <Button variant="ghost" size="sm" className="gap-1">
-                Profilo <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          }
-        />
-        <WorkerReputationCard workerId={userId} profile={profile as never} showTips />
-      </section>
-
-      {/* 6. RECENSIONI */}
-      <section>
-        <SectionHeader
-          icon={MessageSquare}
-          title="Le mie recensioni"
-          action={
-            <Link to="/profile">
-              <Button variant="ghost" size="sm" className="gap-1">
-                Vedi tutte <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          }
-        />
-        <WorkerMyReviews workerId={userId} limit={3} />
-      </section>
 
       {/* 7. REFERRAL */}
       <section>
