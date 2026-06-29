@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { createDebouncedReload } from "@/lib/inbox-realtime";
+import { countUnreadChats } from "@/lib/unread-chats";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { AssistantFab } from "@/components/assistant/AssistantFab";
 import { GuidedTour } from "@/components/GuidedTour";
@@ -76,20 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!user) { setUnreadMsgs(0); return; }
     let cancelled = false;
     const load = async () => {
-      const col = role === "restaurant" ? "restaurant_id" : "worker_id";
-      const { data: apps } = await supabase
-        .from("applications")
-        .select("id")
-        .eq(col, user.id);
-      const ids = (apps ?? []).map((a: any) => a.id);
-      if (ids.length === 0) { if (!cancelled) setUnreadMsgs(0); return; }
-      const { data: rows } = await supabase
-        .from("messages")
-        .select("application_id")
-        .in("application_id", ids)
-        .neq("sender_id", user.id)
-        .is("read_at", null);
-      const distinct = new Set((rows ?? []).map((r: any) => r.application_id)).size;
+      const distinct = await countUnreadChats(user.id, role);
       if (!cancelled) setUnreadMsgs((prev) => (prev === distinct ? prev : distinct));
     };
     load();
