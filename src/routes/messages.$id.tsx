@@ -2158,11 +2158,9 @@ function Thread() {
                 )}
                 {currentTariff != null && (
                   <div className="flex items-center gap-1">
-                    <Euro className="h-3 w-3 shrink-0" />
                     <span className="whitespace-nowrap">
                       <span className="text-foreground/80">Tariffa:</span>{" "}
-                      €{currentTariff}
-                      {ann?.tariff_type === "hourly" ? "/ora" : " a servizio"}
+                      {currentTariff} €{ann?.tariff_type === "hourly" ? "/ora" : " (a servizio)"}
                     </span>
                     {app?.proposed_tariff != null && (
                       <span className="ml-1 text-primary">(controfferta)</span>
