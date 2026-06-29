@@ -2679,15 +2679,15 @@ function Thread() {
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <div>
                     <div className="text-[11px] text-muted-foreground">Tariffa proposta</div>
-                    <div className="font-semibold">€ {ann.tariff_amount}{ann.tariff_type === "hourly" ? "/h" : ""}</div>
+                    <div className="font-semibold">{ann.tariff_amount} €{ann.tariff_type === "hourly" ? "/ora" : ""}</div>
                   </div>
                   <div>
                     <div className="text-[11px] text-muted-foreground">Richiesta lavoratore</div>
-                    <div className="font-semibold text-primary">€ {app.proposed_tariff}{ann.tariff_type === "hourly" ? "/h" : ""}</div>
+                    <div className="font-semibold text-primary">{app.proposed_tariff} €{ann.tariff_type === "hourly" ? "/ora" : ""}</div>
                   </div>
                   <div>
                     <div className="text-[11px] text-muted-foreground">Differenza</div>
-                    <div className="font-semibold">+ € {(Number(app.proposed_tariff) - Number(ann.tariff_amount)).toFixed(2)}</div>
+                    <div className="font-semibold">+ {(Number(app.proposed_tariff) - Number(ann.tariff_amount)).toFixed(2)} €</div>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
