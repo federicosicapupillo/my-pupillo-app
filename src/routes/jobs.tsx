@@ -851,11 +851,15 @@ function OfferCard({
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" /> Ricevuta il {receivedAt}
         </span>
-        {!confirmed && (
+        {canStillConfirm ? (
           <span className="inline-flex items-center gap-1">
             <Info className="h-3 w-3" /> Nome locale visibile dopo conferma
           </span>
-        )}
+        ) : !confirmed ? (
+          <span className="inline-flex items-center gap-1">
+            <Info className="h-3 w-3" /> Locale non visibile
+          </span>
+        ) : null}
       </div>
 
       {/* Actions */}
