@@ -121,7 +121,7 @@ function DesignAuditPage() {
   return (
     <RequireAuth>
       <RequireRole allow={["admin"]}>
-        <AppShell title="Design Audit">
+        <AppShell>
           <div className="max-w-6xl mx-auto p-4 space-y-8">
             <header className="space-y-2">
               <h1 className="text-2xl font-semibold">Pupillo — Design Audit</h1>

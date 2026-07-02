@@ -23,6 +23,7 @@ import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MappaRouteImport } from './routes/mappa'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
+import { Route as DesignAuditRouteImport } from './routes/design-audit'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
 import { Route as BrowseRouteImport } from './routes/browse'
@@ -116,6 +117,11 @@ const JobsRoute = JobsRouteImport.update({
 const ForbiddenRoute = ForbiddenRouteImport.update({
   id: '/forbidden',
   path: '/forbidden',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesignAuditRoute = DesignAuditRouteImport.update({
+  id: '/design-audit',
+  path: '/design-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/browse': typeof BrowseRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
+  '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
@@ -293,6 +300,7 @@ export interface FileRoutesByTo {
   '/browse': typeof BrowseRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
+  '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
@@ -334,6 +342,7 @@ export interface FileRoutesById {
   '/browse': typeof BrowseRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
+  '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
@@ -376,6 +385,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/come-funziona'
     | '/dashboard'
+    | '/design-audit'
     | '/forbidden'
     | '/jobs'
     | '/mappa'
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/come-funziona'
     | '/dashboard'
+    | '/design-audit'
     | '/forbidden'
     | '/jobs'
     | '/mappa'
@@ -456,6 +467,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/come-funziona'
     | '/dashboard'
+    | '/design-audit'
     | '/forbidden'
     | '/jobs'
     | '/mappa'
@@ -497,6 +509,7 @@ export interface RootRouteChildren {
   BrowseRoute: typeof BrowseRoute
   ComeFunzionaRoute: typeof ComeFunzionaRoute
   DashboardRoute: typeof DashboardRoute
+  DesignAuditRoute: typeof DesignAuditRoute
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
   MappaRoute: typeof MappaRoute
@@ -620,6 +633,13 @@ declare module '@tanstack/react-router' {
       path: '/forbidden'
       fullPath: '/forbidden'
       preLoaderRoute: typeof ForbiddenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/design-audit': {
+      id: '/design-audit'
+      path: '/design-audit'
+      fullPath: '/design-audit'
+      preLoaderRoute: typeof DesignAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -842,6 +862,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrowseRoute: BrowseRoute,
   ComeFunzionaRoute: ComeFunzionaRoute,
   DashboardRoute: DashboardRoute,
+  DesignAuditRoute: DesignAuditRoute,
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
   MappaRoute: MappaRoute,
