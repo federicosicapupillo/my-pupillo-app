@@ -115,8 +115,8 @@ async def apply_state(page: Page, state: Optional[str]) -> None:
         except Exception:
             pass
     elif state == "login_error":
-        await page.get_by_label("Email").fill("errore-audit@example.invalid")
-        await page.get_by_label("Password").fill("password-sbagliata")
+        await page.locator('input[type="email"]').first.fill("errore-audit@example.invalid")
+        await page.locator('input[type="password"]').first.fill("password-sbagliata")
         await page.get_by_role("button", name="Accedi").last.click()
         await page.wait_for_timeout(1400)
     elif state == "register_error":
@@ -170,8 +170,8 @@ async def capture(page: Page, filename: str, route: str, viewport: dict, state: 
 async def login(page: Page, email: str, password: str) -> bool:
     await page.goto(BASE_URL + "/auth", wait_until="domcontentloaded")
     await stabilize(page)
-    await page.get_by_label("Email").fill(email)
-    await page.get_by_label("Password").fill(password)
+    await page.locator('input[type="email"]').first.fill(email)
+    await page.locator('input[type="password"]').first.fill(password)
     await page.get_by_role("button", name="Accedi").last.click()
     await page.wait_for_timeout(3500)
     text = (await page.locator("body").inner_text(timeout=3000)).lower()
