@@ -2608,6 +2608,43 @@ export type Database = {
           user_roles_error: string
         }[]
       }
+      search_worker_availability_exceptions_public: {
+        Args: { _from_date: string; _worker_ids: string[] }
+        Returns: {
+          city: string
+          date: string
+          district: string
+          end_time: string
+          id: string
+          is_available: boolean
+          latitude: number
+          longitude: number
+          province: string
+          radius_km: number
+          start_time: string
+          time_slot: string
+          worker_id: string
+        }[]
+      }
+      search_worker_availability_public: {
+        Args: { _worker_ids: string[] }
+        Returns: {
+          city: string
+          day_of_week: number
+          district: string
+          end_time: string
+          id: string
+          is_flexible: boolean
+          is_last_minute: boolean
+          latitude: number
+          longitude: number
+          province: string
+          radius_km: number
+          start_time: string
+          time_slot: string
+          worker_id: string
+        }[]
+      }
       send_required_review_reminders: { Args: never; Returns: number }
       unseed_demo: {
         Args: { _batch: string }
