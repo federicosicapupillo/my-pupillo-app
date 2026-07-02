@@ -587,10 +587,10 @@ function MapPage() {
       // Il campo profiles.weekly_availability è legacy e spesso vuoto.
       const workerIds = wsRaw.map((w) => w.id);
       if (workerIds.length > 0) {
-        const { data: avRows, error: avErr } = await supabase
-          .from("worker_availability")
-          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
-          .in("worker_id", workerIds);
+        const { data: avRows, error: avErr } = await supabase.rpc(
+          "search_worker_availability_public",
+          { _worker_ids: workerIds },
+        );
         if (avErr) {
           console.warn("[mappa] worker_availability load error", avErr);
         } else {

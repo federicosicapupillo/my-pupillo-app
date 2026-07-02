@@ -697,15 +697,8 @@ function WorkersPage() {
       if (ids.length > 0) {
         const todayIso = new Date().toISOString().slice(0, 10);
         const [{ data: avRows, error: avErr }, { data: excRows, error: excErr }] = await Promise.all([
-          supabase
-            .from("worker_availability")
-            .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
-            .in("worker_id", ids),
-          supabase
-            .from("worker_availability_exceptions")
-            .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
-            .in("worker_id", ids)
-            .gte("date", todayIso),
+          supabase.rpc("search_worker_availability_public", { _worker_ids: ids }),
+          supabase.rpc("search_worker_availability_exceptions_public", { _worker_ids: ids, _from_date: todayIso }),
         ]);
         if (avErr) {
           console.warn("[workers] availability load error", avErr);
@@ -803,15 +796,8 @@ function WorkersPage() {
     const refetch = async () => {
       const todayIso = new Date().toISOString().slice(0, 10);
       const [{ data, error }, { data: excData, error: excError }] = await Promise.all([
-        supabase
-          .from("worker_availability")
-          .select("id, worker_id, day_of_week, time_slot, start_time, end_time, is_flexible, is_last_minute, notes, city, province, district, latitude, longitude, radius_km")
-          .in("worker_id", ids),
-        supabase
-          .from("worker_availability_exceptions")
-          .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
-          .in("worker_id", ids)
-          .gte("date", todayIso),
+        supabase.rpc("search_worker_availability_public", { _worker_ids: ids }),
+        supabase.rpc("search_worker_availability_exceptions_public", { _worker_ids: ids, _from_date: todayIso }),
       ]);
       if (cancelled) return;
       if (!error) {
