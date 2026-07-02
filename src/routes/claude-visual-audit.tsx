@@ -1,167 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { auditShots, auditStatusLabel, type AuditShot } from "@/lib/visual-audit-data";
 
 export const Route = createFileRoute("/claude-visual-audit")({
   head: () => ({
     meta: [
       { title: "Pupillo — Visual Audit Pack" },
+      { name: "description", content: "Pacchetto visuale Pupillo per audit UX/UI con screenshot grandi e leggibili." },
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
   component: VisualAudit,
 });
 
-type Shot = {
-  n: string;
-  title: string;
-  role: string;
-  route: string;
-  state: string;
-  file: string; // base filename without -mobile/-desktop.png
-  notes: string[];
-  authRequired?: boolean;
-};
+function ShotBlock({ shot }: { shot: AuditShot }) {
+  const src = `/audit-screenshots/${shot.file}`;
+  const isGenerated = shot.status === "generated";
+  const routeLink = shot.route.includes(":") ? "#" : shot.route;
 
-const SHOTS: Shot[] = [
-  { n: "01", title: "Homepage", role: "Pubblico", route: "/", state: "default", file: "01-home",
-    notes: ["Chiarezza value proposition", "Gerarchia CTA", "Fiducia percepita", "Leggibilità mobile"] },
-  { n: "02", title: "Come funziona", role: "Pubblico", route: "/come-funziona", state: "default", file: "02-come-funziona",
-    notes: ["Chiarezza flusso in 3 step", "Differenziazione lavoratore/ristoratore", "CTA finale"] },
-  { n: "03", title: "Login / Registrazione", role: "Pubblico", route: "/auth", state: "default", file: "03-auth-login",
-    notes: ["Chiarezza login/registrazione", "Leggibilità form", "Contrasto bottoni", "Recupero password visibile"] },
-  { n: "04", title: "Recupero password", role: "Pubblico", route: "/reset-password", state: "default", file: "04-reset-password",
-    notes: ["Chiarezza istruzioni", "Feedback dopo invio email"] },
-  { n: "05", title: "Termini di servizio", role: "Pubblico", route: "/terms", state: "default", file: "05-terms",
-    notes: ["Leggibilità testo lungo", "Gerarchia titoli"] },
-  { n: "06", title: "Registrazione completata", role: "Pubblico", route: "/registration-success", state: "success", file: "06-registration-success",
-    notes: ["Chiarezza next step", "Emozione post-registrazione"] },
-  { n: "07", title: "Accesso negato", role: "Sistema", route: "/forbidden", state: "error", file: "07-forbidden",
-    notes: ["Tono messaggio", "Percorso di recupero"] },
-  { n: "08", title: "Errore account", role: "Sistema", route: "/account-error", state: "error", file: "08-account-error",
-    notes: ["Chiarezza errore", "Azioni disponibili"] },
-
-  { n: "09", title: "Dashboard (redirect a login)", role: "Lavoratore", route: "/dashboard", state: "not-authenticated", file: "09-dashboard-redirect", authRequired: true,
-    notes: ["Comportamento gate auth", "Da catturare manualmente dopo login come lavoratore"] },
-  { n: "10", title: "Profilo (redirect a login)", role: "Lavoratore", route: "/profile", state: "not-authenticated", file: "10-profile-redirect", authRequired: true,
-    notes: ["Da catturare manualmente dopo login"] },
-  { n: "11", title: "Disponibilità (redirect a login)", role: "Lavoratore", route: "/availability", state: "not-authenticated", file: "11-availability-redirect", authRequired: true,
-    notes: ["Da catturare manualmente dopo login lavoratore"] },
-  { n: "12", title: "Ricerca offerte / Jobs", role: "Lavoratore", route: "/jobs", state: "not-authenticated", file: "12-jobs-redirect", authRequired: true,
-    notes: ["Da catturare manualmente dopo login lavoratore"] },
-  { n: "13", title: "Turni", role: "Lavoratore", route: "/shifts", state: "not-authenticated", file: "13-shifts-redirect", authRequired: true,
-    notes: ["Turni confermati / completati / annullati", "Da catturare dopo login"] },
-  { n: "14", title: "Messaggi", role: "Lavoratore", route: "/messages", state: "not-authenticated", file: "14-messages-redirect", authRequired: true,
-    notes: ["Layout lista chat", "Contrasto messaggi"] },
-  { n: "15", title: "Notifiche", role: "Lavoratore", route: "/notifications", state: "not-authenticated", file: "15-notifications-redirect", authRequired: true,
-    notes: ["Chiarezza notifiche", "Stato letto/non letto"] },
-  { n: "16", title: "Annunci (ristoratore)", role: "Ristoratore", route: "/announcements", state: "not-authenticated", file: "16-announcements-redirect", authRequired: true,
-    notes: ["Lista annunci pubblicati", "CTA nuovo annuncio"] },
-  { n: "17", title: "Browse offerte", role: "Lavoratore", route: "/browse", state: "not-authenticated", file: "17-browse-redirect", authRequired: true,
-    notes: ["Card offerta", "Filtri e ricerca"] },
-  { n: "18", title: "Mappa lavoratori/annunci", role: "Ristoratore", route: "/mappa", state: "not-authenticated", file: "18-mappa-redirect", authRequired: true,
-    notes: ["Leggibilità mappa", "Pin e sanitized data"] },
-  { n: "19", title: "Ricerca lavoratori", role: "Ristoratore", route: "/workers", state: "not-authenticated", file: "19-workers-redirect", authRequired: true,
-    notes: ["Card lavoratore sanitizzata", "CTA invito diretto"] },
-  { n: "20", title: "Crediti / Billing", role: "Ristoratore", route: "/billing", state: "not-authenticated", file: "20-billing-redirect", authRequired: true,
-    notes: ["Chiarezza saldo crediti", "Bottone ricarica"] },
-  { n: "21", title: "Onboarding", role: "Lavoratore/Ristoratore", route: "/onboarding", state: "not-authenticated", file: "21-onboarding-redirect", authRequired: true,
-    notes: ["Chiarezza passi iniziali", "Percentuale completamento"] },
-];
-
-function ShotBlock({ s }: { s: Shot }) {
-  const mobile = `/audit-screenshots/${s.file}-mobile.png`;
-  const desktop = `/audit-screenshots/${s.file}-desktop.png`;
   return (
-    <section
-      className="audit-section"
-      style={{
-        pageBreakAfter: "always",
-        breakAfter: "page",
-        borderTop: "2px solid #000",
-        padding: "32px 0",
-      }}
-    >
-      <h2 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "#000" }}>
-        {s.n} — {s.title}
-      </h2>
-      <div style={{ fontSize: 14, color: "#111", marginBottom: 4 }}>
-        <strong>Ruolo:</strong> {s.role} &nbsp;|&nbsp;
-        <strong>Route:</strong> <code>{s.route}</code> &nbsp;|&nbsp;
-        <strong>Stato:</strong> {s.state}
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <a
-          href={s.route}
-          target="_blank"
-          rel="noreferrer"
-          style={{ color: "#0645AD", textDecoration: "underline", fontSize: 14 }}
-        >
-          → Apri schermata reale ({s.route})
+    <section className="audit-section">
+      <div className="audit-meta">
+        <h2>{shot.id} — {shot.title}</h2>
+        <dl>
+          <div><dt>Ruolo</dt><dd>{shot.role}</dd></div>
+          <div><dt>Route</dt><dd><code>{shot.route}</code></dd></div>
+          <div><dt>Stato</dt><dd>{shot.state}</dd></div>
+          <div><dt>Viewport</dt><dd>{shot.viewport}</dd></div>
+          <div><dt>Screenshot</dt><dd>{auditStatusLabel(shot.status)}</dd></div>
+        </dl>
+        <a href={routeLink} target="_blank" rel="noreferrer">
+          Apri route reale
         </a>
-        {s.authRequired && (
-          <div
-            style={{
-              marginTop: 8,
-              padding: 10,
-              background: "#FFF8DC",
-              border: "1px solid #E0C97F",
-              fontSize: 13,
-              color: "#000",
-            }}
-          >
-            ⚠️ Route protetta: lo screenshot mostra il redirect al login perché la sessione
-            non è disponibile lato server. Per l'audit reale: accedi come utente, apri la
-            route, imposta viewport 412px (mobile) o 1280px (desktop), fai screenshot manuale
-            e salvalo in <code>/public/audit-screenshots/{s.file}-mobile.png</code> (o
-            <code> -desktop.png</code>).
+      </div>
+
+      <div className="audit-shot-wrap">
+        {isGenerated ? (
+          <img src={src} alt={`${shot.id} — ${shot.title}`} loading="lazy" />
+        ) : (
+          <div className="missing-shot">
+            <strong>Screenshot non generato automaticamente.</strong>
+            <span>{auditStatusLabel(shot.status)}. Vedi guida per credenziali e passaggi manuali.</span>
+            <code>{shot.file}</code>
           </div>
         )}
       </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px", color: "#000" }}>
-          Mobile — 412×900
-        </h3>
-        <img
-          src={mobile}
-          alt={`${s.title} mobile`}
-          style={{
-            width: "min(430px, 100%)",
-            height: "auto",
-            border: "1px solid #DDD",
-            display: "block",
-            background: "#fff",
-          }}
-          loading="lazy"
-        />
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px", color: "#000" }}>
-          Desktop — 1280×1600
-        </h3>
-        <img
-          src={desktop}
-          alt={`${s.title} desktop`}
-          style={{
-            width: "100%",
-            maxWidth: 1200,
-            height: "auto",
-            border: "1px solid #DDD",
-            display: "block",
-            background: "#fff",
-          }}
-          loading="lazy"
-        />
-      </div>
-
-      <div>
-        <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px", color: "#000" }}>
-          Note da far valutare a Claude
-        </h3>
-        <ul style={{ margin: 0, paddingLeft: 22, color: "#000", fontSize: 14, lineHeight: 1.6 }}>
-          {s.notes.map((note) => (
-            <li key={note}>{note}</li>
-          ))}
+      <div className="audit-notes">
+        <h3>Note UX/UI da far valutare a Claude</h3>
+        <ul>
+          {shot.notes.map((note) => <li key={note}>{note}</li>)}
         </ul>
       </div>
     </section>
@@ -169,78 +56,68 @@ function ShotBlock({ s }: { s: Shot }) {
 }
 
 function VisualAudit() {
+  const generated = auditShots.filter((s) => s.status === "generated").length;
+  const pending = auditShots.length - generated;
+
   return (
-    <div
-      style={{
-        background: "#FFFFFF",
-        color: "#000000",
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        minHeight: "100vh",
-      }}
-    >
+    <main className="audit-root">
       <style>{`
-        @media print {
-          @page { size: A4; margin: 15mm; }
-          body { background: #fff !important; }
-          a { color: #000 !important; text-decoration: underline; }
-          .audit-section { page-break-inside: avoid; }
-          .no-print { display: none !important; }
+        html, body { background: #fff !important; color: #000 !important; }
+        .audit-root { min-height: 100vh; background: #fff; color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+        .audit-container { max-width: 1260px; margin: 0 auto; padding: 40px 28px 96px; }
+        .audit-cover { border-bottom: 3px solid #000; padding-bottom: 28px; margin-bottom: 22px; page-break-after: always; break-after: page; }
+        .audit-cover h1 { margin: 0; font-size: 42px; line-height: 1.05; font-weight: 900; letter-spacing: 0; }
+        .audit-cover p { max-width: 920px; margin: 14px 0 0; font-size: 17px; line-height: 1.6; }
+        .audit-summary { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+        .audit-pill { border: 1px solid #111; padding: 10px 14px; font-size: 14px; background: #f7f7f7; }
+        .audit-section { border-top: 2px solid #000; padding: 30px 0 42px; page-break-after: always; break-after: page; }
+        .audit-meta h2 { margin: 0 0 12px; font-size: 30px; line-height: 1.2; font-weight: 900; color: #000; }
+        .audit-meta dl { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0 0 14px; }
+        .audit-meta dt { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #444; font-weight: 800; }
+        .audit-meta dd { margin: 3px 0 0; font-size: 14px; color: #000; overflow-wrap: anywhere; }
+        .audit-meta code, .missing-shot code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #f1f1f1; color: #000; padding: 2px 5px; border: 1px solid #ddd; }
+        .audit-meta a { color: #0645ad; text-decoration: underline; font-size: 14px; font-weight: 700; }
+        .audit-shot-wrap { margin-top: 18px; }
+        .audit-shot-wrap img { display: block; width: 100%; max-width: 1180px; height: auto; border: 1px solid #bbb; background: #fff; box-shadow: none; }
+        .missing-shot { min-height: 360px; border: 2px dashed #999; background: #fafafa; color: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 32px; text-align: center; font-size: 16px; }
+        .missing-shot strong { font-size: 22px; }
+        .audit-notes { margin-top: 18px; }
+        .audit-notes h3 { margin: 0 0 8px; font-size: 17px; font-weight: 900; color: #000; }
+        .audit-notes ul { margin: 0; padding-left: 22px; font-size: 15px; line-height: 1.65; color: #000; }
+        @media (max-width: 760px) {
+          .audit-container { padding: 24px 14px 60px; }
+          .audit-cover h1 { font-size: 32px; }
+          .audit-meta h2 { font-size: 24px; }
+          .audit-meta dl { grid-template-columns: 1fr; }
+          .audit-shot-wrap img { max-width: none; }
         }
-        html, body { background: #fff !important; }
+        @media print {
+          @page { size: A4; margin: 12mm; }
+          .audit-root, html, body { background: #fff !important; color: #000 !important; }
+          .audit-container { max-width: none; padding: 0; }
+          .audit-section { page-break-inside: avoid; break-inside: avoid; }
+          .audit-shot-wrap img { width: 100%; max-height: 225mm; object-fit: contain; }
+          a { color: #000 !important; }
+        }
       `}</style>
 
-      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "40px 32px 80px" }}>
-        <header
-          style={{
-            pageBreakAfter: "always",
-            breakAfter: "page",
-            paddingBottom: 32,
-          }}
-        >
-          <h1 style={{ fontSize: 40, fontWeight: 900, margin: 0, color: "#000" }}>
-            Pupillo — Visual Audit Pack
-          </h1>
-          <p style={{ fontSize: 16, color: "#000", marginTop: 12, lineHeight: 1.6 }}>
-            Pacchetto di screenshot reali delle schermate dell'app Pupillo, pensato per
-            essere esportato in PDF e caricato su Claude per un audit di grafica, UX,
-            navigabilità e coerenza visiva.
+      <div className="audit-container">
+        <header className="audit-cover">
+          <h1>Pupillo — Visual Audit Pack</h1>
+          <p>
+            Pagina bianca, leggibile e print-friendly per caricare su Claude screenshot reali
+            dell'app Pupillo. Gli screenshot mascherati dal gate privato o dal login non vengono
+            mostrati: le schermate protette vanno rigenerate con lo script e credenziali audit.
           </p>
-          <ul style={{ fontSize: 14, color: "#000", marginTop: 16, lineHeight: 1.6 }}>
-            <li>Sfondo bianco, testi neri, alta leggibilità.</li>
-            <li>Una schermata per blocco, con anteprime grandi mobile + desktop.</li>
-            <li>Page-break automatico tra sezioni per stampa/PDF pulito.</li>
-            <li>Screenshot generati automaticamente via Playwright sulla build reale.</li>
-            <li>
-              Le route protette da auth mostrano il redirect al login. Per gli screenshot
-              autenticati segui la guida in <code>PUPILLO_VISUAL_AUDIT_EXPORT_GUIDE.md</code>.
-            </li>
-          </ul>
-
-          <div
-            className="no-print"
-            style={{
-              marginTop: 24,
-              padding: 16,
-              border: "1px solid #000",
-              background: "#F5F5F5",
-              fontSize: 14,
-              color: "#000",
-            }}
-          >
-            <strong>Come esportare in PDF:</strong> Cmd/Ctrl + P → "Salva come PDF" →
-            attiva "Grafica di sfondo" → formato A4 → salva. Poi carica il PDF su Claude.
+          <div className="audit-summary">
+            <div className="audit-pill"><strong>{auditShots.length}</strong> blocchi audit mappati</div>
+            <div className="audit-pill"><strong>{generated}</strong> screenshot pubblici generati</div>
+            <div className="audit-pill"><strong>{pending}</strong> schermate protette/manuali da generare</div>
+            <div className="audit-pill">Output immagini: <code>/public/audit-screenshots/</code></div>
           </div>
         </header>
-
-        {SHOTS.map((s) => (
-          <ShotBlock key={s.n} s={s} />
-        ))}
-
-        <footer style={{ marginTop: 40, fontSize: 12, color: "#000" }}>
-          Fine del Visual Audit Pack — Pupillo.
-        </footer>
+        {auditShots.map((shot) => <ShotBlock key={shot.id} shot={shot} />)}
       </div>
-    </div>
+    </main>
   );
 }

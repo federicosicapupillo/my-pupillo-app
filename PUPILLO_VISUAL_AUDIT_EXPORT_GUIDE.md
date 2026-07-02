@@ -1,123 +1,138 @@
 # Pupillo — Visual Audit Export Guide
 
-Questa guida spiega come usare il nuovo `/claude-visual-audit` e come completare gli screenshot delle route protette.
+Questa guida accompagna la pagina `/claude-visual-audit` e lo script `scripts/generate-audit-screenshots.py`.
 
-## Cosa è già stato generato automaticamente
+## Problema corretto
 
-Screenshot reali della build in `public/audit-screenshots/`, generati con Playwright a due viewport:
+Gli screenshot precedenti mostravano la maschera “Accesso riservato — Pupillo è attualmente in fase di test privato” oppure redirect al login. La pagina audit ora non mostra più screenshot mascherati: gli screenshot invalidi vengono rimossi e quelli protetti sono marcati come “da generare con credenziali audit”.
 
-- **Mobile**: 412 × 900 (2x DPR)
-- **Desktop**: 1280 × 1600 (2x DPR)
+Il private beta gate dell'app reale non è stato rimosso. Il bypass vale solo per la route documentale `/claude-visual-audit`; lo script locale imposta una sessione temporanea nel browser di audit per catturare screenshot.
 
-File presenti (mobile + desktop per ognuno):
+## Variabili richieste per generare schermate protette
 
-| # | File base | Route | Note |
-|---|-----------|-------|------|
-| 01 | 01-home | / | Homepage pubblica |
-| 02 | 02-come-funziona | /come-funziona | Landing "Come funziona" |
-| 03 | 03-auth-login | /auth | Login / registrazione |
-| 04 | 04-reset-password | /reset-password | Recupero password |
-| 05 | 05-terms | /terms | Termini di servizio |
-| 06 | 06-registration-success | /registration-success | Conferma registrazione |
-| 07 | 07-forbidden | /forbidden | Accesso negato |
-| 08 | 08-account-error | /account-error | Errore account |
-| 09 | 09-dashboard-redirect | /dashboard | Redirect a login (protetta) |
-| 10 | 10-profile-redirect | /profile | Redirect a login (protetta) |
-| 11 | 11-availability-redirect | /availability | Redirect a login (protetta) |
-| 12 | 12-jobs-redirect | /jobs | Redirect a login (protetta) |
-| 13 | 13-shifts-redirect | /shifts | Redirect a login (protetta) |
-| 14 | 14-messages-redirect | /messages | Redirect a login (protetta) |
-| 15 | 15-notifications-redirect | /notifications | Redirect a login (protetta) |
-| 16 | 16-announcements-redirect | /announcements | Redirect a login (protetta) |
-| 17 | 17-browse-redirect | /browse | Redirect a login (protetta) |
-| 18 | 18-mappa-redirect | /mappa | Redirect a login (protetta) |
-| 19 | 19-workers-redirect | /workers | Redirect a login (protetta) |
-| 20 | 20-billing-redirect | /billing | Redirect a login (protetta) |
-| 21 | 21-onboarding-redirect | /onboarding | Redirect a login (protetta) |
+Imposta queste variabili prima di lanciare lo script:
 
-## Perché alcune schermate mostrano il login
+```bash
+export AUDIT_PRIVATE_ACCESS_PASSWORD="password-test-private-beta"
+export AUDIT_WORKER_EMAIL="worker-audit@example.com"
+export AUDIT_WORKER_PASSWORD="password-lavoratore"
+export AUDIT_RESTAURANT_EMAIL="restaurant-audit@example.com"
+export AUDIT_RESTAURANT_PASSWORD="password-ristoratore"
+```
 
-Le route protette (`/dashboard`, `/profile`, `/availability`, `/jobs`, `/shifts`,
-`/messages`, `/notifications`, `/announcements`, `/browse`, `/mappa`, `/workers`,
-`/billing`, `/onboarding`, ecc.) richiedono una sessione autenticata. In fase di
-cattura automatica non era disponibile una sessione, quindi lo screenshot mostra
-correttamente il gate di autenticazione. Sostituiscili con screenshot reali
-seguendo la procedura sotto.
+Se mancano le credenziali lavoratore o ristoratore, lo script genera solo le schermate pubbliche e salta le schermate autenticate per evitare screenshot non validi.
 
-## Come catturare manualmente gli screenshot autenticati
+## Come rigenerare gli screenshot
 
-### Come lavoratore
+1. Assicurati che l'app sia disponibile su `http://localhost:8080`.
+2. Imposta le variabili sopra.
+3. Esegui:
 
-1. Apri l'app in Chrome/Edge.
-2. Login come lavoratore (es. Marco Rossi).
-3. Apri DevTools → toggle device toolbar (Cmd+Shift+M).
-4. Imposta viewport **412 × 900** per mobile, **1280 × 1600** per desktop.
-5. Per ognuna di queste route fai screenshot full-page (Cmd+Shift+P → "Capture full size screenshot"):
-   - `/dashboard`
-   - `/profile`
-   - `/availability`
-   - `/jobs` (+ dettaglio offerta)
-   - `/shifts` (turni confermati / completati / annullati)
-   - `/messages` (+ dettaglio chat `/messages/:id`)
-   - `/notifications`
-   - `/onboarding`
-   - `/reviews/:id` (recensione da lasciare)
-6. Salva ogni file in `public/audit-screenshots/` con il nome che compare in tabella,
-   suffisso `-mobile.png` o `-desktop.png`, sovrascrivendo il redirect.
+```bash
+python3 scripts/generate-audit-screenshots.py
+```
 
-### Come ristoratore
+Gli output vengono salvati in `public/audit-screenshots/`. Lo script cancella prima gli screenshot vecchi, così la pagina audit non mostra più immagini con gate privato o login redirect.
 
-1. Logout e login come ristoratore (es. Osteria Milano Centro).
-2. Ripeti la stessa procedura viewport per:
-   - `/dashboard` (versione ristoratore)
-   - `/announcements` e `/announcements/new`
-   - `/announcements/:id` (dettaglio annuncio + candidature)
-   - `/mappa`
-   - `/workers` e `/workers/:id`
-   - `/ristoratore/annunci/nuovo`
-   - `/ristoratore/collaboratori`
-   - `/ristoratore/recensioni`
-   - `/ristoratore/turni/:shiftId`
-   - `/billing`
-   - `/messages`
-3. Salva nella stessa cartella.
+## Screenshot generati automaticamente in questa versione
 
-## Come esportare la pagina in PDF
+Questi screenshot pubblici sono generabili senza sessione utente:
 
-1. Apri `https://<tuo-dominio>/claude-visual-audit`.
-2. Aspetta il caricamento di tutti gli screenshot (scroll fino in fondo).
+| File | Route | Stato |
+|---|---|---|
+| `01-home-desktop.png` | `/` | homepage desktop |
+| `02-home-mobile.png` | `/` | homepage mobile |
+| `03-come-funziona-desktop.png` | `/come-funziona` | pagina informativa desktop |
+| `04-come-funziona-mobile.png` | `/come-funziona` | pagina informativa mobile |
+| `05-login-desktop.png` | `/auth` | login desktop |
+| `06-login-mobile.png` | `/auth` | login mobile |
+| `07-register-worker-mobile.png` | `/auth?role=worker` | registrazione lavoratore |
+| `08-register-restaurant-mobile.png` | `/auth?role=restaurant` | registrazione ristoratore |
+| `09-reset-password-mobile.png` | `/reset-password` | recupero password |
+| `10-login-error-mobile.png` | `/auth` | errore login |
+| `11-register-error-mobile.png` | `/auth?role=worker` | errore registrazione/form non valido |
+| `68-error-state-mobile.png` | `/account-error` | stato errore account |
+
+## Screenshot da generare con login lavoratore
+
+- Dashboard lavoratore: `12-worker-dashboard-mobile.png`
+- Profilo lavoratore: `13-worker-profile-mobile.png`
+- Modifica profilo lavoratore: `14-worker-profile-edit-desktop.png`
+- Disponibilità: `15-worker-availability-mobile.png`
+- Ricerca offerte / Jobs: `16-worker-jobs-mobile.png`
+- Dettaglio offerta: `17-worker-job-detail-mobile.png` *(richiede dati/offerta reale)*
+- Candidatura inviata: `18-worker-application-sent-mobile.png` *(richiede interazione manuale)*
+- Offerte ricevute/accettate/rifiutate: `19`, `20`, `21`
+- Turni confermati/completati/annullati: `22`, `23`, `24`
+- Recensioni e recensione da lasciare: `25`, `26`
+- Messaggi/chat: `27-worker-messages-mobile.png`
+- Notifiche: `28-worker-notifications-mobile.png`
+- Impostazioni/cambio password: `29`, `30`
+- Onboarding/help/supporto: `31`, `32`
+- Empty/data/loading states collegati: `65`, `66`, `67`, `70`, `71`
+
+## Screenshot da generare con login ristoratore
+
+- Dashboard ristoratore: `33-restaurant-dashboard-desktop.png`
+- Profilo locale e modifica profilo: `34`, `35`
+- Pubblicazione annuncio: `36-restaurant-announcement-new-mobile.png`
+- Elenco/dettaglio annuncio: `37`, `38`
+- Candidature ricevute/dettaglio candidatura: `39`, `40`
+- Ricerca lavoratori/dettaglio lavoratore: `41`, `42`
+- Invito diretto/proposta tariffa: `43`, `44` *(interazioni manuali)*
+- Turni confermati/completati/annullati: `45`, `46`, `47`
+- Crediti/pagamenti: `48-restaurant-billing-mobile.png`
+- Recensioni: `49-restaurant-reviews-mobile.png`
+- Messaggi/chat/notifiche: `50`, `51`
+- Impostazioni/onboarding/help: `52`, `53`, `54`
+- Privacy bloccata/sbloccata: `63`, `64`
+
+## Screenshot non generati automaticamente e motivo
+
+Alcuni screenshot richiedono dati dinamici o un'azione specifica:
+
+- `/announcements/:id`, `/workers_/:id`, `/reviews/:id`: serve un ID reale presente nel database dell'utente audit.
+- Popup conferma/annullamento turno, candidatura inviata, offerta ricevuta, recensione: serve aprire il dialog dal flusso reale.
+- Stato privacy sbloccata: serve un match/turno confermato tra lavoratore e ristoratore.
+- Stati “nessuna candidatura/nessun turno/nessuna notifica”: dipendono dal contenuto effettivo degli account audit.
+
+## Login manuale se necessario
+
+Se lo script non riesce a generare una schermata:
+
+1. Apri l'app nel browser.
+2. Supera il private beta gate con la password di test.
+3. Accedi con l'account lavoratore o ristoratore audit.
+4. Vai alla route indicata nella pagina `/claude-visual-audit`.
+5. Imposta viewport **412×900** per mobile oppure **1280×1800** per desktop.
+6. Cattura lo screenshot e salvalo in `public/audit-screenshots/` con il nome file indicato nel blocco audit.
+7. Ricarica `/claude-visual-audit` e verifica che l'immagine sia leggibile.
+
+## Controllo qualità
+
+Prima di esportare, verifica che nessuno screenshot destinato a route protette mostri:
+
+- “Accesso riservato”;
+- “Pupillo è attualmente in fase di test privato”;
+- login al posto della schermata autenticata;
+- pagina vuota;
+- “Caricamento…” permanente;
+- “sessione non disponibile”.
+
+Se compare uno di questi stati, elimina lo screenshot e rigeneralo con credenziali corrette.
+
+## Esportare `/claude-visual-audit` in PDF
+
+1. Apri `/claude-visual-audit`.
+2. Scorri la pagina per caricare tutte le immagini.
 3. Cmd/Ctrl + P → **Salva come PDF**.
-4. Attiva **Grafica di sfondo**, formato **A4**, margini **default**.
-5. Salva come `Pupillo-Visual-Audit.pdf`.
+4. Attiva **Grafica di sfondo**.
+5. Formato consigliato: A4, margini default.
+6. Salva come `Pupillo-Visual-Audit.pdf`.
 
 ## Cosa caricare su Claude
 
-- `Pupillo-Visual-Audit.pdf` (l'export della pagina).
-- `PUPILLO_VISUAL_AUDIT_EXPORT_GUIDE.md` (questo file).
-- Opzionale: `PUPILLO_CLAUDE_AUDIT_PACK.md` per il contesto funzionale.
-
-## Schermate prioritarie per l'audit
-
-Ordina Claude a concentrarsi in particolare su:
-
-1. **Homepage** (`/`) — value proposition, gerarchia CTA, fiducia.
-2. **Login/Registrazione** (`/auth`) — contrasto, form, error state.
-3. **Dashboard lavoratore** (`/dashboard`) — cosa vede al primo login.
-4. **Ricerca offerte** (`/jobs`, `/browse`) — card, filtri, mobile UX.
-5. **Chat** (`/messages`, `/messages/:id`) — leggibilità e contrasto.
-6. **Dashboard ristoratore** — priorità operative, CTA principali.
-7. **Pubblicazione annuncio** (`/announcements/new`) — friction del form.
-8. **Ricerca lavoratori** (`/workers`) — card sanitizzata, privacy.
-9. **Mappa** (`/mappa`) — leggibilità pin, controlli.
-10. **Onboarding** (`/onboarding`) — chiarezza dei primi passi.
-
-## Regenerare gli screenshot automatici
-
-Lo script è in `/tmp/browser/audit/shots.py` (temporaneo). Per rieseguirlo su una
-nuova build, ricreane una copia con lo stesso contenuto e lancia:
-
-```bash
-python3 /tmp/browser/audit/shots.py
-```
-
-Assicurati che il dev server giri su `http://localhost:8080`.
+- `Pupillo-Visual-Audit.pdf` esportato da `/claude-visual-audit`.
+- La cartella `public/audit-screenshots/` se Claude accetta file multipli.
+- `PUPILLO_VISUAL_AUDIT_EXPORT_GUIDE.md`.
+- Opzionale: `PUPILLO_CLAUDE_AUDIT_PACK.md` per contesto funzionale.
