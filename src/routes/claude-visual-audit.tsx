@@ -74,7 +74,7 @@ function Card({
   children,
 }: {
   title: string;
-  role: "Pubblico" | "Lavoratore" | "Ristoratore" | "Sistema";
+  role: "Pubblico" | "Lavoratore" | "Ristoratore" | "Sistema" | "Entrambi";
   route: string;
   goal: string;
   actions: string;
