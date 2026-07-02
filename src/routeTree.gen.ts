@@ -26,6 +26,7 @@ import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DesignAuditRouteImport } from './routes/design-audit'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
+import { Route as ClaudeVisualAuditRouteImport } from './routes/claude-visual-audit'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AvailabilityRouteImport } from './routes/availability'
@@ -132,6 +133,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const ComeFunzionaRoute = ComeFunzionaRouteImport.update({
   id: '/come-funziona',
   path: '/come-funziona',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClaudeVisualAuditRoute = ClaudeVisualAuditRouteImport.update({
+  id: '/claude-visual-audit',
+  path: '/claude-visual-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrowseRoute = BrowseRouteImport.update({
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/design-audit': typeof DesignAuditRoute
@@ -298,6 +305,7 @@ export interface FileRoutesByTo {
   '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/design-audit': typeof DesignAuditRoute
@@ -340,6 +348,7 @@ export interface FileRoutesById {
   '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
   '/design-audit': typeof DesignAuditRoute
@@ -383,6 +392,7 @@ export interface FileRouteTypes {
     | '/availability'
     | '/billing'
     | '/browse'
+    | '/claude-visual-audit'
     | '/come-funziona'
     | '/dashboard'
     | '/design-audit'
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/availability'
     | '/billing'
     | '/browse'
+    | '/claude-visual-audit'
     | '/come-funziona'
     | '/dashboard'
     | '/design-audit'
@@ -465,6 +476,7 @@ export interface FileRouteTypes {
     | '/availability'
     | '/billing'
     | '/browse'
+    | '/claude-visual-audit'
     | '/come-funziona'
     | '/dashboard'
     | '/design-audit'
@@ -507,6 +519,7 @@ export interface RootRouteChildren {
   AvailabilityRoute: typeof AvailabilityRoute
   BillingRoute: typeof BillingRoute
   BrowseRoute: typeof BrowseRoute
+  ClaudeVisualAuditRoute: typeof ClaudeVisualAuditRoute
   ComeFunzionaRoute: typeof ComeFunzionaRoute
   DashboardRoute: typeof DashboardRoute
   DesignAuditRoute: typeof DesignAuditRoute
@@ -654,6 +667,13 @@ declare module '@tanstack/react-router' {
       path: '/come-funziona'
       fullPath: '/come-funziona'
       preLoaderRoute: typeof ComeFunzionaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/claude-visual-audit': {
+      id: '/claude-visual-audit'
+      path: '/claude-visual-audit'
+      fullPath: '/claude-visual-audit'
+      preLoaderRoute: typeof ClaudeVisualAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/browse': {
@@ -860,6 +880,7 @@ const rootRouteChildren: RootRouteChildren = {
   AvailabilityRoute: AvailabilityRoute,
   BillingRoute: BillingRoute,
   BrowseRoute: BrowseRoute,
+  ClaudeVisualAuditRoute: ClaudeVisualAuditRoute,
   ComeFunzionaRoute: ComeFunzionaRoute,
   DashboardRoute: DashboardRoute,
   DesignAuditRoute: DesignAuditRoute,
