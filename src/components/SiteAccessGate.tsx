@@ -27,6 +27,8 @@ function readSession(): StoredSession | null {
 }
 
 export function SiteAccessGate({ children }: { children: React.ReactNode }) {
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  const isAuditSurface = pathname === "/claude-visual-audit" || pathname.startsWith("/audit-screenshots/");
   // Default to true on the server / first paint to avoid SSR flash. After mount we re-check.
   const [granted, setGranted] = useState<boolean>(true);
   const [hydrated, setHydrated] = useState(false);
@@ -60,7 +62,7 @@ export function SiteAccessGate({ children }: { children: React.ReactNode }) {
     }
   }, [hydrated, granted]);
 
-  if (!hydrated || granted) {
+  if (isAuditSurface || !hydrated || granted) {
     return <>{children}</>;
   }
 
