@@ -95,10 +95,12 @@ function WorkerDetailPage() {
       setW(worker && !worker.is_deleted && !worker.deleted_at ? worker : null);
       // Load worker_availability rows — same source used by the card / map,
       // so the detail page can format hours with the same helper.
-      const { data: avail } = await supabase
-        .from("worker_availability")
-        .select("*")
-        .eq("worker_id", id);
+      // Cross-user read → use sanitized RPC (no notes, rounded coords).
+      // Owner would read the raw table, but this page is a restaurant-side view.
+      const { data: avail } = await supabase.rpc(
+        "search_worker_availability_public",
+        { _worker_ids: [id] },
+      );
       if (!cancelled) setAvailRows((avail ?? []) as unknown as AvailabilityRow[]);
       // Show contacts only if the viewer (restaurant) has an accepted application with this worker
       if (user && role === "restaurant") {
