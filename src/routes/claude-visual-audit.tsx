@@ -13,7 +13,7 @@ export const Route = createFileRoute("/claude-visual-audit")({
 type Shot = {
   n: string;
   title: string;
-  role: "Pubblico" | "Lavoratore" | "Ristoratore" | "Admin" | "Sistema";
+  role: string;
   route: string;
   state: string;
   file: string; // base filename without -mobile/-desktop.png
@@ -47,12 +47,6 @@ const SHOTS: Shot[] = [
     notes: ["Da catturare manualmente dopo login lavoratore"] },
   { n: "12", title: "Ricerca offerte / Jobs", role: "Lavoratore", route: "/jobs", state: "not-authenticated", file: "12-jobs-redirect", authRequired: true,
     notes: ["Da catturare manualmente dopo login lavoratore"] },
-  { n: "13", title: "Turni", role: "Lavoratore/Ristoratore", role_: undefined as never, ...({} as any) } as any,
-];
-
-// Rebuild the last few entries cleanly (avoid the placeholder above)
-SHOTS.length = 12;
-SHOTS.push(
   { n: "13", title: "Turni", role: "Lavoratore", route: "/shifts", state: "not-authenticated", file: "13-shifts-redirect", authRequired: true,
     notes: ["Turni confermati / completati / annullati", "Da catturare dopo login"] },
   { n: "14", title: "Messaggi", role: "Lavoratore", route: "/messages", state: "not-authenticated", file: "14-messages-redirect", authRequired: true,
@@ -71,7 +65,7 @@ SHOTS.push(
     notes: ["Chiarezza saldo crediti", "Bottone ricarica"] },
   { n: "21", title: "Onboarding", role: "Lavoratore/Ristoratore", route: "/onboarding", state: "not-authenticated", file: "21-onboarding-redirect", authRequired: true,
     notes: ["Chiarezza passi iniziali", "Percentuale completamento"] },
-);
+];
 
 function ShotBlock({ s }: { s: Shot }) {
   const mobile = `/audit-screenshots/${s.file}-mobile.png`;
