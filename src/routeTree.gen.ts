@@ -51,6 +51,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
 import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/public/hooks/expire-stale'
 
@@ -268,6 +269,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -321,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers/$id': typeof WorkersIdRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
@@ -367,6 +374,7 @@ export interface FileRoutesByTo {
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers/$id': typeof WorkersIdRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
@@ -414,6 +422,7 @@ export interface FileRoutesById {
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers_/$id': typeof WorkersIdRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
@@ -462,6 +471,7 @@ export interface FileRouteTypes {
     | '/ristoratore/collaboratori'
     | '/ristoratore/recensioni'
     | '/workers/$id'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/ristoratore/collaboratori'
     | '/ristoratore/recensioni'
     | '/workers/$id'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
@@ -554,6 +565,7 @@ export interface FileRouteTypes {
     | '/ristoratore/collaboratori'
     | '/ristoratore/recensioni'
     | '/workers_/$id'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
@@ -596,6 +608,7 @@ export interface RootRouteChildren {
   RistoratoreCollaboratoriRoute: typeof RistoratoreCollaboratoriRoute
   RistoratoreRecensioniRoute: typeof RistoratoreRecensioniRoute
   WorkersIdRoute: typeof WorkersIdRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
@@ -899,6 +912,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -990,6 +1010,7 @@ const rootRouteChildren: RootRouteChildren = {
   RistoratoreCollaboratoriRoute: RistoratoreCollaboratoriRoute,
   RistoratoreRecensioniRoute: RistoratoreRecensioniRoute,
   WorkersIdRoute: WorkersIdRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
