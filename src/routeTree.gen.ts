@@ -20,6 +20,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MappaRouteImport } from './routes/mappa'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
@@ -45,8 +46,12 @@ import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new
 import { Route as AnnouncementsIdRouteImport } from './routes/announcements.$id'
 import { Route as AdminResetTestDbRouteImport } from './routes/admin.reset-test-db'
 import { Route as AdminBackendRouteImport } from './routes/admin.backend'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
 import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/public/hooks/expire-stale'
 
@@ -103,6 +108,11 @@ const NotificationsRoute = NotificationsRouteImport.update({
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MappaRoute = MappaRouteImport.update({
@@ -231,6 +241,18 @@ const AdminBackendRoute = AdminBackendRouteImport.update({
   path: '/backend',
   getParentRoute: () => AdminRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RistoratoreTurniShiftIdRoute = RistoratoreTurniShiftIdRouteImport.update({
   id: '/ristoratore/turni/$shiftId',
   path: '/ristoratore/turni/$shiftId',
@@ -239,6 +261,17 @@ const RistoratoreTurniShiftIdRoute = RistoratoreTurniShiftIdRouteImport.update({
 const RistoratoreAnnunciNuovoRoute = RistoratoreAnnunciNuovoRouteImport.update({
   id: '/ristoratore/annunci/nuovo',
   path: '/ristoratore/annunci/nuovo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicPaymentsWebhookRoute =
@@ -270,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
+  '/mcp': typeof McpRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
@@ -281,6 +315,8 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/backend': typeof AdminBackendRoute
   '/admin/reset-test-db': typeof AdminResetTestDbRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
@@ -291,6 +327,8 @@ export interface FileRoutesByFullPath {
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers/$id': typeof WorkersIdRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -312,6 +350,7 @@ export interface FileRoutesByTo {
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
+  '/mcp': typeof McpRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
@@ -323,6 +362,8 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/backend': typeof AdminBackendRoute
   '/admin/reset-test-db': typeof AdminResetTestDbRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
@@ -333,6 +374,8 @@ export interface FileRoutesByTo {
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers/$id': typeof WorkersIdRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -355,6 +398,7 @@ export interface FileRoutesById {
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
   '/mappa': typeof MappaRoute
+  '/mcp': typeof McpRoute
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
@@ -366,6 +410,8 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/backend': typeof AdminBackendRoute
   '/admin/reset-test-db': typeof AdminResetTestDbRoute
   '/announcements/$id': typeof AnnouncementsIdRoute
@@ -376,6 +422,8 @@ export interface FileRoutesById {
   '/ristoratore/collaboratori': typeof RistoratoreCollaboratoriRoute
   '/ristoratore/recensioni': typeof RistoratoreRecensioniRoute
   '/workers_/$id': typeof WorkersIdRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -399,6 +447,7 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/jobs'
     | '/mappa'
+    | '/mcp'
     | '/messages'
     | '/notifications'
     | '/onboarding'
@@ -410,6 +459,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-phone'
     | '/workers'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/backend'
     | '/admin/reset-test-db'
     | '/announcements/$id'
@@ -420,6 +471,8 @@ export interface FileRouteTypes {
     | '/ristoratore/collaboratori'
     | '/ristoratore/recensioni'
     | '/workers/$id'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -441,6 +494,7 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/jobs'
     | '/mappa'
+    | '/mcp'
     | '/messages'
     | '/notifications'
     | '/onboarding'
@@ -452,6 +506,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-phone'
     | '/workers'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/backend'
     | '/admin/reset-test-db'
     | '/announcements/$id'
@@ -462,6 +518,8 @@ export interface FileRouteTypes {
     | '/ristoratore/collaboratori'
     | '/ristoratore/recensioni'
     | '/workers/$id'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -483,6 +541,7 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/jobs'
     | '/mappa'
+    | '/mcp'
     | '/messages'
     | '/notifications'
     | '/onboarding'
@@ -494,6 +553,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/verify-phone'
     | '/workers'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/backend'
     | '/admin/reset-test-db'
     | '/announcements/$id'
@@ -504,6 +565,8 @@ export interface FileRouteTypes {
     | '/ristoratore/collaboratori'
     | '/ristoratore/recensioni'
     | '/workers_/$id'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -526,6 +589,7 @@ export interface RootRouteChildren {
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
   MappaRoute: typeof MappaRoute
+  McpRoute: typeof McpRoute
   MessagesRoute: typeof MessagesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -537,11 +601,15 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   VerifyPhoneRoute: typeof VerifyPhoneRoute
   WorkersRoute: typeof WorkersRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   RestaurantsIdRoute: typeof RestaurantsIdRoute
   ReviewsIdRoute: typeof ReviewsIdRoute
   RistoratoreCollaboratoriRoute: typeof RistoratoreCollaboratoriRoute
   RistoratoreRecensioniRoute: typeof RistoratoreRecensioniRoute
   WorkersIdRoute: typeof WorkersIdRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
   ApiPublicHooksExpireStaleRoute: typeof ApiPublicHooksExpireStaleRoute
@@ -625,6 +693,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mappa': {
@@ -802,6 +877,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBackendRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ristoratore/turni/$shiftId': {
       id: '/ristoratore/turni/$shiftId'
       path: '/ristoratore/turni/$shiftId'
@@ -814,6 +903,20 @@ declare module '@tanstack/react-router' {
       path: '/ristoratore/annunci/nuovo'
       fullPath: '/ristoratore/annunci/nuovo'
       preLoaderRoute: typeof RistoratoreAnnunciNuovoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/payments/webhook': {
@@ -887,6 +990,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
   MappaRoute: MappaRoute,
+  McpRoute: McpRoute,
   MessagesRoute: MessagesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
@@ -898,11 +1002,16 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   VerifyPhoneRoute: VerifyPhoneRoute,
   WorkersRoute: WorkersRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   RestaurantsIdRoute: RestaurantsIdRoute,
   ReviewsIdRoute: ReviewsIdRoute,
   RistoratoreCollaboratoriRoute: RistoratoreCollaboratoriRoute,
   RistoratoreRecensioniRoute: RistoratoreRecensioniRoute,
   WorkersIdRoute: WorkersIdRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
   ApiPublicHooksExpireStaleRoute: ApiPublicHooksExpireStaleRoute,
