@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://loxgasjxsjyskyapmxke.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "pupillo-mcp",
+      "version": "0.1.0",
+      "title": "Pupillo"
+    },
+    "tools": [
+      {
+        "name": "whoami",
+        "title": "Chi sono",
+        "description": "Restituisce l'identità dell'utente Pupillo collegato (id, email, ruolo se disponibile).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_announcements",
+        "title": "Cerca annunci pubblici",
+        "description": "Cerca annunci di lavoro pubblici Pupillo (turni aperti) filtrando per città, profilo professionale o data. Non richiede autenticazione.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "city": {
+              "description": "Città (es. 'Milano').",
+              "type": "string",
+              "minLength": 1
+            },
+            "profile": {
+              "description": "Profilo professionale (es. 'cameriere', 'cuoco').",
+              "type": "string",
+              "minLength": 1
+            },
+            "from_date": {
+              "description": "Data minima ISO YYYY-MM-DD.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Max risultati (default 20).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_shifts",
+        "title": "I miei turni",
+        "description": "Elenca i turni Pupillo dell'utente autenticato (visibili come lavoratore o come ristoratore, secondo le policy RLS).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "Filtra per stato (es. 'confirmed', 'completed', 'cancelled').",
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "description": "Max risultati (default 20).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_notifications",
+        "title": "Le mie notifiche",
+        "description": "Elenca le notifiche Pupillo dell'utente autenticato, dalle più recenti.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "unread_only": {
+              "description": "Se true, solo notifiche non lette.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Max risultati (default 20).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
