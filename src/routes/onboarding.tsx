@@ -343,6 +343,17 @@ function Onboarding() {
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // Ref-mirror di avatarFile/avatarUrl per poter decidere, dentro il
+  // useEffect [profile], se un refetch del profilo deve rigenerare la
+  // signed URL o preservare l'anteprima locale appena scelta.
+  const avatarFileRef = useRef<File | null>(null);
+  const avatarUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    avatarFileRef.current = avatarFile;
+  }, [avatarFile]);
+  useEffect(() => {
+    avatarUrlRef.current = avatarUrl;
+  }, [avatarUrl]);
 
   // Sezione facoltativa "Esperienza e preferenze" (lavoratore).
   // Tutti i campi sono opzionali: non bloccano salvataggio né completamento.
