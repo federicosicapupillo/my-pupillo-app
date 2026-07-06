@@ -448,7 +448,7 @@ function Billing() {
       <div className="rounded-2xl border bg-card divide-y">
         {tx.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground text-center">Nessun movimento registrato.</p>
-        ) : tx.map(t => (
+        ) : (showAllTx ? tx : tx.slice(0, 3)).map(t => (
           <div key={t.id} className="flex items-center justify-between p-4 text-sm">
             <div>
               <div className="font-medium">{labelFor(t.reason)}</div>
@@ -463,6 +463,13 @@ function Billing() {
           </div>
         ))}
       </div>
+      {tx.length > 3 && (
+        <div className="mt-2 text-center">
+          <Button variant="ghost" size="sm" onClick={() => setShowAllTx(v => !v)}>
+            {showAllTx ? "Mostra meno" : `Mostra tutti (${tx.length})`}
+          </Button>
+        </div>
+      )}
 
       <div className="mt-8 text-center">
         <Link to="/dashboard"><Button variant="ghost">Torna alla dashboard</Button></Link>
