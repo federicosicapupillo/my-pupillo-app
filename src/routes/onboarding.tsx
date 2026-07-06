@@ -190,6 +190,19 @@ function resolveNameFromProfile(
 const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 20, 30, 50] as const;
 const ALLOWED_RADIUS_M = new Set(RADIUS_KM_OPTIONS.map((k) => k * 1000));
 
+/**
+ * Preferisce il valore proveniente dal DB solo se è "significativo"
+ * (non null/undefined e, per le stringhe, non vuoto dopo trim). Altrimenti
+ * mantiene il valore locale già digitato dall'utente. Serve a evitare che
+ * un refetch del profile (es. dopo verifica WhatsApp) sovrascriva con "" i
+ * campi che l'utente sta compilando.
+ */
+function pick<T>(dbVal: T | null | undefined, localVal: T): T {
+  if (dbVal === null || dbVal === undefined) return localVal;
+  if (typeof dbVal === "string" && dbVal.trim() === "") return localVal;
+  return dbVal;
+}
+
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
   component: () => (
@@ -330,6 +343,17 @@ function Onboarding() {
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // Ref-mirror di avatarFile/avatarUrl per poter decidere, dentro il
+  // useEffect [profile], se un refetch del profilo deve rigenerare la
+  // signed URL o preservare l'anteprima locale appena scelta.
+  const avatarFileRef = useRef<File | null>(null);
+  const avatarUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    avatarFileRef.current = avatarFile;
+  }, [avatarFile]);
+  useEffect(() => {
+    avatarUrlRef.current = avatarUrl;
+  }, [avatarUrl]);
 
   // Sezione facoltativa "Esperienza e preferenze" (lavoratore).
   // Tutti i campi sono opzionali: non bloccano salvataggio né completamento.
@@ -667,21 +691,21 @@ function Onboarding() {
       }
       setForm((f) => ({
         ...f,
-        full_name: profile.full_name ?? "",
+        full_name: pick(profile.full_name, f.full_name),
         phone_code: (profile as any).phone_country_code || ph.code,
         phone_number: (profile as any).phone_number || ph.number,
         languages: (profile.languages ?? []).join(", "),
-        business_name: profile.business_name ?? "",
-        vat_number: profile.vat_number ?? "",
-        venue_type: profile.venue_type ?? "",
-        venue_type_other: (profile as any).venue_type_other ?? "",
-        address: profile.address ?? "",
-        price_range: profile.price_range ?? "",
+        business_name: pick(profile.business_name, f.business_name),
+        vat_number: pick(profile.vat_number, f.vat_number),
+        venue_type: pick(profile.venue_type, f.venue_type),
+        venue_type_other: pick((profile as any).venue_type_other, f.venue_type_other),
+        address: pick(profile.address, f.address),
+        price_range: pick(profile.price_range, f.price_range),
         service_area_radius_m: (() => {
           const v = profile.service_area_radius_m ?? 10000;
           return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
         })(),
-        service_area_city: (profile as any).service_area_city ?? "",
+        service_area_city: pick((profile as any).service_area_city, f.service_area_city),
         service_area_district:
           loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL
             ? ""
@@ -690,19 +714,19 @@ function Onboarding() {
               : loadedZones.length > 0
                 ? loadedZones.join(", ")
                 : loadedDistrict,
-        street_number: (profile as any).street_number ?? "",
-        district: (profile as any).neighborhood ?? "",
-        city: (profile as any).city ?? "",
-        province: (profile as any).province ?? "",
-        postal_code: (profile as any).postal_code ?? "",
-        country: (profile as any).country ?? "Italia",
-        contact_person_first_name: (profile as any).contact_person_first_name ?? "",
-        contact_person_last_name: (profile as any).contact_person_last_name ?? "",
-        contact_person_role: (profile as any).contact_person_role ?? "",
-        contact_person_role_other: (profile as any).contact_person_role_other ?? "",
+        street_number: pick((profile as any).street_number, f.street_number),
+        district: pick((profile as any).neighborhood, f.district),
+        city: pick((profile as any).city, f.city),
+        province: pick((profile as any).province, f.province),
+        postal_code: pick((profile as any).postal_code, f.postal_code),
+        country: pick((profile as any).country, f.country) || "Italia",
+        contact_person_first_name: pick((profile as any).contact_person_first_name, f.contact_person_first_name),
+        contact_person_last_name: pick((profile as any).contact_person_last_name, f.contact_person_last_name),
+        contact_person_role: pick((profile as any).contact_person_role, f.contact_person_role),
+        contact_person_role_other: pick((profile as any).contact_person_role_other, f.contact_person_role_other),
         contact_person_phone_code: cph.code,
         contact_person_phone_number: cph.number,
-        contact_person_email: (profile as any).contact_person_email ?? "",
+        contact_person_email: pick((profile as any).contact_person_email, f.contact_person_email),
         representative_age:
           (profile as any).representative_age != null ? String((profile as any).representative_age) : "",
         terms_accepted: profile.terms_accepted,
@@ -712,18 +736,32 @@ function Onboarding() {
     if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
     if (profile) {
       const p = profile as any;
-      setOptExp({
-        experience_years: p.experience_years != null ? String(p.experience_years) : "",
-        experience_level: (p.experience_level === "junior" || p.experience_level === "intermediate" || p.experience_level === "senior" || p.experience_level === "esperto") ? p.experience_level : "",
-        hourly_rate: (() => {
+      setOptExp((s) => {
+        const dbYears = p.experience_years != null ? String(p.experience_years) : "";
+        const dbLevel =
+          p.experience_level === "junior" ||
+          p.experience_level === "intermediate" ||
+          p.experience_level === "senior" ||
+          p.experience_level === "esperto"
+            ? p.experience_level
+            : "";
+        const dbRate = (() => {
           if (p.hourly_rate == null) return "";
           const n = Number(p.hourly_rate);
           if (!Number.isFinite(n)) return "";
           if (n >= 31) return "oltre_30";
           return String(n);
-        })(),
-        is_motorized: p.is_motorized === true ? "yes" : p.is_motorized === false ? "no" : "",
-        short_bio: (p.short_bio ?? p.professional_profile ?? "") as string,
+        })();
+        const dbMotor =
+          p.is_motorized === true ? "yes" : p.is_motorized === false ? "no" : "";
+        const dbBio = (p.short_bio ?? p.professional_profile ?? "") as string;
+        return {
+          experience_years: pick(dbYears, s.experience_years),
+          experience_level: pick(dbLevel, s.experience_level),
+          hourly_rate: pick(dbRate, s.hourly_rate),
+          is_motorized: pick(dbMotor, s.is_motorized),
+          short_bio: pick(dbBio, s.short_bio),
+        };
       });
     }
     if (profile) {
@@ -747,16 +785,24 @@ function Onboarding() {
     }
     if (profile && (profile as any).avatar_url) {
       const stored = (profile as any).avatar_url as string;
-      // Reject legacy public/external URLs — only signed URLs from storage paths are allowed.
-      if (/^(https?:|data:|blob:|\/\/)/i.test(stored)) {
-        setAvatarUrl(null);
-      } else {
-        supabase.storage
-          .from("avatars")
-          .createSignedUrl(stored, 60 * 60)
-          .then(({ data: signed }) => {
-            if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
-          });
+      // Preserve any locally-picked avatar (file staged for upload, or a blob:
+      // preview URL not yet persisted) so a profile refetch does not overwrite
+      // the user's just-chosen photo.
+      const hasLocalAvatar =
+        avatarFileRef.current != null ||
+        (avatarUrlRef.current != null && avatarUrlRef.current.startsWith("blob:"));
+      if (!hasLocalAvatar) {
+        // Reject legacy public/external URLs — only signed URLs from storage paths are allowed.
+        if (/^(https?:|data:|blob:|\/\/)/i.test(stored)) {
+          setAvatarUrl(null);
+        } else {
+          supabase.storage
+            .from("avatars")
+            .createSignedUrl(stored, 60 * 60)
+            .then(({ data: signed }) => {
+              if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+            });
+        }
       }
     }
     if (profile) {
@@ -766,23 +812,23 @@ function Onboarding() {
       const resolvedFirst = names.first_name;
       const resolvedLast = names.last_name;
       setPersonal((s) => ({
-        first_name: resolvedFirst || s.first_name,
-        last_name: resolvedLast || s.last_name,
-        birth_date: p.birth_date ?? s.birth_date,
-        birth_place: p.birth_place ?? s.birth_place,
-        tax_code: p.tax_code ?? s.tax_code,
-        nationality: p.nationality ?? s.nationality,
-        residence_address: p.residence_address ?? s.residence_address,
-        residence_street: split.street || s.residence_street,
-        residence_street_number: split.civic || s.residence_street_number,
-        residence_city: p.residence_city ?? s.residence_city,
-        residence_postal_code: p.residence_postal_code ?? s.residence_postal_code,
-        residence_province: p.residence_province ?? s.residence_province,
-        id_document_type: p.id_document_type ?? s.id_document_type,
-        id_document_number: p.id_document_number ?? s.id_document_number,
-        id_document_issued_at: p.id_document_issued_at ?? s.id_document_issued_at,
-        id_document_expires_at: p.id_document_expires_at ?? s.id_document_expires_at,
-        id_document_issuer: p.id_document_issuer ?? s.id_document_issuer,
+        first_name: pick(resolvedFirst, s.first_name),
+        last_name: pick(resolvedLast, s.last_name),
+        birth_date: pick(p.birth_date, s.birth_date),
+        birth_place: pick(p.birth_place, s.birth_place),
+        tax_code: pick(p.tax_code, s.tax_code),
+        nationality: pick(p.nationality, s.nationality),
+        residence_address: pick(p.residence_address, s.residence_address),
+        residence_street: pick(split.street, s.residence_street),
+        residence_street_number: pick(split.civic, s.residence_street_number),
+        residence_city: pick(p.residence_city, s.residence_city),
+        residence_postal_code: pick(p.residence_postal_code, s.residence_postal_code),
+        residence_province: pick(p.residence_province, s.residence_province),
+        id_document_type: pick(p.id_document_type, s.id_document_type),
+        id_document_number: pick(p.id_document_number, s.id_document_number),
+        id_document_issued_at: pick(p.id_document_issued_at, s.id_document_issued_at),
+        id_document_expires_at: pick(p.id_document_expires_at, s.id_document_expires_at),
+        id_document_issuer: pick(p.id_document_issuer, s.id_document_issuer),
       }));
     }
   }, [profile]);
