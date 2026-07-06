@@ -185,12 +185,8 @@ function Profile() {
       </div>
 
       <div className="mt-6 rounded-2xl border bg-card p-6">
-        <h2 className="font-semibold flex items-center gap-2"><Coins className="h-4 w-4" />Piano e crediti</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border p-3">
-            <div className="text-xs text-muted-foreground">Piano attuale</div>
-            <div className="mt-1 text-lg font-semibold capitalize">{profile?.plan ?? "free"}</div>
-          </div>
+        <h2 className="font-semibold flex items-center gap-2"><Coins className="h-4 w-4" />Crediti</h2>
+        <div className="mt-3">
           <div className="rounded-xl border p-3">
             <div className="text-xs text-muted-foreground">Crediti disponibili</div>
             <div className="mt-1 text-lg font-semibold">{profile?.credits ?? 0}</div>
