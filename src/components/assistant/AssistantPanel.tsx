@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Bot, AlertTriangle, MessageCircle, X, ArrowLeft, Sparkles } from "lucide-react";
+import { Send, Bot, AlertTriangle, MessageCircle, X, ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import {
 import { askAssistant, type AssistantReply } from "@/lib/assistant.functions";
 import { ReportProblemDialog } from "@/components/assistant/ReportProblemDialog";
 import { cn } from "@/lib/utils";
-import { dispatchStartTour } from "@/lib/guided-tour";
 
 type ChatMessage = {
   id: string;
