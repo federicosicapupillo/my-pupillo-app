@@ -70,7 +70,7 @@ export const auditShots: AuditShot[] = [
   { id: "53", title: "Guida/onboarding ristoratore", role: "Ristoratore", route: "/onboarding", state: "autenticato", viewport: "mobile 412×900", file: "53-restaurant-onboarding-mobile.png", status: "requires_credentials", notes: note("Completezza profilo locale", "passi guidati", "CTA") },
   { id: "54", title: "Help/supporto ristoratore", role: "Ristoratore", route: "/messages", state: "supporto/assistente se presente", viewport: "mobile 412×900", file: "54-restaurant-help-support-mobile.png", status: "requires_credentials", notes: note("Visibilità supporto", "comprensione aiuto") },
 
-  { id: "55", title: "Popup guida iniziale", role: "Popup/Stato", route: "/dashboard", state: "guided tour", viewport: "mobile 412×900", file: "55-popup-guided-tour-mobile.png", status: "manual", notes: note("Chiarezza guida", "dismiss", "non invasività") },
+  
   { id: "56", title: "Popup conferma turno", role: "Popup/Stato", route: "/jobs", state: "conferma turno", viewport: "mobile 412×900", file: "56-popup-confirm-shift-mobile.png", status: "manual", notes: note("Rischio errore", "chiarezza riepilogo", "CTA") },
   { id: "57", title: "Popup annullamento turno", role: "Popup/Stato", route: "/shifts", state: "annullamento", viewport: "mobile 412×900", file: "57-popup-cancel-shift-mobile.png", status: "manual", notes: note("Tono", "motivi", "conseguenze", "undo") },
   { id: "58", title: "Popup candidatura inviata", role: "Popup/Stato", route: "/jobs", state: "success candidatura", viewport: "mobile 412×900", file: "58-popup-application-sent-mobile.png", status: "manual", notes: note("Feedback", "prossimo passo", "fiducia") },
