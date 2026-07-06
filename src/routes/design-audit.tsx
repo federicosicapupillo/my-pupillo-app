@@ -55,7 +55,6 @@ const RESTAURANT_SCREENS: Screen[] = [
 ];
 
 const COMPONENTS: { name: string; role: string }[] = [
-  { name: "GuidedTour", role: "Tour guidato primo login" },
   { name: "InsufficientCreditsDialog", role: "Popup crediti insufficienti" },
   { name: "CancelShiftDialog", role: "Annullamento turno" },
   { name: "WorkerSelfCancelledDialog", role: "Auto-annullamento lavoratore" },
