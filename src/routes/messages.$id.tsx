@@ -1404,12 +1404,11 @@ function Thread() {
       // Pre-check credits to show a premium dialog instead of a generic toast.
       const { data: prof } = await supabase
         .from("profiles")
-        .select("credits, plan")
+        .select("credits")
         .eq("id", user.id)
         .maybeSingle();
       const balance = prof?.credits ?? profile?.credits ?? 0;
-      const isPaid = (prof?.plan ?? profile?.plan) === "pro" || (prof?.plan ?? profile?.plan) === "business";
-      if (!isPaid && balance < CREDITS_PER_HIRE) {
+      if (balance < CREDITS_PER_HIRE) {
         console.info("[accept-candidature] insufficient credits", { ...techCtx, balance, required: CREDITS_PER_HIRE });
         setCreditsAvailable(balance);
         setInsufficientOpen(true);

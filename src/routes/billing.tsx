@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle, Zap } from "lucide-react";
-import { CREDIT_PACKS, PLAN_PRICES, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD } from "@/lib/pricing";
+import { CREDIT_PACKS, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD } from "@/lib/pricing";
 import { Progress } from "@/components/ui/progress";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { getStripeEnvironment } from "@/lib/stripe";
 import { Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/billing")({
-  head: () => ({ meta: [{ title: "Crediti e piano — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Crediti — Pupillo" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
     action: typeof search.action === "string" ? search.action : undefined,
@@ -102,7 +102,6 @@ function Billing() {
     let attempts = 0;
     const maxAttempts = 20; // ~40s
     const startCredits = profile?.credits ?? 0;
-    const startPlan = profile?.plan ?? "free";
     setSyncingPayment(true);
     const capturedReturnTo = returnTo;
     const capturedSessionId = session_id;
@@ -139,7 +138,7 @@ function Billing() {
         if (cancelled) return;
         // Refetch profilo + transazioni
         const [{ data: prof }, { data: txRow }] = await Promise.all([
-          supabase.from("profiles").select("credits, plan").eq("id", user.id).maybeSingle(),
+          supabase.from("profiles").select("credits").eq("id", user.id).maybeSingle(),
           supabase
             .from("credit_transactions")
             .select("id")
@@ -148,10 +147,8 @@ function Billing() {
             .maybeSingle(),
         ]);
         const newCredits = (prof as any)?.credits ?? startCredits;
-        const newPlan = (prof as any)?.plan ?? startPlan;
         const creditsUpdated = newCredits > startCredits || !!txRow;
-        const planUpdated = newPlan !== startPlan && newPlan !== "free";
-        if (creditsUpdated || planUpdated) {
+        if (creditsUpdated) {
           // IMPORTANT: strip URL params BEFORE `refresh()` to prevent the
           // effect from re-running on the new `user` reference with the
           // session_id still in the URL → restarting polling = refresh loop.
@@ -159,7 +156,7 @@ function Billing() {
           await refresh();
           await loadTx();
           if (!cancelled) {
-            toast.success(planUpdated ? "Piano attivato" : "Ricarica completata");
+            toast.success("Ricarica completata");
             setSyncingPayment(false);
             console.info("[PUPILLO_STRIPE_RETURN_DEBUG]", {
               session_id: capturedSessionId,
@@ -193,17 +190,17 @@ function Billing() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, session_id]);
 
-  // "Attiva Basic" dal popup crediti insufficienti: apri subito il checkout
-  // Stripe del piano consigliato senza far passare il ristoratore dal billing.
-  // Mappiamo `checkout=basic` al pacchetto SMART (consigliato): è il pack
-  // "Più scelto" della pricing, già configurato in Stripe via `pack_smart_49`.
+  // "Acquista pacchetto" dal popup crediti insufficienti: apri subito il
+  // checkout Stripe del pacchetto consigliato senza far passare il ristoratore
+  // dal billing. Mappiamo `checkout=basic` al pacchetto SMART (consigliato),
+  // il pack "Più scelto" configurato in Stripe via `pack_smart_49`.
   useEffect(() => {
     if (!checkout) return;
     if (checkoutKey) return;
     const key =
       checkout === "basic"
         ? "pack_smart_49"
-        : (CREDIT_PACKS as any)[checkout] || (PLAN_PRICES as any)[checkout]
+        : (CREDIT_PACKS as any)[checkout]
         ? checkout
         : null;
     console.info("[PUPILLO_STRIPE_BASIC_REDIRECT_DEBUG]", {
@@ -215,7 +212,7 @@ function Billing() {
       error: key ? null : `Nessun price configurato per "${checkout}"`,
     });
     if (!key) {
-      toast.error("Piano non disponibile. Scegli un pacchetto dalla lista.");
+      toast.error("Pacchetto non disponibile. Scegli un pacchetto dalla lista.");
       navigate({ to: "/billing", search: (prev: any) => ({ ...prev, checkout: undefined }), replace: true });
       return;
     }
@@ -228,22 +225,18 @@ function Billing() {
   }
 
   const credits = profile?.credits ?? 0;
-  const plan = profile?.plan ?? "free";
-  const isPaid = plan === "pro" || plan === "business";
   const remainingHires = Math.floor(credits / CREDITS_PER_HIRE);
-  const isExhausted = !isPaid && credits < CREDITS_PER_HIRE;
-  const isLow = !isPaid && !isExhausted && credits < LOW_CREDITS_THRESHOLD;
+  const isExhausted = credits < CREDITS_PER_HIRE;
+  const isLow = !isExhausted && credits < LOW_CREDITS_THRESHOLD;
   // Progress bar fills up to a "comfortable" reference of 70 crediti (SMART pack).
   const progressRef = 70;
   const progressValue = Math.min(100, Math.round((credits / progressRef) * 100));
 
   if (checkoutKey) {
-    const isPlan = !!PLAN_PRICES[checkoutKey];
     const discountAppliesToCheckout = !!(
       discount && (
         discount.applies_to === "all" ||
-        (isPlan && discount.applies_to === "premium") ||
-        (!isPlan && discount.applies_to === "credits")
+        discount.applies_to === "credits"
       )
     );
     return (
@@ -270,7 +263,7 @@ function Billing() {
 
   return (
     <AppShell>
-      <PageHeader title="Crediti e piano" subtitle="Gestisci il saldo crediti e il piano del tuo locale" />
+      <PageHeader title="Crediti" subtitle="Gestisci il saldo crediti del tuo locale" />
 
       <PayOnHireBox className="mb-6" />
 
@@ -302,7 +295,7 @@ function Billing() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 mb-8">
+      <div className="mb-8">
         <div className="rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-card p-6 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
@@ -313,34 +306,16 @@ function Billing() {
               <div className="text-3xl font-bold tabular-nums">{credits}</div>
             </div>
           </div>
-          {!isPaid && (
-            <div className="mt-4 space-y-2">
-              <Progress value={progressValue} className="h-2" />
-              <p className="text-xs text-muted-foreground">
-                Ti bastano per circa <strong className="text-foreground">{remainingHires}</strong> {remainingHires === 1 ? "conferma lavoratore" : "conferme lavoratore"}.
-              </p>
-            </div>
-          )}
+          <div className="mt-4 space-y-2">
+            <Progress value={progressValue} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              Ti bastano per circa <strong className="text-foreground">{remainingHires}</strong> {remainingHires === 1 ? "conferma lavoratore" : "conferme lavoratore"}.
+            </p>
+          </div>
           <div className="mt-4 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
             <strong className="text-foreground">{CREDITS_PER_HIRE} crediti = 1 lavoratore confermato.</strong><br />
             Pubblicare annunci e contattare lavoratori è <strong className="text-foreground">gratis</strong>. Paghi solo quando trovi davvero una persona disponibile.
           </div>
-        </div>
-        <div className="rounded-2xl border bg-card p-6">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-accent text-accent-foreground flex items-center justify-center">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Piano attivo</div>
-              <div className="text-3xl font-bold capitalize">{plan}</div>
-            </div>
-          </div>
-          {isPaid ? (
-            <p className="mt-4 text-sm text-muted-foreground">Il tuo piano include pubblicazioni e inviti illimitati.</p>
-          ) : (
-            <p className="mt-4 text-sm text-muted-foreground">Passa a Pro o Business per pubblicare e invitare senza scalare crediti.</p>
-          )}
           <Button
             variant="outline"
             size="sm"
@@ -349,7 +324,7 @@ function Billing() {
             disabled={portalBusy}
           >
             <Receipt className="h-4 w-4" />
-            {portalBusy ? "Apertura…" : "Gestisci abbonamento / Fatture"}
+            {portalBusy ? "Apertura…" : "Gestisci fatture"}
           </Button>
         </div>
       </div>
@@ -401,10 +376,8 @@ function Billing() {
             </p>
             <p className="text-muted-foreground">
               {discount.applies_to === "all"
-                ? "Valido su pacchetti crediti e abbonamenti."
-                : discount.applies_to === "premium"
-                  ? "Valido solo sugli abbonamenti."
-                  : "Valido solo sui pacchetti crediti."}
+                ? "Valido su tutti i pacchetti crediti."
+                : "Valido solo sui pacchetti crediti."}
             </p>
           </div>
         )}
@@ -463,43 +436,6 @@ function Billing() {
                 onClick={() => setCheckoutKey(key)}
               >
                 Acquista {p.label}
-              </Button>
-            </div>
-          );
-        })}
-      </div>
-
-      <h2 className="text-lg font-semibold mb-3">Piani in abbonamento</h2>
-      <div className="grid gap-4 md:grid-cols-2 mb-10">
-        {Object.entries(PLAN_PRICES).map(([key, p]) => {
-          const current = plan === p.plan;
-          const applies = !!(discount && (discount.applies_to === "all" || discount.applies_to === "premium"));
-          let final = p.priceEur;
-          if (applies && discount) {
-            if (discount.type === "percentage") final = +(p.priceEur * (1 - discount.value / 100)).toFixed(2);
-            else if (discount.type === "fixed_amount") final = Math.max(0, +(p.priceEur - discount.value).toFixed(2));
-          }
-          return (
-            <div key={key} className={`rounded-2xl border p-5 flex flex-col ${current ? "border-primary bg-primary/5" : "bg-card"}`}>
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-xl font-semibold">{p.label}</div>
-                {current && <span className="text-xs rounded-full bg-primary text-primary-foreground px-2 py-0.5">Attivo</span>}
-              </div>
-              {applies && final !== p.priceEur ? (
-                <div className="mb-3">
-                  <div className="text-sm text-muted-foreground line-through">€{p.priceEur}/mese</div>
-                  <div className="text-3xl font-bold text-emerald-600">€{final}<span className="text-sm font-normal text-muted-foreground">/mese (primo mese)</span></div>
-                </div>
-              ) : (
-                <div className="text-3xl font-bold mb-3">€{p.priceEur}<span className="text-sm font-normal text-muted-foreground">/mese</span></div>
-              )}
-              <ul className="text-sm space-y-1.5 mb-4">
-                <li className="flex gap-2"><Check className="h-4 w-4 text-primary mt-0.5" />Pubblicazioni illimitate</li>
-                <li className="flex gap-2"><Check className="h-4 w-4 text-primary mt-0.5" />Inviti lavoratori illimitati</li>
-                <li className="flex gap-2"><Check className="h-4 w-4 text-primary mt-0.5" />Supporto prioritario</li>
-              </ul>
-              <Button className="mt-auto" disabled={current} onClick={() => setCheckoutKey(key)}>
-                {current ? "Piano attivo" : "Attiva"}
               </Button>
             </div>
           );

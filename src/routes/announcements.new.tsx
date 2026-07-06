@@ -246,9 +246,8 @@ function NewAnn() {
   const isUrgent = f.speed === "flash" || f.speed === "fast";
   const cost: number = isUrgent ? CREDIT_COSTS.publishUrgentAnnouncement : CREDIT_COSTS.publishAnnouncement;
   const credits = profile?.credits ?? 0;
-  const isPaid = profile?.plan === "pro" || profile?.plan === "business";
   const isFree = cost === 0;
-  const canAfford = isPaid || isFree || credits >= cost;
+  const canAfford = isFree || credits >= cost;
 
   const save = async (asDraft: boolean) => {
     if (!user) return;
@@ -430,9 +429,7 @@ function NewAnn() {
       <div className={`mb-4 w-full max-w-5xl flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-primary" />
-          {isPaid ? (
-            <span>Piano <strong className="capitalize">{profile?.plan}</strong> attivo · pubblicazioni illimitate</span>
-          ) : isFree ? (
+          {isFree ? (
             <span>Pubblicare è <strong>gratis</strong>. Paghi solo quando confermi un lavoratore. Saldo: <strong>{credits}</strong></span>
           ) : (
             <span>
@@ -440,7 +437,7 @@ function NewAnn() {
             </span>
           )}
         </div>
-        {!isPaid && !canAfford && (
+        {!canAfford && (
           <Link to="/billing"><Button size="sm" variant="outline" type="button" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
         )}
       </div>
@@ -656,7 +653,7 @@ function NewAnn() {
           </Button>
           <Button type="submit" disabled={busy || !canAfford} className="flex-1 gap-1">
             {busy ? "Pubblicazione…" : !canAfford ? "Crediti insufficienti" : (
-              <>Pubblica annuncio {!isPaid && <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span>}</>
+              <>Pubblica annuncio <span className="opacity-80">· {cost} <Coins className="inline h-3 w-3" /></span></>
             )}
           </Button>
         </div>
@@ -667,9 +664,7 @@ function NewAnn() {
             <AlertDialogTitle className="flex items-center gap-2"><Coins className="h-5 w-5 text-primary" />Conferma pubblicazione</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-2">
-                {isPaid ? (
-                  <p>Il tuo piano <strong className="capitalize">{profile?.plan}</strong> include pubblicazioni illimitate. Nessun credito verrà scalato.</p>
-                ) : isFree ? (
+                {isFree ? (
                   <p>Pubblicare un annuncio è <strong>gratis</strong>. I crediti vengono scalati solo quando confermi definitivamente un lavoratore per il turno.</p>
                 ) : (
                   <>
@@ -687,7 +682,7 @@ function NewAnn() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Annulla</AlertDialogCancel>
-            {!isPaid && !canAfford ? (
+            {!canAfford ? (
               <Link to="/billing"><Button>Acquista crediti</Button></Link>
             ) : (
               <AlertDialogAction disabled={busy} onClick={requireComplete(async () => { await save(false); setConfirmOpen(false); })}>

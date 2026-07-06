@@ -1411,9 +1411,8 @@ function WorkersPage() {
   });
 
   const credits = profile?.credits ?? 0;
-  const isPaid = profile?.plan === "pro" || profile?.plan === "business";
   const cost = CREDIT_COSTS.assignWorker;
-  const canAfford = isPaid || credits >= cost;
+  const canAfford = credits >= cost;
 
   if (loaded) {
     const validCoords = sorted.filter(
@@ -1502,15 +1501,11 @@ function WorkersPage() {
       <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-primary" />
-          {isPaid ? (
-            <span>Piano <strong className="capitalize">{profile?.plan}</strong> attivo · inviti illimitati</span>
-          ) : (
-            <span>
-              Contattare è gratis. La conferma di un lavoratore costa <strong>{cost} crediti</strong>. Paghi solo quando trovi davvero una persona disponibile. Saldo: <strong>{credits}</strong>
-            </span>
-          )}
+          <span>
+            Contattare è gratis. La conferma di un lavoratore costa <strong>{cost} crediti</strong>. Paghi solo quando trovi davvero una persona disponibile. Saldo: <strong>{credits}</strong>
+          </span>
         </div>
-        {!isPaid && !canAfford && (
+        {!canAfford && (
           <Link to="/billing"><Button size="sm" variant="outline" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
         )}
       </div>

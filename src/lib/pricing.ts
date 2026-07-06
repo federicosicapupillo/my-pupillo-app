@@ -19,11 +19,6 @@ export const CREDIT_PACKS: Record<string, CreditPack> = {
   pack_power_245: { credits: 245, label: "POWER", priceEur: 455, hires: 35, badge: "Miglior valore", tagline: "Massimo risparmio" },
 };
 
-export const PLAN_PRICES: Record<string, { plan: "pro" | "business"; label: string; priceEur: number }> = {
-  pro_monthly: { plan: "pro", label: "Piano Pro", priceEur: 29 },
-  business_monthly: { plan: "business", label: "Piano Business", priceEur: 79 },
-};
-
 // Credit costs for restaurant actions.
 // Pubblicazione e contatto sono gratis: paghi solo quando confermi un lavoratore.
 export const CREDIT_COSTS = {
