@@ -496,6 +496,59 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_flag_cities: {
+        Row: {
+          city: string
+          flag_key: string
+          id: string
+        }
+        Insert: {
+          city: string
+          flag_key: string
+          id?: string
+        }
+        Update: {
+          city?: string
+          flag_key?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_flag_cities_flag_key_fkey"
+            columns: ["flag_key"]
+            isOneToOne: false
+            referencedRelation: "feature_flags"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      feature_flags: {
+        Row: {
+          description: string | null
+          enabled: boolean
+          key: string
+          scope: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          enabled?: boolean
+          key: string
+          scope?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          enabled?: boolean
+          key?: string
+          scope?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       job_requests: {
         Row: {
           access_restrictions: string | null
@@ -2553,6 +2606,11 @@ export type Database = {
         Returns: boolean
       }
       is_confirmed_delay: { Args: { _status: string }; Returns: boolean }
+      is_feature_enabled: { Args: { _key: string }; Returns: boolean }
+      is_feature_enabled_for_city: {
+        Args: { _city: string; _key: string }
+        Returns: boolean
+      }
       is_review_visible_to: {
         Args: { _review_id: string; _user_id: string }
         Returns: boolean
