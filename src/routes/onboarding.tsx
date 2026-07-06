@@ -139,6 +139,54 @@ function computeDateFieldErrors(
   return out;
 }
 
+function resolveNameFromProfile(
+  profile: Record<string, unknown> | null | undefined,
+  metadata: Record<string, unknown> | null | undefined,
+): { first_name: string; last_name: string } {
+  const p = profile ?? {};
+  const m = metadata ?? {};
+
+  let firstName = "";
+  if (typeof p.first_name === "string" && p.first_name.trim()) {
+    firstName = p.first_name.trim();
+  } else if (typeof m.first_name === "string" && m.first_name.trim()) {
+    firstName = m.first_name.trim();
+  } else if (typeof m.given_name === "string" && m.given_name.trim()) {
+    firstName = m.given_name.trim();
+  } else {
+    const full =
+      (typeof m.full_name === "string" && m.full_name.trim()) ||
+      (typeof m.name === "string" && m.name.trim()) ||
+      "";
+    if (full) {
+      const tokens = full.split(/\s+/);
+      firstName = tokens[0] ?? "";
+    }
+  }
+
+  let lastName = "";
+  if (typeof p.last_name === "string" && p.last_name.trim()) {
+    lastName = p.last_name.trim();
+  } else if (typeof m.last_name === "string" && m.last_name.trim()) {
+    lastName = m.last_name.trim();
+  } else if (typeof m.family_name === "string" && m.family_name.trim()) {
+    lastName = m.family_name.trim();
+  } else {
+    const full =
+      (typeof m.full_name === "string" && m.full_name.trim()) ||
+      (typeof m.name === "string" && m.name.trim()) ||
+      "";
+    if (full) {
+      const tokens = full.split(/\s+/);
+      if (tokens.length > 1) {
+        lastName = tokens.slice(1).join(" ");
+      }
+    }
+  }
+
+  return { first_name: firstName, last_name: lastName };
+}
+
 const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 20, 30, 50] as const;
 const ALLOWED_RADIUS_M = new Set(RADIUS_KM_OPTIONS.map((k) => k * 1000));
 
@@ -714,10 +762,9 @@ function Onboarding() {
     if (profile) {
       const p = profile as any;
       const split = splitAddressAndCivic(p.residence_address);
-      const metaFirst = (user as any)?.user_metadata?.first_name as string | undefined;
-      const metaLast = (user as any)?.user_metadata?.last_name as string | undefined;
-      const resolvedFirst = (p.first_name ?? metaFirst ?? "").trim();
-      const resolvedLast = (p.last_name ?? metaLast ?? "").trim();
+      const names = resolveNameFromProfile(p, (user as any)?.user_metadata);
+      const resolvedFirst = names.first_name;
+      const resolvedLast = names.last_name;
       setPersonal((s) => ({
         first_name: resolvedFirst || s.first_name,
         last_name: resolvedLast || s.last_name,
