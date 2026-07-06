@@ -78,7 +78,8 @@ import {
 } from "@/lib/id-document-format";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton";
-import { scrollToField } from "@/lib/form-field-validation";
+import { scrollToField, errorFieldClass } from "@/lib/form-field-validation";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 /**
@@ -354,6 +355,17 @@ function Onboarding() {
   useEffect(() => {
     avatarUrlRef.current = avatarUrl;
   }, [avatarUrl]);
+  // Campi worker in errore dopo un tentativo di "Salva" fallito. L'insieme
+  // viene azzerato all'inizio del submit e ripopolato dai branch di
+  // validazione fallita (accanto a scrollToField). Applica errorFieldClass
+  // sul wrapper/input corrispondente per evidenziarli in rosso.
+  const [errorFields, setErrorFields] = useState<Set<string>>(new Set());
+  const markErr = (name: string) =>
+    setErrorFields((prev) => {
+      if (prev.has(name) && prev.size === 1) return prev;
+      return new Set([name]);
+    });
+  const hasErr = (name: string) => errorFields.has(name);
 
   // Sezione facoltativa "Esperienza e preferenze" (lavoratore).
   // Tutti i campi sono opzionali: non bloccano salvataggio né completamento.
@@ -843,17 +855,22 @@ function Onboarding() {
     }
     const t0 = performance.now();
     console.info("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] click salva profilo", { role });
+    // Reset del set di campi in errore: verrà ripopolato dai branch di
+    // validazione fallita qui sotto.
+    setErrorFields(new Set());
     if (!form.terms_accepted) {
       toast.error("Devi accettare le condizioni d'uso");
       return;
     }
     if (!isValidPhone(form.phone_code, form.phone_number)) {
       toast.error("Inserisci un numero di telefono valido.");
+      markErr("phone");
       scrollToField("phone");
       return;
     }
     if (role !== "admin" && !(profile?.phone_verified || phoneVerifiedOptimistic)) {
       toast.error("Verifica il numero di cellulare prima di completare il profilo.");
+      markErr("phone");
       scrollToField("phone");
       return;
     }
@@ -1022,6 +1039,7 @@ function Onboarding() {
               : null) ?? "Data di nascita non valida.";
           setDateFieldErrors((prev) => ({ ...prev, birth_date: birthMsg }));
           toast.error(birthMsg);
+          markErr("birth_date");
           scrollToField("birth_date");
         } else if (!personal.birth_date) {
           setDateFieldErrors((prev) => ({
@@ -1029,6 +1047,7 @@ function Onboarding() {
             birth_date: "Inserisci la tua data di nascita.",
           }));
           toast.error("Inserisci la tua data di nascita.");
+          markErr("birth_date");
           scrollToField("birth_date");
         } else if (!personal.id_document_issued_at) {
           setDateFieldErrors((prev) => ({
@@ -1037,15 +1056,19 @@ function Onboarding() {
               "Inserisci la data di rilascio del documento.",
           }));
           toast.error("Inserisci la data di rilascio del documento.");
+          markErr("id_document_issued_at");
           scrollToField("id_document_issued_at");
         } else if (!cityEntry) {
           toast.error("Seleziona una città di residenza dall'elenco.");
+          markErr("residence_city");
           scrollToField("residence_city");
         } else if (!capOk) {
           toast.error("Seleziona un CAP valido per la città scelta.");
+          markErr("residence_postal_code");
           scrollToField("residence_postal_code");
         } else if (!civicOk) {
           toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
+          markErr("residence_street_number");
           scrollToField("residence_street_number");
         } else if (!idDocFile && !idDocPath) {
           toast.error("Carica il fronte del documento.");
@@ -1055,9 +1078,11 @@ function Onboarding() {
           scrollToField("sec-id-document");
         } else if (firstEmpty) {
           toast.error("Campo obbligatorio mancante.");
+          markErr(firstEmpty);
           scrollToField(firstEmpty);
         } else if (!cfOk) {
           toast.error("Codice fiscale non valido.");
+          markErr("tax_code");
           scrollToField("tax_code");
         } else {
           toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
@@ -1156,6 +1181,7 @@ function Onboarding() {
       if (!avatarFile && !avatarUrl) {
         setBusy(false); submittingRef.current = false;
         toast.error("Carica una foto profilo per completare il profilo.");
+        markErr("avatar");
         scrollToField("avatar");
         return;
       }
@@ -1586,7 +1612,14 @@ function Onboarding() {
               ) : null}
             </div>
           ) : null}
-          <div id="sec-phone" data-field="phone" className="scroll-mt-24 rounded-lg border bg-card/40 p-3 space-y-2">
+          <div
+            id="sec-phone"
+            data-field="phone"
+            className={cn(
+              "scroll-mt-24 rounded-lg border bg-card/40 p-3 space-y-2",
+              hasErr("phone") && errorFieldClass,
+            )}
+          >
             <div>
               <Label className="text-base font-semibold">Numero di cellulare *</Label>
               <p className="text-xs text-muted-foreground mt-1">
@@ -2117,7 +2150,14 @@ function Onboarding() {
           </>
         ) : role === "worker" ? (
           <>
-            <div id="sec-avatar" data-field="avatar" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+            <div
+              id="sec-avatar"
+              data-field="avatar"
+              className={cn(
+                "rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24",
+                hasErr("avatar") && errorFieldClass,
+              )}
+            >
               <Label className="font-semibold">Foto profilo *</Label>
               <p className="text-xs text-muted-foreground">
                 La foto verrà mostrata sulla tua scheda, nelle candidature e in chat.
@@ -2136,33 +2176,67 @@ function Onboarding() {
             <div id="sec-anagrafica" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">📇 Dati anagrafici</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                <div>
+                <div data-field="first_name" className="scroll-mt-24">
                   <Label>Nome *</Label>
-                  <Input
-                    required
-                    readOnly
-                    value={personal.first_name}
-                    className="bg-muted/50 cursor-not-allowed"
-                    aria-readonly="true"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
-                  </p>
+                  {personal.first_name.trim() === "" ? (
+                    <Input
+                      required
+                      value={personal.first_name}
+                      onChange={(e) =>
+                        setPersonal({ ...personal, first_name: e.target.value })
+                      }
+                      className={cn(hasErr("first_name") && errorFieldClass)}
+                      aria-invalid={hasErr("first_name")}
+                    />
+                  ) : (
+                    <>
+                      <Input
+                        required
+                        readOnly
+                        value={personal.first_name}
+                        className={cn(
+                          "bg-muted/50 cursor-not-allowed",
+                          hasErr("first_name") && errorFieldClass,
+                        )}
+                        aria-readonly="true"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                      </p>
+                    </>
+                  )}
                 </div>
-                <div>
+                <div data-field="last_name" className="scroll-mt-24">
                   <Label>Cognome *</Label>
-                  <Input
-                    required
-                    readOnly
-                    value={personal.last_name}
-                    className="bg-muted/50 cursor-not-allowed"
-                    aria-readonly="true"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
-                  </p>
+                  {personal.last_name.trim() === "" ? (
+                    <Input
+                      required
+                      value={personal.last_name}
+                      onChange={(e) =>
+                        setPersonal({ ...personal, last_name: e.target.value })
+                      }
+                      className={cn(hasErr("last_name") && errorFieldClass)}
+                      aria-invalid={hasErr("last_name")}
+                    />
+                  ) : (
+                    <>
+                      <Input
+                        required
+                        readOnly
+                        value={personal.last_name}
+                        className={cn(
+                          "bg-muted/50 cursor-not-allowed",
+                          hasErr("last_name") && errorFieldClass,
+                        )}
+                        aria-readonly="true"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                      </p>
+                    </>
+                  )}
                 </div>
-                <div data-field="birth_date">
+                <div data-field="birth_date" className={cn("scroll-mt-24", hasErr("birth_date") && errorFieldClass)}>
                   <Label>Data di nascita *</Label>
                   <BirthDateSelect
                     value={personal.birth_date}
@@ -2173,11 +2247,11 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div data-field="birth_place">
+                <div data-field="birth_place" className={cn("scroll-mt-24", hasErr("birth_place") && errorFieldClass)}>
                   <Label>Luogo di nascita *</Label>
                   <Input required value={personal.birth_place} onChange={(e) => setPersonal({ ...personal, birth_place: e.target.value })} />
                 </div>
-                <div data-field="tax_code">
+                <div data-field="tax_code" className={cn("scroll-mt-24", hasErr("tax_code") && errorFieldClass)}>
                   <Label>Codice fiscale *</Label>
                   <Input
                     required
@@ -2189,7 +2263,7 @@ function Onboarding() {
                     <p className="text-xs text-destructive mt-1">Codice fiscale non valido.</p>
                   )}
                 </div>
-                <div data-field="nationality">
+                <div data-field="nationality" className={cn("scroll-mt-24", hasErr("nationality") && errorFieldClass)}>
                   <Label>Nazionalità *</Label>
                   {(() => {
                     const NATIONALITIES = [
@@ -2233,7 +2307,7 @@ function Onboarding() {
                     );
                   })()}
                 </div>
-                <div data-field="residence_city">
+                <div data-field="residence_city" className={cn("scroll-mt-24", hasErr("residence_city") && errorFieldClass)}>
                   <Label>Città di residenza *</Label>
                   <SearchableSelect
                     options={ALL_CITIES_WITH_PROVINCE.map((c) => ({
@@ -2266,7 +2340,7 @@ function Onboarding() {
                     aria-readonly="true"
                   />
                 </div>
-                <div data-field="residence_postal_code">
+                <div data-field="residence_postal_code" className={cn("scroll-mt-24", hasErr("residence_postal_code") && errorFieldClass)}>
                   <Label>CAP *</Label>
                   <SearchableSelect
                     options={capsForCity(
@@ -2286,7 +2360,7 @@ function Onboarding() {
                     }
                   />
                 </div>
-                <div className="md:col-span-2" data-field="residence_street">
+                <div className={cn("md:col-span-2 scroll-mt-24", hasErr("residence_street") && errorFieldClass)} data-field="residence_street">
                   <Label>Via / Indirizzo *</Label>
                   <Input
                     required
@@ -2302,7 +2376,7 @@ function Onboarding() {
                     }
                   />
                 </div>
-                <div data-field="residence_street_number">
+                <div data-field="residence_street_number" className={cn("scroll-mt-24", hasErr("residence_street_number") && errorFieldClass)}>
                   <Label>Numero civico *</Label>
                   <Input
                     required
@@ -2335,7 +2409,7 @@ function Onboarding() {
             <div id="sec-documento" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">🪪 Documento di identità *</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                <div data-field="id_document_type">
+                <div data-field="id_document_type" className={cn("scroll-mt-24", hasErr("id_document_type") && errorFieldClass)}>
                   <Label>Tipo documento *</Label>
                   <Select
                     value={personal.id_document_type}
@@ -2357,7 +2431,7 @@ function Onboarding() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div data-field="id_document_number">
+                <div data-field="id_document_number" className={cn("scroll-mt-24", hasErr("id_document_number") && errorFieldClass)}>
                   <Label>Numero documento *</Label>
                   <Input
                     required
@@ -2425,7 +2499,7 @@ function Onboarding() {
                       </p>
                     )}
                 </div>
-                <div data-field="id_document_issued_at">
+                <div data-field="id_document_issued_at" className={cn("scroll-mt-24", hasErr("id_document_issued_at") && errorFieldClass)}>
                   <Label>Data rilascio *</Label>
                   <DateField
                     required
@@ -2441,7 +2515,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div data-field="id_document_expires_at">
+                <div data-field="id_document_expires_at" className={cn("scroll-mt-24", hasErr("id_document_expires_at") && errorFieldClass)}>
                   <Label>Data scadenza *</Label>
                   <DateField
                     required
@@ -2458,7 +2532,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div className="md:col-span-2" data-field="id_document_issuer">
+                <div className={cn("md:col-span-2 scroll-mt-24", hasErr("id_document_issuer") && errorFieldClass)} data-field="id_document_issuer">
                   <Label>Ente di rilascio *</Label>
                   {(() => {
                     const ISSUER_OPTIONS = [
