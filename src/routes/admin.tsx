@@ -19,6 +19,7 @@ import { AdminBackupSystemSection } from "@/components/AdminBackupSystemSection"
 import { AdminBackupRestoreSection } from "@/components/AdminBackupRestoreSection";
 import { AdminSupportTicketsSection } from "@/components/AdminSupportTicketsSection";
 import { AdminRoleRepairSection } from "@/components/AdminRoleRepairSection";
+import { AdminFeatureFlagsSection } from "@/components/AdminFeatureFlagsSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/admin")({
@@ -262,6 +263,7 @@ function Admin() {
           <TabsTrigger value="reviews">Recensioni</TabsTrigger>
           <TabsTrigger value="backups">Backup</TabsTrigger>
           <TabsTrigger value="support">Segnalazioni</TabsTrigger>
+          <TabsTrigger value="features">Funzionalità</TabsTrigger>
         </TabsList>
 
         {/* PANORAMICA */}
@@ -602,6 +604,9 @@ function Admin() {
         </TabsContent>
         <TabsContent value="support" className="space-y-6">
           <AdminSupportTicketsSection />
+        </TabsContent>
+        <TabsContent value="features" className="space-y-6">
+          <AdminFeatureFlagsSection />
         </TabsContent>
       </Tabs>
     </AppShell>
