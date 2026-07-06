@@ -855,17 +855,22 @@ function Onboarding() {
     }
     const t0 = performance.now();
     console.info("[PUPILLO_PROFILE_SAVE_PERFORMANCE_DEBUG] click salva profilo", { role });
+    // Reset del set di campi in errore: verrà ripopolato dai branch di
+    // validazione fallita qui sotto.
+    setErrorFields(new Set());
     if (!form.terms_accepted) {
       toast.error("Devi accettare le condizioni d'uso");
       return;
     }
     if (!isValidPhone(form.phone_code, form.phone_number)) {
       toast.error("Inserisci un numero di telefono valido.");
+      markErr("phone");
       scrollToField("phone");
       return;
     }
     if (role !== "admin" && !(profile?.phone_verified || phoneVerifiedOptimistic)) {
       toast.error("Verifica il numero di cellulare prima di completare il profilo.");
+      markErr("phone");
       scrollToField("phone");
       return;
     }
