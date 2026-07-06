@@ -2176,31 +2176,65 @@ function Onboarding() {
             <div id="sec-anagrafica" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">📇 Dati anagrafici</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                <div>
+                <div data-field="first_name" className="scroll-mt-24">
                   <Label>Nome *</Label>
-                  <Input
-                    required
-                    readOnly
-                    value={personal.first_name}
-                    className="bg-muted/50 cursor-not-allowed"
-                    aria-readonly="true"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
-                  </p>
+                  {personal.first_name.trim() === "" ? (
+                    <Input
+                      required
+                      value={personal.first_name}
+                      onChange={(e) =>
+                        setPersonal({ ...personal, first_name: e.target.value })
+                      }
+                      className={cn(hasErr("first_name") && errorFieldClass)}
+                      aria-invalid={hasErr("first_name")}
+                    />
+                  ) : (
+                    <>
+                      <Input
+                        required
+                        readOnly
+                        value={personal.first_name}
+                        className={cn(
+                          "bg-muted/50 cursor-not-allowed",
+                          hasErr("first_name") && errorFieldClass,
+                        )}
+                        aria-readonly="true"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                      </p>
+                    </>
+                  )}
                 </div>
-                <div>
+                <div data-field="last_name" className="scroll-mt-24">
                   <Label>Cognome *</Label>
-                  <Input
-                    required
-                    readOnly
-                    value={personal.last_name}
-                    className="bg-muted/50 cursor-not-allowed"
-                    aria-readonly="true"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
-                  </p>
+                  {personal.last_name.trim() === "" ? (
+                    <Input
+                      required
+                      value={personal.last_name}
+                      onChange={(e) =>
+                        setPersonal({ ...personal, last_name: e.target.value })
+                      }
+                      className={cn(hasErr("last_name") && errorFieldClass)}
+                      aria-invalid={hasErr("last_name")}
+                    />
+                  ) : (
+                    <>
+                      <Input
+                        required
+                        readOnly
+                        value={personal.last_name}
+                        className={cn(
+                          "bg-muted/50 cursor-not-allowed",
+                          hasErr("last_name") && errorFieldClass,
+                        )}
+                        aria-readonly="true"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div data-field="birth_date">
                   <Label>Data di nascita *</Label>
