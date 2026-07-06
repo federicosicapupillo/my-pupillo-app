@@ -1039,6 +1039,7 @@ function Onboarding() {
               : null) ?? "Data di nascita non valida.";
           setDateFieldErrors((prev) => ({ ...prev, birth_date: birthMsg }));
           toast.error(birthMsg);
+          markErr("birth_date");
           scrollToField("birth_date");
         } else if (!personal.birth_date) {
           setDateFieldErrors((prev) => ({
@@ -1046,6 +1047,7 @@ function Onboarding() {
             birth_date: "Inserisci la tua data di nascita.",
           }));
           toast.error("Inserisci la tua data di nascita.");
+          markErr("birth_date");
           scrollToField("birth_date");
         } else if (!personal.id_document_issued_at) {
           setDateFieldErrors((prev) => ({
@@ -1054,15 +1056,19 @@ function Onboarding() {
               "Inserisci la data di rilascio del documento.",
           }));
           toast.error("Inserisci la data di rilascio del documento.");
+          markErr("id_document_issued_at");
           scrollToField("id_document_issued_at");
         } else if (!cityEntry) {
           toast.error("Seleziona una città di residenza dall'elenco.");
+          markErr("residence_city");
           scrollToField("residence_city");
         } else if (!capOk) {
           toast.error("Seleziona un CAP valido per la città scelta.");
+          markErr("residence_postal_code");
           scrollToField("residence_postal_code");
         } else if (!civicOk) {
           toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
+          markErr("residence_street_number");
           scrollToField("residence_street_number");
         } else if (!idDocFile && !idDocPath) {
           toast.error("Carica il fronte del documento.");
@@ -1072,9 +1078,11 @@ function Onboarding() {
           scrollToField("sec-id-document");
         } else if (firstEmpty) {
           toast.error("Campo obbligatorio mancante.");
+          markErr(firstEmpty);
           scrollToField(firstEmpty);
         } else if (!cfOk) {
           toast.error("Codice fiscale non valido.");
+          markErr("tax_code");
           scrollToField("tax_code");
         } else {
           toast.error("Completa tutti i dati anagrafici e carica un documento valido per proseguire.");
