@@ -2150,7 +2150,14 @@ function Onboarding() {
           </>
         ) : role === "worker" ? (
           <>
-            <div id="sec-avatar" data-field="avatar" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
+            <div
+              id="sec-avatar"
+              data-field="avatar"
+              className={cn(
+                "rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24",
+                hasErr("avatar") && errorFieldClass,
+              )}
+            >
               <Label className="font-semibold">Foto profilo *</Label>
               <p className="text-xs text-muted-foreground">
                 La foto verrà mostrata sulla tua scheda, nelle candidature e in chat.
