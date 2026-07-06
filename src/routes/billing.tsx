@@ -40,6 +40,8 @@ function Billing() {
   const [discountBusy, setDiscountBusy] = useState(false);
   const [syncingPayment, setSyncingPayment] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
+  const [showAllTx, setShowAllTx] = useState(false);
+
   // Idempotency: ensure each Stripe session_id is processed only once,
   // even if React re-runs the effect (e.g. after `refresh()` swaps the
   // `user` reference). Without this guard, polling could restart and
