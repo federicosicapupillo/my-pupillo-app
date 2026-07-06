@@ -355,6 +355,17 @@ function Onboarding() {
   useEffect(() => {
     avatarUrlRef.current = avatarUrl;
   }, [avatarUrl]);
+  // Campi worker in errore dopo un tentativo di "Salva" fallito. L'insieme
+  // viene azzerato all'inizio del submit e ripopolato dai branch di
+  // validazione fallita (accanto a scrollToField). Applica errorFieldClass
+  // sul wrapper/input corrispondente per evidenziarli in rosso.
+  const [errorFields, setErrorFields] = useState<Set<string>>(new Set());
+  const markErr = (name: string) =>
+    setErrorFields((prev) => {
+      if (prev.has(name) && prev.size === 1) return prev;
+      return new Set([name]);
+    });
+  const hasErr = (name: string) => errorFields.has(name);
 
   // Sezione facoltativa "Esperienza e preferenze" (lavoratore).
   // Tutti i campi sono opzionali: non bloccano salvataggio né completamento.
