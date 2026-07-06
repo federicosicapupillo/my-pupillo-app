@@ -120,7 +120,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const prices = await stripe.prices.list({ lookup_keys: [data.priceId], expand: ["data.product"] });
     if (!prices.data.length) throw new Error("Price not found");
     const stripePrice = prices.data[0];
-    const isRecurring = stripePrice.type === "recurring";
+    if (stripePrice.type === "recurring") {
+      // Subscriptions removed — only one-off credit-pack purchases are supported.
+      throw new Error("Recurring prices are no longer supported");
+    }
 
     // Resolve discount code: reuse a deterministic Stripe coupon per DB row.
     let discounts: { coupon: string }[] | undefined;
@@ -138,7 +141,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           (!row.valid_from || new Date(row.valid_from) <= now) &&
           (!row.valid_until || new Date(row.valid_until) >= now) &&
           (row.max_uses == null || row.used_count < row.max_uses) &&
-          (row.applies_to === "all" || (isRecurring && row.applies_to === "premium") || (!isRecurring && row.applies_to === "credits"));
+          (row.applies_to === "all" || row.applies_to === "credits");
         if (valid && row) {
           const couponId = await resolveCouponForDiscountRow(
             stripe,
@@ -163,7 +166,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     // For one-off charges, attach product name as PaymentIntent description
     // so the Lovable payments dashboard shows the right label.
     let productDescription: string | undefined;
-    if (!isRecurring) {
+    {
       const productId = typeof stripePrice.product === "string"
         ? stripePrice.product
         : (stripePrice.product as any).id;
@@ -175,7 +178,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
     const session = await stripe.checkout.sessions.create({
       line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
-      mode: isRecurring ? "subscription" : "payment",
+      mode: "payment",
       ui_mode: "embedded_page",
       return_url: data.returnUrl,
       // End-to-end compliance handling: Stripe handles VAT calc/collection/filing,
@@ -185,7 +188,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       ...({ managed_payments: { enabled: true } } as any),
       ...(discounts && { discounts }),
       ...(customerId && { customer: customerId }),
-      ...(!isRecurring && productDescription && {
+      ...(productDescription && {
         payment_intent_data: { description: productDescription },
       }),
       ...(data.userId && {
@@ -195,12 +198,6 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           ...(data.discountCode && { discountCode: data.discountCode }),
           ...(appliedDiscountCodeId && { discountCodeId: appliedDiscountCodeId }),
         },
-        ...(isRecurring && { subscription_data: { metadata: {
-          userId: data.userId,
-          priceId: data.priceId,
-          ...(data.discountCode && { discountCode: data.discountCode }),
-          ...(appliedDiscountCodeId && { discountCodeId: appliedDiscountCodeId }),
-        } } }),
       }),
     });
 
@@ -215,25 +212,15 @@ export const createPortalSession = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    // Prefer customer id stored on the profile (covers credit-pack buyers).
-    // Fall back to the most recent subscription row.
+    // Uses stripe_customer_id persisted on the profile (set by
+    // resolveOrCreateCustomer at checkout time and by the checkout.session.completed
+    // webhook), so credit-pack buyers can access invoices via the Customer Portal.
     const { data: prof } = await supabase
       .from("profiles")
       .select("stripe_customer_id, email")
       .eq("id", userId)
       .maybeSingle();
-    let customerId: string | null = (prof as any)?.stripe_customer_id ?? null;
-    if (!customerId) {
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("stripe_customer_id")
-        .eq("user_id", userId)
-        .eq("environment", data.environment)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      customerId = sub?.stripe_customer_id ?? null;
-    }
+    const customerId: string | null = (prof as any)?.stripe_customer_id ?? null;
     if (!customerId) throw new Error("Nessun cliente Stripe collegato. Effettua almeno un acquisto prima di gestire la fatturazione.");
     const stripe = createStripeClient(data.environment);
     const portal = await stripe.billingPortal.sessions.create({
