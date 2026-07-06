@@ -190,6 +190,19 @@ function resolveNameFromProfile(
 const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 20, 30, 50] as const;
 const ALLOWED_RADIUS_M = new Set(RADIUS_KM_OPTIONS.map((k) => k * 1000));
 
+/**
+ * Preferisce il valore proveniente dal DB solo se è "significativo"
+ * (non null/undefined e, per le stringhe, non vuoto dopo trim). Altrimenti
+ * mantiene il valore locale già digitato dall'utente. Serve a evitare che
+ * un refetch del profile (es. dopo verifica WhatsApp) sovrascriva con "" i
+ * campi che l'utente sta compilando.
+ */
+function pick<T>(dbVal: T | null | undefined, localVal: T): T {
+  if (dbVal === null || dbVal === undefined) return localVal;
+  if (typeof dbVal === "string" && dbVal.trim() === "") return localVal;
+  return dbVal;
+}
+
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
   component: () => (
