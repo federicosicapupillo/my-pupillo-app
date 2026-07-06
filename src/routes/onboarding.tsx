@@ -1489,8 +1489,12 @@ function Onboarding() {
               const v = parseInt(form.service_area_radius_m);
               return ALLOWED_RADIUS_M.has(v) ? v : 10000;
             })(),
-            id_document_path: uploadedPath,
-            id_document_back_path: uploadedBackPath,
+            ...(requireIdDocument
+              ? {
+                  id_document_path: uploadedPath,
+                  id_document_back_path: uploadedBackPath,
+                }
+              : {}),
             avatar_url: uploadedAvatarUrl,
             first_name: personal.first_name.trim() || (profile as any)?.first_name || null,
             last_name: personal.last_name.trim() || (profile as any)?.last_name || null,
@@ -1502,11 +1506,15 @@ function Onboarding() {
             residence_city: personal.residence_city.trim(),
             residence_postal_code: personal.residence_postal_code.trim(),
             residence_province: personal.residence_province.trim().toUpperCase(),
-            id_document_type: personal.id_document_type,
-            id_document_number: personal.id_document_number.trim(),
-            id_document_issued_at: personal.id_document_issued_at,
-            id_document_expires_at: personal.id_document_expires_at,
-            id_document_issuer: personal.id_document_issuer.trim(),
+            ...(requireIdDocument
+              ? {
+                  id_document_type: personal.id_document_type,
+                  id_document_number: personal.id_document_number.trim(),
+                  id_document_issued_at: personal.id_document_issued_at,
+                  id_document_expires_at: personal.id_document_expires_at,
+                  id_document_issuer: personal.id_document_issuer.trim(),
+                }
+              : {}),
             ...serviceArea,
             // Campi facoltativi sezione "Esperienza e preferenze"
             experience_years: optExp.experience_years.trim() || null,
