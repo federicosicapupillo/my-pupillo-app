@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { type StripeEnv, verifyWebhook, createStripeClient } from "@/lib/stripe.server";
-import { CREDIT_PACKS, PLAN_PRICES } from "@/lib/pricing";
+import { CREDIT_PACKS } from "@/lib/pricing";
 
 let _supabase: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
@@ -19,74 +19,6 @@ async function resolvePriceLookupKey(priceId: string, env: StripeEnv): Promise<s
     return (price.lookup_key as string) || (price.metadata?.lovable_external_id as string) || null;
   } catch {
     return null;
-  }
-}
-
-async function handleSubscriptionUpsert(subscription: any, env: StripeEnv) {
-  const userId = subscription.metadata?.userId;
-  if (!userId) {
-    console.error("No userId in subscription metadata");
-    return;
-  }
-  const item = subscription.items?.data?.[0];
-  const priceId = item?.price?.metadata?.lovable_external_id || item?.price?.lookup_key || item?.price?.id;
-  const productId = item?.price?.product;
-  const periodStart = item?.current_period_start ?? subscription.current_period_start;
-  const periodEnd = item?.current_period_end ?? subscription.current_period_end;
-
-  await getSupabase().from("subscriptions").upsert(
-    {
-      user_id: userId,
-      stripe_subscription_id: subscription.id,
-      stripe_customer_id: subscription.customer,
-      product_id: productId,
-      price_id: priceId,
-      status: subscription.status,
-      current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-      cancel_at_period_end: subscription.cancel_at_period_end || false,
-      environment: env,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "stripe_subscription_id" }
-  );
-
-  // Update profile.plan
-  const planMap = PLAN_PRICES[priceId as string];
-  const isActive = ["active", "trialing"].includes(subscription.status);
-  if (planMap) {
-    await getSupabase()
-      .from("profiles")
-      .update({
-        plan: (isActive ? planMap.plan : "free") as any,
-        stripe_customer_id: subscription.customer,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-  } else if (subscription.customer) {
-    await getSupabase()
-      .from("profiles")
-      .update({ stripe_customer_id: subscription.customer, updated_at: new Date().toISOString() })
-      .eq("id", userId);
-  }
-
-  // Record discount redemption if applicable (subscription)
-  await recordDiscountRedemption({
-    discountCodeId: subscription.metadata?.discountCodeId,
-    userId,
-    orderId: subscription.id,
-  });
-}
-
-async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
-  await getSupabase()
-    .from("subscriptions")
-    .update({ status: "canceled", updated_at: new Date().toISOString() })
-    .eq("stripe_subscription_id", subscription.id)
-    .eq("environment", env);
-  const userId = subscription.metadata?.userId;
-  if (userId) {
-    await getSupabase().from("profiles").update({ plan: "free", updated_at: new Date().toISOString() }).eq("id", userId);
   }
 }
 
@@ -222,47 +154,14 @@ async function findSessionIdForPaymentIntent(paymentIntentId: string, env: Strip
   }
 }
 
-async function handleInvoicePaymentFailed(invoice: any) {
-  const userId = invoice.subscription_details?.metadata?.userId
-    || invoice.metadata?.userId
-    || (await findUserIdByCustomerId(invoice.customer));
-  if (!userId) return;
-  await getSupabase().from("notifications").insert({
-    user_id: userId,
-    title: "Pagamento abbonamento non riuscito",
-    body: "Aggiorna il metodo di pagamento per evitare l'interruzione del servizio.",
-    link: "/billing",
-  });
-}
-
-async function findUserIdByCustomerId(customerId: string | null): Promise<string | null> {
-  if (!customerId) return null;
-  const { data } = await getSupabase()
-    .from("profiles")
-    .select("id")
-    .eq("stripe_customer_id", customerId)
-    .maybeSingle();
-  return (data as any)?.id ?? null;
-}
-
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
   switch (event.type) {
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
-      await handleSubscriptionUpsert(event.data.object, env);
-      break;
-    case "customer.subscription.deleted":
-      await handleSubscriptionDeleted(event.data.object, env);
-      break;
     case "checkout.session.completed":
       await handleCheckoutCompleted(event.data.object, env);
       break;
     case "charge.refunded":
       await handleChargeRefunded(event.data.object, env);
-      break;
-    case "invoice.payment_failed":
-      await handleInvoicePaymentFailed(event.data.object);
       break;
     default:
       console.log("Unhandled event:", event.type);
