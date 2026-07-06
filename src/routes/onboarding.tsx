@@ -246,6 +246,35 @@ function Onboarding() {
   // without waiting for the async refresh() of the auth context.
   const [phoneVerifiedOptimistic, setPhoneVerifiedOptimistic] = useState(false);
 
+  // Feature flag `require_id_document` (scope: global). When disabled from the
+  // admin panel the whole "Documento di identità" section is hidden and the
+  // client-side validations for id_document_* fields are skipped. Fallback is
+  // SAFE-ON (true) both while loading and if the RPC fails — meglio mostrare
+  // il documento per errore che nasconderlo. La validazione DB
+  // (`enforce_worker_personal_data`) resta la fonte di verità.
+  const [requireIdDocument, setRequireIdDocument] = useState<boolean>(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc("is_feature_enabled", {
+          _key: "require_id_document",
+        });
+        if (cancelled) return;
+        if (error) {
+          console.warn("[onboarding] require_id_document flag read failed", error);
+          return; // keep safe default (true)
+        }
+        setRequireIdDocument(data === false ? false : true);
+      } catch (e) {
+        if (!cancelled) console.warn("[onboarding] require_id_document flag threw", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     if (otpCooldown <= 0) return;
     const t = setInterval(() => setOtpCooldown((c) => Math.max(0, c - 1)), 1000);
