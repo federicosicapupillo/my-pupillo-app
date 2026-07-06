@@ -207,21 +207,6 @@ export function AssistantPanel({
       </div>
 
       <div className="border-t bg-background p-3 space-y-2">
-        {(role === "worker" || role === "restaurant") && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-center gap-1.5 text-xs"
-            onClick={() => {
-              onOpenChange(false);
-              // Defer so the sheet/drawer can close before the tour overlay opens.
-              setTimeout(() => dispatchStartTour({ force: true }), 200);
-            }}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Rivedi guida
-          </Button>
-        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
