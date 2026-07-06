@@ -1002,14 +1002,19 @@ function Onboarding() {
     let uploadedBackPath: string | null = idDocBackPath;
     let uploadedAvatarUrl: string | null = avatarUrl;
     if (role === "worker") {
-      const required = [
+      const requiredBase = [
         personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
         personal.tax_code, personal.nationality,
         personal.residence_street, personal.residence_street_number,
         personal.residence_city, personal.residence_postal_code, personal.residence_province,
-        personal.id_document_type, personal.id_document_number,
-        personal.id_document_issued_at, personal.id_document_expires_at, personal.id_document_issuer,
       ];
+      const requiredDoc = requireIdDocument
+        ? [
+            personal.id_document_type, personal.id_document_number,
+            personal.id_document_issued_at, personal.id_document_expires_at, personal.id_document_issuer,
+          ]
+        : [];
+      const required = [...requiredBase, ...requiredDoc];
       const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
       const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
       const today = todayInRome();
@@ -1037,14 +1042,14 @@ function Onboarding() {
         !provinceOk ||
         !capOk ||
         !civicOk ||
-        (!idDocFile && !idDocPath) ||
-        (!idDocBackFile && !idDocBackPath)
+        (requireIdDocument && !idDocFile && !idDocPath) ||
+        (requireIdDocument && !idDocBackFile && !idDocBackPath)
       ) {
         setBusy(false); submittingRef.current = false;
         // Generic banner + specific message + scroll to first missing field.
         toast.error("Completa i campi obbligatori evidenziati.");
         // Detect first missing required field (ordered as they appear on page).
-        const firstEmpty = ([
+        const orderBase = [
           ["first_name", !personal.first_name.trim()],
           ["last_name", !personal.last_name.trim()],
           ["birth_date", !personal.birth_date],
@@ -1055,12 +1060,18 @@ function Onboarding() {
           ["residence_postal_code", !personal.residence_postal_code.trim()],
           ["residence_street", !personal.residence_street.trim()],
           ["residence_street_number", !personal.residence_street_number.trim()],
-          ["id_document_type", !personal.id_document_type],
-          ["id_document_number", !personal.id_document_number.trim()],
-          ["id_document_issued_at", !personal.id_document_issued_at],
-          ["id_document_expires_at", !personal.id_document_expires_at],
-          ["id_document_issuer", !personal.id_document_issuer.trim()],
-        ] as const).find(([, missing]) => missing)?.[0] ?? null;
+        ] as const;
+        const orderDoc = requireIdDocument
+          ? ([
+              ["id_document_type", !personal.id_document_type],
+              ["id_document_number", !personal.id_document_number.trim()],
+              ["id_document_issued_at", !personal.id_document_issued_at],
+              ["id_document_expires_at", !personal.id_document_expires_at],
+              ["id_document_issuer", !personal.id_document_issuer.trim()],
+            ] as const)
+          : ([] as const);
+        const firstEmpty =
+          [...orderBase, ...orderDoc].find(([, missing]) => missing)?.[0] ?? null;
         if (personal.birth_date && !birthOk) {
           const birthMsg =
             (isValidISODate(personal.birth_date)
@@ -1078,7 +1089,7 @@ function Onboarding() {
           toast.error("Inserisci la tua data di nascita.");
           markErr("birth_date");
           scrollToField("birth_date");
-        } else if (!personal.id_document_issued_at) {
+        } else if (requireIdDocument && !personal.id_document_issued_at) {
           setDateFieldErrors((prev) => ({
             ...prev,
             id_document_issued_at:
@@ -1099,10 +1110,10 @@ function Onboarding() {
           toast.error("Inserisci un numero civico valido (es. 12, 12A, 24/B).");
           markErr("residence_street_number");
           scrollToField("residence_street_number");
-        } else if (!idDocFile && !idDocPath) {
+        } else if (requireIdDocument && !idDocFile && !idDocPath) {
           toast.error("Carica il fronte del documento.");
           scrollToField("sec-id-document");
-        } else if (!idDocBackFile && !idDocBackPath) {
+        } else if (requireIdDocument && !idDocBackFile && !idDocBackPath) {
           toast.error("Carica il retro del documento.");
           scrollToField("sec-id-document");
         } else if (firstEmpty) {
@@ -1118,6 +1129,12 @@ function Onboarding() {
         }
         return;
       }
+      // Document-specific checks: run only when the feature flag is on.
+      // With the flag OFF the whole "Documento di identità" section is
+      // hidden, so client-side format/coherence/date checks and file
+      // uploads for the document are skipped. Birth-date validation still
+      // runs below because it is a non-document requirement.
+      if (requireIdDocument) {
       // Numero documento: only letters and digits, 5–20 chars (already
       // forced uppercase by the input). Mirror this rule in the DB trigger
       // `enforce_worker_personal_data` for backend safety.
@@ -1206,6 +1223,27 @@ function Onboarding() {
         setBusy(false); submittingRef.current = false;
         toast.error("Carica il retro del documento.");
         return;
+      }
+      } else {
+        // Flag OFF: still validate birth date on its own.
+        if (!isValidISODate(personal.birth_date)) {
+          setBusy(false); submittingRef.current = false;
+          setDateFieldErrors((prev) => ({ ...prev, birth_date: INVALID_DATE_MESSAGE }));
+          toast.error(INVALID_DATE_MESSAGE);
+          return;
+        }
+        const birthMsg = validateBirthDate(personal.birth_date, today);
+        if (birthMsg) {
+          setBusy(false); submittingRef.current = false;
+          setDateFieldErrors((prev) => ({ ...prev, birth_date: birthMsg }));
+          toast.error(birthMsg);
+          return;
+        }
+        setDateFieldErrors({
+          birth_date: null,
+          id_document_issued_at: null,
+          id_document_expires_at: null,
+        });
       }
       if (!avatarFile && !avatarUrl) {
         setBusy(false); submittingRef.current = false;
