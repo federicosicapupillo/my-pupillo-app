@@ -42,6 +42,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     role === "admin" && { to: "/admin", label: "Admin", icon: Shield },
   ].filter(Boolean) as { to: string; label: string; icon: typeof LayoutDashboard }[];
 
+  const visibleItems = role === "admin" ? items.filter((i) => i.to === "/admin") : items;
+
   // Breadcrumbs basati sul path corrente
   const labelByPath: Record<string, string> = items.reduce((acc, i) => ({ ...acc, [i.to]: i.label }), {} as Record<string, string>);
   const homeLabel = role === "admin" ? "Admin" : "Dashboard";
@@ -160,7 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
           </Link>
           <div className="hidden md:flex items-center gap-1">
-            {items.map((i) => (
+            {visibleItems.map((i) => (
               <Link key={i.to} to={i.to as never} className="inline-flex rounded-md">
                 <Button variant={loc.pathname.startsWith(i.to) ? "secondary" : "ghost"} size="sm" className="gap-2">
                   <i.icon className="h-4 w-4" />{i.label}
@@ -227,7 +229,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           onKeyDown={handleMobileNavKey}
         >
           <div role="menubar" aria-orientation="vertical" className="flex flex-col gap-1 px-2 py-2">
-            {items.map((i) => {
+            {visibleItems.map((i) => {
               const isActive = loc.pathname.startsWith(i.to);
               return (
                 <Link
