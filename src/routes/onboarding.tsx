@@ -2699,6 +2699,7 @@ function Onboarding() {
                 )}
               </div>
             </div>
+            )}
 
             <div id="sec-roles" className="rounded-xl border bg-muted/30 p-4 space-y-2 scroll-mt-24">
               <Label className="font-semibold">Renditi disponibile per</Label>
