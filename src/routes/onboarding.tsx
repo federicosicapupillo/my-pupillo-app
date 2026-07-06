@@ -78,7 +78,8 @@ import {
 } from "@/lib/id-document-format";
 import { WorkerServiceAreaMap } from "@/components/WorkerServiceAreaMap";
 import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton";
-import { scrollToField } from "@/lib/form-field-validation";
+import { scrollToField, errorFieldClass } from "@/lib/form-field-validation";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 /**
