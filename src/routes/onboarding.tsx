@@ -2473,6 +2473,7 @@ function Onboarding() {
               <p className="text-xs text-muted-foreground">Telefono ed email sono già impostati nei dati account.</p>
             </div>
 
+            {requireIdDocument && (
             <div id="sec-documento" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">🪪 Documento di identità *</h3>
               <div className="grid gap-3 md:grid-cols-2">
