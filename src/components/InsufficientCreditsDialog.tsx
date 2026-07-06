@@ -17,8 +17,8 @@ type Props = {
 
 export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, needed = CREDITS_PER_HIRE, returnTo }: Props) {
   const navigate = useNavigate();
-  const [activatingBasic, setActivatingBasic] = useState(false);
-  const [viewingPlans, setViewingPlans] = useState(false);
+  const [buyingPack, setBuyingPack] = useState(false);
+  const [viewingPacks, setViewingPacks] = useState(false);
 
   const buildSearch = (extra: Record<string, string>) => {
     const params: Record<string, string> = { ...extra };
@@ -26,15 +26,12 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
     return params;
   };
 
-  const activateBasic = async () => {
-    if (activatingBasic) return; // evita doppio click / doppio checkout
-    setActivatingBasic(true);
+  const buyRecommendedPack = async () => {
+    if (buyingPack) return; // evita doppio click / doppio checkout
+    setBuyingPack(true);
     try {
-      // PLACEHOLDER CHECKOUT — sostituire con la chiamata reale al provider
-      // di pagamento per aprire direttamente il checkout del piano Basic
-      // (es. Stripe Checkout Session per priceId del piano "basic").
-      // Per ora reindirizziamo al billing con un parametro che indica
-      // l'intento di avviare il checkout del piano Basic.
+      // Redirect al billing con `checkout=basic` — mappato al pacchetto SMART
+      // consigliato (pack_smart_49) che apre subito Stripe Checkout.
       onOpenChange(false);
       await navigate({
         to: "/billing",
@@ -43,13 +40,13 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
     } catch (e) {
       toast.error("Non siamo riusciti ad aprire il pagamento. Riprova tra qualche secondo.");
     } finally {
-      setActivatingBasic(false);
+      setBuyingPack(false);
     }
   };
 
-  const viewAllPlans = async () => {
-    if (viewingPlans) return;
-    setViewingPlans(true);
+  const viewAllPacks = async () => {
+    if (viewingPacks) return;
+    setViewingPacks(true);
     try {
       onOpenChange(false);
       await navigate({
@@ -57,7 +54,7 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
         search: buildSearch({ action: "confirm-worker" }) as any,
       });
     } finally {
-      setViewingPlans(false);
+      setViewingPacks(false);
     }
   };
 
@@ -71,7 +68,7 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
           <DialogHeader className="text-center sm:text-center">
             <DialogTitle className="text-2xl font-bold text-center">Crediti insufficienti</DialogTitle>
             <DialogDescription className="text-center text-base">
-              Hai terminato i crediti disponibili. Per continuare puoi attivare subito il piano <strong className="text-foreground">Basic</strong> oppure confrontare tutti i piani Pupillo.
+              Hai terminato i crediti disponibili. Per continuare puoi acquistare subito il pacchetto consigliato <strong className="text-foreground">SMART</strong> oppure confrontare tutti i pacchetti Pupillo.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -79,21 +76,21 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
         <div className="px-6 pb-2 space-y-3">
           <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-card p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-primary font-semibold">
-              <Sparkles className="h-3.5 w-3.5" />Piano consigliato
+              <Sparkles className="h-3.5 w-3.5" />Pacchetto consigliato
             </div>
-            <div className="mt-1 text-lg font-bold">Basic</div>
+            <div className="mt-1 text-lg font-bold">SMART · 49 crediti</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Ideale per iniziare a usare Pupillo con continuità e sbloccare nuove opportunità di contatto.
+              Circa 7 conferme lavoratore. Ideale per continuare a usare Pupillo senza interruzioni.
             </p>
           </div>
         </div>
 
         <DialogFooter className="p-6 pt-4 gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
-          <Button variant="outline" onClick={viewAllPlans} disabled={viewingPlans || activatingBasic} className="sm:flex-1">
-            {viewingPlans ? <Loader2 className="h-4 w-4 animate-spin" /> : "Vedi tutti i piani"}
+          <Button variant="outline" onClick={viewAllPacks} disabled={viewingPacks || buyingPack} className="sm:flex-1">
+            {viewingPacks ? <Loader2 className="h-4 w-4 animate-spin" /> : "Vedi tutti i pacchetti"}
           </Button>
-          <Button onClick={activateBasic} disabled={activatingBasic} className="sm:flex-1 gap-2 shadow-lg shadow-primary/30">
-            {activatingBasic ? (<><Loader2 className="h-4 w-4 animate-spin" />Apertura…</>) : "Attiva Basic"}
+          <Button onClick={buyRecommendedPack} disabled={buyingPack} className="sm:flex-1 gap-2 shadow-lg shadow-primary/30">
+            {buyingPack ? (<><Loader2 className="h-4 w-4 animate-spin" />Apertura…</>) : "Acquista pacchetto"}
           </Button>
         </DialogFooter>
       </DialogContent>
