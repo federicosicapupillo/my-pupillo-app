@@ -2236,7 +2236,7 @@ function Onboarding() {
                     </>
                   )}
                 </div>
-                <div data-field="birth_date">
+                <div data-field="birth_date" className={cn("scroll-mt-24", hasErr("birth_date") && errorFieldClass)}>
                   <Label>Data di nascita *</Label>
                   <BirthDateSelect
                     value={personal.birth_date}
@@ -2247,11 +2247,11 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div data-field="birth_place">
+                <div data-field="birth_place" className={cn("scroll-mt-24", hasErr("birth_place") && errorFieldClass)}>
                   <Label>Luogo di nascita *</Label>
                   <Input required value={personal.birth_place} onChange={(e) => setPersonal({ ...personal, birth_place: e.target.value })} />
                 </div>
-                <div data-field="tax_code">
+                <div data-field="tax_code" className={cn("scroll-mt-24", hasErr("tax_code") && errorFieldClass)}>
                   <Label>Codice fiscale *</Label>
                   <Input
                     required
@@ -2263,7 +2263,7 @@ function Onboarding() {
                     <p className="text-xs text-destructive mt-1">Codice fiscale non valido.</p>
                   )}
                 </div>
-                <div data-field="nationality">
+                <div data-field="nationality" className={cn("scroll-mt-24", hasErr("nationality") && errorFieldClass)}>
                   <Label>Nazionalità *</Label>
                   {(() => {
                     const NATIONALITIES = [
@@ -2307,7 +2307,7 @@ function Onboarding() {
                     );
                   })()}
                 </div>
-                <div data-field="residence_city">
+                <div data-field="residence_city" className={cn("scroll-mt-24", hasErr("residence_city") && errorFieldClass)}>
                   <Label>Città di residenza *</Label>
                   <SearchableSelect
                     options={ALL_CITIES_WITH_PROVINCE.map((c) => ({
@@ -2340,7 +2340,7 @@ function Onboarding() {
                     aria-readonly="true"
                   />
                 </div>
-                <div data-field="residence_postal_code">
+                <div data-field="residence_postal_code" className={cn("scroll-mt-24", hasErr("residence_postal_code") && errorFieldClass)}>
                   <Label>CAP *</Label>
                   <SearchableSelect
                     options={capsForCity(
@@ -2360,7 +2360,7 @@ function Onboarding() {
                     }
                   />
                 </div>
-                <div className="md:col-span-2" data-field="residence_street">
+                <div className={cn("md:col-span-2 scroll-mt-24", hasErr("residence_street") && errorFieldClass)} data-field="residence_street">
                   <Label>Via / Indirizzo *</Label>
                   <Input
                     required
@@ -2376,7 +2376,7 @@ function Onboarding() {
                     }
                   />
                 </div>
-                <div data-field="residence_street_number">
+                <div data-field="residence_street_number" className={cn("scroll-mt-24", hasErr("residence_street_number") && errorFieldClass)}>
                   <Label>Numero civico *</Label>
                   <Input
                     required
@@ -2409,7 +2409,7 @@ function Onboarding() {
             <div id="sec-documento" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <h3 className="font-semibold">🪪 Documento di identità *</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                <div data-field="id_document_type">
+                <div data-field="id_document_type" className={cn("scroll-mt-24", hasErr("id_document_type") && errorFieldClass)}>
                   <Label>Tipo documento *</Label>
                   <Select
                     value={personal.id_document_type}
@@ -2431,7 +2431,7 @@ function Onboarding() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div data-field="id_document_number">
+                <div data-field="id_document_number" className={cn("scroll-mt-24", hasErr("id_document_number") && errorFieldClass)}>
                   <Label>Numero documento *</Label>
                   <Input
                     required
@@ -2499,7 +2499,7 @@ function Onboarding() {
                       </p>
                     )}
                 </div>
-                <div data-field="id_document_issued_at">
+                <div data-field="id_document_issued_at" className={cn("scroll-mt-24", hasErr("id_document_issued_at") && errorFieldClass)}>
                   <Label>Data rilascio *</Label>
                   <DateField
                     required
@@ -2515,7 +2515,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div data-field="id_document_expires_at">
+                <div data-field="id_document_expires_at" className={cn("scroll-mt-24", hasErr("id_document_expires_at") && errorFieldClass)}>
                   <Label>Data scadenza *</Label>
                   <DateField
                     required
@@ -2532,7 +2532,7 @@ function Onboarding() {
                     }}
                   />
                 </div>
-                <div className="md:col-span-2" data-field="id_document_issuer">
+                <div className={cn("md:col-span-2 scroll-mt-24", hasErr("id_document_issuer") && errorFieldClass)} data-field="id_document_issuer">
                   <Label>Ente di rilascio *</Label>
                   {(() => {
                     const ISSUER_OPTIONS = [
