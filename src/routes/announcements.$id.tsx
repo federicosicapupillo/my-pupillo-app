@@ -481,17 +481,15 @@ function AnnouncementDetail() {
       return;
     }
     if (!user) return;
-    // Pre-check credits: Pro/Business bypass; otherwise must have >= CREDITS_PER_HIRE.
+    // Pre-check credits: must have >= CREDITS_PER_HIRE.
     try {
       const { data: prof } = await supabase
         .from("profiles")
-        .select("credits, plan")
+        .select("credits")
         .eq("id", user.id)
         .maybeSingle();
       const balance = (prof as any)?.credits ?? profile?.credits ?? 0;
-      const planNow = (prof as any)?.plan ?? profile?.plan;
-      const isPaid = planNow === "pro" || planNow === "business";
-      if (!isPaid && balance < CREDITS_PER_HIRE) {
+      if (balance < CREDITS_PER_HIRE) {
         setCreditsAvailable(balance);
         setInsufficientOpen(true);
         return;
