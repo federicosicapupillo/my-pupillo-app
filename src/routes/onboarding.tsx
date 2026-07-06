@@ -1612,7 +1612,14 @@ function Onboarding() {
               ) : null}
             </div>
           ) : null}
-          <div id="sec-phone" data-field="phone" className="scroll-mt-24 rounded-lg border bg-card/40 p-3 space-y-2">
+          <div
+            id="sec-phone"
+            data-field="phone"
+            className={cn(
+              "scroll-mt-24 rounded-lg border bg-card/40 p-3 space-y-2",
+              hasErr("phone") && errorFieldClass,
+            )}
+          >
             <div>
               <Label className="text-base font-semibold">Numero di cellulare *</Label>
               <p className="text-xs text-muted-foreground mt-1">
