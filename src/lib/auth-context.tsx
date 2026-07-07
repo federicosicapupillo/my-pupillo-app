@@ -73,6 +73,7 @@ type Ctx = {
   loading: boolean;
   extrasLoaded: boolean;
   refresh: () => Promise<void>;
+  patchProfile: (patch: Partial<Profile>) => void;
   signOut: (options?: { redirectTo?: string | false }) => Promise<void>;
 };
 
@@ -214,6 +215,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const patchProfile = (patch: Partial<Profile>) =>
+    setProfile((p) => (p ? { ...p, ...patch } : p));
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
@@ -254,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profile, roleDebug, loading, extrasLoaded, refresh, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, profile, roleDebug, loading, extrasLoaded, refresh, patchProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );
