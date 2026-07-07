@@ -358,6 +358,7 @@ function Billing() {
         </div>
       )}
 
+      {paymentsEnabled && (
       <div className="rounded-2xl border bg-card p-4 mb-6">
         <div className="text-sm font-medium mb-2">Hai un codice sconto?</div>
         <div className="flex gap-2">
@@ -388,7 +389,10 @@ function Billing() {
           </div>
         )}
       </div>
+      )}
 
+      {paymentsEnabled && (
+      <>
       <div className="mb-3 flex items-end justify-between">
         <div>
           <h2 className="text-lg font-semibold">Pacchetti crediti</h2>
