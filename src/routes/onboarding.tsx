@@ -451,6 +451,15 @@ function Onboarding() {
 
   // Worker area mode: "zones" (specific zones/quartieri) | "georadar" (radius around position).
   const [areaMode, setAreaMode] = useState<"zones" | "georadar">("zones");
+  // Ref-guard: diventa true quando l'utente sceglie manualmente una modalità
+  // area. Se true, il useEffect [profile] NON riscrive `areaMode` con il
+  // valore proveniente da un refetch (evita che un rifetch post-verifica
+  // OTP riporti la scelta indietro).
+  const areaModeTouchedRef = useRef(false);
+  // Idem per `requirements`: `RestaurantRequirements` ha default non-vuoti,
+  // quindi non è possibile dedurre "toccato" dal contenuto. Marchiamo touched
+  // sul primo cambio via editor.
+  const requirementsTouchedRef = useRef(false);
 
   // Live-geocode worker service area for the map preview (debounced).
   useEffect(() => {
