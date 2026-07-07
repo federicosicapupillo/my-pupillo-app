@@ -204,6 +204,38 @@ function pick<T>(dbVal: T | null | undefined, localVal: T): T {
   return dbVal;
 }
 
+/**
+ * Varianti di `pick` per tipi non-stringa, usate nel useEffect [profile] per
+ * evitare che un refetch del profilo (es. dopo la verifica OTP) sovrascriva
+ * valori locali già compilati dall'utente.
+ *
+ * - `pickBool`: se il locale è già `true`, non lo abbassa (utile per
+ *   `terms_accepted`: il consenso, una volta dato, non deve sparire per un
+ *   refetch che ritorna false/null).
+ * - `pickArray`: se l'array locale è non-vuoto lo preserva, altrimenti usa
+ *   il valore DB (o `[]`). Non azzera mai un array locale non-vuoto con un
+ *   array DB vuoto.
+ * - `pickNumberString`: state string di un campo numerico. Se il DB ha un
+ *   valore lo usa (rispetta lo stato canonico salvato); se il DB è null e
+ *   il locale è non-vuoto, mantiene il locale. Al primo caricamento con
+ *   locale vuoto il campo resta vuoto (comportamento identico al pre-fix).
+ */
+function pickBool(dbVal: boolean | null | undefined, localVal: boolean): boolean {
+  if (localVal) return true;
+  return Boolean(dbVal);
+}
+function pickArray<T>(dbArr: T[] | null | undefined, localArr: T[]): T[] {
+  if (Array.isArray(localArr) && localArr.length > 0) return localArr;
+  return Array.isArray(dbArr) ? dbArr : [];
+}
+function pickNumberString(
+  dbVal: number | null | undefined,
+  localVal: string,
+): string {
+  if (dbVal !== null && dbVal !== undefined) return String(dbVal);
+  return localVal;
+}
+
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
   component: () => (
