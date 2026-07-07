@@ -2349,7 +2349,7 @@ function Onboarding() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div data-field="first_name" className="scroll-mt-24">
                   <Label>Nome *</Label>
-                  {personal.first_name.trim() === "" ? (
+                  {firstNameEditableRef.current !== false ? (
                     <Input
                       required
                       value={personal.first_name}
@@ -2379,7 +2379,7 @@ function Onboarding() {
                 </div>
                 <div data-field="last_name" className="scroll-mt-24">
                   <Label>Cognome *</Label>
-                  {personal.last_name.trim() === "" ? (
+                  {lastNameEditableRef.current !== false ? (
                     <Input
                       required
                       value={personal.last_name}
