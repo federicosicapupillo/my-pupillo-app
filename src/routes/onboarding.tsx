@@ -246,7 +246,7 @@ export const Route = createFileRoute("/onboarding")({
 });
 
 function Onboarding() {
-  const { user, role, profile, refresh } = useAuth();
+  const { user, role, profile, refresh, patchProfile } = useAuth();
   const nav = useNavigate();
   const verifyVatFn = useServerFn(verifyVat);
   const uploadAvatarFn = useServerFn(uploadAvatar);
@@ -272,6 +272,7 @@ function Onboarding() {
   // Ref-based guard: blocks any further OTP request that fires before the
   // React state has time to flip `otpBusy=true` (e.g. very rapid double-click).
   const otpInFlightRef = useRef(false);
+  const otpJustVerifiedRef = useRef(false);
   const [otpCooldown, setOtpCooldown] = useState(0);
   // Optimistic local override: set immediately after a successful OTP verify
   // so the "Numero WhatsApp verificato" step flips to "done" and CTAs unlock
@@ -757,6 +758,10 @@ function Onboarding() {
   };
 
   useEffect(() => {
+    if (otpJustVerifiedRef.current) {
+      otpJustVerifiedRef.current = false;
+      return;
+    }
     if (profile) {
       const ph = splitPhone((profile as any).phone_full ?? profile.phone);
       const cph = splitPhone((profile as any).contact_person_phone);
@@ -1936,7 +1941,11 @@ function Onboarding() {
                               "[PUPILLO_PHONE_ONBOARDING_DEBUG] phone_verified=true (optimistic) applied to onboarding step",
                               { user_id: user?.id },
                             );
-                            await refresh();
+                            otpJustVerifiedRef.current = true;
+                            patchProfile({
+                              phone_verified: true,
+                              phone_verified_at: new Date().toISOString(),
+                            });
                           } finally {
                             setOtpBusy(false);
                             setOtpAction(null);
