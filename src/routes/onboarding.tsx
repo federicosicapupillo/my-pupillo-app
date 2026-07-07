@@ -931,6 +931,13 @@ function Onboarding() {
       const names = resolveNameFromProfile(p, (user as any)?.user_metadata);
       const resolvedFirst = names.first_name;
       const resolvedLast = names.last_name;
+      // Lock editability on first profile load (stable across keystrokes / refresh).
+      if (firstNameEditableRef.current === null) {
+        firstNameEditableRef.current = !resolvedFirst.trim();
+      }
+      if (lastNameEditableRef.current === null) {
+        lastNameEditableRef.current = !resolvedLast.trim();
+      }
       setPersonal((s) => ({
         first_name: pick(resolvedFirst, s.first_name),
         last_name: pick(resolvedLast, s.last_name),
