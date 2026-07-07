@@ -273,6 +273,11 @@ function Onboarding() {
   // React state has time to flip `otpBusy=true` (e.g. very rapid double-click).
   const otpInFlightRef = useRef(false);
   const otpJustVerifiedRef = useRef(false);
+  // Stable editability for name/surname: decided ONCE when profile first loads.
+  // If the resolved value was empty at that moment → editable for the whole session,
+  // even after the user types characters. If already populated (OAuth) → read-only.
+  const firstNameEditableRef = useRef<boolean | null>(null);
+  const lastNameEditableRef = useRef<boolean | null>(null);
   const [otpCooldown, setOtpCooldown] = useState(0);
   // Optimistic local override: set immediately after a successful OTP verify
   // so the "Numero WhatsApp verificato" step flips to "done" and CTAs unlock
@@ -926,6 +931,13 @@ function Onboarding() {
       const names = resolveNameFromProfile(p, (user as any)?.user_metadata);
       const resolvedFirst = names.first_name;
       const resolvedLast = names.last_name;
+      // Lock editability on first profile load (stable across keystrokes / refresh).
+      if (firstNameEditableRef.current === null) {
+        firstNameEditableRef.current = !resolvedFirst.trim();
+      }
+      if (lastNameEditableRef.current === null) {
+        lastNameEditableRef.current = !resolvedLast.trim();
+      }
       setPersonal((s) => ({
         first_name: pick(resolvedFirst, s.first_name),
         last_name: pick(resolvedLast, s.last_name),
@@ -2337,7 +2349,7 @@ function Onboarding() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div data-field="first_name" className="scroll-mt-24">
                   <Label>Nome *</Label>
-                  {personal.first_name.trim() === "" ? (
+                  {firstNameEditableRef.current !== false ? (
                     <Input
                       required
                       value={personal.first_name}
@@ -2367,7 +2379,7 @@ function Onboarding() {
                 </div>
                 <div data-field="last_name" className="scroll-mt-24">
                   <Label>Cognome *</Label>
-                  {personal.last_name.trim() === "" ? (
+                  {lastNameEditableRef.current !== false ? (
                     <Input
                       required
                       value={personal.last_name}
