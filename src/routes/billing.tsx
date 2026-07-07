@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle, Zap } from "lucide-react";
 import { CREDIT_PACKS, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD } from "@/lib/pricing";
+import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { Progress } from "@/components/ui/progress";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ type Tx = { id: string; created_at: string; delta: number; balance_after: number
 
 function Billing() {
   const { profile, user, role, refresh } = useAuth();
+  const { enabled: paymentsEnabled } = usePaymentsEnabled();
   const navigate = useNavigate();
   const { returnTo, action, session_id, checkout } = useSearch({ from: "/billing" });
   const [tx, setTx] = useState<Tx[]>([]);
@@ -267,7 +270,8 @@ function Billing() {
     <AppShell>
       <PageHeader title="Crediti" subtitle="Gestisci il saldo crediti del tuo locale" />
 
-      <PayOnHireBox className="mb-6" />
+      {!paymentsEnabled && <FreeLaunchBanner className="mb-6" />}
+      {paymentsEnabled && <PayOnHireBox className="mb-6" />}
 
       {syncingPayment && (
         <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
@@ -331,7 +335,7 @@ function Billing() {
         </div>
       </div>
 
-      {isExhausted && (
+      {paymentsEnabled && isExhausted && (
         <div className="mb-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
@@ -342,7 +346,7 @@ function Billing() {
           </div>
         </div>
       )}
-      {isLow && (
+      {paymentsEnabled && isLow && (
         <div className="mb-6 rounded-2xl border border-amber-400/40 bg-amber-50 dark:bg-amber-950/20 p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
@@ -354,6 +358,7 @@ function Billing() {
         </div>
       )}
 
+      {paymentsEnabled && (
       <div className="rounded-2xl border bg-card p-4 mb-6">
         <div className="text-sm font-medium mb-2">Hai un codice sconto?</div>
         <div className="flex gap-2">
@@ -384,7 +389,10 @@ function Billing() {
           </div>
         )}
       </div>
+      )}
 
+      {paymentsEnabled && (
+      <>
       <div className="mb-3 flex items-end justify-between">
         <div>
           <h2 className="text-lg font-semibold">Pacchetti crediti</h2>
@@ -443,6 +451,8 @@ function Billing() {
           );
         })}
       </div>
+      </>
+      )}
 
       <h2 className="text-lg font-semibold mb-3">Storico movimenti</h2>
       <div className="rounded-2xl border bg-card divide-y">
