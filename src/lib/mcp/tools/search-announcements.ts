@@ -33,7 +33,7 @@ export default defineTool({
       .select(
         "id, service_date, service_time, end_time, professional_profile, job_city, job_province, tariff_amount, tariff_type, duration_hours",
       )
-      .eq("status", "open")
+      .eq("status", "active")
       .order("service_date", { ascending: true })
       .limit(limit ?? 20);
     if (city) q = q.ilike("job_city", `%${city}%`);
