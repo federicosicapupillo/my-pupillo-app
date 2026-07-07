@@ -766,29 +766,43 @@ function Onboarding() {
         ? ((profile as any).selected_zones as string[]).filter(Boolean)
         : [];
       const loadedAllZones = Boolean((profile as any).all_zones);
-      if (loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL) {
-        setAreaMode("georadar");
-      } else if (loadedMode === "zones" || loadedDistrict.trim() || loadedZones.length > 0 || loadedAllZones) {
-        setAreaMode("zones");
+      // Rispetta la scelta locale dell'utente: se ha già cliccato una
+      // modalità (touched=true), non lasciamo che il refetch la riscriva.
+      if (!areaModeTouchedRef.current) {
+        if (loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL) {
+          setAreaMode("georadar");
+        } else if (loadedMode === "zones" || loadedDistrict.trim() || loadedZones.length > 0 || loadedAllZones) {
+          setAreaMode("zones");
+        }
       }
       setForm((f) => ({
         ...f,
         full_name: pick(profile.full_name, f.full_name),
         phone_code: (profile as any).phone_country_code || ph.code,
         phone_number: (profile as any).phone_number || ph.number,
-        languages: (profile.languages ?? []).join(", "),
+        // `form.languages` è una stringa comma-joined derivata dalla lista
+        // `profile.languages`. Se DB è vuoto ma l'utente ha già scritto
+        // qualcosa, preserva il locale (pick standard su stringa).
+        languages: pick((profile.languages ?? []).join(", "), f.languages),
         business_name: pick(profile.business_name, f.business_name),
         vat_number: pick(profile.vat_number, f.vat_number),
         venue_type: pick(profile.venue_type, f.venue_type),
         venue_type_other: pick((profile as any).venue_type_other, f.venue_type_other),
         address: pick(profile.address, f.address),
         price_range: pick(profile.price_range, f.price_range),
+        // Se il DB ha un radius salvato lo rispettiamo (fonte canonica).
+        // Se DB è null/undefined manteniamo il valore locale (default o
+        // scelta utente non ancora salvata) invece di forzare 10000 e
+        // sovrascrivere una scelta come "5000" fatta prima della verifica.
         service_area_radius_m: (() => {
-          const v = profile.service_area_radius_m ?? 10000;
+          const v = profile.service_area_radius_m;
+          if (v === null || v === undefined) return f.service_area_radius_m;
           return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
         })(),
         service_area_city: pick((profile as any).service_area_city, f.service_area_city),
-        service_area_district:
+        // Calcola il valore derivato dal DB, poi applica `pick` così che
+        // un DB vuoto ("") non spazzi via una zona già digitata localmente.
+        service_area_district: pick(
           loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL
             ? ""
             : loadedAllZones
@@ -796,6 +810,8 @@ function Onboarding() {
               : loadedZones.length > 0
                 ? loadedZones.join(", ")
                 : loadedDistrict,
+          f.service_area_district,
+        ),
         street_number: pick((profile as any).street_number, f.street_number),
         district: pick((profile as any).neighborhood, f.district),
         city: pick((profile as any).city, f.city),
@@ -809,13 +825,25 @@ function Onboarding() {
         contact_person_phone_code: cph.code,
         contact_person_phone_number: cph.number,
         contact_person_email: pick((profile as any).contact_person_email, f.contact_person_email),
-        representative_age:
-          (profile as any).representative_age != null ? String((profile as any).representative_age) : "",
-        terms_accepted: profile.terms_accepted,
+        representative_age: pickNumberString(
+          (profile as any).representative_age,
+          f.representative_age,
+        ),
+        // Consenso ai termini: se dato localmente non deve sparire per
+        // un refetch che ritorna false/null.
+        terms_accepted: pickBool(profile.terms_accepted, f.terms_accepted),
       }));
     }
-    if (profile) setRequirements(reqFromProfile(profile));
-    if (profile) setSpokenLanguages(normalizeSpokenLanguages((profile as any).spoken_languages));
+    // `requirements` ha default non-vuoti: usiamo un ref-guard "touched"
+    // per non azzerare le scelte dell'utente al refetch.
+    if (profile && !requirementsTouchedRef.current) {
+      setRequirements(reqFromProfile(profile));
+    }
+    // Lingue parlate: se l'utente ha già aggiunto qualcosa non lo perdiamo.
+    if (profile) {
+      const dbLangs = normalizeSpokenLanguages((profile as any).spoken_languages);
+      setSpokenLanguages((cur) => pickArray(dbLangs, cur));
+    }
     if (profile) {
       const p = profile as any;
       setOptExp((s) => {
