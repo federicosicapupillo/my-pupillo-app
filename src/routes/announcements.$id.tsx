@@ -29,6 +29,8 @@ import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
@@ -165,6 +167,7 @@ function AnnouncementDetail() {
   const { section } = Route.useSearch();
   const { user, role, profile } = useAuth();
   const { requireComplete, canPerformOperationalAction } = useProfileGate();
+  const { enabled: paymentsEnabled } = usePaymentsEnabled();
   const nav = useNavigate();
   const candidatesRef = useRef<HTMLElement | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
@@ -482,20 +485,25 @@ function AnnouncementDetail() {
     }
     if (!user) return;
     // Pre-check credits: must have >= CREDITS_PER_HIRE.
-    try {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("credits")
-        .eq("id", user.id)
-        .maybeSingle();
-      const balance = (prof as any)?.credits ?? profile?.credits ?? 0;
-      if (balance < CREDITS_PER_HIRE) {
-        setCreditsAvailable(balance);
-        setInsufficientOpen(true);
-        return;
+    // GATE `payments_enabled`: se il flag è OFF salta il check saldo — la
+    // conferma è gratis (consume_credits lato DB scrive un audit delta=0
+    // e ritorna true anche a saldo zero).
+    if (paymentsEnabled) {
+      try {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("credits")
+          .eq("id", user.id)
+          .maybeSingle();
+        const balance = (prof as any)?.credits ?? profile?.credits ?? 0;
+        if (balance < CREDITS_PER_HIRE) {
+          setCreditsAvailable(balance);
+          setInsufficientOpen(true);
+          return;
+        }
+      } catch (e) {
+        console.error("[accept] credits precheck failed", e);
       }
-    } catch (e) {
-      console.error("[accept] credits precheck failed", e);
     }
     setBusyId(app.id);
     // PUPILLO: regola di OCCUPAZIONE — prima di scalare crediti e assegnare,
@@ -681,7 +689,7 @@ function AnnouncementDetail() {
         </DialogContent>
       </Dialog>
       <InsufficientCreditsDialog
-        open={insufficientOpen}
+        open={insufficientOpen && paymentsEnabled}
         onOpenChange={setInsufficientOpen}
         currentCredits={creditsAvailable}
         returnTo={`/announcements/${id}`}
@@ -951,6 +959,9 @@ function AnnouncementDetail() {
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <Users className="h-5 w-5" /> Candidati ({counts.total})
           </h2>
+          {!paymentsEnabled && (
+            <FreeLaunchBanner className="mb-3" />
+          )}
           <div className={`mb-3 rounded-xl border p-3 text-sm ${isFull ? "border-blue-300 bg-blue-50 text-blue-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
             <div className="font-semibold">{isFull ? "Turno completo" : "Stato assegnazione"}</div>
             <div className="mt-0.5">{positionsBadge}</div>

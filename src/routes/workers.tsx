@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { WorkersMap, type WorkerMapPoint } from "@/components/WorkersMap";
 import { useAvatarUrls } from "@/hooks/use-avatar-urls";
 import { CREDIT_COSTS } from "@/lib/pricing";
+import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { Coins, AlertCircle, MessageSquare, User } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { SpokenLanguagesView, normalizeSpokenLanguages, LANGUAGE_OPTIONS, type SpokenLanguage } from "@/components/SpokenLanguages";
@@ -502,6 +504,7 @@ function computeSpecialBlock(
 
 function WorkersPage() {
   const { user, role, profile } = useAuth();
+  const { enabled: paymentsEnabled } = usePaymentsEnabled();
   const nav = useNavigate();
   const openWorkerProfile = useOpenWorkerProfile();
   const loadWorkerSearchData = useServerFn(loadRestaurantWorkerSearchResults);
@@ -1412,7 +1415,8 @@ function WorkersPage() {
 
   const credits = profile?.credits ?? 0;
   const cost = CREDIT_COSTS.assignWorker;
-  const canAfford = credits >= cost;
+  // Con `payments_enabled` OFF il costo effettivo è 0: qualsiasi saldo va bene.
+  const canAfford = !paymentsEnabled || credits >= cost;
 
   if (loaded) {
     const validCoords = sorted.filter(
@@ -1498,17 +1502,21 @@ function WorkersPage() {
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
       <RequiredReviewsBanner />
       <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
-      <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
-        <div className="flex items-center gap-2">
-          <Coins className="h-4 w-4 text-primary" />
-          <span>
-            Contattare è gratis. La conferma di un lavoratore costa <strong>{cost} crediti</strong>. Paghi solo quando trovi davvero una persona disponibile. Saldo: <strong>{credits}</strong>
-          </span>
+      {paymentsEnabled ? (
+        <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm ${canAfford ? "bg-card" : "border-destructive/40 bg-destructive/5"}`}>
+          <div className="flex items-center gap-2">
+            <Coins className="h-4 w-4 text-primary" />
+            <span>
+              Contattare è gratis. La conferma di un lavoratore costa <strong>{cost} crediti</strong>. Paghi solo quando trovi davvero una persona disponibile. Saldo: <strong>{credits}</strong>
+            </span>
+          </div>
+          {!canAfford && (
+            <Link to="/billing"><Button size="sm" variant="outline" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
+          )}
         </div>
-        {!canAfford && (
-          <Link to="/billing"><Button size="sm" variant="outline" className="gap-1"><AlertCircle className="h-3.5 w-3.5" />Acquista crediti</Button></Link>
-        )}
-      </div>
+      ) : (
+        <FreeLaunchBanner className="mb-4" />
+      )}
       <div className="mb-4 grid gap-3 md:grid-cols-2">
         <div>
           <label className="text-sm font-medium">Annuncio per cui contattare</label>

@@ -31,6 +31,8 @@ import { ReviewLabelsPicker, ReviewLabelsDisplay } from "@/components/ReviewLabe
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { WouldRehirePicker, WouldRehireBadge } from "@/components/WouldRehirePicker";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import {
   CONFIRMATION_TEMPLATE_ID,
@@ -469,6 +471,7 @@ function Thread() {
   const { id } = Route.useParams();
   const { user, role, profile, refresh: refreshAuth } = useAuth();
   const { requireComplete, ensureTargetComplete } = useProfileGate();
+  const { enabled: paymentsEnabled } = usePaymentsEnabled();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   // Ritorno dal flusso Stripe → mostra banner "Pagamento completato"
   // (la conferma del lavoratore resta sempre manuale). Esegue una sola
@@ -1402,17 +1405,22 @@ function Thread() {
         console.error("[accept-candidature] conflict precheck failed", e);
       }
       // Pre-check credits to show a premium dialog instead of a generic toast.
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("credits")
-        .eq("id", user.id)
-        .maybeSingle();
-      const balance = prof?.credits ?? profile?.credits ?? 0;
-      if (balance < CREDITS_PER_HIRE) {
-        console.info("[accept-candidature] insufficient credits", { ...techCtx, balance, required: CREDITS_PER_HIRE });
-        setCreditsAvailable(balance);
-        setInsufficientOpen(true);
-        return;
+      // GATE `payments_enabled`: se il flag è OFF salta il check saldo — la
+      // conferma è gratis (consume_credits lato DB scrive un audit delta=0
+      // e ritorna true anche a saldo zero).
+      if (paymentsEnabled) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("credits")
+          .eq("id", user.id)
+          .maybeSingle();
+        const balance = prof?.credits ?? profile?.credits ?? 0;
+        if (balance < CREDITS_PER_HIRE) {
+          console.info("[accept-candidature] insufficient credits", { ...techCtx, balance, required: CREDITS_PER_HIRE });
+          setCreditsAvailable(balance);
+          setInsufficientOpen(true);
+          return;
+        }
       }
       // Use the application id as the idempotency key: one application
       // == one worker assignment, so the same shift can never be charged twice.
@@ -1443,7 +1451,7 @@ function Thread() {
           announcement_id: app.announcement_id,
           status_before: app.status,
           status_after: "accepted",
-          credits_before: balance,
+          credits_before: paymentsEnabled ? "n/a" : "free_period",
           credits_required: CREDITS_PER_HIRE,
           credits_after: (balAfter as any)?.credits ?? null,
           credit_transaction_created: true,
@@ -2118,6 +2126,9 @@ function Thread() {
             </span>
           )}
         </div>
+        {role === "restaurant" && !paymentsEnabled && (
+          <FreeLaunchBanner className="mb-4" />
+        )}
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <UserAvatar userId={otherId} name={displayOtherName} className="h-12 w-12 shrink-0" />
@@ -3295,7 +3306,7 @@ function Thread() {
         )}
 
         <InsufficientCreditsDialog
-          open={insufficientOpen}
+          open={insufficientOpen && paymentsEnabled}
           onOpenChange={setInsufficientOpen}
           currentCredits={creditsAvailable}
           returnTo={`/messages/${id}`}

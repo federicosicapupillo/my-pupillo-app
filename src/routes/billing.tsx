@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle, Zap } from "lucide-react";
 import { CREDIT_PACKS, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD } from "@/lib/pricing";
+import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { Progress } from "@/components/ui/progress";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ type Tx = { id: string; created_at: string; delta: number; balance_after: number
 
 function Billing() {
   const { profile, user, role, refresh } = useAuth();
+  const { enabled: paymentsEnabled } = usePaymentsEnabled();
   const navigate = useNavigate();
   const { returnTo, action, session_id, checkout } = useSearch({ from: "/billing" });
   const [tx, setTx] = useState<Tx[]>([]);
