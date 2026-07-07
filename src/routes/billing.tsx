@@ -451,6 +451,8 @@ function Billing() {
           );
         })}
       </div>
+      </>
+      )}
 
       <h2 className="text-lg font-semibold mb-3">Storico movimenti</h2>
       <div className="rounded-2xl border bg-card divide-y">
