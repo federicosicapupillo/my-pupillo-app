@@ -270,7 +270,8 @@ function Billing() {
     <AppShell>
       <PageHeader title="Crediti" subtitle="Gestisci il saldo crediti del tuo locale" />
 
-      <PayOnHireBox className="mb-6" />
+      {!paymentsEnabled && <FreeLaunchBanner className="mb-6" />}
+      {paymentsEnabled && <PayOnHireBox className="mb-6" />}
 
       {syncingPayment && (
         <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
