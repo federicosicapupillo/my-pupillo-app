@@ -335,7 +335,7 @@ function Billing() {
         </div>
       </div>
 
-      {isExhausted && (
+      {paymentsEnabled && isExhausted && (
         <div className="mb-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
@@ -346,7 +346,7 @@ function Billing() {
           </div>
         </div>
       )}
-      {isLow && (
+      {paymentsEnabled && isLow && (
         <div className="mb-6 rounded-2xl border border-amber-400/40 bg-amber-50 dark:bg-amber-950/20 p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
