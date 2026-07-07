@@ -2929,7 +2929,10 @@ function Onboarding() {
                       type="button"
                       role="radio"
                       aria-checked={active}
-                      onClick={() => setAreaMode(opt.id)}
+                      onClick={() => {
+                        areaModeTouchedRef.current = true;
+                        setAreaMode(opt.id);
+                      }}
                       className={`text-left rounded-xl border p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${
                         active
                           ? "border-primary bg-primary/5 ring-1 ring-primary"
