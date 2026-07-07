@@ -2289,7 +2289,13 @@ function Onboarding() {
               <p className="text-xs text-muted-foreground -mt-1">
                 Imposta i requisiti standard del locale: verranno precompilati automaticamente in ogni nuovo annuncio.
               </p>
-              <RestaurantRequirementsEditor value={requirements} onChange={setRequirements} />
+              <RestaurantRequirementsEditor
+                value={requirements}
+                onChange={(next) => {
+                  requirementsTouchedRef.current = true;
+                  setRequirements(next);
+                }}
+              />
             </div>
           </>
         ) : role === "worker" ? (
