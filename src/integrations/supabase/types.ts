@@ -76,6 +76,7 @@ export type Database = {
       }
       announcements: {
         Row: {
+          assigned_at: string | null
           assigned_worker_id: string | null
           beard_allowed: string | null
           cancellation_note: string | null
@@ -132,6 +133,7 @@ export type Database = {
           tattoos_allowed: string | null
         }
         Insert: {
+          assigned_at?: string | null
           assigned_worker_id?: string | null
           beard_allowed?: string | null
           cancellation_note?: string | null
@@ -188,6 +190,7 @@ export type Database = {
           tattoos_allowed?: string | null
         }
         Update: {
+          assigned_at?: string | null
           assigned_worker_id?: string | null
           beard_allowed?: string | null
           cancellation_note?: string | null
