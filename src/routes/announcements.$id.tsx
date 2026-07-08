@@ -471,6 +471,10 @@ function AnnouncementDetail() {
         setAlreadyContactAppId(c.existing ? c.applicationId : null);
         return;
       }
+      if ((error.message || "").includes("moderation_blocked")) {
+        toast.error("Operazione non disponibile al momento");
+        return;
+      }
       toast.error(error.message);
       return;
     }
