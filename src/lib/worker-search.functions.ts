@@ -218,6 +218,17 @@ export const loadRestaurantWorkerSearchResults = createServerFn({ method: "POST"
       if (role === "worker") workerRoleUserIds.add(row.user_id);
       if (role === "admin" || role === "restaurant" || role === "ristoratore") blockedUserIds.add(row.user_id);
     }
+    // Escludi utenti nascosti per moderazione (asse separato da account_status).
+    {
+      const { data: hiddenRows, error: hiddenErr } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("moderation_hidden", true);
+      if (hiddenErr) throw new Error(`Errore lettura moderation_hidden: ${hiddenErr.message}`);
+      for (const r of (hiddenRows ?? []) as Array<{ id: string }>) {
+        if (r.id) blockedUserIds.add(r.id);
+      }
+    }
     const allowedWorkerIds = Array.from(workerRoleUserIds).filter((id) => !blockedUserIds.has(id));
 
     let profiles: ProfileRow[] = [];

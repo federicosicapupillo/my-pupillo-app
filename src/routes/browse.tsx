@@ -615,6 +615,9 @@ function Browse() {
     if (error) {
       setSubmitting(false);
       const msg = (error.message || "").toLowerCase();
+      if (msg.includes("moderation_blocked")) {
+        return toast.error("Operazione non disponibile al momento");
+      }
       if (isDuplicateContactError(error) || msg.includes("duplicate") || msg.includes("unique")) {
         const contact = await checkExistingContact({
           announcementId: confirmAnn.id,
