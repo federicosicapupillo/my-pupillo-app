@@ -250,6 +250,7 @@ export type Database = {
       }
       applications: {
         Row: {
+          accepted_at: string | null
           announcement_id: string
           binding_offer: boolean | null
           created_at: string
@@ -267,6 +268,7 @@ export type Database = {
           worker_response_at: string | null
         }
         Insert: {
+          accepted_at?: string | null
           announcement_id: string
           binding_offer?: boolean | null
           created_at?: string
@@ -284,6 +286,7 @@ export type Database = {
           worker_response_at?: string | null
         }
         Update: {
+          accepted_at?: string | null
           announcement_id?: string
           binding_offer?: boolean | null
           created_at?: string
