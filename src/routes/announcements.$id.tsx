@@ -237,7 +237,20 @@ function AnnouncementDetail() {
       .select("id,status,worker_id,proposed_tariff,created_at")
       .eq("announcement_id", id)
       .order("created_at", { ascending: false });
-    const list = (ax as App[]) ?? [];
+    let list = (ax as App[]) ?? [];
+    // Nascondi i candidati bloccati per moderazione (anche se si erano candidati prima del blocco).
+    if (list.length) {
+      const workerIds = Array.from(new Set(list.map((x) => x.worker_id).filter(Boolean)));
+      if (workerIds.length) {
+        const { data: hidden } = await supabase
+          .from("profiles")
+          .select("id")
+          .in("id", workerIds)
+          .eq("moderation_hidden", true);
+        const hiddenSet = new Set(((hidden ?? []) as Array<{ id: string }>).map((r) => r.id));
+        if (hiddenSet.size) list = list.filter((x) => !hiddenSet.has(x.worker_id));
+      }
+    }
     setApps(list);
     // Compute per-application proposal state (latest shift_proposal in chat).
     if (list.length) {
