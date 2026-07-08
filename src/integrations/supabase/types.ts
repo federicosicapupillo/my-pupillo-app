@@ -74,6 +74,36 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          reason: string | null
+          target_user: string | null
+        }
+        Insert: {
+          action: string
+          actor: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string | null
+          target_user?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string | null
+          target_user?: string | null
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           assigned_at: string | null
@@ -936,6 +966,10 @@ export type Database = {
           latitude: number | null
           location_notes: string | null
           longitude: number | null
+          moderation_hidden: boolean
+          moderation_hidden_at: string | null
+          moderation_hidden_by: string | null
+          moderation_reason: string | null
           nationality: string | null
           neighborhood: string | null
           no_show_count: number
@@ -1103,6 +1137,10 @@ export type Database = {
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
+          moderation_hidden?: boolean
+          moderation_hidden_at?: string | null
+          moderation_hidden_by?: string | null
+          moderation_reason?: string | null
           nationality?: string | null
           neighborhood?: string | null
           no_show_count?: number
@@ -1270,6 +1308,10 @@ export type Database = {
           latitude?: number | null
           location_notes?: string | null
           longitude?: number | null
+          moderation_hidden?: boolean
+          moderation_hidden_at?: string | null
+          moderation_hidden_by?: string | null
+          moderation_reason?: string | null
           nationality?: string | null
           neighborhood?: string | null
           no_show_count?: number
@@ -2282,6 +2324,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_set_moderation_hidden: {
+        Args: { _hidden: boolean; _reason?: string; _user_id: string }
+        Returns: undefined
+      }
       announcement_effective_end: {
         Args: { p_announcement_id: string }
         Returns: string
@@ -2495,6 +2541,10 @@ export type Database = {
           latitude: number | null
           location_notes: string | null
           longitude: number | null
+          moderation_hidden: boolean
+          moderation_hidden_at: string | null
+          moderation_hidden_by: string | null
+          moderation_reason: string | null
           nationality: string | null
           neighborhood: string | null
           no_show_count: number
