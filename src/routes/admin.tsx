@@ -27,8 +27,8 @@ export const Route = createFileRoute("/admin")({
   component: () => <RequireRole allow={["admin"]}><Admin /></RequireRole>,
 });
 
-type WorkerRow = { id: string; full_name: string | null; email: string | null; badge: string | null; completed_shifts: number | null; profile_completed: boolean | null; reputation_level: string | null; account_status: string | null };
-type RestaurantRow = { id: string; business_name: string | null; full_name: string | null; email: string | null; city: string | null; credits: number | null; ann_count: number; account_status: string | null };
+type WorkerRow = { id: string; full_name: string | null; email: string | null; badge: string | null; completed_shifts: number | null; profile_completed: boolean | null; reputation_level: string | null; account_status: string | null; moderation_hidden: boolean | null };
+type RestaurantRow = { id: string; business_name: string | null; full_name: string | null; email: string | null; city: string | null; credits: number | null; ann_count: number; account_status: string | null; moderation_hidden: boolean | null };
 type AnnouncementRow = { id: string; restaurant_name: string | null; professional_profile: string | null; service_date: string | null; status: string | null; apps_count: number };
 
 const ANNOUNCEMENT_STATUSES = ["draft","active","assigned","completed","cancelled","expired"] as const;
@@ -103,7 +103,7 @@ function Admin() {
       if (workerIds.length) {
         const { data: wrows } = await supabase
           .from("profiles")
-          .select("id,full_name,email,badge,completed_shifts,profile_completed,reputation_level,account_status")
+          .select("id,full_name,email,badge,completed_shifts,profile_completed,reputation_level,account_status,moderation_hidden")
           .in("id", workerIds)
           .order("completed_shifts", { ascending: false })
           .limit(500);
@@ -115,7 +115,7 @@ function Admin() {
       if (restaurantIds.length) {
         const { data: rrows } = await supabase
           .from("profiles")
-          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,province,province_code,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes,email,credits,account_status")
+          .select("id,full_name,business_name,vat_number,vat_status,vat_company_name,vat_verified_at,venue_type,venue_type_other,city,province,province_code,price_range,default_settings_updated_at,default_required_skills,default_dress_code_items,default_language_requirements,default_license_requirement,default_dress_code_notes,email,credits,account_status,moderation_hidden")
           .in("id", restaurantIds)
           .order("vat_verified_at", { ascending: false });
         setVatList(rrows ?? []);
@@ -146,6 +146,7 @@ function Admin() {
           email: r.email, city: r.city, credits: r.credits,
           ann_count: annCount[r.id] ?? 0,
           account_status: r.account_status ?? null,
+          moderation_hidden: (r as any).moderation_hidden ?? false,
         })));
       }
 
@@ -238,6 +239,29 @@ function Admin() {
     else setRestaurants(rs => rs.map(r => r.id === id ? { ...r, account_status: newStatus } : r));
   }
 
+  async function toggleModerationHidden(id: string, currentlyHidden: boolean, kind: "worker" | "restaurant") {
+    let reason: string | null = null;
+    if (!currentlyHidden) {
+      const r = window.prompt("Motivo del blocco per moderazione (obbligatorio):");
+      if (r === null) return;
+      if (!r.trim()) { toast.error("Il motivo è obbligatorio per bloccare un utente."); return; }
+      reason = r.trim();
+    } else {
+      const r = window.prompt("Motivo dello sblocco (facoltativo):");
+      if (r === null) return;
+      reason = r.trim() ? r.trim() : null;
+    }
+    const { error } = await (supabase as any).rpc("admin_set_moderation_hidden", {
+      _user_id: id,
+      _hidden: !currentlyHidden,
+      _reason: reason,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success(!currentlyHidden ? "Utente nascosto per moderazione" : "Blocco moderazione rimosso");
+    if (kind === "worker") setWorkers(ws => ws.map(w => w.id === id ? { ...w, moderation_hidden: !currentlyHidden } : w));
+    else setRestaurants(rs => rs.map(r => r.id === id ? { ...r, moderation_hidden: !currentlyHidden } : r));
+  }
+
   async function updateAnnouncementStatus(id: string, newStatus: string) {
     const { error } = await supabase.from("announcements").update({ status: newStatus as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
@@ -319,6 +343,7 @@ function Admin() {
                       <td className="py-2 pr-3">{w.full_name ?? "—"}</td>
                       <td className="pr-3">{w.email ?? "—"}</td>
                       <td className="pr-3">{accountStatusBadge(w.account_status)}</td>
+                      <td className="pr-3">{w.moderation_hidden ? <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs text-red-700">Nascosto</span> : <span className="text-xs text-muted-foreground">—</span>}</td>
                       <td className="pr-3">{w.profile_completed ? <span className="text-emerald-600 text-xs">Completo</span> : <span className="text-amber-600 text-xs">Incompleto</span>}</td>
                       <td className="pr-3 capitalize">{w.badge ?? "—"}</td>
                       <td className="pr-3 capitalize">{w.reputation_level ?? "—"}</td>
@@ -326,14 +351,14 @@ function Admin() {
                       <td>
                         <div className="flex gap-1">
                           <Link to="/workers/$id" params={{ id: w.id }}><Button size="sm" variant="outline">Profilo</Button></Link>
-                          {(w.account_status ?? "active") !== "suspended"
-                            ? <Button size="sm" variant="outline" onClick={() => updateAccountStatus(w.id, "suspended", "worker")}>Sospendi</Button>
-                            : <Button size="sm" onClick={() => updateAccountStatus(w.id, "active", "worker")}>Riattiva</Button>}
+                          {!w.moderation_hidden
+                            ? <Button size="sm" variant="outline" onClick={() => toggleModerationHidden(w.id, false, "worker")}>Blocca</Button>
+                            : <Button size="sm" onClick={() => toggleModerationHidden(w.id, true, "worker")}>Sblocca</Button>}
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {workersFiltered.length === 0 && <tr><td colSpan={8} className="py-4 text-center text-muted-foreground">Nessun lavoratore</td></tr>}
+                  {workersFiltered.length === 0 && <tr><td colSpan={9} className="py-4 text-center text-muted-foreground">Nessun lavoratore</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -365,19 +390,20 @@ function Admin() {
                       <td className="pr-3">{r.email ?? "—"}</td>
                       <td className="pr-3">{r.city ?? "—"}</td>
                       <td className="pr-3">{accountStatusBadge(r.account_status)}</td>
+                      <td className="pr-3">{r.moderation_hidden ? <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs text-red-700">Nascosto</span> : <span className="text-xs text-muted-foreground">—</span>}</td>
                       <td className="pr-3">{r.ann_count}</td>
                       <td className="pr-3">{r.credits ?? 0}</td>
                       <td>
                         <div className="flex gap-1">
                           <Link to="/restaurants/$id" params={{ id: r.id }}><Button size="sm" variant="outline">Profilo</Button></Link>
-                          {(r.account_status ?? "active") !== "suspended"
-                            ? <Button size="sm" variant="outline" onClick={() => updateAccountStatus(r.id, "suspended", "restaurant")}>Sospendi</Button>
-                            : <Button size="sm" onClick={() => updateAccountStatus(r.id, "active", "restaurant")}>Riattiva</Button>}
+                          {!r.moderation_hidden
+                            ? <Button size="sm" variant="outline" onClick={() => toggleModerationHidden(r.id, false, "restaurant")}>Blocca</Button>
+                            : <Button size="sm" onClick={() => toggleModerationHidden(r.id, true, "restaurant")}>Sblocca</Button>}
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {restsFiltered.length === 0 && <tr><td colSpan={7} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>}
+                  {restsFiltered.length === 0 && <tr><td colSpan={8} className="py-4 text-center text-muted-foreground">Nessun ristoratore</td></tr>}
                 </tbody>
               </table>
             </div>
