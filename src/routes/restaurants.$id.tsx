@@ -135,6 +135,9 @@ function RestaurantDetailPage() {
         setAlreadyContactAppId(c.existing ? c.applicationId : null);
         return;
       }
+      if ((error.message || "").includes("moderation_blocked")) {
+        return toast.error("Operazione non disponibile al momento");
+      }
       return toast.error(error.message);
     }
     if (app?.id) {
