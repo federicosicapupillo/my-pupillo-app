@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { RequireAuth } from "@/components/RequireAuth";
+import { RequireRole } from "@/components/RequireRole";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,9 +25,9 @@ import { populateTestUsers, countExistingTestProfiles, type PopulateReport } fro
 export const Route = createFileRoute("/admin/backend")({
   head: () => ({ meta: [{ title: "Backend — Admin Pupillo" }] }),
   component: () => (
-    <RequireAuth>
+    <RequireRole allow={["admin"]}>
       <BackendInfo />
-    </RequireAuth>
+    </RequireRole>
   ),
 });
 
