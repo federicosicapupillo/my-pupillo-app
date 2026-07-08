@@ -335,7 +335,7 @@ function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-muted-foreground">
-                  <tr><th className="py-2 pr-3">Nome</th><th className="pr-3">Email</th><th className="pr-3">Account</th><th className="pr-3">Profilo</th><th className="pr-3">Badge</th><th className="pr-3">Reputazione</th><th className="pr-3">Turni</th><th>Azioni</th></tr>
+                  <tr><th className="py-2 pr-3">Nome</th><th className="pr-3">Email</th><th className="pr-3">Account</th><th className="pr-3">Moderazione</th><th className="pr-3">Profilo</th><th className="pr-3">Badge</th><th className="pr-3">Reputazione</th><th className="pr-3">Turni</th><th>Azioni</th></tr>
                 </thead>
                 <tbody>
                   {workersFiltered.slice(0, 200).map(w => (
@@ -381,7 +381,7 @@ function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-muted-foreground">
-                  <tr><th className="py-2 pr-3">Attività</th><th className="pr-3">Email</th><th className="pr-3">Città</th><th className="pr-3">Account</th><th className="pr-3">Annunci</th><th className="pr-3">Crediti</th><th>Azioni</th></tr>
+                  <tr><th className="py-2 pr-3">Attività</th><th className="pr-3">Email</th><th className="pr-3">Città</th><th className="pr-3">Account</th><th className="pr-3">Moderazione</th><th className="pr-3">Annunci</th><th className="pr-3">Crediti</th><th>Azioni</th></tr>
                 </thead>
                 <tbody>
                   {restsFiltered.slice(0, 200).map(r => (
