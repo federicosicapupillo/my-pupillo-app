@@ -2937,19 +2937,6 @@ function Onboarding() {
                   </Select>
                 </div>
               </div>
-              <div>
-                <Label>Descrizione professionale</Label>
-                <Textarea
-                  rows={4}
-                  maxLength={500}
-                  placeholder="Scrivi in poche righe la tua esperienza, il tipo di locali in cui hai lavorato o i servizi che sai gestire."
-                  value={optExp.short_bio}
-                  onChange={(e) => setOptExp({ ...optExp, short_bio: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {optExp.short_bio.length}/500 caratteri. Se non compili, sul profilo apparirà "Profilo non specificato".
-                </p>
-              </div>
             </div>
             <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <div>
