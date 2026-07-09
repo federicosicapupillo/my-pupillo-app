@@ -14,7 +14,6 @@ export type SearchWorkerProfile = {
   spoken_languages: Json;
   professional_profile: string | null;
   default_required_skills: string[] | null;
-  short_bio: string | null;
   primary_role: string | null;
   secondary_roles: string[] | null;
   city: string | null;

@@ -76,7 +76,6 @@ type W = {
   spoken_languages: any;
   professional_profile: string | null;
   default_required_skills: string[] | null;
-  short_bio: string | null;
   primary_role: string | null;
   secondary_roles: string[] | null;
   city: string | null;
@@ -1133,7 +1132,7 @@ function WorkersPage() {
       first: first || fnFirst,
       last: last || fnRest.join(" "),
       title: (w.professional_profile ?? "").toLowerCase(),
-      description: (w.short_bio ?? "").toLowerCase(),
+      description: "",
       roles: [w.primary_role ?? "", ...(w.secondary_roles ?? [])].join(" ").toLowerCase(),
       langs: [
         ...normalizeSpokenLanguages(w.spoken_languages).map((s) => s.language),
@@ -1908,7 +1907,6 @@ function WorkersPage() {
                 <span>{new Date(r.lastReviewAt).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" })}</span>
               </div>
             )}
-            <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{w.professional_profile || "Profilo non specificato"}</p>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span>

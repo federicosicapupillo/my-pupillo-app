@@ -33,7 +33,6 @@ type WorkerProfile = {
   avg_competence: number | null;
   completed_shifts: number | null;
   hourly_rate: number | null;
-  short_bio: string | null;
   weekly_availability: string[] | null;
   hourly_availability: string | null;
   reputation_level: string | null;
@@ -236,14 +235,6 @@ export function WorkerProfilePreviewDialog({
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Zona / Città</h3>
               <p className="text-sm">{zone}</p>
             </section>
-
-            {/* Bio */}
-            {w.short_bio && (
-              <section>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Bio</h3>
-                <p className="text-sm text-foreground/90 leading-relaxed break-words">{w.short_bio}</p>
-              </section>
-            )}
 
             {/* Esperienza */}
             <section className="text-sm space-y-1">

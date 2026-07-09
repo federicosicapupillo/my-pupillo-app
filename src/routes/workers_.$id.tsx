@@ -44,7 +44,6 @@ type Worker = {
   hourly_rate: number | null;
   hourly_availability: string | null;
   weekly_availability: string[] | null;
-  short_bio: string | null;
   age: number | null;
   phone: string | null;
   email: string | null;
