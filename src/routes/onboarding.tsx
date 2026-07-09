@@ -2447,10 +2447,30 @@ function Onboarding() {
                     required
                     maxLength={16}
                     value={personal.tax_code}
-                    onChange={(e) => setPersonal({ ...personal, tax_code: e.target.value.toUpperCase() })}
+                    onChange={(e) => {
+                      setCfCoherenceError(null);
+                      setPersonal({ ...personal, tax_code: e.target.value.toUpperCase() });
+                    }}
+                    onBlur={() => {
+                      const cf = personal.tax_code.trim().toUpperCase();
+                      if (!cf) return;
+                      // Controllo di coerenza al blur solo se abbiamo anche
+                      // data e luogo di nascita: altrimenti si valida solo
+                      // il formato (già segnalato inline sotto).
+                      if (!personal.birth_date && !personal.birth_place.trim()) return;
+                      const res = validateCodiceFiscale({
+                        cf,
+                        birthDate: personal.birth_date,
+                        birthPlace: personal.birth_place,
+                      });
+                      setCfCoherenceError(res.ok ? null : res.error);
+                    }}
                   />
                   {personal.tax_code && !CF_REGEX.test(personal.tax_code.trim().toUpperCase()) && (
                     <p className="text-xs text-destructive mt-1">Codice fiscale non valido.</p>
+                  )}
+                  {cfCoherenceError && CF_REGEX.test(personal.tax_code.trim().toUpperCase()) && (
+                    <p className="text-xs text-destructive mt-1">{cfCoherenceError}</p>
                   )}
                 </div>
                 <div data-field="nationality" className={cn("scroll-mt-24", hasErr("nationality") && errorFieldClass)}>
