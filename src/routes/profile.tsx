@@ -15,7 +15,8 @@ import { KeyRound, Trash2, FileText, Coins, Star, Eye, EyeOff, User, Building2, 
 import { SpokenLanguagesView, SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
-import { provinceCode, splitAddressAndCivic } from "@/lib/italian-locations";
+import { provinceCode, splitAddressAndCivic, findCityProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { CapField } from "@/components/CapField";
 import { ReferralCard } from "@/components/ReferralCard";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
@@ -399,21 +400,26 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
   const displayStreet = profile?.residence_street ?? legacyAddress.street ?? "";
   const displayNumber = profile?.residence_number ?? legacyAddress.civic ?? "";
   const displayAddress = displayStreet && displayNumber ? `${displayStreet}, ${displayNumber}` : "";
+  const displayCap = profile?.residence_postal_code ?? profile?.postal_code ?? "";
   const [editing, setEditing] = useState(false);
   const [city, setCity] = useState<string>(displayCity);
   const [street, setStreet] = useState<string>(displayStreet);
   const [number, setNumber] = useState<string>(displayNumber);
-  const [errors, setErrors] = useState<Partial<Record<"city" | "street" | "number", string>>>({});
+  const [cap, setCap] = useState<string>(displayCap);
+  const [errors, setErrors] = useState<Partial<Record<"city" | "street" | "number" | "cap", string>>>({});
   const { saving, save } = useBoxSave(userId, onSaved, {
     success: "Residenza aggiornata correttamente.",
     error: "Non è stato possibile aggiornare la residenza. Riprova.",
   });
+
+  const provinceForCap = findCityProvince(city)?.province ?? null;
 
   const start = () => {
     const currentLegacyAddress = splitAddressAndCivic(profile?.residence_address);
     setCity(profile?.residence_city ?? profile?.city ?? "");
     setStreet(profile?.residence_street ?? currentLegacyAddress.street ?? "");
     setNumber(profile?.residence_number ?? currentLegacyAddress.civic ?? "");
+    setCap(profile?.residence_postal_code ?? profile?.postal_code ?? "");
     setErrors({});
     setEditing(true);
   };
@@ -424,6 +430,11 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
     if (!city.trim()) next.city = "Seleziona la città di residenza.";
     if (!street.trim()) next.street = "Inserisci la via di residenza.";
     if (!number.trim()) next.number = "Inserisci il numero civico.";
+    if (!cap.trim()) {
+      next.cap = "Inserisci il CAP.";
+    } else if (!isValidCapForCity(provinceForCap, city, cap.trim())) {
+      next.cap = "CAP non valido per la città selezionata.";
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -435,6 +446,8 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
       residence_street: street.trim() || null,
       residence_number: number.trim() || null,
       residence_address: `${street.trim()}, ${number.trim()}`,
+      residence_postal_code: cap.trim() || null,
+      ...(provinceForCap ? { residence_province: provinceForCap } : {}),
     });
     if (ok) setEditing(false);
   };
@@ -448,11 +461,27 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
             <SearchableSelect
               options={WORKER_CITIES as unknown as string[]}
               value={city}
-              onChange={(v) => { setCity(v); if (errors.city) setErrors(p => ({ ...p, city: undefined })); }}
+              onChange={(v) => {
+                setCity(v);
+                setCap("");
+                if (errors.city) setErrors(p => ({ ...p, city: undefined }));
+                if (errors.cap) setErrors(p => ({ ...p, cap: undefined }));
+              }}
               placeholder="Seleziona città"
               triggerClassName={errors.city ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive" : undefined}
             />
             {errors.city && <p className="mt-1 text-xs text-destructive">{errors.city}</p>}
+          </div>
+          <div>
+            <Label>CAP <span className="text-destructive">*</span></Label>
+            <CapField
+              province={provinceForCap}
+              city={city || null}
+              value={cap}
+              onChange={(v) => { setCap(v); if (errors.cap) setErrors(p => ({ ...p, cap: undefined })); }}
+              disabled={!city}
+            />
+            {errors.cap && <p className="mt-1 text-xs text-destructive">{errors.cap}</p>}
           </div>
           <div className="md:col-span-2">
             <Label>Via <span className="text-destructive">*</span></Label>
@@ -485,6 +514,12 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
             <p className="text-sm text-muted-foreground">Indirizzo di residenza</p>
             <p className={cn("text-sm font-medium", !displayAddress && "text-muted-foreground")}>
               {displayAddress || "Indirizzo non completato"}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">CAP</p>
+            <p className={cn("text-sm font-medium", !displayCap && "text-muted-foreground")}>
+              {displayCap || "CAP non completato"}
             </p>
           </div>
         </div>
