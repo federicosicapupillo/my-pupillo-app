@@ -15,7 +15,8 @@ import { KeyRound, Trash2, FileText, Coins, Star, Eye, EyeOff, User, Building2, 
 import { SpokenLanguagesView, SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
-import { provinceCode, splitAddressAndCivic } from "@/lib/italian-locations";
+import { provinceCode, splitAddressAndCivic, findCityProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { CapField } from "@/components/CapField";
 import { ReferralCard } from "@/components/ReferralCard";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
