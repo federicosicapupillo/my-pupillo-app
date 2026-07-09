@@ -442,13 +442,11 @@ function Onboarding() {
     experience_level: "" | "junior" | "intermediate" | "senior" | "esperto";
     hourly_rate: string;
     is_motorized: "" | "yes" | "no";
-    short_bio: string;
   }>({
     experience_years: "",
     experience_level: "",
     hourly_rate: "",
     is_motorized: "",
-    short_bio: "",
   });
 
   const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
