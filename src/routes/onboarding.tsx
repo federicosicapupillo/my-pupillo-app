@@ -1682,7 +1682,6 @@ function Onboarding() {
         experience_level: optExp.experience_level || null,
         desired_hourly_rate: optExp.hourly_rate || null,
         has_vehicle: optExp.is_motorized || "non_specificato",
-        professional_summary_presente: !!optExp.short_bio.trim(),
         dati_salvati_correttamente: true,
       });
     }
