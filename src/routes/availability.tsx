@@ -37,6 +37,7 @@ import {
   isValidTimeRange,
 } from "@/lib/availability";
 import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity } from "@/lib/worker-cities";
+import { useAvailableNowEnabled } from "@/lib/use-available-now-enabled";
 
 // Province codes for the supported worker cities. Keep aligned with WORKER_CITIES.
 const CITY_PROVINCE_CODE: Record<string, string> = {
@@ -158,6 +159,7 @@ function AvailabilityPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { requireCompleteForAvailability, canPerformOperationalAction } = useProfileGate();
+  const { enabled: availableNowEnabled } = useAvailableNowEnabled();
 
   // Defaults from worker profile
   const defaults = useMemo(() => {
@@ -789,6 +791,7 @@ function AvailabilityPage() {
       )}
 
       {/* ───────── DISPONIBILE ORA — funzione veloce e separata ───────── */}
+      {availableNowEnabled && (
       <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
         <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -822,6 +825,7 @@ function AvailabilityPage() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {isEmpty && (
         <Card className="mb-6 border-dashed border-2 bg-card/40">
