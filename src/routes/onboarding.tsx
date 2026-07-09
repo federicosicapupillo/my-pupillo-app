@@ -542,6 +542,11 @@ function Onboarding() {
     );
   }
 
+  // Inline error for the "Codice fiscale" coherence check (decoded CF ↔
+  // birth_date / birth_place). Cleared when the user edits the CF or the
+  // related anagraphic fields.
+  const [cfCoherenceError, setCfCoherenceError] = useState<string | null>(null);
+
   /**
    * Live "any worker date is filled but invalid" flag, used to disable the
    * Salva button. Empty fields are NOT considered invalid here (the existing
