@@ -1632,8 +1632,6 @@ function Onboarding() {
               return Number.isFinite(n) && n >= 0 ? n : null;
             })(),
             is_motorized: optExp.is_motorized === "yes" ? true : optExp.is_motorized === "no" ? false : null,
-            short_bio: optExp.short_bio.trim() ? optExp.short_bio.trim().slice(0, 500) : null,
-            professional_profile: optExp.short_bio.trim() ? optExp.short_bio.trim().slice(0, 500) : ((profile as any)?.professional_profile ?? null),
           };
     // Salva i campi del profilo. Aggiungiamo un timeout lato client per
     // evitare loading infinito se la rete è instabile.
