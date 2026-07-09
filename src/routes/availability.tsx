@@ -791,6 +791,7 @@ function AvailabilityPage() {
       )}
 
       {/* ───────── DISPONIBILE ORA — funzione veloce e separata ───────── */}
+      {availableNowEnabled && (
       <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
         <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -824,6 +825,7 @@ function AvailabilityPage() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {isEmpty && (
         <Card className="mb-6 border-dashed border-2 bg-card/40">
