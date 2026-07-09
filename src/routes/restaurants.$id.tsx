@@ -79,7 +79,7 @@ function RestaurantDetailPage() {
         supabase
           .from("profiles")
           .select(
-            "id, business_name, full_name, avatar_url, city, province, neighborhood, venue_type, venue_type_other, price_range, employees_count, opening_hours, busy_days, rating_avg, reviews_count, plan, badge, primary_role, short_bio, default_dress_code_items, default_dress_code_notes, default_required_skills, default_language_requirements, default_license_requirement",
+            "id, business_name, full_name, avatar_url, city, province, neighborhood, venue_type, venue_type_other, price_range, employees_count, opening_hours, busy_days, rating_avg, reviews_count, plan, badge, primary_role,  default_dress_code_items, default_dress_code_notes, default_required_skills, default_language_requirements, default_license_requirement",
           )
           .eq("id", id)
           .maybeSingle(),

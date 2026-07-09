@@ -14,7 +14,6 @@ export type SearchWorkerProfile = {
   spoken_languages: Json;
   professional_profile: string | null;
   default_required_skills: string[] | null;
-  short_bio: string | null;
   primary_role: string | null;
   secondary_roles: string[] | null;
   city: string | null;
@@ -237,7 +236,7 @@ export const loadRestaurantWorkerSearchResults = createServerFn({ method: "POST"
       const [{ data: profilesData, error: profilesError }, { data: availabilityData, error: availabilityError }] = await Promise.all([
         supabaseAdmin
           .from("profiles")
-          .select("id,email,full_name,first_name,last_name,age,languages,spoken_languages,professional_profile,default_required_skills,short_bio,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,residence_city,residence_province,available_now_until,badge,rating_avg,reliability_pct,no_shows,weekly_availability,last_active_at,service_area_lat,service_area_lng,latitude,longitude,service_area_radius_m,reputation_score,reputation_level,completed_shifts,punctuality_pct,rehire_restaurants_count,reviews_count,search_penalty_active,search_penalty_reason,search_penalty_until,delay_count,account_status,profile_completed,is_deleted,deleted_at,is_demo,seed_batch_id,selected_zones,all_zones,work_area_mode,created_at")
+          .select("id,email,full_name,first_name,last_name,age,languages,spoken_languages,professional_profile,default_required_skills,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,residence_city,residence_province,available_now_until,badge,rating_avg,reliability_pct,no_shows,weekly_availability,last_active_at,service_area_lat,service_area_lng,latitude,longitude,service_area_radius_m,reputation_score,reputation_level,completed_shifts,punctuality_pct,rehire_restaurants_count,reviews_count,search_penalty_active,search_penalty_reason,search_penalty_until,delay_count,account_status,profile_completed,is_deleted,deleted_at,is_demo,seed_batch_id,selected_zones,all_zones,work_area_mode,created_at")
           .in("id", allowedWorkerIds),
         supabaseAdmin
           .from("worker_availability")

@@ -442,13 +442,11 @@ function Onboarding() {
     experience_level: "" | "junior" | "intermediate" | "senior" | "esperto";
     hourly_rate: string;
     is_motorized: "" | "yes" | "no";
-    short_bio: string;
   }>({
     experience_years: "",
     experience_level: "",
     hourly_rate: "",
     is_motorized: "",
-    short_bio: "",
   });
 
   const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
@@ -880,13 +878,11 @@ function Onboarding() {
         })();
         const dbMotor =
           p.is_motorized === true ? "yes" : p.is_motorized === false ? "no" : "";
-        const dbBio = (p.short_bio ?? p.professional_profile ?? "") as string;
         return {
           experience_years: pick(dbYears, s.experience_years),
           experience_level: pick(dbLevel, s.experience_level),
           hourly_rate: pick(dbRate, s.hourly_rate),
           is_motorized: pick(dbMotor, s.is_motorized),
-          short_bio: pick(dbBio, s.short_bio),
         };
       });
     }
@@ -1636,8 +1632,6 @@ function Onboarding() {
               return Number.isFinite(n) && n >= 0 ? n : null;
             })(),
             is_motorized: optExp.is_motorized === "yes" ? true : optExp.is_motorized === "no" ? false : null,
-            short_bio: optExp.short_bio.trim() ? optExp.short_bio.trim().slice(0, 500) : null,
-            professional_profile: optExp.short_bio.trim() ? optExp.short_bio.trim().slice(0, 500) : ((profile as any)?.professional_profile ?? null),
           };
     // Salva i campi del profilo. Aggiungiamo un timeout lato client per
     // evitare loading infinito se la rete è instabile.
@@ -1688,7 +1682,6 @@ function Onboarding() {
         experience_level: optExp.experience_level || null,
         desired_hourly_rate: optExp.hourly_rate || null,
         has_vehicle: optExp.is_motorized || "non_specificato",
-        professional_summary_presente: !!optExp.short_bio.trim(),
         dati_salvati_correttamente: true,
       });
     }
@@ -2943,19 +2936,6 @@ function Onboarding() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div>
-                <Label>Descrizione professionale</Label>
-                <Textarea
-                  rows={4}
-                  maxLength={500}
-                  placeholder="Scrivi in poche righe la tua esperienza, il tipo di locali in cui hai lavorato o i servizi che sai gestire."
-                  value={optExp.short_bio}
-                  onChange={(e) => setOptExp({ ...optExp, short_bio: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {optExp.short_bio.length}/500 caratteri. Se non compili, sul profilo apparirà "Profilo non specificato".
-                </p>
               </div>
             </div>
             <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
