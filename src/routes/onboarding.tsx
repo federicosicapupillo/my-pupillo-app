@@ -1126,9 +1126,19 @@ function Onboarding() {
         personal.residence_postal_code,
       );
       const civicOk = isValidCivicNumber(personal.residence_street_number);
+      // CF coerenza con data/luogo di nascita — decode e verifica.
+      // La check formale (cfOk) resta sopra per gestire il messaggio "CF non valido".
+      const cfCoherence = cfOk
+        ? validateCodiceFiscale({
+            cf: personal.tax_code,
+            birthDate: personal.birth_date,
+            birthPlace: personal.birth_place,
+          })
+        : ({ ok: true } as const);
       if (
         !allFilled ||
         !cfOk ||
+        (cfCoherence.ok === false) ||
         !birthOk ||
         !cityEntry ||
         !provinceOk ||
@@ -1164,21 +1174,21 @@ function Onboarding() {
           : ([] as const);
         const firstEmpty =
           [...orderBase, ...orderDoc].find(([, missing]) => missing)?.[0] ?? null;
-        if (personal.birth_date && !birthOk) {
+        // PRIORITÀ: prima si scorre al PRIMO campo vuoto in ordine DOM,
+        // poi si controllano gli errori di formato dei campi già compilati.
+        // Così se Città, Indirizzo e Numero civico sono tutti vuoti, lo scroll
+        // va sul primo (Città) e non sul controllo di formato del civico.
+        if (firstEmpty) {
+          toast.error("Campo obbligatorio mancante.");
+          markErr(firstEmpty);
+          scrollToField(firstEmpty);
+        } else if (personal.birth_date && !birthOk) {
           const birthMsg =
             (isValidISODate(personal.birth_date)
               ? validateBirthDate(personal.birth_date, today)
               : null) ?? "Data di nascita non valida.";
           setDateFieldErrors((prev) => ({ ...prev, birth_date: birthMsg }));
           toast.error(birthMsg);
-          markErr("birth_date");
-          scrollToField("birth_date");
-        } else if (!personal.birth_date) {
-          setDateFieldErrors((prev) => ({
-            ...prev,
-            birth_date: "Inserisci la tua data di nascita.",
-          }));
-          toast.error("Inserisci la tua data di nascita.");
           markErr("birth_date");
           scrollToField("birth_date");
         } else if (requireIdDocument && !personal.id_document_issued_at) {
@@ -1208,12 +1218,13 @@ function Onboarding() {
         } else if (requireIdDocument && !idDocBackFile && !idDocBackPath) {
           toast.error("Carica il retro del documento.");
           scrollToField("sec-id-document");
-        } else if (firstEmpty) {
-          toast.error("Campo obbligatorio mancante.");
-          markErr(firstEmpty);
-          scrollToField(firstEmpty);
         } else if (!cfOk) {
           toast.error("Codice fiscale non valido.");
+          markErr("tax_code");
+          scrollToField("tax_code");
+        } else if (cfCoherence.ok === false) {
+          setCfCoherenceError(cfCoherence.error);
+          toast.error(cfCoherence.error);
           markErr("tax_code");
           scrollToField("tax_code");
         } else {
@@ -1221,6 +1232,8 @@ function Onboarding() {
         }
         return;
       }
+      // Se siamo arrivati qui, il CF è coerente: puliamo eventuale errore.
+      setCfCoherenceError(null);
       // Document-specific checks: run only when the feature flag is on.
       // With the flag OFF the whole "Documento di identità" section is
       // hidden, so client-side format/coherence/date checks and file
