@@ -314,7 +314,11 @@ function AuthPage() {
   const handleOAuth = async (provider: "google" | "apple") => {
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin + "/dashboard",
+      redirect_uri: window.location.origin,
+      extraParams:
+        provider === "google"
+          ? { scope: "openid email profile", prompt: "select_account" }
+          : undefined,
     });
     if (result.error) {
       setBusy(false);
