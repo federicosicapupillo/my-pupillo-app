@@ -37,6 +37,7 @@ import {
   isValidTimeRange,
 } from "@/lib/availability";
 import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity } from "@/lib/worker-cities";
+import { useAvailableNowEnabled } from "@/lib/use-available-now-enabled";
 
 // Province codes for the supported worker cities. Keep aligned with WORKER_CITIES.
 const CITY_PROVINCE_CODE: Record<string, string> = {
