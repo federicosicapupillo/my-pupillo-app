@@ -447,6 +447,7 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
       residence_number: number.trim() || null,
       residence_address: `${street.trim()}, ${number.trim()}`,
       residence_postal_code: cap.trim() || null,
+      ...(provinceForCap ? { residence_province: provinceForCap } : {}),
     });
     if (ok) setEditing(false);
   };
