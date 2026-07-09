@@ -878,13 +878,11 @@ function Onboarding() {
         })();
         const dbMotor =
           p.is_motorized === true ? "yes" : p.is_motorized === false ? "no" : "";
-        const dbBio = (p.short_bio ?? p.professional_profile ?? "") as string;
         return {
           experience_years: pick(dbYears, s.experience_years),
           experience_level: pick(dbLevel, s.experience_level),
           hourly_rate: pick(dbRate, s.hourly_rate),
           is_motorized: pick(dbMotor, s.is_motorized),
-          short_bio: pick(dbBio, s.short_bio),
         };
       });
     }
