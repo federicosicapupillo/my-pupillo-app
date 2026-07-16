@@ -10,6 +10,7 @@ import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
+import { useReferralEnabledForRole } from "@/lib/use-referral-enabled";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { WorkerAvailabilitySummary } from "@/components/WorkerAvailabilitySummary";
 import { RestaurantReputationCard } from "@/components/RestaurantReputationCard";
@@ -473,12 +474,18 @@ function DashboardInner() {
         </div>
       )}
 
-      {role !== "worker" && (
-        <div className="mt-6">
-          <ReferralCard />
-        </div>
-      )}
+      {role !== "worker" && <RestaurantReferralSlot role={role} />}
     </AppShell>
+  );
+}
+
+function RestaurantReferralSlot({ role }: { role: string | null }) {
+  const status = useReferralEnabledForRole(role);
+  if (status !== "enabled") return null;
+  return (
+    <div className="mt-6">
+      <ReferralCard />
+    </div>
   );
 }
 
@@ -718,15 +725,8 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
 
 
 
-      {/* 7. REFERRAL */}
-      <section>
-        <SectionHeader
-          icon={Gift}
-          title="Presenta un amico"
-          subtitle="Più amici inviti, più cresce la community"
-        />
-        <ReferralCard />
-      </section>
+      {/* 7. REFERRAL — gated by feature flag worker_referral_enabled */}
+      <WorkerReferralSection />
 
       <div aria-hidden className="h-2" />
       {/* keep level reference for future use */}
@@ -744,6 +744,7 @@ function StatusPill({
   okLabel: string;
   koLabel: string;
 }) {
+  // placeholder retained
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
@@ -755,6 +756,22 @@ function StatusPill({
       {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
       {ok ? okLabel : koLabel}
     </span>
+  );
+}
+
+function WorkerReferralSection() {
+  // Il worker home renderizza sempre per un utente worker: usiamo il flag worker.
+  const status = useReferralEnabledForRole("worker");
+  if (status !== "enabled") return null;
+  return (
+    <section>
+      <SectionHeader
+        icon={Gift}
+        title="Presenta un amico"
+        subtitle="Più amici inviti, più cresce la community"
+      />
+      <ReferralCard />
+    </section>
   );
 }
 

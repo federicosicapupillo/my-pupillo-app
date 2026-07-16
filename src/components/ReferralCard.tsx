@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { useReferralEnabledForRole } from "@/lib/use-referral-enabled";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Gift, Copy, Share2, Coins, Users, Clock, CheckCircle2 } from "lucide-react";
@@ -18,7 +19,8 @@ type Invite = {
 };
 
 export function ReferralCard() {
-  const { profile, user } = useAuth();
+  const { profile, user, role } = useAuth();
+  const referralStatus = useReferralEnabledForRole(role);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +32,8 @@ export function ReferralCard() {
     : "";
 
   useEffect(() => {
-    if (!user) return;
+    // Fail-closed: nessuna query referral in loading / disabled / error.
+    if (!user || referralStatus !== "enabled") return;
     (async () => {
       const { data } = await supabase
         .from("referral_invites")
@@ -41,7 +44,7 @@ export function ReferralCard() {
       setInvites((data as any) ?? []);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, referralStatus]);
 
   const copy = async (text: string, label: string) => {
     try {
@@ -57,6 +60,9 @@ export function ReferralCard() {
     const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(url, "_blank");
   };
+
+  // Non montare nulla se il flag non è esplicitamente enabled per il ruolo.
+  if (referralStatus !== "enabled") return null;
 
   const completed = invites.filter(i => i.status === "completed").length;
   const pending = invites.filter(i => i.status !== "completed" && i.status !== "rejected").length;

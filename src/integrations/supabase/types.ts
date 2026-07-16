@@ -2667,6 +2667,10 @@ export type Database = {
         Args: { _city: string; _key: string }
         Returns: boolean
       }
+      is_referral_enabled_for_user: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       is_review_visible_to: {
         Args: { _review_id: string; _user_id: string }
         Returns: boolean
