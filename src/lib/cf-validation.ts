@@ -4,16 +4,22 @@
  * Wraps `codice-fiscale-js` to provide a single entry point that:
  *  1. Validates the CF format + checksum (already covered by CF_REGEX but the
  *     lib also checks the control character).
- *  2. Decodes the CF and checks that the encoded birth date matches the
- *     `birth_date` (ISO yyyy-mm-dd) filled in the form.
- *  3. If a `birth_place` is provided AND the lib can resolve the CF's Belfiore
- *     code to a comune, compares the two names (case- and accent-insensitive).
- *     If the Belfiore code is unknown (foreign / Z000, obsolete comuni), we
- *     do NOT raise a false negative — the check is skipped.
+ *  2. Verifies coherence with the anagrafica actually collected by Pupillo:
+ *     nome, cognome, data di nascita, comune/Stato estero di nascita.
+ *     Il sesso NON viene mai controllato perché non viene richiesto in
+ *     registrazione: la data di nascita è confrontata con giorno decodificato
+ *     modulo 40 (day+40 per le donne).
+ *  3. Nome e cognome vengono normalizzati (uppercase, rimozione accenti,
+ *     apostrofi, trattini, spazi multipli) prima del calcolo dei codici
+ *     consonanti/vocali. La libreria applica le regole standard per nomi
+ *     con 4+ consonanti e per cognomi/nomi composti.
+ *  4. Se il Belfiore non è risolvibile (foreign / Z-code / comuni storici),
+ *     il controllo del luogo viene saltato per evitare falsi negativi.
  *
  * Omocodie: `computeInverse` transparently handles the standard omocodia
- * substitutions, so a CF with letter substitutions in numeric positions still
- * yields the correct decoded fields.
+ * substitutions per data/luogo; i primi 6 caratteri (cognome+nome) sono
+ * sempre lettere e non sono toccati dall'omocodia, quindi il confronto
+ * con i codici calcolati è diretto.
  */
 import CodiceFiscale from "codice-fiscale-js";
 
@@ -21,6 +27,8 @@ export type CfValidationInput = {
   cf: string;
   birthDate?: string | null; // ISO yyyy-mm-dd
   birthPlace?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
 };
 
 export type CfValidationResult =
@@ -30,6 +38,10 @@ export type CfValidationResult =
 const CF_REGEX =
   /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$|^[0-9]{11}$/;
 
+/** Messaggio unico di incoerenza CF ↔ anagrafica. */
+export const CF_MISMATCH_MESSAGE =
+  "Il codice fiscale non corrisponde ai dati anagrafici inseriti. Controlla nome, cognome, data e luogo di nascita.";
+
 function normalizePlace(s: string): string {
   return s
     .normalize("NFD")
@@ -37,6 +49,23 @@ function normalizePlace(s: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+/**
+ * Normalizza nome/cognome per il calcolo del codice CF:
+ *  - NFD + rimozione diacritici (È → E, ç → C)
+ *  - uppercase
+ *  - rimozione apostrofi, trattini, punti, spazi multipli
+ *  - collassa in una stringa di sole A-Z (la libreria applica poi le
+ *    regole consonanti/vocali standard, inclusa la gestione di nomi
+ *    con 4+ consonanti)
+ */
+function normalizeAnagName(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
 }
 
 export function validateCodiceFiscale(
@@ -68,6 +97,36 @@ export function validateCodiceFiscale(
     return { ok: true };
   }
 
+  // --- Coerenza cognome (primi 3 caratteri, lettere, immuni da omocodia) ---
+  if (input.lastName && input.lastName.trim()) {
+    const norm = normalizeAnagName(input.lastName);
+    if (norm.length > 0) {
+      try {
+        const expected = CodiceFiscale.surnameCode(norm);
+        if (expected && expected.length === 3 && cf.slice(0, 3) !== expected) {
+          return { ok: false, field: "tax_code", error: CF_MISMATCH_MESSAGE };
+        }
+      } catch {
+        // se la libreria non riesce a calcolare, non blocchiamo
+      }
+    }
+  }
+
+  // --- Coerenza nome (caratteri 4-6) ---
+  if (input.firstName && input.firstName.trim()) {
+    const norm = normalizeAnagName(input.firstName);
+    if (norm.length > 0) {
+      try {
+        const expected = CodiceFiscale.nameCode(norm);
+        if (expected && expected.length === 3 && cf.slice(3, 6) !== expected) {
+          return { ok: false, field: "tax_code", error: CF_MISMATCH_MESSAGE };
+        }
+      } catch {
+        // ignora
+      }
+    }
+  }
+
   // Coerenza con data di nascita
   if (input.birthDate) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input.birthDate);
@@ -76,12 +135,7 @@ export function validateCodiceFiscale(
       const mo = Number(m[2]);
       const d = Number(m[3]);
       if (decoded.year !== y || decoded.month !== mo || decoded.day !== d) {
-        return {
-          ok: false,
-          field: "tax_code",
-          error:
-            "Il codice fiscale non corrisponde alla data di nascita inserita.",
-        };
+        return { ok: false, field: "tax_code", error: CF_MISMATCH_MESSAGE };
       }
     }
   }
@@ -93,12 +147,7 @@ export function validateCodiceFiscale(
     // Skip if the decoded name looks like a placeholder / foreign (Z-code) or if user typed something too short.
     if (expected && provided && expected.length > 1 && provided.length > 1) {
       if (expected !== provided) {
-        return {
-          ok: false,
-          field: "tax_code",
-          error:
-            "Il codice fiscale non corrisponde al luogo di nascita inserito.",
-        };
+        return { ok: false, field: "tax_code", error: CF_MISMATCH_MESSAGE };
       }
     }
   }
