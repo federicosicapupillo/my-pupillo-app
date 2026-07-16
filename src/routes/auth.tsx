@@ -534,6 +534,17 @@ function AuthPage() {
                         </li>
                       );
                     })}
+                    <li
+                      className={`flex items-start gap-1.5 ${
+                        passwordKnownWeak ? "text-destructive" : "text-muted-foreground"
+                      }`}
+                    >
+                      <X className="h-3 w-3 mt-0.5 shrink-0" />
+                      <span>
+                        La password non deve essere comune, facilmente prevedibile o presente
+                        negli archivi delle password compromesse.
+                      </span>
+                    </li>
                   </ul>
                 </div>
                 <div>
