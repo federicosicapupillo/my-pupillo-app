@@ -12,14 +12,15 @@ import { createDebouncedReload } from "@/lib/inbox-realtime";
 import { countUnreadChats } from "@/lib/unread-chats";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { AssistantFab } from "@/components/assistant/AssistantFab";
-import { useMapEnabled } from "@/lib/use-map-enabled";
+import { useMapEnabledForRole } from "@/lib/use-map-enabled";
 
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { profile, role, signOut, user } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
-  const { workerEnabled: workerMapEnabled, restaurantEnabled: restaurantMapEnabled } = useMapEnabled();
+  const mapStatus = useMapEnabledForRole(role);
+  const showMapNav = mapStatus === "enabled"; // fail-closed: loading/disabled/error → nascosto
 
   // Home dinamica in base al ruolo dell'utente
   const homeTo: string = !user
@@ -37,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     role === "worker" && { to: "/browse", label: "Trova offerte", icon: Compass },
     role === "worker" && { to: "/availability", label: "Disponibilità", icon: CalendarDays },
     (role === "worker" || role === "restaurant") && { to: "/shifts", label: "I miei turni", icon: CalendarClock },
-    ((role === "worker" && workerMapEnabled) || (role === "restaurant" && restaurantMapEnabled)) && { to: "/mappa", label: "Mappa", icon: MapIcon },
+    (role === "worker" || role === "restaurant") && showMapNav && { to: "/mappa", label: "Mappa", icon: MapIcon },
     { to: "/messages", label: "Messaggi", icon: MessageSquare },
     role === "restaurant" && { to: "/billing", label: "Crediti", icon: Coins },
     { to: "/profile", label: "Profilo", icon: Settings },

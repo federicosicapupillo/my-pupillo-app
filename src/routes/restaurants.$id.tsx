@@ -17,6 +17,7 @@ import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
 import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
+import { useMapEnabledForRole } from "@/lib/use-map-enabled";
 
 export const Route = createFileRoute("/restaurants/$id")({
   head: () => ({ meta: [{ title: "Dettaglio ristoratore — Pupillo" }] }),
@@ -51,6 +52,8 @@ function RestaurantDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const mapStatus = useMapEnabledForRole(role);
+  const showMapCta = mapStatus === "enabled";
   const [r, setR] = useState<Restaurant | null>(null);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +216,9 @@ function RestaurantDetailPage() {
         <PageHeader title="Ristoratore non trovato" />
         <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
           Il profilo richiesto non esiste o è stato rimosso.
+        {showMapCta && (
           <div className="mt-4"><Link to="/mappa"><Button variant="outline" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Torna alla mappa</Button></Link></div>
+        )}
         </div>
       </AppShell>
     );
@@ -227,7 +232,12 @@ function RestaurantDetailPage() {
   return (
     <AppShell>
       <div className="mb-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/mappa" })} className="gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => (showMapCta ? navigate({ to: "/mappa" }) : navigate({ to: "/dashboard" }))}
+          className="gap-1"
+        >
           <ArrowLeft className="h-4 w-4" />Indietro
         </Button>
       </div>
@@ -365,7 +375,7 @@ function RestaurantDetailPage() {
             ) : (
               <p className="text-xs text-muted-foreground">Questo ristoratore non è attualmente attivo.</p>
             )}
-            {r.service_area_lat != null && r.service_area_lng != null && (
+            {showMapCta && r.service_area_lat != null && r.service_area_lng != null && (
               <Link to="/mappa" className="block">
                 <Button variant="ghost" className="w-full gap-2"><MapIcon className="h-4 w-4" />Mostra sulla mappa</Button>
               </Link>

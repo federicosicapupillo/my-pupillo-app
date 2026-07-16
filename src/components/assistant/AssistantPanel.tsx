@@ -18,6 +18,7 @@ import {
 import { askAssistant, type AssistantReply } from "@/lib/assistant.functions";
 import { ReportProblemDialog } from "@/components/assistant/ReportProblemDialog";
 import { cn } from "@/lib/utils";
+import { useMapEnabledForRole } from "@/lib/use-map-enabled";
 
 type ChatMessage = {
   id: string;
@@ -50,7 +51,24 @@ export function AssistantPanel({
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const welcome = useMemo(() => welcomeMessage(role), [role]);
-  const faqs = useMemo(() => getContextualFaqs(loc.pathname, role), [loc.pathname, role]);
+  const mapStatus = useMapEnabledForRole(role);
+  const mapEnabled = mapStatus === "enabled"; // fail-closed: loading/disabled/error → mappa nascosta
+  // Rimuove FAQ e CTA che puntano a /mappa quando la funzionalità non è
+  // attiva per il ruolo corrente. Il server function `askAssistant` non
+  // legge i feature flag (limite documentato): il filtro CTA client-side è
+  // la barriera che impedisce di suggerire "Vai alla mappa" quando la
+  // funzione è disattivata.
+  const stripMapCta = (cta: AssistantCta | null | undefined): AssistantCta | null | undefined =>
+    !mapEnabled && cta && cta.to === "/mappa" ? null : cta;
+  const rawFaqs = useMemo(() => getContextualFaqs(loc.pathname, role), [loc.pathname, role]);
+  const faqs = useMemo(
+    () => (mapEnabled ? rawFaqs : rawFaqs.filter((f) => f.cta?.to !== "/mappa" && !f.contextPaths?.includes("/mappa"))),
+    [rawFaqs, mapEnabled],
+  );
+  const errorFaqs = useMemo(
+    () => (mapEnabled ? ERROR_FAQS : ERROR_FAQS.filter((f) => f.cta?.to !== "/mappa")),
+    [mapEnabled],
+  );
   const visibleFaqs = showAllFaqs ? faqs : faqs.slice(0, 6);
 
   // Reset when reopening on a different page or when opening the panel
@@ -80,7 +98,7 @@ export function AssistantPanel({
       });
       setMessages((prev) => [
         ...prev,
-        { id: uid(), role: "assistant", content: res.reply, cta: res.cta ?? null },
+        { id: uid(), role: "assistant", content: res.reply, cta: stripMapCta(res.cta) ?? null },
       ]);
     } catch (err) {
       setMessages((prev) => [
@@ -101,7 +119,7 @@ export function AssistantPanel({
     setMessages((prev) => [
       ...prev,
       { id: uid(), role: "user", content: faq.question },
-      { id: uid(), role: "assistant", content: faq.answer, cta: faq.cta ?? null },
+      { id: uid(), role: "assistant", content: faq.answer, cta: stripMapCta(faq.cta) ?? null },
     ]);
   };
 
@@ -156,7 +174,7 @@ export function AssistantPanel({
             )}
             <div className="pt-3 text-xs uppercase tracking-wide text-muted-foreground">Problemi comuni</div>
             <div className="flex flex-wrap gap-2">
-              {ERROR_FAQS.map((f) => (
+              {errorFaqs.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => askFaq(f)}
