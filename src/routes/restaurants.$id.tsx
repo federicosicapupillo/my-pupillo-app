@@ -49,12 +49,11 @@ function statusBadge(s?: string | null) {
 }
 
 function RestaurantDetailPage() {
-  const { user, role } = useAuth();
-  const mapStatus = useMapEnabledForRole(role);
-  const showMapCta = mapStatus === "enabled";
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const mapStatus = useMapEnabledForRole(role);
+  const showMapCta = mapStatus === "enabled";
   const [r, setR] = useState<Restaurant | null>(null);
   const [anns, setAnns] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
