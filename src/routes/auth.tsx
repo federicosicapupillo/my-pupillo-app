@@ -57,10 +57,14 @@ function AuthPage() {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
   const [resendBusy, setResendBusy] = useState(false);
+  // Passwords rejected by the backend as compromised/common/weak.
+  // Used to mark the "not-compromised" criterion as failed for those exact values.
+  const [weakPasswords, setWeakPasswords] = useState<Set<string>>(() => new Set());
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
   const passwordStrongEnough = isPasswordStrongEnough(password);
   const passwordsMatch = doPasswordsMatch(password, confirmPassword);
+  const passwordKnownWeak = password.length > 0 && weakPasswords.has(password);
   const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ' \-]+$/;
   const firstNameTrim = firstName.trim();
   const lastNameTrim = lastName.trim();
@@ -192,6 +196,10 @@ function AuthPage() {
       toast.error("La password deve contenere almeno 8 caratteri, una lettera e un numero.");
       return;
     }
+    if (passwordKnownWeak) {
+      toast.error("Questa password è troppo comune o facile da indovinare. Scegli una password diversa e più sicura.");
+      return;
+    }
     if (password !== confirmPassword) {
       toast.error("Le password non coincidono.");
       return;
@@ -221,6 +229,20 @@ function AuthPage() {
       console.warn("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] signup error, popup NOT shown", { message: error.message });
       if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already")) {
         toast.error("Questa email risulta già registrata. Accedi oppure recupera la password.");
+      } else if (
+        msg.includes("known to be weak") ||
+        msg.includes("weak password") ||
+        msg.includes("pwned") ||
+        msg.includes("compromised") ||
+        msg.includes("easy to guess") ||
+        msg.includes("common password")
+      ) {
+        setWeakPasswords((prev) => {
+          const next = new Set(prev);
+          next.add(password);
+          return next;
+        });
+        toast.error("Questa password è troppo comune o facile da indovinare. Scegli una password diversa e più sicura.");
       } else {
         toast.error(error.message);
       }
@@ -512,6 +534,17 @@ function AuthPage() {
                         </li>
                       );
                     })}
+                    <li
+                      className={`flex items-start gap-1.5 ${
+                        passwordKnownWeak ? "text-destructive" : "text-muted-foreground"
+                      }`}
+                    >
+                      <X className="h-3 w-3 mt-0.5 shrink-0" />
+                      <span>
+                        La password non deve essere comune, facilmente prevedibile o presente
+                        negli archivi delle password compromesse.
+                      </span>
+                    </li>
                   </ul>
                 </div>
                 <div>
@@ -587,7 +620,8 @@ function AuthPage() {
                     !emailsMatch ||
                     !restaurantAgeOk ||
                     !passwordStrongEnough ||
-                    !passwordsMatch
+                    !passwordsMatch ||
+                    passwordKnownWeak
                   }
                 >
                   {busy ? "Attendi..." : "Crea profilo"}
