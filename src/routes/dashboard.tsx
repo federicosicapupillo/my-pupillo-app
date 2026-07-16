@@ -10,6 +10,7 @@ import { Briefcase, Plus, Users, MessageSquare, AlertCircle, Coins, CheckCircle2
 import { ProfileStatusBanner } from "@/components/ProfileStatusBanner";
 import { toastOnce } from "@/lib/toast-dedup";
 import { ReferralCard } from "@/components/ReferralCard";
+import { useReferralEnabledForRole } from "@/lib/use-referral-enabled";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { WorkerAvailabilitySummary } from "@/components/WorkerAvailabilitySummary";
 import { RestaurantReputationCard } from "@/components/RestaurantReputationCard";
