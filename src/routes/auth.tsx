@@ -620,7 +620,8 @@ function AuthPage() {
                     !emailsMatch ||
                     !restaurantAgeOk ||
                     !passwordStrongEnough ||
-                    !passwordsMatch
+                    !passwordsMatch ||
+                    passwordKnownWeak
                   }
                 >
                   {busy ? "Attendi..." : "Crea profilo"}
