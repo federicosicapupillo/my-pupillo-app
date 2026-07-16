@@ -474,12 +474,18 @@ function DashboardInner() {
         </div>
       )}
 
-      {role !== "worker" && (
-        <div className="mt-6">
-          <ReferralCard />
-        </div>
-      )}
+      {role !== "worker" && <RestaurantReferralSlot role={role} />}
     </AppShell>
+  );
+}
+
+function RestaurantReferralSlot({ role }: { role: string | null }) {
+  const status = useReferralEnabledForRole(role);
+  if (status !== "enabled") return null;
+  return (
+    <div className="mt-6">
+      <ReferralCard />
+    </div>
   );
 }
 
