@@ -1130,6 +1130,8 @@ function Onboarding() {
             cf: personal.tax_code,
             birthDate: personal.birth_date,
             birthPlace: personal.birth_place,
+            firstName: personal.first_name,
+            lastName: personal.last_name,
           })
         : ({ ok: true } as const);
       if (
@@ -2456,6 +2458,8 @@ function Onboarding() {
                         cf,
                         birthDate: personal.birth_date,
                         birthPlace: personal.birth_place,
+                        firstName: personal.first_name,
+                        lastName: personal.last_name,
                       });
                       setCfCoherenceError(res.ok ? null : res.error);
                     }}
