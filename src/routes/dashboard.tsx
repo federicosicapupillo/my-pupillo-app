@@ -725,15 +725,8 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
 
 
 
-      {/* 7. REFERRAL */}
-      <section>
-        <SectionHeader
-          icon={Gift}
-          title="Presenta un amico"
-          subtitle="Più amici inviti, più cresce la community"
-        />
-        <ReferralCard />
-      </section>
+      {/* 7. REFERRAL — gated by feature flag worker_referral_enabled */}
+      <WorkerReferralSection />
 
       <div aria-hidden className="h-2" />
       {/* keep level reference for future use */}
