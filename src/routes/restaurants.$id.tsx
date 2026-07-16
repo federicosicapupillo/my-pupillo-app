@@ -17,6 +17,7 @@ import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
 import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
+import { useMapEnabledForRole } from "@/lib/use-map-enabled";
 
 export const Route = createFileRoute("/restaurants/$id")({
   head: () => ({ meta: [{ title: "Dettaglio ristoratore — Pupillo" }] }),
@@ -48,6 +49,8 @@ function statusBadge(s?: string | null) {
 }
 
 function RestaurantDetailPage() {
+  const mapStatus = useMapEnabledForRole(useAuth().role);
+  const showMapCta = mapStatus === "enabled";
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
