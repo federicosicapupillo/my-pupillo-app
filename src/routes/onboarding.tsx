@@ -63,6 +63,7 @@ import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { WORKER_CITIES, zonesForCity, ALL_ZONES_OPTION } from "@/lib/worker-cities";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { NATIONALITIES } from "@/lib/nationalities";
 import { ZonesMultiSelect } from "@/components/ZonesMultiSelect";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
