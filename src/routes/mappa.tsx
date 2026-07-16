@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useMapEnabled } from "@/lib/use-map-enabled";
+import { useMapEnabledForRole } from "@/lib/use-map-enabled";
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -72,22 +72,23 @@ export const Route = createFileRoute("/mappa")({
 function MapPageGate() {
   const { role } = useAuth();
   const nav = useNavigate();
-  const { workerEnabled, restaurantEnabled, loaded } = useMapEnabled();
+  const status = useMapEnabledForRole(role);
 
-  const blocked =
-    loaded &&
-    ((role === "worker" && !workerEnabled) ||
-      (role === "restaurant" && !restaurantEnabled));
-
+  // FAIL-CLOSED: qualunque stato diverso da "enabled" (loading, disabled,
+  // error) NON deve montare MapPage. Solo "enabled" autorizza il mount:
+  // nessuna query Supabase, geolocalizzazione, marker, listener o
+  // subscription viene inizializzata prima della conferma esplicita.
   useEffect(() => {
-    if (blocked) nav({ to: "/dashboard", replace: true });
-  }, [blocked, nav]);
+    if (status === "disabled" || status === "error") {
+      nav({ to: "/dashboard", replace: true });
+    }
+  }, [status, nav]);
 
-  if (!loaded || blocked) {
+  if (status !== "enabled") {
     return (
       <AppShell>
         <div className="min-h-[40vh] flex items-center justify-center text-sm text-muted-foreground">
-          Caricamento…
+          {status === "loading" ? "Caricamento…" : "Funzionalità non disponibile."}
         </div>
       </AppShell>
     );
