@@ -57,10 +57,14 @@ function AuthPage() {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
   const [resendBusy, setResendBusy] = useState(false);
+  // Passwords rejected by the backend as compromised/common/weak.
+  // Used to mark the "not-compromised" criterion as failed for those exact values.
+  const [weakPasswords, setWeakPasswords] = useState<Set<string>>(() => new Set());
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
   const passwordStrongEnough = isPasswordStrongEnough(password);
   const passwordsMatch = doPasswordsMatch(password, confirmPassword);
+  const passwordKnownWeak = password.length > 0 && weakPasswords.has(password);
   const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ' \-]+$/;
   const firstNameTrim = firstName.trim();
   const lastNameTrim = lastName.trim();
