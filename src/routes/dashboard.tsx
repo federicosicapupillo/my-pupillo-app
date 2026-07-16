@@ -744,6 +744,7 @@ function StatusPill({
   okLabel: string;
   koLabel: string;
 }) {
+  // placeholder retained
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
@@ -755,6 +756,22 @@ function StatusPill({
       {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
       {ok ? okLabel : koLabel}
     </span>
+  );
+}
+
+function WorkerReferralSection() {
+  // Il worker home renderizza sempre per un utente worker: usiamo il flag worker.
+  const status = useReferralEnabledForRole("worker");
+  if (status !== "enabled") return null;
+  return (
+    <section>
+      <SectionHeader
+        icon={Gift}
+        title="Presenta un amico"
+        subtitle="Più amici inviti, più cresce la community"
+      />
+      <ReferralCard />
+    </section>
   );
 }
 
