@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useMapEnabled } from "@/lib/use-map-enabled";
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -65,8 +66,34 @@ function todayIso(): string {
 
 export const Route = createFileRoute("/mappa")({
   head: () => ({ meta: [{ title: "Mappa — Pupillo" }] }),
-  component: () => <RequireAuth><MapPage /></RequireAuth>,
+  component: () => <RequireAuth><MapPageGate /></RequireAuth>,
 });
+
+function MapPageGate() {
+  const { role } = useAuth();
+  const nav = useNavigate();
+  const { workerEnabled, restaurantEnabled, loaded } = useMapEnabled();
+
+  const blocked =
+    loaded &&
+    ((role === "worker" && !workerEnabled) ||
+      (role === "restaurant" && !restaurantEnabled));
+
+  useEffect(() => {
+    if (blocked) nav({ to: "/dashboard", replace: true });
+  }, [blocked, nav]);
+
+  if (!loaded || blocked) {
+    return (
+      <AppShell>
+        <div className="min-h-[40vh] flex items-center justify-center text-sm text-muted-foreground">
+          Caricamento…
+        </div>
+      </AppShell>
+    );
+  }
+  return <MapPage />;
+}
 
 type Restaurant = {
   id: string;
