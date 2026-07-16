@@ -2469,47 +2469,21 @@ function Onboarding() {
                 </div>
                 <div data-field="nationality" className={cn("scroll-mt-24", hasErr("nationality") && errorFieldClass)}>
                   <Label>Nazionalità *</Label>
-                  {(() => {
-                    const NATIONALITIES = [
-                      "Italiana","Albanese","Rumena","Marocchina","Egiziana","Tunisina",
-                      "Francese","Spagnola","Tedesca","Inglese","Ucraina","Moldava",
-                      "Peruviana","Brasiliana","Argentina","Cinese","Indiana","Pakistana",
-                      "Bangladese","Filippina",
-                    ];
-                    const current = personal.nationality?.trim() || "";
-                    const isPreset = NATIONALITIES.includes(current);
-                    const selectValue = current === "" ? "" : isPreset ? current : "Altro";
-                    return (
-                      <>
-                        <Select
-                          value={selectValue}
-                          onValueChange={(v) => {
-                            if (v === "Altro") {
-                              setPersonal({ ...personal, nationality: isPreset ? "" : current });
-                            } else {
-                              setPersonal({ ...personal, nationality: v });
-                            }
-                          }}
-                        >
-                          <SelectTrigger><SelectValue placeholder="Seleziona nazionalità" /></SelectTrigger>
-                          <SelectContent>
-                            {NATIONALITIES.map((n) => (
-                              <SelectItem key={n} value={n}>{n}</SelectItem>
-                            ))}
-                            <SelectItem value="Altro">Altro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {selectValue === "Altro" && (
-                          <Input
-                            className="mt-2"
-                            placeholder="Specifica nazionalità"
-                            value={isPreset ? "" : current}
-                            onChange={(e) => setPersonal({ ...personal, nationality: e.target.value })}
-                          />
-                        )}
-                      </>
-                    );
-                  })()}
+                  <SearchableSelect
+                    options={NATIONALITIES.map((n) => ({
+                      value: n.value,
+                      label: `${n.flag} ${n.value}`,
+                    }))}
+                    value={personal.nationality?.trim() || ""}
+                    onChange={(v) => setPersonal({ ...personal, nationality: v })}
+                    placeholder="Seleziona nazionalità"
+                    searchPlaceholder="Cerca nazionalità…"
+                  />
+                  {hasErr("nationality") && (
+                    <p className="text-xs text-destructive mt-1">
+                      Seleziona la tua nazionalità per continuare.
+                    </p>
+                  )}
                 </div>
                 <div data-field="residence_city" className={cn("scroll-mt-24", hasErr("residence_city") && errorFieldClass)}>
                   <Label>Città di residenza *</Label>
