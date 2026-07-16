@@ -196,6 +196,10 @@ function AuthPage() {
       toast.error("La password deve contenere almeno 8 caratteri, una lettera e un numero.");
       return;
     }
+    if (passwordKnownWeak) {
+      toast.error("Questa password è troppo comune o facile da indovinare. Scegli una password diversa e più sicura.");
+      return;
+    }
     if (password !== confirmPassword) {
       toast.error("Le password non coincidono.");
       return;
@@ -225,6 +229,20 @@ function AuthPage() {
       console.warn("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] signup error, popup NOT shown", { message: error.message });
       if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already")) {
         toast.error("Questa email risulta già registrata. Accedi oppure recupera la password.");
+      } else if (
+        msg.includes("known to be weak") ||
+        msg.includes("weak password") ||
+        msg.includes("pwned") ||
+        msg.includes("compromised") ||
+        msg.includes("easy to guess") ||
+        msg.includes("common password")
+      ) {
+        setWeakPasswords((prev) => {
+          const next = new Set(prev);
+          next.add(password);
+          return next;
+        });
+        toast.error("Questa password è troppo comune o facile da indovinare. Scegli una password diversa e più sicura.");
       } else {
         toast.error(error.message);
       }
