@@ -49,7 +49,8 @@ function statusBadge(s?: string | null) {
 }
 
 function RestaurantDetailPage() {
-  const mapStatus = useMapEnabledForRole(useAuth().role);
+  const { user, role } = useAuth();
+  const mapStatus = useMapEnabledForRole(role);
   const showMapCta = mapStatus === "enabled";
   const { id } = Route.useParams();
   const navigate = useNavigate();
