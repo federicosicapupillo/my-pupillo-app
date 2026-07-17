@@ -2457,6 +2457,7 @@ function Onboarding() {
                   <Label>Luogo di nascita *</Label>
                   <Input required value={personal.birth_place} onChange={(e) => setPersonal({ ...personal, birth_place: e.target.value })} />
                 </div>
+                {taxCodeEnabled && (
                 <div data-field="tax_code" className={cn("scroll-mt-24", hasErr("tax_code") && errorFieldClass)}>
                   <Label>Codice fiscale *</Label>
                   <Input
@@ -2491,6 +2492,7 @@ function Onboarding() {
                     <p className="text-xs text-destructive mt-1">{cfCoherenceError}</p>
                   )}
                 </div>
+                )}
                 <div data-field="nationality" className={cn("scroll-mt-24", hasErr("nationality") && errorFieldClass)}>
                   <Label>Nazionalità *</Label>
                   <SearchableSelect
