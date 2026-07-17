@@ -82,6 +82,7 @@ import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton"
 import { scrollToField, errorFieldClass } from "@/lib/form-field-validation";
 import { cn } from "@/lib/utils";
 import { validateCodiceFiscale } from "@/lib/cf-validation";
+import { useWorkerTaxCodeEnabled } from "@/lib/use-worker-tax-code-enabled";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 /**
@@ -314,6 +315,13 @@ function Onboarding() {
       cancelled = true;
     };
   }, []);
+
+  // Feature flag `worker_tax_code_enabled` (scope: global).
+  // FAIL-CLOSED per la visualizzazione: mostriamo e richiediamo il CF SOLO
+  // quando lo stato è confermato `enabled`. In `loading` / `disabled` /
+  // `error` il campo resta nascosto e la sua assenza non blocca il
+  // completamento del profilo lavoratore.
+  const { isEnabled: taxCodeEnabled } = useWorkerTaxCodeEnabled();
 
   useEffect(() => {
     if (otpCooldown <= 0) return;
@@ -1093,7 +1101,8 @@ function Onboarding() {
     if (role === "worker") {
       const requiredBase = [
         personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
-        personal.tax_code, personal.nationality,
+        ...(taxCodeEnabled ? [personal.tax_code] : []),
+        personal.nationality,
         personal.residence_street, personal.residence_street_number,
         personal.residence_city, personal.residence_postal_code, personal.residence_province,
       ];
@@ -1105,7 +1114,11 @@ function Onboarding() {
         : [];
       const required = [...requiredBase, ...requiredDoc];
       const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
-      const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
+      // Se il flag è OFF il CF è opzionale: consideriamo `cfOk = true`
+      // (nessun blocco di formato). Se ON, comportamento originale.
+      const cfOk = taxCodeEnabled
+        ? CF_REGEX.test(personal.tax_code.trim().toUpperCase())
+        : true;
       const today = todayInRome();
       const birthOk =
         isValidISODate(personal.birth_date) &&
@@ -1125,7 +1138,7 @@ function Onboarding() {
       const civicOk = isValidCivicNumber(personal.residence_street_number);
       // CF coerenza con data/luogo di nascita — decode e verifica.
       // La check formale (cfOk) resta sopra per gestire il messaggio "CF non valido".
-      const cfCoherence = cfOk
+      const cfCoherence = taxCodeEnabled && cfOk
         ? validateCodiceFiscale({
             cf: personal.tax_code,
             birthDate: personal.birth_date,
@@ -1155,7 +1168,9 @@ function Onboarding() {
           ["last_name", !personal.last_name.trim()],
           ["birth_date", !personal.birth_date],
           ["birth_place", !personal.birth_place.trim()],
-          ["tax_code", !personal.tax_code.trim()],
+          ...(taxCodeEnabled
+            ? ([["tax_code", !personal.tax_code.trim()]] as const)
+            : ([] as const)),
           ["nationality", !personal.nationality.trim()],
           ["residence_city", !personal.residence_city.trim()],
           ["residence_postal_code", !personal.residence_postal_code.trim()],
@@ -1604,7 +1619,12 @@ function Onboarding() {
             last_name: personal.last_name.trim() || (profile as any)?.last_name || null,
             birth_date: personal.birth_date,
             birth_place: personal.birth_place.trim(),
-            tax_code: personal.tax_code.trim().toUpperCase(),
+            // Con flag OFF non inviamo alcun valore per `tax_code`: così
+            // eventuali dati storici in DB restano intatti (nessun NULL
+            // forzato) e nessuna validazione backend viene innescata.
+            ...(taxCodeEnabled
+              ? { tax_code: personal.tax_code.trim().toUpperCase() }
+              : {}),
             nationality: personal.nationality.trim(),
             residence_address: `${personal.residence_street.trim()}, ${personal.residence_street_number.trim()}`,
             residence_city: personal.residence_city.trim(),
@@ -2437,6 +2457,7 @@ function Onboarding() {
                   <Label>Luogo di nascita *</Label>
                   <Input required value={personal.birth_place} onChange={(e) => setPersonal({ ...personal, birth_place: e.target.value })} />
                 </div>
+                {taxCodeEnabled && (
                 <div data-field="tax_code" className={cn("scroll-mt-24", hasErr("tax_code") && errorFieldClass)}>
                   <Label>Codice fiscale *</Label>
                   <Input
@@ -2471,6 +2492,7 @@ function Onboarding() {
                     <p className="text-xs text-destructive mt-1">{cfCoherenceError}</p>
                   )}
                 </div>
+                )}
                 <div data-field="nationality" className={cn("scroll-mt-24", hasErr("nationality") && errorFieldClass)}>
                   <Label>Nazionalità *</Label>
                   <SearchableSelect

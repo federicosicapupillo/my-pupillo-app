@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { invalidateReferralFeatureFlags } from "@/lib/use-referral-enabled";
+import { invalidateWorkerTaxCodeFeatureFlag } from "@/lib/use-worker-tax-code-enabled";
 
 type FeatureFlag = {
   key: string;
@@ -50,6 +51,9 @@ export function AdminFeatureFlagsSection() {
     toast.success(`Flag "${key}" ${next ? "attivato" : "disattivato"}`);
     if (key === "worker_referral_enabled" || key === "restaurant_referral_enabled") {
       invalidateReferralFeatureFlags();
+    }
+    if (key === "worker_tax_code_enabled") {
+      invalidateWorkerTaxCodeFeatureFlag();
     }
     void load();
   }
