@@ -82,6 +82,7 @@ import { UseCurrentLocationButton } from "@/components/UseCurrentLocationButton"
 import { scrollToField, errorFieldClass } from "@/lib/form-field-validation";
 import { cn } from "@/lib/utils";
 import { validateCodiceFiscale } from "@/lib/cf-validation";
+import { useWorkerTaxCodeEnabled } from "@/lib/use-worker-tax-code-enabled";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 /**
