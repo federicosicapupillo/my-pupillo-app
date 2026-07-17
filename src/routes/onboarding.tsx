@@ -316,6 +316,13 @@ function Onboarding() {
     };
   }, []);
 
+  // Feature flag `worker_tax_code_enabled` (scope: global).
+  // FAIL-CLOSED per la visualizzazione: mostriamo e richiediamo il CF SOLO
+  // quando lo stato è confermato `enabled`. In `loading` / `disabled` /
+  // `error` il campo resta nascosto e la sua assenza non blocca il
+  // completamento del profilo lavoratore.
+  const { isEnabled: taxCodeEnabled } = useWorkerTaxCodeEnabled();
+
   useEffect(() => {
     if (otpCooldown <= 0) return;
     const t = setInterval(() => setOtpCooldown((c) => Math.max(0, c - 1)), 1000);
