@@ -1619,7 +1619,12 @@ function Onboarding() {
             last_name: personal.last_name.trim() || (profile as any)?.last_name || null,
             birth_date: personal.birth_date,
             birth_place: personal.birth_place.trim(),
-            tax_code: personal.tax_code.trim().toUpperCase(),
+            // Con flag OFF non inviamo alcun valore per `tax_code`: così
+            // eventuali dati storici in DB restano intatti (nessun NULL
+            // forzato) e nessuna validazione backend viene innescata.
+            ...(taxCodeEnabled
+              ? { tax_code: personal.tax_code.trim().toUpperCase() }
+              : {}),
             nationality: personal.nationality.trim(),
             residence_address: `${personal.residence_street.trim()}, ${personal.residence_street_number.trim()}`,
             residence_city: personal.residence_city.trim(),
