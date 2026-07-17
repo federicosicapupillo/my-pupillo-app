@@ -1101,7 +1101,8 @@ function Onboarding() {
     if (role === "worker") {
       const requiredBase = [
         personal.first_name, personal.last_name, personal.birth_date, personal.birth_place,
-        personal.tax_code, personal.nationality,
+        ...(taxCodeEnabled ? [personal.tax_code] : []),
+        personal.nationality,
         personal.residence_street, personal.residence_street_number,
         personal.residence_city, personal.residence_postal_code, personal.residence_province,
       ];
@@ -1113,7 +1114,11 @@ function Onboarding() {
         : [];
       const required = [...requiredBase, ...requiredDoc];
       const allFilled = required.every((v) => String(v ?? "").trim().length > 0);
-      const cfOk = CF_REGEX.test(personal.tax_code.trim().toUpperCase());
+      // Se il flag è OFF il CF è opzionale: consideriamo `cfOk = true`
+      // (nessun blocco di formato). Se ON, comportamento originale.
+      const cfOk = taxCodeEnabled
+        ? CF_REGEX.test(personal.tax_code.trim().toUpperCase())
+        : true;
       const today = todayInRome();
       const birthOk =
         isValidISODate(personal.birth_date) &&
@@ -1133,7 +1138,7 @@ function Onboarding() {
       const civicOk = isValidCivicNumber(personal.residence_street_number);
       // CF coerenza con data/luogo di nascita — decode e verifica.
       // La check formale (cfOk) resta sopra per gestire il messaggio "CF non valido".
-      const cfCoherence = cfOk
+      const cfCoherence = taxCodeEnabled && cfOk
         ? validateCodiceFiscale({
             cf: personal.tax_code,
             birthDate: personal.birth_date,
@@ -1163,7 +1168,9 @@ function Onboarding() {
           ["last_name", !personal.last_name.trim()],
           ["birth_date", !personal.birth_date],
           ["birth_place", !personal.birth_place.trim()],
-          ["tax_code", !personal.tax_code.trim()],
+          ...(taxCodeEnabled
+            ? ([["tax_code", !personal.tax_code.trim()]] as const)
+            : ([] as const)),
           ["nationality", !personal.nationality.trim()],
           ["residence_city", !personal.residence_city.trim()],
           ["residence_postal_code", !personal.residence_postal_code.trim()],
