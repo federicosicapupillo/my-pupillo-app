@@ -3313,7 +3313,7 @@ function Thread() {
           currentCredits={creditsAvailable}
           returnTo={`/messages/${id}`}
         />
-        {role === "restaurant" && app && ann && (
+        {role === "restaurant" && app && ann && counterofferEnabled && (
           <CounterofferDialog
             open={counterofferOpen}
             onOpenChange={setCounterofferOpen}
