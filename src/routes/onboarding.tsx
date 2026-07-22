@@ -3118,7 +3118,12 @@ function Onboarding() {
           <Checkbox checked={form.terms_accepted} onCheckedChange={(v) => setForm({ ...form, terms_accepted: !!v })} />
           <span>
             Ho letto e accetto le{" "}
-            <Link to="/terms" className="underline hover:text-primary" target="_blank">
+            <Link
+              to="/terms"
+              className="underline hover:text-primary"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               condizioni d'uso e la privacy policy
             </Link>
             .
