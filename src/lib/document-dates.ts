@@ -87,6 +87,60 @@ export function isValidISODate(iso: string | null | undefined): boolean {
 }
 
 /**
+ * Strict calendar-date validator.
+ *
+ * Accepts BOTH ISO `yyyy-mm-dd` and Italian `dd/mm/yyyy` strings and
+ * returns `true` only if the value corresponds to a real day on the
+ * Gregorian calendar. Unlike `new Date(y, m-1, d)` on its own, this
+ * function never lets JavaScript "normalize" an invalid input to the
+ * next month (e.g. 29/02/2009 → 01/03/2009): it explicitly re-checks
+ * that year/month/day survive the roundtrip.
+ *
+ * Leap-year rule: divisible by 4, except centuries not divisible by 400.
+ * Examples that MUST be rejected: 29/02/2009, 29/02/1900, 30/02/2008,
+ * 31/04/2008, 31/06/2008, 31/09/2008, 31/11/2008, 00/01/2000, 01/00/2000.
+ * Examples that MUST be accepted: 29/02/2008, 29/02/2000, 28/02/2009.
+ */
+export function isValidCalendarDate(input: string | null | undefined): boolean {
+  if (input == null) return false;
+  const s = String(input).trim();
+  if (!s) return false;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  const it = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+  let y: number, mo: number, d: number;
+  if (iso) {
+    y = Number(iso[1]);
+    mo = Number(iso[2]);
+    d = Number(iso[3]);
+  } else if (it) {
+    d = Number(it[1]);
+    mo = Number(it[2]);
+    y = Number(it[3]);
+  } else {
+    return false;
+  }
+  if (!Number.isInteger(y) || !Number.isInteger(mo) || !Number.isInteger(d)) {
+    return false;
+  }
+  if (mo < 1 || mo > 12) return false;
+  if (d < 1 || d > 31) return false;
+  const isLeap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const daysInMonth = [
+    31,
+    isLeap ? 29 : 28,
+    31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+  ];
+  if (d > daysInMonth[mo - 1]) return false;
+  // Final roundtrip guard: reject anything JavaScript would silently normalize.
+  const dt = new Date(y, mo - 1, d);
+  return (
+    dt.getFullYear() === y &&
+    dt.getMonth() === mo - 1 &&
+    dt.getDate() === d
+  );
+}
+
+/**
  * Validate a list of required date inputs (ISO `yyyy-mm-dd`).
  * Returns the generic dd/mm/yyyy error message if any value is missing
  * or not a real date; `null` otherwise.
