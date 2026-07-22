@@ -473,6 +473,7 @@ function Thread() {
   const { user, role, profile, refresh: refreshAuth } = useAuth();
   const { requireComplete, ensureTargetComplete } = useProfileGate();
   const { enabled: paymentsEnabled } = usePaymentsEnabled();
+  const { isEnabled: counterofferEnabled } = useCounterofferEnabled();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   // Ritorno dal flusso Stripe → mostra banner "Pagamento completato"
   // (la conferma del lavoratore resta sempre manuale). Esegue una sola
