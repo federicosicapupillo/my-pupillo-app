@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { invalidateReferralFeatureFlags } from "@/lib/use-referral-enabled";
 import { invalidateWorkerTaxCodeFeatureFlag } from "@/lib/use-worker-tax-code-enabled";
+import { invalidateCounterofferFeatureFlag } from "@/lib/use-counteroffer-enabled";
 
 type FeatureFlag = {
   key: string;
@@ -54,6 +55,9 @@ export function AdminFeatureFlagsSection() {
     }
     if (key === "worker_tax_code_enabled") {
       invalidateWorkerTaxCodeFeatureFlag();
+    }
+    if (key === "counteroffer_enabled") {
+      invalidateCounterofferFeatureFlag();
     }
     void load();
   }
