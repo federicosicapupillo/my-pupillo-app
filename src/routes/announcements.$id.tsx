@@ -30,6 +30,7 @@ import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialo
 import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
@@ -168,6 +169,7 @@ function AnnouncementDetail() {
   const { user, role, profile } = useAuth();
   const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { enabled: paymentsEnabled } = usePaymentsEnabled();
+  const { isEnabled: counterofferEnabled } = useCounterofferEnabled();
   const nav = useNavigate();
   const candidatesRef = useRef<HTMLElement | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
