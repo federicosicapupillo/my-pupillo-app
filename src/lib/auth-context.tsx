@@ -140,7 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loadExtras = async (uid: string) => {
-    setExtrasLoaded(false);
+    // NON azzeriamo extrasLoaded durante i reload: RequireAuth sostituirebbe
+    // i children con "Caricamento…" smontando la pagina attiva (es. onboarding)
+    // ogni volta che Supabase riemette un evento auth (TOKEN_REFRESHED al
+    // ritorno sul tab, USER_UPDATED, ecc.), perdendo lo state locale del form.
+    // Il primo caricamento parte comunque con extrasLoaded=false dallo useState.
     const [{ data: roles, error: rolesError }, { data: prof, error: profileError }, { data: resolvedRows, error: rpcError }] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", uid),
       // Use a SECURITY DEFINER RPC so the owner can read their own sensitive
@@ -219,12 +223,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile((p) => (p ? { ...p, ...patch } : p));
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    let currentUid: string | null = null;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      // Ignora eventi di sola manutenzione della sessione (TOKEN_REFRESHED,
+      // INITIAL_SESSION, PASSWORD_RECOVERY, ecc.): sparano al ritorno sul
+      // tab per la visibilitychange e non devono ricaricare il profilo,
+      // altrimenti pagine come /onboarding perdono lo state locale.
+      if (
+        event !== "SIGNED_IN" &&
+        event !== "SIGNED_OUT" &&
+        event !== "USER_UPDATED"
+      ) {
+        // Manteniamo comunque session/user aggiornati se cambiano al refresh.
+        setSession(s);
+        setUser(s?.user ?? null);
+        return;
+      }
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        setTimeout(() => loadExtras(s.user.id), 0);
+        // SIGNED_IN viene emesso anche per lo stesso utente dopo un refresh:
+        // ricarichiamo il profilo solo se l'utente è davvero cambiato o è la
+        // prima volta. Per USER_UPDATED ricarichiamo sempre.
+        const uidChanged = currentUid !== s.user.id;
+        currentUid = s.user.id;
+        if (event === "USER_UPDATED" || uidChanged) {
+          setTimeout(() => loadExtras(s.user.id), 0);
+        }
       } else {
+        currentUid = null;
         setRole(null);
         setProfile(null);
         setRoleDebug(null);
@@ -234,7 +261,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
-      if (data.session?.user) await loadExtras(data.session.user.id);
+      if (data.session?.user) {
+        currentUid = data.session.user.id;
+        await loadExtras(data.session.user.id);
+      }
       setLoading(false);
     });
     return () => sub.subscription.unsubscribe();
