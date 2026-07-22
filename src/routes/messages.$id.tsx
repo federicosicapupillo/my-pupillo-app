@@ -32,6 +32,7 @@ import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { WouldRehirePicker, WouldRehireBadge } from "@/components/WouldRehirePicker";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import {
