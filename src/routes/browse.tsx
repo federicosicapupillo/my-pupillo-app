@@ -572,9 +572,10 @@ function Browse() {
       setConfirmAnn(null);
       return;
     }
-    // Validazione contro-offerta lato client
+    // Validazione contro-offerta lato client — bypassata se il feature flag
+    // `counteroffer_enabled` è spento (fail-closed).
     let counterValueNum: number | null = null;
-    if (applyMode === "counter") {
+    if (counterofferEnabled && applyMode === "counter") {
       const v = parseFloat(counterAmount.replace(",", "."));
       if (!Number.isFinite(v) || v <= 0) {
         toast.error("Inserisci una tariffa valida.");
