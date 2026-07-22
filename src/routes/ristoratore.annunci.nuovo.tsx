@@ -976,7 +976,16 @@ function NewRestaurantJobRequest() {
                 onChange={(v) => setField("postal_code", v)}
               />
             </Field>
-            <Field label="Paese"><Input value={f.country} onChange={e => setField("country", e.target.value)} /></Field>
+            <Field label="Paese">
+              <Input
+                value={f.country || "Italia"}
+                readOnly
+                disabled
+                aria-readonly="true"
+                tabIndex={-1}
+                className="cursor-not-allowed opacity-80"
+              />
+            </Field>
           </div>
           <div className="relative isolate z-0 w-full mb-6 sm:mb-8">
             {coords ? (
