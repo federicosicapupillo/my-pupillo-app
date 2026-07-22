@@ -713,7 +713,7 @@ function AnnouncementDetail() {
         currentCredits={creditsAvailable}
         returnTo={`/announcements/${id}`}
       />
-      {counterofferAppId && (() => {
+      {counterofferEnabled && counterofferAppId && (() => {
         const a = apps.find((x) => x.id === counterofferAppId);
         if (!a || !ann) return null;
         return (
