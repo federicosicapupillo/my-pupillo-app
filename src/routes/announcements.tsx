@@ -1454,6 +1454,7 @@ function AnnouncementDetailsDialog({
   const [recreateOpen, setRecreateOpen] = useState(false);
   const [recreating, setRecreating] = useState(false);
   const [form, setForm] = useState<any>(null);
+  const [workersNeeded, setWorkersNeeded] = useState<number | null>(null);
 
   useEffect(() => {
     if (!ann) return;
@@ -1468,6 +1469,23 @@ function AnnouncementDetailsDialog({
       license_requirement: ann.license_requirement ?? "nessuna",
       notes: (ann as any).notes ?? "",
     });
+  }, [ann?.id, open]);
+
+  useEffect(() => {
+    if (!ann?.id || !open) return;
+    let cancelled = false;
+    setWorkersNeeded(null);
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("job_requests")
+        .select("workers_needed")
+        .eq("announcement_id", ann.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const n = Number((data as any)?.workers_needed);
+      setWorkersNeeded(Number.isFinite(n) && n > 0 ? n : 1);
+    })();
+    return () => { cancelled = true; };
   }, [ann?.id, open]);
 
   if (!ann || !form) return null;
@@ -1606,7 +1624,7 @@ function AnnouncementDetailsDialog({
               <SummaryRow icon={Briefcase} label="Ruolo richiesto" value={ann.professional_profile || "—"} />
               <SummaryRow icon={Calendar} label="Data del turno" value={dateLabel} />
               <SummaryRow icon={Clock} label="Orario" value={`${ann.service_time?.slice(0,5) ?? "—"}${ann.end_time ? ` – ${ann.end_time.slice(0,5)}` : ""}`} />
-              <SummaryRow icon={Users} label="Numero lavoratori richiesti" value="1" />
+              <SummaryRow icon={Users} label="Numero lavoratori richiesti" value={String(workersNeeded ?? "—")} />
             </Section>
 
             <Section title="2. Luogo">
