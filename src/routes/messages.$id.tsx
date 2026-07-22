@@ -32,6 +32,7 @@ import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { WouldRehirePicker, WouldRehireBadge } from "@/components/WouldRehirePicker";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { PROPOSAL_TEMPLATE_ID } from "@/lib/shift-proposal";
 import {
@@ -472,6 +473,7 @@ function Thread() {
   const { user, role, profile, refresh: refreshAuth } = useAuth();
   const { requireComplete, ensureTargetComplete } = useProfileGate();
   const { enabled: paymentsEnabled } = usePaymentsEnabled();
+  const { isEnabled: counterofferEnabled } = useCounterofferEnabled();
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   // Ritorno dal flusso Stripe → mostra banner "Pagamento completato"
   // (la conferma del lavoratore resta sempre manuale). Esegue una sola
@@ -2524,7 +2526,7 @@ function Thread() {
                       ? "Conferma lavoratore"
                       : "Accetta candidatura"}
                 </Button>
-                {restaurantProposalMsg && (
+                {restaurantProposalMsg && counterofferEnabled && (
                   <Button
                     variant="outline"
                     className="gap-2 w-full sm:col-span-3 border-primary/40 text-primary hover:bg-primary/5"
@@ -3311,7 +3313,7 @@ function Thread() {
           currentCredits={creditsAvailable}
           returnTo={`/messages/${id}`}
         />
-        {role === "restaurant" && app && ann && (
+        {role === "restaurant" && app && ann && counterofferEnabled && (
           <CounterofferDialog
             open={counterofferOpen}
             onOpenChange={setCounterofferOpen}

@@ -21,6 +21,7 @@ import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
 import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
 import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
+import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
@@ -102,6 +103,7 @@ function distKm(aLat:number,aLng:number,bLat:number,bLng:number){
 function Browse() {
   const { user, role, profile } = useAuth();
   const navigate = useNavigate();
+  const { isEnabled: counterofferEnabled } = useCounterofferEnabled();
   const [items, setItems] = useState<Ann[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [appStatusById, setAppStatusById] = useState<Record<string, string>>({});
@@ -570,9 +572,10 @@ function Browse() {
       setConfirmAnn(null);
       return;
     }
-    // Validazione contro-offerta lato client
+    // Validazione contro-offerta lato client — bypassata se il feature flag
+    // `counteroffer_enabled` è spento (fail-closed).
     let counterValueNum: number | null = null;
-    if (applyMode === "counter") {
+    if (counterofferEnabled && applyMode === "counter") {
       const v = parseFloat(counterAmount.replace(",", "."));
       if (!Number.isFinite(v) || v <= 0) {
         toast.error("Inserisci una tariffa valida.");
@@ -1161,7 +1164,8 @@ function Browse() {
         ann={confirmAnn}
         restaurantInfo={confirmAnn ? restaurantsById[confirmAnn.restaurant_id] : undefined}
         submitting={submitting}
-        applyMode={applyMode}
+        counterofferEnabled={counterofferEnabled}
+        applyMode={counterofferEnabled ? applyMode : "accept"}
         setApplyMode={setApplyMode}
         counterAmount={counterAmount}
         setCounterAmount={setCounterAmount}
@@ -1194,11 +1198,12 @@ function isNightShift(time?: string | null) {
 }
 
 function ApplyConfirmDialog({
-  ann, restaurantInfo, submitting, applyMode, setApplyMode, counterAmount, setCounterAmount, onCancel, onConfirm,
+  ann, restaurantInfo, submitting, counterofferEnabled, applyMode, setApplyMode, counterAmount, setCounterAmount, onCancel, onConfirm,
 }: {
   ann: Ann | null;
   restaurantInfo?: { city: string | null; neighborhood: string | null };
   submitting: boolean;
+  counterofferEnabled: boolean;
   applyMode: "accept" | "counter";
   setApplyMode: (m: "accept" | "counter") => void;
   counterAmount: string;
@@ -1361,7 +1366,7 @@ function ApplyConfirmDialog({
           </div>
         )}
 
-        {ann && (
+        {ann && counterofferEnabled && (
           <div className="px-6 pb-2 space-y-2">
             <Label className="text-sm font-medium">Vuoi candidarti alla tariffa proposta o fare una contro offerta?</Label>
             <div className="grid grid-cols-2 gap-2">

@@ -30,6 +30,7 @@ import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialo
 import { CounterofferDialog } from "@/components/CounterofferDialog";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
+import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
@@ -168,6 +169,7 @@ function AnnouncementDetail() {
   const { user, role, profile } = useAuth();
   const { requireComplete, canPerformOperationalAction } = useProfileGate();
   const { enabled: paymentsEnabled } = usePaymentsEnabled();
+  const { isEnabled: counterofferEnabled } = useCounterofferEnabled();
   const nav = useNavigate();
   const candidatesRef = useRef<HTMLElement | null>(null);
   const [ann, setAnn] = useState<Ann | null>(null);
@@ -711,7 +713,7 @@ function AnnouncementDetail() {
         currentCredits={creditsAvailable}
         returnTo={`/announcements/${id}`}
       />
-      {counterofferAppId && (() => {
+      {counterofferEnabled && counterofferAppId && (() => {
         const a = apps.find((x) => x.id === counterofferAppId);
         if (!a || !ann) return null;
         return (
@@ -1131,16 +1133,18 @@ function AnnouncementDetail() {
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             {hasCounter ? `Accetta €${a.proposed_tariff}` : "Assegna"}
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1 border-primary/40 text-primary hover:bg-primary/5"
-                            disabled={busyId === a.id}
-                            onClick={() => setCounterofferAppId(a.id)}
-                          >
-                            <Handshake className="h-3.5 w-3.5" />
-                            Invia controfferta
-                          </Button>
+                          {counterofferEnabled && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 border-primary/40 text-primary hover:bg-primary/5"
+                              disabled={busyId === a.id}
+                              onClick={() => setCounterofferAppId(a.id)}
+                            >
+                              <Handshake className="h-3.5 w-3.5" />
+                              Invia controfferta
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
