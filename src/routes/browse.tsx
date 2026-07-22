@@ -21,6 +21,7 @@ import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
 import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
 import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
+import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
