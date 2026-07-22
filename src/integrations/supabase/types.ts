@@ -14,27 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _pupillo_cf_tests: {
-        Row: {
-          detail: string | null
-          n: number | null
-          name: string | null
-          result: string | null
-        }
-        Insert: {
-          detail?: string | null
-          n?: number | null
-          name?: string | null
-          result?: string | null
-        }
-        Update: {
-          detail?: string | null
-          n?: number | null
-          name?: string | null
-          result?: string | null
-        }
-        Relationships: []
-      }
       account_deletion_feedback: {
         Row: {
           created_at: string
