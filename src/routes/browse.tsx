@@ -1365,7 +1365,7 @@ function ApplyConfirmDialog({
           </div>
         )}
 
-        {ann && (
+        {ann && counterofferEnabled && (
           <div className="px-6 pb-2 space-y-2">
             <Label className="text-sm font-medium">Vuoi candidarti alla tariffa proposta o fare una contro offerta?</Label>
             <div className="grid grid-cols-2 gap-2">
