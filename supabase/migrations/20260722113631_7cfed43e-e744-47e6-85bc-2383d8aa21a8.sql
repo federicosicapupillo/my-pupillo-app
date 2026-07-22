@@ -1,0 +1,1 @@
+ALTER TRIGGER trg_enforce_counteroffer_flag ON public.applications RENAME TO trg_00_enforce_counteroffer_flag;
