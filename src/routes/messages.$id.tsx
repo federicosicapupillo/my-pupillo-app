@@ -2526,7 +2526,7 @@ function Thread() {
                       ? "Conferma lavoratore"
                       : "Accetta candidatura"}
                 </Button>
-                {restaurantProposalMsg && (
+                {restaurantProposalMsg && counterofferEnabled && (
                   <Button
                     variant="outline"
                     className="gap-2 w-full sm:col-span-3 border-primary/40 text-primary hover:bg-primary/5"
