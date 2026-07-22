@@ -1133,16 +1133,18 @@ function AnnouncementDetail() {
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             {hasCounter ? `Accetta €${a.proposed_tariff}` : "Assegna"}
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1 border-primary/40 text-primary hover:bg-primary/5"
-                            disabled={busyId === a.id}
-                            onClick={() => setCounterofferAppId(a.id)}
-                          >
-                            <Handshake className="h-3.5 w-3.5" />
-                            Invia controfferta
-                          </Button>
+                          {counterofferEnabled && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 border-primary/40 text-primary hover:bg-primary/5"
+                              disabled={busyId === a.id}
+                              onClick={() => setCounterofferAppId(a.id)}
+                            >
+                              <Handshake className="h-3.5 w-3.5" />
+                              Invia controfferta
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
