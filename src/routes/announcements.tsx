@@ -1871,6 +1871,25 @@ function ProposalConfirmDialog({
   const navigate = useNavigate();
   const [sending, setSending] = useState(false);
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
+  const [workersNeeded, setWorkersNeeded] = useState<number | null>(null);
+
+  useEffect(() => {
+    const annId = target?.ann?.id;
+    if (!annId) { setWorkersNeeded(null); return; }
+    let cancelled = false;
+    setWorkersNeeded(null);
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("job_requests")
+        .select("workers_needed")
+        .eq("announcement_id", annId)
+        .maybeSingle();
+      if (cancelled) return;
+      const n = Number((data as any)?.workers_needed);
+      setWorkersNeeded(Number.isFinite(n) && n > 0 ? n : 1);
+    })();
+    return () => { cancelled = true; };
+  }, [target?.ann?.id]);
 
   if (!target) return null;
   const { ann, candidate } = target;
@@ -1956,7 +1975,7 @@ function ProposalConfirmDialog({
             <SummaryRow icon={Briefcase} label="Ruolo richiesto" value={ann.professional_profile || "—"} />
             <SummaryRow icon={Calendar} label="Data turno" value={dateLabel} />
             <SummaryRow icon={Clock} label="Orario" value={timeLabel} />
-            <SummaryRow icon={Users} label="Numero lavoratori richiesti" value="1" />
+            <SummaryRow icon={Users} label="Numero lavoratori richiesti" value={String(workersNeeded ?? "—")} />
           </Section>
 
           <Section title="2. Luogo">
