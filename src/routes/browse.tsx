@@ -103,6 +103,7 @@ function distKm(aLat:number,aLng:number,bLat:number,bLng:number){
 function Browse() {
   const { user, role, profile } = useAuth();
   const navigate = useNavigate();
+  const { isEnabled: counterofferEnabled } = useCounterofferEnabled();
   const [items, setItems] = useState<Ann[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [appStatusById, setAppStatusById] = useState<Record<string, string>>({});
