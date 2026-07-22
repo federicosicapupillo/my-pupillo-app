@@ -1163,7 +1163,8 @@ function Browse() {
         ann={confirmAnn}
         restaurantInfo={confirmAnn ? restaurantsById[confirmAnn.restaurant_id] : undefined}
         submitting={submitting}
-        applyMode={applyMode}
+        counterofferEnabled={counterofferEnabled}
+        applyMode={counterofferEnabled ? applyMode : "accept"}
         setApplyMode={setApplyMode}
         counterAmount={counterAmount}
         setCounterAmount={setCounterAmount}
