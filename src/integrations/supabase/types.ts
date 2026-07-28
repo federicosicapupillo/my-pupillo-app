@@ -750,6 +750,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "job_requests_restaurant_profile_id_fkey"
+            columns: ["restaurant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       messages: {
@@ -2320,7 +2327,206 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "job_requests_restaurant_profile_id_fkey"
+            columns: ["restaurant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      public_profiles: {
+        Row: {
+          age: number | null
+          all_zones: boolean | null
+          available_now_until: string | null
+          avatar_url: string | null
+          avg_competence: number | null
+          avg_professionalism: number | null
+          avg_punctuality: number | null
+          avg_reliability: number | null
+          avg_teamwork: number | null
+          badge: Database["public"]["Enums"]["worker_badge"] | null
+          business_name: string | null
+          busy_days: string[] | null
+          city: string | null
+          completed_shifts: number | null
+          completion_pct: number | null
+          default_arrival_advance_minutes: number | null
+          default_arrival_advance_reason: string | null
+          distinct_restaurants_count: number | null
+          employees_count: number | null
+          experience_level:
+            | Database["public"]["Enums"]["experience_level"]
+            | null
+          experience_years: string | null
+          first_name: string | null
+          full_name: string | null
+          hourly_availability: string | null
+          hourly_rate: number | null
+          id: string | null
+          is_deleted: boolean | null
+          is_motorized: boolean | null
+          languages: string[] | null
+          last_name: string | null
+          neighborhood: string | null
+          no_show_count: number | null
+          opening_hours: string | null
+          phone_verified: boolean | null
+          price_range: string | null
+          primary_role: string | null
+          professional_profile: string | null
+          profile_completed: boolean | null
+          province: string | null
+          province_code: string | null
+          punctuality_pct: number | null
+          rating_avg: number | null
+          rehire_restaurants_count: number | null
+          rehire_total_answers: number | null
+          rehire_yes_count: number | null
+          reliability_pct: number | null
+          reputation_level: string | null
+          reputation_score: number | null
+          reviews_count: number | null
+          secondary_roles: string[] | null
+          selected_zones: string[] | null
+          service_area_city: string | null
+          service_area_district: string | null
+          service_area_radius_m: number | null
+          spoken_languages: Json | null
+          venue_type: string | null
+          venue_type_other: string | null
+          weekly_availability: string[] | null
+          work_area_mode: string | null
+        }
+        Insert: {
+          age?: number | null
+          all_zones?: boolean | null
+          available_now_until?: string | null
+          avatar_url?: string | null
+          avg_competence?: number | null
+          avg_professionalism?: number | null
+          avg_punctuality?: number | null
+          avg_reliability?: number | null
+          avg_teamwork?: number | null
+          badge?: Database["public"]["Enums"]["worker_badge"] | null
+          business_name?: string | null
+          busy_days?: string[] | null
+          city?: string | null
+          completed_shifts?: number | null
+          completion_pct?: number | null
+          default_arrival_advance_minutes?: number | null
+          default_arrival_advance_reason?: string | null
+          distinct_restaurants_count?: number | null
+          employees_count?: number | null
+          experience_level?:
+            | Database["public"]["Enums"]["experience_level"]
+            | null
+          experience_years?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          hourly_availability?: string | null
+          hourly_rate?: number | null
+          id?: string | null
+          is_deleted?: boolean | null
+          is_motorized?: boolean | null
+          languages?: string[] | null
+          last_name?: string | null
+          neighborhood?: string | null
+          no_show_count?: number | null
+          opening_hours?: string | null
+          phone_verified?: boolean | null
+          price_range?: string | null
+          primary_role?: string | null
+          professional_profile?: string | null
+          profile_completed?: boolean | null
+          province?: string | null
+          province_code?: string | null
+          punctuality_pct?: number | null
+          rating_avg?: number | null
+          rehire_restaurants_count?: number | null
+          rehire_total_answers?: number | null
+          rehire_yes_count?: number | null
+          reliability_pct?: number | null
+          reputation_level?: string | null
+          reputation_score?: number | null
+          reviews_count?: number | null
+          secondary_roles?: string[] | null
+          selected_zones?: string[] | null
+          service_area_city?: string | null
+          service_area_district?: string | null
+          service_area_radius_m?: number | null
+          spoken_languages?: Json | null
+          venue_type?: string | null
+          venue_type_other?: string | null
+          weekly_availability?: string[] | null
+          work_area_mode?: string | null
+        }
+        Update: {
+          age?: number | null
+          all_zones?: boolean | null
+          available_now_until?: string | null
+          avatar_url?: string | null
+          avg_competence?: number | null
+          avg_professionalism?: number | null
+          avg_punctuality?: number | null
+          avg_reliability?: number | null
+          avg_teamwork?: number | null
+          badge?: Database["public"]["Enums"]["worker_badge"] | null
+          business_name?: string | null
+          busy_days?: string[] | null
+          city?: string | null
+          completed_shifts?: number | null
+          completion_pct?: number | null
+          default_arrival_advance_minutes?: number | null
+          default_arrival_advance_reason?: string | null
+          distinct_restaurants_count?: number | null
+          employees_count?: number | null
+          experience_level?:
+            | Database["public"]["Enums"]["experience_level"]
+            | null
+          experience_years?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          hourly_availability?: string | null
+          hourly_rate?: number | null
+          id?: string | null
+          is_deleted?: boolean | null
+          is_motorized?: boolean | null
+          languages?: string[] | null
+          last_name?: string | null
+          neighborhood?: string | null
+          no_show_count?: number | null
+          opening_hours?: string | null
+          phone_verified?: boolean | null
+          price_range?: string | null
+          primary_role?: string | null
+          professional_profile?: string | null
+          profile_completed?: boolean | null
+          province?: string | null
+          province_code?: string | null
+          punctuality_pct?: number | null
+          rating_avg?: number | null
+          rehire_restaurants_count?: number | null
+          rehire_total_answers?: number | null
+          rehire_yes_count?: number | null
+          reliability_pct?: number | null
+          reputation_level?: string | null
+          reputation_score?: number | null
+          reviews_count?: number | null
+          secondary_roles?: string[] | null
+          selected_zones?: string[] | null
+          service_area_city?: string | null
+          service_area_district?: string | null
+          service_area_radius_m?: number | null
+          spoken_languages?: Json | null
+          venue_type?: string | null
+          venue_type_other?: string | null
+          weekly_availability?: string[] | null
+          work_area_mode?: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
