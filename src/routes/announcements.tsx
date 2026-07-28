@@ -32,6 +32,7 @@ import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ANNOUNCEMENT_SAFE_COLUMNS } from "@/lib/announcement-columns";
+import { fetchWorkersNeededMap } from "@/lib/announcement-positions";
 import {
   Dialog,
   DialogContent,
@@ -426,6 +427,8 @@ function AnnouncementsPage() {
   const [items, setItems] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [workersNeededMap, setWorkersNeededMap] = useState<Record<string, number>>({});
+  const [acceptedMap, setAcceptedMap] = useState<Record<string, number>>({});
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
   const [assigned, setAssigned] = useState<Record<string, AssignedInfo>>({});
   const [collaboratedWorkerIds, setCollaboratedWorkerIds] = useState<Set<string>>(() => new Set());
@@ -496,6 +499,15 @@ function AnnouncementsPage() {
           (byAnn[a.announcement_id] ||= []).push(a);
         });
         setCounts(map);
+        const acc: Record<string, number> = {};
+        (apps ?? []).forEach((a: any) => {
+          if (a.status === "accepted") acc[a.announcement_id] = (acc[a.announcement_id] ?? 0) + 1;
+        });
+        setAcceptedMap(acc);
+        try {
+          const wn = await fetchWorkersNeededMap(ids);
+          setWorkersNeededMap(wn);
+        } catch { /* non-blocking */ }
         const assignedAnns = list.filter(a => a.assigned_worker_id);
         const assignedWorkerIds = assignedAnns.map(a => a.assigned_worker_id as string);
         const workerIds = Array.from(new Set([...(apps ?? []).map((a: any) => a.worker_id), ...assignedWorkerIds]));
@@ -821,6 +833,20 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           {role === "restaurant" && (
             <div className="flex items-center gap-2"><Users className="h-4 w-4" />{counts[a.id] ?? 0} candidatur{(counts[a.id] ?? 0) === 1 ? "a" : "e"}</div>
           )}
+          {role === "restaurant" && (() => {
+            const needed = workersNeededMap[a.id];
+            if (!needed) return null;
+            const accepted = acceptedMap[a.id] ?? 0;
+            const remaining = Math.max(0, needed - accepted);
+            return (
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                {needed} {needed === 1 ? "lavoratore richiesto" : "lavoratori richiesti"}
+                {" · "}
+                {remaining} {remaining === 1 ? "posizione ancora disponibile" : "posizioni ancora disponibili"}
+              </div>
+            );
+          })()}
         </div>
         <div className="mt-3">
           {canSeePrecise ? (
@@ -1229,6 +1255,8 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           ann={detailsAnn}
           candidatesCount={detailsAnn ? (counts[detailsAnn.id] ?? 0) : 0}
           assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
+          workersNeededHint={detailsAnn ? (workersNeededMap[detailsAnn.id] ?? null) : null}
+          acceptedCount={detailsAnn ? (acceptedMap[detailsAnn.id] ?? 0) : 0}
           venueName={(profile as any)?.business_name ?? null}
           statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
           shiftStarted={detailsAnn ? isShiftStarted(detailsAnn, now) : false}
@@ -1434,13 +1462,15 @@ function SummaryRow({ icon: Icon, label, value }: { icon: typeof Calendar; label
 }
 
 function AnnouncementDetailsDialog({
-  open, onOpenChange, ann, candidatesCount, assignedCount, venueName, statusKind, shiftStarted = false, onUpdated, onDuplicate,
+  open, onOpenChange, ann, candidatesCount, assignedCount, workersNeededHint, acceptedCount, venueName, statusKind, shiftStarted = false, onUpdated, onDuplicate,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   ann: Ann | null;
   candidatesCount: number;
   assignedCount: number;
+  workersNeededHint?: number | null;
+  acceptedCount?: number;
   venueName: string | null;
   statusKind: EffectiveStatus;
   shiftStarted?: boolean;
@@ -1473,6 +1503,10 @@ function AnnouncementDetailsDialog({
 
   useEffect(() => {
     if (!ann?.id || !open) return;
+    if (workersNeededHint && workersNeededHint > 0) {
+      setWorkersNeeded(workersNeededHint);
+      return;
+    }
     let cancelled = false;
     setWorkersNeeded(null);
     (async () => {
@@ -1486,7 +1520,7 @@ function AnnouncementDetailsDialog({
       setWorkersNeeded(Number.isFinite(n) && n > 0 ? n : 1);
     })();
     return () => { cancelled = true; };
-  }, [ann?.id, open]);
+  }, [ann?.id, open, workersNeededHint]);
 
   if (!ann || !form) return null;
 
@@ -1625,6 +1659,13 @@ function AnnouncementDetailsDialog({
               <SummaryRow icon={Calendar} label="Data del turno" value={dateLabel} />
               <SummaryRow icon={Clock} label="Orario" value={`${ann.service_time?.slice(0,5) ?? "—"}${ann.end_time ? ` – ${ann.end_time.slice(0,5)}` : ""}`} />
               <SummaryRow icon={Users} label="Numero lavoratori richiesti" value={String(workersNeeded ?? "—")} />
+              {workersNeeded != null && (
+                <SummaryRow
+                  icon={UserCheck}
+                  label="Posizioni ancora disponibili"
+                  value={String(Math.max(0, workersNeeded - (acceptedCount ?? 0)))}
+                />
+              )}
             </Section>
 
             <Section title="2. Luogo">
