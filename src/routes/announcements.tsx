@@ -1659,6 +1659,13 @@ function AnnouncementDetailsDialog({
               <SummaryRow icon={Calendar} label="Data del turno" value={dateLabel} />
               <SummaryRow icon={Clock} label="Orario" value={`${ann.service_time?.slice(0,5) ?? "—"}${ann.end_time ? ` – ${ann.end_time.slice(0,5)}` : ""}`} />
               <SummaryRow icon={Users} label="Numero lavoratori richiesti" value={String(workersNeeded ?? "—")} />
+              {workersNeeded != null && (
+                <SummaryRow
+                  icon={UserCheck}
+                  label="Posizioni ancora disponibili"
+                  value={String(Math.max(0, workersNeeded - (acceptedCount ?? 0)))}
+                />
+              )}
             </Section>
 
             <Section title="2. Luogo">
