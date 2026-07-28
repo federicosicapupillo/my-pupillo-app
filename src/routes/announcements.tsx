@@ -427,6 +427,8 @@ function AnnouncementsPage() {
   const [items, setItems] = useState<Ann[]>([]);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [workersNeededMap, setWorkersNeededMap] = useState<Record<string, number>>({});
+  const [acceptedMap, setAcceptedMap] = useState<Record<string, number>>({});
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
   const [assigned, setAssigned] = useState<Record<string, AssignedInfo>>({});
   const [collaboratedWorkerIds, setCollaboratedWorkerIds] = useState<Set<string>>(() => new Set());
