@@ -1462,13 +1462,15 @@ function SummaryRow({ icon: Icon, label, value }: { icon: typeof Calendar; label
 }
 
 function AnnouncementDetailsDialog({
-  open, onOpenChange, ann, candidatesCount, assignedCount, venueName, statusKind, shiftStarted = false, onUpdated, onDuplicate,
+  open, onOpenChange, ann, candidatesCount, assignedCount, workersNeededHint, acceptedCount, venueName, statusKind, shiftStarted = false, onUpdated, onDuplicate,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   ann: Ann | null;
   candidatesCount: number;
   assignedCount: number;
+  workersNeededHint?: number | null;
+  acceptedCount?: number;
   venueName: string | null;
   statusKind: EffectiveStatus;
   shiftStarted?: boolean;
