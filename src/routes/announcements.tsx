@@ -32,6 +32,7 @@ import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ANNOUNCEMENT_SAFE_COLUMNS } from "@/lib/announcement-columns";
+import { fetchWorkersNeededMap } from "@/lib/announcement-positions";
 import {
   Dialog,
   DialogContent,
