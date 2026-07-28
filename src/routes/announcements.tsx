@@ -1503,6 +1503,10 @@ function AnnouncementDetailsDialog({
 
   useEffect(() => {
     if (!ann?.id || !open) return;
+    if (workersNeededHint && workersNeededHint > 0) {
+      setWorkersNeeded(workersNeededHint);
+      return;
+    }
     let cancelled = false;
     setWorkersNeeded(null);
     (async () => {
@@ -1516,7 +1520,7 @@ function AnnouncementDetailsDialog({
       setWorkersNeeded(Number.isFinite(n) && n > 0 ? n : 1);
     })();
     return () => { cancelled = true; };
-  }, [ann?.id, open]);
+  }, [ann?.id, open, workersNeededHint]);
 
   if (!ann || !form) return null;
 
