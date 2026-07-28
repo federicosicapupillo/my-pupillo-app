@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      _tmp_guard_test_backup: {
+        Row: {
+          city: string | null
+          id: string | null
+        }
+        Insert: {
+          city?: string | null
+          id?: string | null
+        }
+        Update: {
+          city?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
+      _tmp_guard_test_log: {
+        Row: {
+          id: number
+          outcome: string | null
+          test: string | null
+        }
+        Insert: {
+          id?: number
+          outcome?: string | null
+          test?: string | null
+        }
+        Update: {
+          id?: number
+          outcome?: string | null
+          test?: string | null
+        }
+        Relationships: []
+      }
       account_deletion_feedback: {
         Row: {
           created_at: string
@@ -2530,13 +2563,6 @@ export type Database = {
       }
     }
     Functions: {
-      _tmp_test_profiles_guard: {
-        Args: never
-        Returns: {
-          outcome: string
-          test: string
-        }[]
-      }
       admin_set_moderation_hidden: {
         Args: { _hidden: boolean; _reason?: string; _user_id: string }
         Returns: undefined
