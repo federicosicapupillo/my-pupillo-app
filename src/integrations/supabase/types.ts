@@ -2530,6 +2530,13 @@ export type Database = {
       }
     }
     Functions: {
+      _tmp_test_profiles_guard: {
+        Args: never
+        Returns: {
+          outcome: string
+          test: string
+        }[]
+      }
       admin_set_moderation_hidden: {
         Args: { _hidden: boolean; _reason?: string; _user_id: string }
         Returns: undefined
