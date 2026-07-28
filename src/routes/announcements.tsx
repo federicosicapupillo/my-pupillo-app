@@ -1255,6 +1255,8 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           ann={detailsAnn}
           candidatesCount={detailsAnn ? (counts[detailsAnn.id] ?? 0) : 0}
           assignedCount={detailsAnn?.assigned_worker_id ? 1 : 0}
+          workersNeededHint={detailsAnn ? (workersNeededMap[detailsAnn.id] ?? null) : null}
+          acceptedCount={detailsAnn ? (acceptedMap[detailsAnn.id] ?? 0) : 0}
           venueName={(profile as any)?.business_name ?? null}
           statusKind={detailsAnn ? computeEffectiveStatus(detailsAnn, now).kind : "active"}
           shiftStarted={detailsAnn ? isShiftStarted(detailsAnn, now) : false}
