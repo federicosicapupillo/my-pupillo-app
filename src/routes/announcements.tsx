@@ -833,6 +833,20 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           {role === "restaurant" && (
             <div className="flex items-center gap-2"><Users className="h-4 w-4" />{counts[a.id] ?? 0} candidatur{(counts[a.id] ?? 0) === 1 ? "a" : "e"}</div>
           )}
+          {role === "restaurant" && (() => {
+            const needed = workersNeededMap[a.id];
+            if (!needed) return null;
+            const accepted = acceptedMap[a.id] ?? 0;
+            const remaining = Math.max(0, needed - accepted);
+            return (
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                {needed} {needed === 1 ? "lavoratore richiesto" : "lavoratori richiesti"}
+                {" · "}
+                {remaining} {remaining === 1 ? "posizione ancora disponibile" : "posizioni ancora disponibili"}
+              </div>
+            );
+          })()}
         </div>
         <div className="mt-3">
           {canSeePrecise ? (
