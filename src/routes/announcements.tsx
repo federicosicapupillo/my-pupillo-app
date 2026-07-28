@@ -499,6 +499,15 @@ function AnnouncementsPage() {
           (byAnn[a.announcement_id] ||= []).push(a);
         });
         setCounts(map);
+        const acc: Record<string, number> = {};
+        (apps ?? []).forEach((a: any) => {
+          if (a.status === "accepted") acc[a.announcement_id] = (acc[a.announcement_id] ?? 0) + 1;
+        });
+        setAcceptedMap(acc);
+        try {
+          const wn = await fetchWorkersNeededMap(ids);
+          setWorkersNeededMap(wn);
+        } catch { /* non-blocking */ }
         const assignedAnns = list.filter(a => a.assigned_worker_id);
         const assignedWorkerIds = assignedAnns.map(a => a.assigned_worker_id as string);
         const workerIds = Array.from(new Set([...(apps ?? []).map((a: any) => a.worker_id), ...assignedWorkerIds]));
