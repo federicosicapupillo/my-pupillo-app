@@ -1,4 +1,5 @@
 export type TimeSlot =
+  | "colazione"
   | "pranzo"
   | "aperitivo"
   | "cena"
@@ -9,6 +10,7 @@ export type TimeSlot =
   | "personalizzata";
 
 export const SLOT_LABELS: Record<TimeSlot, string> = {
+  colazione: "Colazione",
   pranzo: "Pranzo",
   aperitivo: "Aperitivo",
   cena: "Cena",
@@ -20,6 +22,7 @@ export const SLOT_LABELS: Record<TimeSlot, string> = {
 };
 
 export const SLOT_DEFAULT_TIMES: Record<TimeSlot, { start: string | null; end: string | null }> = {
+  colazione: { start: "07:00", end: "11:00" },
   pranzo: { start: "11:00", end: "15:00" },
   aperitivo: { start: "17:00", end: "21:00" },
   cena: { start: "18:00", end: "23:30" },

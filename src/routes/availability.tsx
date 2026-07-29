@@ -2,14 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { RequireRole } from "@/components/RequireRole";
 import { AppShell } from "@/components/AppShell";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { setMyAvailableNow } from "@/lib/profile-self-update";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,10 +19,29 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CalendarDays, Save, Plus, Trash2, Zap, MapPin, Copy, Sparkles, Wand2, CalendarIcon, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import {
+  CalendarDays,
+  Save,
+  Plus,
+  Trash2,
+  Zap,
+  MapPin,
+  Copy,
+  Sparkles,
+  CalendarIcon,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Repeat,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProfileGate } from "@/components/ProfileGate";
 import {
@@ -37,6 +55,16 @@ import {
   crossesMidnight,
   isValidTimeRange,
 } from "@/lib/availability";
+import {
+  addMonths,
+  buildMonthGrid,
+  dowOfIso,
+  formatDateLong,
+  formatMonthLabel,
+  rangesOverlap,
+  startOfMonth,
+  toIso,
+} from "@/lib/availability-calendar";
 import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity } from "@/lib/worker-cities";
 import { useAvailableNowEnabled } from "@/lib/use-available-now-enabled";
 import { useWorkerSpecialAvailabilityEnabled } from "@/lib/use-worker-special-availability-enabled";
@@ -75,13 +103,19 @@ export const Route = createFileRoute("/availability")({
   ),
 });
 
-const ALL_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute"];
-const EXC_SLOTS: TimeSlot[] = ["pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute", "personalizzata"];
+/** Fasce principali mostrate nel pannello giorno (configurazione centralizzata). */
+const PRIMARY_SLOTS: TimeSlot[] = ["colazione", "pranzo", "cena"];
+/** Fasce secondarie, mantenute per compatibilità con i dati già salvati. */
+const SECONDARY_SLOTS: TimeSlot[] = ["aperitivo", "serale", "intera_giornata", "last_minute"];
+const PANEL_SLOTS: TimeSlot[] = [...PRIMARY_SLOTS, "personalizzata", ...SECONDARY_SLOTS];
+const EXC_SLOTS: TimeSlot[] = ["colazione", "pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute", "personalizzata"];
+
+const DAY_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
 const TIME_OPTIONS: string[] = (() => {
   const out: string[] = [];
   for (let h = 0; h < 24; h++) {
-    for (const m of [0, 30]) {
+    for (const m of [0, 15, 30, 45]) {
       out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
   }
@@ -95,7 +129,11 @@ const QUICK_RANGES: Array<{ start: string; end: string; label: string }> = [
   { start: "20:00", end: "02:00", label: "20:00 – 02:00" },
 ];
 
+let uidSeq = 0;
+const nextUid = () => `s${++uidSeq}`;
+
 type LocalSlot = {
+  uid: string;
   id?: string;
   time_slot: TimeSlot;
   start_time: string | null;
@@ -115,6 +153,14 @@ type DayState = {
   radius_km: number | null;
 };
 
+type WorkArea = {
+  city: string;
+  province: string;
+  district: string;
+  radius_km: number | null;
+  notes: string;
+};
+
 type NewExc = {
   date: string;
   is_available: boolean;
@@ -129,16 +175,7 @@ type NewExc = {
 };
 
 function emptyDay(city = "", province = "", district = "", radius_km: number | null = null): DayState {
-  return {
-    is_available: false,
-    flexible: false,
-    notes: "",
-    slots: [],
-    city,
-    province,
-    district,
-    radius_km,
-  };
+  return { is_available: false, flexible: false, notes: "", slots: [], city, province, district, radius_km };
 }
 
 function emptyNewExc(city = "", province = "", district = "", radius_km: number | null = null): NewExc {
@@ -154,6 +191,18 @@ function emptyNewExc(city = "", province = "", district = "", radius_km: number 
     radius_km,
     time_slot: "",
   };
+}
+
+function slotLabelOf(s: LocalSlot): string {
+  return SLOT_LABELS[s.time_slot] ?? s.time_slot;
+}
+
+function sameArea(d: DayState, a: WorkArea): boolean {
+  return (
+    (d.city || "") === (a.city || "") &&
+    (d.district || "") === (a.district || "") &&
+    (d.radius_km ?? null) === (a.radius_km ?? null)
+  );
 }
 
 function AvailabilityPage() {
@@ -178,20 +227,24 @@ function AvailabilityPage() {
   }, [profile]);
 
   const [days, setDays] = useState<DayState[]>(() => Array.from({ length: 7 }, () => emptyDay()));
+  const [area, setArea] = useState<WorkArea>({ city: "", province: "", district: "", radius_km: null, notes: "" });
   const [exceptions, setExceptions] = useState<AvailabilityExceptionRow[]>([]);
   const [newExc, setNewExc] = useState<NewExc>(() => emptyNewExc());
   const [availableNow, setAvailableNow] = useState(false);
   const [availableNowUntil, setAvailableNowUntil] = useState<string | null>(null);
   const [availableNowDuration, setAvailableNowDuration] = useState<"2h" | "today" | "tonight">("2h");
-  const [duplicateFrom, setDuplicateFrom] = useState<number | null>(null);
-  const [duplicateTargets, setDuplicateTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
-  const [editingDay, setEditingDay] = useState<number | null>(null);
+
+  const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const [selectedDates, setSelectedDates] = useState<string[]>(() => [toIso(new Date())]);
+
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyTargets, setCopyTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
+  const [copying, setCopying] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
-  type PresetType = "all" | "weekend" | "cena" | "pranzo";
-  const [confirmPreset, setConfirmPreset] = useState<{ type: PresetType; title: string; message: string } | null>(null);
+  const [confirmApplyArea, setConfirmApplyArea] = useState(false);
+  const [howItWorks, setHowItWorks] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [copying, setCopying] = useState(false);
   const [addingException, setAddingException] = useState(false);
   type ExcErrors = Partial<Record<"date" | "is_available" | "time_slot" | "city" | "district" | "radius_km" | "time", string>>;
   const [excErrors, setExcErrors] = useState<ExcErrors>({});
@@ -202,9 +255,7 @@ function AvailabilityPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [rowsRes] = await Promise.all([
-        supabase.from("worker_availability").select("*").eq("worker_id", user.id),
-      ]);
+      const rowsRes = await supabase.from("worker_availability").select("*").eq("worker_id", user.id);
       if (cancelled) return;
       const rows = (rowsRes.data ?? []) as unknown as AvailabilityRow[];
       const next: DayState[] = Array.from({ length: 7 }, () =>
@@ -212,6 +263,7 @@ function AvailabilityPage() {
       );
       rows.forEach((r) => {
         const d = next[r.day_of_week];
+        if (!d) return;
         d.is_available = true;
         if (r.city) d.city = r.city;
         if (r.province) d.province = r.province;
@@ -221,6 +273,7 @@ function AvailabilityPage() {
           d.flexible = true;
         } else {
           d.slots.push({
+            uid: nextUid(),
             id: r.id,
             time_slot: r.time_slot,
             start_time: r.start_time?.slice(0, 5) ?? null,
@@ -232,6 +285,16 @@ function AvailabilityPage() {
         if (r.notes && !d.notes) d.notes = r.notes;
       });
       setDays(next);
+      // Area di lavoro: valore prevalente fra i giorni attivi, altrimenti default profilo.
+      const active = next.filter((d) => d.is_available && d.city);
+      const base = active[0];
+      setArea({
+        city: base?.city || defaults.city,
+        province: base?.province || defaults.province,
+        district: base?.district || defaults.district,
+        radius_km: base?.radius_km ?? defaults.radius_km,
+        notes: base?.notes || "",
+      });
       setNewExc(emptyNewExc(defaults.city, defaults.province, defaults.district, defaults.radius_km));
       const until = (profile as { available_now_until?: string | null } | null)?.available_now_until ?? null;
       if (until && new Date(until).getTime() > Date.now()) {
@@ -239,7 +302,6 @@ function AvailabilityPage() {
         setAvailableNowUntil(until);
       }
       setLoading(false);
-      // Mark "loaded" on next tick so the dirty tracker doesn't fire from hydration
       setTimeout(() => { loadedRef.current = true; setDirty(false); }, 0);
     })();
     return () => { cancelled = true; };
@@ -264,13 +326,11 @@ function AvailabilityPage() {
     return () => { cancelled = true; };
   }, [user, specialAvailabilityEnabled]);
 
-  // Track unsaved changes on the weekly grid
   useEffect(() => {
     if (!loadedRef.current) return;
     setDirty(true);
   }, [days]);
 
-  // Browser warning on unload when there are unsaved changes
   useEffect(() => {
     if (!dirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -281,185 +341,121 @@ function AvailabilityPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-  const updateDay = (i: number, patch: Partial<DayState>) =>
-    setDays((d) => d.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  // ─────────── Selezione calendario → giorni della settimana ───────────
+  const selectedDows = useMemo(() => {
+    const set = new Set<number>();
+    selectedDates.forEach((iso) => set.add(dowOfIso(iso)));
+    return [...set].sort((a, b) => a - b);
+  }, [selectedDates]);
 
-  const setDayCity = (i: number, city: string) => {
-    const zones = zonesForCity(city);
-    const current = days[i].district;
-    // Keep current zone if still valid, otherwise default to "Tutte le zone".
-    const nextDistrict = current && zones.includes(current) ? current : ALL_ZONES_OPTION;
-    updateDay(i, { city, province: provinceForCity(city), district: nextDistrict });
-  };
+  const primaryDow = selectedDows.length > 0 ? selectedDows[0] : null;
 
-  const toggleDay = (i: number, on: boolean) => updateDay(i, { is_available: on });
-
-  const toggleSlot = (i: number, slot: TimeSlot) => {
-    setDays((d) =>
-      d.map((x, idx) => {
-        if (idx !== i) return x;
-        const has = x.slots.find((s) => s.time_slot === slot);
-        if (has) return { ...x, slots: x.slots.filter((s) => s.time_slot !== slot) };
-        const def = SLOT_DEFAULT_TIMES[slot];
-        return {
-          ...x,
-          is_available: true,
-          slots: [
-            ...x.slots,
-            {
-              time_slot: slot,
-              start_time: def.start,
-              end_time: def.end,
-              is_flexible: false,
-              is_last_minute: slot === "last_minute",
-            },
-          ],
-        };
-      }),
+  const toggleDate = (iso: string) => {
+    setSelectedDates((prev) =>
+      prev.includes(iso) ? prev.filter((x) => x !== iso) : [...prev, iso].sort(),
     );
   };
 
-  const updateSlotTime = (i: number, slot: TimeSlot, field: "start_time" | "end_time", v: string) => {
-    setDays((d) =>
-      d.map((x, idx) =>
-        idx === i
-          ? { ...x, slots: x.slots.map((s) => (s.time_slot === slot ? { ...s, [field]: v || null } : s)) }
-          : x,
+  const applyToSelected = useCallback(
+    (fn: (d: DayState) => DayState) => {
+      setDays((prev) => prev.map((d, i) => (selectedDows.includes(i) ? fn(d) : d)));
+    },
+    [selectedDows],
+  );
+
+  // ─────────── Editing fasce ───────────
+  const setDayAvailable = (on: boolean) =>
+    applyToSelected((d) => ({
+      ...d,
+      is_available: on,
+      city: on ? (d.city || area.city) : d.city,
+      province: on ? (d.province || area.province) : d.province,
+      district: on ? (d.district || area.district) : d.district,
+      radius_km: on ? (d.radius_km ?? area.radius_km) : d.radius_km,
+    }));
+
+  const addSlot = (slot: TimeSlot) => {
+    const def = SLOT_DEFAULT_TIMES[slot];
+    applyToSelected((d) => ({
+      ...d,
+      is_available: true,
+      city: d.city || area.city,
+      province: d.province || area.province,
+      district: d.district || area.district,
+      radius_km: d.radius_km ?? area.radius_km,
+      slots: [
+        ...d.slots,
+        {
+          uid: nextUid(),
+          time_slot: slot,
+          start_time: def.start ?? (slot === "personalizzata" ? "18:00" : null),
+          end_time: def.end ?? (slot === "personalizzata" ? "23:00" : null),
+          is_flexible: false,
+          is_last_minute: slot === "last_minute",
+        },
+      ],
+    }));
+  };
+
+  const removeSlot = (uid: string) =>
+    applyToSelected((d) => ({ ...d, slots: d.slots.filter((s) => s.uid !== uid) }));
+
+  const patchSlot = (uid: string, patch: Partial<LocalSlot>) =>
+    applyToSelected((d) => ({
+      ...d,
+      slots: d.slots.map((s) => (s.uid === uid ? { ...s, ...patch } : s)),
+    }));
+
+  const setSlotType = (uid: string, slot: TimeSlot) => {
+    const def = SLOT_DEFAULT_TIMES[slot];
+    applyToSelected((d) => ({
+      ...d,
+      slots: d.slots.map((s) =>
+        s.uid === uid
+          ? {
+              ...s,
+              time_slot: slot,
+              is_last_minute: slot === "last_minute",
+              start_time: slot === "personalizzata" ? (s.start_time ?? "18:00") : def.start,
+              end_time: slot === "personalizzata" ? (s.end_time ?? "23:00") : def.end,
+            }
+          : s,
+      ),
+    }));
+  };
+
+  const setFlexible = (on: boolean) =>
+    applyToSelected((d) => ({ ...d, flexible: on, is_available: on || d.is_available }));
+
+  // ─────────── Area di lavoro ───────────
+  const setAreaCity = (city: string) => {
+    const zones = zonesForCity(city);
+    const keep = area.district && zones.includes(area.district) ? area.district : ALL_ZONES_OPTION;
+    setArea((a) => ({ ...a, city, province: provinceForCity(city), district: keep }));
+  };
+
+  const applyAreaToAllDays = () => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.is_available
+          ? { ...d, city: area.city, province: area.province, district: area.district, radius_km: area.radius_km, notes: area.notes }
+          : d,
       ),
     );
+    setConfirmApplyArea(false);
+    toast.success("Area di lavoro applicata a tutti i giorni disponibili.");
   };
 
-  const setFlexible = (i: number, on: boolean) =>
-    updateDay(i, { flexible: on, is_available: on || days[i].is_available });
-
-  const openDuplicate = (i: number) => {
-    setDuplicateFrom(i);
-    setDuplicateTargets(Array.from({ length: 7 }, (_, idx) => false));
-  };
-
-  const applyDuplicate = async () => {
-    if (duplicateFrom == null) return;
-    const src = days[duplicateFrom];
-    const next = days.map((x, idx) => {
-      if (idx === duplicateFrom || !duplicateTargets[idx]) return x;
-      return {
-        ...src,
-        slots: src.slots.map((s) => ({ ...s, id: undefined })),
-      };
-    });
-    setDays(next);
-    setCopying(true);
-    try {
-      const ok = await persistAll(next, { silent: true });
-      if (ok) {
-        setDuplicateFrom(null);
-        toast.success("Disponibilità copiata e salvata correttamente.");
-      } else {
-        toast.error("Non è stato possibile copiare la disponibilità. Riprova.");
-      }
-    } finally {
-      setCopying(false);
-    }
-  };
-
-  // -- Quick presets -------------------------------------------------------
-  const presetAll = () => {
-    setDays((d) => d.map((x) => ({
-      ...x,
-      is_available: true,
-      city: x.city || defaults.city,
-      province: x.province || defaults.province,
-      district: x.district || defaults.district,
-      radius_km: x.radius_km ?? defaults.radius_km,
-    })));
-    toast.success("Disponibilità settimana impostata correttamente.");
-  };
-  const presetWeekend = () => {
-    setDays((d) => d.map((x, i) => {
-      const isW = i === 5 || i === 6;
-      return {
-        ...x,
-        is_available: isW,
-        city: isW ? (x.city || defaults.city) : x.city,
-        province: isW ? (x.province || defaults.province) : x.province,
-        district: isW ? (x.district || defaults.district) : x.district,
-        radius_km: isW ? (x.radius_km ?? defaults.radius_km) : x.radius_km,
-      };
-    }));
-    toast.success("Disponibilità weekend impostata correttamente.");
-  };
-  const presetSlot = (slot: TimeSlot) => {
-    const def = SLOT_DEFAULT_TIMES[slot];
-    setDays((d) => {
-      const anyOn = d.some((x) => x.is_available);
-      return d.map((x) => {
-        const apply = anyOn ? x.is_available : true;
-        if (!apply) return x;
-        return {
-          ...x,
-          is_available: true,
-          city: x.city || defaults.city,
-          province: x.province || defaults.province,
-          district: x.district || defaults.district,
-          radius_km: x.radius_km ?? defaults.radius_km,
-          flexible: false,
-          slots: [{
-            time_slot: slot,
-            start_time: def.start,
-            end_time: def.end,
-            is_flexible: false,
-            is_last_minute: slot === "last_minute",
-          }],
-        };
-      });
-    });
-    const slotToast = slot === "cena" ? "serale" : slot === "pranzo" ? "pranzo" : SLOT_LABELS[slot];
-    toast.success(`Disponibilità ${slotToast} impostata correttamente.`);
-  };
-  const clearAll = () => {
-    setDays(Array.from({ length: 7 }, () => emptyDay(defaults.city, defaults.province, defaults.district, defaults.radius_km)));
-    setEditingDay(null);
-    setConfirmClear(false);
-    toast.success("Tutte le disponibilità sono state cancellate.");
-  };
-
-  const applyPreset = () => {
-    if (!confirmPreset) return;
-    switch (confirmPreset.type) {
-      case "all": presetAll(); break;
-      case "weekend": presetWeekend(); break;
-      case "cena": presetSlot("cena"); break;
-      case "pranzo": presetSlot("pranzo"); break;
-    }
-    setConfirmPreset(null);
-  };
-
-  const daySummary = (d: DayState): { location: string; hours: string } => {
-    const loc = d.city
-      ? `${d.city}${d.district ? ` · ${d.district}` : " · Tutte le zone"}`
-      : "Città non indicata";
-    if (d.flexible && d.slots.length === 0) {
-      return { location: loc, hours: "Valuto in base alla proposta" };
-    }
-    if (d.slots.length === 0) return { location: loc, hours: "Nessuna fascia" };
-    const parts = d.slots.slice(0, 2).map((s) => {
-      if (s.time_slot === "last_minute") return "Last minute";
-      if (s.start_time && s.end_time) return `${s.start_time} - ${s.end_time}`;
-      return SLOT_LABELS[s.time_slot];
-    });
-    const more = d.slots.length > 2 ? ` · +${d.slots.length - 2}` : "";
-    return { location: loc, hours: parts.join(" · ") + more };
-  };
-
+  // ─────────── Validazione + salvataggio ───────────
   const validateBeforeSave = (list: DayState[] = days): string | null => {
     for (let i = 0; i < list.length; i++) {
       const d = list[i];
       if (!d.is_available) continue;
       if (!d.city || !d.city.trim()) {
-        return `Seleziona la città in cui sei disponibile (${DAY_LABELS[i]}).`;
+        return `Seleziona la città nell'area di lavoro (${DAY_LABELS[i]}).`;
       }
       if (!d.flexible && d.slots.length === 0) {
-        return `Indica almeno una fascia oraria o un orario di disponibilità per ${DAY_LABELS[i]}.`;
+        return `Indica almeno una fascia oraria per ${DAY_LABELS[i]}.`;
       }
       for (const s of d.slots) {
         if (s.time_slot === "last_minute") continue;
@@ -470,21 +466,16 @@ function AvailabilityPage() {
           return `Orario di inizio e fine non possono coincidere (${DAY_LABELS[i]}).`;
         }
       }
-    }
-    return null;
-  };
-
-  // Stricter per-day validation used by "Salva e chiudi".
-  const validateDay = (i: number): string | null => {
-    const d = days[i];
-    if (!d.is_available) return null;
-    if (!d.city.trim()) return "Seleziona la città.";
-    if (!d.district.trim()) return "Seleziona la zona o quartiere.";
-    if (!d.flexible && d.slots.length === 0) return "Seleziona almeno una fascia oraria.";
-    for (const s of d.slots) {
-      if (s.time_slot === "last_minute") continue;
-      if (!s.start_time || !s.end_time) return "Inserisci orario di inizio e fine.";
-      if (!isValidTimeRange(s.start_time, s.end_time)) return "Orario di inizio e fine non possono coincidere.";
+      const ranges = d.slots.filter((s) => s.time_slot !== "last_minute" && s.start_time && s.end_time);
+      for (let a = 0; a < ranges.length; a++) {
+        for (let b = a + 1; b < ranges.length; b++) {
+          const ra = ranges[a];
+          const rb = ranges[b];
+          if (rangesOverlap(ra.start_time as string, ra.end_time as string, rb.start_time as string, rb.end_time as string)) {
+            return `Le fasce orarie di ${DAY_LABELS[i]} si sovrappongono.`;
+          }
+        }
+      }
     }
     return null;
   };
@@ -561,20 +552,46 @@ function AvailabilityPage() {
 
   const save = async (): Promise<void> => { await persistAll(); };
 
-  const saveAndClose = async (i: number) => {
-    const err = validateDay(i);
-    if (err) { toast.error(err); return; }
-    const ok = await persistAll(undefined, { silent: true });
-    if (ok) {
-      setEditingDay(null);
-      toast.success("Disponibilità aggiornata correttamente.");
+  // ─────────── Copia su altri giorni ───────────
+  const openCopy = () => {
+    if (primaryDow == null) return;
+    setCopyTargets(Array.from({ length: 7 }, () => false));
+    setCopyOpen(true);
+  };
+
+  const applyCopy = async () => {
+    if (primaryDow == null) return;
+    const src = days[primaryDow];
+    const next = days.map((d, i) =>
+      i === primaryDow || !copyTargets[i]
+        ? d
+        : { ...src, slots: src.slots.map((s) => ({ ...s, uid: nextUid(), id: undefined })) },
+    );
+    setDays(next);
+    setCopying(true);
+    try {
+      const ok = await persistAll(next, { silent: true });
+      if (ok) {
+        setCopyOpen(false);
+        toast.success("Disponibilità copiata e salvata correttamente.");
+      } else {
+        toast.error("Non è stato possibile copiare la disponibilità. Riprova.");
+      }
+    } finally {
+      setCopying(false);
     }
   };
 
+  const clearAll = () => {
+    setDays(Array.from({ length: 7 }, () => emptyDay(area.city, area.province, area.district, area.radius_km)));
+    setConfirmClear(false);
+    toast.success("Tutte le disponibilità sono state cancellate.");
+  };
+
+  // ─────────── Disponibilità speciali (flag) ───────────
   const addException = async () => {
     if (!user || !specialAvailabilityEnabled) return;
     const errs: ExcErrors = {};
-    // Date required, not in the past
     if (!newExc.date) {
       errs.date = "Seleziona una data valida.";
     } else {
@@ -601,7 +618,6 @@ function AvailabilityPage() {
       return;
     }
     setExcErrors({});
-    // Duplicate check: same date + same slot
     const dup = exceptions.find(
       (e) => e.date === newExc.date && (e.time_slot ?? "") === newExc.time_slot,
     );
@@ -638,7 +654,7 @@ function AvailabilityPage() {
         return;
       }
       setExceptions((e) => [...e, data as unknown as AvailabilityExceptionRow].sort((a, b) => a.date.localeCompare(b.date)));
-      setNewExc(emptyNewExc(defaults.city, defaults.province, defaults.district, defaults.radius_km));
+      setNewExc(emptyNewExc(area.city, area.province, area.district, area.radius_km));
       toast.success("Disponibilità speciale aggiunta correttamente.");
     } finally {
       setAddingException(false);
@@ -672,37 +688,32 @@ function AvailabilityPage() {
     }
   };
 
+  // ─────────── Derivati ───────────
+  const grid = useMemo(() => buildMonthGrid(month), [month]);
+
+  const monthSetCount = useMemo(
+    () => grid.filter((c) => c.inMonth && !c.isPast && days[c.dow]?.is_available).length,
+    [grid, days],
+  );
+
   const summary = useMemo(() => {
     const active = days.filter((d) => d.is_available).length;
     const totalSlots = days.reduce((acc, d) => acc + d.slots.length + (d.flexible ? 1 : 0), 0);
-    const cityCounts = new Map<string, number>();
-    days.forEach((d) => {
-      if (!d.is_available || !d.city) return;
-      const k = d.city.trim();
-      if (!k) return;
-      cityCounts.set(k, (cityCounts.get(k) ?? 0) + 1);
-    });
-    let prevalentCity: string | null = null;
-    let max = 0;
-    cityCounts.forEach((v, k) => { if (v > max) { max = v; prevalentCity = k; } });
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     const nextSpecial = exceptions
       .filter((e) => new Date(e.date + "T00:00:00") >= today)
       .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null;
-    return { active, totalSlots, prevalentCity, nextSpecial };
+    return { active, totalSlots, nextSpecial };
   }, [days, exceptions]);
 
   const isEmpty = !loading && summary.active === 0 && exceptions.length === 0;
 
-  // Gate: profili non completi al 100% non possono modificare la disponibilità.
-  // I tasti restano visibili ma al click apre il popup dedicato.
   const saveGated = requireCompleteForAvailability(save);
   const addExceptionGated = requireCompleteForAvailability(addException);
   const removeExceptionGated = requireCompleteForAvailability(removeException);
   const toggleAvailableNowGated = requireCompleteForAvailability(toggleAvailableNow);
   const gatedOpacity = canPerformOperationalAction ? "" : "opacity-70";
 
-  // Derived save status for the header pill / sticky CTA
   const saveStatus: "saving" | "dirty" | "saved" | "idle" =
     saving ? "saving" : dirty ? "dirty" : lastSavedAt ? "saved" : "idle";
 
@@ -713,31 +724,39 @@ function AvailabilityPage() {
     idle: { label: "Nessuna modifica", cls: "border-border bg-muted text-muted-foreground", Icon: CheckCircle2, spin: false },
   }[saveStatus];
 
-  // Default the weekly editor to "today" on first load so the user never lands
-  // on an empty agenda. DAY_LABELS is Mon-first; JS getDay() is Sun-first.
-  useEffect(() => {
-    if (loading) return;
-    if (editingDay != null) return;
-    const dow = new Date().getDay();
-    const idx = dow === 0 ? 6 : dow - 1;
-    setEditingDay(idx);
-  }, [loading, editingDay]);
+  const panelDay = primaryDow != null ? days[primaryDow] : null;
+  const selectionLabel =
+    selectedDates.length === 0
+      ? "Nessun giorno selezionato"
+      : selectedDates.length === 1
+        ? formatDateLong(selectedDates[0])
+        : `${selectedDates.length} giorni selezionati`;
+  const affectedLabel = selectedDows.map((d) => DAY_LABELS[d]).join(", ");
 
   return (
     <AppShell>
-      {/* ───────── HERO HEADER ───────── */}
-      <header className="mb-6 rounded-2xl border bg-card/70 p-5 sm:p-6 shadow-sm">
+      {/* ───────── HEADER ───────── */}
+      <header className="mb-5 rounded-2xl border bg-card/70 p-5 sm:p-6 shadow-sm">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h1 className="truncate text-2xl sm:text-3xl font-bold tracking-tight">Le mie disponibilità</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Tocca un giorno per modificarlo, poi salva la settimana.
+              Imposta il tuo schema settimanale ricorrente scegliendo i giorni dal calendario.
             </p>
           </div>
-          <div className="hidden sm:flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setHowItWorks(true)}
+              aria-label="Come funziona il calendario"
+            >
+              <Info className="h-5 w-5 text-muted-foreground" />
+            </Button>
             <span className={cn(
-              "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-              SAVE_PILL.cls
+              "hidden sm:inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+              SAVE_PILL.cls,
             )}>
               <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
               {SAVE_PILL.label}
@@ -746,7 +765,7 @@ function AvailabilityPage() {
               onClick={saveGated}
               disabled={saving || loading || !dirty}
               size="lg"
-              className={cn("gap-2 shadow-sm min-w-[180px]", gatedOpacity)}
+              className={cn("hidden sm:inline-flex gap-2 shadow-sm min-w-[180px]", gatedOpacity)}
             >
               <Save className="h-4 w-4" />
               {saving ? "Salvataggio..." : "Salva disponibilità"}
@@ -754,7 +773,6 @@ function AvailabilityPage() {
           </div>
         </div>
 
-        {/* Riepilogo sintetico */}
         <div className="mt-5 flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs">
             <CalendarDays className="h-3.5 w-3.5 text-primary" />
@@ -764,26 +782,24 @@ function AvailabilityPage() {
             <Zap className="h-3.5 w-3.5 text-primary" />
             <strong className="tabular-nums">{summary.totalSlots}</strong> {summary.totalSlots === 1 ? "fascia" : "fasce"}
           </span>
-          {summary.prevalentCity && (
+          {area.city && (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-foreground">
               <MapPin className="h-3.5 w-3.5 text-primary" />
-              <strong>{summary.prevalentCity}</strong>
+              <strong>{area.city}</strong>{area.district ? ` · ${area.district}` : ""}
             </span>
           )}
           {summary.nextSpecial && (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
               Speciale {new Date(summary.nextSpecial.date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
-              {summary.nextSpecial.city ? ` · ${summary.nextSpecial.city}` : ""}
             </span>
           )}
         </div>
 
-        {/* Mobile: pill stato (CTA è nella bottom bar sticky) */}
         <div className="sm:hidden mt-4">
           <span className={cn(
             "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-            SAVE_PILL.cls
+            SAVE_PILL.cls,
           )}>
             <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
             {SAVE_PILL.label}
@@ -791,516 +807,104 @@ function AvailabilityPage() {
         </div>
       </header>
 
-      {/* Banner modifiche non salvate — molto evidente */}
       {dirty && (
-        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:px-5 sm:py-4">
+        <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
           <div className="flex items-start gap-3">
             <span className="relative flex h-2.5 w-2.5 shrink-0 mt-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
             </span>
-            <div>
-              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                Hai modifiche non salvate
-              </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">Hai modifiche non salvate</p>
               <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
-                Ricorda di premere "Salva disponibilità" prima di uscire dalla pagina.
+                Premi "Salva disponibilità" prima di uscire dalla pagina.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* ───────── DISPONIBILE ORA — funzione veloce e separata ───────── */}
+      {/* ───────── DISPONIBILE ORA ───────── */}
       {availableNowEnabled && (
-      <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex items-center gap-3 sm:flex-1 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                <Zap className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold">Disponibile ora</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  Attiva per ricevere proposte immediate, a prescindere dalla settimana.
+        <Card className="mb-5 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-3 sm:flex-1 min-w-0">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                  <Zap className="h-5 w-5" />
                 </div>
-                {availableNow && availableNowUntil && (
-                  <div className="text-xs text-primary mt-1">
-                    Attivo fino alle {new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                <div className="min-w-0">
+                  <div className="font-semibold">Disponibile ora</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    Attiva per ricevere proposte immediate, a prescindere dal calendario.
                   </div>
-                )}
+                  {availableNow && availableNowUntil && (
+                    <div className="text-xs text-primary mt-1">
+                      Attivo fino alle {new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 sm:shrink-0">
-              <Select value={availableNowDuration} onValueChange={(v) => setAvailableNowDuration(v as "2h" | "today" | "tonight")}>
-                <SelectTrigger className="w-full sm:w-[170px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2h">Prossime 2 ore</SelectItem>
-                  <SelectItem value="today">Disponibile oggi</SelectItem>
-                  <SelectItem value="tonight">Questa sera</SelectItem>
-                </SelectContent>
-              </Select>
-              <Switch checked={availableNow} onCheckedChange={toggleAvailableNowGated} aria-label="Disponibile ora" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      )}
-
-      {isEmpty && (
-        <Card className="mb-6 border-dashed border-2 bg-card/40">
-          <CardContent className="p-8 sm:p-10 text-center space-y-3">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-              <CalendarDays className="h-7 w-7 text-primary" />
-            </div>
-            <div className="font-semibold text-lg">Nessuna disponibilità impostata</div>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Scegli i giorni della settimana, le fasce orarie e le zone in cui vuoi lavorare per ricevere proposte mirate.
-            </p>
-            <div className="pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setEditingDay(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)}>
-                Inizia dalla settimana
-              </Button>
+              <div className="flex items-center gap-3 sm:shrink-0">
+                <Select value={availableNowDuration} onValueChange={(v) => setAvailableNowDuration(v as "2h" | "today" | "tonight")}>
+                  <SelectTrigger className="w-full sm:w-[170px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2h">Prossime 2 ore</SelectItem>
+                    <SelectItem value="today">Disponibile oggi</SelectItem>
+                    <SelectItem value="tonight">Questa sera</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Switch checked={availableNow} onCheckedChange={toggleAvailableNowGated} aria-label="Disponibile ora" />
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* ───────── AGENDA SETTIMANALE: tab giorni + pannello editor ───────── */}
-      <section className="mb-8">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-semibold">Agenda settimanale</h2>
-          <span className="hidden sm:inline text-xs text-muted-foreground">Tocca un giorno per modificarlo</span>
-        </div>
-
-        {/* Day tabs — navigazione settimanale compatta e leggibile */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 mb-5">
-          {days.map((d, i) => {
-            const active = editingDay === i;
-            const has = d.is_available;
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setEditingDay(i)}
-                aria-pressed={active}
-                className={cn(
-                  "group relative flex flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  active && "border-primary bg-primary/15 text-foreground ring-2 ring-primary/50 shadow-sm",
-                  !active && has && "border-primary/40 bg-primary/5 text-foreground hover:border-primary/70 hover:bg-primary/10",
-                  !active && !has && "border-border bg-card/60 text-muted-foreground hover:border-foreground/25 hover:bg-card hover:text-foreground",
-                )}
-              >
-                <span className="uppercase tracking-wider">{DAY_LABELS[i].slice(0, 3)}</span>
-                <span
-                  className={cn(
-                    "h-2 w-2 rounded-full transition-colors",
-                    has ? "bg-primary" : "bg-muted-foreground/25 group-hover:bg-muted-foreground/40",
-                  )}
-                  aria-hidden
-                />
-                {active && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full bg-primary" aria-hidden />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Pannello giorno selezionato */}
-        {editingDay != null && (() => {
-          const i = editingDay;
-          const d = days[i];
-          const sum = daySummary(d);
-          return (
-            <Card className={cn("border transition-colors", d.is_available ? "border-primary/25 bg-card/80" : "border-border bg-card/60")}>
-              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-4">
-                <div className="min-w-0">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                    {DAY_LABELS[i]}
-                    {d.is_available && (
-                      <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden />
-                    )}
-                  </CardTitle>
-                  <div className={cn("text-xs mt-1", d.is_available ? "text-primary" : "text-muted-foreground")}>
-                    {d.is_available
-                      ? <>Disponibile · <span className="text-muted-foreground">{sum.hours}</span></>
-                      : "Non disponibile"}
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="hidden sm:inline text-xs font-medium text-muted-foreground">Attiva</span>
-                  <Switch
-                    checked={d.is_available}
-                    onCheckedChange={(v) => toggleDay(i, v)}
-                    aria-label={`Disponibile ${DAY_LABELS[i]}`}
-                  />
-                </div>
-              </CardHeader>
-
-              {!d.is_available && (
-                <CardContent className="pt-0 pb-6 text-sm text-muted-foreground">
-                  <div className="rounded-lg border border-dashed bg-muted/40 px-4 py-4 text-center">
-                    Attiva il toggle per impostare città, fasce e orari di {DAY_LABELS[i]}.
-                  </div>
-                </CardContent>
-              )}
-
-              {d.is_available && (
-                <CardContent className="space-y-4">
-                {/* Location */}
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Città *</label>
-                    <Select value={d.city || undefined} onValueChange={(v) => setDayCity(i, v)}>
-                      <SelectTrigger><SelectValue placeholder="Seleziona la città" /></SelectTrigger>
-                      <SelectContent>
-                        {d.city && !WORKER_CITIES.includes(d.city as (typeof WORKER_CITIES)[number]) && (
-                          <SelectItem value={d.city}>{d.city} (attuale)</SelectItem>
-                        )}
-                        {WORKER_CITIES.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere *</label>
-                    {(() => {
-                      const zones = zonesForCity(d.city);
-                      const options = [ALL_ZONES_OPTION, "Centro", ...zones.filter((z) => z !== "Centro")];
-                      const dedup = Array.from(new Set(options));
-                      const showCurrent = d.district && !dedup.includes(d.district);
-                      return (
-                        <Select
-                          value={d.district || undefined}
-                          onValueChange={(v) => updateDay(i, { district: v })}
-                          disabled={!d.city}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={d.city ? "Seleziona la zona" : "Prima seleziona la città"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {showCurrent && (
-                              <SelectItem value={d.district}>{d.district} (attuale)</SelectItem>
-                            )}
-                            {dedup.map((z) => (
-                              <SelectItem key={z} value={z}>{z}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      );
-                    })()}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
-                    <Input
-                      value={d.province}
-                      readOnly
-                      disabled
-                      placeholder="Auto da città"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Raggio massimo</label>
-                    <Select
-                      value={d.radius_km != null ? String(d.radius_km) : "none"}
-                      onValueChange={(v) => updateDay(i, { radius_km: v === "none" ? null : parseInt(v, 10) })}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Nessun limite" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nessun limite</SelectItem>
-                        {RADIUS_OPTIONS.map((r) => (
-                          <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Slots */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-foreground">Fasce orarie</label>
-                  <div className="flex flex-wrap gap-2">
-                    {ALL_SLOTS.map((slot) => {
-                      const active = !!d.slots.find((s) => s.time_slot === slot);
-                      return (
-                        <button
-                          key={slot}
-                          type="button"
-                          onClick={() => toggleSlot(i, slot)}
-                          className={cn(
-                            "text-xs rounded-full px-3.5 py-2 border transition-all focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                            active
-                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                              : "bg-card hover:bg-muted border-border text-foreground hover:border-primary/40",
-                          )}
-                        >
-                          {SLOT_LABELS[slot]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {d.slots.length === 0 && !d.flexible && (
-                    <p className="text-xs text-muted-foreground">
-                      Seleziona una fascia o attiva "Disponibile, ma valuto in base alla proposta".
-                    </p>
-                  )}
-                </div>
-
-                <label className="flex items-center gap-3 rounded-lg border border-border bg-card/50 px-3 py-2.5 text-sm cursor-pointer transition-colors hover:border-primary/30 hover:bg-card">
-                  <input
-                    type="checkbox"
-                    checked={d.flexible}
-                    onChange={(e) => setFlexible(i, e.target.checked)}
-                    className="h-4 w-4 shrink-0"
-                  />
-                  <span className="text-foreground">Disponibile, ma valuto in base alla proposta</span>
-                </label>
-
-                {d.slots.length > 0 && (
-                  <div className="space-y-3">
-                    {d.slots.map((s) => (
-                      <div key={s.time_slot} className="rounded-xl border border-border/80 bg-card/50 p-3.5 sm:p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="secondary" className="font-medium">
-                            {SLOT_LABELS[s.time_slot]}
-                          </Badge>
-                          {s.time_slot === "last_minute" && (
-                            <span className="text-xs text-muted-foreground">Nessun orario fisso</span>
-                          )}
-                        </div>
-                        {s.time_slot !== "last_minute" && (
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs text-muted-foreground mb-1.5">Dalle</label>
-                              <Input type="time" value={s.start_time ?? ""} onChange={(e) => updateSlotTime(i, s.time_slot, "start_time", e.target.value)} />
-                            </div>
-                            <div>
-                              <label className="block text-xs text-muted-foreground mb-1.5">Alle</label>
-                              <Input type="time" value={s.end_time ?? ""} onChange={(e) => updateSlotTime(i, s.time_slot, "end_time", e.target.value)} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <label className="text-xs text-muted-foreground">Note sulla disponibilità (facoltative)</label>
-                  <Textarea
-                    value={d.notes}
-                    onChange={(e) => updateDay(i, { notes: e.target.value })}
-                    placeholder="Es. Preferisco turni serali in zona centro"
-                    rows={2}
-                    className="bg-card/50"
-                  />
-                </div>
-
-                <div className="flex flex-col-reverse sm:flex-row sm:flex-wrap justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => openDuplicate(i)}
-                    disabled={saving || copying}
-                  >
-                    <Copy className="h-3.5 w-3.5" /> Copia su altri giorni
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className={cn("gap-2", gatedOpacity)}
-                    onClick={() => requireCompleteForAvailability(() => saveAndClose(i))()}
-                    disabled={saving || copying}
-                  >
-                    <Save className="h-3.5 w-3.5" /> {saving ? "Salvataggio…" : "Salva e chiudi"}
-                  </Button>
-                </div>
-                </CardContent>
-              )}
-            </Card>
-          );
-        })()}
-      </section>
-
-      {/* ───────── AZIONI RAPIDE ───────── */}
-      <section className="mb-10">
-        <div className="mb-3 flex items-center gap-2">
-          <Wand2 className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Azioni rapide</h3>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "all", title: "Imposta tutta la settimana", message: "Questa azione imposterà la disponibilità su tutti i giorni della settimana. Vuoi continuare?" })}>
-            Tutta la settimana
-          </Button>
-          <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "weekend", title: "Imposta solo weekend", message: "Questa azione imposterà la disponibilità su Sabato e Domenica. Vuoi continuare?" })}>
-            Solo weekend
-          </Button>
-          <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "pranzo", title: "Imposta solo pranzo", message: "Questa azione imposterà la fascia oraria 'Pranzo' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
-            Solo pranzo
-          </Button>
-          <Button type="button" size="sm" variant="outline" className={cn("gap-1.5", gatedOpacity)} onClick={() => setConfirmPreset({ type: "cena", title: "Imposta solo sere", message: "Questa azione imposterà la fascia oraria 'Cena' sui giorni attualmente disponibili (o tutti se nessuno è attivo). Vuoi continuare?" })}>
-            Solo sera
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="gap-1.5 text-destructive/80 hover:text-destructive hover:bg-destructive/10 ml-auto"
-            onClick={() => setConfirmClear(true)}
-          >
-            <Trash2 className="h-3.5 w-3.5" /> Cancella tutto
-          </Button>
-        </div>
-      </section>
-
-      {/* Special dates — gated by `worker_special_availability_enabled` (fail-closed) */}
-      {specialAvailabilityEnabled && (
-      <section className="mt-12 pt-6 border-t border-dashed">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <h2 className="text-lg font-semibold">Disponibilità speciale</h2>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Eccezioni alla tua agenda settimanale per date specifiche.
-            </p>
-          </div>
-        </div>
-
-        <Card>
-          <CardContent className="p-4 grid gap-3 md:grid-cols-6">
-            {/* Date picker */}
-            <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Data <span className="text-destructive">*</span></label>
-              {(() => {
-                const today = new Date(); today.setHours(0, 0, 0, 0);
-                const selected = newExc.date ? new Date(newExc.date + "T00:00:00") : undefined;
-                const label = selected
-                  ? selected.toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })
-                  : "Seleziona una data";
-                return (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !selected && "text-muted-foreground",
-                          excErrors.date && "border-destructive",
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        <span className="capitalize">{label}</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selected}
-                        onSelect={(d) => {
-                          if (!d) return;
-                          const yyyy = d.getFullYear();
-                          const mm = String(d.getMonth() + 1).padStart(2, "0");
-                          const dd = String(d.getDate()).padStart(2, "0");
-                          setNewExc({ ...newExc, date: `${yyyy}-${mm}-${dd}` });
-                          setExcErrors((e) => ({ ...e, date: undefined }));
-                        }}
-                        disabled={(d) => d < today}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                );
-              })()}
-              {excErrors.date && <p className="text-xs text-destructive mt-1">{excErrors.date}</p>}
-            </div>
-
-            {/* Status */}
-            <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Stato <span className="text-destructive">*</span></label>
-              <Select value={newExc.is_available ? "yes" : "no"} onValueChange={(v) => setNewExc({ ...newExc, is_available: v === "yes" })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+      {/* ───────── AREA DI LAVORO ───────── */}
+      <Card className="mb-5">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" /> Area di lavoro
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Città, zona e raggio valgono per le nuove disponibilità che imposti. I giorni già salvati mantengono la
+            loro area finché non premi "Applica a tutti i giorni".
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Città</label>
+              <Select value={area.city || undefined} onValueChange={setAreaCity}>
+                <SelectTrigger><SelectValue placeholder="Seleziona la città" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="yes">Disponibile</SelectItem>
-                  <SelectItem value="no">Non disponibile</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Slot */}
-            <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Fascia {newExc.is_available && <span className="text-destructive">*</span>}</label>
-              <Select
-                value={newExc.time_slot || undefined}
-                onValueChange={(v) => { setNewExc({ ...newExc, time_slot: v as TimeSlot }); setExcErrors((e) => ({ ...e, time_slot: undefined })); }}
-                disabled={!newExc.is_available}
-              >
-                <SelectTrigger className={cn(excErrors.time_slot && "border-destructive")}>
-                  <SelectValue placeholder="Seleziona una fascia" />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXC_SLOTS.map((s) => (
-                    <SelectItem key={s} value={s}>{SLOT_LABELS[s]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {excErrors.time_slot && <p className="text-xs text-destructive mt-1">{excErrors.time_slot}</p>}
-            </div>
-
-            {/* City */}
-            <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Città {newExc.is_available && <span className="text-destructive">*</span>}</label>
-              <Select
-                value={newExc.city || undefined}
-                onValueChange={(v) => {
-                  const zones = zonesForCity(v);
-                  const keepDistrict = newExc.district && zones.includes(newExc.district) ? newExc.district : ALL_ZONES_OPTION;
-                  setNewExc({ ...newExc, city: v, province: provinceForCity(v), district: keepDistrict });
-                  setExcErrors((e) => ({ ...e, city: undefined, district: undefined }));
-                }}
-                disabled={!newExc.is_available}
-              >
-                <SelectTrigger className={cn(excErrors.city && "border-destructive")}>
-                  <SelectValue placeholder="Seleziona la città" />
-                </SelectTrigger>
-                <SelectContent>
-                  {newExc.city && !WORKER_CITIES.includes(newExc.city as (typeof WORKER_CITIES)[number]) && (
-                    <SelectItem value={newExc.city}>{newExc.city} (attuale)</SelectItem>
+                  {area.city && !WORKER_CITIES.includes(area.city as (typeof WORKER_CITIES)[number]) && (
+                    <SelectItem value={area.city}>{area.city} (attuale)</SelectItem>
                   )}
                   {WORKER_CITIES.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {excErrors.city && <p className="text-xs text-destructive mt-1">{excErrors.city}</p>}
             </div>
-
-            {/* Zone */}
-            <div className="md:col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere {newExc.is_available && <span className="text-destructive">*</span>}</label>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere</label>
               {(() => {
-                const zones = zonesForCity(newExc.city);
+                const zones = zonesForCity(area.city);
                 const dedup = Array.from(new Set([ALL_ZONES_OPTION, "Centro", ...zones.filter((z) => z !== "Centro")]));
-                const showCurrent = newExc.district && !dedup.includes(newExc.district);
+                const showCurrent = area.district && !dedup.includes(area.district);
                 return (
                   <Select
-                    value={newExc.district || undefined}
-                    onValueChange={(v) => { setNewExc({ ...newExc, district: v }); setExcErrors((e) => ({ ...e, district: undefined })); }}
-                    disabled={!newExc.is_available || !newExc.city}
+                    value={area.district || undefined}
+                    onValueChange={(v) => setArea((a) => ({ ...a, district: v }))}
+                    disabled={!area.city}
                   >
-                    <SelectTrigger className={cn(excErrors.district && "border-destructive")}>
-                      <SelectValue placeholder={newExc.city ? "Seleziona la zona" : "Prima seleziona la città"} />
+                    <SelectTrigger>
+                      <SelectValue placeholder={area.city ? "Seleziona la zona" : "Prima seleziona la città"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {showCurrent && <SelectItem value={newExc.district}>{newExc.district} (attuale)</SelectItem>}
+                      {showCurrent && <SelectItem value={area.district}>{area.district} (attuale)</SelectItem>}
                       {dedup.map((z) => (
                         <SelectItem key={z} value={z}>{z}</SelectItem>
                       ))}
@@ -1308,176 +912,675 @@ function AvailabilityPage() {
                   </Select>
                 );
               })()}
-              {excErrors.district && <p className="text-xs text-destructive mt-1">{excErrors.district}</p>}
             </div>
-
-            {/* Province */}
             <div>
               <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
-              <Input value={newExc.province} readOnly disabled placeholder="Auto" />
+              <Input value={area.province} readOnly disabled placeholder="Auto" />
             </div>
-
-            {/* Radius */}
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Raggio {newExc.is_available && <span className="text-destructive">*</span>}</label>
+              <label className="block text-xs text-muted-foreground mb-1">Raggio massimo</label>
               <Select
-                value={newExc.radius_km != null ? String(newExc.radius_km) : undefined}
-                onValueChange={(v) => { setNewExc({ ...newExc, radius_km: parseInt(v, 10) }); setExcErrors((e) => ({ ...e, radius_km: undefined })); }}
-                disabled={!newExc.is_available}
+                value={area.radius_km != null ? String(area.radius_km) : undefined}
+                onValueChange={(v) => setArea((a) => ({ ...a, radius_km: parseInt(v, 10) }))}
               >
-                <SelectTrigger className={cn(excErrors.radius_km && "border-destructive")}>
-                  <SelectValue placeholder="Seleziona raggio" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Seleziona raggio" /></SelectTrigger>
                 <SelectContent>
                   {RADIUS_OPTIONS.map((r) => (
                     <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {excErrors.radius_km && <p className="text-xs text-destructive mt-1">{excErrors.radius_km}</p>}
             </div>
-            {newExc.time_slot === "personalizzata" && (
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Note per i ristoratori (facoltative)</label>
+            <Input
+              value={area.notes}
+              onChange={(e) => setArea((a) => ({ ...a, notes: e.target.value }))}
+              placeholder="Es. Mi sposto volentieri anche fuori zona con preavviso"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setConfirmApplyArea(true)} disabled={!area.city}>
+              Applica a tutti i giorni disponibili
+            </Button>
+            <span className="text-xs text-muted-foreground">Sovrascrive l'area dei giorni già impostati.</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {isEmpty && (
+        <Card className="mb-5 border-dashed border-2 bg-card/40">
+          <CardContent className="p-8 text-center space-y-3">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+              <CalendarDays className="h-7 w-7 text-primary" />
+            </div>
+            <div className="font-semibold text-lg">Nessuna disponibilità impostata</div>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Tocca un giorno sul calendario e imposta le fasce orarie: verranno applicate a tutti i giorni della
+              settimana corrispondenti.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ───────── CALENDARIO MENSILE ───────── */}
+      <Card className="mb-5 overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMonth((m) => addMonths(m, -1))}
+              aria-label="Mese precedente"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="text-center min-w-0">
+              <CardTitle className="text-base sm:text-lg truncate">{formatMonthLabel(month)}</CardTitle>
+              <p className="text-[11px] text-muted-foreground mt-0.5 tabular-nums">
+                {monthSetCount} {monthSetCount === 1 ? "giorno impostato" : "giorni impostati"}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMonth((m) => addMonths(m, 1))}
+              aria-label="Mese successivo"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-5">
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {DAY_SHORT.map((d) => (
+              <div key={d} className="text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+            {grid.map((c) => {
+              const isSelected = selectedDates.includes(c.iso);
+              const hasAvail = days[c.dow]?.is_available;
+              const disabled = c.isPast;
+              return (
+                <button
+                  key={c.iso}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => toggleDate(c.iso)}
+                  aria-pressed={isSelected}
+                  aria-label={`${formatDateLong(c.iso)}${hasAvail ? " · disponibilità impostata" : ""}`}
+                  className={cn(
+                    "relative aspect-square rounded-xl border text-sm font-medium transition-all",
+                    "flex flex-col items-center justify-center gap-1",
+                    c.inMonth ? "text-foreground" : "text-muted-foreground/40",
+                    disabled && "opacity-35 cursor-not-allowed",
+                    isSelected
+                      ? "border-primary bg-primary text-primary-foreground shadow-neon"
+                      : hasAvail && c.inMonth
+                        ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
+                        : "border-border/70 bg-card/50 hover:bg-muted/60",
+                    c.isToday && !isSelected && "ring-1 ring-primary/60",
+                  )}
+                >
+                  <span className="tabular-nums leading-none">{c.day}</span>
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      hasAvail && c.inMonth
+                        ? isSelected ? "bg-primary-foreground" : "bg-primary"
+                        : "bg-transparent",
+                    )}
+                    aria-hidden
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-primary" /> Disponibilità impostata
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-[4px] border border-primary bg-primary" /> Selezionato
+            </span>
+            {selectedDates.length > 0 && (
+              <button
+                type="button"
+                className="ml-auto inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                onClick={() => setSelectedDates([])}
+              >
+                <X className="h-3.5 w-3.5" /> Deseleziona
+              </button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ───────── PANNELLO GIORNO ───────── */}
+      {panelDay == null ? (
+        <Card className="mb-6 border-dashed">
+          <CardContent className="p-8 text-center text-sm text-muted-foreground">
+            Seleziona uno o più giorni sul calendario per impostare le fasce orarie.
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className={cn("mb-6 border transition-colors", panelDay.is_available ? "border-primary/25 bg-card/80" : "bg-card/60")}>
+          <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 space-y-0 pb-3">
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg truncate">{selectionLabel}</CardTitle>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {panelDay.is_available ? "Disponibile" : "Non disponibile"}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="hidden sm:inline text-xs font-medium text-muted-foreground">Disponibile</span>
+              <Switch
+                checked={panelDay.is_available}
+                onCheckedChange={setDayAvailable}
+                aria-label="Disponibile"
+              />
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {/* Avviso ricorrenza — sempre visibile */}
+            <div className="flex items-start gap-2.5 rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3">
+              <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Le modifiche valgono per <strong className="text-foreground">tutti i {affectedLabel}</strong> in modo
+                ricorrente, non solo per la data selezionata.
+              </p>
+            </div>
+
+            {!panelDay.is_available ? (
+              <div className="rounded-lg border border-dashed bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
+                Attiva il selettore per impostare le fasce orarie.
+              </div>
+            ) : (
               <>
-                <div className="md:col-span-3">
-                  <label className="block text-xs text-muted-foreground mb-1">Dalle *</label>
-                  <Select
-                    value={newExc.start_time || ""}
-                    onValueChange={(v) => setNewExc({ ...newExc, start_time: v })}
-                    disabled={!newExc.is_available}
-                  >
-                    <SelectTrigger className={cn(excErrors.time && "border-destructive")}><SelectValue placeholder="Seleziona" /></SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {TIME_OPTIONS.map((t) => (
-                        <SelectItem key={`s-${t}`} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-3">
-                  <label className="block text-xs text-muted-foreground mb-1">Alle *</label>
-                  <Select
-                    value={newExc.end_time || ""}
-                    onValueChange={(v) => setNewExc({ ...newExc, end_time: v })}
-                    disabled={!newExc.is_available}
-                  >
-                    <SelectTrigger className={cn(excErrors.time && "border-destructive")}><SelectValue placeholder="Seleziona" /></SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {TIME_OPTIONS.map((t) => (
-                        <SelectItem key={`e-${t}`} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {newExc.start_time && newExc.end_time && crossesMidnight(newExc.start_time, newExc.end_time) && (
-                    <p className="text-[11px] text-muted-foreground mt-1">Termina il giorno successivo</p>
+                {/* Area applicata a questo giorno */}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    {panelDay.city
+                      ? `${panelDay.city}${panelDay.district ? ` · ${panelDay.district}` : ""}${panelDay.radius_km ? ` · ${panelDay.radius_km} km` : ""}`
+                      : "Area non impostata"}
+                  </span>
+                  {panelDay.city && !sameArea(panelDay, area) && (
+                    <Badge variant="secondary">Diversa dall'area di lavoro</Badge>
                   )}
                 </div>
-                {excErrors.time && (
-                  <div className="md:col-span-6 -mt-2">
-                    <p className="text-xs text-destructive">{excErrors.time}</p>
-                  </div>
-                )}
-                <div className="md:col-span-6">
-                  <label className="block text-xs text-muted-foreground mb-2">Scelte rapide</label>
-                  <div className="flex flex-wrap gap-2">
-                    {QUICK_RANGES.map((r) => (
-                      <Button
-                        key={r.label}
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={!newExc.is_available}
-                        onClick={() => setNewExc({ ...newExc, start_time: r.start, end_time: r.end })}
-                      >
-                        {r.label}
-                      </Button>
-                    ))}
-                  </div>
+
+                {/* Fasce orarie */}
+                <div className="space-y-2.5">
+                  {panelDay.slots.length === 0 && !panelDay.flexible && (
+                    <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-4 text-center text-xs text-muted-foreground">
+                      Nessuna fascia oraria. Aggiungine una qui sotto.
+                    </div>
+                  )}
+                  {panelDay.slots.map((s) => (
+                    <div key={s.uid} className="rounded-xl border bg-background/60 p-3">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                        <Select value={s.time_slot} onValueChange={(v) => setSlotType(s.uid, v as TimeSlot)}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {PANEL_SLOTS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{SLOT_LABELS[opt]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeSlot(s.uid)}
+                          aria-label={`Rimuovi fascia ${slotLabelOf(s)}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {s.time_slot !== "last_minute" && (
+                        <div className="mt-2.5 grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[11px] text-muted-foreground mb-1">Dalle</label>
+                            <Select
+                              value={s.start_time ?? ""}
+                              onValueChange={(v) => patchSlot(s.uid, { start_time: v })}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue placeholder="--:--" /></SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {TIME_OPTIONS.map((t) => (
+                                  <SelectItem key={`s-${s.uid}-${t}`} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] text-muted-foreground mb-1">Alle</label>
+                            <Select
+                              value={s.end_time ?? ""}
+                              onValueChange={(v) => patchSlot(s.uid, { end_time: v })}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue placeholder="--:--" /></SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {TIME_OPTIONS.map((t) => (
+                                  <SelectItem key={`e-${s.uid}-${t}`} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {s.start_time && s.end_time && (
+                            <div className="col-span-2 -mt-1 space-y-1">
+                              {crossesMidnight(s.start_time, s.end_time) && (
+                                <p className="text-[11px] text-muted-foreground">Termina il giorno successivo</p>
+                              )}
+                              {!isValidTimeRange(s.start_time, s.end_time) && (
+                                <p className="text-[11px] text-destructive">Inizio e fine non possono coincidere.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {s.time_slot === "personalizzata" && (
+                        <div className="mt-2.5 flex flex-wrap gap-1.5">
+                          {QUICK_RANGES.map((r) => (
+                            <Button
+                              key={r.label}
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px]"
+                              onClick={() => patchSlot(s.uid, { start_time: r.start, end_time: r.end })}
+                            >
+                              {r.label}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
+
+                {/* Aggiunta rapida fasce */}
+                <div className="flex flex-wrap gap-2">
+                  {PRIMARY_SLOTS.map((slot) => (
+                    <Button key={slot} type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addSlot(slot)}>
+                      <Plus className="h-3.5 w-3.5" /> {SLOT_LABELS[slot]}
+                    </Button>
+                  ))}
+                  <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addSlot("personalizzata")}>
+                    <Plus className="h-3.5 w-3.5" /> Personalizza
+                  </Button>
+                </div>
+
+                {/* Flessibile */}
+                <label className="flex items-center justify-between gap-3 rounded-xl border bg-background/60 px-3.5 py-3">
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">Valuto in base alla proposta</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Ricevi proposte anche fuori dalle fasce indicate.
+                    </span>
+                  </span>
+                  <Switch checked={panelDay.flexible} onCheckedChange={setFlexible} aria-label="Valuto in base alla proposta" />
+                </label>
               </>
             )}
-            <div className="md:col-span-6">
-              <label className="block text-xs text-muted-foreground mb-1">Note (facoltative)</label>
-              <Input value={newExc.notes} onChange={(e) => setNewExc({ ...newExc, notes: e.target.value })} placeholder="Es. Sono a Milano per il weekend" />
-            </div>
-            <div className="md:col-span-6 flex justify-end">
-              <Button onClick={addExceptionGated} disabled={addingException} className={`gap-2 ${gatedOpacity}`}>
-                <Plus className="h-4 w-4" /> {addingException ? "Aggiunta in corso…" : "Aggiungi disponibilità speciale"}
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+                onClick={openCopy}
+                disabled={selectedDows.length !== 1}
+              >
+                <Copy className="h-4 w-4" /> Copia su tutta la settimana
+              </Button>
+              <Button type="button" variant="ghost" size="sm" className="gap-2 text-destructive" onClick={() => setConfirmClear(true)}>
+                <Trash2 className="h-4 w-4" /> Cancella tutto
               </Button>
             </div>
           </CardContent>
         </Card>
-
-        <div className="mt-4 space-y-3">
-          {exceptions.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border/80 bg-card/40 p-7 sm:p-8 text-center">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-muted">
-                <Sparkles className="h-5 w-5 text-muted-foreground/70" />
-              </div>
-              <p className="mt-3 text-sm font-medium">Nessuna disponibilità speciale</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Aggiungi eccezioni per date specifiche, ad esempio festivi o giorni fuori routine.
-              </p>
-            </div>
-          )}
-          {exceptions.map((e) => (
-            <div key={e.id} className="rounded-xl border border-border/80 bg-card/60 p-3.5 sm:p-4 flex flex-wrap items-center gap-3 text-sm transition-colors hover:bg-card/80">
-              <Badge variant={e.is_available ? "default" : "destructive"}>
-                {e.is_available ? "Disponibile" : "Non disponibile"}
-              </Badge>
-              <span className="font-medium">
-                {new Date(e.date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
-              </span>
-              {e.is_available && e.city && (
-                <span className="inline-flex items-center gap-1 text-foreground">
-                  <MapPin className="h-3.5 w-3.5 text-primary" />
-                  {e.city}{e.district ? ` · ${e.district}` : ""}
-                  {e.radius_km ? ` · entro ${e.radius_km} km` : ""}
-                </span>
-              )}
-              {e.is_available && e.time_slot && (
-                <Badge variant="secondary">{SLOT_LABELS[e.time_slot]}</Badge>
-              )}
-              {e.is_available && e.start_time && e.end_time && (
-                <span className="text-muted-foreground">
-                  {e.start_time.slice(0, 5)} – {e.end_time.slice(0, 5)}
-                </span>
-              )}
-              {e.notes && <span className="text-muted-foreground truncate">· {e.notes}</span>}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="ml-auto"
-                onClick={() => removeExceptionGated(e.id)}
-                aria-label="Rimuovi disponibilità speciale"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      </section>
       )}
 
-      {/* Duplicate dialog */}
-      <Dialog open={duplicateFrom != null} onOpenChange={(open) => { if (!open) setDuplicateFrom(null); }}>
+      {/* ───────── DISPONIBILITÀ SPECIALI (feature flag) ───────── */}
+      {specialAvailabilityEnabled && (
+        <section className="mb-8">
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" /> Disponibilità speciali
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Eccezioni per date specifiche: hanno sempre la priorità sul calendario ricorrente.
+            </p>
+          </div>
+
+          <Card>
+            <CardContent className="grid gap-3 p-4 md:grid-cols-6">
+              <div className="md:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">Data <span className="text-destructive">*</span></label>
+                {(() => {
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const selected = newExc.date ? new Date(newExc.date + "T00:00:00") : undefined;
+                  const label = selected
+                    ? selected.toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })
+                    : "Seleziona una data";
+                  return (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selected && "text-muted-foreground",
+                            excErrors.date && "border-destructive",
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          <span className="capitalize">{label}</span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selected}
+                          onSelect={(d) => {
+                            if (!d) return;
+                            setNewExc({ ...newExc, date: toIso(d) });
+                            setExcErrors((e) => ({ ...e, date: undefined }));
+                          }}
+                          disabled={(d) => d < today}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  );
+                })()}
+                {excErrors.date && <p className="text-xs text-destructive mt-1">{excErrors.date}</p>}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">Stato <span className="text-destructive">*</span></label>
+                <Select value={newExc.is_available ? "yes" : "no"} onValueChange={(v) => setNewExc({ ...newExc, is_available: v === "yes" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Disponibile</SelectItem>
+                    <SelectItem value="no">Non disponibile</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">Fascia {newExc.is_available && <span className="text-destructive">*</span>}</label>
+                <Select
+                  value={newExc.time_slot || undefined}
+                  onValueChange={(v) => { setNewExc({ ...newExc, time_slot: v as TimeSlot }); setExcErrors((e) => ({ ...e, time_slot: undefined })); }}
+                  disabled={!newExc.is_available}
+                >
+                  <SelectTrigger className={cn(excErrors.time_slot && "border-destructive")}>
+                    <SelectValue placeholder="Seleziona una fascia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXC_SLOTS.map((s) => (
+                      <SelectItem key={s} value={s}>{SLOT_LABELS[s]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {excErrors.time_slot && <p className="text-xs text-destructive mt-1">{excErrors.time_slot}</p>}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">Città {newExc.is_available && <span className="text-destructive">*</span>}</label>
+                <Select
+                  value={newExc.city || undefined}
+                  onValueChange={(v) => {
+                    const zones = zonesForCity(v);
+                    const keepDistrict = newExc.district && zones.includes(newExc.district) ? newExc.district : ALL_ZONES_OPTION;
+                    setNewExc({ ...newExc, city: v, province: provinceForCity(v), district: keepDistrict });
+                    setExcErrors((e) => ({ ...e, city: undefined, district: undefined }));
+                  }}
+                  disabled={!newExc.is_available}
+                >
+                  <SelectTrigger className={cn(excErrors.city && "border-destructive")}>
+                    <SelectValue placeholder="Seleziona la città" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {newExc.city && !WORKER_CITIES.includes(newExc.city as (typeof WORKER_CITIES)[number]) && (
+                      <SelectItem value={newExc.city}>{newExc.city} (attuale)</SelectItem>
+                    )}
+                    {WORKER_CITIES.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {excErrors.city && <p className="text-xs text-destructive mt-1">{excErrors.city}</p>}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere {newExc.is_available && <span className="text-destructive">*</span>}</label>
+                {(() => {
+                  const zones = zonesForCity(newExc.city);
+                  const dedup = Array.from(new Set([ALL_ZONES_OPTION, "Centro", ...zones.filter((z) => z !== "Centro")]));
+                  const showCurrent = newExc.district && !dedup.includes(newExc.district);
+                  return (
+                    <Select
+                      value={newExc.district || undefined}
+                      onValueChange={(v) => { setNewExc({ ...newExc, district: v }); setExcErrors((e) => ({ ...e, district: undefined })); }}
+                      disabled={!newExc.is_available || !newExc.city}
+                    >
+                      <SelectTrigger className={cn(excErrors.district && "border-destructive")}>
+                        <SelectValue placeholder={newExc.city ? "Seleziona la zona" : "Prima seleziona la città"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {showCurrent && <SelectItem value={newExc.district}>{newExc.district} (attuale)</SelectItem>}
+                        {dedup.map((z) => (
+                          <SelectItem key={z} value={z}>{z}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                })()}
+                {excErrors.district && <p className="text-xs text-destructive mt-1">{excErrors.district}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
+                <Input value={newExc.province} readOnly disabled placeholder="Auto" />
+              </div>
+
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Raggio {newExc.is_available && <span className="text-destructive">*</span>}</label>
+                <Select
+                  value={newExc.radius_km != null ? String(newExc.radius_km) : undefined}
+                  onValueChange={(v) => { setNewExc({ ...newExc, radius_km: parseInt(v, 10) }); setExcErrors((e) => ({ ...e, radius_km: undefined })); }}
+                  disabled={!newExc.is_available}
+                >
+                  <SelectTrigger className={cn(excErrors.radius_km && "border-destructive")}>
+                    <SelectValue placeholder="Seleziona raggio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RADIUS_OPTIONS.map((r) => (
+                      <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {excErrors.radius_km && <p className="text-xs text-destructive mt-1">{excErrors.radius_km}</p>}
+              </div>
+
+              {newExc.time_slot === "personalizzata" && (
+                <>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs text-muted-foreground mb-1">Dalle *</label>
+                    <Select
+                      value={newExc.start_time || ""}
+                      onValueChange={(v) => setNewExc({ ...newExc, start_time: v })}
+                      disabled={!newExc.is_available}
+                    >
+                      <SelectTrigger className={cn(excErrors.time && "border-destructive")}><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {TIME_OPTIONS.map((t) => (
+                          <SelectItem key={`xs-${t}`} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs text-muted-foreground mb-1">Alle *</label>
+                    <Select
+                      value={newExc.end_time || ""}
+                      onValueChange={(v) => setNewExc({ ...newExc, end_time: v })}
+                      disabled={!newExc.is_available}
+                    >
+                      <SelectTrigger className={cn(excErrors.time && "border-destructive")}><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {TIME_OPTIONS.map((t) => (
+                          <SelectItem key={`xe-${t}`} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {newExc.start_time && newExc.end_time && crossesMidnight(newExc.start_time, newExc.end_time) && (
+                      <p className="text-[11px] text-muted-foreground mt-1">Termina il giorno successivo</p>
+                    )}
+                  </div>
+                  {excErrors.time && (
+                    <div className="md:col-span-6 -mt-2">
+                      <p className="text-xs text-destructive">{excErrors.time}</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="md:col-span-6">
+                <label className="block text-xs text-muted-foreground mb-1">Note (facoltative)</label>
+                <Input value={newExc.notes} onChange={(e) => setNewExc({ ...newExc, notes: e.target.value })} placeholder="Es. Sono a Milano per il weekend" />
+              </div>
+              <div className="md:col-span-6 flex justify-end">
+                <Button onClick={addExceptionGated} disabled={addingException} className={`gap-2 ${gatedOpacity}`}>
+                  <Plus className="h-4 w-4" /> {addingException ? "Aggiunta in corso…" : "Aggiungi disponibilità speciale"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="mt-4 space-y-3">
+            {exceptions.length === 0 && (
+              <div className="rounded-xl border border-dashed border-border/80 bg-card/40 p-7 text-center">
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-muted">
+                  <Sparkles className="h-5 w-5 text-muted-foreground/70" />
+                </div>
+                <p className="mt-3 text-sm font-medium">Nessuna disponibilità speciale</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Aggiungi eccezioni per date specifiche, ad esempio festivi o giorni fuori routine.
+                </p>
+              </div>
+            )}
+            {exceptions.map((e) => (
+              <div key={e.id} className="rounded-xl border border-border/80 bg-card/60 p-3.5 flex flex-wrap items-center gap-3 text-sm transition-colors hover:bg-card/80">
+                <Badge variant={e.is_available ? "default" : "destructive"}>
+                  {e.is_available ? "Disponibile" : "Non disponibile"}
+                </Badge>
+                <span className="font-medium">
+                  {new Date(e.date + "T00:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+                </span>
+                {e.is_available && e.city && (
+                  <span className="inline-flex items-center gap-1 text-foreground">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    {e.city}{e.district ? ` · ${e.district}` : ""}
+                    {e.radius_km ? ` · entro ${e.radius_km} km` : ""}
+                  </span>
+                )}
+                {e.is_available && e.time_slot && (
+                  <Badge variant="secondary">{SLOT_LABELS[e.time_slot]}</Badge>
+                )}
+                {e.is_available && e.start_time && e.end_time && (
+                  <span className="text-muted-foreground">
+                    {e.start_time.slice(0, 5)} – {e.end_time.slice(0, 5)}
+                  </span>
+                )}
+                {e.notes && <span className="text-muted-foreground truncate">· {e.notes}</span>}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-auto"
+                  onClick={() => removeExceptionGated(e.id)}
+                  aria-label="Rimuovi disponibilità speciale"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ───────── DIALOGS ───────── */}
+      <Dialog open={howItWorks} onOpenChange={setHowItWorks}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Come funziona il calendario</DialogTitle>
+            <DialogDescription>
+              Il calendario è una vista sul tuo schema settimanale ricorrente.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+            <li>Selezionando una data modifichi <strong className="text-foreground">tutti i giorni della settimana corrispondenti</strong> (es. tocca un mercoledì → vale per tutti i mercoledì).</li>
+            <li>Puoi selezionare più date insieme: le modifiche si applicano a tutti i giorni della settimana coinvolti.</li>
+            <li>Città, zona e raggio si impostano una sola volta nella sezione "Area di lavoro".</li>
+            <li>Le date passate non sono selezionabili.</li>
+          </ul>
+          <DialogFooter>
+            <Button onClick={() => setHowItWorks(false)}>Ho capito</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Duplica {duplicateFrom != null ? DAY_LABELS[duplicateFrom] : ""} su altri giorni
+              Copia {primaryDow != null ? DAY_LABELS[primaryDow] : ""} su altri giorni
             </DialogTitle>
+            <DialogDescription>
+              Verranno copiate fasce orarie, area di lavoro e note. I giorni selezionati saranno sovrascritti.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Verranno copiati città, zona, raggio, fasce orarie e note. I dati esistenti sui giorni selezionati saranno sovrascritti.
-            </p>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => setCopyTargets(Array.from({ length: 7 }, (_, i) => i !== primaryDow))}>
+                Tutta la settimana
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setCopyTargets(Array.from({ length: 7 }, (_, i) => i < 5 && i !== primaryDow))}>
+                Solo feriali
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setCopyTargets(Array.from({ length: 7 }, (_, i) => i >= 5 && i !== primaryDow))}>
+                Solo weekend
+              </Button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {DAY_LABELS.map((lbl, idx) => (
-                <label key={idx} className={`flex items-center gap-2 rounded-lg border p-2 text-sm ${idx === duplicateFrom ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+                <label
+                  key={idx}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border p-2 text-sm",
+                    idx === primaryDow ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
+                  )}
+                >
                   <input
                     type="checkbox"
-                    disabled={idx === duplicateFrom}
-                    checked={duplicateTargets[idx]}
-                    onChange={(e) => setDuplicateTargets((t) => t.map((v, i) => (i === idx ? e.target.checked : v)))}
+                    disabled={idx === primaryDow}
+                    checked={copyTargets[idx]}
+                    onChange={(e) => setCopyTargets((t) => t.map((v, i) => (i === idx ? e.target.checked : v)))}
                     className="h-4 w-4"
                   />
                   {lbl}
@@ -1486,10 +1589,25 @@ function AvailabilityPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDuplicateFrom(null)} disabled={copying}>Annulla</Button>
-            <Button onClick={applyDuplicate} disabled={!duplicateTargets.some(Boolean) || copying || saving}>
+            <Button variant="outline" onClick={() => setCopyOpen(false)} disabled={copying}>Annulla</Button>
+            <Button onClick={applyCopy} disabled={!copyTargets.some(Boolean) || copying || saving}>
               {copying ? "Copia in corso…" : "Applica"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmApplyArea} onOpenChange={setConfirmApplyArea}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Applicare l'area a tutti i giorni?</DialogTitle>
+            <DialogDescription>
+              Città, zona, raggio e note verranno sovrascritti su tutti i giorni disponibili.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmApplyArea(false)}>Annulla</Button>
+            <Button onClick={applyAreaToAllDays}>Applica</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1498,27 +1616,13 @@ function AvailabilityPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancella tutte le disponibilità</DialogTitle>
+            <DialogDescription>
+              Stai per cancellare tutte le disponibilità impostate. Vuoi continuare?
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Stai per cancellare tutte le disponibilità impostate. Vuoi continuare?
-          </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmClear(false)}>Annulla</Button>
             <Button variant="destructive" onClick={clearAll}>Cancella tutto</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preset confirmation dialog */}
-      <Dialog open={!!confirmPreset} onOpenChange={(open) => { if (!open) setConfirmPreset(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{confirmPreset?.title}</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">{confirmPreset?.message}</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmPreset(null)}>Annulla</Button>
-            <Button onClick={applyPreset}>Applica</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1535,12 +1639,12 @@ function AvailabilityPage() {
         "sm:hidden fixed bottom-0 inset-x-0 z-40 border-t p-4 transition-colors",
         dirty
           ? "border-amber-500/30 bg-background/98 backdrop-blur supports-[backdrop-filter]:bg-background/90 shadow-[0_-8px_30px_-10px_rgba(0,0,0,0.3)]"
-          : "border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+          : "border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
       )}>
         <div className="flex items-center gap-3">
           <span className={cn(
             "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold shrink-0",
-            SAVE_PILL.cls
+            SAVE_PILL.cls,
           )}>
             <SAVE_PILL.Icon className={cn("h-3 w-3", SAVE_PILL.spin && "animate-spin")} />
             <span className="truncate max-w-[120px]">{SAVE_PILL.label}</span>
@@ -1548,11 +1652,7 @@ function AvailabilityPage() {
           <Button
             onClick={saveGated}
             disabled={saving || loading || !dirty}
-            className={cn(
-              "flex-1 gap-2 h-12 text-base font-semibold",
-              gatedOpacity,
-              dirty && "shadow-neon"
-            )}
+            className={cn("flex-1 gap-2 h-12 text-base font-semibold", gatedOpacity, dirty && "shadow-neon")}
           >
             <Save className="h-4 w-4" />
             {saving ? "Salvataggio..." : "Salva disponibilità"}
