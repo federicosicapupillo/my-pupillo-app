@@ -82,7 +82,7 @@ export async function loadRestaurantReceivedReviews(restaurantId: string): Promi
   const appIds = Array.from(new Set(rows.map((r) => r.application_id).filter(Boolean) as string[]));
 
   const [wRes, sRes, aRes] = await Promise.all([
-    wIds.length ? supabase.from("profiles").select("id, full_name, is_deleted").in("id", wIds) : Promise.resolve({ data: [] as WorkerInfo[] }),
+    wIds.length ? supabase.from("public_profiles").select("id, full_name, is_deleted").in("id", wIds) : Promise.resolve({ data: [] as WorkerInfo[] }),
     shiftIds.length ? supabase.from("shifts").select("id, shift_date").in("id", shiftIds) : Promise.resolve({ data: [] as ShiftInfo[] }),
     appIds.length ? supabase.from("applications").select("id, announcement_id").in("id", appIds) : Promise.resolve({ data: [] as AppInfo[] }),
   ]);

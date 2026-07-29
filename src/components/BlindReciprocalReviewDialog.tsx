@@ -127,7 +127,7 @@ export function BlindReciprocalReviewDialog({
         if (isUnlocked && r.target_id === user.id) {
           // Hydrate display metadata only when we are allowed to show the row.
           const { data: w } = await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("full_name, first_name, last_name, is_deleted")
             .eq("id", r.author_id)
             .maybeSingle();

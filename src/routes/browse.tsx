@@ -156,7 +156,7 @@ function Browse() {
   useEffect(() => {
     if (!selected) { setRestaurant(null); return; }
     (async () => {
-      const { data } = await supabase.from("profiles")
+      const { data } = await supabase.from("public_profiles")
         .select("id, full_name, business_name, venue_type, city, neighborhood, rating_avg")
         .eq("id", selected.restaurant_id).maybeSingle();
       setRestaurant((data as RestaurantInfo) ?? null);
@@ -212,7 +212,7 @@ function Browse() {
     const existingProfileIds = new Set<string>();
     if (restIdsAll.length) {
       const { data: rs } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, city, neighborhood, is_deleted")
         .in("id", restIdsAll);
       for (const r of ((rs ?? []) as any[])) {

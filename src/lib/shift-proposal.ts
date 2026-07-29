@@ -113,7 +113,7 @@ export async function sendShiftProposal(params: {
       .eq("id", announcementId)
       .maybeSingle(),
     supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("business_name, full_name")
       .eq("id", restaurantId)
       .maybeSingle(),

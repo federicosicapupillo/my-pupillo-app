@@ -128,7 +128,7 @@ export function useRequiredReviews() {
           : Promise.resolve({ data: [] as any[] }),
         workerIds.length
           ? supabase
-              .from("profiles")
+              .from("public_profiles")
               .select("id, full_name, primary_role")
               .in("id", workerIds)
           : Promise.resolve({ data: [] as any[] }),
@@ -225,7 +225,7 @@ export function useRequiredReviews() {
       const reqShiftIds = Array.from(new Set(reqRows.map((r) => r.shift_id).filter(Boolean))) as string[];
       const [{ data: pr }, { data: an }, { data: sh }] = await Promise.all([
         reqWorkerIds.length
-          ? supabase.from("profiles").select("id, full_name, primary_role").in("id", reqWorkerIds)
+          ? supabase.from("public_profiles").select("id, full_name, primary_role").in("id", reqWorkerIds)
           : Promise.resolve({ data: [] as any[] }),
         reqAnnIds.length
           ? supabase.from("announcements").select("id, location_address").in("id", reqAnnIds)
