@@ -36,6 +36,7 @@ import {
   SPECIAL_INCOMPATIBLE_MESSAGE,
   type SpecialAvailabilityBlock,
 } from "@/lib/worker-special-availability";
+import { useWorkerSpecialAvailabilityEnabled } from "@/lib/use-worker-special-availability-enabled";
 import {
   computeCompatibility,
   sameCity,
@@ -134,6 +135,9 @@ function Browse() {
   // abituale. Se nessuna è compatibile con città/orario dell'annuncio,
   // candidatura bloccata sia lato UI sia lato submit.
   const [specialExceptions, setSpecialExceptions] = useState<AvailabilityExceptionRow[]>([]);
+  // Fail-closed: con flag OFF le disponibilità speciali non vengono lette né
+  // usate nel matching (resta solo la disponibilità settimanale ordinaria).
+  const { isEnabled: specialAvailabilityEnabled } = useWorkerSpecialAvailabilityEnabled();
   // Disponibilità ABITUALE (settimanale) del lavoratore, usata per calcolare
   // la compatibilità di ogni annuncio quando non c'è una disponibilità
   // speciale per quella data. Serve a ordinare la lista nazionale per
@@ -304,7 +308,7 @@ function Browse() {
       setAppStatusById(statusMap);
       setFavIds(new Set((favs??[]).map((f:any)=>f.announcement_id)));
       const annDates = Array.from(new Set(list.map(a => a.service_date).filter(Boolean))) as string[];
-      if (annDates.length > 0) {
+      if (specialAvailabilityEnabled && annDates.length > 0) {
         const { data: excs } = await supabase
           .from("worker_availability_exceptions")
           .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")
@@ -335,7 +339,7 @@ function Browse() {
     }
     setLoading(false);
   };
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [user, specialAvailabilityEnabled]);
 
   const filtered = useMemo(() => {
     const lat = profile?.service_area_lat, lng = profile?.service_area_lng;

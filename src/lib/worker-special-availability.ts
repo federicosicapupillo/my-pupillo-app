@@ -60,6 +60,12 @@ export async function fetchSpecialAvailabilityBlock(
   ann: AnnouncementLike | null | undefined,
 ): Promise<SpecialAvailabilityBlock | null> {
   if (!ann?.service_date) return null;
+  // Feature flag `worker_special_availability_enabled` (fail-closed): con flag
+  // OFF le disponibilità speciali storiche NON influenzano il matching.
+  const { data: flag, error: flagErr } = await supabase.rpc("is_feature_enabled", {
+    _key: "worker_special_availability_enabled",
+  });
+  if (flagErr || flag !== true) return null;
   const { data, error } = await supabase
     .from("worker_availability_exceptions")
     .select("id, worker_id, date, is_available, time_slot, start_time, end_time, notes, city, province, district, latitude, longitude, radius_km")

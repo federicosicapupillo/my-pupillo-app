@@ -39,6 +39,7 @@ import {
 } from "@/lib/availability";
 import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity } from "@/lib/worker-cities";
 import { useAvailableNowEnabled } from "@/lib/use-available-now-enabled";
+import { useWorkerSpecialAvailabilityEnabled } from "@/lib/use-worker-special-availability-enabled";
 
 // Province codes for the supported worker cities. Keep aligned with WORKER_CITIES.
 const CITY_PROVINCE_CODE: Record<string, string> = {
@@ -161,6 +162,8 @@ function AvailabilityPage() {
   const [saving, setSaving] = useState(false);
   const { requireCompleteForAvailability, canPerformOperationalAction } = useProfileGate();
   const { enabled: availableNowEnabled } = useAvailableNowEnabled();
+  // Fail-closed: la sezione "Disponibilità speciali" esiste solo con flag ON.
+  const { isEnabled: specialAvailabilityEnabled } = useWorkerSpecialAvailabilityEnabled();
 
   // Defaults from worker profile
   const defaults = useMemo(() => {
@@ -199,13 +202,11 @@ function AvailabilityPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [rowsRes, excRes] = await Promise.all([
+      const [rowsRes] = await Promise.all([
         supabase.from("worker_availability").select("*").eq("worker_id", user.id),
-        supabase.from("worker_availability_exceptions").select("*").eq("worker_id", user.id).order("date", { ascending: true }),
       ]);
       if (cancelled) return;
       const rows = (rowsRes.data ?? []) as unknown as AvailabilityRow[];
-      const exc = (excRes.data ?? []) as unknown as AvailabilityExceptionRow[];
       const next: DayState[] = Array.from({ length: 7 }, () =>
         emptyDay(defaults.city, defaults.province, defaults.district, defaults.radius_km),
       );
@@ -231,7 +232,6 @@ function AvailabilityPage() {
         if (r.notes && !d.notes) d.notes = r.notes;
       });
       setDays(next);
-      setExceptions(exc);
       setNewExc(emptyNewExc(defaults.city, defaults.province, defaults.district, defaults.radius_km));
       const until = (profile as { available_now_until?: string | null } | null)?.available_now_until ?? null;
       if (until && new Date(until).getTime() > Date.now()) {
@@ -244,6 +244,25 @@ function AvailabilityPage() {
     })();
     return () => { cancelled = true; };
   }, [user, profile, defaults.city, defaults.province, defaults.district, defaults.radius_km]);
+
+  // Disponibilità speciali: nessuna query quando il flag è OFF/loading/error.
+  useEffect(() => {
+    if (!user || !specialAvailabilityEnabled) {
+      setExceptions([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("worker_availability_exceptions")
+        .select("*")
+        .eq("worker_id", user.id)
+        .order("date", { ascending: true });
+      if (cancelled) return;
+      setExceptions((data ?? []) as unknown as AvailabilityExceptionRow[]);
+    })();
+    return () => { cancelled = true; };
+  }, [user, specialAvailabilityEnabled]);
 
   // Track unsaved changes on the weekly grid
   useEffect(() => {
@@ -553,7 +572,7 @@ function AvailabilityPage() {
   };
 
   const addException = async () => {
-    if (!user) return;
+    if (!user || !specialAvailabilityEnabled) return;
     const errs: ExcErrors = {};
     // Date required, not in the past
     if (!newExc.date) {
@@ -627,6 +646,7 @@ function AvailabilityPage() {
   };
 
   const removeException = async (id: string) => {
+    if (!specialAvailabilityEnabled) return;
     const { error } = await supabase.from("worker_availability_exceptions").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     setExceptions((e) => e.filter((x) => x.id !== id));
@@ -1138,7 +1158,8 @@ function AvailabilityPage() {
         </div>
       </section>
 
-      {/* Special dates */}
+      {/* Special dates — gated by `worker_special_availability_enabled` (fail-closed) */}
+      {specialAvailabilityEnabled && (
       <section className="mt-12 pt-6 border-t border-dashed">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <div className="min-w-0">
@@ -1435,6 +1456,7 @@ function AvailabilityPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* Duplicate dialog */}
       <Dialog open={duplicateFrom != null} onOpenChange={(open) => { if (!open) setDuplicateFrom(null); }}>
