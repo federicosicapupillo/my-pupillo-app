@@ -207,3 +207,19 @@ La vista deve filtrare: `WHERE is_deleted = false AND moderation_hidden = false 
 - **Fase 7**: vista `public.announcements_public` (esiste già in `restaurants.$id.tsx:91` — verificare copertura colonne e revocare `SELECT` anon sulla tabella base).
 
 Nessuna modifica al DB o al codice applicata in questa fase.
+---
+
+## 9. Fase 4 — avanzamento (batch 1 applicato)
+
+Migrate a `public.public_profiles` (solo letture controparte, tutte le colonne già presenti nella vista):
+`ristoratore.collaboratori.tsx:95`, `WorkerProfilePreviewDialog.tsx:107`, `dashboard.tsx:168,1039`,
+`announcements.tsx:517`, `shifts.tsx:397`, `messages.tsx:188`, `shift-proposal.ts:116`,
+`browse.tsx:159,215`, `BlindReciprocalReviewDialog.tsx:130`, `required-reviews.ts:131,228`,
+`RestaurantReceivedReviews.tsx:85`, `PreviousCandidatesSection.tsx:59`, `WorkerMyReviews.tsx:90`.
+
+Restano su `profiles` (letture del proprio profilo o admin): `required-reviews.ts:83,295`, `browse.tsx:540`, `AdminRequiredReviewsSection.tsx:41`.
+
+Batch successivi (richiedono estensione vista e/o RPC contatti): `mappa.tsx`, `workers_.$id.tsx`,
+`announcements.$id.tsx`, `ristoratore.turni.$shiftId.tsx`, `jobs.tsx`, `restaurants.$id.tsx`,
+`messages.$id.tsx`, `workers.tsx` — la vista non espone `latitude/longitude`, `service_area_lat/lng`,
+`address`, `default_*`, quindi vanno aggiunte colonne pubbliche o RPC autorizzate prima dello swap.
