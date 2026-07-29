@@ -1050,7 +1050,18 @@ function AvailabilityPage() {
                     data-testid={`week-row-${i}`}
                     onClick={() => {
                       const target = grid.find((c) => c.inMonth && !c.isPast && c.dow === i);
-                      if (target) setSelectedDate(target.iso);
+                      if (target) {
+                        setSelectedDate(target.iso);
+                        return;
+                      }
+                      // Nessuna occorrenza futura nel mese visualizzato:
+                      // salta alla prossima occorrenza di quel giorno.
+                      const d0 = new Date();
+                      d0.setHours(0, 0, 0, 0);
+                      const delta = (i - ((d0.getDay() + 6) % 7) + 7) % 7;
+                      d0.setDate(d0.getDate() + delta);
+                      setMonth(startOfMonth(d0));
+                      setSelectedDate(toIso(d0));
                     }}
                     className={cn(
                       "grid w-full grid-cols-[38px_minmax(0,1fr)] items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
