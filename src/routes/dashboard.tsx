@@ -288,6 +288,8 @@ function DashboardInner() {
         )}
       />
 
+      <BolognaLaunchBanner role={role} className="mb-6" />
+
       {role === "restaurant" && <PayOnHireBox className="mb-6" />}
 
       <ProfileStatusBanner />
