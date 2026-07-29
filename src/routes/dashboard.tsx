@@ -1,4 +1,5 @@
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
+import { BolognaLaunchBanner } from "@/components/BolognaLaunchBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
