@@ -557,14 +557,17 @@ function MapPage() {
       const workerPromise = isRestaurant
         ? loadWorkerSearchData({ data: { reason: "mappa_restaurant_workers" } }).then((res) => ({ data: res.workers, error: null }))
         : supabase
-            .from("profiles")
-            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_city, service_area_district, service_area_lat, service_area_lng, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, hourly_availability, available_now_until, work_area_mode, all_zones, selected_zones, account_status, business_name, punctuality_pct, avg_professionalism")
+            // Proiezione pubblica: coordinate solo approssimate (~1 km).
+            .from("public_profiles")
+            .select("id, full_name, primary_role, secondary_roles, city, neighborhood, service_area_city, service_area_district, approx_lat, approx_lng, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, hourly_rate, experience_level, weekly_availability, hourly_availability, available_now_until, work_area_mode, all_zones, selected_zones, business_name, punctuality_pct, avg_professionalism")
             .is("business_name", null)
             .not("primary_role", "is", null)
             .limit(2000);
       const [{ data: r }, workerResult, { data: a }] = await Promise.all([
-        supabase.from("profiles")
-          .select("id, business_name, full_name, venue_type, venue_type_other, price_range, address, city, province, neighborhood, service_area_lat, service_area_lng, latitude, longitude, contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_phone, contact_person_email, account_status, plan, credits, rating_avg")
+        // Locali sulla mappa: nessun contatto, nessun indirizzo civico,
+        // nessun dato amministrativo, coordinate solo approssimate.
+        supabase.from("public_profiles")
+          .select("id, business_name, full_name, venue_type, venue_type_other, price_range, city, province, neighborhood, approx_lat, approx_lng, rating_avg")
           .or("primary_role.eq.restaurant,business_name.not.is.null")
           .limit(1000),
         workerPromise,
@@ -577,10 +580,31 @@ function MapPage() {
           .eq("status", "active")
           .limit(1000),
       ]);
-      setRestaurants((r as Restaurant[]) || []);
+      setRestaurants(
+        (((r as any[]) || []).map((x) => ({
+          ...x,
+          address: null,
+          service_area_lat: x.approx_lat ?? null,
+          service_area_lng: x.approx_lng ?? null,
+          latitude: x.approx_lat ?? null,
+          longitude: x.approx_lng ?? null,
+          contact_person_first_name: null,
+          contact_person_last_name: null,
+          contact_person_role: null,
+          contact_person_phone: null,
+          contact_person_email: null,
+          account_status: "active",
+          plan: null,
+          credits: null,
+        })) as Restaurant[]),
+      );
       const workerError = "error" in workerResult ? workerResult.error : null;
       if (workerError) console.warn("[mappa] worker load error", workerError);
-      const workersReceived = (((workerResult as any).data as any[]) || []) as Worker[];
+      const workersReceived = ((((workerResult as any).data as any[]) || []).map((x) => (
+        "approx_lat" in x
+          ? { ...x, service_area_lat: x.approx_lat ?? null, service_area_lng: x.approx_lng ?? null, account_status: "active" }
+          : x
+      )) as Worker[]);
       const blockedWorkers: Array<{ user_id: string; nome: string | null; primary_role: string | null; user_roles: string[]; motivo: string }> = [];
       const dedupedWorkers = new Map<string, Worker>();
       for (const candidate of workersReceived) {

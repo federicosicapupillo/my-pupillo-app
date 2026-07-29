@@ -80,9 +80,11 @@ function RestaurantDetailPage() {
       setLoading(true);
       const [{ data: prof, error }, { data: a }] = await Promise.all([
         supabase
-          .from("profiles")
+          .from("public_profiles")
           .select(
-            "id, business_name, full_name, avatar_url, city, province, neighborhood, venue_type, venue_type_other, price_range, employees_count, opening_hours, busy_days, rating_avg, reviews_count, plan, badge, primary_role,  default_dress_code_items, default_dress_code_notes, default_required_skills, default_language_requirements, default_license_requirement",
+            // Solo campi commerciali pubblici: nessun contatto, indirizzo civico,
+            // P.IVA, piano o stato amministrativo.
+            "id, business_name, full_name, avatar_url, city, province, neighborhood, venue_type, venue_type_other, price_range, employees_count, opening_hours, busy_days, rating_avg, reviews_count, badge, primary_role, default_dress_code_items, default_dress_code_notes, default_required_skills, default_language_requirements, default_license_requirement",
           )
           .eq("id", id)
           .maybeSingle(),
@@ -225,9 +227,11 @@ function RestaurantDetailPage() {
   }
 
   const name = r.business_name || r.full_name || "Locale";
-  const fullAddress = [r.address, r.neighborhood, r.city].filter(Boolean).join(", ");
+  // Zona approssimativa: l'indirizzo civico non è un dato pubblico.
+  const areaLabel = [r.neighborhood, r.city, r.province].filter(Boolean).join(", ");
   const activeAnns = anns.filter(a => a.status === "active");
-  const canBook = role === "worker" && r.account_status === "active";
+  // La vista pubblica espone solo profili attivi e non moderati.
+  const canBook = role === "worker";
 
   return (
     <AppShell>
@@ -247,12 +251,12 @@ function RestaurantDetailPage() {
         subtitle={[r.venue_type, r.city].filter(Boolean).join(" · ") || "Ristoratore"}
       />
 
-      {/* Status row */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className={`rounded-full px-3 py-1 text-xs capitalize ${statusBadge(r.account_status)}`}>{r.account_status || "—"}</span>
-        <span className="rounded-full bg-accent text-accent-foreground px-3 py-1 text-xs capitalize">Piano {r.plan || "free"}</span>
-        {r.rating_avg ? <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs"><Star className="h-3 w-3" />{Number(r.rating_avg).toFixed(1)}</span> : null}
-      </div>
+      {/* Status row — nessun dato amministrativo (stato account, piano) */}
+      {r.rating_avg ? (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs"><Star className="h-3 w-3" />{Number(r.rating_avg).toFixed(1)}</span>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         {/* Main */}
@@ -261,15 +265,12 @@ function RestaurantDetailPage() {
           <div className="rounded-2xl border bg-card p-5">
             <h2 className="font-semibold mb-3">Informazioni locale</h2>
             <dl className="grid gap-3 sm:grid-cols-2 text-sm">
-              <Field icon={<MapPin className="h-4 w-4" />} label="Indirizzo" value={fullAddress || "—"} />
+              <Field icon={<MapPin className="h-4 w-4" />} label="Zona" value={areaLabel || "—"} />
               <Field label="Tipologia" value={r.venue_type || "—"} />
               <Field label="Fascia di prezzo" value={priceRangeLabel(r.price_range)} />
               <Field label="Città" value={r.city || "—"} />
-              <Field label="Zona" value={r.neighborhood || "—"} />
-              <Field icon={<Phone className="h-4 w-4" />} label="Telefono" value={r.phone || "—"} />
-              <Field icon={<Mail className="h-4 w-4" />} label="Email" value={r.email || "—"} />
-              {r.website && <Field icon={<Globe className="h-4 w-4" />} label="Sito" value={r.website} />}
-              {r.vat_number && <Field label="P.IVA" value={r.vat_number} />}
+              <Field label="Quartiere" value={r.neighborhood || "—"} />
+              <Field label="Dipendenti" value={r.employees_count ?? "—"} />
             </dl>
             {r.bio && (
               <div className="mt-4 pt-4 border-t">

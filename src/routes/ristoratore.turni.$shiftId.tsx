@@ -224,10 +224,12 @@ function ShiftDetailPage() {
             return supabase.from("announcements").select(ANNOUNCEMENT_SAFE_COLUMNS).eq("id", s.announcement_id as string).maybeSingle();
           })()
         : Promise.resolve({ data: null }),
-      supabase.from("profiles")
-        .select("id, full_name, first_name, last_name, primary_role, professional_profile, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, languages, spoken_languages, phone_verified, profile_completed, id_document_path, is_deleted, phone_full, phone")
+      // Nessun telefono/documento nel payload: il contatto del lavoratore
+      // assegnato si ottiene via RPC autorizzata (get_counterparty_phone).
+      supabase.from("public_profiles")
+        .select("id, full_name, first_name, last_name, primary_role, professional_profile, badge, rating_avg, reviews_count, reliability_pct, completed_shifts, languages, spoken_languages, phone_verified, profile_completed, is_deleted")
         .eq("id", s.worker_id).maybeSingle(),
-      supabase.from("profiles").select("id, business_name, full_name").eq("id", s.restaurant_id).maybeSingle(),
+      supabase.from("public_profiles").select("id, business_name, full_name").eq("id", s.restaurant_id).maybeSingle(),
       s.announcement_id
         ? supabase.from("applications").select("id, worker_id, status").eq("announcement_id", s.announcement_id)
         : Promise.resolve({ data: [] as any[] }),

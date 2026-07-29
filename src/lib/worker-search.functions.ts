@@ -341,7 +341,27 @@ export const loadRestaurantWorkerSearchResults = createServerFn({ method: "POST"
       if (isDemo) { excluded.demo += 1; continue; }
       if (!hasAuthUser) { excluded.orphan_auth += 1; continue; }
 
-      const { email: _email, ...safeProfile } = p;
+      // Sanitizzazione payload verso il client ristoratore: niente PII di
+      // contatto, niente residenza, niente coordinate precise, niente campi
+      // amministrativi (penalità, demo, stato account).
+      const {
+        email: _email,
+        latitude: _lat,
+        longitude: _lng,
+        residence_city: _rc,
+        residence_province: _rp,
+        search_penalty_reason: _spr,
+        search_penalty_until: _spu,
+        search_penalty_active: _spa,
+        delay_count: _dc,
+        no_shows: _ns,
+        is_demo: _isDemo,
+        seed_batch_id: _seed,
+        deleted_at: _delAt,
+        account_status: _accStatus,
+        last_active_at: _lastActive,
+        ...safeProfile
+      } = p as Record<string, any>;
       const availabilityRows = availabilityRowsByWorker.get(p.id) ?? [];
       const availabilityCoord = availabilityCoordinateByWorker.get(p.id);
       const availabilityLocation = availabilityRows.find((r) => firstText(r.city, r.district, r.province));
@@ -386,9 +406,10 @@ export const loadRestaurantWorkerSearchResults = createServerFn({ method: "POST"
       const hasApproximateLocation = !hasValidCoordinates && !!approximateCoord;
       const shownOnMap = !!mapCoord;
       workers.push({
-        ...safeProfile,
-        service_area_lat: mapCoord?.[0] ?? null,
-        service_area_lng: mapCoord?.[1] ?? null,
+        ...(safeProfile as any),
+        // Coordinate volutamente approssimate (~1 km) anche lato ristoratore.
+        service_area_lat: mapCoord ? Math.round(mapCoord[0] * 100) / 100 : null,
+        service_area_lng: mapCoord ? Math.round(mapCoord[1] * 100) / 100 : null,
         user_roles: Array.from(new Set(userRoles.map(normalizeRole).filter(Boolean))),
         role_is_worker: roleIsWorker,
         role_is_admin: roleIsAdmin,
@@ -407,8 +428,8 @@ export const loadRestaurantWorkerSearchResults = createServerFn({ method: "POST"
         location_source: locationSource,
         availability_source: availabilitySource,
         coordinate_source: coordinateSource,
-        map_lat: mapCoord?.[0] ?? null,
-        map_lng: mapCoord?.[1] ?? null,
+        map_lat: mapCoord ? Math.round(mapCoord[0] * 100) / 100 : null,
+        map_lng: mapCoord ? Math.round(mapCoord[1] * 100) / 100 : null,
         has_valid_coordinates: hasValidCoordinates,
         has_approximate_location: hasApproximateLocation,
         shown_on_map: shownOnMap,

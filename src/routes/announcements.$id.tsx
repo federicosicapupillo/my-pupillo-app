@@ -231,8 +231,10 @@ function AnnouncementDetail() {
     }
     setAnn(a as Ann | null);
     if (!a) { setLoading(false); return; }
-    const { data: r } = await supabase.from("profiles")
-      .select("id,full_name,business_name,venue_type,venue_type_other,address,city,neighborhood,price_range,phone,email,rating_avg,reviews_count,opening_hours,employees_count")
+    // Nome del locale e contatti NON sono pubblici prima dell'assegnazione:
+    // qui si usa solo la proiezione pubblica commerciale.
+    const { data: r } = await supabase.from("public_profiles")
+      .select("id,full_name,business_name,venue_type,venue_type_other,city,neighborhood,price_range,rating_avg,reviews_count,opening_hours,employees_count")
       .eq("id", (a as Ann).restaurant_id).maybeSingle();
     setRestaurant(r as Restaurant | null);
     const { data: ax } = await supabase.from("applications")
@@ -245,11 +247,14 @@ function AnnouncementDetail() {
       const workerIds = Array.from(new Set(list.map((x) => x.worker_id).filter(Boolean)));
       if (workerIds.length) {
         const { data: hidden } = await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select("id")
           .in("id", workerIds)
-          .eq("moderation_hidden", true);
-        const hiddenSet = new Set(((hidden ?? []) as Array<{ id: string }>).map((r) => r.id));
+        ;
+        // La vista pubblica esclude già i profili moderati/eliminati:
+        // ciò che manca dal risultato è nascosto.
+        const visibleSet = new Set(((hidden ?? []) as Array<{ id: string }>).map((r) => r.id));
+        const hiddenSet = new Set(workerIds.filter((wid) => !visibleSet.has(wid)));
         if (hiddenSet.size) list = list.filter((x) => !hiddenSet.has(x.worker_id));
       }
     }
@@ -313,8 +318,8 @@ function AnnouncementDetail() {
     setJobRequest((jr as JobRequest) ?? null);
     const ids = Array.from(new Set(list.map(x => x.worker_id)));
     if (ids.length) {
-      const { data: ps } = await supabase.from("profiles")
-        .select("id,full_name,first_name,last_name,age,city,professional_profile,primary_role,languages,rating_avg,reviews_count,badge,reliability_pct,experience_years,completed_shifts,phone_verified,profile_completed,id_document_path,phone_full,phone")
+      const { data: ps } = await supabase.from("public_profiles")
+        .select("id,full_name,first_name,last_name,age,city,professional_profile,primary_role,languages,rating_avg,reviews_count,badge,reliability_pct,experience_years,completed_shifts,phone_verified,profile_completed")
         .in("id", ids);
       const map: Record<string, WorkerProfile> = {};
       (ps ?? []).forEach((p: any) => { map[p.id] = p; });
@@ -371,7 +376,7 @@ function AnnouncementDetail() {
           const oldA = p.old as App;
           const newA = p.new as App;
           if (isOwnerNow && oldA.status !== newA.status) {
-            const { data: w } = await supabase.from("profiles").select("first_name, full_name").eq("id", newA.worker_id).maybeSingle();
+            const { data: w } = await supabase.from("public_profiles").select("first_name, full_name").eq("id", newA.worker_id).maybeSingle();
             const ww: any = w ?? {};
             // After "accepted" the restaurant is allowed to see the full name.
             const allowFull = newA.status === "accepted";
