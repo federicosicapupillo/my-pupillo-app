@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useCanGoBack, useRouter } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({ meta: [
@@ -9,11 +10,26 @@ export const Route = createFileRoute("/terms")({
 });
 
 function Terms() {
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+  const { user, role } = useAuth();
+
+  // Fallback contestuale: mai la home pubblica per un utente autenticato.
+  const fallbackTo = !user ? "/" : role === "admin" ? "/admin" : "/profile";
+
+  const handleBack = () => {
+    if (canGoBack) {
+      router.history.back();
+      return;
+    }
+    router.navigate({ to: fallbackTo });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to={fallbackTo} className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">P</div>
             <span className="text-xl font-semibold">Pupillo</span>
           </Link>
@@ -49,7 +65,9 @@ function Terms() {
         </section>
 
         <div className="mt-10">
-          <Link to="/" className="text-sm text-primary underline">← Torna alla home</Link>
+          <button type="button" onClick={handleBack} className="text-sm text-primary underline">
+            ← Torna indietro
+          </button>
         </div>
       </main>
     </div>
