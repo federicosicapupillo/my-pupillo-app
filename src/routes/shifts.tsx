@@ -361,7 +361,10 @@ function ShiftsPage() {
     if (annIds.length) {
       const [{ data: annData }, { data: accApps }] = await Promise.all([
         supabase.from("announcements").select("id, service_date, service_time, end_time, location_address, tariff_amount, tariff_type, job_address, job_city, professional_profile, required_skills, dress_code_items, dress_code_notes, notes").in("id", annIds),
-        (supabase as any).from("applications").select("id, announcement_id, status").in("announcement_id", annIds).in("status", ["accepted", "confirmed", "assigned"]).eq(col, user.id)
+        // NB: `application_status` ammette solo pending/interested/not_interested/
+        // counter_offer/accepted/rejected/expired/cancelled. I valori legacy
+        // "confirmed"/"assigned" facevano fallire la query con 400 (22P02).
+        (supabase as any).from("applications").select("id, announcement_id, status").in("announcement_id", annIds).in("status", ["accepted"]).eq(col, user.id)
       ]);
       (annData ?? []).forEach((a: any) => { annMap[a.id] = a; });
       (accApps ?? []).forEach((a: any) => { accAppMap[a.announcement_id] = { id: a.id, status: a.status }; });
