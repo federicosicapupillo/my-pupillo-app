@@ -544,9 +544,22 @@ function AvailabilityPage() {
       if (!opts.silent) toast.success("Disponibilità salvate correttamente");
       return true;
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Errore nel salvataggio";
-      console.error("[availability] save failed", msg);
-      toast.error("Non è stato possibile salvare la disponibilità. Riprova.");
+      const pg = e as { message?: string; code?: string; details?: string; hint?: string };
+      console.error("[availability] save failed", {
+        message: pg?.message,
+        code: pg?.code,
+        details: pg?.details,
+        hint: pg?.hint,
+      });
+      const userMsg =
+        pg?.code === "23514"
+          ? "Una delle fasce orarie selezionate non è ammessa. Riprova o scegli un'altra fascia."
+          : pg?.code === "23505"
+            ? "Hai inserito due volte la stessa fascia per lo stesso giorno."
+            : pg?.code === "42501"
+              ? "Non hai i permessi per salvare le disponibilità."
+              : "Non è stato possibile salvare la disponibilità. Riprova.";
+      toast.error(userMsg);
       return false;
     } finally {
       setSaving(false);
