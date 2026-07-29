@@ -1964,7 +1964,15 @@ function Thread() {
     ann.assigned_worker_id &&
     ann.assigned_worker_id !== app.worker_id
   );
-  const steps = buildTimeline(app?.status, { slotTakenByOther });
+  // Controfferta storica: esiste un evento registrato anche se oggi il flag è OFF.
+  const hasHistoricalCounteroffer = useMemo(
+    () => (events ?? []).some((e) => e.action === "counter_offer"),
+    [events],
+  );
+  const steps = buildTimeline(app?.status, {
+    slotTakenByOther,
+    includeCounteroffer: counterofferEnabled || hasHistoricalCounteroffer,
+  });
 
   const logEvent = async (action: string, metadata: Record<string, unknown>) => {
     if (!user) return;
