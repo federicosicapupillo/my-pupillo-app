@@ -2551,10 +2551,19 @@ export type Database = {
       }
     }
     Functions: {
+      _apply_profile_self_patch: {
+        Args: { _allowed: string[]; _patch: Json }
+        Returns: undefined
+      }
+      admin_set_account_status: {
+        Args: { _reason?: string; _status: string; _user_id: string }
+        Returns: undefined
+      }
       admin_set_moderation_hidden: {
         Args: { _hidden: boolean; _reason?: string; _user_id: string }
         Returns: undefined
       }
+      admin_set_vat_verified: { Args: { _user_id: string }; Returns: undefined }
       announcement_effective_end: {
         Args: { p_announcement_id: string }
         Returns: string
@@ -2991,6 +3000,8 @@ export type Database = {
         }[]
       }
       send_required_review_reminders: { Args: never; Returns: number }
+      set_my_available_now: { Args: { _until: string }; Returns: string }
+      set_my_avatar: { Args: { _path: string }; Returns: undefined }
       unseed_demo: {
         Args: { _batch: string }
         Returns: {
@@ -2998,6 +3009,11 @@ export type Database = {
           step: string
         }[]
       }
+      update_my_announcement_defaults: {
+        Args: { _patch: Json }
+        Returns: undefined
+      }
+      update_my_profile: { Args: { _patch: Json }; Returns: undefined }
       validate_discount_code: {
         Args: { _applies_to?: string; _code: string }
         Returns: Json
