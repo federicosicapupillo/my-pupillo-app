@@ -40,6 +40,7 @@ import {
   ChevronRight,
   Info,
   Repeat,
+  Pencil,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -244,6 +245,9 @@ function AvailabilityPage() {
   const [confirmApplyArea, setConfirmApplyArea] = useState(false);
   const [howItWorks, setHowItWorks] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [areaEditing, setAreaEditing] = useState(false);
+  const [editingSlotUid, setEditingSlotUid] = useState<string | null>(null);
+  const snapshotRef = useRef<{ days: DayState[]; area: WorkArea } | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [addingException, setAddingException] = useState(false);
   type ExcErrors = Partial<Record<"date" | "is_available" | "time_slot" | "city" | "district" | "radius_km" | "time", string>>;
@@ -288,13 +292,18 @@ function AvailabilityPage() {
       // Area di lavoro: valore prevalente fra i giorni attivi, altrimenti default profilo.
       const active = next.filter((d) => d.is_available && d.city);
       const base = active[0];
-      setArea({
+      const nextArea: WorkArea = {
         city: base?.city || defaults.city,
         province: base?.province || defaults.province,
         district: base?.district || defaults.district,
         radius_km: base?.radius_km ?? defaults.radius_km,
         notes: base?.notes || "",
-      });
+      };
+      setArea(nextArea);
+      snapshotRef.current = {
+        days: next.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })),
+        area: { ...nextArea },
+      };
       setNewExc(emptyNewExc(defaults.city, defaults.province, defaults.district, defaults.radius_km));
       const until = (profile as { available_now_until?: string | null } | null)?.available_now_until ?? null;
       if (until && new Date(until).getTime() > Date.now()) {
@@ -538,6 +547,10 @@ function AvailabilityPage() {
       }
       setDirty(false);
       setLastSavedAt(new Date());
+      snapshotRef.current = {
+        days: list.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })),
+        area: { ...area },
+      };
       if (!opts.silent) toast.success("Disponibilità salvate");
       return true;
     } catch (e: unknown) {
@@ -586,6 +599,47 @@ function AvailabilityPage() {
     setDays(Array.from({ length: 7 }, () => emptyDay(area.city, area.province, area.district, area.radius_km)));
     setConfirmClear(false);
     toast.success("Tutte le disponibilità sono state cancellate.");
+  };
+
+  /** Ripristina l'ultimo stato salvato (o caricato) senza toccare il DB. */
+  const revertChanges = () => {
+    const snap = snapshotRef.current;
+    if (!snap) return;
+    setDays(snap.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })));
+    setArea({ ...snap.area });
+    setAreaEditing(false);
+    setEditingSlotUid(null);
+    setTimeout(() => setDirty(false), 0);
+    toast.success("Modifiche annullate.");
+  };
+
+  /** Copia rapida del giorno selezionato su un insieme di giorni. */
+  const quickCopy = async (kind: "all" | "weekdays" | "weekend" | "empty") => {
+    if (primaryDow == null) return;
+    const src = days[primaryDow];
+    const targets = Array.from({ length: 7 }, (_, i) => {
+      if (i === primaryDow) return false;
+      if (kind === "all") return true;
+      if (kind === "weekdays") return i < 5;
+      if (kind === "weekend") return i >= 5;
+      const d = days[i];
+      return !d.is_available || (d.slots.length === 0 && !d.flexible);
+    });
+    if (!targets.some(Boolean)) {
+      toast.error("Nessun giorno di destinazione.");
+      return;
+    }
+    const next = days.map((d, i) =>
+      targets[i] ? { ...src, slots: src.slots.map((s) => ({ ...s, uid: nextUid(), id: undefined })) } : d,
+    );
+    setDays(next);
+    setCopying(true);
+    try {
+      const ok = await persistAll(next, { silent: true });
+      if (ok) toast.success("Disponibilità copiata e salvata correttamente.");
+    } finally {
+      setCopying(false);
+    }
   };
 
   // ─────────── Disponibilità speciali (flag) ───────────
@@ -706,8 +760,6 @@ function AvailabilityPage() {
     return { active, totalSlots, nextSpecial };
   }, [days, exceptions]);
 
-  const isEmpty = !loading && summary.active === 0 && exceptions.length === 0;
-
   const saveGated = requireCompleteForAvailability(save);
   const addExceptionGated = requireCompleteForAvailability(addException);
   const removeExceptionGated = requireCompleteForAvailability(removeException);
@@ -725,532 +777,613 @@ function AvailabilityPage() {
   }[saveStatus];
 
   const panelDay = primaryDow != null ? days[primaryDow] : null;
-  const selectionLabel =
-    selectedDates.length === 0
-      ? "Nessun giorno selezionato"
-      : selectedDates.length === 1
-        ? formatDateLong(selectedDates[0])
-        : `${selectedDates.length} giorni selezionati`;
   const affectedLabel = selectedDows.map((d) => DAY_LABELS[d]).join(", ");
 
   return (
     <AppShell>
       {/* ───────── HEADER ───────── */}
-      <header className="mb-5 rounded-2xl border bg-card/70 p-5 sm:p-6 shadow-sm">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl sm:text-3xl font-bold tracking-tight">Le mie disponibilità</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Imposta il tuo schema settimanale ricorrente scegliendo i giorni dal calendario.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setHowItWorks(true)}
-              aria-label="Come funziona il calendario"
-            >
-              <Info className="h-5 w-5 text-muted-foreground" />
-            </Button>
-            <span className={cn(
-              "hidden sm:inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-              SAVE_PILL.cls,
-            )}>
-              <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
-              {SAVE_PILL.label}
-            </span>
-            <Button
-              onClick={saveGated}
-              disabled={saving || loading || !dirty}
-              size="lg"
-              className={cn("hidden sm:inline-flex gap-2 shadow-sm min-w-[180px]", gatedOpacity)}
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Salvataggio..." : "Salva disponibilità"}
-            </Button>
-          </div>
+      <header className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card/70 px-4 py-3.5 sm:px-5">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">Le mie disponibilità</h1>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
+            Imposta quando sei disponibile a lavorare.
+          </p>
         </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs">
-            <CalendarDays className="h-3.5 w-3.5 text-primary" />
-            <strong className="tabular-nums">{summary.active}</strong>/7 giorni
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs">
-            <Zap className="h-3.5 w-3.5 text-primary" />
-            <strong className="tabular-nums">{summary.totalSlots}</strong> {summary.totalSlots === 1 ? "fascia" : "fasce"}
-          </span>
-          {area.city && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-foreground">
-              <MapPin className="h-3.5 w-3.5 text-primary" />
-              <strong>{area.city}</strong>{area.district ? ` · ${area.district}` : ""}
-            </span>
-          )}
-          {summary.nextSpecial && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5" />
-              Speciale {new Date(summary.nextSpecial.date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
-            </span>
-          )}
-        </div>
-
-        <div className="sm:hidden mt-4">
+        <div className="flex shrink-0 items-center gap-2">
           <span className={cn(
-            "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+            "hidden lg:inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold",
             SAVE_PILL.cls,
           )}>
             <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
             {SAVE_PILL.label}
           </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={revertChanges}
+            disabled={!dirty || saving}
+            className="hidden sm:inline-flex"
+          >
+            Annulla modifiche
+          </Button>
+          <Button
+            onClick={saveGated}
+            disabled={saving || loading || !dirty}
+            size="sm"
+            className={cn("hidden sm:inline-flex gap-2 font-semibold", gatedOpacity, dirty && "shadow-neon")}
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Salvataggio..." : "Salva disponibilità"}
+          </Button>
         </div>
       </header>
 
-      {dirty && (
-        <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <div className="flex items-start gap-3">
-            <span className="relative flex h-2.5 w-2.5 shrink-0 mt-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">Hai modifiche non salvate</p>
-              <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
-                Premi "Salva disponibilità" prima di uscire dalla pagina.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ───────── DISPONIBILE ORA ───────── */}
-      {availableNowEnabled && (
-        <Card className="mb-5 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex items-center gap-3 sm:flex-1 min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                  <Zap className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold">Disponibile ora</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">
-                    Attiva per ricevere proposte immediate, a prescindere dal calendario.
-                  </div>
-                  {availableNow && availableNowUntil && (
-                    <div className="text-xs text-primary mt-1">
-                      Attivo fino alle {new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,2fr)_340px]">
+        {/* ══════════ COLONNA SINISTRA ══════════ */}
+        <div className="space-y-4">
+          {/* ── Disponibile ora ── */}
+          {availableNowEnabled && (
+            <Card className="border-primary/20">
+              <CardContent className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3.5">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+                    <Zap className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">Disponibile ora</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {availableNow && availableNowUntil
+                        ? `Attivo fino alle ${new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`
+                        : "Ricevi proposte immediate, fuori calendario."}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 sm:shrink-0">
-                <Select value={availableNowDuration} onValueChange={(v) => setAvailableNowDuration(v as "2h" | "today" | "tonight")}>
-                  <SelectTrigger className="w-full sm:w-[170px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2h">Prossime 2 ore</SelectItem>
-                    <SelectItem value="today">Disponibile oggi</SelectItem>
-                    <SelectItem value="tonight">Questa sera</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Switch checked={availableNow} onCheckedChange={toggleAvailableNowGated} aria-label="Disponibile ora" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ───────── AREA DI LAVORO ───────── */}
-      <Card className="mb-5">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" /> Area di lavoro
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Città, zona e raggio valgono per le nuove disponibilità che imposti. I giorni già salvati mantengono la
-            loro area finché non premi "Applica a tutti i giorni".
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Città</label>
-              <Select value={area.city || undefined} onValueChange={setAreaCity}>
-                <SelectTrigger><SelectValue placeholder="Seleziona la città" /></SelectTrigger>
-                <SelectContent>
-                  {area.city && !WORKER_CITIES.includes(area.city as (typeof WORKER_CITIES)[number]) && (
-                    <SelectItem value={area.city}>{area.city} (attuale)</SelectItem>
-                  )}
-                  {WORKER_CITIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Zona / quartiere</label>
-              {(() => {
-                const zones = zonesForCity(area.city);
-                const dedup = Array.from(new Set([ALL_ZONES_OPTION, "Centro", ...zones.filter((z) => z !== "Centro")]));
-                const showCurrent = area.district && !dedup.includes(area.district);
-                return (
-                  <Select
-                    value={area.district || undefined}
-                    onValueChange={(v) => setArea((a) => ({ ...a, district: v }))}
-                    disabled={!area.city}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={area.city ? "Seleziona la zona" : "Prima seleziona la città"} />
-                    </SelectTrigger>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Select value={availableNowDuration} onValueChange={(v) => setAvailableNowDuration(v as "2h" | "today" | "tonight")}>
+                    <SelectTrigger className="h-9 w-[140px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {showCurrent && <SelectItem value={area.district}>{area.district} (attuale)</SelectItem>}
-                      {dedup.map((z) => (
-                        <SelectItem key={z} value={z}>{z}</SelectItem>
-                      ))}
+                      <SelectItem value="2h">Prossime 2 ore</SelectItem>
+                      <SelectItem value="today">Disponibile oggi</SelectItem>
+                      <SelectItem value="tonight">Questa sera</SelectItem>
                     </SelectContent>
                   </Select>
-                );
-              })()}
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Provincia</label>
-              <Input value={area.province} readOnly disabled placeholder="Auto" />
-            </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Raggio massimo</label>
-              <Select
-                value={area.radius_km != null ? String(area.radius_km) : undefined}
-                onValueChange={(v) => setArea((a) => ({ ...a, radius_km: parseInt(v, 10) }))}
-              >
-                <SelectTrigger><SelectValue placeholder="Seleziona raggio" /></SelectTrigger>
-                <SelectContent>
-                  {RADIUS_OPTIONS.map((r) => (
-                    <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-muted-foreground mb-1">Note per i ristoratori (facoltative)</label>
-            <Input
-              value={area.notes}
-              onChange={(e) => setArea((a) => ({ ...a, notes: e.target.value }))}
-              placeholder="Es. Mi sposto volentieri anche fuori zona con preavviso"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setConfirmApplyArea(true)} disabled={!area.city}>
-              Applica a tutti i giorni disponibili
-            </Button>
-            <span className="text-xs text-muted-foreground">Sovrascrive l'area dei giorni già impostati.</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {isEmpty && (
-        <Card className="mb-5 border-dashed border-2 bg-card/40">
-          <CardContent className="p-8 text-center space-y-3">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-              <CalendarDays className="h-7 w-7 text-primary" />
-            </div>
-            <div className="font-semibold text-lg">Nessuna disponibilità impostata</div>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Tocca un giorno sul calendario e imposta le fasce orarie: verranno applicate a tutti i giorni della
-              settimana corrispondenti.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ───────── CALENDARIO MENSILE ───────── */}
-      <Card className="mb-5 overflow-hidden">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setMonth((m) => addMonths(m, -1))}
-              aria-label="Mese precedente"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <div className="text-center min-w-0">
-              <CardTitle className="text-base sm:text-lg truncate">{formatMonthLabel(month)}</CardTitle>
-              <p className="text-[11px] text-muted-foreground mt-0.5 tabular-nums">
-                {monthSetCount} {monthSetCount === 1 ? "giorno impostato" : "giorni impostati"}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setMonth((m) => addMonths(m, 1))}
-              aria-label="Mese successivo"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="pb-5">
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {DAY_SHORT.map((d) => (
-              <div key={d} className="text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {d}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
-            {grid.map((c) => {
-              const isSelected = selectedDates.includes(c.iso);
-              const hasAvail = days[c.dow]?.is_available;
-              const disabled = c.isPast;
-              return (
-                <button
-                  key={c.iso}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => toggleDate(c.iso)}
-                  aria-pressed={isSelected}
-                  aria-label={`${formatDateLong(c.iso)}${hasAvail ? " · disponibilità impostata" : ""}`}
-                  className={cn(
-                    "relative aspect-square rounded-xl border text-sm font-medium transition-all",
-                    "flex flex-col items-center justify-center gap-1",
-                    c.inMonth ? "text-foreground" : "text-muted-foreground/40",
-                    disabled && "opacity-35 cursor-not-allowed",
-                    isSelected
-                      ? "border-primary bg-primary text-primary-foreground shadow-neon"
-                      : hasAvail && c.inMonth
-                        ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
-                        : "border-border/70 bg-card/50 hover:bg-muted/60",
-                    c.isToday && !isSelected && "ring-1 ring-primary/60",
-                  )}
-                >
-                  <span className="tabular-nums leading-none">{c.day}</span>
-                  <span
-                    className={cn(
-                      "h-1.5 w-1.5 rounded-full",
-                      hasAvail && c.inMonth
-                        ? isSelected ? "bg-primary-foreground" : "bg-primary"
-                        : "bg-transparent",
-                    )}
-                    aria-hidden
-                  />
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-primary" /> Disponibilità impostata
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-[4px] border border-primary bg-primary" /> Selezionato
-            </span>
-            {selectedDates.length > 0 && (
-              <button
-                type="button"
-                className="ml-auto inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-                onClick={() => setSelectedDates([])}
-              >
-                <X className="h-3.5 w-3.5" /> Deseleziona
-              </button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ───────── PANNELLO GIORNO ───────── */}
-      {panelDay == null ? (
-        <Card className="mb-6 border-dashed">
-          <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Seleziona uno o più giorni sul calendario per impostare le fasce orarie.
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className={cn("mb-6 border transition-colors", panelDay.is_available ? "border-primary/25 bg-card/80" : "bg-card/60")}>
-          <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 space-y-0 pb-3">
-            <div className="min-w-0">
-              <CardTitle className="text-base sm:text-lg truncate">{selectionLabel}</CardTitle>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {panelDay.is_available ? "Disponibile" : "Non disponibile"}
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span className="hidden sm:inline text-xs font-medium text-muted-foreground">Disponibile</span>
-              <Switch
-                checked={panelDay.is_available}
-                onCheckedChange={setDayAvailable}
-                aria-label="Disponibile"
-              />
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {/* Avviso ricorrenza — sempre visibile */}
-            <div className="flex items-start gap-2.5 rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3">
-              <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Le modifiche valgono per <strong className="text-foreground">tutti i {affectedLabel}</strong> in modo
-                ricorrente, non solo per la data selezionata.
-              </p>
-            </div>
-
-            {!panelDay.is_available ? (
-              <div className="rounded-lg border border-dashed bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
-                Attiva il selettore per impostare le fasce orarie.
-              </div>
-            ) : (
-              <>
-                {/* Area applicata a questo giorno */}
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-primary" />
-                    {panelDay.city
-                      ? `${panelDay.city}${panelDay.district ? ` · ${panelDay.district}` : ""}${panelDay.radius_km ? ` · ${panelDay.radius_km} km` : ""}`
-                      : "Area non impostata"}
-                  </span>
-                  {panelDay.city && !sameArea(panelDay, area) && (
-                    <Badge variant="secondary">Diversa dall'area di lavoro</Badge>
-                  )}
+                  <Switch checked={availableNow} onCheckedChange={toggleAvailableNowGated} aria-label="Disponibile ora" />
                 </div>
+              </CardContent>
+            </Card>
+          )}
 
-                {/* Fasce orarie */}
-                <div className="space-y-2.5">
-                  {panelDay.slots.length === 0 && !panelDay.flexible && (
-                    <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-4 text-center text-xs text-muted-foreground">
-                      Nessuna fascia oraria. Aggiungine una qui sotto.
-                    </div>
-                  )}
-                  {panelDay.slots.map((s) => (
-                    <div key={s.uid} className="rounded-xl border bg-background/60 p-3">
-                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                        <Select value={s.time_slot} onValueChange={(v) => setSlotType(s.uid, v as TimeSlot)}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {PANEL_SLOTS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>{SLOT_LABELS[opt]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeSlot(s.uid)}
-                          aria-label={`Rimuovi fascia ${slotLabelOf(s)}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {s.time_slot !== "last_minute" && (
-                        <div className="mt-2.5 grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-[11px] text-muted-foreground mb-1">Dalle</label>
-                            <Select
-                              value={s.start_time ?? ""}
-                              onValueChange={(v) => patchSlot(s.uid, { start_time: v })}
-                            >
-                              <SelectTrigger className="h-9"><SelectValue placeholder="--:--" /></SelectTrigger>
-                              <SelectContent className="max-h-64">
-                                {TIME_OPTIONS.map((t) => (
-                                  <SelectItem key={`s-${s.uid}-${t}`} value={t}>{t}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="block text-[11px] text-muted-foreground mb-1">Alle</label>
-                            <Select
-                              value={s.end_time ?? ""}
-                              onValueChange={(v) => patchSlot(s.uid, { end_time: v })}
-                            >
-                              <SelectTrigger className="h-9"><SelectValue placeholder="--:--" /></SelectTrigger>
-                              <SelectContent className="max-h-64">
-                                {TIME_OPTIONS.map((t) => (
-                                  <SelectItem key={`e-${s.uid}-${t}`} value={t}>{t}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          {s.start_time && s.end_time && (
-                            <div className="col-span-2 -mt-1 space-y-1">
-                              {crossesMidnight(s.start_time, s.end_time) && (
-                                <p className="text-[11px] text-muted-foreground">Termina il giorno successivo</p>
-                              )}
-                              {!isValidTimeRange(s.start_time, s.end_time) && (
-                                <p className="text-[11px] text-destructive">Inizio e fine non possono coincidere.</p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {s.time_slot === "personalizzata" && (
-                        <div className="mt-2.5 flex flex-wrap gap-1.5">
-                          {QUICK_RANGES.map((r) => (
-                            <Button
-                              key={r.label}
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-[11px]"
-                              onClick={() => patchSlot(s.uid, { start_time: r.start, end_time: r.end })}
-                            >
-                              {r.label}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Aggiunta rapida fasce */}
-                <div className="flex flex-wrap gap-2">
-                  {PRIMARY_SLOTS.map((slot) => (
-                    <Button key={slot} type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addSlot(slot)}>
-                      <Plus className="h-3.5 w-3.5" /> {SLOT_LABELS[slot]}
-                    </Button>
-                  ))}
-                  <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => addSlot("personalizzata")}>
-                    <Plus className="h-3.5 w-3.5" /> Personalizza
-                  </Button>
-                </div>
-
-                {/* Flessibile */}
-                <label className="flex items-center justify-between gap-3 rounded-xl border bg-background/60 px-3.5 py-3">
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium">Valuto in base alla proposta</span>
-                    <span className="block text-xs text-muted-foreground">
-                      Ricevi proposte anche fuori dalle fasce indicate.
-                    </span>
-                  </span>
-                  <Switch checked={panelDay.flexible} onCheckedChange={setFlexible} aria-label="Valuto in base alla proposta" />
-                </label>
-              </>
-            )}
-
-            <div className="flex flex-wrap gap-2 pt-1">
+          {/* ── 1. AREA DI LAVORO ── */}
+          <Card>
+            <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 space-y-0 pb-3">
+              <CardTitle className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                <MapPin className="h-4 w-4 shrink-0 text-primary" /> Area di lavoro
+              </CardTitle>
               <Button
                 type="button"
-                variant="secondary"
+                variant={areaEditing ? "secondary" : "outline"}
                 size="sm"
-                className="gap-2"
-                onClick={openCopy}
-                disabled={selectedDows.length !== 1}
+                className="h-8 shrink-0 gap-1.5"
+                onClick={() => setAreaEditing((v) => !v)}
               >
-                <Copy className="h-4 w-4" /> Copia su tutta la settimana
+                <Pencil className="h-3.5 w-3.5" /> {areaEditing ? "Chiudi" : "Modifica"}
               </Button>
-              <Button type="button" variant="ghost" size="sm" className="gap-2 text-destructive" onClick={() => setConfirmClear(true)}>
-                <Trash2 className="h-4 w-4" /> Cancella tutto
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!areaEditing ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      { label: "Città", value: area.city },
+                      { label: "Provincia", value: area.province },
+                      { label: "Zona", value: area.district },
+                      { label: "Raggio", value: area.radius_km ? `${area.radius_km} km` : "" },
+                    ].map((f) => (
+                      <div key={f.label} className="rounded-lg border bg-background/60 px-2.5 py-2">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{f.label}</div>
+                        <div className="truncate text-sm font-medium">{f.value || "—"}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {area.notes && (
+                    <p className="truncate rounded-lg border border-dashed bg-background/40 px-2.5 py-2 text-xs text-muted-foreground">
+                      {area.notes}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div>
+                      <label className="mb-1 block text-[11px] text-muted-foreground">Città</label>
+                      <Select value={area.city || undefined} onValueChange={setAreaCity}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                        <SelectContent>
+                          {area.city && !WORKER_CITIES.includes(area.city as (typeof WORKER_CITIES)[number]) && (
+                            <SelectItem value={area.city}>{area.city} (attuale)</SelectItem>
+                          )}
+                          {WORKER_CITIES.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-muted-foreground">Zona / quartiere</label>
+                      {(() => {
+                        const zones = zonesForCity(area.city);
+                        const dedup = Array.from(new Set([ALL_ZONES_OPTION, "Centro", ...zones.filter((z) => z !== "Centro")]));
+                        const showCurrent = area.district && !dedup.includes(area.district);
+                        return (
+                          <Select
+                            value={area.district || undefined}
+                            onValueChange={(v) => setArea((a) => ({ ...a, district: v }))}
+                            disabled={!area.city}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder={area.city ? "Seleziona" : "Prima la città"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {showCurrent && <SelectItem value={area.district}>{area.district} (attuale)</SelectItem>}
+                              {dedup.map((z) => (
+                                <SelectItem key={z} value={z}>{z}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })()}
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-muted-foreground">Provincia</label>
+                      <Input className="h-9" value={area.province} readOnly disabled placeholder="Auto" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-muted-foreground">Raggio massimo</label>
+                      <Select
+                        value={area.radius_km != null ? String(area.radius_km) : undefined}
+                        onValueChange={(v) => setArea((a) => ({ ...a, radius_km: parseInt(v, 10) }))}
+                      >
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                        <SelectContent>
+                          {RADIUS_OPTIONS.map((r) => (
+                            <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] text-muted-foreground">Note per i ristoratori (facoltative)</label>
+                    <Input
+                      className="h-9"
+                      value={area.notes}
+                      onChange={(e) => setArea((a) => ({ ...a, notes: e.target.value }))}
+                      placeholder="Es. Mi sposto volentieri con preavviso"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setConfirmApplyArea(true)} disabled={!area.city}>
+                      Applica a tutti i giorni disponibili
+                    </Button>
+                    <span className="text-[11px] text-muted-foreground">Sovrascrive l'area dei giorni già impostati.</span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── 2. DISPONIBILITÀ RICORRENTE DEL GIORNO ── */}
+          {panelDay == null ? (
+            <Card className="border-dashed">
+              <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                Seleziona un giorno sul calendario per impostare le fasce orarie ricorrenti.
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className={cn(panelDay.is_available && "border-primary/25")}>
+              <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 space-y-0 pb-3">
+                <div className="min-w-0">
+                  <CardTitle className="truncate text-sm font-semibold">
+                    Disponibilità ricorrente del{" "}
+                    <span className="text-primary">
+                      {selectedDows.length === 1 ? DAY_LABELS[selectedDows[0]].toLowerCase() : affectedLabel.toLowerCase()}
+                    </span>
+                  </CardTitle>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Le fasce orarie impostate si ripetono ogni settimana.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Disponibile</span>
+                  <Switch checked={panelDay.is_available} onCheckedChange={setDayAvailable} aria-label="Disponibile" />
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-3">
+                {!panelDay.is_available ? (
+                  <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
+                    Attiva il selettore per impostare le fasce orarie.
+                  </div>
+                ) : (
+                  <>
+                    {/* Elenco fasce */}
+                    <div className="space-y-2">
+                      {panelDay.slots.length === 0 && !panelDay.flexible && (
+                        <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-3 text-center text-xs text-muted-foreground">
+                          Nessuna fascia oraria impostata.
+                        </div>
+                      )}
+                      {panelDay.slots.map((s) => {
+                        const open = editingSlotUid === s.uid;
+                        const invalid = s.time_slot !== "last_minute" && (!s.start_time || !s.end_time || !isValidTimeRange(s.start_time, s.end_time));
+                        return (
+                          <div key={s.uid} className={cn("rounded-lg border bg-background/60", invalid && "border-destructive/60")}>
+                            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2">
+                              <div className="min-w-0 text-sm">
+                                <span className="font-medium">{slotLabelOf(s)}</span>
+                                {s.time_slot !== "last_minute" && (
+                                  <span className="ml-2 tabular-nums text-muted-foreground">
+                                    {s.start_time && s.end_time ? `${s.start_time} – ${s.end_time}` : "orario da impostare"}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex shrink-0 items-center gap-0.5">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setEditingSlotUid(open ? null : s.uid)}
+                                  aria-label={`Modifica fascia ${slotLabelOf(s)}`}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={() => { removeSlot(s.uid); if (open) setEditingSlotUid(null); }}
+                                  aria-label={`Rimuovi fascia ${slotLabelOf(s)}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                            {open && (
+                              <div className="space-y-2 border-t px-3 py-2.5">
+                                <div className="grid gap-2 sm:grid-cols-3">
+                                  <div>
+                                    <label className="mb-1 block text-[11px] text-muted-foreground">Fascia</label>
+                                    <Select value={s.time_slot} onValueChange={(v) => setSlotType(s.uid, v as TimeSlot)}>
+                                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        {PANEL_SLOTS.map((opt) => (
+                                          <SelectItem key={opt} value={opt}>{SLOT_LABELS[opt]}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  {s.time_slot !== "last_minute" && (
+                                    <>
+                                      <div>
+                                        <label className="mb-1 block text-[11px] text-muted-foreground">Dalle</label>
+                                        <Select value={s.start_time ?? ""} onValueChange={(v) => patchSlot(s.uid, { start_time: v })}>
+                                          <SelectTrigger className="h-9"><SelectValue placeholder="--:--" /></SelectTrigger>
+                                          <SelectContent className="max-h-64">
+                                            {TIME_OPTIONS.map((t) => (
+                                              <SelectItem key={`s-${s.uid}-${t}`} value={t}>{t}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div>
+                                        <label className="mb-1 block text-[11px] text-muted-foreground">Alle</label>
+                                        <Select value={s.end_time ?? ""} onValueChange={(v) => patchSlot(s.uid, { end_time: v })}>
+                                          <SelectTrigger className="h-9"><SelectValue placeholder="--:--" /></SelectTrigger>
+                                          <SelectContent className="max-h-64">
+                                            {TIME_OPTIONS.map((t) => (
+                                              <SelectItem key={`e-${s.uid}-${t}`} value={t}>{t}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                                {s.start_time && s.end_time && crossesMidnight(s.start_time, s.end_time) && (
+                                  <p className="text-[11px] text-muted-foreground">Termina il giorno successivo</p>
+                                )}
+                                {s.start_time && s.end_time && !isValidTimeRange(s.start_time, s.end_time) && (
+                                  <p className="text-[11px] text-destructive">Inizio e fine non possono coincidere.</p>
+                                )}
+                                {s.time_slot === "personalizzata" && (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {QUICK_RANGES.map((r) => (
+                                      <Button
+                                        key={r.label}
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-[11px]"
+                                        onClick={() => patchSlot(s.uid, { start_time: r.start, end_time: r.end })}
+                                      >
+                                        {r.label}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-1.5 border-dashed"
+                      onClick={() => addSlot("personalizzata")}
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Aggiungi fascia oraria
+                    </Button>
+
+                    {/* Fasce rapide */}
+                    <div>
+                      <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">Fasce rapide</div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {([...PRIMARY_SLOTS, "personalizzata"] as TimeSlot[]).map((slot) => {
+                          const active = panelDay.slots.some((s) => s.time_slot === slot);
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => {
+                                addSlot(slot);
+                                if (slot === "personalizzata") setEditingSlotUid(null);
+                              }}
+                              className={cn(
+                                "rounded-lg border px-3 py-2.5 text-center text-xs font-medium transition-colors",
+                                active
+                                  ? "border-primary bg-primary/15 text-primary"
+                                  : "border-border bg-background/60 hover:border-primary/50 hover:bg-primary/5",
+                              )}
+                            >
+                              {slot === "personalizzata" ? "Personalizza" : SLOT_LABELS[slot]}
+                              <span className="mt-0.5 block text-[10px] font-normal tabular-nums text-muted-foreground">
+                                {SLOT_DEFAULT_TIMES[slot].start
+                                  ? `${SLOT_DEFAULT_TIMES[slot].start} – ${SLOT_DEFAULT_TIMES[slot].end}`
+                                  : "orario libero"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Flessibile */}
+                    <label className="flex items-center justify-between gap-3 rounded-lg border bg-background/60 px-3 py-2.5">
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium">Valuto in base alla proposta</span>
+                        <span className="block text-xs text-muted-foreground">Ricevi proposte anche fuori dalle fasce indicate.</span>
+                      </span>
+                      <Switch checked={panelDay.flexible} onCheckedChange={setFlexible} aria-label="Valuto in base alla proposta" />
+                    </label>
+
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="truncate">
+                        {panelDay.city
+                          ? `${panelDay.city}${panelDay.district ? ` · ${panelDay.district}` : ""}${panelDay.radius_km ? ` · ${panelDay.radius_km} km` : ""}`
+                          : "Area non impostata"}
+                      </span>
+                      {panelDay.city && !sameArea(panelDay, area) && (
+                        <Badge variant="secondary" className="shrink-0">Diversa dall'area</Badge>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── 3. AZIONI RAPIDE ── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Copy className="h-4 w-4 text-primary" /> Azioni rapide
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Copia le tue disponibilità su più giorni.</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+                {([
+                  { kind: "all", label: "Tutta la settimana", hint: "7 giorni" },
+                  { kind: "weekdays", label: "Solo feriali", hint: "Lun – Ven" },
+                  { kind: "weekend", label: "Solo weekend", hint: "Sab – Dom" },
+                  { kind: "empty", label: "Solo giorni vuoti", hint: "Non sovrascrive" },
+                ] as const).map((a) => (
+                  <button
+                    key={a.kind}
+                    type="button"
+                    disabled={selectedDows.length !== 1 || copying || saving}
+                    onClick={() => quickCopy(a.kind)}
+                    className={cn(
+                      "rounded-lg border border-border bg-background/60 px-3 py-2.5 text-left transition-colors",
+                      "hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-40",
+                    )}
+                  >
+                    <span className="block text-xs font-medium">{a.label}</span>
+                    <span className="mt-0.5 block text-[10px] text-muted-foreground">{a.hint}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={openCopy}
+                  disabled={selectedDows.length !== 1}
+                >
+                  <Copy className="h-3.5 w-3.5" /> Scegli i giorni…
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-destructive"
+                  onClick={() => setConfirmClear(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Cancella tutto
+                </Button>
+                {selectedDows.length !== 1 && (
+                  <span className="text-[11px] text-muted-foreground">Seleziona un solo giorno per copiare.</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ══════════ COLONNA DESTRA ══════════ */}
+        <div className="space-y-4">
+          {/* ── 4. CALENDARIO COMPATTO ── */}
+          <Card>
+            <CardHeader className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 space-y-0 pb-2">
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonth((m) => addMonths(m, -1))} aria-label="Mese precedente">
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              <div className="min-w-0 text-center">
+                <CardTitle className="truncate text-sm font-semibold capitalize">{formatMonthLabel(month)}</CardTitle>
+                <p className="text-[10px] tabular-nums text-muted-foreground">
+                  {monthSetCount} {monthSetCount === 1 ? "giorno impostato" : "giorni impostati"}
+                </p>
+              </div>
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonth((m) => addMonths(m, 1))} aria-label="Mese successivo">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="pb-4">
+              <div className="mb-1 grid grid-cols-7 gap-1">
+                {DAY_SHORT.map((d) => (
+                  <div key={d} className="text-center text-[10px] font-semibold uppercase text-muted-foreground">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {grid.map((c) => {
+                  const isSelected = selectedDates.includes(c.iso);
+                  const hasAvail = days[c.dow]?.is_available;
+                  return (
+                    <button
+                      key={c.iso}
+                      type="button"
+                      disabled={c.isPast}
+                      onClick={() => toggleDate(c.iso)}
+                      aria-pressed={isSelected}
+                      aria-label={`${formatDateLong(c.iso)}${hasAvail ? " · disponibilità impostata" : ""}`}
+                      className={cn(
+                        "relative flex aspect-square flex-col items-center justify-center rounded-md border text-xs font-medium transition-colors",
+                        c.inMonth ? "text-foreground" : "text-muted-foreground/40",
+                        c.isPast && "cursor-not-allowed opacity-35",
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : hasAvail && c.inMonth
+                            ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
+                            : "border-border/60 bg-card/50 hover:bg-muted/60",
+                        c.isToday && !isSelected && "ring-1 ring-primary/60",
+                      )}
+                    >
+                      <span className="tabular-nums leading-none">{c.day}</span>
+                      <span
+                        className={cn(
+                          "mt-0.5 h-1 w-1 rounded-full",
+                          hasAvail && c.inMonth ? (isSelected ? "bg-primary-foreground" : "bg-primary") : "bg-transparent",
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Disponibilità impostata
+                </span>
+                {selectedDates.length > 0 && (
+                  <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => setSelectedDates([])}>
+                    <X className="h-3 w-3" /> Deseleziona
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── 5. RIEPILOGO SETTIMANA ── */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <CalendarDays className="h-4 w-4 text-primary" /> Riepilogo settimana
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1.5 pb-4">
+              {days.map((d, i) => {
+                const isSel = selectedDows.includes(i);
+                const labels = d.flexible
+                  ? ["Flessibile"]
+                  : d.slots.map((s) =>
+                      s.start_time && s.end_time ? `${s.start_time}–${s.end_time}` : slotLabelOf(s),
+                    );
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      const target = grid.find((c) => c.inMonth && !c.isPast && c.dow === i);
+                      if (target) setSelectedDates([target.iso]);
+                    }}
+                    className={cn(
+                      "grid w-full grid-cols-[38px_minmax(0,1fr)] items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
+                      isSel
+                        ? "border-primary bg-primary/10"
+                        : d.is_available
+                          ? "border-border bg-background/60 hover:bg-muted/50"
+                          : "border-dashed border-border/60 bg-transparent hover:bg-muted/40",
+                    )}
+                  >
+                    <span className={cn("text-xs font-semibold", isSel ? "text-primary" : d.is_available ? "text-foreground" : "text-muted-foreground")}>
+                      {DAY_SHORT[i]}
+                    </span>
+                    <span className="min-w-0 truncate text-[11px] tabular-nums text-muted-foreground">
+                      {d.is_available ? (labels.length > 0 ? labels.join(" · ") : "Nessuna fascia") : "Non disponibile"}
+                    </span>
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* ── 6. COME FUNZIONA ── */}
+          <Card className="border-primary/25 bg-primary/5">
+            <CardContent className="space-y-2 p-3.5">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Repeat className="h-4 w-4 text-primary" /> Come funziona
+              </div>
+              <ul className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+                <li>Le disponibilità che imposti valgono <strong className="text-foreground">ogni settimana</strong>.</li>
+                <li>Seleziona un giorno per modificare gli orari ricorrenti di quel giorno: es. un mercoledì vale per <strong className="text-foreground">tutti i mercoledì</strong>.</li>
+                <li>Città, zona e raggio si impostano una sola volta in "Area di lavoro".</li>
+              </ul>
+              <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={() => setHowItWorks(true)}>
+                <Info className="h-3.5 w-3.5" /> Maggiori dettagli
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* ───────── DISPONIBILITÀ SPECIALI (feature flag) ───────── */}
       {specialAvailabilityEnabled && (
