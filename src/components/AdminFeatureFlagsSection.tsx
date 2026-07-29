@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { invalidateReferralFeatureFlags } from "@/lib/use-referral-enabled";
 import { invalidateWorkerTaxCodeFeatureFlag } from "@/lib/use-worker-tax-code-enabled";
 import { invalidateCounterofferFeatureFlag } from "@/lib/use-counteroffer-enabled";
+import { invalidateWorkerSpecialAvailabilityFeatureFlag } from "@/lib/use-worker-special-availability-enabled";
 
 type FeatureFlag = {
   key: string;
@@ -58,6 +59,9 @@ export function AdminFeatureFlagsSection() {
     }
     if (key === "counteroffer_enabled") {
       invalidateCounterofferFeatureFlag();
+    }
+    if (key === "worker_special_availability_enabled") {
+      invalidateWorkerSpecialAvailabilityFeatureFlag();
     }
     void load();
   }

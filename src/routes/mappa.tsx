@@ -675,17 +675,24 @@ function MapPage() {
         // lavoratore: città del profilo + service_area_city + città delle
         // disponibilità speciali future. La disponibilità speciale prevale
         // sulla disponibilità abituale (rule 17/18).
+        // Feature flag `worker_special_availability_enabled` (fail-closed): con
+        // flag OFF le disponibilità speciali storiche non allargano le città.
+        const { data: specialFlag } = await supabase.rpc("is_feature_enabled", {
+          _key: "worker_special_availability_enabled",
+        });
         const [{ data: meProfile }, { data: exc }] = await Promise.all([
           supabase
             .from("profiles")
             .select("city, service_area_city, neighborhood, service_area_district")
             .eq("id", user.id)
             .maybeSingle(),
-          supabase
-            .from("worker_availability_exceptions")
-            .select("city, date, is_available")
-            .eq("worker_id", user.id)
-            .gte("date", todayIso()),
+          specialFlag === true
+            ? supabase
+                .from("worker_availability_exceptions")
+                .select("city, date, is_available")
+                .eq("worker_id", user.id)
+                .gte("date", todayIso())
+            : Promise.resolve({ data: [] as { city: string | null; date: string; is_available: boolean }[] }),
         ]);
         const allowed = new Set<string>();
         const profCity = normalizeCity((meProfile as any)?.city);
