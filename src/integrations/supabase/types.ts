@@ -2340,6 +2340,8 @@ export type Database = {
         Row: {
           age: number | null
           all_zones: boolean | null
+          approx_lat: number | null
+          approx_lng: number | null
           available_now_until: string | null
           avatar_url: string | null
           avg_competence: number | null
@@ -2355,6 +2357,11 @@ export type Database = {
           completion_pct: number | null
           default_arrival_advance_minutes: number | null
           default_arrival_advance_reason: string | null
+          default_dress_code_items: string[] | null
+          default_dress_code_notes: string | null
+          default_language_requirements: string[] | null
+          default_license_requirement: string | null
+          default_required_skills: string[] | null
           distinct_restaurants_count: number | null
           employees_count: number | null
           experience_level:
@@ -2403,6 +2410,8 @@ export type Database = {
         Insert: {
           age?: number | null
           all_zones?: boolean | null
+          approx_lat?: never
+          approx_lng?: never
           available_now_until?: string | null
           avatar_url?: string | null
           avg_competence?: number | null
@@ -2418,6 +2427,11 @@ export type Database = {
           completion_pct?: number | null
           default_arrival_advance_minutes?: number | null
           default_arrival_advance_reason?: string | null
+          default_dress_code_items?: string[] | null
+          default_dress_code_notes?: string | null
+          default_language_requirements?: string[] | null
+          default_license_requirement?: string | null
+          default_required_skills?: string[] | null
           distinct_restaurants_count?: number | null
           employees_count?: number | null
           experience_level?:
@@ -2466,6 +2480,8 @@ export type Database = {
         Update: {
           age?: number | null
           all_zones?: boolean | null
+          approx_lat?: never
+          approx_lng?: never
           available_now_until?: string | null
           avatar_url?: string | null
           avg_competence?: number | null
@@ -2481,6 +2497,11 @@ export type Database = {
           completion_pct?: number | null
           default_arrival_advance_minutes?: number | null
           default_arrival_advance_reason?: string | null
+          default_dress_code_items?: string[] | null
+          default_dress_code_notes?: string | null
+          default_language_requirements?: string[] | null
+          default_license_requirement?: string | null
+          default_required_skills?: string[] | null
           distinct_restaurants_count?: number | null
           employees_count?: number | null
           experience_level?:

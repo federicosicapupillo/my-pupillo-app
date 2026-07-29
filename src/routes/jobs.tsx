@@ -74,6 +74,9 @@ type Announcement = {
   required_skills: string[] | null;
   dress_code_items: string[] | null;
   dress_code_notes: string | null;
+  // Indirizzo del turno: leggibile solo dalle parti autorizzate via RLS
+  // sull'annuncio, mostrato solo a candidatura confermata.
+  location_address?: string | null;
 };
 
 type RestaurantPublic = {
@@ -84,15 +87,6 @@ type RestaurantPublic = {
   neighborhood: string | null;
   venue_type: string | null;
   venue_type_other: string | null;
-  // Sensitive — only revealed once the offer is mutually confirmed
-  phone_full: string | null;
-  email: string | null;
-  address: string | null;
-  street: string | null;
-  street_number: string | null;
-  contact_person_first_name: string | null;
-  contact_person_last_name: string | null;
-  contact_person_phone: string | null;
 };
 
 type ShiftLite = {
@@ -349,15 +343,17 @@ function Jobs() {
         ? supabase
             .from("announcements")
             .select(
-              "id, service_date, service_time, end_time, end_date, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id, professional_profile, notes, required_skills, dress_code_items, dress_code_notes",
+              "id, service_date, service_time, end_time, end_date, duration_hours, tariff_amount, tariff_type, speed, job_city, job_province, assigned_worker_id, professional_profile, notes, required_skills, dress_code_items, dress_code_notes, location_address",
             )
             .in("id", annIds)
         : Promise.resolve({ data: [] as any[] }),
       restIds.length
         ? supabase
-            .from("profiles")
+            // Nessun contatto né indirizzo del locale: si mostra solo la zona.
+            // I contatti arrivano dalla RPC autorizzata in chat/turno.
+            .from("public_profiles")
             .select(
-              "id, full_name, business_name, city, neighborhood, venue_type, venue_type_other, phone_full, email, address, street, street_number, contact_person_first_name, contact_person_last_name, contact_person_phone",
+              "id, full_name, business_name, city, neighborhood, venue_type, venue_type_other",
             )
             .in("id", restIds)
         : Promise.resolve({ data: [] as any[] }),
@@ -791,7 +787,9 @@ function OfferCard({
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-4 w-4" />
             <span className="truncate">
-              {confirmed && r.restaurant?.address ? r.restaurant.address : zone}
+              {confirmed && r.announcement?.location_address
+                ? r.announcement.location_address
+                : zone}
             </span>
           </div>
         </div>

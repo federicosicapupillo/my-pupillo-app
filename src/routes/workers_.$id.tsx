@@ -45,8 +45,6 @@ type Worker = {
   hourly_availability: string | null;
   weekly_availability: string[] | null;
   age: number | null;
-  phone: string | null;
-  email: string | null;
   is_motorized: boolean | null;
   reputation_score: number | null;
   reputation_level: string | null;
@@ -60,9 +58,7 @@ type Worker = {
   avatar_url: string | null;
   phone_verified: boolean | null;
   profile_completed: boolean | null;
-  id_document_path: string | null;
   is_deleted: boolean | null;
-  deleted_at: string | null;
   service_area_city?: string | null;
   service_area_district?: string | null;
   selected_zones?: string[] | null;
@@ -86,12 +82,14 @@ function WorkerDetailPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.from("profiles")
-        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,age,phone,email,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,id_document_path,is_deleted,deleted_at,service_area_city,service_area_district,selected_zones,all_zones")
+      // Profilo pubblico del lavoratore: nessuna email, telefono, data di
+      // nascita, indirizzo o documento. I contatti passano dalla chat / RPC.
+      const { data } = await supabase.from("public_profiles")
+        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,age,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,is_deleted,service_area_city,service_area_district,selected_zones,all_zones")
         .eq("id", id).maybeSingle();
       if (cancelled) return;
       const worker = data as Worker | null;
-      setW(worker && !worker.is_deleted && !worker.deleted_at ? worker : null);
+      setW(worker && !worker.is_deleted ? worker : null);
       // Load worker_availability rows — same source used by the card / map,
       // so the detail page can format hours with the same helper.
       // Cross-user read → use sanitized RPC (no notes, rounded coords).
@@ -257,16 +255,6 @@ function WorkerDetailPage() {
             </div>
           </Card>
 
-          {contactAllowed && w.email && (
-            <Card title="Contatti">
-              {w.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <a href={`mailto:${w.email}`} className="text-primary hover:underline">{w.email}</a>
-                </div>
-              )}
-            </Card>
-          )}
           {contactAllowed && user && (
             <WorkerContactCard
               workerId={w.id}
