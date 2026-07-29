@@ -1,80 +1,57 @@
-## Obiettivo
+## Analisi dell'implementazione attuale
 
-Sostituire i toast generici con una validazione che porta l'utente al primo campo mancante, lo evidenzia con bordo rosso, mostra un messaggio sotto, e pulisce errore appena compilato. Funzionante su mobile, tema chiaro/scuro, riutilizzabile.
+**Route usata dalla chat**
+- `/messages` (`src/routes/messages.tsx`, 946 righe) — lista conversazioni/inbox realtime.
+- `/messages/$id` (`src/routes/messages.$id.tsx`, **4.593 righe**) — il thread vero e proprio. È qui che vive tutto.
 
-## Approccio
+**Componenti che visualizzano i messaggi**
+Non esistono componenti chat separati: tutto è inline in `messages.$id.tsx` (bolle, avatar `UserAvatar`, composer `Textarea` + pulsante Invia, template picker). Componenti collegati (business, non chat): `ProposalCard`, `ConfirmationCard`, `ConfirmedWorkerCard`, `CounterofferDialog`, `ReviewDialog`/`ReviewBlock`, `BlindReciprocalReviewDialog`, `SaveToFavoritesPrompt`, `InsufficientCreditsDialog`, `BlockedContactDialog`, `WorkerIncidentDialogs`, `PayOnHireBox`, `FreeLaunchBanner`.
 
-Creare un'utility riutilizzabile + applicarla ai due form più critici dove oggi compaiono errori generici:
+**Dati letti**
+`applications` (riga completa), `announcements` (orari, tariffa, requisiti, dress code, indicazioni), `public_profiles` (controparte + reputazione), `messages`, `activity_logs` (timeline), `shifts`, `reviews`, `proposal_responses`, `notifications`, RPC `get_announcement_contact` (referente sbloccato), `canAssignShift`, feature flag pagamenti/controfferta.
 
-1. **`src/lib/form-field-validation.ts`** — nuova utility:
-   - `registerField(name, ref)` per registrare i ref dei campi (input/section)
-   - `focusFirstMissing(errors, refs)` — scroll smooth + focus al primo campo con errore, con `block: "center"`
-   - Hook `useFieldErrors()` che restituisce `{ errors, setErrors, clearError, fieldProps(name) }` dove `fieldProps` ritorna `{ ref, "aria-invalid", className }` da spreddare sui campi.
-   - Helper `FieldError({ name })` che renderizza `<p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle/> {message}</p>`.
-   - Classe errore: `"border-destructive focus-visible:ring-destructive/40"` (già nel token system).
+**Azioni che oggi dipendono dalla chat**
+Accetta/rifiuta proposta, candidatura, controfferta, conferma assegnazione (con consumo crediti), invio istruzioni operative (template `shift_confirmation`), conferma lettura istruzioni (`action_type=instructions_acknowledged`), completamento turno, annullamento, segnalazioni ritardo/no-show, recensioni cieche reciproche, chiusura chat. Tutte scrivono una riga in `messages` come "evento".
 
-2. **`src/routes/onboarding.tsx`** (worker + restaurant):
-   - Sostituire la sequenza di `toast.error(...)` nella `saveProfile` con `setErrors({...})` + `focusFirstMissing`.
-   - Aggiungere `ref` ai campi chiave (telefono, partita IVA, nome locale, indirizzo, città, CAP, referente, data nascita, documenti, foto profilo, mansioni, zone).
-   - Mostrare `<FieldError name="..."/>` sotto ogni campo.
-   - Mantenere tutti i testi esistenti dei toast come messaggi di errore inline + tenere un toast riassuntivo breve ("Completa i campi evidenziati").
-   - Pulizia automatica: handler `onChange` esistenti chiamano `clearError(name)`.
+**La chat è usata per messaggi liberi?**
+**No.** In produzione: 136 messaggi totali, **0 messaggi liberi** (`template_id IS NULL` e `message_type='user'`). Sono tutti template/system: `shift_proposal` (26), `shift_confirmation` (24), system (29), `review_submitted` (14), chiusure chat (15), ecc. Quindi la card "Comunicazioni registrate" oggi sarebbe sempre vuota, ma la implemento comunque come previsto.
 
-3. **`src/routes/profile.tsx`** — stesso pattern dove esistono salvataggi con campi obbligatori.
+**Rischi della sostituzione**
+1. `messages` non è solo UI: è il **log di stato**. Molte logiche (gate anti-duplicato proposta, "istruzioni già inviate", "lettura confermata", chiusura chat, trigger DB `notify_new_message`) leggono/scrivono lì. Le insert devono restare identiche, cambia solo la resa grafica.
+2. Il trigger DB `notify_new_message` genera le notifiche a partire da `template_id`: se smetto di inserire quelle righe, si perdono le notifiche.
+3. Il badge "messaggi non letti" in `AppShell` e l'inbox realtime dipendono da `read_at` / `last_message_preview`.
+4. Rischio regressione su privacy: nome locale/indirizzo/referente vanno mostrati solo dopo lo sblocco esistente (`get_announcement_contact` + stato accettato/confermato).
+5. ~20 punti di navigazione puntano a `/messages/$id`: vanno tutti rediretti.
 
-4. **Gating operativo (candidature / pubblicazione annunci / proposte)**:
-   - In `src/routes/announcements.$id.tsx` (candidatura worker), `src/routes/ristoratore.annunci.nuovo.tsx` (pubblica annuncio), `src/routes/workers.tsx` (invia proposta): prima dell'azione, controllare `profile.profile_completed`. Se false, mostrare toast "Completa il profilo per continuare" + `navigate({ to: "/onboarding" })`. L'onboarding al mount legge un eventuale `?focus=<fieldName>` (o semplicemente esegue la validazione iniziale silenziosa) e fa scroll al primo campo mancante.
+Nessuna modifica a DB, RLS, trigger o matching.
 
-5. **Accessibilità sezioni libere**: il `PhoneVerificationGate` e `RequireAuth` non vengono toccati; `/onboarding`, `/profile`, `/terms`, ecc. restano accessibili come ora.
+## Piano di implementazione
 
-## Dettagli tecnici
+### Fase 1 — Nuova pagina di riepilogo
+- Nuova route `src/routes/pratiche.$id.tsx` ("Dettagli proposta" / "Riepilogo candidatura" / "Dettagli turno" in base allo stato), che **riusa lo stesso data-loader** di `messages.$id.tsx` estratto in `src/lib/application-detail.ts` (query, derivazione stato, sblocco privacy, timeline da `activity_logs` + `messages`).
+- Layout desktop 2 colonne (`max-w-6xl`), mobile impilato:
+  - principale: Header con badge stato → Card 1 Riepilogo turno → Card 2 Locale e luogo → Card 3 Requisiti e mansioni → Card 4 Proposta e risposta → Card 5 Istruzioni operative (con stato lettura e data/ora) → Card 6 Comunicazioni registrate (solo se esistono).
+  - laterale: riepilogo economico, CTA per stato+ruolo, referente (se sbloccato), mappa/"Apri in mappa", cronologia sintetica (Card 7 timeline verticale dai dati reali).
+- Stati vuoti/errore in italiano: caricamento, errore, non trovata, non autorizzato, istruzioni non inviate, dati bloccati, nessuna comunicazione, turno annullato, proposta scaduta.
 
-**Utility file:**
-```ts
-// src/lib/form-field-validation.ts
-export function useFieldErrors<T extends string>() {
-  const refs = useRef<Record<string, HTMLElement|null>>({});
-  const [errors, setErrors] = useState<Partial<Record<T,string>>>({});
-  const register = (name:T) => (el:HTMLElement|null) => { refs.current[name]=el; };
-  const clearError = (name:T) => setErrors(e => { const n={...e}; delete n[name]; return n; });
-  const focusFirst = (order:T[]) => {
-    for (const k of order) if (errors[k]) {
-      const el = refs.current[k];
-      el?.scrollIntoView({ behavior:"smooth", block:"center" });
-      requestAnimationFrame(()=> (el as HTMLInputElement|null)?.focus?.());
-      return;
-    }
-  };
-  return { errors, setErrors, clearError, register, focusFirst };
-}
+### Fase 2 — Azioni senza chat
+- Le CTA riusano le funzioni esistenti (accetta/rifiuta/assegna/annulla/recensisci/segnala), spostate in `src/lib/application-actions.ts` senza cambiarne il comportamento (stesse insert su `messages`, stessi `template_id`, stessi update su `applications`).
+- Invio istruzioni operative: **modulo strutturato** in dialog (referente, telefono, punto di accesso, orario arrivo, dress code, parcheggio, indicazioni, note) che produce lo stesso messaggio `shift_confirmation` di oggi → appare nella Card 5.
+- Conferma lettura worker: pulsante "Ho letto le istruzioni" → stessa insert `action_type=instructions_acknowledged` (data/ora mostrata in Card 5).
+- Rimosso: composer, pulsante Invia, template picker libero, bolle, avatar messaggio.
 
-export const errorFieldClass = "border-destructive focus-visible:ring-destructive/40 aria-[invalid=true]:border-destructive";
+### Fase 3 — Navigazione
+- `/messages/$id` diventa un redirect verso la nuova route (nessun deep-link rotto); aggiorno i ~20 link interni (dashboard, jobs, shifts, announcements, workers, mappa, collaboratori, turni ristoratore, `notification-link.ts`, `NotificationBell`, dialog vari).
+- `/messages` (inbox) resta come elenco pratiche, ma le righe aprono la nuova pagina; rinomino la voce di menu in "Candidature/Turni" se confermi.
 
-export function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p role="alert" className="mt-1 flex items-center gap-1 text-xs font-medium text-destructive">
-    <AlertCircle className="h-3.5 w-3.5"/>{message}
-  </p>;
-}
-```
+### Fase 4 — Verifica
+Test 1-15 richiesti via Playwright con account worker e ristoratore autenticati, screenshot desktop e mobile.
 
-**Integrazione `onboarding.tsx`:**
-sostituire blocco `if (...) { toast.error(...); return; }` con costruzione `const errs: Record<string,string> = {}; if(!field) errs.field="Campo obbligatorio"; ... if (Object.keys(errs).length) { setErrors(errs); focusFirst(ORDER); toast.error("Completa i campi evidenziati"); return; }`.
+### Dettagli tecnici
+- Nessuna migration. Nessuna modifica a RLS, trigger, RPC, matching.
+- Nessuna cancellazione di dati o tabelle: `messages` continua a essere scritta come log eventi.
+- `messages.$id.tsx` resta nel repo solo come redirect; il codice riusabile viene estratto, non duplicato.
 
-Su ogni `<Input>` o componente: `ref={register("fieldName")} aria-invalid={!!errors.fieldName} className={cn(base, errors.fieldName && errorFieldClass)} onChange={e => { setField(...); clearError("fieldName"); }}`.
-Sotto: `<FieldError message={errors.fieldName}/>`.
-
-## Scope file
-
-- create: `src/lib/form-field-validation.tsx`
-- edit: `src/routes/onboarding.tsx` (entrambi i flussi worker/restaurant)
-- edit: `src/routes/profile.tsx` (se ha validazioni di salvataggio)
-- edit: `src/routes/announcements.$id.tsx` — gate candidatura worker
-- edit: `src/routes/ristoratore.annunci.nuovo.tsx` — gate pubblicazione + sostituire validazione interna con stesso pattern
-- edit: `src/routes/workers.tsx` — gate "Invia proposta"
-
-## Fuori scope (non tocco)
-
-- logica candidatura/accettazione/chat/crediti/pagamenti/routing/permessi
-- testi UI esistenti (oltre ai messaggi errore inline)
-- layout generale
+### Domande aperte
+1. La voce di menu "Messaggi" va rinominata (es. "Candidature") o resta?
+2. Il nome della nuova route: `/pratiche/$id` va bene o preferisci `/candidature/$id`?
