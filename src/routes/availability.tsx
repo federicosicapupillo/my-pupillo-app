@@ -104,11 +104,8 @@ export const Route = createFileRoute("/availability")({
   ),
 });
 
-/** Fasce principali mostrate nel pannello giorno (configurazione centralizzata). */
-const PRIMARY_SLOTS: TimeSlot[] = ["colazione", "pranzo", "cena"];
-/** Fasce secondarie, mantenute per compatibilità con i dati già salvati. */
-const SECONDARY_SLOTS: TimeSlot[] = ["aperitivo", "serale", "intera_giornata", "last_minute"];
-const PANEL_SLOTS: TimeSlot[] = [...PRIMARY_SLOTS, "personalizzata", ...SECONDARY_SLOTS];
+/** Unico menu "Disponibilità" del pannello giorno. */
+const PANEL_SLOTS: TimeSlot[] = ["colazione", "pranzo", "cena", "intera_giornata", "personalizzata"];
 const EXC_SLOTS: TimeSlot[] = ["colazione", "pranzo", "aperitivo", "cena", "serale", "intera_giornata", "last_minute", "personalizzata"];
 
 const DAY_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
@@ -122,13 +119,6 @@ const TIME_OPTIONS: string[] = (() => {
   }
   return out;
 })();
-
-const QUICK_RANGES: Array<{ start: string; end: string; label: string }> = [
-  { start: "09:00", end: "13:00", label: "09:00 – 13:00" },
-  { start: "14:00", end: "18:00", label: "14:00 – 18:00" },
-  { start: "18:00", end: "23:00", label: "18:00 – 23:00" },
-  { start: "20:00", end: "02:00", label: "20:00 – 02:00" },
-];
 
 let uidSeq = 0;
 const nextUid = () => `s${++uidSeq}`;
@@ -236,17 +226,16 @@ function AvailabilityPage() {
   const [availableNowDuration, setAvailableNowDuration] = useState<"2h" | "today" | "tonight">("2h");
 
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
-  const [selectedDates, setSelectedDates] = useState<string[]>(() => [toIso(new Date())]);
+  /** Selezione singola: una sola data (quindi un solo giorno settimanale) alla volta. */
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => toIso(new Date()));
 
   const [copyOpen, setCopyOpen] = useState(false);
-  const [copyTargets, setCopyTargets] = useState<boolean[]>(() => Array.from({ length: 7 }, () => false));
   const [copying, setCopying] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmApplyArea, setConfirmApplyArea] = useState(false);
   const [howItWorks, setHowItWorks] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [areaEditing, setAreaEditing] = useState(false);
-  const [editingSlotUid, setEditingSlotUid] = useState<string | null>(null);
   const snapshotRef = useRef<{ days: DayState[]; area: WorkArea } | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [addingException, setAddingException] = useState(false);
@@ -350,26 +339,17 @@ function AvailabilityPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-  // ─────────── Selezione calendario → giorni della settimana ───────────
-  const selectedDows = useMemo(() => {
-    const set = new Set<number>();
-    selectedDates.forEach((iso) => set.add(dowOfIso(iso)));
-    return [...set].sort((a, b) => a - b);
-  }, [selectedDates]);
+  // ─────────── Selezione calendario (single-select) → giorno settimanale ───────────
+  const primaryDow = selectedDate != null ? dowOfIso(selectedDate) : null;
 
-  const primaryDow = selectedDows.length > 0 ? selectedDows[0] : null;
-
-  const toggleDate = (iso: string) => {
-    setSelectedDates((prev) =>
-      prev.includes(iso) ? prev.filter((x) => x !== iso) : [...prev, iso].sort(),
-    );
-  };
+  /** Single-select: cliccare una data deseleziona automaticamente la precedente. */
+  const selectDate = (iso: string) => setSelectedDate(iso);
 
   const applyToSelected = useCallback(
     (fn: (d: DayState) => DayState) => {
-      setDays((prev) => prev.map((d, i) => (selectedDows.includes(i) ? fn(d) : d)));
+      setDays((prev) => prev.map((d, i) => (i === primaryDow ? fn(d) : d)));
     },
-    [selectedDows],
+    [primaryDow],
   );
 
   // ─────────── Editing fasce ───────────
@@ -383,55 +363,38 @@ function AvailabilityPage() {
       radius_km: on ? (d.radius_km ?? area.radius_km) : d.radius_km,
     }));
 
-  const addSlot = (slot: TimeSlot) => {
+  /** Unico menu "Disponibilità": imposta la fascia del giorno selezionato. */
+  const setDaySlot = (slot: TimeSlot) => {
     const def = SLOT_DEFAULT_TIMES[slot];
-    applyToSelected((d) => ({
-      ...d,
-      is_available: true,
-      city: d.city || area.city,
-      province: d.province || area.province,
-      district: d.district || area.district,
-      radius_km: d.radius_km ?? area.radius_km,
-      slots: [
-        ...d.slots,
-        {
-          uid: nextUid(),
-          time_slot: slot,
-          start_time: def.start ?? (slot === "personalizzata" ? "18:00" : null),
-          end_time: def.end ?? (slot === "personalizzata" ? "23:00" : null),
-          is_flexible: false,
-          is_last_minute: slot === "last_minute",
-        },
-      ],
-    }));
+    applyToSelected((d) => {
+      const prev = d.slots[0];
+      return {
+        ...d,
+        is_available: true,
+        city: d.city || area.city,
+        province: d.province || area.province,
+        district: d.district || area.district,
+        radius_km: d.radius_km ?? area.radius_km,
+        slots: [
+          {
+            uid: prev?.uid ?? nextUid(),
+            id: prev?.id,
+            time_slot: slot,
+            start_time: slot === "personalizzata" ? (prev?.start_time ?? "18:00") : def.start,
+            end_time: slot === "personalizzata" ? (prev?.end_time ?? "23:00") : def.end,
+            is_flexible: false,
+            is_last_minute: false,
+          },
+        ],
+      };
+    });
   };
 
-  const removeSlot = (uid: string) =>
-    applyToSelected((d) => ({ ...d, slots: d.slots.filter((s) => s.uid !== uid) }));
-
-  const patchSlot = (uid: string, patch: Partial<LocalSlot>) =>
+  const patchDaySlot = (patch: Partial<LocalSlot>) =>
     applyToSelected((d) => ({
       ...d,
-      slots: d.slots.map((s) => (s.uid === uid ? { ...s, ...patch } : s)),
+      slots: d.slots.map((s, i) => (i === 0 ? { ...s, ...patch } : s)),
     }));
-
-  const setSlotType = (uid: string, slot: TimeSlot) => {
-    const def = SLOT_DEFAULT_TIMES[slot];
-    applyToSelected((d) => ({
-      ...d,
-      slots: d.slots.map((s) =>
-        s.uid === uid
-          ? {
-              ...s,
-              time_slot: slot,
-              is_last_minute: slot === "last_minute",
-              start_time: slot === "personalizzata" ? (s.start_time ?? "18:00") : def.start,
-              end_time: slot === "personalizzata" ? (s.end_time ?? "23:00") : def.end,
-            }
-          : s,
-      ),
-    }));
-  };
 
   const setFlexible = (on: boolean) =>
     applyToSelected((d) => ({ ...d, flexible: on, is_available: on || d.is_available }));
@@ -565,18 +528,22 @@ function AvailabilityPage() {
 
   const save = async (): Promise<void> => { await persistAll(); };
 
-  // ─────────── Copia su altri giorni ───────────
-  const openCopy = () => {
-    if (primaryDow == null) return;
-    setCopyTargets(Array.from({ length: 7 }, () => false));
-    setCopyOpen(true);
-  };
+  // ─────────── Copia su tutti i giorni della settimana ───────────
+  /** Giorni che verrebbero sovrascritti (hanno già una disponibilità impostata). */
+  const overwriteTargets = useMemo(
+    () =>
+      days
+        .map((d, i) => ({ d, i }))
+        .filter(({ d, i }) => i !== primaryDow && (d.is_available || d.slots.length > 0))
+        .map(({ i }) => DAY_LABELS[i]),
+    [days, primaryDow],
+  );
 
   const applyCopy = async () => {
     if (primaryDow == null) return;
     const src = days[primaryDow];
     const next = days.map((d, i) =>
-      i === primaryDow || !copyTargets[i]
+      i === primaryDow
         ? d
         : { ...src, slots: src.slots.map((s) => ({ ...s, uid: nextUid(), id: undefined })) },
     );
@@ -586,7 +553,7 @@ function AvailabilityPage() {
       const ok = await persistAll(next, { silent: true });
       if (ok) {
         setCopyOpen(false);
-        toast.success("Disponibilità copiata e salvata correttamente.");
+        toast.success("Disponibilità copiata su tutta la settimana e salvata.");
       } else {
         toast.error("Non è stato possibile copiare la disponibilità. Riprova.");
       }
@@ -608,38 +575,8 @@ function AvailabilityPage() {
     setDays(snap.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })));
     setArea({ ...snap.area });
     setAreaEditing(false);
-    setEditingSlotUid(null);
     setTimeout(() => setDirty(false), 0);
     toast.success("Modifiche annullate.");
-  };
-
-  /** Copia rapida del giorno selezionato su un insieme di giorni. */
-  const quickCopy = async (kind: "all" | "weekdays" | "weekend" | "empty") => {
-    if (primaryDow == null) return;
-    const src = days[primaryDow];
-    const targets = Array.from({ length: 7 }, (_, i) => {
-      if (i === primaryDow) return false;
-      if (kind === "all") return true;
-      if (kind === "weekdays") return i < 5;
-      if (kind === "weekend") return i >= 5;
-      const d = days[i];
-      return !d.is_available || (d.slots.length === 0 && !d.flexible);
-    });
-    if (!targets.some(Boolean)) {
-      toast.error("Nessun giorno di destinazione.");
-      return;
-    }
-    const next = days.map((d, i) =>
-      targets[i] ? { ...src, slots: src.slots.map((s) => ({ ...s, uid: nextUid(), id: undefined })) } : d,
-    );
-    setDays(next);
-    setCopying(true);
-    try {
-      const ok = await persistAll(next, { silent: true });
-      if (ok) toast.success("Disponibilità copiata e salvata correttamente.");
-    } finally {
-      setCopying(false);
-    }
   };
 
   // ─────────── Disponibilità speciali (flag) ───────────
@@ -777,7 +714,7 @@ function AvailabilityPage() {
   }[saveStatus];
 
   const panelDay = primaryDow != null ? days[primaryDow] : null;
-  const affectedLabel = selectedDows.map((d) => DAY_LABELS[d]).join(", ");
+  const daySlot = panelDay?.slots[0] ?? null;
 
   return (
     <AppShell>
@@ -984,18 +921,19 @@ function AvailabilityPage() {
             <Card className={cn(panelDay.is_available && "border-primary/25")}>
               <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 space-y-0 pb-3">
                 <div className="min-w-0">
-                  <CardTitle className="truncate text-sm font-semibold">
-                    Disponibilità ricorrente del{" "}
-                    <span className="text-primary">
-                      {selectedDows.length === 1 ? DAY_LABELS[selectedDows[0]].toLowerCase() : affectedLabel.toLowerCase()}
-                    </span>
+                  <CardTitle className="truncate text-base font-semibold capitalize">
+                    {primaryDow != null ? DAY_LABELS[primaryDow] : ""}
+                    {selectedDate ? <span className="ml-2 text-sm font-normal text-muted-foreground">{formatDateLong(selectedDate)}</span> : null}
                   </CardTitle>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Le fasce orarie impostate si ripetono ogni settimana.
+                  <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Repeat className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    Questa disponibilità si ripete ogni {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Disponibile</span>
+                  <span className={cn("text-xs font-medium", panelDay.is_available ? "text-primary" : "text-muted-foreground")}>
+                    {panelDay.is_available ? "Disponibile" : "Non disponibile"}
+                  </span>
                   <Switch checked={panelDay.is_available} onCheckedChange={setDayAvailable} aria-label="Disponibile" />
                 </div>
               </CardHeader>
@@ -1003,175 +941,82 @@ function AvailabilityPage() {
               <CardContent className="space-y-3">
                 {!panelDay.is_available ? (
                   <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
-                    Attiva il selettore per impostare le fasce orarie.
+                    Attiva il selettore per impostare la disponibilità di questo giorno.
                   </div>
                 ) : (
                   <>
-                    {/* Elenco fasce */}
-                    <div className="space-y-2">
-                      {panelDay.slots.length === 0 && !panelDay.flexible && (
-                        <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-3 text-center text-xs text-muted-foreground">
-                          Nessuna fascia oraria impostata.
-                        </div>
-                      )}
-                      {panelDay.slots.map((s) => {
-                        const open = editingSlotUid === s.uid;
-                        const invalid = s.time_slot !== "last_minute" && (!s.start_time || !s.end_time || !isValidTimeRange(s.start_time, s.end_time));
-                        return (
-                          <div key={s.uid} className={cn("rounded-lg border bg-background/60", invalid && "border-destructive/60")}>
-                            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2">
-                              <div className="min-w-0 text-sm">
-                                <span className="font-medium">{slotLabelOf(s)}</span>
-                                {s.time_slot !== "last_minute" && (
-                                  <span className="ml-2 tabular-nums text-muted-foreground">
-                                    {s.start_time && s.end_time ? `${s.start_time} – ${s.end_time}` : "orario da impostare"}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex shrink-0 items-center gap-0.5">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => setEditingSlotUid(open ? null : s.uid)}
-                                  aria-label={`Modifica fascia ${slotLabelOf(s)}`}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive"
-                                  onClick={() => { removeSlot(s.uid); if (open) setEditingSlotUid(null); }}
-                                  aria-label={`Rimuovi fascia ${slotLabelOf(s)}`}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                            {open && (
-                              <div className="space-y-2 border-t px-3 py-2.5">
-                                <div className="grid gap-2 sm:grid-cols-3">
-                                  <div>
-                                    <label className="mb-1 block text-[11px] text-muted-foreground">Fascia</label>
-                                    <Select value={s.time_slot} onValueChange={(v) => setSlotType(s.uid, v as TimeSlot)}>
-                                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                                      <SelectContent>
-                                        {PANEL_SLOTS.map((opt) => (
-                                          <SelectItem key={opt} value={opt}>{SLOT_LABELS[opt]}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  {s.time_slot !== "last_minute" && (
-                                    <>
-                                      <div>
-                                        <label className="mb-1 block text-[11px] text-muted-foreground">Dalle</label>
-                                        <Select value={s.start_time ?? ""} onValueChange={(v) => patchSlot(s.uid, { start_time: v })}>
-                                          <SelectTrigger className="h-9"><SelectValue placeholder="--:--" /></SelectTrigger>
-                                          <SelectContent className="max-h-64">
-                                            {TIME_OPTIONS.map((t) => (
-                                              <SelectItem key={`s-${s.uid}-${t}`} value={t}>{t}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <div>
-                                        <label className="mb-1 block text-[11px] text-muted-foreground">Alle</label>
-                                        <Select value={s.end_time ?? ""} onValueChange={(v) => patchSlot(s.uid, { end_time: v })}>
-                                          <SelectTrigger className="h-9"><SelectValue placeholder="--:--" /></SelectTrigger>
-                                          <SelectContent className="max-h-64">
-                                            {TIME_OPTIONS.map((t) => (
-                                              <SelectItem key={`e-${s.uid}-${t}`} value={t}>{t}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                                {s.start_time && s.end_time && crossesMidnight(s.start_time, s.end_time) && (
-                                  <p className="text-[11px] text-muted-foreground">Termina il giorno successivo</p>
-                                )}
-                                {s.start_time && s.end_time && !isValidTimeRange(s.start_time, s.end_time) && (
-                                  <p className="text-[11px] text-destructive">Inizio e fine non possono coincidere.</p>
-                                )}
-                                {s.time_slot === "personalizzata" && (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {QUICK_RANGES.map((r) => (
-                                      <Button
-                                        key={r.label}
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-7 text-[11px]"
-                                        onClick={() => patchSlot(s.uid, { start_time: r.start, end_time: r.end })}
-                                      >
-                                        {r.label}
-                                      </Button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-1.5 border-dashed"
-                      onClick={() => addSlot("personalizzata")}
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Aggiungi fascia oraria
-                    </Button>
-
-                    {/* Fasce rapide */}
                     <div>
-                      <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">Fasce rapide</div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        {([...PRIMARY_SLOTS, "personalizzata"] as TimeSlot[]).map((slot) => {
-                          const active = panelDay.slots.some((s) => s.time_slot === slot);
-                          return (
-                            <button
-                              key={slot}
-                              type="button"
-                              onClick={() => {
-                                addSlot(slot);
-                                if (slot === "personalizzata") setEditingSlotUid(null);
-                              }}
-                              className={cn(
-                                "rounded-lg border px-3 py-2.5 text-center text-xs font-medium transition-colors",
-                                active
-                                  ? "border-primary bg-primary/15 text-primary"
-                                  : "border-border bg-background/60 hover:border-primary/50 hover:bg-primary/5",
-                              )}
-                            >
-                              {slot === "personalizzata" ? "Personalizza" : SLOT_LABELS[slot]}
-                              <span className="mt-0.5 block text-[10px] font-normal tabular-nums text-muted-foreground">
-                                {SLOT_DEFAULT_TIMES[slot].start
-                                  ? `${SLOT_DEFAULT_TIMES[slot].start} – ${SLOT_DEFAULT_TIMES[slot].end}`
-                                  : "orario libero"}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Disponibilità</label>
+                      <Select value={daySlot?.time_slot ?? undefined} onValueChange={(v) => setDaySlot(v as TimeSlot)}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Seleziona una fascia" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PANEL_SLOTS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt === "intera_giornata" ? "Tutto il giorno" : opt === "personalizzata" ? "Personalizzato" : SLOT_LABELS[opt]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {/* Flessibile */}
-                    <label className="flex items-center justify-between gap-3 rounded-lg border bg-background/60 px-3 py-2.5">
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium">Valuto in base alla proposta</span>
-                        <span className="block text-xs text-muted-foreground">Ricevi proposte anche fuori dalle fasce indicate.</span>
-                      </span>
-                      <Switch checked={panelDay.flexible} onCheckedChange={setFlexible} aria-label="Valuto in base alla proposta" />
-                    </label>
+                    {daySlot && daySlot.time_slot !== "personalizzata" && (
+                      <p className="rounded-lg border bg-background/60 px-3 py-2 text-sm tabular-nums">
+                        {daySlot.start_time && daySlot.end_time
+                          ? `${daySlot.start_time} – ${daySlot.end_time}`
+                          : "Orario da impostare"}
+                        <button
+                          type="button"
+                          className="ml-3 text-xs font-medium text-primary underline-offset-2 hover:underline"
+                          onClick={() => setDaySlot("personalizzata")}
+                        >
+                          Modifica orario
+                        </button>
+                      </p>
+                    )}
+
+                    {daySlot?.time_slot === "personalizzata" && (
+                      <>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">Dalle</label>
+                            <Select value={daySlot.start_time ?? undefined} onValueChange={(v) => patchDaySlot({ start_time: v })}>
+                              <SelectTrigger className="h-10"><SelectValue placeholder="--:--" /></SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {TIME_OPTIONS.map((t) => (
+                                  <SelectItem key={`s-${t}`} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">Alle</label>
+                            <Select value={daySlot.end_time ?? undefined} onValueChange={(v) => patchDaySlot({ end_time: v })}>
+                              <SelectTrigger className="h-10"><SelectValue placeholder="--:--" /></SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {TIME_OPTIONS.map((t) => (
+                                  <SelectItem key={`e-${t}`} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        {(!daySlot.start_time || !daySlot.end_time) && (
+                          <p className="text-xs text-destructive">Inserisci orario di inizio e fine.</p>
+                        )}
+                        {daySlot.start_time && daySlot.end_time && !isValidTimeRange(daySlot.start_time, daySlot.end_time) && (
+                          <p className="text-xs text-destructive">L'orario di fine deve essere diverso da quello di inizio.</p>
+                        )}
+                        {daySlot.start_time && daySlot.end_time && crossesMidnight(daySlot.start_time, daySlot.end_time) && (
+                          <p className="text-xs text-muted-foreground">Il turno termina il giorno successivo.</p>
+                        )}
+                      </>
+                    )}
+
+                    {!daySlot && (
+                      <p className="text-xs text-muted-foreground">Nessuna fascia impostata per questo giorno.</p>
+                    )}
 
                     <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                       <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -1184,69 +1029,21 @@ function AvailabilityPage() {
                         <Badge variant="secondary" className="shrink-0">Diversa dall'area</Badge>
                       )}
                     </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full gap-2"
+                      disabled={copying || saving}
+                      onClick={() => setCopyOpen(true)}
+                    >
+                      <Copy className="h-4 w-4" /> Copia su tutti i giorni della settimana
+                    </Button>
                   </>
                 )}
               </CardContent>
             </Card>
           )}
-
-          {/* ── 3. AZIONI RAPIDE ── */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <Copy className="h-4 w-4 text-primary" /> Azioni rapide
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Copia le tue disponibilità su più giorni.</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-                {([
-                  { kind: "all", label: "Tutta la settimana", hint: "7 giorni" },
-                  { kind: "weekdays", label: "Solo feriali", hint: "Lun – Ven" },
-                  { kind: "weekend", label: "Solo weekend", hint: "Sab – Dom" },
-                  { kind: "empty", label: "Solo giorni vuoti", hint: "Non sovrascrive" },
-                ] as const).map((a) => (
-                  <button
-                    key={a.kind}
-                    type="button"
-                    disabled={selectedDows.length !== 1 || copying || saving}
-                    onClick={() => quickCopy(a.kind)}
-                    className={cn(
-                      "rounded-lg border border-border bg-background/60 px-3 py-2.5 text-left transition-colors",
-                      "hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-40",
-                    )}
-                  >
-                    <span className="block text-xs font-medium">{a.label}</span>
-                    <span className="mt-0.5 block text-[10px] text-muted-foreground">{a.hint}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 gap-1.5"
-                  onClick={openCopy}
-                  disabled={selectedDows.length !== 1}
-                >
-                  <Copy className="h-3.5 w-3.5" /> Scegli i giorni…
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 text-destructive"
-                  onClick={() => setConfirmClear(true)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Cancella tutto
-                </Button>
-                {selectedDows.length !== 1 && (
-                  <span className="text-[11px] text-muted-foreground">Seleziona un solo giorno per copiare.</span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* ══════════ COLONNA DESTRA ══════════ */}
@@ -1275,14 +1072,14 @@ function AvailabilityPage() {
               </div>
               <div className="grid grid-cols-7 gap-1">
                 {grid.map((c) => {
-                  const isSelected = selectedDates.includes(c.iso);
+                  const isSelected = selectedDate === c.iso;
                   const hasAvail = days[c.dow]?.is_available;
                   return (
                     <button
                       key={c.iso}
                       type="button"
                       disabled={c.isPast}
-                      onClick={() => toggleDate(c.iso)}
+                      onClick={() => selectDate(c.iso)}
                       aria-pressed={isSelected}
                       aria-label={`${formatDateLong(c.iso)}${hasAvail ? " · disponibilità impostata" : ""}`}
                       className={cn(
@@ -1313,8 +1110,8 @@ function AvailabilityPage() {
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Disponibilità impostata
                 </span>
-                {selectedDates.length > 0 && (
-                  <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => setSelectedDates([])}>
+                {selectedDate && (
+                  <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => setSelectedDate(null)}>
                     <X className="h-3 w-3" /> Deseleziona
                   </button>
                 )}
@@ -1331,7 +1128,7 @@ function AvailabilityPage() {
             </CardHeader>
             <CardContent className="space-y-1.5 pb-4">
               {days.map((d, i) => {
-                const isSel = selectedDows.includes(i);
+                const isSel = primaryDow === i;
                 const labels = d.flexible
                   ? ["Flessibile"]
                   : d.slots.map((s) =>
@@ -1343,7 +1140,7 @@ function AvailabilityPage() {
                     type="button"
                     onClick={() => {
                       const target = grid.find((c) => c.inMonth && !c.isPast && c.dow === i);
-                      if (target) setSelectedDates([target.iso]);
+                      if (target) setSelectedDate(target.iso);
                     }}
                     className={cn(
                       "grid w-full grid-cols-[38px_minmax(0,1fr)] items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
@@ -1681,50 +1478,20 @@ function AvailabilityPage() {
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              Copia {primaryDow != null ? DAY_LABELS[primaryDow] : ""} su altri giorni
-            </DialogTitle>
+            <DialogTitle>Copiare su tutti i giorni della settimana?</DialogTitle>
             <DialogDescription>
-              Verranno copiate fasce orarie, area di lavoro e note. I giorni selezionati saranno sovrascritti.
+              La disponibilità di {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""} verrà copiata su tutti gli altri giorni.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="outline" onClick={() => setCopyTargets(Array.from({ length: 7 }, (_, i) => i !== primaryDow))}>
-                Tutta la settimana
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setCopyTargets(Array.from({ length: 7 }, (_, i) => i < 5 && i !== primaryDow))}>
-                Solo feriali
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setCopyTargets(Array.from({ length: 7 }, (_, i) => i >= 5 && i !== primaryDow))}>
-                Solo weekend
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {DAY_LABELS.map((lbl, idx) => (
-                <label
-                  key={idx}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg border p-2 text-sm",
-                    idx === primaryDow ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    disabled={idx === primaryDow}
-                    checked={copyTargets[idx]}
-                    onChange={(e) => setCopyTargets((t) => t.map((v, i) => (i === idx ? e.target.checked : v)))}
-                    className="h-4 w-4"
-                  />
-                  {lbl}
-                </label>
-              ))}
-            </div>
-          </div>
+          {overwriteTargets.length > 0 && (
+            <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+              Attenzione: verranno sovrascritte le disponibilità già impostate per {overwriteTargets.join(", ")}.
+            </p>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCopyOpen(false)} disabled={copying}>Annulla</Button>
-            <Button onClick={applyCopy} disabled={!copyTargets.some(Boolean) || copying || saving}>
-              {copying ? "Copia in corso…" : "Applica"}
+            <Button onClick={applyCopy} disabled={copying || saving}>
+              {copying ? "Copia in corso…" : "Conferma e copia"}
             </Button>
           </DialogFooter>
         </DialogContent>
