@@ -318,3 +318,61 @@ perché la revoca parziale romperebbe i flussi non ancora migrati.
 - **Impatto**: la mappa `accAppMap` restava vuota → sulla pagina `/shifts` mancavano i link
   alla chat della candidatura. Nessuna relazione con RLS o con la Fase 5.
 - **Fix applicato**: filtro ridotto a `["accepted"]`.
+
+---
+
+## 11. Fase 5-bis — chiusura UPDATE su `profiles` (APPLICATA)
+
+### 11.1 RPC create (tutte `SECURITY DEFINER`, `search_path = public`)
+
+| RPC | Gruppo | Grant EXECUTE | Note |
+|---|---|---|---|
+| `public._apply_profile_self_patch(jsonb, text[])` | helper interno | *revocato a `anon`/`authenticated`/PUBLIC* | applica il patch **solo** su `id = auth.uid()`, valida ogni chiave contro l'allowlist, `UPDATE` dinamico via `jsonb_populate_record` |
+| `public.update_my_profile(jsonb)` | profilo + onboarding | `authenticated`, `service_role` | allowlist anagrafica/contatti/residenza/documento/area/competenze/attività/sede/referente/flag onboarding |
+| `public.set_my_avatar(text)` | avatar | `authenticated`, `service_role` | solo `avatar_url` |
+| `public.set_my_available_now(timestamptz)` | disponibilità immediata | `authenticated`, `service_role` | clamp a max +24h, passato → `NULL`, ritorna il valore effettivo |
+| `public.update_my_announcement_defaults(jsonb)` | impostazioni predefinite annuncio | `authenticated`, `service_role` | luogo/referente/requisiti/dress code/venue + `default_settings_updated_at` automatico |
+| `public.admin_set_account_status(uuid, text, text)` | admin | `authenticated` (gate `has_role`), `service_role` | scrive in `admin_audit_log` |
+| `public.admin_set_vat_verified(uuid)` | admin | `authenticated` (gate `has_role`), `service_role` | scrive in `admin_audit_log` |
+
+### 11.2 File modificati
+
+- `src/lib/profile-self-update.ts` (nuovo): `updateMyProfile`, `updateMyAnnouncementDefaults`, `setMyAvatar`, `setMyAvailableNow`; split automatico delle chiavi `default_*`.
+- `src/routes/onboarding.tsx` → `updateMyProfile`
+- `src/routes/profile.tsx` → `updateMyProfile` (box) + `setMyAvatar`
+- `src/routes/availability.tsx` → `setMyAvailableNow`
+- `src/routes/ristoratore.annunci.nuovo.tsx` → `updateMyAnnouncementDefaults`
+- `src/routes/admin.tsx` → `admin_set_account_status`, `admin_set_vat_verified`
+
+### 11.3 Privilegi finali su `public.profiles`
+
+```
+authenticated : SELECT
+anon          : (nessuno)
+service_role  : SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
+```
+Trigger difensivo `trg_00_profiles_guard_admin_columns` mantenuto come seconda barriera.
+Tutte le scritture backend (`vat.functions.ts`, `phone-verification.functions.ts`, `role-repair.functions.ts`,
+`payments.functions.ts`, `avatars.functions.ts`, `account-deletion.server.ts`, `demo-seed.server.ts`,
+`api/public/payments/webhook.ts`) usano il client service role: nessuna regressione.
+
+### 11.4 Test runtime PostgREST (utente reale creato/eliminato)
+
+| # | Caso | Esito |
+|---|---|---|
+| 1 | `UPDATE profiles` diretto da utente | `42501 permission denied` ✔ |
+| 2 | `update_my_profile` campi consentiti (patch onboarding completo + patch box profilo) | OK, valori persistiti ✔ |
+| 3–4 | `update_my_profile` con `credits` / `account_status` | `42501 Column ... is not self-updatable` ✔ |
+| 5 | `set_my_avatar` | `avatar_url` aggiornato ✔ |
+| 6–7 | `set_my_available_now` +2h / +48h | valorizzato; clamp a 24h ✔ |
+| 8 | `update_my_announcement_defaults` | luogo + dress code + timestamp aggiornati ✔ |
+| 9 | defaults con `plan` | rifiutato ✔ |
+| 10–11 | RPC admin da non-admin | `42501 Admin role required` ✔ |
+| 12–13 | RPC admin da admin | `account_status=suspended`, `vat_status=valid` ✔ |
+| 14 | `UPDATE` diretto anche da admin | `42501` (passa dalle RPC) ✔ |
+| 15 | `UPDATE` da service role | OK ✔ |
+| 16 | patch con chiave `id` (tentativo su altro profilo) | rifiutato ✔ |
+
+> Nota: `short_bio` è nell'allowlist della RPC ma resta bloccato dal trigger difensivo
+> (`Modifica non consentita sui campi protetti del profilo`). Nessuna UI lo scrive oggi;
+> se in futuro va reso editabile, va rimosso dalla lista protetta del trigger.
