@@ -1044,6 +1044,7 @@ function AvailabilityPage() {
                   <button
                     key={i}
                     type="button"
+                    data-testid={`week-row-${i}`}
                     onClick={() => {
                       const target = grid.find((c) => c.inMonth && !c.isPast && c.dow === i);
                       if (target) setSelectedDate(target.iso);
