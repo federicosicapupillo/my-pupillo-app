@@ -3004,6 +3004,10 @@ export type Database = {
           step: string
         }[]
       }
+      update_my_announcement_defaults: {
+        Args: { _patch: Json }
+        Returns: undefined
+      }
       update_my_profile: { Args: { _patch: Json }; Returns: undefined }
       validate_discount_code: {
         Args: { _applies_to?: string; _code: string }
