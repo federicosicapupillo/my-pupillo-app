@@ -268,6 +268,9 @@ function AvailabilityPage() {
 
   useEffect(() => {
     if (!user) return;
+    // Carica una sola volta per utente: refetch successivi (es. refresh del
+    // profilo) non devono sovrascrivere le modifiche non ancora salvate.
+    if (loadedRef.current) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
