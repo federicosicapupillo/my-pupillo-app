@@ -223,3 +223,98 @@ Batch successivi (richiedono estensione vista e/o RPC contatti): `mappa.tsx`, `w
 `announcements.$id.tsx`, `ristoratore.turni.$shiftId.tsx`, `jobs.tsx`, `restaurants.$id.tsx`,
 `messages.$id.tsx`, `workers.tsx` — la vista non espone `latitude/longitude`, `service_area_lat/lng`,
 `address`, `default_*`, quindi vanno aggiunte colonne pubbliche o RPC autorizzate prima dello swap.
+
+---
+
+## 10. Fase 5 — chiusura SELECT su `profiles` (APPLICATA)
+
+### 10.1 Policy finale
+
+```sql
+-- rimossa: "Profiles viewable by all authenticated"  USING (true)
+CREATE POLICY "Users read own profile"  ON public.profiles FOR SELECT TO authenticated
+  USING (id = auth.uid());
+CREATE POLICY "Admins read any profile" ON public.profiles FOR SELECT TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'::app_role));
+-- UPDATE invariato: "Users update own profile" (auth.uid() = id) + "Admins update any profile"
+```
+
+`public.public_profiles` è `security_barrier` **senza** `security_invoker` ed è owned da
+`postgres`: continua quindi a leggere la tabella base bypassando RLS e resta la sola
+superficie di lettura dei profili altrui. Nessuna colonna è stata aggiunta alla vista in
+questa fase (nessuna lettura residua lo richiedeva).
+
+### 10.2 Grant finali
+
+| Ruolo | `profiles` | `public_profiles` |
+|---|---|---|
+| `anon` | — (nessuno) | — (nessuno) |
+| `authenticated` | SELECT, UPDATE | SELECT |
+| `service_role` | ALL | ALL |
+
+Nessun `DELETE`/`TRUNCATE`/`TRIGGER`/`INSERT` per `authenticated`.
+
+### 10.3 Query residue su `profiles` (tutte legittime)
+
+**Proprio profilo (client):** `billing.tsx:146` (credits) · `messages.$id.tsx:1418,1444` (credits) ·
+`announcements.$id.tsx:518` (credits) · `browse.tsx:540` (id) · `mappa.tsx:680` (city/service_area) ·
+`workers.tsx:764` (default contatto/arrivo del ristoratore stesso) ·
+`required-reviews.ts:83,295` (business_name, review_blocked).
+
+**Admin (client, gated da `has_role`):** `admin.tsx:73,82,105,117,161,182,201,235,481` ·
+`AdminRequiredReviewsSection.tsx:41`.
+
+**Backend (server fn / service role, RLS non applicabile):** `worker-search.functions.ts` ·
+`vat.functions.ts` · `phone-verification.functions.ts` · `avatars.functions.ts` ·
+`account-deletion.server.ts` · `role-repair.functions.ts` · `demo-seed.server.ts` ·
+`backup-restore.functions.ts` · `cleanup-test-profiles.functions.ts` ·
+`populate-test-users.functions.ts` · `announcement-reopen.ts` · `utils/payments.functions.ts` ·
+`api/public/payments/webhook.ts` · `api/public/hooks/expire-stale.ts`.
+
+> `worker-search.functions.ts` legge `email`, coordinate precise e campi amministrativi con
+> `supabaseAdmin`, ma li **destruttura via** prima di rispondere al client (righe 346‑364).
+
+### 10.4 UPDATE diretto — call site residui e piano di revoca
+
+`UPDATE` su `profiles` resta concesso a `authenticated`, protetto dal trigger
+`trg_00_profiles_guard_admin_columns` (allowlist di colonne; tutto il resto → 42501).
+
+| Call site | Ruolo | Campi | RPC tipizzata prevista |
+|---|---|---|---|
+| `onboarding.tsx:1666` | W/R | anagrafica completa + default | `update_own_onboarding_profile(payload jsonb)` |
+| `profile.tsx:305` | W/R | `patch` dinamico | `update_own_profile(payload jsonb)` |
+| `profile.tsx:347` | W/R | `avatar_url` | `set_own_avatar(path text)` |
+| `availability.tsx:645` | W | `available_now_until` | `set_available_now(until timestamptz)` |
+| `ristoratore.annunci.nuovo.tsx:767` | R | default annuncio | `update_own_announcement_defaults(payload jsonb)` |
+| `admin.tsx:235,481` | A | `account_status`, `vat_*` | restano admin (già gated da policy + `has_role`) |
+
+Revoca finale (`REVOKE UPDATE ON public.profiles FROM authenticated`) **solo** dopo la
+migrazione di tutti e cinque i call site self alle RPC sopra: va fatta in un'unica migration,
+perché la revoca parziale romperebbe i flussi non ancora migrati.
+
+### 10.5 Test runtime (4 ruoli, REST reale)
+
+| Scenario | Esito |
+|---|---|
+| anon → `profiles` | 42501 negato |
+| anon → `public_profiles` | 42501 negato |
+| worker → proprio `profiles` (email/phone/tax_code/credits) | 1 riga (OK) |
+| worker → `profiles` di un altro utente | 0 righe (RLS filtra) |
+| worker → `profiles` senza filtro | 1 riga (solo la propria) |
+| restaurant → `profiles` di un worker | 0 righe |
+| restaurant → `public_profiles` di un worker | 1 riga (solo campi pubblici) |
+| restaurant → `public_profiles.email` / `phone` / `tax_code` / `id_document_path` / `credits` | 42703 colonna inesistente |
+| admin → `profiles` | 78 righe (accesso completo) |
+| self UPDATE `city` | OK |
+| self UPDATE `credits` | 42501 bloccato dal trigger |
+| UPDATE profilo altrui | 0 righe |
+
+### 10.6 Il 400 su `applications`
+
+- **Query**: `shifts.tsx:364` — `from("applications").select("id, announcement_id, status").in("announcement_id", …).in("status", ["accepted","confirmed","assigned"])`.
+- **Causa**: `confirmed` e `assigned` non esistono nell'enum `application_status`
+  (`pending, interested, not_interested, counter_offer, accepted, rejected, expired, cancelled`).
+  PostgREST risponde 400 / SQLSTATE `22P02`.
+- **Impatto**: la mappa `accAppMap` restava vuota → sulla pagina `/shifts` mancavano i link
+  alla chat della candidatura. Nessuna relazione con RLS o con la Fase 5.
+- **Fix applicato**: filtro ridotto a `["accepted"]`.
