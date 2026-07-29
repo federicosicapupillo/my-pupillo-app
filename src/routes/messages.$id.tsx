@@ -435,7 +435,10 @@ function buildEventList(app: App, events: LogEvent[]): TimelineEvent[] {
 type StepState = "done" | "current" | "todo" | "error";
 type Step = { key: string; label: string; icon: typeof Send; state: StepState };
 
-function buildTimeline(status?: string, opts?: { slotTakenByOther?: boolean }): Step[] {
+function buildTimeline(
+  status?: string,
+  opts?: { slotTakenByOther?: boolean; includeCounteroffer?: boolean },
+): Step[] {
   const s = status ?? "pending";
   const isReject = s === "rejected" || s === "not_interested";
   const slotTaken = !!opts?.slotTakenByOther && s === "rejected";
@@ -448,17 +451,30 @@ function buildTimeline(status?: string, opts?: { slotTakenByOther?: boolean }): 
   const mark = (cond: boolean, isCurrent: boolean): StepState =>
     cond ? "done" : isCurrent ? "current" : "todo";
 
-  return [
+  const steps: Step[] = [
     { key: "sent", label: "Inviata", icon: Send, state: "done" },
     { key: "interest", label: "Interesse", icon: ThumbsUp,
       state: isReject ? "error" : mark(isInterested || isCounter || isAccepted, s === "pending") },
-    { key: "counter", label: "Controfferta", icon: Handshake,
-      state: isCounter ? "current" : (isAccepted ? "done" : "todo") },
     { key: "outcome",
       label: isCancelled ? "Annullata" : slotTaken ? "Turno assegnato ad altri" : isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
       icon: isReject || isExpired || isCancelled ? Ban : Check,
       state: isAccepted ? "done" : (isReject || isExpired || isCancelled) ? "error" : "todo" },
   ];
+
+  // Lo step "Controfferta" compare solo quando la funzionalità è attiva
+  // (feature flag `counteroffer_enabled`) oppure quando esiste davvero una
+  // controfferta storica su questa richiesta: mai come passaggio ordinario
+  // non raggiungibile.
+  if (opts?.includeCounteroffer || isCounter) {
+    steps.splice(2, 0, {
+      key: "counter",
+      label: "Controfferta",
+      icon: Handshake,
+      state: isCounter ? "current" : isAccepted ? "done" : "todo",
+    });
+  }
+
+  return steps;
 }
 
 function Thread() {
