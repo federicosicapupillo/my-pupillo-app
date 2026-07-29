@@ -1879,11 +1879,7 @@ function Thread() {
   }, [isConversationClosed, app?.id, role, shift?.id, closureReason]);
 
   const realConversationMessages = useMemo(() => msgs.filter(isRealChatMessage), [msgs]);
-  const displayableConversationMessages = useMemo(() => msgs.filter(isDisplayableConversationMessage), [msgs]);
   const canWriteNewMessage = !!app && !!user && !isConversationClosed;
-  // La sezione conversazione viene renderizzata solo quando contiene messaggi
-  // effettivamente visibili. Non mostriamo più il grande box vuoto per chat
-  // chiuse (annullate/completate) o per chat attive senza messaggi.
   const proposalMessages = useMemo(
     () => msgs.filter((m) => m.template_id === PROPOSAL_TEMPLATE_ID),
     [msgs],
@@ -1894,6 +1890,33 @@ function Thread() {
     () => msgs.filter(isRealChatMessage),
     [msgs],
   );
+  // Cronologia: eventi applicativi (activity_logs) + eventi di sistema
+  // registrati come messaggi, uniti e ordinati cronologicamente.
+  const historyEvents = useMemo<TimelineEvent[]>(() => {
+    if (!app) return [];
+    const base = buildEventList(app, events);
+    const systemEvents: TimelineEvent[] = msgs
+      .filter((m) => isSystemChatEvent(m))
+      .map((m) => {
+        const label = m.template_id === CONFIRMATION_TEMPLATE_ID
+          ? "Istruzioni operative inviate"
+          : m.action_type === "instructions_acknowledged"
+            ? "Istruzioni lette dal lavoratore"
+            : m.template_id === "chat_closed_completed"
+              ? "Turno concluso"
+              : m.template_id === "chat_closed_cancelled"
+                ? "Turno annullato"
+                : (m.body ?? "").replace(/^⚙️ Sistema:\s*/, "").split("\n")[0];
+        const tone: TimelineEvent["tone"] =
+          m.action_type === "accept_application"
+            ? "success"
+            : m.action_type === "reject_application" || m.template_id === "chat_closed_cancelled"
+              ? "error"
+              : "neutral";
+        return { at: m.created_at, label: label || "Aggiornamento", tone };
+      });
+    return [...base, ...systemEvents].sort((a, b) => a.at.localeCompare(b.at));
+  }, [app, events, msgs]);
 
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
