@@ -514,7 +514,7 @@ function AnnouncementsPage() {
         if (workerIds.length) {
           const [{ data: profs }, { data: allRevs }] = await Promise.all([
             supabase
-              .from("profiles")
+              .from("public_profiles")
               .select("id, full_name, professional_profile, rating_avg, badge, avatar_url")
               .in("id", workerIds),
             supabase

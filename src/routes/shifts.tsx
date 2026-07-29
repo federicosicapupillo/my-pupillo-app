@@ -394,7 +394,7 @@ function ShiftsPage() {
     const pendingWorkerIds = pending.map(p => p.worker_id);
     const ids = Array.from(new Set([...otherIds, ...pendingWorkerIds]));
     if (ids.length) {
-      const { data: ps } = await supabase.from("profiles").select("id,full_name,business_name,city").in("id", ids);
+      const { data: ps } = await supabase.from("public_profiles").select("id,full_name,business_name,city").in("id", ids);
       const map: Record<string, Profile> = {};
       (ps ?? []).forEach((p: any) => { map[p.id] = p; });
       setProfiles(map);

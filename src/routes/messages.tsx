@@ -185,7 +185,7 @@ function MessagesLayout() {
     const annIds = Array.from(new Set(list.map((a) => a.announcement_id).filter(Boolean))) as string[];
     const [{ data: profs }, { data: msgs }, { data: anns }, { data: priorShifts }] = await Promise.all([
       others.length
-        ? supabase.from("profiles").select("id, full_name, first_name, business_name").in("id", others)
+        ? supabase.from("public_profiles").select("id, full_name, first_name, business_name").in("id", others)
         : Promise.resolve({ data: [] as any[] }),
       ids.length
         ? supabase

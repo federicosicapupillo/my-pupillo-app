@@ -56,7 +56,7 @@ export function PreviousCandidatesSection(props: {
         return;
       }
       const { data: profiles } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, full_name, first_name, primary_role, reliability_pct, completed_shifts, rating_avg, is_deleted")
         .in("id", workerIds);
       const validProfiles = ((profiles ?? []) as any[]).filter((p) => !p.is_deleted);

@@ -92,7 +92,7 @@ function Page() {
     if (workerIds.length === 0) { setRows([]); setLoading(false); return; }
 
     const [{ data: profs }, { data: favs }, { data: apps }, { data: reviews }] = await Promise.all([
-      supabase.from("profiles")
+      supabase.from("public_profiles")
         .select("id, full_name, avatar_url, badge, rating_avg, primary_role, spoken_languages, reliability_pct")
         .in("id", workerIds),
       supabase.from("restaurant_worker_favorites")

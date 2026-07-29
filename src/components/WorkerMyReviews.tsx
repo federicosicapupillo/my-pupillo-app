@@ -87,7 +87,7 @@ export function WorkerMyReviews({ workerId, limit }: { workerId: string; limit?:
 
       const [au, sh, ap] = await Promise.all([
         authorIds.length
-          ? supabase.from("profiles").select("id,business_name,full_name,city,is_deleted").in("id", authorIds)
+          ? supabase.from("public_profiles").select("id,business_name,full_name,city,is_deleted").in("id", authorIds)
           : Promise.resolve({ data: [] as any[] }),
         shiftIds.length
           ? supabase.from("shifts").select("id,restaurant_id").in("id", shiftIds)

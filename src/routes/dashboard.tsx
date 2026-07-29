@@ -165,7 +165,7 @@ function DashboardInner() {
     const annIds = rows.map(r => r.id);
     const workerIds = Array.from(new Set(rows.map(r => r.assigned_worker_id).filter(Boolean))) as string[];
     const [profsRes, jrRes, shiftsRes, appsRes] = await Promise.all([
-      workerIds.length ? supabase.from("profiles").select("id, full_name").in("id", workerIds) : Promise.resolve({ data: [] as any[] }),
+      workerIds.length ? supabase.from("public_profiles").select("id, full_name").in("id", workerIds) : Promise.resolve({ data: [] as any[] }),
       supabase.from("job_requests").select("announcement_id, role_required").in("announcement_id", annIds),
       supabase.from("shifts").select("id, announcement_id, status, worker_id, reviewed_at").in("announcement_id", annIds).eq("restaurant_id", uid),
       supabase.from("applications").select("id, announcement_id, worker_id, status").in("announcement_id", annIds).eq("restaurant_id", uid),
@@ -1036,7 +1036,7 @@ function FavoriteWorkersSection() {
       if (ids.length === 0) { if (alive) { setItems([]); setLoading(false); } return; }
 
       const [{ data: profs }, { data: shifts }, { data: apps }] = await Promise.all([
-        supabase.from("profiles")
+        supabase.from("public_profiles")
           .select("id, full_name, primary_role, rating_avg")
           .in("id", ids),
         supabase.from("shifts")
