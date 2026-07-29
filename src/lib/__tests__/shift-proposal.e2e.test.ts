@@ -133,8 +133,11 @@ describe("E2E — restaurant sends a shift proposal", () => {
     expect(body).toContain("Ruolo: Cameriere");
     expect(body).toContain("Data: ");
     expect(body).toContain("Orario: 19:00 - 23:00");
-    expect(body).toContain("Locale: Trattoria da Marco");
-    expect(body).toContain("Via Roma 1, Milano");
+    // PRIVACY: prima dello sblocco identita' il corpo salvato non deve
+    // contenere ne' il nome del locale ne' l'indirizzo esatto.
+    expect(body).not.toContain("Trattoria da Marco");
+    expect(body).not.toContain("Via Roma 1");
+    expect(body).toContain("Locale: Ristorante partner");
     // Compensation is required for the worker to evaluate the offer.
     expect(body.toLowerCase()).toContain("compenso");
   });

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateIT, formatTariff } from "@/lib/format";
+import { PUBLIC_VENUE_NAME, publicLocationLabel } from "@/lib/public-location";
 import {
   checkWorkerShiftConflict,
   CONFLICT_RESTAURANT_REQUEST_MESSAGE,
@@ -106,18 +107,11 @@ export async function sendShiftProposal(params: {
   workerId: string;
 }) {
   const { applicationId, announcementId, restaurantId, workerId } = params;
-  const [{ data: ann }, { data: prof }] = await Promise.all([
-    supabase
-      .from("announcements")
-      .select("id, service_date, service_time, end_time, location_address, job_city, tariff_amount, tariff_type, notes, professional_profile")
-      .eq("id", announcementId)
-      .maybeSingle(),
-    supabase
-      .from("public_profiles")
-      .select("business_name, full_name")
-      .eq("id", restaurantId)
-      .maybeSingle(),
-  ]);
+  const { data: ann } = await supabase
+    .from("announcements")
+    .select("id, service_date, service_time, end_time, location_address, job_city, tariff_amount, tariff_type, notes, professional_profile")
+    .eq("id", announcementId)
+    .maybeSingle();
   // PUPILLO: regola di OCCUPAZIONE — non inviare proposta a un lavoratore
   // gia' occupato in quella fascia oraria (con buffer 1h post-fine).
   if (ann) {
@@ -128,8 +122,19 @@ export async function sendShiftProposal(params: {
       throw new WorkerBusyError();
     }
   }
-  const venueName = (prof as any)?.business_name || (prof as any)?.full_name || null;
-  const body = buildProposalBody((ann as ProposalAnnouncement) ?? { id: announcementId, service_date: null, service_time: null, location_address: null }, venueName);
+  // PRIVACY PUPILLO: il corpo del messaggio viene salvato una volta sola e
+  // finisce anche nell'anteprima/notifica del lavoratore, quindi non deve mai
+  // contenere il nome reale del locale ne' l'indirizzo esatto: entrambi
+  // restano nascosti fino allo sblocco dell'identita' (conferma/turno svolto),
+  // dove la UI della chat li mostra leggendoli dal profilo autorizzato.
+  const annSafe: ProposalAnnouncement = {
+    ...((ann as ProposalAnnouncement) ?? { id: announcementId, service_date: null, service_time: null, location_address: null }),
+    location_address: null,
+  };
+  annSafe.job_city = publicLocationLabel({
+    job_city: (ann as any)?.job_city ?? null,
+  });
+  const body = buildProposalBody(annSafe, PUBLIC_VENUE_NAME);
   const createdAt = new Date().toISOString();
   await supabase.from("messages").insert({
     application_id: applicationId,
