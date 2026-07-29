@@ -232,7 +232,7 @@ function Admin() {
   });
 
   async function updateAccountStatus(id: string, newStatus: string, kind: "worker" | "restaurant") {
-    const { error } = await supabase.from("profiles").update({ account_status: newStatus as any }).eq("id", id);
+    const { error } = await supabase.rpc("admin_set_account_status" as never, { _user_id: id, _status: newStatus } as never);
     if (error) { toast.error(error.message); return; }
     toast.success(newStatus === "suspended" ? "Account sospeso" : newStatus === "active" ? "Account riattivato" : "Stato aggiornato");
     if (kind === "worker") setWorkers(ws => ws.map(w => w.id === id ? { ...w, account_status: newStatus } : w));
@@ -478,7 +478,7 @@ function Admin() {
                       <td className="pr-3">{defaultsCell(r)}</td>
                       <td>
                         <Button size="sm" variant="outline" onClick={async () => {
-                          const { error } = await supabase.from("profiles").update({ vat_status: "valid", vat_verified_at: new Date().toISOString() }).eq("id", r.id);
+                          const { error } = await supabase.rpc("admin_set_vat_verified" as never, { _user_id: r.id } as never);
                           if (error) toast.error(error.message);
                           else { toast.success("Segnata come verificata"); setVatList(l => l.map(x => x.id===r.id?{...x,vat_status:"valid",vat_verified_at:new Date().toISOString()}:x)); }
                         }}>Segna come verificata</Button>
