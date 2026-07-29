@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { updateMyProfile, setMyAvatar } from "@/lib/profile-self-update";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -302,7 +303,7 @@ function useBoxSave(userId: string | null, onSaved: () => Promise<void> | void, 
     if (!userId) return false;
     setSaving(true);
     try {
-      const { error } = await supabase.from("profiles").update(patch as any).eq("id", userId);
+      const { error } = await updateMyProfile(patch);
       if (error) throw error;
       toast.success(messages?.success ?? "Profilo aggiornato correttamente.");
       await onSaved();
@@ -344,7 +345,7 @@ function AvatarBox({ profile, userId, onSaved }: { profile: any; userId: string 
       const res = await uploadAvatarFn({ data: fd });
       if (!res.ok) { toast.error(res.error); setSaving(false); return; }
       const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(res.path, 60 * 60);
-      const { error } = await supabase.from("profiles").update({ avatar_url: res.path } as any).eq("id", userId);
+      const { error } = await setMyAvatar(res.path);
       if (error) throw error;
       if (signed?.signedUrl) updateAvatarUrlCache(userId, signed.signedUrl, profile?.full_name ?? null);
       toast.success("Profilo aggiornato correttamente.");

@@ -5,6 +5,7 @@ import { RestaurantProfileGate } from "@/components/RestaurantProfileGate";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { updateMyAnnouncementDefaults } from "@/lib/profile-self-update";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -764,7 +765,7 @@ function NewRestaurantJobRequest() {
           price_range: (profile as any)?.price_range ?? null,
         },
       });
-      const { error: defErr } = await supabase.from("profiles").update(update as any).eq("id", user.id);
+      const { error: defErr } = await updateMyAnnouncementDefaults(update as Record<string, unknown>);
       if (defErr) toast.error("Annuncio salvato, ma impostazioni predefinite non aggiornate: " + defErr.message);
       else toast.success("Annuncio salvato e impostazioni predefinite aggiornate.");
     }

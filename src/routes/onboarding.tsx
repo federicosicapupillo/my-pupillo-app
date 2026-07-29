@@ -4,6 +4,7 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { updateMyProfile } from "@/lib/profile-self-update";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1663,7 +1664,7 @@ function Onboarding() {
     let updateResult: { error: { message: string } | null };
     try {
       updateResult = (await Promise.race([
-        supabase.from("profiles").update(update).eq("id", user.id),
+        updateMyProfile(update as Record<string, unknown>),
         new Promise((_, rej) =>
           setTimeout(() => rej(new Error("__timeout__")), SAVE_TIMEOUT_MS),
         ),

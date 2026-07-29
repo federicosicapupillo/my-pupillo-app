@@ -4,6 +4,7 @@ import { RequireRole } from "@/components/RequireRole";
 import { AppShell } from "@/components/AppShell";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { setMyAvailableNow } from "@/lib/profile-self-update";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -642,7 +643,7 @@ function AvailabilityPage() {
       until = d.toISOString();
     }
     setAvailableNowUntil(until);
-    const { error } = await supabase.from("profiles").update({ available_now_until: until }).eq("id", user.id);
+    const { error } = await setMyAvailableNow(until);
     if (error) {
       toast.error(error.message);
       setAvailableNow(!on);
