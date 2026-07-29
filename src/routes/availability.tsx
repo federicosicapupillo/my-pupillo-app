@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { RequireRole } from "@/components/RequireRole";
 import { AppShell } from "@/components/AppShell";
@@ -196,6 +196,28 @@ function sameArea(d: DayState, a: WorkArea): boolean {
   );
 }
 
+/**
+ * Firma dello stato editabile (giorni + area di lavoro). Confrontando la firma
+ * corrente con lo snapshot dell'ultimo salvataggio otteniamo il flag "dirty"
+ * in modo esatto: coprire fascia, orari, copie sugli altri giorni, città,
+ * provincia, zona, raggio e note.
+ */
+function signatureOf(days: DayState[], area: WorkArea): string {
+  return JSON.stringify({
+    d: days.map((d) => ({
+      a: d.is_available,
+      f: d.flexible,
+      n: d.notes || "",
+      c: d.city || "",
+      p: d.province || "",
+      z: d.district || "",
+      r: d.radius_km ?? null,
+      s: d.slots.map((s) => [s.time_slot, s.start_time ?? "", s.end_time ?? ""]),
+    })),
+    w: [area.city || "", area.province || "", area.district || "", area.radius_km ?? null, area.notes || ""],
+  });
+}
+
 function AvailabilityPage() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -234,9 +256,10 @@ function AvailabilityPage() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmApplyArea, setConfirmApplyArea] = useState(false);
   const [howItWorks, setHowItWorks] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [areaEditing, setAreaEditing] = useState(false);
   const snapshotRef = useRef<{ days: DayState[]; area: WorkArea } | null>(null);
+  /** Firma dell'ultimo stato salvato/caricato: null finché non abbiamo caricato. */
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [addingException, setAddingException] = useState(false);
   type ExcErrors = Partial<Record<"date" | "is_available" | "time_slot" | "city" | "district" | "radius_km" | "time", string>>;
@@ -299,8 +322,9 @@ function AvailabilityPage() {
         setAvailableNow(true);
         setAvailableNowUntil(until);
       }
+      setSavedSignature(signatureOf(next, nextArea));
       setLoading(false);
-      setTimeout(() => { loadedRef.current = true; setDirty(false); }, 0);
+      loadedRef.current = true;
     })();
     return () => { cancelled = true; };
   }, [user, profile, defaults.city, defaults.province, defaults.district, defaults.radius_km]);
@@ -324,11 +348,11 @@ function AvailabilityPage() {
     return () => { cancelled = true; };
   }, [user, specialAvailabilityEnabled]);
 
-  useEffect(() => {
-    if (!loadedRef.current) return;
-    setDirty(true);
-  }, [days]);
+  /** Stato dirty = differenza fra stato corrente e snapshot dell'ultimo salvataggio. */
+  const currentSignature = useMemo(() => signatureOf(days, area), [days, area]);
+  const dirty = savedSignature != null && currentSignature !== savedSignature;
 
+  // Refresh / chiusura scheda: protezione nativa del browser.
   useEffect(() => {
     if (!dirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -508,13 +532,13 @@ function AvailabilityPage() {
         const { error: insErr } = await supabase.from("worker_availability").insert(inserts as never);
         if (insErr) throw insErr;
       }
-      setDirty(false);
       setLastSavedAt(new Date());
       snapshotRef.current = {
         days: list.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })),
         area: { ...area },
       };
-      if (!opts.silent) toast.success("Disponibilità salvate");
+      setSavedSignature(signatureOf(list, area));
+      if (!opts.silent) toast.success("Disponibilità salvate correttamente");
       return true;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore nel salvataggio";
@@ -539,7 +563,8 @@ function AvailabilityPage() {
     [days, primaryDow],
   );
 
-  const applyCopy = async () => {
+  /** Copia locale: nessun salvataggio automatico, resta una modifica non salvata. */
+  const applyCopy = () => {
     if (primaryDow == null) return;
     const src = days[primaryDow];
     const next = days.map((d, i) =>
@@ -548,18 +573,8 @@ function AvailabilityPage() {
         : { ...src, slots: src.slots.map((s) => ({ ...s, uid: nextUid(), id: undefined })) },
     );
     setDays(next);
-    setCopying(true);
-    try {
-      const ok = await persistAll(next, { silent: true });
-      if (ok) {
-        setCopyOpen(false);
-        toast.success("Disponibilità copiata su tutta la settimana e salvata.");
-      } else {
-        toast.error("Non è stato possibile copiare la disponibilità. Riprova.");
-      }
-    } finally {
-      setCopying(false);
-    }
+    setCopyOpen(false);
+    toast.success("Disponibilità copiata su tutta la settimana. Ricordati di salvare.");
   };
 
   const clearAll = () => {
@@ -575,7 +590,6 @@ function AvailabilityPage() {
     setDays(snap.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })));
     setArea({ ...snap.area });
     setAreaEditing(false);
-    setTimeout(() => setDirty(false), 0);
     toast.success("Modifiche annullate.");
   };
 
@@ -716,6 +730,36 @@ function AvailabilityPage() {
   const panelDay = primaryDow != null ? days[primaryDow] : null;
   const daySlot = panelDay?.slots[0] ?? null;
 
+  // ─────────── Navigazione interna: blocco con dialog personalizzato ───────────
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty,
+    enableBeforeUnload: false, // gestito dall'effetto beforeunload sopra
+    withResolver: true,
+  });
+  const [leaveSaving, setLeaveSaving] = useState(false);
+
+  const stayOnPage = () => blocker.reset?.();
+
+  const leaveWithoutSaving = () => {
+    const snap = snapshotRef.current;
+    if (snap) {
+      setDays(snap.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })));
+      setArea({ ...snap.area });
+    }
+    blocker.proceed?.();
+  };
+
+  const saveAndContinue = async () => {
+    setLeaveSaving(true);
+    try {
+      const ok = await persistAll();
+      if (ok) blocker.proceed?.();
+      else blocker.reset?.();
+    } finally {
+      setLeaveSaving(false);
+    }
+  };
+
   return (
     <AppShell>
       {/* ───────── HEADER ───────── */}
@@ -756,7 +800,7 @@ function AvailabilityPage() {
         </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,2fr)_340px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         {/* ══════════ COLONNA SINISTRA ══════════ */}
         <div className="space-y-4">
           {/* ── Disponibile ora ── */}
@@ -910,144 +954,6 @@ function AvailabilityPage() {
             </CardContent>
           </Card>
 
-          {/* ── 2. DISPONIBILITÀ RICORRENTE DEL GIORNO ── */}
-          {panelDay == null ? (
-            <Card className="border-dashed">
-              <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                Seleziona un giorno sul calendario per impostare le fasce orarie ricorrenti.
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className={cn(panelDay.is_available && "border-primary/25")}>
-              <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 space-y-0 pb-3">
-                <div className="min-w-0">
-                  <CardTitle className="truncate text-base font-semibold capitalize">
-                    {primaryDow != null ? DAY_LABELS[primaryDow] : ""}
-                    {selectedDate ? <span className="ml-2 text-sm font-normal text-muted-foreground">{formatDateLong(selectedDate)}</span> : null}
-                  </CardTitle>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Repeat className="h-3.5 w-3.5 shrink-0 text-primary" />
-                    Questa disponibilità si ripete ogni {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className={cn("text-xs font-medium", panelDay.is_available ? "text-primary" : "text-muted-foreground")}>
-                    {panelDay.is_available ? "Disponibile" : "Non disponibile"}
-                  </span>
-                  <Switch checked={panelDay.is_available} onCheckedChange={setDayAvailable} aria-label="Disponibile" />
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-3">
-                {!panelDay.is_available ? (
-                  <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
-                    Attiva il selettore per impostare la disponibilità di questo giorno.
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Disponibilità</label>
-                      <Select value={daySlot?.time_slot ?? undefined} onValueChange={(v) => setDaySlot(v as TimeSlot)}>
-                        <SelectTrigger className="h-10">
-                          <SelectValue placeholder="Seleziona una fascia" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PANEL_SLOTS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>
-                              {opt === "intera_giornata" ? "Tutto il giorno" : opt === "personalizzata" ? "Personalizzato" : SLOT_LABELS[opt]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {daySlot && daySlot.time_slot !== "personalizzata" && (
-                      <p className="rounded-lg border bg-background/60 px-3 py-2 text-sm tabular-nums">
-                        {daySlot.start_time && daySlot.end_time
-                          ? `${daySlot.start_time} – ${daySlot.end_time}`
-                          : "Orario da impostare"}
-                        <button
-                          type="button"
-                          className="ml-3 text-xs font-medium text-primary underline-offset-2 hover:underline"
-                          onClick={() => setDaySlot("personalizzata")}
-                        >
-                          Modifica orario
-                        </button>
-                      </p>
-                    )}
-
-                    {daySlot?.time_slot === "personalizzata" && (
-                      <>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <div>
-                            <label className="mb-1 block text-xs text-muted-foreground">Dalle</label>
-                            <Select value={daySlot.start_time ?? undefined} onValueChange={(v) => patchDaySlot({ start_time: v })}>
-                              <SelectTrigger className="h-10"><SelectValue placeholder="--:--" /></SelectTrigger>
-                              <SelectContent className="max-h-64">
-                                {TIME_OPTIONS.map((t) => (
-                                  <SelectItem key={`s-${t}`} value={t}>{t}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs text-muted-foreground">Alle</label>
-                            <Select value={daySlot.end_time ?? undefined} onValueChange={(v) => patchDaySlot({ end_time: v })}>
-                              <SelectTrigger className="h-10"><SelectValue placeholder="--:--" /></SelectTrigger>
-                              <SelectContent className="max-h-64">
-                                {TIME_OPTIONS.map((t) => (
-                                  <SelectItem key={`e-${t}`} value={t}>{t}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        {(!daySlot.start_time || !daySlot.end_time) && (
-                          <p className="text-xs text-destructive">Inserisci orario di inizio e fine.</p>
-                        )}
-                        {daySlot.start_time && daySlot.end_time && !isValidTimeRange(daySlot.start_time, daySlot.end_time) && (
-                          <p className="text-xs text-destructive">L'orario di fine deve essere diverso da quello di inizio.</p>
-                        )}
-                        {daySlot.start_time && daySlot.end_time && crossesMidnight(daySlot.start_time, daySlot.end_time) && (
-                          <p className="text-xs text-muted-foreground">Il turno termina il giorno successivo.</p>
-                        )}
-                      </>
-                    )}
-
-                    {!daySlot && (
-                      <p className="text-xs text-muted-foreground">Nessuna fascia impostata per questo giorno.</p>
-                    )}
-
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      <span className="truncate">
-                        {panelDay.city
-                          ? `${panelDay.city}${panelDay.district ? ` · ${panelDay.district}` : ""}${panelDay.radius_km ? ` · ${panelDay.radius_km} km` : ""}`
-                          : "Area non impostata"}
-                      </span>
-                      {panelDay.city && !sameArea(panelDay, area) && (
-                        <Badge variant="secondary" className="shrink-0">Diversa dall'area</Badge>
-                      )}
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full gap-2"
-                      disabled={copying || saving}
-                      onClick={() => setCopyOpen(true)}
-                    >
-                      <Copy className="h-4 w-4" /> Copia su tutti i giorni della settimana
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* ══════════ COLONNA DESTRA ══════════ */}
-        <div className="space-y-4">
           {/* ── 4. CALENDARIO COMPATTO ── */}
           <Card>
             <CardHeader className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 space-y-0 pb-2">
@@ -1179,6 +1085,161 @@ function AvailabilityPage() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* ══════════ COLONNA DESTRA ══════════ */}
+        <div className="space-y-4">
+          {/* ── 2. DISPONIBILITÀ RICORRENTE DEL GIORNO ── */}
+          {panelDay == null ? (
+            <Card className="border-dashed">
+              <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                Seleziona un giorno sul calendario per impostare le fasce orarie ricorrenti.
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className={cn(panelDay.is_available && "border-primary/25")}>
+              <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 space-y-0 pb-3">
+                <div className="min-w-0">
+                  <CardTitle className="truncate text-base font-semibold capitalize">
+                    Disponibilità del {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
+                  </CardTitle>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Repeat className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    Questa impostazione vale per tutti i {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={cn("text-xs font-medium", panelDay.is_available ? "text-primary" : "text-muted-foreground")}>
+                    {panelDay.is_available ? "Disponibile" : "Non disponibile"}
+                  </span>
+                  <Switch checked={panelDay.is_available} onCheckedChange={setDayAvailable} aria-label="Disponibile" />
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-3">
+                {!panelDay.is_available ? (
+                  <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
+                    Attiva il selettore per impostare la disponibilità di questo giorno.
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Disponibilità</label>
+                      <Select value={daySlot?.time_slot ?? undefined} onValueChange={(v) => setDaySlot(v as TimeSlot)}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Seleziona una fascia" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PANEL_SLOTS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt === "intera_giornata" ? "Tutto il giorno" : opt === "personalizzata" ? "Personalizzato" : SLOT_LABELS[opt]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {daySlot && daySlot.time_slot !== "personalizzata" && (
+                      <p className="rounded-lg border bg-background/60 px-3 py-2 text-sm tabular-nums">
+                        {daySlot.start_time && daySlot.end_time
+                          ? `${daySlot.start_time} – ${daySlot.end_time}`
+                          : "Orario da impostare"}
+                        <button
+                          type="button"
+                          className="ml-3 text-xs font-medium text-primary underline-offset-2 hover:underline"
+                          onClick={() => setDaySlot("personalizzata")}
+                        >
+                          Modifica orario
+                        </button>
+                      </p>
+                    )}
+
+                    {daySlot?.time_slot === "personalizzata" && (
+                      <>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">Dalle</label>
+                            <Select value={daySlot.start_time ?? undefined} onValueChange={(v) => patchDaySlot({ start_time: v })}>
+                              <SelectTrigger className="h-10"><SelectValue placeholder="--:--" /></SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {TIME_OPTIONS.map((t) => (
+                                  <SelectItem key={`s-${t}`} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">Alle</label>
+                            <Select value={daySlot.end_time ?? undefined} onValueChange={(v) => patchDaySlot({ end_time: v })}>
+                              <SelectTrigger className="h-10"><SelectValue placeholder="--:--" /></SelectTrigger>
+                              <SelectContent className="max-h-64">
+                                {TIME_OPTIONS.map((t) => (
+                                  <SelectItem key={`e-${t}`} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        {(!daySlot.start_time || !daySlot.end_time) && (
+                          <p className="text-xs text-destructive">Inserisci orario di inizio e fine.</p>
+                        )}
+                        {daySlot.start_time && daySlot.end_time && !isValidTimeRange(daySlot.start_time, daySlot.end_time) && (
+                          <p className="text-xs text-destructive">L'orario di fine deve essere diverso da quello di inizio.</p>
+                        )}
+                        {daySlot.start_time && daySlot.end_time && crossesMidnight(daySlot.start_time, daySlot.end_time) && (
+                          <p className="text-xs text-muted-foreground">Il turno termina il giorno successivo.</p>
+                        )}
+                      </>
+                    )}
+
+                    {!daySlot && (
+                      <p className="text-xs text-muted-foreground">Nessuna fascia impostata per questo giorno.</p>
+                    )}
+
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="truncate">
+                        {panelDay.city
+                          ? `${panelDay.city}${panelDay.district ? ` · ${panelDay.district}` : ""}${panelDay.radius_km ? ` · ${panelDay.radius_km} km` : ""}`
+                          : "Area non impostata"}
+                      </span>
+                      {panelDay.city && !sameArea(panelDay, area) && (
+                        <Badge variant="secondary" className="shrink-0">Diversa dall'area</Badge>
+                      )}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full gap-2"
+                      disabled={copying || saving}
+                      onClick={() => setCopyOpen(true)}
+                    >
+                      <Copy className="h-4 w-4" /> Copia su tutti i giorni della settimana
+                    </Button>
+
+                    <div className="space-y-2 border-t pt-3">
+                      <Button
+                        onClick={saveGated}
+                        disabled={saving || loading || !dirty}
+                        className={cn("w-full gap-2 font-semibold", gatedOpacity, dirty && "shadow-neon")}
+                      >
+                        <Save className="h-4 w-4" />
+                        {saving ? "Salvataggio..." : "Salva disponibilità"}
+                      </Button>
+                      <span className={cn(
+                        "flex items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold",
+                        SAVE_PILL.cls,
+                      )}>
+                        <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
+                        {SAVE_PILL.label}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
@@ -1523,6 +1584,25 @@ function AvailabilityPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmClear(false)}>Annulla</Button>
             <Button variant="destructive" onClick={clearAll}>Cancella tutto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modifiche non salvate: navigazione interna bloccata ── */}
+      <Dialog open={blocker.status === "blocked"} onOpenChange={(v) => { if (!v) stayOnPage(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifiche non salvate</DialogTitle>
+            <DialogDescription>
+              Hai modificato le tue disponibilità ma non hai ancora salvato. Se esci, le modifiche andranno perse.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={stayOnPage} disabled={leaveSaving}>Resta nella pagina</Button>
+            <Button variant="ghost" onClick={leaveWithoutSaving} disabled={leaveSaving}>Esci senza salvare</Button>
+            <Button onClick={saveAndContinue} disabled={leaveSaving}>
+              {leaveSaving ? "Salvataggio…" : "Salva e continua"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
