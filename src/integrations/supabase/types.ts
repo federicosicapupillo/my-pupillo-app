@@ -2555,10 +2555,15 @@ export type Database = {
         Args: { _allowed: string[]; _patch: Json }
         Returns: undefined
       }
+      admin_set_account_status: {
+        Args: { _reason?: string; _status: string; _user_id: string }
+        Returns: undefined
+      }
       admin_set_moderation_hidden: {
         Args: { _hidden: boolean; _reason?: string; _user_id: string }
         Returns: undefined
       }
+      admin_set_vat_verified: { Args: { _user_id: string }; Returns: undefined }
       announcement_effective_end: {
         Args: { p_announcement_id: string }
         Returns: string
