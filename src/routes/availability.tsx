@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { RequireRole } from "@/components/RequireRole";
 import { AppShell } from "@/components/AppShell";
@@ -196,6 +196,28 @@ function sameArea(d: DayState, a: WorkArea): boolean {
   );
 }
 
+/**
+ * Firma dello stato editabile (giorni + area di lavoro). Confrontando la firma
+ * corrente con lo snapshot dell'ultimo salvataggio otteniamo il flag "dirty"
+ * in modo esatto: coprire fascia, orari, copie sugli altri giorni, città,
+ * provincia, zona, raggio e note.
+ */
+function signatureOf(days: DayState[], area: WorkArea): string {
+  return JSON.stringify({
+    d: days.map((d) => ({
+      a: d.is_available,
+      f: d.flexible,
+      n: d.notes || "",
+      c: d.city || "",
+      p: d.province || "",
+      z: d.district || "",
+      r: d.radius_km ?? null,
+      s: d.slots.map((s) => [s.time_slot, s.start_time ?? "", s.end_time ?? ""]),
+    })),
+    w: [area.city || "", area.province || "", area.district || "", area.radius_km ?? null, area.notes || ""],
+  });
+}
+
 function AvailabilityPage() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -234,9 +256,10 @@ function AvailabilityPage() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmApplyArea, setConfirmApplyArea] = useState(false);
   const [howItWorks, setHowItWorks] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [areaEditing, setAreaEditing] = useState(false);
   const snapshotRef = useRef<{ days: DayState[]; area: WorkArea } | null>(null);
+  /** Firma dell'ultimo stato salvato/caricato: null finché non abbiamo caricato. */
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [addingException, setAddingException] = useState(false);
   type ExcErrors = Partial<Record<"date" | "is_available" | "time_slot" | "city" | "district" | "radius_km" | "time", string>>;
@@ -245,6 +268,9 @@ function AvailabilityPage() {
 
   useEffect(() => {
     if (!user) return;
+    // Carica una sola volta per utente: refetch successivi (es. refresh del
+    // profilo) non devono sovrascrivere le modifiche non ancora salvate.
+    if (loadedRef.current) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -299,8 +325,9 @@ function AvailabilityPage() {
         setAvailableNow(true);
         setAvailableNowUntil(until);
       }
+      setSavedSignature(signatureOf(next, nextArea));
       setLoading(false);
-      setTimeout(() => { loadedRef.current = true; setDirty(false); }, 0);
+      loadedRef.current = true;
     })();
     return () => { cancelled = true; };
   }, [user, profile, defaults.city, defaults.province, defaults.district, defaults.radius_km]);
@@ -324,11 +351,11 @@ function AvailabilityPage() {
     return () => { cancelled = true; };
   }, [user, specialAvailabilityEnabled]);
 
-  useEffect(() => {
-    if (!loadedRef.current) return;
-    setDirty(true);
-  }, [days]);
+  /** Stato dirty = differenza fra stato corrente e snapshot dell'ultimo salvataggio. */
+  const currentSignature = useMemo(() => signatureOf(days, area), [days, area]);
+  const dirty = savedSignature != null && currentSignature !== savedSignature;
 
+  // Refresh / chiusura scheda: protezione nativa del browser.
   useEffect(() => {
     if (!dirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -508,13 +535,13 @@ function AvailabilityPage() {
         const { error: insErr } = await supabase.from("worker_availability").insert(inserts as never);
         if (insErr) throw insErr;
       }
-      setDirty(false);
       setLastSavedAt(new Date());
       snapshotRef.current = {
         days: list.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })),
         area: { ...area },
       };
-      if (!opts.silent) toast.success("Disponibilità salvate");
+      setSavedSignature(signatureOf(list, area));
+      if (!opts.silent) toast.success("Disponibilità salvate correttamente");
       return true;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore nel salvataggio";
@@ -539,7 +566,8 @@ function AvailabilityPage() {
     [days, primaryDow],
   );
 
-  const applyCopy = async () => {
+  /** Copia locale: nessun salvataggio automatico, resta una modifica non salvata. */
+  const applyCopy = () => {
     if (primaryDow == null) return;
     const src = days[primaryDow];
     const next = days.map((d, i) =>
@@ -548,18 +576,8 @@ function AvailabilityPage() {
         : { ...src, slots: src.slots.map((s) => ({ ...s, uid: nextUid(), id: undefined })) },
     );
     setDays(next);
-    setCopying(true);
-    try {
-      const ok = await persistAll(next, { silent: true });
-      if (ok) {
-        setCopyOpen(false);
-        toast.success("Disponibilità copiata su tutta la settimana e salvata.");
-      } else {
-        toast.error("Non è stato possibile copiare la disponibilità. Riprova.");
-      }
-    } finally {
-      setCopying(false);
-    }
+    setCopyOpen(false);
+    toast.success("Disponibilità copiata su tutta la settimana. Ricordati di salvare.");
   };
 
   const clearAll = () => {
@@ -575,7 +593,6 @@ function AvailabilityPage() {
     setDays(snap.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })));
     setArea({ ...snap.area });
     setAreaEditing(false);
-    setTimeout(() => setDirty(false), 0);
     toast.success("Modifiche annullate.");
   };
 
@@ -716,6 +733,36 @@ function AvailabilityPage() {
   const panelDay = primaryDow != null ? days[primaryDow] : null;
   const daySlot = panelDay?.slots[0] ?? null;
 
+  // ─────────── Navigazione interna: blocco con dialog personalizzato ───────────
+  const blocker = useBlocker({
+    shouldBlockFn: () => dirty,
+    enableBeforeUnload: false, // gestito dall'effetto beforeunload sopra
+    withResolver: true,
+  });
+  const [leaveSaving, setLeaveSaving] = useState(false);
+
+  const stayOnPage = () => blocker.reset?.();
+
+  const leaveWithoutSaving = () => {
+    const snap = snapshotRef.current;
+    if (snap) {
+      setDays(snap.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })));
+      setArea({ ...snap.area });
+    }
+    blocker.proceed?.();
+  };
+
+  const saveAndContinue = async () => {
+    setLeaveSaving(true);
+    try {
+      const ok = await persistAll();
+      if (ok) blocker.proceed?.();
+      else blocker.reset?.();
+    } finally {
+      setLeaveSaving(false);
+    }
+  };
+
   return (
     <AppShell>
       {/* ───────── HEADER ───────── */}
@@ -756,7 +803,7 @@ function AvailabilityPage() {
         </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,2fr)_340px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         {/* ══════════ COLONNA SINISTRA ══════════ */}
         <div className="space-y-4">
           {/* ── Disponibile ora ── */}
@@ -910,6 +957,153 @@ function AvailabilityPage() {
             </CardContent>
           </Card>
 
+          {/* ── 4. CALENDARIO COMPATTO ── */}
+          <Card>
+            <CardHeader className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 space-y-0 pb-2">
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonth((m) => addMonths(m, -1))} aria-label="Mese precedente">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="min-w-0 text-center">
+                <CardTitle className="truncate text-sm font-semibold capitalize">{formatMonthLabel(month)}</CardTitle>
+                <p className="text-[10px] tabular-nums text-muted-foreground">
+                  {monthSetCount} {monthSetCount === 1 ? "giorno impostato" : "giorni impostati"}
+                </p>
+              </div>
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonth((m) => addMonths(m, 1))} aria-label="Mese successivo">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="pb-4">
+              <div className="mb-1 grid grid-cols-7 gap-1">
+                {DAY_SHORT.map((d) => (
+                  <div key={d} className="text-center text-[10px] font-semibold uppercase text-muted-foreground">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {grid.map((c) => {
+                  const isSelected = selectedDate === c.iso;
+                  const hasAvail = days[c.dow]?.is_available;
+                  return (
+                    <button
+                      key={c.iso}
+                      type="button"
+                      disabled={c.isPast}
+                      onClick={() => selectDate(c.iso)}
+                      aria-pressed={isSelected}
+                      aria-label={`${formatDateLong(c.iso)}${hasAvail ? " · disponibilità impostata" : ""}`}
+                      className={cn(
+                        "relative flex aspect-square flex-col items-center justify-center rounded-md border text-xs font-medium transition-colors",
+                        c.inMonth ? "text-foreground" : "text-muted-foreground/40",
+                        c.isPast && "cursor-not-allowed opacity-35",
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : hasAvail && c.inMonth
+                            ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
+                            : "border-border/60 bg-card/50 hover:bg-muted/60",
+                        c.isToday && !isSelected && "ring-1 ring-primary/60",
+                      )}
+                    >
+                      <span className="tabular-nums leading-none">{c.day}</span>
+                      <span
+                        className={cn(
+                          "mt-0.5 h-1 w-1 rounded-full",
+                          hasAvail && c.inMonth ? (isSelected ? "bg-primary-foreground" : "bg-primary") : "bg-transparent",
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Disponibilità impostata
+                </span>
+                {selectedDate && (
+                  <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => setSelectedDate(null)}>
+                    <X className="h-3 w-3" /> Deseleziona
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── 5. RIEPILOGO SETTIMANA ── */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <CalendarDays className="h-4 w-4 text-primary" /> Riepilogo settimana
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1.5 pb-4">
+              {days.map((d, i) => {
+                const isSel = primaryDow === i;
+                const labels = d.flexible
+                  ? ["Flessibile"]
+                  : d.slots.map((s) =>
+                      s.start_time && s.end_time ? `${s.start_time}–${s.end_time}` : slotLabelOf(s),
+                    );
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    data-testid={`week-row-${i}`}
+                    onClick={() => {
+                      const target = grid.find((c) => c.inMonth && !c.isPast && c.dow === i);
+                      if (target) {
+                        setSelectedDate(target.iso);
+                        return;
+                      }
+                      // Nessuna occorrenza futura nel mese visualizzato:
+                      // salta alla prossima occorrenza di quel giorno.
+                      const d0 = new Date();
+                      d0.setHours(0, 0, 0, 0);
+                      const delta = (i - ((d0.getDay() + 6) % 7) + 7) % 7;
+                      d0.setDate(d0.getDate() + delta);
+                      setMonth(startOfMonth(d0));
+                      setSelectedDate(toIso(d0));
+                    }}
+                    className={cn(
+                      "grid w-full grid-cols-[38px_minmax(0,1fr)] items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
+                      isSel
+                        ? "border-primary bg-primary/10"
+                        : d.is_available
+                          ? "border-border bg-background/60 hover:bg-muted/50"
+                          : "border-dashed border-border/60 bg-transparent hover:bg-muted/40",
+                    )}
+                  >
+                    <span className={cn("text-xs font-semibold", isSel ? "text-primary" : d.is_available ? "text-foreground" : "text-muted-foreground")}>
+                      {DAY_SHORT[i]}
+                    </span>
+                    <span className="min-w-0 truncate text-[11px] tabular-nums text-muted-foreground">
+                      {d.is_available ? (labels.length > 0 ? labels.join(" · ") : "Nessuna fascia") : "Non disponibile"}
+                    </span>
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* ── 6. COME FUNZIONA ── */}
+          <Card className="border-primary/25 bg-primary/5">
+            <CardContent className="space-y-2 p-3.5">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Repeat className="h-4 w-4 text-primary" /> Come funziona
+              </div>
+              <ul className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+                <li>Le disponibilità che imposti valgono <strong className="text-foreground">ogni settimana</strong>.</li>
+                <li>Seleziona un giorno per modificare gli orari ricorrenti di quel giorno: es. un mercoledì vale per <strong className="text-foreground">tutti i mercoledì</strong>.</li>
+                <li>Città, zona e raggio si impostano una sola volta in "Area di lavoro".</li>
+              </ul>
+              <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={() => setHowItWorks(true)}>
+                <Info className="h-3.5 w-3.5" /> Maggiori dettagli
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ══════════ COLONNA DESTRA ══════════ */}
+        <div className="space-y-4">
           {/* ── 2. DISPONIBILITÀ RICORRENTE DEL GIORNO ── */}
           {panelDay == null ? (
             <Card className="border-dashed">
@@ -922,12 +1116,11 @@ function AvailabilityPage() {
               <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 space-y-0 pb-3">
                 <div className="min-w-0">
                   <CardTitle className="truncate text-base font-semibold capitalize">
-                    {primaryDow != null ? DAY_LABELS[primaryDow] : ""}
-                    {selectedDate ? <span className="ml-2 text-sm font-normal text-muted-foreground">{formatDateLong(selectedDate)}</span> : null}
+                    Disponibilità del {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
                   </CardTitle>
                   <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Repeat className="h-3.5 w-3.5 shrink-0 text-primary" />
-                    Questa disponibilità si ripete ogni {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
+                    Questa impostazione vale per tutti i {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -1039,146 +1232,29 @@ function AvailabilityPage() {
                     >
                       <Copy className="h-4 w-4" /> Copia su tutti i giorni della settimana
                     </Button>
+
+                    <div className="space-y-2 border-t pt-3">
+                      <Button
+                        onClick={saveGated}
+                        disabled={saving || loading || !dirty}
+                        className={cn("w-full gap-2 font-semibold", gatedOpacity, dirty && "shadow-neon")}
+                      >
+                        <Save className="h-4 w-4" />
+                        {saving ? "Salvataggio..." : "Salva disponibilità"}
+                      </Button>
+                      <span className={cn(
+                        "flex items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold",
+                        SAVE_PILL.cls,
+                      )}>
+                        <SAVE_PILL.Icon className={cn("h-3.5 w-3.5", SAVE_PILL.spin && "animate-spin")} />
+                        {SAVE_PILL.label}
+                      </span>
+                    </div>
                   </>
                 )}
               </CardContent>
             </Card>
           )}
-        </div>
-
-        {/* ══════════ COLONNA DESTRA ══════════ */}
-        <div className="space-y-4">
-          {/* ── 4. CALENDARIO COMPATTO ── */}
-          <Card>
-            <CardHeader className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 space-y-0 pb-2">
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonth((m) => addMonths(m, -1))} aria-label="Mese precedente">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="min-w-0 text-center">
-                <CardTitle className="truncate text-sm font-semibold capitalize">{formatMonthLabel(month)}</CardTitle>
-                <p className="text-[10px] tabular-nums text-muted-foreground">
-                  {monthSetCount} {monthSetCount === 1 ? "giorno impostato" : "giorni impostati"}
-                </p>
-              </div>
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMonth((m) => addMonths(m, 1))} aria-label="Mese successivo">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="pb-4">
-              <div className="mb-1 grid grid-cols-7 gap-1">
-                {DAY_SHORT.map((d) => (
-                  <div key={d} className="text-center text-[10px] font-semibold uppercase text-muted-foreground">{d}</div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {grid.map((c) => {
-                  const isSelected = selectedDate === c.iso;
-                  const hasAvail = days[c.dow]?.is_available;
-                  return (
-                    <button
-                      key={c.iso}
-                      type="button"
-                      disabled={c.isPast}
-                      onClick={() => selectDate(c.iso)}
-                      aria-pressed={isSelected}
-                      aria-label={`${formatDateLong(c.iso)}${hasAvail ? " · disponibilità impostata" : ""}`}
-                      className={cn(
-                        "relative flex aspect-square flex-col items-center justify-center rounded-md border text-xs font-medium transition-colors",
-                        c.inMonth ? "text-foreground" : "text-muted-foreground/40",
-                        c.isPast && "cursor-not-allowed opacity-35",
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : hasAvail && c.inMonth
-                            ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
-                            : "border-border/60 bg-card/50 hover:bg-muted/60",
-                        c.isToday && !isSelected && "ring-1 ring-primary/60",
-                      )}
-                    >
-                      <span className="tabular-nums leading-none">{c.day}</span>
-                      <span
-                        className={cn(
-                          "mt-0.5 h-1 w-1 rounded-full",
-                          hasAvail && c.inMonth ? (isSelected ? "bg-primary-foreground" : "bg-primary") : "bg-transparent",
-                        )}
-                        aria-hidden
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Disponibilità impostata
-                </span>
-                {selectedDate && (
-                  <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => setSelectedDate(null)}>
-                    <X className="h-3 w-3" /> Deseleziona
-                  </button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* ── 5. RIEPILOGO SETTIMANA ── */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                <CalendarDays className="h-4 w-4 text-primary" /> Riepilogo settimana
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1.5 pb-4">
-              {days.map((d, i) => {
-                const isSel = primaryDow === i;
-                const labels = d.flexible
-                  ? ["Flessibile"]
-                  : d.slots.map((s) =>
-                      s.start_time && s.end_time ? `${s.start_time}–${s.end_time}` : slotLabelOf(s),
-                    );
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      const target = grid.find((c) => c.inMonth && !c.isPast && c.dow === i);
-                      if (target) setSelectedDate(target.iso);
-                    }}
-                    className={cn(
-                      "grid w-full grid-cols-[38px_minmax(0,1fr)] items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
-                      isSel
-                        ? "border-primary bg-primary/10"
-                        : d.is_available
-                          ? "border-border bg-background/60 hover:bg-muted/50"
-                          : "border-dashed border-border/60 bg-transparent hover:bg-muted/40",
-                    )}
-                  >
-                    <span className={cn("text-xs font-semibold", isSel ? "text-primary" : d.is_available ? "text-foreground" : "text-muted-foreground")}>
-                      {DAY_SHORT[i]}
-                    </span>
-                    <span className="min-w-0 truncate text-[11px] tabular-nums text-muted-foreground">
-                      {d.is_available ? (labels.length > 0 ? labels.join(" · ") : "Nessuna fascia") : "Non disponibile"}
-                    </span>
-                  </button>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          {/* ── 6. COME FUNZIONA ── */}
-          <Card className="border-primary/25 bg-primary/5">
-            <CardContent className="space-y-2 p-3.5">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Repeat className="h-4 w-4 text-primary" /> Come funziona
-              </div>
-              <ul className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
-                <li>Le disponibilità che imposti valgono <strong className="text-foreground">ogni settimana</strong>.</li>
-                <li>Seleziona un giorno per modificare gli orari ricorrenti di quel giorno: es. un mercoledì vale per <strong className="text-foreground">tutti i mercoledì</strong>.</li>
-                <li>Città, zona e raggio si impostano una sola volta in "Area di lavoro".</li>
-              </ul>
-              <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={() => setHowItWorks(true)}>
-                <Info className="h-3.5 w-3.5" /> Maggiori dettagli
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -1523,6 +1599,25 @@ function AvailabilityPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmClear(false)}>Annulla</Button>
             <Button variant="destructive" onClick={clearAll}>Cancella tutto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modifiche non salvate: navigazione interna bloccata ── */}
+      <Dialog open={blocker.status === "blocked"} onOpenChange={(v) => { if (!v) stayOnPage(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifiche non salvate</DialogTitle>
+            <DialogDescription>
+              Hai modificato le tue disponibilità ma non hai ancora salvato. Se esci, le modifiche andranno perse.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={stayOnPage} disabled={leaveSaving}>Resta nella pagina</Button>
+            <Button variant="ghost" onClick={leaveWithoutSaving} disabled={leaveSaving}>Esci senza salvare</Button>
+            <Button onClick={saveAndContinue} disabled={leaveSaving}>
+              {leaveSaving ? "Salvataggio…" : "Salva e continua"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
