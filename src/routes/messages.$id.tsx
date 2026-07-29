@@ -1884,7 +1884,16 @@ function Thread() {
   // La sezione conversazione viene renderizzata solo quando contiene messaggi
   // effettivamente visibili. Non mostriamo più il grande box vuoto per chat
   // chiuse (annullate/completate) o per chat attive senza messaggi.
-  const shouldRenderConversation = displayableConversationMessages.length > 0;
+  const proposalMessages = useMemo(
+    () => msgs.filter((m) => m.template_id === PROPOSAL_TEMPLATE_ID),
+    [msgs],
+  );
+  // Comunicazioni registrate: solo i messaggi liberi realmente scambiati.
+  // Gli eventi di sistema/template finiscono nella cronologia, non qui.
+  const recordedCommunications = useMemo(
+    () => msgs.filter(isRealChatMessage),
+    [msgs],
+  );
 
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
 
@@ -2116,7 +2125,7 @@ function Thread() {
   }
 
   return (
-      <div className="max-w-3xl mx-auto lg:mx-0">
+      <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <Link to="/messages" className="lg:hidden"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Indietro</Button></Link>
           {app && (
@@ -2134,6 +2143,8 @@ function Thread() {
         {role === "restaurant" && !paymentsEnabled && (
           <FreeLaunchBanner className="mb-4" />
         )}
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6 lg:items-start">
+        <div className="min-w-0">
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <UserAvatar userId={otherId} name={displayOtherName} className="h-12 w-12 shrink-0" />
@@ -2716,123 +2727,39 @@ function Thread() {
           </div>
         )}
 
-        <div className="relative">
+        <div className="space-y-4">
         {(() => {
-          // Lift the "Candidatura confermata" instructions summary OUT of
-          // the chat scroll: render it as a sticky, always-visible card
-          // above the conversation so the worker/restaurant can read it
-          // without scrolling through messages.
+          // Card "Istruzioni operative": riepilogo statico dei dati operativi
+          // sbloccati dopo la conferma. Non e' piu' un messaggio di chat.
           const confMsg = msgs.find((m) => m.template_id === CONFIRMATION_TEMPLATE_ID);
           if (!confMsg) return null;
-          const venueName = role === "worker"
+          const venueNameForCard = role === "worker"
             ? displayOtherName
             : (profile?.business_name || profile?.full_name || null);
           const ackMsg = msgs.find(
             (mm) => mm.action_type === "instructions_acknowledged" && mm.application_id === id,
           );
-          const hasAcknowledged = !!ackMsg;
-          const acknowledgedAt = ackMsg?.created_at ?? null;
           return (
-            <div className={shouldRenderConversation ? "mb-3" : undefined} id="instructions-card" data-instructions-card>
+            <div id="instructions-card" data-instructions-card>
               <ConfirmationCard
                 ann={ann}
-                venueName={venueName}
+                venueName={venueNameForCard}
                 applicationId={id}
                 announcementId={app?.announcement_id ?? null}
                 isWorker={role === "worker"}
-                acknowledged={hasAcknowledged}
-                acknowledgedAt={acknowledgedAt}
+                acknowledged={!!ackMsg}
+                acknowledgedAt={ackMsg?.created_at ?? null}
                 arrivalAdvanceMinutes={restaurantArrivalAdvance}
                 onAcknowledge={acknowledgeInstructions}
               />
             </div>
           );
         })()}
-        {shouldRenderConversation && (
-        <>
-          <div
-            ref={scrollRef}
-            onScroll={(e) => {
-              const el = e.currentTarget;
-              const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-              nearBottomRef.current = dist < 80;
-              if (nearBottomRef.current && newCount > 0) setNewCount(0);
-              // Load older messages when the user reaches the top.
-              if (el.scrollTop < 80 && hasMore && !loadingMore) {
-                loadOlder();
-              }
-            }}
-            className="rounded-2xl border bg-card p-4 h-[min(52vh,520px)] min-h-[360px] overflow-y-auto space-y-2"
-          >
-            {hasMore && (
-              <div className="flex justify-center pb-2">
-                <button
-                  type="button"
-                  onClick={loadOlder}
-                  disabled={loadingMore}
-                  className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline disabled:opacity-60"
-                >
-                  {loadingMore ? "Caricamento…" : "Carica messaggi precedenti"}
-                </button>
-              </div>
-            )}
-            {displayableConversationMessages.map(m => {
-            const isSystem = m.message_type === "system" || m.body.startsWith("⚙️ Sistema:");
-            // Card combinata "Turno chiuso e recensione ricevuta" — UN SOLO
-            // messaggio visibile sia al ristoratore sia al lavoratore.
-            if (m.template_id === SHIFT_REVIEW_TEMPLATE_ID) {
-              return (
-                <div key={m.id} className="flex justify-center">
-                  <ShiftClosedWithReviewCard review={existingReview} />
-                </div>
-              );
-            }
-            // L'evento "lettura istruzioni" non è un vero messaggio chat:
-            // viene mostrato come stato nella card "Istruzioni operative"
-            // sopra la conversazione. Lo nascondiamo qui senza cancellare
-            // il record dal DB.
-            if (m.action_type === "instructions_acknowledged") {
-              return null;
-            }
-            // I messaggi di chiusura chat (turno annullato/concluso) non vengono
-            // più mostrati come bubble nella conversazione; lo stato del turno
-            // rimane visibile nelle card "Dettagli turno" / "Istruzioni operative".
-            if (m.template_id === "chat_closed_cancelled" || m.template_id === "chat_closed_completed") {
-              return null;
-            }
-            if (isSystem) {
-              const isAccept = m.action_type === "accept_application";
-              const isReject = m.action_type === "reject_application";
-              const isCancel = m.action_type === "withdraw_application";
-              const tone = isAccept
-                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-                : isReject
-                  ? "bg-destructive/10 text-destructive border-destructive/30"
-                  : isCancel
-                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                    : "bg-muted text-muted-foreground border";
-              const label = isAccept
-                ? "Proposta accettata"
-                : isReject
-                  ? "Proposta rifiutata"
-                  : isCancel
-                    ? "Candidatura annullata dal lavoratore"
-                    : m.body.replace(/^⚙️ Sistema:\s*/, "").replace(/^⚙️ /, "");
-              return (
-                <div key={m.id} className="flex justify-center">
-                  <div className={`rounded-full px-3 py-1 text-xs font-medium border ${tone}`}>
-                    {label}
-                  </div>
-                </div>
-              );
-            }
-            if (m.template_id === CONFIRMATION_TEMPLATE_ID) {
-              // Rendered as a sticky card above the chat scroll instead
-              // of inline within the message list. Skip the in-chat copy
-              // to avoid duplicate riepilogo.
-              return null;
-            }
-            if (m.template_id === PROPOSAL_TEMPLATE_ID) {
+        {proposalMessages.length > 0 && (
+          <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-proposta">
+            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">Proposta e risposta</h2>
+            <div className="space-y-3">
+              {proposalMessages.map((m) => {
               const ownStatus = proposalStatuses[m.id];
               const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
               // Per-proposal status is authoritative. Legacy proposals (no recorded
@@ -2997,45 +2924,34 @@ function Thread() {
                 )}
                 </div>
               );
-            }
-            return (
-              <div key={m.id} className={`flex items-end gap-2 ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
-                {m.sender_id === app?.worker_id && m.sender_id !== user?.id && (
-                  <UserAvatar userId={app?.worker_id} name={other?.name} className="h-8 w-8 shrink-0" />
-                )}
-                <div className={`flex flex-col gap-0.5 max-w-[75%] ${m.sender_id === user?.id ? "items-end" : "items-start"}`}>
-                  <div className={`rounded-2xl px-4 py-2 text-sm ${m.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{m.body}</div>
-                  {m.sender_id === user?.id && (
-                    <div className="flex items-center gap-1 px-1 text-[10px] text-muted-foreground" aria-label={m.read_at ? "Letto" : "Inviato"} title={m.read_at ? `Letto ${new Date(m.read_at).toLocaleString("it-IT", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}` : "Inviato"}>
-                      {m.read_at
-                        ? <CheckCheck className="h-3.5 w-3.5 text-sky-500" />
-                        : <Check className="h-3.5 w-3.5" />}
-                      <span>{m.read_at ? "Letto" : "Inviato"}</span>
-                    </div>
-                  )}
-                </div>
-                {m.sender_id === app?.worker_id && m.sender_id === user?.id && (
-                  <UserAvatar userId={app?.worker_id} name={undefined} className="h-8 w-8 shrink-0" />
-                )}
-              </div>
-            );
-            })}
-            <div ref={endRef} />
-          </div>
-          {newCount > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                endRef.current?.scrollIntoView({ behavior: "smooth" });
-                setNewCount(0);
-              }}
-              className="absolute left-1/2 -translate-x-1/2 bottom-3 z-10 rounded-full bg-primary text-primary-foreground text-xs px-3 py-1 shadow"
-            >
-              {newCount === 1 ? "1 nuovo messaggio" : `${newCount} nuovi messaggi`} ↓
-            </button>
-          )}
-        </>
+              })}
+            </div>
+          </section>
         )}
+        <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-comunicazioni">
+          <h2 id="sec-comunicazioni" className="text-sm font-semibold mb-3">Comunicazioni registrate</h2>
+          {recordedCommunications.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nessuna comunicazione registrata per questo turno.
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {recordedCommunications.map((m) => (
+                <li key={m.id} className="py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                    <span className="text-xs font-medium">
+                      {m.sender_id === user?.id ? "Tu" : displayOtherName}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground tabular-nums">
+                      {formatTs(m.created_at)}
+                    </span>
+                  </div>
+                  <p className="mt-1 whitespace-pre-line text-sm text-foreground/90">{m.body}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
         </div>
         {role === "restaurant" && app && shift && (() => {
           const reviewed = !!existingReview;
@@ -3309,6 +3225,78 @@ function Thread() {
             onSubmit={submitReview}
           />
         )}
+
+        </div>
+        <aside className="mt-4 space-y-4 lg:mt-0">
+          {ann && (
+            <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-riepilogo">
+              <h2 id="sec-riepilogo" className="text-sm font-semibold mb-2">Riepilogo turno</h2>
+              <dl className="space-y-1.5 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">Mansione</dt>
+                  <dd className="text-right font-medium">{ann.professional_profile ?? "Da definire"}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">Data</dt>
+                  <dd className="text-right font-medium">{formatDateIT(ann.service_date)}</dd>
+                </div>
+                {ann.service_time && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Orario</dt>
+                    <dd className="text-right font-medium">
+                      {ann.service_time.slice(0, 5)}{ann.end_time ? ` - ${String(ann.end_time).slice(0, 5)}` : ""}
+                    </dd>
+                  </div>
+                )}
+                {currentTariff != null && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Compenso</dt>
+                    <dd className="text-right font-medium">
+                      {currentTariff} €{ann.tariff_type === "hourly" ? "/ora" : " (a servizio)"}
+                    </dd>
+                  </div>
+                )}
+                {displayAddress && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Luogo</dt>
+                    <dd className="text-right font-medium break-words">{displayAddress}</dd>
+                  </div>
+                )}
+              </dl>
+            </section>
+          )}
+          {app && (
+            <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-cronologia">
+              <h2 id="sec-cronologia" className="text-sm font-semibold mb-3">Cronologia</h2>
+              {historyEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nessun evento registrato.</p>
+              ) : (
+                <ol className="space-y-3">
+                  {historyEvents.map((e, i) => (
+                    <li key={`${e.at}-${i}`} className="flex gap-3">
+                      <span
+                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                          e.tone === "success"
+                            ? "bg-emerald-500"
+                            : e.tone === "error"
+                              ? "bg-destructive"
+                              : "bg-muted-foreground/50"
+                        }`}
+                        aria-hidden
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium leading-tight">{e.label}</div>
+                        {e.note && <div className="text-xs text-muted-foreground">{e.note}</div>}
+                        <div className="text-[11px] text-muted-foreground tabular-nums">{formatTs(e.at)}</div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          )}
+        </aside>
+        </div>
 
         <InsufficientCreditsDialog
           open={insufficientOpen && paymentsEnabled}
