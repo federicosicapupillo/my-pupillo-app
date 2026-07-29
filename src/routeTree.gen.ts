@@ -30,6 +30,7 @@ import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
 import { Route as ClaudeVisualAuditRouteImport } from './routes/claude-visual-audit'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as BillingRouteImport } from './routes/billing'
+import { Route as AvailabilityRouteImport } from './routes/availability'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -157,6 +158,11 @@ const BrowseRoute = BrowseRouteImport.update({
 const BillingRoute = BillingRouteImport.update({
   id: '/billing',
   path: '/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AvailabilityRoute = AvailabilityRouteImport.update({
+  id: '/availability',
+  path: '/availability',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -287,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
+  '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
@@ -333,6 +340,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
+  '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
@@ -380,6 +388,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/announcements': typeof AnnouncementsRouteWithChildren
   '/auth': typeof AuthRoute
+  '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
@@ -428,6 +437,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/announcements'
     | '/auth'
+    | '/availability'
     | '/billing'
     | '/browse'
     | '/claude-visual-audit'
@@ -474,6 +484,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/announcements'
     | '/auth'
+    | '/availability'
     | '/billing'
     | '/browse'
     | '/claude-visual-audit'
@@ -520,6 +531,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/announcements'
     | '/auth'
+    | '/availability'
     | '/billing'
     | '/browse'
     | '/claude-visual-audit'
@@ -567,6 +579,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AnnouncementsRoute: typeof AnnouncementsRouteWithChildren
   AuthRoute: typeof AuthRoute
+  AvailabilityRoute: typeof AvailabilityRoute
   BillingRoute: typeof BillingRoute
   BrowseRoute: typeof BrowseRoute
   ClaudeVisualAuditRoute: typeof ClaudeVisualAuditRoute
@@ -750,6 +763,13 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/billing'
       preLoaderRoute: typeof BillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/availability': {
+      id: '/availability'
+      path: '/availability'
+      fullPath: '/availability'
+      preLoaderRoute: typeof AvailabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -960,6 +980,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AnnouncementsRoute: AnnouncementsRouteWithChildren,
   AuthRoute: AuthRoute,
+  AvailabilityRoute: AvailabilityRoute,
   BillingRoute: BillingRoute,
   BrowseRoute: BrowseRoute,
   ClaudeVisualAuditRoute: ClaudeVisualAuditRoute,
