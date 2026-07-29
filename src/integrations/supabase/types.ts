@@ -2551,6 +2551,10 @@ export type Database = {
       }
     }
     Functions: {
+      _apply_profile_self_patch: {
+        Args: { _allowed: string[]; _patch: Json }
+        Returns: undefined
+      }
       admin_set_moderation_hidden: {
         Args: { _hidden: boolean; _reason?: string; _user_id: string }
         Returns: undefined
@@ -2998,6 +3002,7 @@ export type Database = {
           step: string
         }[]
       }
+      update_my_profile: { Args: { _patch: Json }; Returns: undefined }
       validate_discount_code: {
         Args: { _applies_to?: string; _code: string }
         Returns: Json
