@@ -99,7 +99,7 @@ import {
 } from "@/lib/shift-conflict";
 
 export const Route = createFileRoute("/messages/$id")({
-  head: () => ({ meta: [{ title: "Conversazione — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Dettagli turno e candidatura — Pupillo" }] }),
   component: () => <RequireAuth><Thread /></RequireAuth>,
   // Fallback friendly se il caricamento della conversazione fallisce
   // (link rotto, RLS, errore di rete). Niente più "This page didn't load":
@@ -390,13 +390,6 @@ function isRealChatMessage(m: Msg) {
     (m.message_type === "user" || !m.message_type) &&
     !!m.body?.trim()
   );
-}
-
-function isDisplayableConversationMessage(m: Msg) {
-  if (isSystemChatEvent(m)) return false;
-  if (m.template_id === PROPOSAL_TEMPLATE_ID) return true;
-  if (m.template_id || m.message_type === "template") return false;
-  return !!m.body?.trim();
 }
 
 type TimelineEvent = { at: string; label: string; note?: string; tone: "neutral" | "success" | "error" };
