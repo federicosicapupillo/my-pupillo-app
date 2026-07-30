@@ -462,7 +462,7 @@ function AnnouncementDetail() {
       toast.error(CONFLICT_WORKER_APPLY_MESSAGE);
       return;
     }
-    const { data: app, error } = await supabase.from("applications").insert({
+    const { error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
       worker_id: user.id,
       restaurant_id: ann.restaurant_id,
