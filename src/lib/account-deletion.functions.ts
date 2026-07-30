@@ -22,6 +22,7 @@ type DeleteAccountResult = {
   error_code?: string;
   message?: string;
   impact?: Record<string, number>;
+  cleanup_status?: "complete" | "partial" | "not_applicable";
 };
 
 export const deleteAccount = createServerFn({ method: "POST" })
@@ -37,4 +38,22 @@ export const deleteAccount = createServerFn({ method: "POST" })
     return softDeleteAccount(userId, data.reason, data.customReason, {
       confirmActiveShifts: data.confirmActiveShifts === true,
     });
+  });
+
+/**
+ * Admin-only retry of the restaurant cleanup after a partial failure.
+ * Idempotent: notifications are deduped and updates filter on non-final states.
+ */
+export const retryRestaurantCleanup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ targetUserId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin, error } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    } as never);
+    if (error || isAdmin !== true) return { ok: false, error_code: "forbidden" as const, cleanup_status: "partial" as const };
+    const { runRestaurantCleanup } = await import("@/lib/account-deletion.server");
+    const outcome = await runRestaurantCleanup(data.targetUserId);
+    return { ok: outcome.status === "complete", cleanup_status: outcome.status, error: outcome.error };
   });
