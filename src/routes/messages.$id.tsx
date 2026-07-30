@@ -3971,10 +3971,17 @@ function ProposalCard(props: {
   status: string;
   lockReason?: "completed" | "cancelled" | null;
   specialBlock?: SpecialAvailabilityBlock | null;
+  /**
+   * Static shift page: the role/date/venue/compensation recap already lives in
+   * the summary boxes at the top, so the card renders only the decision
+   * controls (deadline, actions, confirmation dialogs) without duplicating it.
+   */
+  compact?: boolean;
   onAccept: () => Promise<void>;
   onReject: (reason?: string) => Promise<void>;
 }) {
   const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
+  const compact = props.compact ?? false;
   const lockReason = props.lockReason ?? null;
   const specialBlock = props.specialBlock ?? null;
   const incompatibleSpecial = !!specialBlock?.blocked;
