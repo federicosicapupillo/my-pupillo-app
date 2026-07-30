@@ -21,6 +21,8 @@ import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
 import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
 import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
+import { JOB_ROLES } from "@/lib/job-roles";
+import { normalizeRole } from "@/lib/worker-role-normalization";
 import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import {
   checkWorkerShiftConflict,
@@ -65,7 +67,7 @@ type Ann = {
 
 type RestaurantInfo = { id: string; full_name: string | null; business_name: string | null; venue_type: string | null; city: string | null; neighborhood: string | null; rating_avg: number | null } | null;
 
-const ROLES = ["cameriere","bartender","chef","aiuto cucina","runner","lavapiatti","hostess","responsabile sala"];
+const ROLES: readonly string[] = JOB_ROLES;
 const SPEEDS = [{v:"normal",l:"Standard"},{v:"urgent",l:"Urgente"},{v:"flash",l:"Flash"}];
 
 function roleEmoji(role: string | null | undefined): string {
@@ -345,7 +347,7 @@ function Browse() {
     const lat = profile?.service_area_lat, lng = profile?.service_area_lng;
     const max = maxKm ? Number(maxKm) : null;
     let out = items.filter(a => {
-      if (roleF !== "any" && a.professional_profile !== roleF) return false;
+      if (roleF !== "any" && normalizeRole(a.professional_profile) !== normalizeRole(roleF)) return false;
       if (speedF !== "any" && a.speed !== speedF) return false;
       if (onlyNotApplied && appliedIds.has(a.id)) return false;
       if (onlyFav && !favIds.has(a.id)) return false;
