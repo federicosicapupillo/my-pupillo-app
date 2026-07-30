@@ -4640,6 +4640,7 @@ function ConfirmationCard(props: {
                 </Button>
               )}
             </div>
+            )}
           </div>
         )}
       </section>
