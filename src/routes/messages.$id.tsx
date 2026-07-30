@@ -1896,12 +1896,8 @@ function Thread() {
     () => msgs.filter((m) => m.template_id === PROPOSAL_TEMPLATE_ID),
     [msgs],
   );
-  // Comunicazioni registrate: solo i messaggi liberi realmente scambiati.
-  // Gli eventi di sistema/template finiscono nella cronologia, non qui.
-  const recordedCommunications = useMemo(
-    () => msgs.filter(isRealChatMessage),
-    [msgs],
-  );
+  // NOTE: free-form chat messages (`isRealChatMessage`) are no longer rendered
+  // on this static summary page. Rows remain untouched in the database.
   // Cronologia: eventi applicativi (activity_logs) + eventi di sistema
   // registrati come messaggi, uniti e ordinati cronologicamente.
   const historyEvents = useMemo<TimelineEvent[]>(() => {
