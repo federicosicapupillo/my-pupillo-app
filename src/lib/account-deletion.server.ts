@@ -60,20 +60,27 @@ export async function loadRestaurantDeletionImpact(userId: string): Promise<Acco
 
   const countOf = async (p: PromiseLike<{ count: number | null }>) => (await p).count ?? 0;
 
-  const [announcements, applications, assignedShifts, imminentShifts, completedShifts] = await Promise.all([
+  // Applications tied to a COMPLETED shift are work history: excluded from the
+  // cleanup and therefore from the impact preview.
+  const { data: completedPairsRaw } = await supabaseAdmin
+    .from("shifts")
+    .select("worker_id, announcement_id")
+    .eq("restaurant_id", userId)
+    .eq("status", "completed");
+  const historicalPairs = new Set(
+    ((completedPairsRaw as { worker_id: string | null; announcement_id: string | null }[] | null) ?? [])
+      .map((s) => `${s.worker_id}|${s.announcement_id}`),
+  );
+  const isHistorical = (a: { worker_id: string | null; announcement_id: string | null }) =>
+    historicalPairs.has(`${a.worker_id}|${a.announcement_id}`);
+
+  const [announcements, assignedShifts, imminentShifts, completedShifts] = await Promise.all([
     countOf(
       supabaseAdmin
         .from("announcements")
         .select("id", { count: "exact", head: true })
         .eq("restaurant_id", userId)
         .not("status", "in", "(cancelled,completed)") as never,
-    ),
-    countOf(
-      supabaseAdmin
-        .from("applications")
-        .select("id", { count: "exact", head: true })
-        .eq("restaurant_id", userId)
-        .in("status", ["pending", "interested", "counter_offer"]) as never,
     ),
     countOf(
       supabaseAdmin
@@ -100,16 +107,21 @@ export async function loadRestaurantDeletionImpact(userId: string): Promise<Acco
     ),
   ]);
 
+  const { data: pendingAppsRaw } = await supabaseAdmin
+    .from("applications")
+    .select("id, worker_id, announcement_id")
+    .eq("restaurant_id", userId)
+    .in("status", ["pending", "interested", "counter_offer"]);
+  const pendingApps = (
+    (pendingAppsRaw as { id: string; worker_id: string | null; announcement_id: string | null }[] | null) ?? []
+  ).filter((a) => !isHistorical(a));
+  const applications = pendingApps.length;
+
   // Pending proposals = non-final applications that carry a `propose_shift`
   // message. Counted separately because it needs a join on messages.
   let proposals = 0;
   {
-    const { data: apps } = await supabaseAdmin
-      .from("applications")
-      .select("id")
-      .eq("restaurant_id", userId)
-      .in("status", ["pending", "interested", "counter_offer"]);
-    const ids = ((apps as { id: string }[] | null) ?? []).map((a) => a.id);
+    const ids = pendingApps.map((a) => a.id);
     if (ids.length > 0) {
       const { data: msgs } = await supabaseAdmin
         .from("messages")
