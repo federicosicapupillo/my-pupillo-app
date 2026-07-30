@@ -501,6 +501,8 @@ type WorkerHomeProps = {
 
 function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps) {
   const completedShifts = Number(profile?.completed_shifts ?? 0) || 0;
+  const phoneOk = !!profile?.phone_verified;
+  const profileOk = !!profile?.profile_completed;
   const reputationLevel = profile?.reputation_level ?? "new";
 
   const tasks: Array<{
