@@ -673,29 +673,6 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
   );
 }
 
-function StatusPill({
-  ok,
-  okLabel,
-  koLabel,
-}: {
-  ok: boolean;
-  okLabel: string;
-  koLabel: string;
-}) {
-  // placeholder retained
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
-        ok
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-      }`}
-    >
-      {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-      {ok ? okLabel : koLabel}
-    </span>
-  );
-}
 
 function WorkerReferralSection() {
   // Il worker home renderizza sempre per un utente worker: usiamo il flag worker.
