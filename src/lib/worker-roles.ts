@@ -1,22 +1,6 @@
-export const WORKER_ROLES = [
-  "Cameriere",
-  "Bartender",
-  "Barista",
-  "Chef",
-  "Aiuto cuoco",
-  "Lavapiatti",
-  "Runner",
-  "Hostess",
-  "Addetto sala",
-  "Addetto banco",
-  "Addetto cucina",
-  "Pizzaiolo",
-  "Responsabile sala",
-  "Sommelier",
-  "Addetto catering",
-  "Sicurezza / controllo accessi",
-  "DJ / intrattenimento",
-  "Animatore eventi",
-] as const;
+// Ruoli lavoratore = stessa sorgente unica dei ruoli annuncio.
+import { JOB_ROLES, type JobRole } from "@/lib/job-roles";
 
-export type WorkerRole = (typeof WORKER_ROLES)[number];
+export const WORKER_ROLES = JOB_ROLES;
+
+export type WorkerRole = JobRole;

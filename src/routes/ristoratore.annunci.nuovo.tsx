@@ -39,6 +39,7 @@ import { DateField } from "@/components/DateField";
 import { formatTariff } from "@/lib/format";
 import { LanguagesMultiSelect } from "@/components/RestaurantRequirements";
 import { CONTACT_ROLES, isValidEmail } from "@/lib/contact-roles";
+import { JOB_ROLES } from "@/lib/job-roles";
 import { PhoneInput } from "@/components/PhoneInput";
 import { splitPhone, buildPhoneFull, DEFAULT_PHONE_PREFIX } from "@/lib/phone-prefixes";
 import {
@@ -59,20 +60,7 @@ export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
   ),
 });
 
-const ROLE_OPTIONS = [
-  "Cameriere",
-  "Bartender",
-  "Chef",
-  "Aiuto cucina",
-  "Runner",
-  "Lavapiatti",
-  "Barista",
-  "Pizzaiolo",
-  "Hostess",
-  "Responsabile di sala",
-  "Addetto catering",
-  "Receptionist",
-];
+const ROLE_OPTIONS: readonly string[] = JOB_ROLES;
 
 const HOURLY_RATE_OPTIONS = Array.from({ length: 17 }, (_, i) => 9 + i); // 9..25
 const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
