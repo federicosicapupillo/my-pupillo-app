@@ -2308,14 +2308,11 @@ function Thread() {
           const identityVisible = !!other?.profile_completed;
           const reputationVisible = identityVisible && !!other?.phone_verified;
           const displayName = identityVisible ? (displayOtherName ?? "Lavoratore") : "Profilo in verifica";
-          // Messaggio: basato esclusivamente su dati reali verificati.
+          // Nessun riepilogo recensioni qui: l'informazione vive solo nel box
+          // "Recensioni lavoratore" sotto. Manteniamo solo l'avviso privacy.
           const microSummary = !reputationVisible
             ? "Alcuni dati del lavoratore non sono ancora pubblici: identità e reputazione visibili solo dopo la verifica."
-            : verifiedReviewsCount === 0 && !showCompletedShifts
-              ? "Questo lavoratore non ha ancora recensioni verificate. Puoi comunque valutare profilo, competenze e disponibilità."
-              : verifiedReviewsCount === 0 && showCompletedShifts
-                ? "Questo lavoratore ha turni completati, ma non ha ancora recensioni verificate."
-                : `Profilo con ${verifiedReviewsCount} ${verifiedReviewsCount === 1 ? "recensione verificata" : "recensioni verificate"}. Valuta media e commenti disponibili.`;
+            : null;
           // Livello reputazione coerente: se non ci sono dati reali,
           // non promuoviamo oltre "Nuovo" / "Nuovo verificato".
           const hasRealReputation = verifiedReviewsCount > 0 || showCompletedShifts;
@@ -2422,7 +2419,7 @@ function Thread() {
                 </div>
               )}
 
-              <p className="mt-3 text-sm text-muted-foreground">{microSummary}</p>
+              {microSummary && <p className="mt-3 text-sm text-muted-foreground">{microSummary}</p>}
 
               {reputationVisible && (
                 <div className="mt-4 rounded-xl border bg-card/60 p-3">
