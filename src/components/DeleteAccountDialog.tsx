@@ -244,11 +244,33 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
             />
+            {impact && (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <p className="mb-1 font-medium">Eliminando il tuo account:</p>
+                <ul className="list-disc space-y-0.5 pl-5 text-muted-foreground">
+                  <li>{impact.announcements} annunci verranno annullati e rimossi dalle ricerche</li>
+                  <li>{impact.applications} candidature verranno annullate</li>
+                  <li>{impact.proposals} proposte inviate non saranno più accettabili</li>
+                  <li>{impact.assigned_shifts} turni assegnati saranno annullati e i lavoratori avvisati</li>
+                  <li>{impact.completed_shifts} turni già conclusi resteranno nello storico in forma anonimizzata</li>
+                </ul>
+              </div>
+            )}
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="delete-understood"
+                checked={understood}
+                onCheckedChange={(v) => setUnderstood(v === true)}
+              />
+              <Label htmlFor="delete-understood" className="text-sm font-normal leading-snug">
+                Ho compreso che gli annunci e i turni futuri saranno annullati.
+              </Label>
+            </div>
             <DialogFooter className="gap-2 sm:gap-2">
               <Button variant="outline" onClick={() => setStep("reason")} disabled={busy}>Indietro</Button>
               <Button
                 variant="destructive"
-                disabled={busy || confirmText !== "ELIMINA"}
+                disabled={busy || confirmText !== "ELIMINA" || !understood}
                 onClick={submit}
               >
                 {busy ? "Eliminazione in corso…" : "Elimina definitivamente"}
@@ -260,11 +282,35 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
         {step === "blocked" && (
           <>
             <DialogHeader>
-              <DialogTitle>Non puoi eliminare l'account adesso</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" /> Hai turni ancora attivi
+              </DialogTitle>
               <DialogDescription>{blockedMessage}</DialogDescription>
             </DialogHeader>
+            {impact && (
+              <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+                <li>{impact.announcements} annunci attivi</li>
+                <li>{impact.applications} candidature pendenti</li>
+                <li>{impact.proposals} proposte inviate</li>
+                <li>{impact.assigned_shifts} turni assegnati</li>
+                <li>{impact.imminent_shifts} turni imminenti o in corso</li>
+              </ul>
+            )}
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="delete-shifts-confirm"
+                checked={shiftsConfirmed}
+                onCheckedChange={(v) => setShiftsConfirmed(v === true)}
+              />
+              <Label htmlFor="delete-shifts-confirm" className="text-sm font-normal leading-snug">
+                Confermo l'annullamento dei turni e l'eliminazione dell'account
+              </Label>
+            </div>
             <DialogFooter>
-              <Button onClick={() => handleClose(false)}>Ho capito</Button>
+              <Button variant="outline" onClick={() => handleClose(false)} disabled={busy}>Annulla</Button>
+              <Button variant="destructive" disabled={busy || !shiftsConfirmed} onClick={submit}>
+                {busy ? "Eliminazione in corso…" : "Elimina definitivamente il profilo"}
+              </Button>
             </DialogFooter>
           </>
         )}
