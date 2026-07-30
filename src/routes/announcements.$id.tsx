@@ -362,13 +362,9 @@ function AnnouncementDetail() {
     const ch = supabase.channel(`ann-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "applications", filter: `announcement_id=eq.${id}` },
         async (p) => {
-          const n = p.new as App;
-          if (isOwnerNow) {
-            // Privacy: do not disclose the worker name before the shift is confirmed.
-            toast.success("Nuova candidatura", {
-              description: "Un lavoratore si è candidato per il tuo annuncio.",
-            });
-          }
+          // Nessun toast qui: la campanella notifiche mostra già il toast
+          // "Nuova candidatura ricevuta" generato dal trigger DB
+          // (sorgente unica, idempotente via dedupe_key).
           load();
         })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `announcement_id=eq.${id}` },
@@ -444,7 +440,7 @@ function AnnouncementDetail() {
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const [selfCancelledOpen, setSelfCancelledOpen] = useState(false);
   const applyAsWorker = async () => {
-    if (!user || !ann) return;
+    if (!user || !ann || applying) return;
     setApplying(true);
     // Gate worker-side re-apply: a worker that previously self-cancelled
     // (status `not_interested`) cannot re-apply to the same announcement.
@@ -466,7 +462,7 @@ function AnnouncementDetail() {
       toast.error(CONFLICT_WORKER_APPLY_MESSAGE);
       return;
     }
-    const { data: app, error } = await supabase.from("applications").insert({
+    const { error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
       worker_id: user.id,
       restaurant_id: ann.restaurant_id,
@@ -485,14 +481,9 @@ function AnnouncementDetail() {
       toast.error(error.message);
       return;
     }
-    if (app?.id) {
-      await supabase.from("notifications").insert({
-        user_id: ann.restaurant_id,
-        title: "Nuova candidatura ricevuta",
-        body: "Un lavoratore si è candidato per uno dei tuoi turni.",
-        link: `/messages/${app.id}`,
-      });
-    }
+    // NOTA: la notifica al ristoratore è generata solo dal trigger DB
+    // `notify_application_insert` (idempotente via dedupe_key). Nessun
+    // insert lato client, altrimenti si creano notifiche duplicate.
     toast.success("Candidatura inviata!");
   };
 

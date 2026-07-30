@@ -652,17 +652,10 @@ function Browse() {
       }
       return toast.error(error.message);
     }
-    // Notifica al ristoratore (best-effort)
-    if (app?.id) {
-      await supabase.from("notifications").insert({
-        user_id: confirmAnn.restaurant_id,
-        title: counterValueNum != null ? "Nuova contro offerta ricevuta" : "Nuova candidatura ricevuta",
-        body: counterValueNum != null
-          ? `Un lavoratore propone € ${counterValueNum}/h per uno dei tuoi turni.`
-          : "Un lavoratore si è candidato per uno dei tuoi turni.",
-        link: `/messages/${app.id}`,
-      });
-    }
+    // NOTA: la notifica al ristoratore ("Nuova candidatura ricevuta") è
+    // generata esclusivamente dal trigger DB `notify_application_insert`,
+    // idempotente via dedupe_key `application_received:<app>:<restaurant>`.
+    // Non inserire notifiche qui: creerebbe un duplicato.
     setAppliedIds(new Set(appliedIds).add(confirmAnn.id));
     setSubmitting(false);
     if (app?.id) {
