@@ -15,6 +15,7 @@ import { useReferralEnabledForRole } from "@/lib/use-referral-enabled";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { WorkerAvailabilitySummary } from "@/components/WorkerAvailabilitySummary";
 import { RestaurantReputationCard } from "@/components/RestaurantReputationCard";
+import { WorkerReputationSummary } from "@/components/WorkerReputationSummary";
 import { getShiftStartDate, getShiftEndDate } from "@/lib/announcement-time";
 import {
   AlertDialog,
@@ -710,7 +711,10 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
         <WorkerAvailabilitySummary workerId={userId} collapsible />
       </section>
 
-
+      {/* 5. REPUTATION SCORE */}
+      <section>
+        <WorkerReputationSummary workerId={userId} />
+      </section>
 
       {/* 7. REFERRAL — gated by feature flag worker_referral_enabled */}
       <WorkerReferralSection />
