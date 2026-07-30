@@ -14,6 +14,7 @@ type DeletionResult = {
   error_code?: string;
   message?: string;
   technical_message?: string;
+  impact?: Record<string, number>;
 };
 
 const PROFILE_SELECT = "id, avatar_url, id_document_path, id_document_back_path";
@@ -36,7 +37,83 @@ async function removeStoredFiles(paths: { bucket: string; path: string | null | 
   }
 }
 
-export async function softDeleteAccount(userId: string, reason: AccountDeletionReason, customReason?: string): Promise<DeletionResult> {
+export type AccountDeletionImpact = {
+  announcements: number;
+  applications: number;
+  proposals: number;
+  assigned_shifts: number;
+  imminent_shifts: number;
+  completed_shifts: number;
+};
+
+/**
+ * Impact summary for a restaurant account, computed server-side with the
+ * admin client (the SQL sibling `get_my_account_deletion_impact()` uses
+ * auth.uid() and is meant for the authenticated client).
+ */
+export async function loadRestaurantDeletionImpact(userId: string): Promise<AccountDeletionImpact> {
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
+  const tomorrowIso = new Date(today.getTime() + 86_400_000).toISOString().slice(0, 10);
+
+  const countOf = async (p: PromiseLike<{ count: number | null }>) => (await p).count ?? 0;
+
+  const [announcements, applications, assignedShifts, imminentShifts, completedShifts] = await Promise.all([
+    countOf(
+      supabaseAdmin
+        .from("announcements")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", userId)
+        .not("status", "in", "(cancelled,completed)") as never,
+    ),
+    countOf(
+      supabaseAdmin
+        .from("applications")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", userId)
+        .in("status", ["pending", "interested", "counter_offer"]) as never,
+    ),
+    countOf(
+      supabaseAdmin
+        .from("shifts")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", userId)
+        .eq("status", "scheduled")
+        .gte("shift_date", todayIso) as never,
+    ),
+    countOf(
+      supabaseAdmin
+        .from("shifts")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", userId)
+        .eq("status", "scheduled")
+        .lte("shift_date", tomorrowIso) as never,
+    ),
+    countOf(
+      supabaseAdmin
+        .from("shifts")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", userId)
+        .eq("status", "completed") as never,
+    ),
+  ]);
+
+  return {
+    announcements,
+    applications,
+    proposals: 0,
+    assigned_shifts: assignedShifts,
+    imminent_shifts: imminentShifts,
+    completed_shifts: completedShifts,
+  };
+}
+
+export async function softDeleteAccount(
+  userId: string,
+  reason: AccountDeletionReason,
+  customReason?: string,
+  options: { confirmActiveShifts?: boolean } = {},
+): Promise<DeletionResult> {
   try {
     const { data: authBefore, error: authBeforeError } = await supabaseAdmin.auth.admin.getUserById(userId);
     console.info("[deleteAccount] Auth user status before deletion", {
@@ -67,6 +144,22 @@ export async function softDeleteAccount(userId: string, reason: AccountDeletionR
         ? "worker"
         : roles?.[0]?.role ?? null;
 
+    // Restaurant accounts: block the deletion until the owner explicitly
+    // confirms the cancellation of imminent / in-progress shifts.
+    let restaurantImpact: AccountDeletionImpact | null = null;
+    if (role === "restaurant") {
+      restaurantImpact = await loadRestaurantDeletionImpact(userId);
+      if (restaurantImpact.imminent_shifts > 0 && options.confirmActiveShifts !== true) {
+        return {
+          ok: false,
+          error_code: "active_shifts_confirmation_required",
+          message:
+            "Alcuni lavoratori sono già stati assegnati a turni imminenti o in corso. Eliminando il profilo, questi turni saranno annullati e i lavoratori verranno avvisati.",
+          impact: restaurantImpact as unknown as Record<string, number>,
+        };
+      }
+    }
+
     const { error: feedbackError } = await supabaseAdmin.from("account_deletion_feedback").insert({
       user_id: userId,
       profile_id: userId,
@@ -76,6 +169,19 @@ export async function softDeleteAccount(userId: string, reason: AccountDeletionR
     } as never);
 
     if (feedbackError) throw feedbackError;
+
+    // Transactional cleanup: cancel announcements / applications / proposals /
+    // future shifts and notify every involved worker exactly once.
+    if (role === "restaurant") {
+      const { error: cleanupError } = await (supabaseAdmin as never as {
+        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      }).rpc("process_restaurant_account_deletion", { _uid: userId });
+      if (cleanupError) {
+        // Do NOT abort: the profile must still be flagged as deleted so that
+        // its announcements stop being visible to workers.
+        console.error("[deleteAccount] restaurant cleanup failed", cleanupError);
+      }
+    }
 
     const anonymizedProfile = {
       is_deleted: true,

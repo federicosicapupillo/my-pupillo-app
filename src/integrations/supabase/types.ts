@@ -2627,6 +2627,7 @@ export type Database = {
         Args: { other_user_id: string }
         Returns: string
       }
+      get_my_account_deletion_impact: { Args: never; Returns: Json }
       get_my_job_request: {
         Args: { _announcement_id: string }
         Returns: {
@@ -2936,6 +2937,10 @@ export type Database = {
       }
       mark_overdue_required_reviews: { Args: never; Returns: number }
       normalize_vat: { Args: { _v: string }; Returns: string }
+      process_restaurant_account_deletion: {
+        Args: { _uid: string }
+        Returns: Json
+      }
       recompute_review_block: {
         Args: { _restaurant_id: string }
         Returns: undefined

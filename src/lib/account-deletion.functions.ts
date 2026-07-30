@@ -14,12 +14,14 @@ const DeleteAccountInput = z.object({
     "altro",
   ]),
   customReason: z.string().trim().max(500).optional(),
+  confirmActiveShifts: z.boolean().optional(),
 });
 
 type DeleteAccountResult = {
   ok: boolean;
   error_code?: string;
   message?: string;
+  impact?: Record<string, number>;
 };
 
 export const deleteAccount = createServerFn({ method: "POST" })
@@ -32,5 +34,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
       return { ok: false, error_code: "missing_custom_reason" };
     }
 
-    return softDeleteAccount(userId, data.reason, data.customReason);
+    return softDeleteAccount(userId, data.reason, data.customReason, {
+      confirmActiveShifts: data.confirmActiveShifts === true,
+    });
   });

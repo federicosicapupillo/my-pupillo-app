@@ -11,6 +11,17 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertTriangle } from "lucide-react";
 import { deleteAccount } from "@/lib/account-deletion.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
+
+type DeletionImpact = {
+  announcements: number;
+  applications: number;
+  proposals: number;
+  assigned_shifts: number;
+  imminent_shifts: number;
+  completed_shifts: number;
+};
 
 type DeletionReason =
   | "non_uso_piu"
@@ -43,6 +54,9 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
   const [blockedMessage, setBlockedMessage] = useState<string>("");
+  const [impact, setImpact] = useState<DeletionImpact | null>(null);
+  const [understood, setUnderstood] = useState(false);
+  const [shiftsConfirmed, setShiftsConfirmed] = useState(false);
   const logoutTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -51,6 +65,20 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase.rpc("get_my_account_deletion_impact" as never);
+      if (cancelled || error) return;
+      const payload = data as unknown as (DeletionImpact & { ok?: boolean }) | null;
+      if (payload?.ok) setImpact(payload);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   const reset = () => {
     setStep("confirm");
     setReason("");
@@ -58,6 +86,8 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
     setConfirmText("");
     setBusy(false);
     setBlockedMessage("");
+    setUnderstood(false);
+    setShiftsConfirmed(false);
   };
 
   const handleClose = (v: boolean) => {
@@ -78,13 +108,18 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
       toast.error("Per confermare devi scrivere ELIMINA");
       return;
     }
+    if (!understood) {
+      toast.error("Devi confermare di aver compreso le conseguenze dell'eliminazione.");
+      return;
+    }
+    if (busy) return;
     setBusy(true);
     const payloadReason = reason;
     const payloadCustom = reason === "altro" ? (customReason.trim().slice(0, 500) || undefined) : undefined;
     let res: { ok: boolean; error_code?: string; message?: string } | null = null;
     try {
       res = await deleteAccountFn({
-        data: { reason: payloadReason, customReason: payloadCustom },
+        data: { reason: payloadReason, customReason: payloadCustom, confirmActiveShifts: shiftsConfirmed },
       });
     } catch {
       setBusy(false);
@@ -93,6 +128,17 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
     }
     if (!res?.ok) {
       setBusy(false);
+      if (res?.error_code === "active_shifts_confirmation_required") {
+        if ((res as { impact?: DeletionImpact }).impact) {
+          setImpact((res as { impact?: DeletionImpact }).impact ?? null);
+        }
+        setBlockedMessage(
+          res.message ||
+            "Alcuni lavoratori sono già stati assegnati a turni imminenti o in corso. Eliminando il profilo, questi turni saranno annullati e i lavoratori verranno avvisati.",
+        );
+        setStep("blocked");
+        return;
+      }
       if (res?.error_code === "active_shifts") {
         setBlockedMessage(res.message || "Hai ancora turni attivi.");
         setStep("blocked");
@@ -198,11 +244,33 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
             />
+            {impact && (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <p className="mb-1 font-medium">Eliminando il tuo account:</p>
+                <ul className="list-disc space-y-0.5 pl-5 text-muted-foreground">
+                  <li>{impact.announcements} annunci verranno annullati e rimossi dalle ricerche</li>
+                  <li>{impact.applications} candidature verranno annullate</li>
+                  <li>{impact.proposals} proposte inviate non saranno più accettabili</li>
+                  <li>{impact.assigned_shifts} turni assegnati saranno annullati e i lavoratori avvisati</li>
+                  <li>{impact.completed_shifts} turni già conclusi resteranno nello storico in forma anonimizzata</li>
+                </ul>
+              </div>
+            )}
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="delete-understood"
+                checked={understood}
+                onCheckedChange={(v) => setUnderstood(v === true)}
+              />
+              <Label htmlFor="delete-understood" className="text-sm font-normal leading-snug">
+                Ho compreso che gli annunci e i turni futuri saranno annullati.
+              </Label>
+            </div>
             <DialogFooter className="gap-2 sm:gap-2">
               <Button variant="outline" onClick={() => setStep("reason")} disabled={busy}>Indietro</Button>
               <Button
                 variant="destructive"
-                disabled={busy || confirmText !== "ELIMINA"}
+                disabled={busy || confirmText !== "ELIMINA" || !understood}
                 onClick={submit}
               >
                 {busy ? "Eliminazione in corso…" : "Elimina definitivamente"}
@@ -214,11 +282,35 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
         {step === "blocked" && (
           <>
             <DialogHeader>
-              <DialogTitle>Non puoi eliminare l'account adesso</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" /> Hai turni ancora attivi
+              </DialogTitle>
               <DialogDescription>{blockedMessage}</DialogDescription>
             </DialogHeader>
+            {impact && (
+              <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+                <li>{impact.announcements} annunci attivi</li>
+                <li>{impact.applications} candidature pendenti</li>
+                <li>{impact.proposals} proposte inviate</li>
+                <li>{impact.assigned_shifts} turni assegnati</li>
+                <li>{impact.imminent_shifts} turni imminenti o in corso</li>
+              </ul>
+            )}
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="delete-shifts-confirm"
+                checked={shiftsConfirmed}
+                onCheckedChange={(v) => setShiftsConfirmed(v === true)}
+              />
+              <Label htmlFor="delete-shifts-confirm" className="text-sm font-normal leading-snug">
+                Confermo l'annullamento dei turni e l'eliminazione dell'account
+              </Label>
+            </div>
             <DialogFooter>
-              <Button onClick={() => handleClose(false)}>Ho capito</Button>
+              <Button variant="outline" onClick={() => handleClose(false)} disabled={busy}>Annulla</Button>
+              <Button variant="destructive" disabled={busy || !shiftsConfirmed} onClick={submit}>
+                {busy ? "Eliminazione in corso…" : "Elimina definitivamente il profilo"}
+              </Button>
             </DialogFooter>
           </>
         )}
