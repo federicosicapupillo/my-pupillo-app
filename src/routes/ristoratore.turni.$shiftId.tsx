@@ -704,7 +704,7 @@ function ShiftDetailPage() {
               <CheckCheck className="h-4 w-4" /> Concludi turno
             </Button>
           )}
-          {shift.status === "scheduled" && (
+          {shift.status === "scheduled" && noShowWindow.canRestaurantCancel && (
             <Button
               variant="outline"
               onClick={() => setCancelOpen(true)}
@@ -713,6 +713,11 @@ function ShiftDetailPage() {
             >
               <XCircle className="h-4 w-4" /> Annulla turno
             </Button>
+          )}
+          {shift.status === "scheduled" && !noShowWindow.canRestaurantCancel && noShowWindow.phase === "expired" && (
+            <p className="w-full text-xs text-muted-foreground sm:max-w-md" role="note">
+              {NO_SHOW_EXPIRED_MESSAGE}
+            </p>
           )}
           {shift.status === "cancelled" && (
             <span className="text-sm text-muted-foreground">Turno annullato</span>
