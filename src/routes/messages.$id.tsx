@@ -4604,18 +4604,21 @@ function ConfirmationCard(props: {
                     ? "Lettura confermata."
                     : "In attesa di conferma lettura istruzioni da parte del lavoratore.")}
             </p>
+            {(!isWorker || showAckButton) && (
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                asChild
-                size="sm"
-                variant="outline"
-                className="gap-2 border-primary/60 text-primary hover:bg-primary/10"
-              >
-                <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
-                  <Navigation className="h-4 w-4" />
-                  Apri in mappa
-                </a>
-              </Button>
+              {!isWorker && (
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 border-primary/60 text-primary hover:bg-primary/10"
+                >
+                  <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                    <Navigation className="h-4 w-4" />
+                    Apri in mappa
+                  </a>
+                </Button>
+              )}
               {showAckButton && (
                 <Button
                   size="sm"
@@ -4637,6 +4640,7 @@ function ConfirmationCard(props: {
                 </Button>
               )}
             </div>
+            )}
           </div>
         )}
       </section>
