@@ -667,11 +667,6 @@ function MessagesLayout() {
                   <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
                     Quando un ristoratore ti contatterà per un turno, la conversazione apparirà qui. Nel frattempo, mantieni aggiornati profilo e disponibilità per ricevere più proposte.
                   </p>
-                  <div className="mt-4 flex flex-wrap justify-center gap-2">
-                    <Link to="/profile" className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-                      Aggiorna il profilo
-                    </Link>
-                  </div>
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
