@@ -115,9 +115,10 @@ export async function navigateFromNotificationLink(
       }
       try {
         // Preserve query (e.g. ?action=review) and hash for deep-links.
+        const finalHash = hash || (isReviewDeepLink ? "shift-reviews" : undefined);
         return Object.keys(searchObj).length > 0
-          ? navigate({ to: "/messages/$id", params: { id }, search: searchObj as never, hash: hash || undefined })
-          : navigate({ to: "/messages/$id", params: { id }, hash: hash || undefined });
+          ? navigate({ to: "/messages/$id", params: { id }, search: searchObj as never, hash: finalHash })
+          : navigate({ to: "/messages/$id", params: { id }, hash: finalHash });
       } catch {
         return fallback();
       }
