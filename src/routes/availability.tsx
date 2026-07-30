@@ -224,6 +224,7 @@ function AvailabilityPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { requireCompleteForAvailability, canPerformOperationalAction } = useProfileGate();
+  const invalidateAvailabilityStatus = useInvalidateWorkerAvailabilityStatus();
   const { enabled: availableNowEnabled } = useAvailableNowEnabled();
   // Fail-closed: la sezione "Disponibilità speciali" esiste solo con flag ON.
   const { isEnabled: specialAvailabilityEnabled } = useWorkerSpecialAvailabilityEnabled();
@@ -542,6 +543,7 @@ function AvailabilityPage() {
         area: { ...area },
       };
       setSavedSignature(signatureOf(list, area));
+      void invalidateAvailabilityStatus(user.id);
       if (!opts.silent) toast.success("Disponibilità salvate correttamente");
       return true;
     } catch (e: unknown) {
