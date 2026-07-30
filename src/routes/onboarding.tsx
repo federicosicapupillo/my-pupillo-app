@@ -62,6 +62,7 @@ import { DateField } from "@/components/DateField";
 import { BirthDateSelect } from "@/components/BirthDateSelect";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
+import { normalizeRole } from "@/lib/worker-role-normalization";
 import { WORKER_CITIES, zonesForCity, ALL_ZONES_OPTION } from "@/lib/worker-cities";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { NATIONALITIES } from "@/lib/nationalities";
