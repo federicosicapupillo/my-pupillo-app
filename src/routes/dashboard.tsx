@@ -500,9 +500,6 @@ type WorkerHomeProps = {
 };
 
 function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps) {
-  const phoneOk = !!profile?.phone_verified;
-  const profileOk = !!profile?.profile_completed;
-  const isReady = phoneOk && profileOk;
   const completedShifts = Number(profile?.completed_shifts ?? 0) || 0;
   const reputationLevel = profile?.reputation_level ?? "new";
 
