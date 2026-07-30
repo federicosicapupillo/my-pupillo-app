@@ -57,6 +57,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   const [impact, setImpact] = useState<DeletionImpact | null>(null);
   const [understood, setUnderstood] = useState(false);
   const [shiftsConfirmed, setShiftsConfirmed] = useState(false);
+  const [cleanupPartial, setCleanupPartial] = useState(false);
   const logoutTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -150,7 +151,13 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
       return;
     }
     setStep("done");
-    toast.success("Account eliminato correttamente.");
+    const partial = (res as { cleanup_status?: string }).cleanup_status === "partial";
+    setCleanupPartial(partial);
+    if (partial) {
+      toast.warning("Profilo eliminato. Alcune operazioni di annullamento sono ancora in corso.");
+    } else {
+      toast.success("Account eliminato correttamente.");
+    }
     setBusy(false);
     logoutTimerRef.current = window.setTimeout(() => {
       void finishAndExit();
@@ -318,9 +325,11 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
         {step === "done" && (
           <>
             <DialogHeader>
-              <DialogTitle>Account eliminato</DialogTitle>
+              <DialogTitle>{cleanupPartial ? "Profilo eliminato — completamento in corso" : "Account eliminato"}</DialogTitle>
               <DialogDescription>
-                Account eliminato correttamente. Le recensioni già inviate resteranno visibili in forma anonima, come previsto dalle regole della piattaforma.
+                {cleanupPartial
+                  ? "Il tuo profilo è stato eliminato e i tuoi annunci non sono più visibili. L'annullamento di alcune candidature o turni non è stato completato: verrà finalizzato automaticamente e l'assistenza è già stata avvisata."
+                  : "Account eliminato correttamente. Le recensioni già inviate resteranno visibili in forma anonima, come previsto dalle regole della piattaforma."}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

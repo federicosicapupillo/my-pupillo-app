@@ -15,6 +15,8 @@ type DeletionResult = {
   message?: string;
   technical_message?: string;
   impact?: Record<string, number>;
+  /** "complete" = cleanup RPC succeeded, "partial" = profile hidden but cleanup pending retry. */
+  cleanup_status?: "complete" | "partial" | "not_applicable";
 };
 
 const PROFILE_SELECT = "id, avatar_url, id_document_path, id_document_back_path";
@@ -98,14 +100,78 @@ export async function loadRestaurantDeletionImpact(userId: string): Promise<Acco
     ),
   ]);
 
+  // Pending proposals = non-final applications that carry a `propose_shift`
+  // message. Counted separately because it needs a join on messages.
+  let proposals = 0;
+  {
+    const { data: apps } = await supabaseAdmin
+      .from("applications")
+      .select("id")
+      .eq("restaurant_id", userId)
+      .in("status", ["pending", "interested", "counter_offer"]);
+    const ids = ((apps as { id: string }[] | null) ?? []).map((a) => a.id);
+    if (ids.length > 0) {
+      const { data: msgs } = await supabaseAdmin
+        .from("messages")
+        .select("application_id")
+        .eq("action_type", "propose_shift")
+        .in("application_id", ids);
+      proposals = new Set(((msgs as { application_id: string }[] | null) ?? []).map((m) => m.application_id)).size;
+    }
+  }
+
   return {
     announcements,
     applications,
-    proposals: 0,
+    proposals,
     assigned_shifts: assignedShifts,
     imminent_shifts: imminentShifts,
     completed_shifts: completedShifts,
   };
+}
+
+type CleanupOutcome = { status: "complete" | "partial"; error: string | null; result: Record<string, unknown> | null };
+
+/**
+ * Runs the restaurant cleanup RPC. Fully idempotent: safe to call again after
+ * a partial failure. The UID always comes from the trusted caller (verified
+ * session on the server), never from client input.
+ */
+export async function runRestaurantCleanup(userId: string): Promise<CleanupOutcome> {
+  const rpc = (supabaseAdmin as unknown as {
+    rpc: (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  }).rpc;
+  try {
+    const { data, error } = await rpc.call(supabaseAdmin, "process_restaurant_account_deletion", { _uid: userId });
+    const payload = (data ?? null) as Record<string, unknown> | null;
+    if (error || payload?.ok !== true) {
+      const msg = error?.message ?? `unexpected cleanup payload: ${JSON.stringify(payload)}`;
+      console.error("[deleteAccount] restaurant cleanup failed", { userId, error: msg });
+      await supabaseAdmin.from("admin_audit_log").insert({
+        actor: userId,
+        action: "restaurant_account_deleted_cleanup_failed",
+        target_user: userId,
+        reason: "restaurant_account_deleted",
+        metadata: { error: msg, cleanup_status: "partial" },
+      } as never);
+      return { status: "partial", error: msg, result: payload };
+    }
+    return { status: "complete", error: null, result: payload };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[deleteAccount] restaurant cleanup threw", { userId, error: msg });
+    await supabaseAdmin.from("admin_audit_log").insert({
+      actor: userId,
+      action: "restaurant_account_deleted_cleanup_failed",
+      target_user: userId,
+      reason: "restaurant_account_deleted",
+      metadata: { error: msg, cleanup_status: "partial" },
+    } as never);
+    return { status: "partial", error: msg, result: null };
+  }
 }
 
 export async function softDeleteAccount(
@@ -172,15 +238,12 @@ export async function softDeleteAccount(
 
     // Transactional cleanup: cancel announcements / applications / proposals /
     // future shifts and notify every involved worker exactly once.
+    let cleanupStatus: "complete" | "partial" | "not_applicable" = "not_applicable";
     if (role === "restaurant") {
-      const { error: cleanupError } = await (supabaseAdmin as never as {
-        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-      }).rpc("process_restaurant_account_deletion", { _uid: userId });
-      if (cleanupError) {
-        // Do NOT abort: the profile must still be flagged as deleted so that
-        // its announcements stop being visible to workers.
-        console.error("[deleteAccount] restaurant cleanup failed", cleanupError);
-      }
+      // Do NOT abort on failure: the profile must still be flagged as deleted
+      // so that its announcements stop being visible to workers. The caller
+      // gets `cleanup_status: "partial"` and the cleanup can be retried.
+      cleanupStatus = (await runRestaurantCleanup(userId)).status;
     }
 
     const anonymizedProfile = {
@@ -316,7 +379,7 @@ export async function softDeleteAccount(
       error: authAfterError?.message ?? null,
     });
 
-    return { ok: true };
+    return { ok: true, cleanup_status: cleanupStatus };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[deleteAccount] soft delete failed", error);
