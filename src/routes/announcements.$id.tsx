@@ -362,11 +362,9 @@ function AnnouncementDetail() {
     const ch = supabase.channel(`ann-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "applications", filter: `announcement_id=eq.${id}` },
         async (p) => {
-          const n = p.new as App;
-          if (isOwnerNow) {
-            // Nessun toast qui: la campanella notifiche mostra già il toast
-            // "Nuova candidatura ricevuta" generato dal trigger DB.
-          }
+          // Nessun toast qui: la campanella notifiche mostra già il toast
+          // "Nuova candidatura ricevuta" generato dal trigger DB
+          // (sorgente unica, idempotente via dedupe_key).
           load();
         })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "applications", filter: `announcement_id=eq.${id}` },
@@ -442,7 +440,7 @@ function AnnouncementDetail() {
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const [selfCancelledOpen, setSelfCancelledOpen] = useState(false);
   const applyAsWorker = async () => {
-    if (!user || !ann) return;
+    if (!user || !ann || applying) return;
     setApplying(true);
     // Gate worker-side re-apply: a worker that previously self-cancelled
     // (status `not_interested`) cannot re-apply to the same announcement.
