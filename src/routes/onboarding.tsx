@@ -899,8 +899,14 @@ function Onboarding() {
     if (profile) {
       const sec = (profile as any).secondary_roles as string[] | null | undefined;
       const prim = (profile as any).primary_role as string | null | undefined;
-      const known = new Set<string>(WORKER_ROLES as readonly string[]);
-      const merged = [...(sec ?? []), ...(prim ? [prim] : [])].filter((r) => known.has(r));
+      // Mappa anche le etichette storiche ("Aiuto cuoco", "Responsabile sala")
+      // sulle etichette canoniche, così i ruoli salvati non vanno persi.
+      const byNorm = new Map<string, string>(
+        (WORKER_ROLES as readonly string[]).map((r) => [normalizeRole(r), r]),
+      );
+      const merged = [...(sec ?? []), ...(prim ? [prim] : [])]
+        .map((r) => byNorm.get(normalizeRole(r)))
+        .filter((r): r is string => Boolean(r));
       if (merged.length > 0) {
         setWorkerRoles((WORKER_ROLES as readonly string[]).filter((r) => merged.includes(r)));
       }
