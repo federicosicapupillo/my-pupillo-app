@@ -4110,6 +4110,7 @@ function ProposalCard(props: {
     <>
     <div className="flex justify-center my-2">
       <div className="w-full max-w-md rounded-2xl border-2 border-primary/40 bg-card shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.45)] overflow-hidden">
+        {!compact && (
         <div className="bg-primary/10 px-4 py-3 border-b border-primary/30">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -4117,6 +4118,8 @@ function ProposalCard(props: {
           </div>
           <p className="text-xs text-muted-foreground mt-1">Ciao, sei disponibile per questo turno?</p>
         </div>
+        )}
+        {!compact && (
         <dl className="px-4 py-3 space-y-2 text-sm">
           <ProposalRow icon={Briefcase} label="Ruolo" value={ann?.professional_profile?.trim() || "Da definire"} />
           {ann?.service_date && (
@@ -4171,7 +4174,8 @@ function ProposalCard(props: {
             <ProposalRow icon={StickyNote} label="Note" value={ann.notes.trim()} />
           )}
         </dl>
-        {!canSeePreciseInfo ? (
+        )}
+        {compact ? null : !canSeePreciseInfo ? (
           <div className="mx-4 mb-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-amber-900 dark:text-amber-200">
             <div className="flex items-center gap-2 font-semibold">
               <ShieldAlert className="h-4 w-4 shrink-0" />
@@ -4194,7 +4198,7 @@ function ProposalCard(props: {
         )}
 
         {deadline && !accepted && !rejected && (
-          <div className={`mx-4 mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+          <div className={`mx-4 mb-3 ${compact ? "mt-3" : ""} flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
             expired
               ? "border-destructive/30 bg-destructive/10 text-destructive"
               : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
