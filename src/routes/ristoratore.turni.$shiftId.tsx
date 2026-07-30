@@ -22,6 +22,7 @@ import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/component
 import { WorkerContactCard } from "@/components/WorkerContactCard";
 import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
+import { getNoShowWindow, NO_SHOW_EXPIRED_MESSAGE } from "@/lib/no-show-window";
 import { PreviousCandidatesSection } from "@/components/PreviousCandidatesSection";
 import { isShiftDateStillFuture } from "@/lib/announcement-reopen";
 import { formatDisplayLabels } from "@/lib/format-label";
@@ -172,6 +173,11 @@ function ShiftDetailPage() {
   const reviewRef = useRef<HTMLDivElement | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
 
   const toggleFavorite = async () => {
     if (!user || !shift?.worker_id) return;
@@ -446,6 +452,13 @@ function ShiftDetailPage() {
 
   // Orari
   const startTime = ann?.service_time?.slice(0, 5) ?? null;
+  // Finestra no-show / annullamento unilaterale: inizio turno → +30 minuti.
+  const noShowWindow = getNoShowWindow({
+    status: shift.status,
+    shiftDate: ann?.service_date ?? shift.shift_date,
+    serviceTime: ann?.service_time ?? null,
+    now: new Date(nowTick),
+  });
   const dur = ann?.duration_hours ?? shift.hours;
   const endTime = (() => {
     if (!startTime || !dur) return null;
@@ -704,7 +717,7 @@ function ShiftDetailPage() {
               <CheckCheck className="h-4 w-4" /> Concludi turno
             </Button>
           )}
-          {shift.status === "scheduled" && (
+          {shift.status === "scheduled" && noShowWindow.canRestaurantCancel && (
             <Button
               variant="outline"
               onClick={() => setCancelOpen(true)}
@@ -713,6 +726,11 @@ function ShiftDetailPage() {
             >
               <XCircle className="h-4 w-4" /> Annulla turno
             </Button>
+          )}
+          {shift.status === "scheduled" && !noShowWindow.canRestaurantCancel && noShowWindow.phase === "expired" && (
+            <p className="w-full text-xs text-muted-foreground sm:max-w-md" role="note">
+              {NO_SHOW_EXPIRED_MESSAGE}
+            </p>
           )}
           {shift.status === "cancelled" && (
             <span className="text-sm text-muted-foreground">Turno annullato</span>

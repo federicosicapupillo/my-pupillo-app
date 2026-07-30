@@ -3020,6 +3020,7 @@ export type Database = {
       send_required_review_reminders: { Args: never; Returns: number }
       set_my_available_now: { Args: { _until: string }; Returns: string }
       set_my_avatar: { Args: { _path: string }; Returns: undefined }
+      shift_effective_start: { Args: { _shift_id: string }; Returns: string }
       unseed_demo: {
         Args: { _batch: string }
         Returns: {

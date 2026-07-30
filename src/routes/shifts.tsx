@@ -21,6 +21,22 @@ import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
 import { ReportDelayDialog, CancelPresenceDialog, type IncidentTarget } from "@/components/WorkerIncidentDialogs";
 import { formatShiftLocation, debugLocationFormat } from "@/lib/format-location";
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
+import {
+  getNoShowWindow,
+  computeShiftStart,
+  NO_SHOW_EXPIRED_MESSAGE,
+  isNoShowWindowServerError,
+} from "@/lib/no-show-window";
+
+/** Tick periodico: la finestra no-show si chiude anche senza refresh. */
+function useMinuteTick(intervalMs = 15_000): number {
+  const [tick, setTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setTick(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return tick;
+}
 
 export const Route = createFileRoute("/shifts")({
   head: () => ({ meta: [{ title: "I miei turni — Pupillo" }] }),
@@ -60,78 +76,24 @@ const statusMeta: Record<Shift["status"], { label: string; color: string; icon: 
   cancelled: { label: "Annullato", color: "bg-gray-500/10 text-gray-700 border-gray-500/30", icon: XCircle },
 };
 
-// Tolleranza minima prima che il ristoratore possa segnalare "No show".
-// Regola Pupillo: il No show diventa disponibile solo 15 minuti DOPO
-// l'orario di inizio turno reale (shift_date + service_time del turno o
-// dell'annuncio collegato). Non si usa data creazione/pubblicazione
-// annuncio, candidatura, fine turno, né expires_at.
-const NO_SHOW_TOLERANCE_MINUTES = 15;
-
-function computeShiftStartDate(shiftDate: string | null | undefined, serviceTime: string | null | undefined): Date | null {
-  if (!shiftDate) return null;
-  const time = (serviceTime ?? "").trim();
-  const hhmm = /^(\d{2}):(\d{2})/.exec(time);
-  const h = hhmm ? Number(hhmm[1]) : 0;
-  const m = hhmm ? Number(hhmm[2]) : 0;
-  const d = new Date(`${shiftDate}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return null;
-  d.setHours(h, m, 0, 0);
-  return d;
-}
-
-function formatTimeHHMM(d: Date): string {
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-}
-
-type NoShowAvailability = {
-  canMark: boolean;
-  availableFrom: Date | null;
-  minutesAfterStart: number | null;
-  reasonIfDisabled: string | null;
-  disabledMessage: string | null;
-};
-
-function getNoShowAvailability(shift: Shift, serviceTime: string | null | undefined): NoShowAvailability {
-  // Stati incompatibili: solo "scheduled" può diventare no_show
-  if (shift.status !== "scheduled") {
-    return {
-      canMark: false,
-      availableFrom: null,
-      minutesAfterStart: null,
-      reasonIfDisabled: `turno in stato ${shift.status}, no_show non applicabile`,
-      disabledMessage: "Il No show può essere segnalato solo su turni confermati.",
-    };
-  }
-  const start = computeShiftStartDate(shift.shift_date, serviceTime);
-  if (!start) {
-    return {
-      canMark: false,
-      availableFrom: null,
-      minutesAfterStart: null,
-      reasonIfDisabled: "orario inizio turno mancante",
-      disabledMessage: "Orario di inizio turno non disponibile.",
-    };
-  }
-  const availableFrom = new Date(start.getTime() + NO_SHOW_TOLERANCE_MINUTES * 60_000);
-  const now = new Date();
-  const minutesAfterStart = Math.floor((now.getTime() - start.getTime()) / 60_000);
-  if (now.getTime() < availableFrom.getTime()) {
-    return {
-      canMark: false,
-      availableFrom,
-      minutesAfterStart,
-      reasonIfDisabled: "tolleranza 15 minuti non ancora trascorsa",
-      disabledMessage: `Potrai segnalare No show dalle ${formatTimeHHMM(availableFrom)}.`,
-    };
-  }
+// Finestra No-show lato ristoratore: dall'inizio turno fino a +30 minuti
+// (inclusi). Logica condivisa e testata in `@/lib/no-show-window`; il
+// controllo definitivo è server-side (trigger sul DB).
+function getNoShowAvailability(shift: Shift, serviceTime: string | null | undefined, now?: Date) {
+  const w = getNoShowWindow({
+    status: shift.status,
+    shiftDate: shift.shift_date,
+    serviceTime,
+    now,
+  });
   return {
-    canMark: true,
-    availableFrom,
-    minutesAfterStart,
-    reasonIfDisabled: null,
-    disabledMessage: null,
+    canMark: w.canMarkNoShow,
+    canCancel: w.canRestaurantCancel,
+    availableFrom: w.start,
+    deadline: w.deadline,
+    minutesAfterStart: w.start ? Math.floor(((now ?? new Date()).getTime() - w.start.getTime()) / 60_000) : null,
+    reasonIfDisabled: w.canMarkNoShow ? null : w.phase,
+    disabledMessage: w.message,
   };
 }
 
@@ -202,6 +164,7 @@ function ShiftsPage() {
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const [noShowDialog, setNoShowDialog] = useState<Shift | null>(null);
   const [noShowNotes, setNoShowNotes] = useState("");
+  const nowTick = useMinuteTick();
   const [noShowSubmitting, setNoShowSubmitting] = useState(false);
   const [notEndedDialog, setNotEndedDialog] = useState<Shift | null>(null);
   const [reviewNotAvailableOpen, setReviewNotAvailableOpen] = useState(false);
@@ -1098,14 +1061,15 @@ function ShiftsPage() {
                           <CheckCircle2 className="h-4 w-4" /> Completato
                         </Button>
                         {(() => {
-                          const noShowInfo = getNoShowAvailability(s, ann0?.service_time ?? null);
+                          const noShowInfo = getNoShowAvailability(s, ann0?.service_time ?? null, new Date(nowTick));
                           if (typeof window !== "undefined") {
                             console.log("[PUPILLO_NO_SHOW_AVAILABILITY_DEBUG]", {
                               restaurant_user_id: s.restaurant_id,
                               worker_user_id: s.worker_id,
                               shift_id: s.id,
                               announcement_id: s.announcement_id,
-                              shift_start_time: computeShiftStartDate(s.shift_date, ann0?.service_time ?? null)?.toISOString() ?? null,
+                              shift_start_time: computeShiftStart(s.shift_date, ann0?.service_time ?? null)?.toISOString() ?? null,
+                              no_show_deadline: noShowInfo.deadline?.toISOString() ?? null,
                               current_time: new Date().toISOString(),
                               no_show_available_from: noShowInfo.availableFrom?.toISOString() ?? null,
                               minutes_after_start: noShowInfo.minutesAfterStart,
@@ -1115,19 +1079,29 @@ function ShiftsPage() {
                             });
                           }
                           return (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => { setNoShowDialog(s); setNoShowNotes(""); }}
-                              disabled={!noShowInfo.canMark}
-                              title={noShowInfo.disabledMessage ?? undefined}
-                              aria-label={noShowInfo.disabledMessage ?? "Segnala No-show"}
-                              className="gap-1"
-                            >
-                              <AlertTriangle className="h-4 w-4" /> No-show
-                            </Button>
+                            <div className="flex w-full flex-col gap-1 sm:w-auto">
+                              {noShowInfo.reasonIfDisabled !== "expired" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => { setNoShowDialog(s); setNoShowNotes(""); }}
+                                  disabled={!noShowInfo.canMark}
+                                  title={noShowInfo.disabledMessage ?? undefined}
+                                  aria-label={noShowInfo.disabledMessage ?? "Segnala No-show"}
+                                  className="gap-1"
+                                >
+                                  <AlertTriangle className="h-4 w-4" /> No-show
+                                </Button>
+                              )}
+                              {noShowInfo.reasonIfDisabled === "expired" && (
+                                <p className="max-w-full text-xs text-muted-foreground sm:max-w-xs" role="note">
+                                  {NO_SHOW_EXPIRED_MESSAGE}
+                                </p>
+                              )}
+                            </div>
                           );
                         })()}
+                        {getNoShowAvailability(s, ann0?.service_time ?? null, new Date(nowTick)).canCancel && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -1147,6 +1121,7 @@ function ShiftsPage() {
                         >
                           <XCircle className="h-4 w-4" /> Annulla turno
                         </Button>
+                        )}
                       </>
                     )}
                     {acceptedAppMap[s.announcement_id || ""] && (
@@ -1512,19 +1487,27 @@ function ShiftsPage() {
               onClick={async () => {
                 const s = noShowDialog;
                 if (!s) return;
-                // Guard finale: nessun No show se non sono passati almeno 15 min
-                // dall'orario di inizio turno reale. Stesso calcolo del bottone.
+                // Guard finale: no-show solo dentro la finestra inizio → +30 min.
+                // Il server resta comunque la fonte definitiva.
                 const ann = announcementsMap[s.announcement_id || ""];
                 const guard = getNoShowAvailability(s, ann?.service_time ?? null);
                 if (!guard.canMark) {
                   toast.error(guard.disabledMessage ?? "Non puoi segnalare No show in questo momento.");
+                  if (guard.reasonIfDisabled === "expired") {
+                    setNoShowDialog(null);
+                    setNoShowNotes("");
+                  }
                   return;
                 }
                 setNoShowSubmitting(true);
                 const { error } = await supabase.from("shifts").update({ status: "no_show" }).eq("id", s.id);
                 if (error) {
-                  toast.error(error.message);
+                  toast.error(isNoShowWindowServerError(error.message) ? NO_SHOW_EXPIRED_MESSAGE : error.message);
                   setNoShowSubmitting(false);
+                  if (isNoShowWindowServerError(error.message)) {
+                    setNoShowDialog(null);
+                    setNoShowNotes("");
+                  }
                   if (typeof window !== "undefined") {
                     console.log("[PUPILLO_NO_SHOW_CONFIRM_DEBUG]", {
                       restaurant_user_id: user?.id ?? null,

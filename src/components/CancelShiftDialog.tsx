@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { isNoShowWindowServerError, NO_SHOW_EXPIRED_MESSAGE } from "@/lib/no-show-window";
 import { cancelShiftWithNotifications } from "@/lib/shift-cancel";
 
 type Props = {
@@ -61,7 +62,10 @@ export function CancelShiftDialog({
       onCancelled?.();
       onOpenChange(false);
     } catch (e: any) {
-      const msg = typeof e?.message === "string" && e.message ? e.message : "Impossibile annullare il turno.";
+      const raw = typeof e?.message === "string" && e.message ? e.message : "";
+      const msg = isNoShowWindowServerError(raw)
+        ? NO_SHOW_EXPIRED_MESSAGE
+        : raw || "Impossibile annullare il turno.";
       setError(msg);
       toast.error(msg);
     } finally {
