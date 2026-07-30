@@ -452,6 +452,13 @@ function ShiftDetailPage() {
 
   // Orari
   const startTime = ann?.service_time?.slice(0, 5) ?? null;
+  // Finestra no-show / annullamento unilaterale: inizio turno → +30 minuti.
+  const noShowWindow = getNoShowWindow({
+    status: shift.status,
+    shiftDate: ann?.service_date ?? shift.shift_date,
+    serviceTime: ann?.service_time ?? null,
+    now: new Date(nowTick),
+  });
   const dur = ann?.duration_hours ?? shift.hours;
   const endTime = (() => {
     if (!startTime || !dur) return null;
