@@ -29,6 +29,7 @@ import { Award } from "lucide-react";
 import { ConfirmedWorkerCard, type ConfirmedWorkerProfile, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { ReviewLabelsPicker, ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
+import { ShiftReviewsSection } from "@/components/ShiftReviewsSection";
 import { WouldRehirePicker, WouldRehireBadge } from "@/components/WouldRehirePicker";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
