@@ -1896,12 +1896,8 @@ function Thread() {
     () => msgs.filter((m) => m.template_id === PROPOSAL_TEMPLATE_ID),
     [msgs],
   );
-  // Comunicazioni registrate: solo i messaggi liberi realmente scambiati.
-  // Gli eventi di sistema/template finiscono nella cronologia, non qui.
-  const recordedCommunications = useMemo(
-    () => msgs.filter(isRealChatMessage),
-    [msgs],
-  );
+  // NOTE: free-form chat messages (`isRealChatMessage`) are no longer rendered
+  // on this static summary page. Rows remain untouched in the database.
   // Cronologia: eventi applicativi (activity_logs) + eventi di sistema
   // registrati come messaggi, uniti e ordinati cronologicamente.
   const historyEvents = useMemo<TimelineEvent[]>(() => {
@@ -2798,11 +2794,23 @@ function Thread() {
             </div>
           );
         })()}
-        {proposalMessages.length > 0 && (
+        {(() => {
+          // Static shift page: the proposal recap (role, date, venue, address,
+          // compensation, dress code, tasks, languages, requirements) is
+          // already rendered by the summary boxes above, so only proposals
+          // that still need a decision are shown — as a bare action block.
+          const pendingProposals = proposalMessages.filter((m) => {
+            const own = proposalStatuses[m.id];
+            const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
+            const eff = own ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
+            return eff !== "accepted" && eff !== "rejected" && eff !== "not_interested" && eff !== "expired";
+          });
+          if (pendingProposals.length === 0) return null;
+          return (
           <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-proposta">
-            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">Proposta e risposta</h2>
+            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">Azioni disponibili</h2>
             <div className="space-y-3">
-              {proposalMessages.map((m) => {
+              {pendingProposals.map((m) => {
               const ownStatus = proposalStatuses[m.id];
               const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
               // Per-proposal status is authoritative. Legacy proposals (no recorded
@@ -2830,6 +2838,7 @@ function Thread() {
                 <ProposalCard
                   message={m}
                   ann={ann}
+                  compact
                   venueName={venueName}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
@@ -2970,31 +2979,14 @@ function Thread() {
               })}
             </div>
           </section>
-        )}
-        <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-comunicazioni">
-          <h2 id="sec-comunicazioni" className="text-sm font-semibold mb-3">Comunicazioni registrate</h2>
-          {recordedCommunications.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nessuna comunicazione registrata per questo turno.
-            </p>
-          ) : (
-            <ul className="divide-y">
-              {recordedCommunications.map((m) => (
-                <li key={m.id} className="py-2.5 first:pt-0 last:pb-0">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                    <span className="text-xs font-medium">
-                      {m.sender_id === user?.id ? "Tu" : displayOtherName}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground tabular-nums">
-                      {formatTs(m.created_at)}
-                    </span>
-                  </div>
-                  <p className="mt-1 whitespace-pre-line text-sm text-foreground/90">{m.body}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          );
+        })()}
+        {/*
+          "Comunicazioni registrate" removed from this static summary page:
+          free-form chat no longer exists, so the box was permanently empty.
+          Historical rows stay untouched in the database (`messages`); they are
+          simply not rendered here until a dedicated use is defined.
+        */}
         {app && shift && user && (role === "worker" || role === "restaurant") && (
           <ShiftReviewsSection
             className="mt-4"
@@ -3971,10 +3963,17 @@ function ProposalCard(props: {
   status: string;
   lockReason?: "completed" | "cancelled" | null;
   specialBlock?: SpecialAvailabilityBlock | null;
+  /**
+   * Static shift page: the role/date/venue/compensation recap already lives in
+   * the summary boxes at the top, so the card renders only the decision
+   * controls (deadline, actions, confirmation dialogs) without duplicating it.
+   */
+  compact?: boolean;
   onAccept: () => Promise<void>;
   onReject: (reason?: string) => Promise<void>;
 }) {
   const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
+  const compact = props.compact ?? false;
   const lockReason = props.lockReason ?? null;
   const specialBlock = props.specialBlock ?? null;
   const incompatibleSpecial = !!specialBlock?.blocked;
@@ -4103,6 +4102,7 @@ function ProposalCard(props: {
     <>
     <div className="flex justify-center my-2">
       <div className="w-full max-w-md rounded-2xl border-2 border-primary/40 bg-card shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.45)] overflow-hidden">
+        {!compact && (
         <div className="bg-primary/10 px-4 py-3 border-b border-primary/30">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -4110,6 +4110,8 @@ function ProposalCard(props: {
           </div>
           <p className="text-xs text-muted-foreground mt-1">Ciao, sei disponibile per questo turno?</p>
         </div>
+        )}
+        {!compact && (
         <dl className="px-4 py-3 space-y-2 text-sm">
           <ProposalRow icon={Briefcase} label="Ruolo" value={ann?.professional_profile?.trim() || "Da definire"} />
           {ann?.service_date && (
@@ -4164,7 +4166,8 @@ function ProposalCard(props: {
             <ProposalRow icon={StickyNote} label="Note" value={ann.notes.trim()} />
           )}
         </dl>
-        {!canSeePreciseInfo ? (
+        )}
+        {compact ? null : !canSeePreciseInfo ? (
           <div className="mx-4 mb-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-amber-900 dark:text-amber-200">
             <div className="flex items-center gap-2 font-semibold">
               <ShieldAlert className="h-4 w-4 shrink-0" />
@@ -4187,7 +4190,7 @@ function ProposalCard(props: {
         )}
 
         {deadline && !accepted && !rejected && (
-          <div className={`mx-4 mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+          <div className={`mx-4 mb-3 ${compact ? "mt-3" : ""} flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
             expired
               ? "border-destructive/30 bg-destructive/10 text-destructive"
               : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
