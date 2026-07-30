@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProfileGate } from "@/components/ProfileGate";
+import { useInvalidateWorkerAvailabilityStatus } from "@/lib/use-worker-availability-status";
 import {
   DAY_LABELS,
   SLOT_LABELS,
