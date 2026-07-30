@@ -291,9 +291,9 @@ function DashboardInner() {
         )}
       />
 
-      <BolognaLaunchBanner role={role} className="mb-6" />
-
       {role === "worker" && <AvailabilitySetupBanner userId={user?.id} className="mb-6" />}
+
+      <BolognaLaunchBanner role={role} className="mb-6" />
 
       {role === "restaurant" && <PayOnHireBox className="mb-6" />}
 
