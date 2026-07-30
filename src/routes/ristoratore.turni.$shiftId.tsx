@@ -22,6 +22,7 @@ import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/component
 import { WorkerContactCard } from "@/components/WorkerContactCard";
 import { RequestReviewRevisionDialog } from "@/components/RequestReviewRevisionDialog";
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
+import { getNoShowWindow, NO_SHOW_EXPIRED_MESSAGE } from "@/lib/no-show-window";
 import { PreviousCandidatesSection } from "@/components/PreviousCandidatesSection";
 import { isShiftDateStillFuture } from "@/lib/announcement-reopen";
 import { formatDisplayLabels } from "@/lib/format-label";
