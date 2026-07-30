@@ -29,6 +29,7 @@ import { Award } from "lucide-react";
 import { ConfirmedWorkerCard, type ConfirmedWorkerProfile, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { ReviewLabelsPicker, ReviewLabelsDisplay } from "@/components/ReviewLabelsPicker";
 import { SaveToFavoritesPrompt } from "@/components/SaveToFavoritesPrompt";
+import { ShiftReviewsSection } from "@/components/ShiftReviewsSection";
 import { WouldRehirePicker, WouldRehireBadge } from "@/components/WouldRehirePicker";
 import { CREDITS_PER_HIRE } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
@@ -566,7 +567,9 @@ function Thread() {
     setTplCategory("post_shift");
     setReviewOpen(true);
     const t = window.setTimeout(() => {
-      document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const target =
+        document.getElementById("shift-reviews") ?? document.getElementById("review-block");
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 250);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2992,6 +2995,23 @@ function Thread() {
             </ul>
           )}
         </section>
+        {app && shift && user && (role === "worker" || role === "restaurant") && (
+          <ShiftReviewsSection
+            className="mt-4"
+            shiftId={shift.id}
+            shiftStatus={shift.status ?? null}
+            shiftEnded={
+              (ann ? getShiftEndDate(ann) : (shift.shift_date ? new Date(`${shift.shift_date}T23:59:00`) : null))
+                ? Date.now() >= (ann ? getShiftEndDate(ann)! : new Date(`${shift.shift_date}T23:59:00`)).getTime()
+                : false
+            }
+            role={role === "worker" ? "worker" : "restaurant"}
+            targetId={role === "worker" ? shift.restaurant_id : shift.worker_id}
+            targetName={displayOtherName ?? null}
+            announcementId={shift.announcement_id ?? app.announcement_id ?? null}
+            applicationId={app.id}
+          />
+        )}
         </div>
         {role === "restaurant" && app && shift && (() => {
           const reviewed = !!existingReview;

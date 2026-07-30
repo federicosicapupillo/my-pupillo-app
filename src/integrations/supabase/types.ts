@@ -2872,6 +2872,19 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_shift_review_status: {
+        Args: { _shift_id: string }
+        Returns: {
+          mine_exists: boolean
+          mine_review_id: string
+          other_exists: boolean
+          other_review_id: string
+          shift_id: string
+          shift_status: string
+          unlocked: boolean
+          viewer_role: string
+        }[]
+      }
       grant_credits: {
         Args: {
           _amount: number
