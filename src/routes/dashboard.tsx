@@ -500,10 +500,9 @@ type WorkerHomeProps = {
 };
 
 function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps) {
+  const completedShifts = Number(profile?.completed_shifts ?? 0) || 0;
   const phoneOk = !!profile?.phone_verified;
   const profileOk = !!profile?.profile_completed;
-  const isReady = phoneOk && profileOk;
-  const completedShifts = Number(profile?.completed_shifts ?? 0) || 0;
   const reputationLevel = profile?.reputation_level ?? "new";
 
   const tasks: Array<{
@@ -560,61 +559,6 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
 
   return (
     <div className="mt-6 space-y-8">
-      {/* 1. HERO / STATO UTENTE */}
-      <section
-        className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-primary/5 p-5 sm:p-7"
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/15 blur-3xl"
-        />
-        <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">
-              Home operativa
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {isReady
-                ? "Sei pronto a lavorare. Tieni d'occhio offerte e messaggi."
-                : "Completa i passi qui sotto per iniziare a ricevere offerte."}
-            </p>
-            {!isReady && (
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                {!phoneOk && (
-                  <StatusPill
-                    ok={false}
-                    okLabel="Numero verificato"
-                    koLabel="Numero da verificare"
-                  />
-                )}
-                {!profileOk && (
-                  <StatusPill
-                    ok={false}
-                    okLabel="Profilo completo"
-                    koLabel="Profilo da completare"
-                  />
-                )}
-              </div>
-            )}
-          </div>
-          <div className="shrink-0">
-            {isReady ? (
-              <Link to="/announcements">
-                <Button size="sm" className="gap-1.5">
-                  <Briefcase className="h-4 w-4" /> Vedi offerte
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/onboarding">
-                <Button size="sm" className="gap-1.5">
-                  Completa <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </section>
-
       {/* 2. KPI OPERATIVI */}
       {(() => {
         const tiles: ReactNode[] = [];
@@ -729,29 +673,6 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
   );
 }
 
-function StatusPill({
-  ok,
-  okLabel,
-  koLabel,
-}: {
-  ok: boolean;
-  okLabel: string;
-  koLabel: string;
-}) {
-  // placeholder retained
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
-        ok
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-      }`}
-    >
-      {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-      {ok ? okLabel : koLabel}
-    </span>
-  );
-}
 
 function WorkerReferralSection() {
   // Il worker home renderizza sempre per un utente worker: usiamo il flag worker.
