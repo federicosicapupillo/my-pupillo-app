@@ -59,20 +59,7 @@ export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
   ),
 });
 
-const ROLE_OPTIONS = [
-  "Cameriere",
-  "Bartender",
-  "Chef",
-  "Aiuto cucina",
-  "Runner",
-  "Lavapiatti",
-  "Barista",
-  "Pizzaiolo",
-  "Hostess",
-  "Responsabile di sala",
-  "Addetto catering",
-  "Receptionist",
-];
+const ROLE_OPTIONS = JOB_ROLES;
 
 const HOURLY_RATE_OPTIONS = Array.from({ length: 17 }, (_, i) => 9 + i); // 9..25
 const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
