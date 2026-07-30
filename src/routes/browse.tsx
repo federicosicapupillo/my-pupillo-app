@@ -347,7 +347,7 @@ function Browse() {
     const lat = profile?.service_area_lat, lng = profile?.service_area_lng;
     const max = maxKm ? Number(maxKm) : null;
     let out = items.filter(a => {
-      if (roleF !== "any" && normalizeRole(a.professional_profile) !== normalizeRole(roleF)) return false;
+      if (roleF !== "any" && !roleFilterMatches(a.professional_profile, roleF)) return false;
       if (speedF !== "any" && a.speed !== speedF) return false;
       if (onlyNotApplied && appliedIds.has(a.id)) return false;
       if (onlyFav && !favIds.has(a.id)) return false;
