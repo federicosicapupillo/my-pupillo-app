@@ -173,6 +173,11 @@ function ShiftDetailPage() {
   const reviewRef = useRef<HTMLDivElement | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
 
   const toggleFavorite = async () => {
     if (!user || !shift?.worker_id) return;
