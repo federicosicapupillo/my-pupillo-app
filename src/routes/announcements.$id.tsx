@@ -364,10 +364,8 @@ function AnnouncementDetail() {
         async (p) => {
           const n = p.new as App;
           if (isOwnerNow) {
-            // Privacy: do not disclose the worker name before the shift is confirmed.
-            toast.success("Nuova candidatura", {
-              description: "Un lavoratore si è candidato per il tuo annuncio.",
-            });
+            // Nessun toast qui: la campanella notifiche mostra già il toast
+            // "Nuova candidatura ricevuta" generato dal trigger DB.
           }
           load();
         })
@@ -485,14 +483,9 @@ function AnnouncementDetail() {
       toast.error(error.message);
       return;
     }
-    if (app?.id) {
-      await supabase.from("notifications").insert({
-        user_id: ann.restaurant_id,
-        title: "Nuova candidatura ricevuta",
-        body: "Un lavoratore si è candidato per uno dei tuoi turni.",
-        link: `/messages/${app.id}`,
-      });
-    }
+    // NOTA: la notifica al ristoratore è generata solo dal trigger DB
+    // `notify_application_insert` (idempotente via dedupe_key). Nessun
+    // insert lato client, altrimenti si creano notifiche duplicate.
     toast.success("Candidatura inviata!");
   };
 
