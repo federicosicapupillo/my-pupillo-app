@@ -144,6 +144,22 @@ export async function softDeleteAccount(
         ? "worker"
         : roles?.[0]?.role ?? null;
 
+    // Restaurant accounts: block the deletion until the owner explicitly
+    // confirms the cancellation of imminent / in-progress shifts.
+    let restaurantImpact: AccountDeletionImpact | null = null;
+    if (role === "restaurant") {
+      restaurantImpact = await loadRestaurantDeletionImpact(userId);
+      if (restaurantImpact.imminent_shifts > 0 && options.confirmActiveShifts !== true) {
+        return {
+          ok: false,
+          error_code: "active_shifts_confirmation_required",
+          message:
+            "Alcuni lavoratori sono già stati assegnati a turni imminenti o in corso. Eliminando il profilo, questi turni saranno annullati e i lavoratori verranno avvisati.",
+          impact: restaurantImpact as unknown as Record<string, number>,
+        };
+      }
+    }
+
     const { error: feedbackError } = await supabaseAdmin.from("account_deletion_feedback").insert({
       user_id: userId,
       profile_id: userId,
@@ -153,6 +169,19 @@ export async function softDeleteAccount(
     } as never);
 
     if (feedbackError) throw feedbackError;
+
+    // Transactional cleanup: cancel announcements / applications / proposals /
+    // future shifts and notify every involved worker exactly once.
+    if (role === "restaurant") {
+      const { error: cleanupError } = await (supabaseAdmin as never as {
+        rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      }).rpc("process_restaurant_account_deletion", { _uid: userId });
+      if (cleanupError) {
+        // Do NOT abort: the profile must still be flagged as deleted so that
+        // its announcements stop being visible to workers.
+        console.error("[deleteAccount] restaurant cleanup failed", cleanupError);
+      }
+    }
 
     const anonymizedProfile = {
       is_deleted: true,
