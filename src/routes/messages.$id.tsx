@@ -2798,11 +2798,23 @@ function Thread() {
             </div>
           );
         })()}
-        {proposalMessages.length > 0 && (
+        {(() => {
+          // Static shift page: the proposal recap (role, date, venue, address,
+          // compensation, dress code, tasks, languages, requirements) is
+          // already rendered by the summary boxes above, so only proposals
+          // that still need a decision are shown — as a bare action block.
+          const pendingProposals = proposalMessages.filter((m) => {
+            const own = proposalStatuses[m.id];
+            const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
+            const eff = own ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
+            return eff !== "accepted" && eff !== "rejected" && eff !== "not_interested" && eff !== "expired";
+          });
+          if (pendingProposals.length === 0) return null;
+          return (
           <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-proposta">
-            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">Proposta e risposta</h2>
+            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">Azioni disponibili</h2>
             <div className="space-y-3">
-              {proposalMessages.map((m) => {
+              {pendingProposals.map((m) => {
               const ownStatus = proposalStatuses[m.id];
               const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
               // Per-proposal status is authoritative. Legacy proposals (no recorded
@@ -2830,6 +2842,7 @@ function Thread() {
                 <ProposalCard
                   message={m}
                   ann={ann}
+                  compact
                   venueName={venueName}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
@@ -2970,31 +2983,14 @@ function Thread() {
               })}
             </div>
           </section>
-        )}
-        <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-comunicazioni">
-          <h2 id="sec-comunicazioni" className="text-sm font-semibold mb-3">Comunicazioni registrate</h2>
-          {recordedCommunications.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nessuna comunicazione registrata per questo turno.
-            </p>
-          ) : (
-            <ul className="divide-y">
-              {recordedCommunications.map((m) => (
-                <li key={m.id} className="py-2.5 first:pt-0 last:pb-0">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                    <span className="text-xs font-medium">
-                      {m.sender_id === user?.id ? "Tu" : displayOtherName}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground tabular-nums">
-                      {formatTs(m.created_at)}
-                    </span>
-                  </div>
-                  <p className="mt-1 whitespace-pre-line text-sm text-foreground/90">{m.body}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          );
+        })()}
+        {/*
+          "Comunicazioni registrate" removed from this static summary page:
+          free-form chat no longer exists, so the box was permanently empty.
+          Historical rows stay untouched in the database (`messages`); they are
+          simply not rendered here until a dedicated use is defined.
+        */}
         {app && shift && user && (role === "worker" || role === "restaurant") && (
           <ShiftReviewsSection
             className="mt-4"
