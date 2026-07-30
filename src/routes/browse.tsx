@@ -68,6 +68,18 @@ type Ann = {
 type RestaurantInfo = { id: string; full_name: string | null; business_name: string | null; venue_type: string | null; city: string | null; neighborhood: string | null; rating_avg: number | null } | null;
 
 const ROLES: readonly string[] = JOB_ROLES;
+
+/** Confronto ruolo annuncio ↔ ruolo filtro: insensibile a maiuscole,
+ *  accenti e punteggiatura, con fallback sui sinonimi storici. */
+function roleFilterMatches(announcementRole: string | null | undefined, selected: string): boolean {
+  const compact = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const a = compact(String(announcementRole ?? ""));
+  const b = compact(selected);
+  if (!a) return false;
+  if (a === b) return true;
+  return normalizeRole(announcementRole) === normalizeRole(selected);
+}
 const SPEEDS = [{v:"normal",l:"Standard"},{v:"urgent",l:"Urgente"},{v:"flash",l:"Flash"}];
 
 function roleEmoji(role: string | null | undefined): string {
