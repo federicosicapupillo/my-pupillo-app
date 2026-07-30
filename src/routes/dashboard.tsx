@@ -1,5 +1,6 @@
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { BolognaLaunchBanner } from "@/components/BolognaLaunchBanner";
+import { AvailabilitySetupBanner } from "@/components/AvailabilitySetupBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -291,6 +292,8 @@ function DashboardInner() {
       />
 
       <BolognaLaunchBanner role={role} className="mb-6" />
+
+      {role === "worker" && <AvailabilitySetupBanner userId={user?.id} className="mb-6" />}
 
       {role === "restaurant" && <PayOnHireBox className="mb-6" />}
 
