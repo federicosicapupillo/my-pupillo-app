@@ -1,5 +1,6 @@
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { BolognaLaunchBanner } from "@/components/BolognaLaunchBanner";
+import { AvailabilitySetupBanner } from "@/components/AvailabilitySetupBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -289,6 +290,8 @@ function DashboardInner() {
           <Link to="/ristoratore/annunci/nuovo"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>
         )}
       />
+
+      {role === "worker" && <AvailabilitySetupBanner userId={user?.id} className="mb-6" />}
 
       <BolognaLaunchBanner role={role} className="mb-6" />
 
