@@ -566,7 +566,9 @@ function Thread() {
     setTplCategory("post_shift");
     setReviewOpen(true);
     const t = window.setTimeout(() => {
-      document.getElementById("review-block")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const target =
+        document.getElementById("shift-reviews") ?? document.getElementById("review-block");
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 250);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
