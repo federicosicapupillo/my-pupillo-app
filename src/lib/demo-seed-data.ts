@@ -20,7 +20,11 @@ export const DEMO_LAST_NAMES = [
   "Gentile", "Marini", "Vitale",
 ];
 
-export const DEMO_WORKER_ROLES = [
+/**
+ * Ruoli usati dai dati demo/seed E2E: derivano dal catalogo unico, così i
+ * dati generati sono nello stesso formato canonico dei dati reali.
+ */
+export const DEMO_WORKER_ROLES: string[] = [
   "cameriere",
   "barista",
   "chef",
@@ -31,7 +35,7 @@ export const DEMO_WORKER_ROLES = [
   "sommelier",
   "hostess",
   "addetto_sala",
-];
+].map((id) => roleLabelOf(id));
 
 export const DEMO_VENUE_TYPES = [
   "ristorante",
