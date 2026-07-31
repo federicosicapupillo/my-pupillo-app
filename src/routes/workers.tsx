@@ -1501,6 +1501,7 @@ function WorkersPage() {
   return (
     <AppShell>
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
+      <LaunchAreaNotice className="mb-4" />
       <RequiredReviewsBanner />
       <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
       {paymentsEnabled ? (

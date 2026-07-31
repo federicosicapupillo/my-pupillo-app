@@ -797,6 +797,8 @@ function NewRestaurantJobRequest() {
         action={<Link to="/announcements"><Button variant="outline" className="gap-2"><X className="h-4 w-4" />Torna agli annunci</Button></Link>}
       />
 
+      <LaunchAreaNotice className="mx-auto mb-4 max-w-5xl" />
+
       <form className="mx-auto max-w-5xl space-y-6" onSubmit={(e) => e.preventDefault()}>
         <section className="rounded-2xl border bg-card p-5 space-y-4">
           <SectionTitle number="1" title="Informazioni principali" />
