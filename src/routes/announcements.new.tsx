@@ -537,8 +537,8 @@ function NewAnn() {
           <Select value={f.professional_profile} onValueChange={v => setF({ ...f, professional_profile: v })}>
             <SelectTrigger><SelectValue placeholder="Seleziona un ruolo" /></SelectTrigger>
             <SelectContent>
-              {["cameriere","bartender","chef","aiuto cucina","runner","lavapiatti","hostess","responsabile sala"].map(r => (
-                <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>
+              {JOB_ROLES.map(r => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
             </SelectContent>
           </Select>
