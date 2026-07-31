@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateIT, formatTariff } from "@/lib/format";
+import { roleLabelOf } from "@/lib/job-roles";
 import { PUBLIC_VENUE_NAME, publicLocationLabel } from "@/lib/public-location";
 import {
   checkWorkerShiftConflict,
