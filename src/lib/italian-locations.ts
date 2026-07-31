@@ -1,3 +1,9 @@
+import {
+  ACTIVE_LAUNCH_AREAS,
+  LAUNCH_AREA_RESTRICTED,
+  isProvinceAllowed,
+} from "./launch-area";
+
 export type CityEntry = {
   name: string;
   caps: string[];
@@ -10,7 +16,9 @@ export type ProvinceLocation = {
 };
 
 // MVP set of Italian provinces with main comuni and CAP. Extendable in future.
-export const ITALIAN_LOCATIONS: ProvinceLocation[] = [
+// NB: la lista completa NON è quella esposta all'app: `ITALIAN_LOCATIONS`
+// (in fondo al blocco) è filtrata sulle aree di lancio attive.
+const ALL_ITALIAN_LOCATIONS_RAW: ProvinceLocation[] = [
   {
     province: "Milano",
     province_code: "MI",
