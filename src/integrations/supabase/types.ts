@@ -2674,6 +2674,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      canonical_job_role: { Args: { _value: string }; Returns: string }
       consume_credits: {
         Args: { _amount: number; _reason: string; _reference_id?: string }
         Returns: boolean
