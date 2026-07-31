@@ -10,6 +10,7 @@ import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle, Zap } from "lucide-re
 import { CREDIT_PACKS, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
 import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
+import { LaunchPricingNotice } from "@/components/LaunchPricingNotice";
 import { Progress } from "@/components/ui/progress";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { Input } from "@/components/ui/input";
@@ -271,6 +272,7 @@ function Billing() {
       <PageHeader title="Crediti" subtitle="Gestisci il saldo crediti del tuo locale" />
 
       {!paymentsEnabled && <FreeLaunchBanner className="mb-6" />}
+      {!paymentsEnabled && <LaunchPricingNotice className="mb-6" />}
       {paymentsEnabled && <PayOnHireBox className="mb-6" />}
 
       {syncingPayment && (
