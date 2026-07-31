@@ -20,10 +20,10 @@ export function AdminLaunchAreasSection() {
       </div>
 
       {LAUNCH_AREAS.map((area) => (
-        <div key={area.id} className="rounded-2xl border bg-card p-5">
+        <div key={area.code} className="rounded-2xl border bg-card p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-semibold">
-              {area.label} — {area.province} ({area.province_code})
+              {area.name} — {area.province} ({area.province_code})
             </h3>
             <span
               className={`rounded-full border px-3 py-1 text-xs font-semibold ${
