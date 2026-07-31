@@ -26,6 +26,7 @@ import {
   BEARD_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS,
 } from "@/lib/announcement-requirements";
 import { isValidCapForCity } from "@/lib/italian-locations";
+import { JOB_ROLES } from "@/lib/job-roles";
 import { CapField } from "@/components/CapField";
 import { DateField } from "@/components/DateField";
 import { HourlyRateInput } from "@/components/HourlyRateInput";
