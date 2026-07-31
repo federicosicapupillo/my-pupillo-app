@@ -17,20 +17,8 @@ export type RoleCompatibilityResult = {
   workerRoles: string[];     // normalised worker roles
 };
 
-// Cheap alias table — keep in sync with workers.tsx ROLE_ALIASES (lower-case).
-// We intentionally keep this small: just the common Italian variants.
-const ROLE_ALIASES: Record<string, string[]> = {
-  cameriere: ["cameriere", "cameriera", "sala", "addetto sala", "addetta sala", "waiter", "waitress"],
-  cameriera: ["cameriere", "cameriera", "sala", "addetto sala", "addetta sala", "waiter", "waitress"],
-  lavapiatti: ["lavapiatti", "dishwasher", "plonge"],
-  cuoco: ["cuoco", "cuoca", "chef", "capo cucina"],
-  aiuto_cuoco: ["aiuto cuoco", "aiuto-cuoco", "aiuto_cuoco", "commis", "commis di cucina"],
-  pizzaiolo: ["pizzaiolo", "pizzaiola"],
-  barista: ["barista", "bartender"],
-  bartender: ["barista", "bartender"],
-  runner: ["runner", "addetto runner"],
-  hostess: ["hostess", "host", "accoglienza"],
-};
+// Gli alias legacy vivono nel catalogo unico dei ruoli (`src/lib/job-roles.ts`).
+import { isSameRole } from "@/lib/job-roles";
 
 function normalize(s: string | null | undefined): string {
   return (s ?? "").toString().trim().toLowerCase();
@@ -60,8 +48,7 @@ export function getRoleCompatibility(
   if (roles.length === 0) {
     return { status: "unknown", requiredRoleLabel: required, workerRoles: roles };
   }
-  const aliases = ROLE_ALIASES[required] ?? [required];
-  const match = roles.some((r) => aliases.some((a) => r === a || r.includes(a) || a.includes(r)));
+  const match = roles.some((r) => isSameRole(r, required));
   return {
     status: match ? "compatible" : "not_compatible",
     requiredRoleLabel: required,
