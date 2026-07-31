@@ -1496,6 +1496,11 @@ function Onboarding() {
         toast.error("Indica la città di partenza per la tua area di interesse.");
         return;
       }
+      if (!isLocationAllowed({ city: form.service_area_city.trim() })) {
+        setBusy(false); submittingRef.current = false;
+        toast.error(LAUNCH_AREA_ERROR_MESSAGE);
+        return;
+      }
       if (areaMode === "zones" && selectedZones.length === 0) {
         setBusy(false); submittingRef.current = false;
         toast.error("Indica la zona o il quartiere della tua area di interesse.");
