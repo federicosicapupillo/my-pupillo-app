@@ -2650,6 +2650,10 @@ export type Database = {
         Args: { _allowed: string[]; _patch: Json }
         Returns: undefined
       }
+      accept_application_atomic: {
+        Args: { _application_id: string }
+        Returns: Json
+      }
       admin_launch_area_stats: { Args: never; Returns: Json }
       admin_set_account_status: {
         Args: { _reason?: string; _status: string; _user_id: string }
