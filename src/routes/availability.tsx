@@ -67,26 +67,12 @@ import {
   startOfMonth,
   toIso,
 } from "@/lib/availability-calendar";
-import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity } from "@/lib/worker-cities";
+import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity, provinceCodeForCity } from "@/lib/worker-cities";
 import { useAvailableNowEnabled } from "@/lib/use-available-now-enabled";
 import { useWorkerSpecialAvailabilityEnabled } from "@/lib/use-worker-special-availability-enabled";
 
-// Province codes for the supported worker cities. Keep aligned with WORKER_CITIES.
-const CITY_PROVINCE_CODE: Record<string, string> = {
-  Milano: "MI",
-  Roma: "RM",
-  Torino: "TO",
-  Bologna: "BO",
-  Firenze: "FI",
-  Napoli: "NA",
-  Genova: "GE",
-  Verona: "VR",
-  Venezia: "VE",
-  Bari: "BA",
-};
-
 function provinceForCity(city: string): string {
-  return CITY_PROVINCE_CODE[city] ?? "";
+  return provinceCodeForCity(city);
 }
 
 export const Route = createFileRoute("/availability")({
