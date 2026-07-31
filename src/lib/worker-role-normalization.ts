@@ -1,30 +1,5 @@
-const ROLE_SYNONYMS: Record<string, string[]> = {
-  cameriere: ["cameriere", "camerieri", "cameriera", "cameriere di sala", "commis di sala", "chef de rang", "responsabile di sala"],
-  bartender: ["bartender", "bar tender", "bar_tender", "barman", "barlady", "addetto cocktail", "addetta cocktail", "preparazione cocktail", "preparazione_cocktail", "cocktail base"],
-  barista: ["barista", "caffetteria"],
-  chef: ["chef", "cuoco", "cuoca", "head chef", "executive chef", "sous chef"],
-  "aiuto cuoco": ["aiuto cuoco", "aiuto cucina", "aiuto_cucina", "commis di cucina", "commis_cucina"],
-  runner: ["runner"],
-  lavapiatti: ["lavapiatti", "lavaggio piatti"],
-  pizzaiolo: ["pizzaiolo", "pizzaiola", "pizzeria"],
-  hostess: ["hostess", "steward", "hostess / steward", "addetto accoglienza", "addetto_accoglienza", "accoglienza", "receptionist", "reception"],
-  sommelier: ["sommelier"],
-  "addetto sala": ["addetto sala", "addetto_sala"],
-  "addetto banco": ["addetto banco", "addetto_banco", "banconista", "bancone", "addetto cassa", "addetto_cassa", "cassa", "cassiere", "cassiera"],
-  "addetto cucina": ["addetto cucina", "addetto_cucina", "kitchen helper", "kitchen porter"],
-  "responsabile sala": ["responsabile sala", "responsabile di sala", "maitre", "maître", "capo sala", "caposala"],
-  "addetto catering": ["addetto catering", "catering", "banqueting", "addetto banqueting"],
-  "sicurezza / controllo accessi": ["sicurezza", "controllo accessi", "security", "buttafuori", "addetto sicurezza", "steward sicurezza"],
-  "dj / intrattenimento": ["dj", "deejay", "intrattenimento", "intrattenitore", "musica"],
-  "animatore eventi": ["animatore eventi", "animatore", "animatrice", "animazione", "event animator"],
-};
-
-const ALIAS_TO_CANONICAL = Object.entries(ROLE_SYNONYMS).reduce<Record<string, string>>((acc, [canonical, aliases]) => {
-  const canonicalKey = compactRole(canonical);
-  acc[canonicalKey] = canonicalKey;
-  for (const alias of aliases) acc[compactRole(alias)] = canonicalKey;
-  return acc;
-}, {});
+// Alias e ruoli canonici arrivano dal catalogo unico dei ruoli.
+import { roleIdOf } from "@/lib/job-roles";
 
 function compactRole(value: string): string {
   return value
@@ -39,7 +14,7 @@ function compactRole(value: string): string {
 export function normalizeRole(role: string | null | undefined): string {
   const compacted = compactRole(String(role ?? ""));
   if (!compacted) return "";
-  return ALIAS_TO_CANONICAL[compacted] ?? compacted;
+  return roleIdOf(role) ?? compacted;
 }
 
 export function splitRoleValue(value: unknown): string[] {
