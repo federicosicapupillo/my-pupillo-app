@@ -166,12 +166,8 @@ const CATEGORY_LABEL: Record<Category, string> = {
 const SUBCATEGORIES: Record<Category, string[]> = {
   all: ["Tutti i campi", "Più rilevanti", "Ultimi attivi", "Miglior rating", "Più affidabili"],
   name_profile: ["Nome", "Cognome", "Nome completo", "Titolo profilo", "Descrizione profilo"],
-  role: [
-    "Cameriere", "Bartender", "Barista", "Chef", "Aiuto cucina", "Lavapiatti",
-    "Runner", "Responsabile di sala", "Hostess", "Receptionist", "Pizzaiolo",
-    "Addetto catering", "Commis di sala", "Commis di cucina", "Sommelier",
-    "Barman", "Banconista", "Altro ruolo",
-  ],
+  // Sorgente unica condivisa con annunci, onboarding, profilo e "Trova offerte".
+  role: [...JOB_ROLES],
   skill: [
     "Servizio al tavolo", "Saper portare tre piatti", "Uso palmare/comande",
     "Preparazione cocktail", "Caffetteria", "Gestione cassa", "Banqueting",
@@ -298,27 +294,8 @@ function distanceM(lat1: number, lng1: number, lat2: number, lng2: number) {
 // risultare automaticamente "runner", un "aiuto cucina" non deve
 // diventare "lavapiatti" ecc. Le card mostrerebbero un ruolo per cui il
 // lavoratore non è davvero qualificato.
-const ROLE_ALIASES: Record<string, string[]> = {
-  cameriere: ["cameriere", "camerieri", "cameriera", "commis di sala", "chef de rang", "responsabile di sala"],
-  "chef de rang": ["chef de rang", "cameriere"],
-  bartender: ["bartender", "barman", "barlady"],
-  barista: ["barista", "caffetteria"],
-  chef: ["chef", "cuoco", "cuoca"],
-  cuoco: ["cuoco", "cuoca", "chef"],
-  "aiuto cucina": ["aiuto cucina", "commis di cucina", "aiuto cuoco"],
-  runner: ["runner"],
-  lavapiatti: ["lavapiatti", "lavaggio piatti"],
-  pizzaiolo: ["pizzaiolo", "pizzaiola", "pizzeria"],
-  hostess: ["hostess", "steward", "accoglienza"],
-  "hostess / steward": ["hostess", "steward", "accoglienza"],
-  steward: ["steward", "hostess"],
-  sommelier: ["sommelier"],
-  "addetto sala": ["addetto sala", "sala"],
-  "addetto cassa": ["addetto cassa", "cassa", "cassiere", "cassiera"],
-  banconista: ["banconista", "bancone"],
-  receptionist: ["receptionist", "reception", "accoglienza"],
-  "addetto accoglienza": ["accoglienza", "hostess", "steward", "receptionist"],
-};
+// Gli alias/varianti legacy vivono nel catalogo condiviso `src/lib/job-roles.ts`:
+// il confronto avviene sempre sull'identificativo tecnico del ruolo.
 
 // Solo ruolo principale + ruoli secondari: NON usiamo professional_profile
 // (bio libera) per matchare il ruolo, perché introduce falsi positivi
@@ -332,11 +309,8 @@ function workerRolesList(w: W): string[] {
 
 function workerMatchesRole(w: W, role: string | null | undefined): boolean {
   if (!role) return true;
-  const key = role.trim().toLowerCase();
-  if (!key) return true;
-  const aliases = ROLE_ALIASES[key] ?? [key];
-  const roles = workerRolesList(w);
-  return roles.some((r) => aliases.some((a) => r === a || r.includes(a)));
+  if (!role.trim()) return true;
+  return workerRolesList(w).some((r) => isSameRole(r, role));
 }
 
 function plainRole(value: string | null | undefined): string {
@@ -452,13 +426,7 @@ export function pickDisplayedRole(
   const primary = (w.primary_role ?? "").trim();
   const target = (targetRole ?? "").trim();
   if (!target) return { label: primary, secondary: null };
-  const key = target.toLowerCase();
-  const aliases = ROLE_ALIASES[key] ?? [key];
-  const match = (s: string) => {
-    const v = s.toLowerCase().trim();
-    if (!v) return false;
-    return aliases.some((a) => v === a || v.includes(a));
-  };
+  const match = (s: string) => isSameRole(s, target);
   if (primary && match(primary)) {
     return { label: primary, secondary: null };
   }
