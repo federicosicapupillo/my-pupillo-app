@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateIT, formatTariff } from "@/lib/format";
+import { roleLabelOf } from "@/lib/job-roles";
 import { PUBLIC_VENUE_NAME, publicLocationLabel } from "@/lib/public-location";
 import {
   checkWorkerShiftConflict,
@@ -20,7 +21,9 @@ export class WorkerBusyError extends Error {
  * Example: "Proposta: Bartender · 27/05 · 19:00 - 23:00".
  */
 export function buildProposalPreview(ann: ProposalAnnouncement): string {
-  const role = (ann.professional_profile ?? "").trim();
+  // Etichetta canonica dal catalogo unico: un annuncio salvato con un valore
+  // legacy ("dj", "banconista") mostra comunque il ruolo canonico.
+  const role = roleLabelOf(ann.professional_profile ?? "").trim();
   const parts: string[] = [];
   if (role) parts.push(role.charAt(0).toUpperCase() + role.slice(1));
   if (ann.service_date) {

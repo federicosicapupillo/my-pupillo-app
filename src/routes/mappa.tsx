@@ -29,6 +29,7 @@ import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { displayWorkerName } from "@/lib/worker-display";
 import { loadRestaurantWorkerSearchResults } from "@/lib/worker-search.functions";
 import { WORKER_ROLES } from "@/lib/worker-roles";
+import { roleLabelOf } from "@/lib/job-roles";
 import { workerMatchesAnyRoleField, normalizeRole, collectWorkerRoleValues, collectWorkerCompetenceValues } from "@/lib/worker-role-normalization";
 import { summarizeWeeklyAvailability } from "@/lib/availability-summary";
 import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summary";
@@ -306,21 +307,13 @@ function maskedZoneLabel(r: { neighborhood?: string | null; city?: string | null
   return "Zona non specificata";
 }
 
-// Map normalized role key -> canonical display label from WORKER_ROLES.
-const ROLE_DISPLAY_BY_NORMALIZED: Record<string, string> = WORKER_ROLES.reduce(
-  (acc, label) => {
-    const key = normalizeRole(label);
-    if (key) acc[key] = label;
-    return acc;
-  },
-  {} as Record<string, string>,
-);
-
+// Etichetta canonica risolta dal catalogo unico (gestisce anche id tecnici e
+// alias legacy come "DJ", "banconista", "maitre"). Nessuna mappa locale.
 function toDisplayRole(value: string): string {
+  const canonical = roleLabelOf(value);
+  if (canonical) return canonical;
   const key = normalizeRole(value);
   if (!key) return value.trim();
-  if (ROLE_DISPLAY_BY_NORMALIZED[key]) return ROLE_DISPLAY_BY_NORMALIZED[key];
-  // Title-case fallback for unknown roles
   return key
     .split(" ")
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
