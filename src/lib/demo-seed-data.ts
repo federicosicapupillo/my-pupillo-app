@@ -24,20 +24,10 @@ export const DEMO_LAST_NAMES = [
  * Ruoli usati dai dati demo/seed E2E: derivano dal catalogo unico, così i
  * dati generati sono nello stesso formato canonico dei dati reali.
  */
-import { roleLabelOf } from "@/lib/job-roles";
+import { ACTIVE_JOB_ROLES } from "@/lib/job-roles";
 
-export const DEMO_WORKER_ROLES: string[] = [
-  "cameriere",
-  "barista",
-  "chef",
-  "aiuto_cucina",
-  "lavapiatti",
-  "pizzaiolo",
-  "runner",
-  "sommelier",
-  "hostess",
-  "addetto_sala",
-].map((id) => roleLabelOf(id));
+/** Primi 10 ruoli del catalogo, in etichetta canonica: nessuna lista propria. */
+export const DEMO_WORKER_ROLES: string[] = ACTIVE_JOB_ROLES.slice(0, 10).map((r) => r.label);
 
 export const DEMO_VENUE_TYPES = [
   "ristorante",
