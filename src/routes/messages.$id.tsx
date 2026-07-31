@@ -1816,6 +1816,12 @@ function Thread() {
 
   const sendCounter = async () => {
     if (sendingCounter) return;
+    // Feature flag OFF: creation of NEW counteroffers is disabled (existing
+    // ones stay fully manageable).
+    if (!counterofferEnabled) {
+      toast.error("La funzione controfferta non è al momento disponibile.");
+      return;
+    }
     const v = parseFloat(counterValue);
     if (!v || v <= 0) { toast.error("Inserisci un importo valido"); return; }
     if (!app || !user) return;
@@ -1825,7 +1831,11 @@ function Thread() {
       status: "counter_offer", proposed_tariff: v,
       ...(role === "worker" ? { worker_response_at: new Date().toISOString() } : {}),
     }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      console.error("[counteroffer] create failed", error);
+      toast.error("Non è stato possibile inviare la controfferta. Riprova.");
+      return;
+    }
     await supabase.from("messages").insert({
       application_id: id, sender_id: user.id,
       body: `💶 Controfferta: €${v} ${ann?.tariff_type === "hourly" ? "/ora" : "a servizio"}`,
@@ -2746,10 +2756,17 @@ function Thread() {
                   onClick={async () => {
                     if (!app) return;
                     const orig = ann.tariff_amount;
+                    // Resolving an existing counteroffer: clear the proposed
+                    // tariff (back to the announcement rate). Allowed even
+                    // when the counteroffer feature flag is OFF.
                     const { error } = await supabase.from("applications").update({
-                      status: "pending", proposed_tariff: orig,
+                      status: "pending", proposed_tariff: null,
                     }).eq("id", id);
-                    if (error) { toast.error(error.message); return; }
+                    if (error) {
+                      console.error("[counteroffer] restore original tariff failed", error);
+                      toast.error("Non è stato possibile aggiornare la proposta. Riprova.");
+                      return;
+                    }
                     await supabase.from("notifications").insert({
                       user_id: app.worker_id,
                       title: "Il ristoratore propone la tariffa originale",
@@ -2757,7 +2774,7 @@ function Thread() {
                       link: `/messages/${id}`,
                     });
                     await logEvent("original_rate_proposed", { tariff: orig });
-                    setApp({ ...app, status: "pending", proposed_tariff: orig } as App);
+                    setApp({ ...app, status: "pending", proposed_tariff: null } as App);
                     toast.success("Hai riproposto la tariffa originale.");
                   }}
                 >
