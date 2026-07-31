@@ -761,27 +761,42 @@ export type Database = {
       }
       launch_area_comuni: {
         Row: {
+          active: boolean
           area_code: string
+          cadastral_code: string | null
           caps: string[]
           comune: string
           created_at: string
           id: string
+          istat_code: string | null
+          lat: number | null
+          lng: number | null
           updated_at: string
         }
         Insert: {
+          active?: boolean
           area_code: string
+          cadastral_code?: string | null
           caps?: string[]
           comune: string
           created_at?: string
           id?: string
+          istat_code?: string | null
+          lat?: number | null
+          lng?: number | null
           updated_at?: string
         }
         Update: {
+          active?: boolean
           area_code?: string
+          cadastral_code?: string | null
           caps?: string[]
           comune?: string
           created_at?: string
           id?: string
+          istat_code?: string | null
+          lat?: number | null
+          lng?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2450,6 +2465,7 @@ export type Database = {
           hourly_availability: string | null
           hourly_rate: number | null
           id: string | null
+          in_launch_area: boolean | null
           is_deleted: boolean | null
           is_motorized: boolean | null
           languages: string[] | null
@@ -2520,6 +2536,7 @@ export type Database = {
           hourly_availability?: string | null
           hourly_rate?: number | null
           id?: string | null
+          in_launch_area?: never
           is_deleted?: boolean | null
           is_motorized?: boolean | null
           languages?: string[] | null
@@ -2590,6 +2607,7 @@ export type Database = {
           hourly_availability?: string | null
           hourly_rate?: number | null
           id?: string | null
+          in_launch_area?: never
           is_deleted?: boolean | null
           is_motorized?: boolean | null
           languages?: string[] | null
@@ -2632,6 +2650,7 @@ export type Database = {
         Args: { _allowed: string[]; _patch: Json }
         Returns: undefined
       }
+      admin_launch_area_stats: { Args: never; Returns: Json }
       admin_set_account_status: {
         Args: { _reason?: string; _status: string; _user_id: string }
         Returns: undefined
@@ -2644,6 +2663,10 @@ export type Database = {
       announcement_effective_end: {
         Args: { p_announcement_id: string }
         Returns: string
+      }
+      are_coords_in_launch_area: {
+        Args: { _lat: number; _lng: number }
+        Returns: boolean
       }
       award_referral_credits: {
         Args: { _referred_user_id: string }
@@ -3119,6 +3142,10 @@ export type Database = {
       validate_discount_code: {
         Args: { _applies_to?: string; _code: string }
         Returns: Json
+      }
+      validate_launch_location: {
+        Args: { _city: string; _lat?: number; _lng?: number; _province: string }
+        Returns: boolean
       }
     }
     Enums: {
