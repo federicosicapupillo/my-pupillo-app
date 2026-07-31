@@ -2187,6 +2187,7 @@ function Onboarding() {
                 />
               </div>
             </div>
+            <LaunchAreaNotice />
             <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start">
               <div data-field="province" className="scroll-mt-24">
                 <Label>Provincia *</Label>
@@ -3006,6 +3007,7 @@ function Onboarding() {
                   );
                 })}
               </div>
+              <LaunchAreaNotice />
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Città di partenza *</Label>
