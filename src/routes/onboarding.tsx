@@ -1056,6 +1056,11 @@ function Onboarding() {
         scrollToField("city");
         return;
       }
+      if (!isLocationAllowed({ city: form.city, province: form.province })) {
+        toast.error(LAUNCH_AREA_ERROR_MESSAGE);
+        scrollToField("city");
+        return;
+      }
       if (!form.postal_code.trim()) {
         toast.error("Inserisci il CAP.");
         scrollToField("postal_code");
