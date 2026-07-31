@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
+import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
+import { isLocationAllowed } from "@/lib/launch-area";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useMemo, useState } from "react";
@@ -214,6 +216,12 @@ function Browse() {
     ]);
     const statusFiltered = rawList.filter((a) => !HIDDEN_STATUSES.has(String(a.status)));
 
+    // Difesa in profondità: il DB già filtra gli annunci fuori area di lancio
+    // (vista `announcements_public`), ma non mostriamo comunque nulla fuori zona.
+    const areaFiltered = statusFiltered.filter((a) =>
+      isLocationAllowed({ city: (a as any).job_city, province: (a as any).job_province }),
+    );
+
     // Carica i profili dei ristoratori per filtrare gli annunci orfani:
     // - ristoratore eliminato (is_deleted)
     // - ristoratore non esistente nel DB
@@ -224,7 +232,7 @@ function Browse() {
     // lista degli annunci. Filtriamo quindi solo per profilo esistente e
     // non eliminato (is_deleted=true), che il lavoratore può leggere
     // tramite la policy "Profiles viewable by all authenticated".
-    const restIdsAll = Array.from(new Set(statusFiltered.map((a) => a.restaurant_id))).filter(Boolean);
+    const restIdsAll = Array.from(new Set(areaFiltered.map((a) => a.restaurant_id))).filter(Boolean);
     const restaurantsMeta: Record<string, { city: string | null; neighborhood: string | null }> = {};
     const deletedRestaurantIds = new Set<string>();
     const existingProfileIds = new Set<string>();
@@ -238,7 +246,7 @@ function Browse() {
         restaurantsMeta[r.id] = { city: r.city, neighborhood: r.neighborhood };
         if (r.is_deleted === true) deletedRestaurantIds.add(r.id);
       }
-      for (const a of statusFiltered) {
+      for (const a of areaFiltered) {
         if (!existingProfileIds.has(a.restaurant_id) || deletedRestaurantIds.has(a.restaurant_id)) {
           console.log("[PUPILLO_WORKER_OFFERS_EMPTY_REASON]", {
             announcement_id: a.id,
@@ -255,7 +263,7 @@ function Browse() {
     // Mostriamo TUTTI gli annunci attivi, eccetto quelli del ristoratore
     // eliminato. Se il profilo non è ancora caricato (es. errori RLS),
     // teniamo comunque l'annuncio visibile per non nascondere offerte valide.
-    const restaurantFiltered = statusFiltered.filter(
+    const restaurantFiltered = areaFiltered.filter(
       (a) => !deletedRestaurantIds.has(a.restaurant_id),
     );
 
@@ -273,7 +281,7 @@ function Browse() {
       source: "supabase:announcements_public",
       supabase_count: supabaseCount,
       mock_count: 0,
-      after_status_filter: statusFiltered.length,
+      after_status_filter: areaFiltered.length,
       after_real_restaurant_filter: restaurantFiltered.length,
       after_dedup: list.length,
       final_rendered: list.length,
@@ -285,7 +293,7 @@ function Browse() {
           ? "nessun annuncio attivo restituito dalla query"
           : "tutti gli annunci sono stati filtrati (status nascosto o ristoratore eliminato)",
         supabase_count: supabaseCount,
-        after_status_filter: statusFiltered.length,
+        after_status_filter: areaFiltered.length,
         after_real_restaurant_filter: restaurantFiltered.length,
       });
     }
@@ -689,6 +697,8 @@ function Browse() {
   return (
     <AppShell>
       <PageHeader title="Trova offerte" subtitle="Esplora gli annunci attivi e candidati" />
+
+      <LaunchAreaNotice className="mb-4" />
 
       <div className="rounded-2xl border bg-card p-4 mb-4">
         <div className="grid gap-3 md:grid-cols-4">

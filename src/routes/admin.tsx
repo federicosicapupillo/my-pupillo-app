@@ -19,6 +19,7 @@ import { AdminBackupSystemSection } from "@/components/AdminBackupSystemSection"
 import { AdminBackupRestoreSection } from "@/components/AdminBackupRestoreSection";
 import { AdminSupportTicketsSection } from "@/components/AdminSupportTicketsSection";
 import { AdminRoleRepairSection } from "@/components/AdminRoleRepairSection";
+import { AdminLaunchAreasSection } from "@/components/AdminLaunchAreasSection";
 import { AdminFeatureFlagsSection } from "@/components/AdminFeatureFlagsSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -288,6 +289,7 @@ function Admin() {
           <TabsTrigger value="backups">Backup</TabsTrigger>
           <TabsTrigger value="support">Segnalazioni</TabsTrigger>
           <TabsTrigger value="features">Funzionalità</TabsTrigger>
+          <TabsTrigger value="areas">Aree operative</TabsTrigger>
         </TabsList>
 
         {/* PANORAMICA */}
@@ -633,6 +635,9 @@ function Admin() {
         </TabsContent>
         <TabsContent value="features" className="space-y-6">
           <AdminFeatureFlagsSection />
+        </TabsContent>
+        <TabsContent value="areas" className="space-y-6">
+          <AdminLaunchAreasSection />
         </TabsContent>
       </Tabs>
     </AppShell>

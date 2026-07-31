@@ -759,6 +759,83 @@ export type Database = {
           },
         ]
       }
+      launch_area_comuni: {
+        Row: {
+          area_code: string
+          caps: string[]
+          comune: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          area_code: string
+          caps?: string[]
+          comune: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          area_code?: string
+          caps?: string[]
+          comune?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "launch_area_comuni_area_code_fkey"
+            columns: ["area_code"]
+            isOneToOne: false
+            referencedRelation: "launch_areas"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      launch_areas: {
+        Row: {
+          active: boolean
+          center_lat: number | null
+          center_lng: number | null
+          code: string
+          created_at: string
+          name: string
+          province: string
+          province_code: string
+          radius_km: number | null
+          region: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          center_lat?: number | null
+          center_lng?: number | null
+          code: string
+          created_at?: string
+          name: string
+          province: string
+          province_code: string
+          radius_km?: number | null
+          region: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          center_lat?: number | null
+          center_lng?: number | null
+          code?: string
+          created_at?: string
+          name?: string
+          province?: string
+          province_code?: string
+          radius_km?: number | null
+          region?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           action_type: string | null
@@ -2917,6 +2994,10 @@ export type Database = {
         Args: { _city: string; _key: string }
         Returns: boolean
       }
+      is_in_launch_area: {
+        Args: { _city: string; _province?: string }
+        Returns: boolean
+      }
       is_referral_enabled_for_user: {
         Args: { _user_id: string }
         Returns: boolean
@@ -2936,6 +3017,7 @@ export type Database = {
         Returns: string
       }
       mark_overdue_required_reviews: { Args: never; Returns: number }
+      norm_place_name: { Args: { _v: string }; Returns: string }
       normalize_vat: { Args: { _v: string }; Returns: string }
       process_restaurant_account_deletion: {
         Args: { _uid: string }

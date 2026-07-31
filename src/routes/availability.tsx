@@ -67,26 +67,13 @@ import {
   startOfMonth,
   toIso,
 } from "@/lib/availability-calendar";
-import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity } from "@/lib/worker-cities";
+import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
+import { WORKER_CITIES, ALL_ZONES_OPTION, zonesForCity, provinceCodeForCity } from "@/lib/worker-cities";
 import { useAvailableNowEnabled } from "@/lib/use-available-now-enabled";
 import { useWorkerSpecialAvailabilityEnabled } from "@/lib/use-worker-special-availability-enabled";
 
-// Province codes for the supported worker cities. Keep aligned with WORKER_CITIES.
-const CITY_PROVINCE_CODE: Record<string, string> = {
-  Milano: "MI",
-  Roma: "RM",
-  Torino: "TO",
-  Bologna: "BO",
-  Firenze: "FI",
-  Napoli: "NA",
-  Genova: "GE",
-  Verona: "VR",
-  Venezia: "VE",
-  Bari: "BA",
-};
-
 function provinceForCity(city: string): string {
-  return CITY_PROVINCE_CODE[city] ?? "";
+  return provinceCodeForCity(city);
 }
 
 export const Route = createFileRoute("/availability")({
@@ -818,6 +805,8 @@ function AvailabilityPage() {
           </Button>
         </div>
       </header>
+
+      <LaunchAreaNotice className="mb-4" />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         {/* ══════════ COLONNA SINISTRA ══════════ */}

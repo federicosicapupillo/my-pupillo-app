@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
+import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
+import { isLocationAllowed, LAUNCH_AREA_ERROR_MESSAGE, areCoordsInLaunchArea } from "@/lib/launch-area";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { RestaurantProfileGate } from "@/components/RestaurantProfileGate";
 import { useAuth } from "@/lib/auth-context";
@@ -544,6 +546,12 @@ function NewRestaurantJobRequest() {
     if (!f.province) errs.province = "Seleziona la provincia.";
     if (!f.city) errs.city = "Seleziona la città.";
     else if (f.province && !isCityInProvince(f.city, f.province)) errs.city = "La città non appartiene alla provincia scelta.";
+    if (f.city && !isLocationAllowed({ city: f.city, province: f.province })) {
+      errs.city = LAUNCH_AREA_ERROR_MESSAGE;
+    }
+    if (coords && !areCoordsInLaunchArea(coords.lat, coords.lng)) {
+      errs.address = LAUNCH_AREA_ERROR_MESSAGE;
+    }
     if (!f.district || !f.district.trim()) errs.district = "Seleziona la zona/quartiere.";
     else if (f.city && zonesForCity(f.city).length > 0 && !isValidDistrictForCity(f.city, f.district)) errs.district = "Zona/quartiere non valida.";
     if (f.province && f.city && f.postal_code && !isValidCapForCity(f.province, f.city, f.postal_code)) errs.postal_code = "Il CAP non appartiene alla città selezionata.";
@@ -794,6 +802,8 @@ function NewRestaurantJobRequest() {
         subtitle="Compila la richiesta di personale e pubblicala quando è pronta."
         action={<Link to="/announcements"><Button variant="outline" className="gap-2"><X className="h-4 w-4" />Torna agli annunci</Button></Link>}
       />
+
+      <LaunchAreaNotice className="mx-auto mb-4 max-w-5xl" />
 
       <form className="mx-auto max-w-5xl space-y-6" onSubmit={(e) => e.preventDefault()}>
         <section className="rounded-2xl border bg-card p-5 space-y-4">

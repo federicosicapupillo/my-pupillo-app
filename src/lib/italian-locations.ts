@@ -1,3 +1,9 @@
+import {
+  ACTIVE_LAUNCH_AREAS,
+  LAUNCH_AREA_RESTRICTED,
+  isProvinceAllowed,
+} from "./launch-area";
+
 export type CityEntry = {
   name: string;
   caps: string[];
@@ -10,7 +16,9 @@ export type ProvinceLocation = {
 };
 
 // MVP set of Italian provinces with main comuni and CAP. Extendable in future.
-export const ITALIAN_LOCATIONS: ProvinceLocation[] = [
+// NB: la lista completa NON è quella esposta all'app: `ITALIAN_LOCATIONS`
+// (in fondo al blocco) è filtrata sulle aree di lancio attive.
+const ALL_ITALIAN_LOCATIONS_RAW: ProvinceLocation[] = [
   {
     province: "Milano",
     province_code: "MI",
@@ -80,16 +88,8 @@ export const ITALIAN_LOCATIONS: ProvinceLocation[] = [
   {
     province: "Bologna",
     province_code: "BO",
-    cities: [
-      { name: "Bologna", caps: ["40121","40122","40123","40124","40125","40126","40127","40128","40129","40131","40132","40133","40134","40135","40136","40137","40138","40139","40141"] },
-      { name: "Imola", caps: ["40026"] },
-      { name: "Casalecchio di Reno", caps: ["40033"] },
-      { name: "San Lazzaro di Savena", caps: ["40068"] },
-      { name: "Castel Maggiore", caps: ["40013"] },
-      { name: "Pianoro", caps: ["40065"] },
-      { name: "Zola Predosa", caps: ["40069"] },
-      { name: "Budrio", caps: ["40054"] },
-    ],
+    // Elenco completo dei 55 comuni: unica sorgente in `@/lib/launch-area`.
+    cities: [],
   },
   {
     province: "Napoli",
@@ -127,6 +127,30 @@ export const ITALIAN_LOCATIONS: ProvinceLocation[] = [
     ],
   },
 ];
+
+/**
+ * Tutte le province note, con i comuni delle aree di lancio iniettati
+ * dalla configurazione territoriale centralizzata.
+ */
+export const ALL_ITALIAN_LOCATIONS: ProvinceLocation[] =
+  ALL_ITALIAN_LOCATIONS_RAW.map((p) => {
+    const area = ACTIVE_LAUNCH_AREAS.find(
+      (a) => a.province_code === p.province_code,
+    );
+    if (!area) return p;
+    return {
+      ...p,
+      cities: area.comuni.map((c) => ({ name: c.name, caps: c.caps })),
+    };
+  });
+
+/**
+ * Province effettivamente selezionabili nell'app: filtrate sulle aree di
+ * lancio attive (fase Bologna). Se nessuna area è attiva, nessun filtro.
+ */
+export const ITALIAN_LOCATIONS: ProvinceLocation[] = LAUNCH_AREA_RESTRICTED
+  ? ALL_ITALIAN_LOCATIONS.filter((p) => isProvinceAllowed(p.province_code))
+  : ALL_ITALIAN_LOCATIONS;
 
 function findProvince(province?: string | null): ProvinceLocation | undefined {
   if (!province) return undefined;

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
+import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
+import { isLocationAllowed } from "@/lib/launch-area";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -1281,6 +1283,15 @@ function WorkersPage() {
       : null;
   const activeRoleContext: string | null = advancedRole ?? announcementRole ?? null;
   const filtered = workers.filter((worker) => {
+    // Lancio Bologna: mostra solo lavoratori la cui area di riferimento
+    // rientra nell'area operativa attiva (difesa in profondità lato client).
+    const wCity =
+      (worker as any).location_city ??
+      worker.service_area_city ??
+      (worker as any).residence_city ??
+      (worker as any).city ??
+      null;
+    if (wCity && !isLocationAllowed({ city: wCity })) return false;
     // PUPILLO: anche se l'utente ha scelto un ruolo specifico nella
     // ricerca avanzata, NON nascondiamo i lavoratori che non lo hanno tra
     // le mansioni dichiarate. Restano visibili in coda con un badge
@@ -1499,6 +1510,7 @@ function WorkersPage() {
   return (
     <AppShell>
       <PageHeader title="Cerca lavoratori" subtitle="Trova personale extra disponibile" />
+      <LaunchAreaNotice className="mb-4" />
       <RequiredReviewsBanner />
       <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
       {paymentsEnabled ? (

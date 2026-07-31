@@ -63,6 +63,8 @@ import { BirthDateSelect } from "@/components/BirthDateSelect";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { WORKER_ROLES } from "@/lib/worker-roles";
 import { normalizeRole } from "@/lib/worker-role-normalization";
+import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
+import { isLocationAllowed, LAUNCH_AREA_ERROR_MESSAGE } from "@/lib/launch-area";
 import { WORKER_CITIES, zonesForCity, ALL_ZONES_OPTION } from "@/lib/worker-cities";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { NATIONALITIES } from "@/lib/nationalities";
@@ -1054,6 +1056,11 @@ function Onboarding() {
         scrollToField("city");
         return;
       }
+      if (!isLocationAllowed({ city: form.city, province: form.province })) {
+        toast.error(LAUNCH_AREA_ERROR_MESSAGE);
+        scrollToField("city");
+        return;
+      }
       if (!form.postal_code.trim()) {
         toast.error("Inserisci il CAP.");
         scrollToField("postal_code");
@@ -1487,6 +1494,11 @@ function Onboarding() {
       if (!form.service_area_city.trim()) {
         setBusy(false); submittingRef.current = false;
         toast.error("Indica la città di partenza per la tua area di interesse.");
+        return;
+      }
+      if (!isLocationAllowed({ city: form.service_area_city.trim() })) {
+        setBusy(false); submittingRef.current = false;
+        toast.error(LAUNCH_AREA_ERROR_MESSAGE);
         return;
       }
       if (areaMode === "zones" && selectedZones.length === 0) {
@@ -2185,6 +2197,7 @@ function Onboarding() {
                 />
               </div>
             </div>
+            <LaunchAreaNotice />
             <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start">
               <div data-field="province" className="scroll-mt-24">
                 <Label>Provincia *</Label>
@@ -3004,6 +3017,7 @@ function Onboarding() {
                   );
                 })}
               </div>
+              <LaunchAreaNotice />
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Città di partenza *</Label>
