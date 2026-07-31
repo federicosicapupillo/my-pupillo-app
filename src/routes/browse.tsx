@@ -216,6 +216,12 @@ function Browse() {
     ]);
     const statusFiltered = rawList.filter((a) => !HIDDEN_STATUSES.has(String(a.status)));
 
+    // Difesa in profondità: il DB già filtra gli annunci fuori area di lancio
+    // (vista `announcements_public`), ma non mostriamo comunque nulla fuori zona.
+    const areaFiltered = statusFiltered.filter((a) =>
+      isLocationAllowed({ city: (a as any).job_city, province: (a as any).job_province }),
+    );
+
     // Carica i profili dei ristoratori per filtrare gli annunci orfani:
     // - ristoratore eliminato (is_deleted)
     // - ristoratore non esistente nel DB
