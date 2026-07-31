@@ -24,6 +24,8 @@ export const DEMO_LAST_NAMES = [
  * Ruoli usati dai dati demo/seed E2E: derivano dal catalogo unico, così i
  * dati generati sono nello stesso formato canonico dei dati reali.
  */
+import { roleLabelOf } from "@/lib/job-roles";
+
 export const DEMO_WORKER_ROLES: string[] = [
   "cameriere",
   "barista",
