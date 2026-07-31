@@ -1355,6 +1355,9 @@ function Thread() {
     if (!app || !user) return;
     if (transitioning) return;
     setTransitioning(next);
+    // True when the assignment has been performed atomically server-side
+    // (credits + application status + announcement in one transaction).
+    let assignedAtomically = false;
     try {
     // Charge credits to the restaurant only on shift assignment confirmation.
     if (next === "accepted" && role === "restaurant" && app.status !== "accepted") {
@@ -1439,14 +1442,35 @@ function Thread() {
           return;
         }
       }
-      // Use the application id as the idempotency key: one application
-      // == one worker assignment, so the same shift can never be charged twice.
-      const { consumeCredits } = await import("@/lib/credits");
-      const ok = await consumeCredits(CREDITS_PER_HIRE, "assign_worker", app.id);
-      if (!ok) {
-        console.warn("[accept-candidature] consumeCredits returned false", techCtx);
+      // Atomic + idempotent assignment: locks the application, re-validates
+      // it server-side, consumes credits, flips the status and updates the
+      // announcement inside ONE transaction. On any failure nothing is
+      // charged and nothing is partially assigned.
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "accept_application_atomic",
+        { _application_id: app.id },
+      );
+      const res = (rpcData ?? null) as { ok?: boolean; code?: string; detail?: string } | null;
+      if (rpcError || !res?.ok) {
+        console.warn("[accept-candidature] atomic assign failed", { ...techCtx, rpcError, res });
+        const code = res?.code ?? "assignment_failed";
+        if (code === "insufficient_credits") {
+          const { data: prof2 } = await supabase
+            .from("profiles").select("credits").eq("id", user.id).maybeSingle();
+          setCreditsAvailable(prof2?.credits ?? profile?.credits ?? 0);
+          setInsufficientOpen(true);
+        } else if (code === "announcement_full") {
+          toast.error("Il turno è già stato assegnato a un altro lavoratore.");
+        } else if (code === "not_available" || code === "not_found") {
+          toast.error("Questa proposta non è più disponibile.");
+        } else if (code === "forbidden" || code === "not_authenticated") {
+          toast.error("Non hai i permessi per completare questa operazione.");
+        } else {
+          toast.error("Non è stato possibile completare l'assegnazione. Nessun credito è stato scalato.");
+        }
         return;
       }
+      assignedAtomically = true;
       // Refresh auth profile so the credit counter in the UI reflects the new balance.
       try { await refreshAuth?.(); } catch (e) { console.warn("[accept-candidature] refresh profile failed", e); }
       // Privacy unlock debug log — captures the credit + privacy state at the
@@ -1483,7 +1507,14 @@ function Thread() {
     }
     const patch: any = { status: next, ...extra };
     if (role === "worker") patch.worker_response_at = new Date().toISOString();
-    const { error } = await supabase.from("applications").update(patch).eq("id", id);
+    const extraKeys = Object.keys(extra ?? {});
+    // The atomic RPC already set status = 'accepted'; only apply leftover
+    // fields (if any) so we never re-run the whole transition client-side.
+    const { error } = assignedAtomically
+      ? (extraKeys.length
+          ? await supabase.from("applications").update({ ...extra } as any).eq("id", id)
+          : { error: null as any })
+      : await supabase.from("applications").update(patch).eq("id", id);
     if (error) {
       console.error("[accept-candidature] application update failed", {
         application_id: app.id,
@@ -1501,7 +1532,7 @@ function Thread() {
       }
       return;
     }
-    if (next === "accepted" && app.announcement_id) {
+    if (next === "accepted" && app.announcement_id && !assignedAtomically) {
       // Multi-position aware: only mark the announcement as `assigned` (which
       // closes it) when the last open slot is taken. Always record this worker
       // as the most recent assigned_worker_id for chat-side display.
