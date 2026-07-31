@@ -172,12 +172,38 @@ export function isLocationAllowed(input: {
 /** Verifica che delle coordinate ricadano nell'area attiva (anti-geocoding fuori zona). */
 export function areCoordsInLaunchArea(lat?: number | null, lng?: number | null): boolean {
   if (!LAUNCH_AREA_RESTRICTED) return true;
-  if (typeof lat !== "number" || typeof lng !== "number") return true;
+  if (lat == null && lng == null) return true;
+  if (typeof lat !== "number" || typeof lng !== "number") return false;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+  if (Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001) return false;
   return ACTIVE_LAUNCH_AREAS.some((a) => {
     const dLat = (lat - a.center[0]) * 111;
     const dLng = (lng - a.center[1]) * 111 * Math.cos((a.center[0] * Math.PI) / 180);
-    return Math.sqrt(dLat * dLat + dLng * dLng) <= a.radius_km;
+    // stessa tolleranza di confine usata dal database (+5 km)
+    return Math.sqrt(dLat * dLat + dLng * dLng) <= a.radius_km + 5;
   });
+}
+
+/**
+ * Validazione combinata comune + provincia + coordinate.
+ * Rispecchia `public.validate_launch_location` a database: usare questa
+ * funzione (e non i singoli controlli) prima di ogni scrittura.
+ */
+export function validateLaunchLocation(input: {
+  city?: string | null;
+  province?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+}): boolean {
+  if (!LAUNCH_AREA_RESTRICTED) return true;
+  const { city, province, lat, lng } = input;
+  if (city) {
+    if (!isComuneAllowed(city)) return false;
+    if (province && !isProvinceAllowed(province)) return false;
+  } else if (province && !isProvinceAllowed(province)) {
+    return false;
+  }
+  return areCoordsInLaunchArea(lat, lng);
 }
 
 /** CAP consentiti per un comune dell'area attiva. */
