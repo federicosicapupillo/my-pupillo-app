@@ -549,7 +549,7 @@ function NewRestaurantJobRequest() {
     if (f.city && !isLocationAllowed({ city: f.city, province: f.province })) {
       errs.city = LAUNCH_AREA_ERROR_MESSAGE;
     }
-    if (!areCoordsInLaunchArea(f.latitude as any, f.longitude as any)) {
+    if (coords && !areCoordsInLaunchArea(coords.lat, coords.lng)) {
       errs.address = LAUNCH_AREA_ERROR_MESSAGE;
     }
     if (!f.district || !f.district.trim()) errs.district = "Seleziona la zona/quartiere.";
