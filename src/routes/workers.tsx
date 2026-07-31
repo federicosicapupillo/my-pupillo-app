@@ -1128,15 +1128,9 @@ function WorkersPage() {
     if (!sub) return true;
     const f = fieldsOf(w);
     const s = sub.toLowerCase();
-    const roleAliases: Record<string, string[]> = {
-      cameriere: ["cameriere", "camerieri", "cameriera", "cameriere di sala", "commis di sala", "responsabile di sala"],
-      bartender: ["bartender", "barman", "barlady", "cocktail"],
-      barista: ["barista", "caffetteria", "banconista"],
-      chef: ["chef", "cuoco", "cucina"],
-      "aiuto cucina": ["aiuto cucina", "commis di cucina", "cucina", "preparazione linea"],
-      runner: ["runner", "sala"],
-      lavapiatti: ["lavapiatti", "lavaggio"],
-    };
+    // NB: nessuna mappa alias dei RUOLI qui — gli alias vivono solo in
+    // `src/lib/job-roles.ts` e i confronti passano da `isSameRole()`.
+    // Sotto restano solo alias di COMPETENZE (categoria "skill").
     const skillAliases: Record<string, string[]> = {
       "preparazione cocktail": ["cocktail", "bartender", "barman"],
       caffetteria: ["caffetteria", "barista", "banconista"],
