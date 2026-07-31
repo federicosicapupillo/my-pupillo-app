@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { LAUNCH_PRICING, formatLaunchDate } from "@/lib/launch-pricing";
 
 /**
  * Banner mostrato quando il flag `payments_enabled` è OFF (periodo di lancio).
@@ -17,7 +18,8 @@ export function FreeLaunchBanner({ className = "" }: { className?: string }) {
         </div>
         <div>
           <div className="font-semibold text-foreground">
-            Lancio Bologna — la piattaforma è gratuita fino al 31 dicembre.
+            Lancio Bologna — la piattaforma è gratuita fino al{" "}
+            {formatLaunchDate(LAUNCH_PRICING.freeUntil)}.
           </div>
           <p className="mt-0.5 text-muted-foreground">
             Confermi i lavoratori senza costi. Nessun credito viene scalato.
