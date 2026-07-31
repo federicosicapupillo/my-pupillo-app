@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { RequireAuth } from "@/components/RequireAuth";
+import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
+import { isLocationAllowed } from "@/lib/launch-area";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";

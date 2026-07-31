@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
+import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
+import { isLocationAllowed, LAUNCH_AREA_ERROR_MESSAGE, areCoordsInLaunchArea } from "@/lib/launch-area";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { RestaurantProfileGate } from "@/components/RestaurantProfileGate";
 import { useAuth } from "@/lib/auth-context";
