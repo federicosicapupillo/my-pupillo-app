@@ -212,6 +212,12 @@ export const createPortalSession = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    // Gate server-side: se i pagamenti non sono attivi, nessuno può aprire il
+    // portale fatture nemmeno chiamando direttamente questa funzione o l'URL.
+    const { data: paymentsOn } = await supabase.rpc("is_feature_enabled", { _key: "payments_enabled" });
+    if (paymentsOn === false) {
+      throw new Error("La gestione delle fatture sarà disponibile con l'attivazione dei servizi a pagamento.");
+    }
     // Uses stripe_customer_id persisted on the profile (set by
     // resolveOrCreateCustomer at checkout time and by the checkout.session.completed
     // webhook), so credit-pack buyers can access invoices via the Customer Portal.
