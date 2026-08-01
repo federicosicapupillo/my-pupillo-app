@@ -14,6 +14,7 @@ import { LaunchPricingNotice } from "@/components/LaunchPricingNotice";
 import { Progress } from "@/components/ui/progress";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { createPortalSession } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
@@ -31,6 +32,10 @@ export const Route = createFileRoute("/billing")({
 });
 
 type Tx = { id: string; created_at: string; delta: number; balance_after: number; reason: string | null };
+
+// Messaggio unico mostrato finché la fatturazione non sarà attiva.
+const INVOICES_DISABLED_MSG =
+  "La gestione delle fatture sarà disponibile con l'attivazione dei servizi a pagamento.";
 
 function Billing() {
   const { profile, user, role, refresh } = useAuth();
@@ -232,6 +237,8 @@ function Billing() {
 
   const credits = profile?.credits ?? 0;
   const remainingHires = Math.floor(credits / CREDITS_PER_HIRE);
+  // La fatturazione segue i pagamenti: finché il flag è OFF il portale resta chiuso.
+  const invoicesEnabled = paymentsEnabled;
   const isExhausted = credits < CREDITS_PER_HIRE;
   const isLow = !isExhausted && credits < LOW_CREDITS_THRESHOLD;
   // Progress bar fills up to a "comfortable" reference of 70 crediti (SMART pack).
@@ -324,16 +331,37 @@ function Billing() {
             <strong className="text-foreground">{CREDITS_PER_HIRE} crediti = 1 lavoratore confermato.</strong><br />
             Pubblicare annunci e contattare lavoratori è <strong className="text-foreground">gratis</strong>. Paghi solo quando trovi davvero una persona disponibile.
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4 gap-2"
-            onClick={openPortal}
-            disabled={portalBusy}
-          >
-            <Receipt className="h-4 w-4" />
-            {portalBusy ? "Apertura…" : "Gestisci fatture"}
-          </Button>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* span wrapper: un <button disabled> non emette eventi mouse/touch,
+                    quindi tooltip (desktop) e toast (mobile) vivono sul contenitore. */}
+                <span
+                  className="mt-4 inline-block"
+                  tabIndex={0}
+                  role="button"
+                  aria-disabled={!invoicesEnabled}
+                  onClick={() => { if (!invoicesEnabled) toast.message(INVOICES_DISABLED_MSG); else openPortal(); }}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 pointer-events-none"
+                    disabled={!invoicesEnabled || portalBusy}
+                    tabIndex={-1}
+                  >
+                    <Receipt className="h-4 w-4" />
+                    {portalBusy ? "Apertura…" : "Gestisci fatture"}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!invoicesEnabled && (
+                <TooltipContent side="bottom" className="max-w-xs text-center">
+                  {INVOICES_DISABLED_MSG}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
