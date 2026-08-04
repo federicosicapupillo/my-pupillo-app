@@ -1238,7 +1238,7 @@ function Onboarding() {
           markErr("residence_city");
           scrollToField("residence_city");
         } else if (!capOk) {
-          toast.error("Seleziona un CAP valido per la città scelta.");
+          toast.error("Inserisci un CAP valido (5 cifre).");
           markErr("residence_postal_code");
           scrollToField("residence_postal_code");
         } else if (!civicOk) {
