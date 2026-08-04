@@ -332,11 +332,19 @@ function Jobs() {
   const [tab, setTab] = useState<Bucket>("nuove");
   const [sortMode, setSortMode] = useState<SortMode>("service_date");
   const [reviewRow, setReviewRow] = useState<Row | null>(null);
+  // Tick al minuto: la scadenza è calcolata sull'orario di inizio turno, quindi
+  // una pagina lasciata aperta deve passare da sola a "Scaduta" senza refresh.
+  const [minuteTick, setMinuteTick] = useState(0);
   const [lastSeenAt] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     const raw = window.localStorage.getItem(SEEN_KEY);
     return raw ? Number(raw) : 0;
   });
+
+  useEffect(() => {
+    const t = setInterval(() => setMinuteTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   const load = async () => {
     if (!user) return;
@@ -523,7 +531,7 @@ function Jobs() {
     };
     for (const r of rows) for (const b of bucketsFor(r, lastSeenAt)) c[b] += 1;
     return c;
-  }, [rows, lastSeenAt]);
+  }, [rows, lastSeenAt, minuteTick]);
 
   const filtered = useMemo(() => {
     const list = rows.filter((r) => bucketsFor(r, lastSeenAt).includes(tab));
