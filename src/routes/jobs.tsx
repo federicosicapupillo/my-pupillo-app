@@ -332,11 +332,19 @@ function Jobs() {
   const [tab, setTab] = useState<Bucket>("nuove");
   const [sortMode, setSortMode] = useState<SortMode>("service_date");
   const [reviewRow, setReviewRow] = useState<Row | null>(null);
+  // Tick al minuto: la scadenza è calcolata sull'orario di inizio turno, quindi
+  // una pagina lasciata aperta deve passare da sola a "Scaduta" senza refresh.
+  const [minuteTick, setMinuteTick] = useState(0);
   const [lastSeenAt] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     const raw = window.localStorage.getItem(SEEN_KEY);
     return raw ? Number(raw) : 0;
   });
+
+  useEffect(() => {
+    const t = setInterval(() => setMinuteTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   const load = async () => {
     if (!user) return;
@@ -470,6 +478,7 @@ function Jobs() {
     const row = rows.find((r) => r.id === id);
     if (status === "interested" && row && isExpiredByTime(row)) {
       toast.error("Questa offerta è scaduta: il turno è già iniziato.");
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: "expired" } : r)));
       return;
     }
     const { error } = await supabase
@@ -480,6 +489,8 @@ function Jobs() {
       const msg = String(error.message ?? "");
       if (msg.includes("OFFER_EXPIRED") || msg.includes("ANNOUNCEMENT_EXPIRED")) {
         toast.error("Questa offerta è scaduta: il turno è già iniziato.");
+        // Allinea subito la UI: badge "Scaduta" e niente pulsanti, senza refresh manuale.
+        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: "expired" } : r)));
       } else {
         toast.error(msg);
       }
@@ -523,7 +534,7 @@ function Jobs() {
     };
     for (const r of rows) for (const b of bucketsFor(r, lastSeenAt)) c[b] += 1;
     return c;
-  }, [rows, lastSeenAt]);
+  }, [rows, lastSeenAt, minuteTick]);
 
   const filtered = useMemo(() => {
     const list = rows.filter((r) => bucketsFor(r, lastSeenAt).includes(tab));
@@ -548,7 +559,7 @@ function Jobs() {
       return priorityFor(a, isNewA) - priorityFor(b, isNewB);
     });
     return list;
-  }, [rows, tab, sortMode, lastSeenAt]);
+  }, [rows, tab, sortMode, lastSeenAt, minuteTick]);
 
   if (role !== "worker")
     return (

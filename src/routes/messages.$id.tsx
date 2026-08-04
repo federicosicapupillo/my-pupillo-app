@@ -1473,6 +1473,8 @@ function Thread() {
           toast.error("Il turno è già stato assegnato a un altro lavoratore.");
         } else if (code === "offer_expired") {
           toast.error("Questa offerta è scaduta: il turno è già iniziato. Nessun credito è stato scalato.");
+          // Allinea la UI senza refresh manuale: stato "Scaduta", pulsanti rimossi.
+          if (app) setApp({ ...app, status: "expired" } as App);
         } else if (code === "not_available" || code === "not_found") {
           toast.error("Questa proposta non è più disponibile.");
         } else if (code === "forbidden" || code === "not_authenticated") {
