@@ -712,7 +712,7 @@ function Browse() {
     <AppShell>
       <PageHeader title="Trova offerte" subtitle="Esplora gli annunci attivi e candidati" />
 
-      <LaunchAreaNotice className="mb-4" />
+      <LaunchAreaNotice className="mb-4" variant="worker" />
 
       <div className="rounded-2xl border bg-card p-4 mb-4">
         <div className="grid gap-3 md:grid-cols-4">
