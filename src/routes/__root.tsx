@@ -143,6 +143,32 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  // Sincronizza l'orologio con il server: un dispositivo con l'ora sbagliata
+  // deve comunque vedere lo stato di scadenza corretto. Il DB resta la fonte
+  // di verità: questo serve solo alla UI.
+  React.useEffect(() => {
+    let cancelled = false;
+    const sync = async () => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { setServerNow } = await import("@/lib/server-clock");
+        const t0 = Date.now();
+        const { data, error } = await supabase.rpc("server_now");
+        if (cancelled || error || !data) return;
+        setServerNow(data as unknown as string, Date.now() - t0);
+      } catch {
+        /* offline: si continua con l'orologio locale */
+      }
+    };
+    void sync();
+    const onFocus = () => void sync();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
