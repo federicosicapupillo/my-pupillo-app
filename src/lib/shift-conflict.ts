@@ -3,15 +3,17 @@ import { getShiftStartDate, getShiftEndDate, type AnnTimeInput } from "@/lib/ann
 
 /**
  * REGOLA OCCUPAZIONE LAVORATORE (PUPILLO):
- * Quando un lavoratore ha un turno accettato, risulta OCCUPATO dall'inizio
- * del turno fino a `fine + BUFFER_HOURS`. Un nuovo turno è in conflitto se
- * le finestre [start, end+buffer) si sovrappongono.
+ * Un lavoratore con un turno confermato è OCCUPATO nell'intervallo
+ * semiaperto [inizio, fine). Due turni sono in conflitto solo se questi
+ * intervalli si sovrappongono: turni contigui (fine = inizio) e turni nello
+ * stesso giorno in fasce diverse restano permessi.
  *
- * Centralizzato qui per riuso lato candidatura lavoratore, accettazione
- * proposta, invio proposta ristoratore, e assegnazione turno.
+ * Nessun buffer: la stessa semantica è applicata come autorità finale dal
+ * database (`worker_has_confirmed_shift_conflict`). Questo modulo è solo
+ * anticipazione UX.
  */
 
-export const BUFFER_HOURS = 1;
+export const BUFFER_HOURS = 0;
 const BUFFER_MS = BUFFER_HOURS * 3_600_000;
 
 export const CONFLICT_WORKER_APPLY_MESSAGE =
@@ -22,6 +24,26 @@ export const CONFLICT_RESTAURANT_REQUEST_MESSAGE =
   "Questo lavoratore risulta già occupato nella fascia oraria selezionata.";
 export const CONFLICT_RESTAURANT_ASSIGN_MESSAGE =
   "Non puoi confermare questo lavoratore: ha già un altro turno confermato in questa fascia oraria.";
+
+/**
+ * Traduce l'errore applicativo `WORKER_SHIFT_CONFLICT` sollevato dai trigger
+ * del database (candidatura, accettazione offerta/proposta, creazione turno)
+ * nel messaggio utente corretto per il contesto. Restituisce `null` quando
+ * l'errore non riguarda la sovrapposizione turni.
+ */
+export function mapShiftConflictError(
+  error: unknown,
+  context: "worker_apply" | "worker_accept" | "restaurant_request" | "restaurant_assign",
+): string | null {
+  const msg = String((error as any)?.message ?? error ?? "");
+  if (!msg.toUpperCase().includes("WORKER_SHIFT_CONFLICT")) return null;
+  switch (context) {
+    case "worker_apply": return CONFLICT_WORKER_APPLY_MESSAGE;
+    case "worker_accept": return CONFLICT_WORKER_ACCEPT_MESSAGE;
+    case "restaurant_request": return CONFLICT_RESTAURANT_REQUEST_MESSAGE;
+    default: return CONFLICT_RESTAURANT_ASSIGN_MESSAGE;
+  }
+}
 
 export type BusyWindow = {
   applicationId: string;

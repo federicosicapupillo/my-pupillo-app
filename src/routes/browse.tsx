@@ -30,6 +30,7 @@ import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
+  mapShiftConflictError,
   conflictsWithBusyWindows,
   fetchWorkerBusyWindows,
   type BusyWindow,
@@ -661,6 +662,8 @@ function Browse() {
       if (msg.includes("announcement_expired")) {
         return toast.error("Questo annuncio è scaduto: il turno è già iniziato.");
       }
+      const conflictMsg = mapShiftConflictError(error, "worker_apply");
+      if (conflictMsg) return toast.error(conflictMsg);
       if (isDuplicateContactError(error) || msg.includes("duplicate") || msg.includes("unique")) {
         const contact = await checkExistingContact({
           announcementId: confirmAnn.id,

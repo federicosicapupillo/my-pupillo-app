@@ -2694,9 +2694,18 @@ export type Database = {
         Args: { _announcement_id: string }
         Returns: boolean
       }
+      announcement_shift_interval: { Args: { _ann: string }; Returns: unknown }
       are_coords_in_launch_area: {
         Args: { _lat: number; _lng: number }
         Returns: boolean
+      }
+      assert_no_worker_shift_conflict: {
+        Args: {
+          _announcement_id: string
+          _exclude_shift_id?: string
+          _worker_id: string
+        }
+        Returns: undefined
       }
       award_referral_credits: {
         Args: { _referred_user_id: string }
@@ -3180,6 +3189,23 @@ export type Database = {
       }
       validate_launch_location: {
         Args: { _city: string; _lat?: number; _lng?: number; _province: string }
+        Returns: boolean
+      }
+      worker_conflicts_with_announcement: {
+        Args: {
+          _announcement_id: string
+          _exclude_shift_id?: string
+          _worker_id: string
+        }
+        Returns: boolean
+      }
+      worker_has_confirmed_shift_conflict: {
+        Args: {
+          _candidate_end: string
+          _candidate_start: string
+          _exclude_shift_id?: string
+          _worker_id: string
+        }
         Returns: boolean
       }
     }
