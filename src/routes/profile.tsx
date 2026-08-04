@@ -33,7 +33,6 @@ import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { updateAvatarUrlCache, useAvatarUrl } from "@/hooks/use-avatar-urls";
 import { SearchableSelect } from "@/components/SearchableSelect";
-import { WORKER_CITIES } from "@/lib/worker-cities";
 import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Lock } from "lucide-react";
