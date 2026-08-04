@@ -2673,6 +2673,22 @@ function Thread() {
           );
         })()}
 
+        {shift?.status === "no_show" && (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 mb-4">
+            <div className="flex gap-3">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+              <div className="min-w-0 text-sm">
+                <div className="font-semibold text-destructive">No show segnalato</div>
+                <p className="mt-1 text-muted-foreground">
+                  {role === "worker"
+                    ? "Il ristoratore ha segnalato che non ti sei presentato a questo turno. La segnalazione resta registrata nella cronologia. Se ritieni ci sia un errore, contatta l'assistenza Pupillo."
+                    : "Hai segnalato il no show del lavoratore per questo turno. La segnalazione è registrata in modo permanente e verrà verificata dal controllo Pupillo."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {app && (
           <div className="rounded-2xl border bg-card p-4 mb-4">
             <div className="text-xs font-medium text-muted-foreground mb-3">Stato della richiesta</div>
