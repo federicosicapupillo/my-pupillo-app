@@ -98,6 +98,7 @@ import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_ACCEPT_MESSAGE,
   CONFLICT_RESTAURANT_ASSIGN_MESSAGE,
+  mapShiftConflictError,
 } from "@/lib/shift-conflict";
 
 export const Route = createFileRoute("/messages/$id")({
@@ -900,6 +901,13 @@ function Thread() {
           const next = p.new as App;
           setApp(prev => {
             if (!prev) return next;
+            // Un cambio di stato (in particolare `accepted`) sblocca turno,
+            // contatti e dettagli operativi: il solo patch locale della riga
+            // lascerebbe la pagina con dati parziali finché l'utente non
+            // ricarica a mano. Rifacciamo il fetch completo.
+            if (prev.status !== next.status) {
+              setTimeout(() => setRefetchSeq((s) => s + 1), 0);
+            }
             if (prev.status === next.status && prev.proposed_tariff === next.proposed_tariff) return prev;
             return { ...prev, ...next };
           });
@@ -922,7 +930,10 @@ function Thread() {
         }
       });
     return () => { supabase.removeChannel(ch); };
-  }, [id, user?.id, refetchSeq]);
+    // `role` è risolto in modo asincrono dall'AuthContext: senza questa
+    // dipendenza il primo fetch può avvenire con `role` ancora null e
+    // lasciare fuori i dati specifici del ruolo (es. profilo lavoratore).
+  }, [id, user?.id, role, refetchSeq]);
 
   // Admin debug: fetch proposal_responses + related notifications for each
   // proposal message so admins can see where the flow breaks.
@@ -1474,6 +1485,8 @@ function Thread() {
           toast.error("Il turno è già stato assegnato a un altro lavoratore.");
         } else if (code === "outside_operational_area") {
           toast.error(OUTSIDE_OPERATIONAL_AREA_MESSAGE);
+        } else if (code === "worker_shift_conflict") {
+          toast.error(CONFLICT_RESTAURANT_ASSIGN_MESSAGE);
         } else if (code === "offer_expired") {
           toast.error("Questa offerta è scaduta: il turno è già iniziato. Nessun credito è stato scalato.");
           // Allinea la UI senza refresh manuale: stato "Scaduta", pulsanti rimossi.
@@ -1542,6 +1555,8 @@ function Thread() {
       });
       if (String(error.message || "").toLowerCase().includes("announcement_full")) {
         toast.error("Questo annuncio ha già raggiunto il numero massimo di lavoratori richiesti.");
+      } else if (mapShiftConflictError(error, role === "worker" ? "worker_accept" : "restaurant_assign")) {
+        toast.error(mapShiftConflictError(error, role === "worker" ? "worker_accept" : "restaurant_assign")!);
       } else if (next === "accepted" && role === "restaurant") {
         toast.error("Non è stato possibile accettare la candidatura. Riprova.");
       } else {
@@ -2952,6 +2967,9 @@ function Thread() {
                         setProposalStatuses((prev) => ({ ...prev, [m.id]: "accepted" }));
                       } else if (String(respErr.message ?? "").includes("OFFER_EXPIRED")) {
                         toast.error("Questa proposta è scaduta: il turno è già iniziato.");
+                        return;
+                      } else if (mapShiftConflictError(respErr, "worker_accept")) {
+                        toast.error(CONFLICT_WORKER_ACCEPT_MESSAGE);
                         return;
                       } else if (!String(respErr.message ?? "").toLowerCase().includes("duplicate")) {
                         console.error("[proposal] response insert failed", respErr);

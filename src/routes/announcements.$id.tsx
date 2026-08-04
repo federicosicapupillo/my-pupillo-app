@@ -45,6 +45,7 @@ import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
   CONFLICT_RESTAURANT_ASSIGN_MESSAGE,
+  mapShiftConflictError,
 } from "@/lib/shift-conflict";
 import { ConfirmedWorkerCard, type ConfirmedWorkerLastReview } from "@/components/ConfirmedWorkerCard";
 import { computeProposalStatus, type ProposalState } from "@/lib/proposal-status";
@@ -506,6 +507,11 @@ function AnnouncementDetail() {
         toast.error(OUTSIDE_OPERATIONAL_AREA_MESSAGE);
         return;
       }
+      const conflictMsg = mapShiftConflictError(error, "worker_apply");
+      if (conflictMsg) {
+        toast.error(conflictMsg);
+        return;
+      }
       toast.error(error.message);
       return;
     }
@@ -582,6 +588,9 @@ function AnnouncementDetail() {
         setFullDialogOpen(true);
       } else if (code === "outside_operational_area") {
         toast.error(OUTSIDE_OPERATIONAL_AREA_MESSAGE);
+        load();
+      } else if (code === "worker_shift_conflict") {
+        toast.error(CONFLICT_RESTAURANT_ASSIGN_MESSAGE);
         load();
       } else if (code === "offer_expired") {
         toast.error("Questa offerta è scaduta: il turno è già iniziato. Nessun credito è stato scalato.");
