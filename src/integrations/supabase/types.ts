@@ -2678,6 +2678,10 @@ export type Database = {
         Args: { _announcement_id: string }
         Returns: boolean
       }
+      announcement_is_in_operational_area: {
+        Args: { _announcement_id: string }
+        Returns: boolean
+      }
       announcement_is_open: {
         Args: { _announcement_id: string }
         Returns: boolean
@@ -3061,6 +3065,10 @@ export type Database = {
         Returns: {
           user_id: string
         }[]
+      }
+      location_is_in_operational_area: {
+        Args: { _city: string; _lat?: number; _lng?: number; _province: string }
+        Returns: boolean
       }
       log_profile_date_validation_failure: {
         Args: { _payload: Json; _reason: string }
