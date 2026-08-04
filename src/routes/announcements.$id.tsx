@@ -23,6 +23,11 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { getShiftEndDate, getShiftStartDate, isAnnouncementExpired } from "@/lib/announcement-time";
+import {
+  isOutsideOperationalArea,
+  isOutsideOperationalAreaError,
+  OUTSIDE_OPERATIONAL_AREA_MESSAGE,
+} from "@/lib/operational-area";
 import { useProfileGate } from "@/components/ProfileGate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
@@ -423,6 +428,10 @@ function AnnouncementDetail() {
   });
   const restaurantName = restaurant?.business_name || restaurant?.full_name || "Ristoratore";
   const isWorker = !!user && !isOwner;
+  // AREA OPERATIVA: un annuncio fuori Bologna e provincia non è operativo
+  // nemmeno via URL diretto. Lo storico resta consultabile, ma nessuna
+  // azione (candidatura, chat, proposta) è disponibile.
+  const outsideArea = isOutsideOperationalArea(ann as any);
   const publicVenueName = "Ristorante partner";
   const displayedRestaurantName = canSeeAddress ? restaurantName : publicVenueName;
 
@@ -441,6 +450,11 @@ function AnnouncementDetail() {
   const [selfCancelledOpen, setSelfCancelledOpen] = useState(false);
   const applyAsWorker = async () => {
     if (!user || !ann || applying) return;
+    // Blocco area operativa (stesso controllo del database).
+    if (isOutsideOperationalArea(ann as any)) {
+      toast.error(OUTSIDE_OPERATIONAL_AREA_MESSAGE);
+      return;
+    }
     setApplying(true);
     // Gate worker-side re-apply: a worker that previously self-cancelled
     // (status `not_interested`) cannot re-apply to the same announcement.
@@ -486,6 +500,10 @@ function AnnouncementDetail() {
       }
       if ((error.message || "").includes("ANNOUNCEMENT_EXPIRED")) {
         toast.error("Questo annuncio è scaduto: il turno è già iniziato.");
+        return;
+      }
+      if (isOutsideOperationalAreaError(error)) {
+        toast.error(OUTSIDE_OPERATIONAL_AREA_MESSAGE);
         return;
       }
       toast.error(error.message);
@@ -562,6 +580,9 @@ function AnnouncementDetail() {
       const code = res?.code ?? "assignment_failed";
       if (code === "announcement_full") {
         setFullDialogOpen(true);
+      } else if (code === "outside_operational_area") {
+        toast.error(OUTSIDE_OPERATIONAL_AREA_MESSAGE);
+        load();
       } else if (code === "offer_expired") {
         toast.error("Questa offerta è scaduta: il turno è già iniziato. Nessun credito è stato scalato.");
         load();
@@ -911,7 +932,19 @@ function AnnouncementDetail() {
         {isWorker && (
           <div className="rounded-2xl border bg-card p-5 space-y-3">
             <div className="text-sm font-medium">Azioni</div>
-            {myApp ? (
+            {outsideArea ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs">
+                <div className="font-semibold text-amber-900">Offerta non disponibile</div>
+                <div className="text-amber-800 mt-0.5">{OUTSIDE_OPERATIONAL_AREA_MESSAGE}</div>
+                {myApp && (
+                  <Link to="/messages/$id" params={{ id: myApp.id }}>
+                    <Button size="sm" variant="secondary" className="w-full gap-2 mt-2">
+                      <MessageSquare className="h-4 w-4" />Vai alla chat
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : myApp ? (
               <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
                 <div className="font-medium text-foreground">Candidatura inviata</div>
                 <div className="text-muted-foreground">
