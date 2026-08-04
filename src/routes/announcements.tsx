@@ -44,6 +44,7 @@ import {
 import {
   labelOf, labelsOf,
   LICENSE_OPTIONS, LANGUAGE_OPTIONS, SKILL_OPTIONS, DRESS_CODE_OPTIONS, TATTOO_OPTIONS, PIERCING_OPTIONS, BEARD_OPTIONS,
+  SPEED_OPTIONS,
 } from "@/lib/announcement-requirements";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1410,27 +1411,12 @@ function RepublishDialog({
           {ann.professional_profile && (
             <SummaryRow icon={Users} label="Ruolo richiesto" value={ann.professional_profile} />
           )}
-          <SummaryRow icon={RotateCw} label="Velocità ricerca" value={speedLabel[ann.speed] ?? ann.speed} />
+          <SummaryRow icon={RotateCw} label="Velocità ricerca" value={labelOf(ann.speed, SPEED_OPTIONS)} />
           {ann.license_requirement && ann.license_requirement !== "nessuna" && (
-            <SummaryRow icon={CheckCircle2} label="Patente" value={labelOf(ann.license_requirement, [
-              { value: "b", label: "Patente B" },
-              { value: "c", label: "Patente C" },
-              { value: "d", label: "Patente D" },
-              { value: "nessuna", label: "Nessuna" },
-            ])} />
+            <SummaryRow icon={CheckCircle2} label="Patente" value={labelOf(ann.license_requirement, LICENSE_OPTIONS)} />
           )}
           {ann.language_requirements && ann.language_requirements.length > 0 && (
-            <SummaryRow icon={CheckCircle2} label="Lingue" value={labelsOf(ann.language_requirements, [
-              { value: "italiano", label: "Italiano" },
-              { value: "inglese", label: "Inglese" },
-              { value: "francese", label: "Francese" },
-              { value: "spagnolo", label: "Spagnolo" },
-              { value: "tedesco", label: "Tedesco" },
-              { value: "cinese", label: "Cinese" },
-              { value: "arabo", label: "Arabo" },
-              { value: "russo", label: "Russo" },
-              { value: "portoghese", label: "Portoghese" },
-            ]).join(", ")} />
+            <SummaryRow icon={CheckCircle2} label="Lingue" value={labelsOf(ann.language_requirements, LANGUAGE_OPTIONS).join(", ")} />
           )}
         </div>
         <DialogFooter className="gap-2">

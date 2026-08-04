@@ -21,6 +21,7 @@ import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canWorkerApplyToAnnouncement } from "@/lib/application-reapply";
 import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
+import { SPEED_SHORT_LABELS } from "@/lib/requirement-options";
 import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import { JOB_ROLES } from "@/lib/job-roles";
@@ -1039,7 +1040,7 @@ function Browse() {
                 </SheetHeader>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-secondary px-2 py-1 text-xs capitalize">{selected.speed}</span>
+                  <span className="rounded-full bg-secondary px-2 py-1 text-xs">{SPEED_SHORT_LABELS[selected.speed] ?? formatDisplayLabel(selected.speed)}</span>
                   <span className="rounded-full bg-accent text-accent-foreground px-2 py-1 text-xs">{selected.duration_hours}h</span>
                   <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">{selectedTotal ?? formatTariff(selected.tariff_amount, selected.tariff_type)}</span>
                   {dist != null && <span className="rounded-full bg-muted px-2 py-1 text-xs">{dist.toFixed(1)} km</span>}
@@ -1049,18 +1050,18 @@ function Browse() {
                   <Row icon={Calendar} label="Data" value={new Date(selected.service_date).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long", year:"numeric" })} />
                   <Row icon={Clock} label="Orario" value={`${selected.service_time?.slice(0,5)} · durata ${selected.duration_hours}h`} />
                   <Row icon={Euro} label="Compenso" value={selectedTotal ?? formatTariff(selected.tariff_amount, selected.tariff_type)} detail={selectedTotal && selected.tariff_type === "hourly" ? `€${selected.tariff_amount}/ora × ${selected.duration_hours}h` : undefined} />
-                  <Row icon={Zap} label="Tipologia" value={selected.speed} />
+                  <Row icon={Zap} label="Tipologia" value={SPEED_SHORT_LABELS[selected.speed] ?? formatDisplayLabel(selected.speed)} />
                   <Row icon={MapPin} label="Zona" value={publicLocationLabel({ job_city: selected.job_city, city: restaurant?.city, neighborhood: restaurant?.neighborhood })} />
-                  {restaurant?.venue_type && <Row icon={User} label="Locale" value={restaurant.venue_type} />}
+                  {restaurant?.venue_type && <Row icon={User} label="Locale" value={formatDisplayLabel(restaurant.venue_type)} />}
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">{PRECISE_ADDRESS_HINT}</p>
 
                 {(() => {
-                  const skills = (selected.required_skills ?? []).filter(Boolean);
-                  const dressItems = (selected.dress_code_items ?? []).filter(Boolean);
+                  const skills = formatDisplayLabels(selected.required_skills ?? []);
+                  const dressItems = formatDisplayLabels(selected.dress_code_items ?? []);
                   const dressNotes = (selected.dress_code_notes ?? "").trim();
-                  const langs = (selected.language_requirements ?? []).filter(Boolean);
-                  const license = (selected.license_requirement ?? "").trim();
+                  const langs = formatDisplayLabels(selected.language_requirements ?? []);
+                  const license = formatDisplayLabel(selected.license_requirement ?? "");
                   const opsParts = [selected.notes, selected.job_location_notes, selected.job_additional_directions, selected.job_access_restrictions]
                     .map((s) => (s ?? "").trim()).filter(Boolean);
                   const need = workersNeededById[selected.id] ?? 1;
