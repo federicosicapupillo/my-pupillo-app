@@ -12,6 +12,7 @@ import {
   providerLabel,
   PASSWORD_SET_METADATA_KEY,
   getAuthMethods,
+  securityUiFor,
 } from "@/lib/auth-methods";
 import { PASSWORD_RULES, validatePasswordPair } from "@/lib/password-validation";
 
@@ -94,7 +95,8 @@ export function AccountSecuritySection({ email }: { email: string | null }) {
     );
   }
 
-  const { hasPasswordLogin, socialProviders, isSocialOnlyAccount } = methods;
+  const { hasPasswordLogin, socialProviders } = methods;
+  const ui = securityUiFor(methods);
 
   /** Ricontrolla le identità prima di scrivere: la UI non è una difesa. */
   const assertMode = async (expectPassword: boolean): Promise<boolean> => {
@@ -186,25 +188,16 @@ export function AccountSecuritySection({ email }: { email: string | null }) {
   return (
     <div className="mt-6 rounded-2xl border bg-card p-6 space-y-5">
       <div>
-        <h2 className="font-semibold flex items-center gap-2"><ShieldCheck className="h-4 w-4" />
-          {socialProviders.length > 0 && hasPasswordLogin ? "Metodi di accesso" : "Metodo di accesso"}
-        </h2>
+        <h2 className="font-semibold flex items-center gap-2"><ShieldCheck className="h-4 w-4" />{ui.heading}</h2>
         <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-          {socialProviders.map((p) => (
-            <li key={p}>{providerLabel(p)} collegato</li>
-          ))}
-          {hasPasswordLogin && <li>Email e password {socialProviders.length > 0 ? "attivi" : "attivi"}</li>}
+          {ui.providerLines.map((line) => <li key={line}>{line}</li>)}
         </ul>
-        {isSocialOnlyAccount && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Accedi a Pupillo tramite {socialProviders.map(providerLabel).join(" o ")}.
-          </p>
-        )}
+        {ui.socialNotice && <p className="mt-2 text-sm text-muted-foreground">{ui.socialNotice}</p>}
       </div>
 
       {hasPasswordLogin ? (
         <form onSubmit={submitChange} className="space-y-3">
-          <h3 className="font-medium flex items-center gap-2"><KeyRound className="h-4 w-4" />Cambia password</h3>
+          <h3 className="font-medium flex items-center gap-2"><KeyRound className="h-4 w-4" />{ui.actionLabel}</h3>
           <PasswordInput id="current-pwd" label="Password attuale *" value={currentPwd} onChange={setCurrentPwd} autoComplete="current-password" disabled={busy} />
           <PasswordInput id="new-pwd" label="Nuova password *" value={pwd} onChange={setPwd} autoComplete="new-password" disabled={busy} />
           <PasswordInput id="confirm-pwd" label="Conferma nuova password *" value={pwdConfirm} onChange={setPwdConfirm} autoComplete="new-password" disabled={busy} />
@@ -221,7 +214,7 @@ export function AccountSecuritySection({ email }: { email: string | null }) {
         </form>
       ) : (
         <form onSubmit={submitSetFirst} className="space-y-3">
-          <h3 className="font-medium flex items-center gap-2"><KeyRound className="h-4 w-4" />Imposta una password</h3>
+          <h3 className="font-medium flex items-center gap-2"><KeyRound className="h-4 w-4" />{ui.actionLabel}</h3>
           <p className="text-sm text-muted-foreground">
             Impostando una password potrai accedere a Pupillo anche con la tua email.
             Il tuo accesso con {socialProviders.map(providerLabel).join(" e ") || "il provider collegato"} resta attivo.

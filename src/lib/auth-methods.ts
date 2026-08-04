@@ -136,3 +136,42 @@ export function mapPasswordError(error: unknown): string {
 
 export const IDENTITIES_LOAD_ERROR =
   "Non è stato possibile caricare i tuoi metodi di accesso. Riprova più tardi.";
+
+/**
+ * Decisione UI derivata dalle identità: quale form mostrare e con quali testi.
+ * Vive qui (non nel componente) per essere testabile e non duplicabile.
+ */
+export type SecurityUi = {
+  mode: "change-password" | "set-password" | "password-only";
+  heading: string;
+  providerLines: string[];
+  socialNotice: string | null;
+  showCurrentPassword: boolean;
+  actionLabel: string;
+};
+
+export function securityUiFor(methods: AuthMethods): SecurityUi {
+  const socialLines = methods.socialProviders.map((p) => `${providerLabel(p)} collegato`);
+  const lines = [...socialLines];
+  if (methods.hasPasswordLogin) lines.push("Email e password attivi");
+
+  if (methods.isSocialOnlyAccount) {
+    return {
+      mode: "set-password",
+      heading: methods.socialProviders.length > 1 ? "Metodi di accesso" : "Metodo di accesso",
+      providerLines: lines,
+      socialNotice: `Accedi a Pupillo tramite ${methods.socialProviders.map(providerLabel).join(" o ")}.`,
+      showCurrentPassword: false,
+      actionLabel: "Imposta una password",
+    };
+  }
+
+  return {
+    mode: methods.hasSocialIdentity ? "change-password" : "password-only",
+    heading: methods.hasSocialIdentity ? "Metodi di accesso" : "Metodo di accesso",
+    providerLines: lines.length ? lines : ["Email e password attivi"],
+    socialNotice: null,
+    showCurrentPassword: true,
+    actionLabel: "Cambia password",
+  };
+}

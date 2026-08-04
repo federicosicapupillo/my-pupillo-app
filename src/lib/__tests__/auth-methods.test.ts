@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   getAuthMethods, hasPasswordLogin, hasSocialIdentity, isSocialOnlyAccount,
-  mapPasswordError, providerLabel, PASSWORD_SET_METADATA_KEY,
+  mapPasswordError, providerLabel, PASSWORD_SET_METADATA_KEY, securityUiFor,
 } from "@/lib/auth-methods";
 
 const ids = (...p: string[]) => p.map((provider) => ({ provider }));
@@ -70,5 +70,44 @@ describe("providerLabel", () => {
     expect(providerLabel("google")).toBe("Google");
     expect(providerLabel("apple")).toBe("Apple");
     expect(providerLabel("email")).toBe("Email e password");
+  });
+});
+
+describe("securityUiFor", () => {
+  const ui = (...p: string[]) => securityUiFor(getAuthMethods(ids(...p)));
+
+  it("solo Google → 'Imposta una password', nessuna password attuale", () => {
+    const u = ui("google");
+    expect(u.mode).toBe("set-password");
+    expect(u.actionLabel).toBe("Imposta una password");
+    expect(u.showCurrentPassword).toBe(false);
+    expect(u.providerLines).toEqual(["Google collegato"]);
+    expect(u.socialNotice).toBe("Accedi a Pupillo tramite Google.");
+  });
+  it("solo email → 'Cambia password' con password attuale", () => {
+    const u = ui("email");
+    expect(u.mode).toBe("password-only");
+    expect(u.actionLabel).toBe("Cambia password");
+    expect(u.showCurrentPassword).toBe(true);
+    expect(u.heading).toBe("Metodo di accesso");
+    expect(u.providerLines).toEqual(["Email e password attivi"]);
+  });
+  it("google + email → entrambi i metodi elencati, cambio password", () => {
+    const u = ui("google", "email");
+    expect(u.mode).toBe("change-password");
+    expect(u.heading).toBe("Metodi di accesso");
+    expect(u.providerLines).toEqual(["Google collegato", "Email e password attivi"]);
+    expect(u.socialNotice).toBeNull();
+  });
+  it("google + apple senza password → 'Imposta una password'", () => {
+    const u = ui("google", "apple");
+    expect(u.actionLabel).toBe("Imposta una password");
+    expect(u.providerLines).toEqual(["Apple collegato", "Google collegato"]);
+    expect(u.socialNotice).toContain("Apple o Google");
+  });
+  it("social con password_set → cambio password", () => {
+    const u = securityUiFor(getAuthMethods(ids("google"), { [PASSWORD_SET_METADATA_KEY]: true }));
+    expect(u.actionLabel).toBe("Cambia password");
+    expect(u.providerLines).toEqual(["Google collegato", "Email e password attivi"]);
   });
 });
