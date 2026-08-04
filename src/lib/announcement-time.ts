@@ -10,6 +10,8 @@
  */
 const APP_TZ = "Europe/Rome";
 
+import { serverNow } from "./server-clock";
+
 /** Returns the UTC instant for `dateStr`+`timeStr` interpreted as wall time in `tz`. */
 function zonedWallTimeToDate(dateStr: string, timeStr: string, tz: string = APP_TZ): Date | null {
   if (!dateStr) return null;
@@ -87,7 +89,7 @@ export function getExpiresAtDate(a: AnnTimeInput): Date | null {
 }
 
 /** True quando l'annuncio è scaduto (now >= inizio turno). */
-export function isAnnouncementExpired(a: AnnTimeInput, now: Date = new Date()): boolean {
+export function isAnnouncementExpired(a: AnnTimeInput, now: Date = serverNow()): boolean {
   const start = getShiftStartDate(a);
   if (!start) return false;
   return now.getTime() >= start.getTime();
@@ -97,7 +99,7 @@ export function isAnnouncementExpired(a: AnnTimeInput, now: Date = new Date()): 
  * Vero quando il turno è oltre la fine effettiva, oppure (per stati non assegnati)
  * la deadline `expires_at` è passata. Usa il fuso Europa/Roma per i confronti.
  */
-export function isPastEffectiveEnd(a: AnnTimeInput, now: Date = new Date()): boolean {
+export function isPastEffectiveEnd(a: AnnTimeInput, now: Date = serverNow()): boolean {
   const end = getShiftEndDate(a);
   if (end && end.getTime() < now.getTime()) return true;
   return false;
