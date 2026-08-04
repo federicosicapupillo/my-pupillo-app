@@ -4,6 +4,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { OUTSIDE_OPERATIONAL_AREA_MESSAGE } from "@/lib/operational-area";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1471,6 +1472,8 @@ function Thread() {
           setInsufficientOpen(true);
         } else if (code === "announcement_full") {
           toast.error("Il turno è già stato assegnato a un altro lavoratore.");
+        } else if (code === "outside_operational_area") {
+          toast.error(OUTSIDE_OPERATIONAL_AREA_MESSAGE);
         } else if (code === "offer_expired") {
           toast.error("Questa offerta è scaduta: il turno è già iniziato. Nessun credito è stato scalato.");
           // Allinea la UI senza refresh manuale: stato "Scaduta", pulsanti rimossi.
