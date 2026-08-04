@@ -2674,7 +2674,19 @@ export type Database = {
         Args: { p_announcement_id: string }
         Returns: string
       }
+      announcement_is_applicable: {
+        Args: { _announcement_id: string }
+        Returns: boolean
+      }
       announcement_is_open: {
+        Args: { _announcement_id: string }
+        Returns: boolean
+      }
+      announcement_not_started: {
+        Args: { _announcement_id: string }
+        Returns: boolean
+      }
+      announcement_offer_acceptable: {
         Args: { _announcement_id: string }
         Returns: boolean
       }
@@ -3138,6 +3150,7 @@ export type Database = {
         }[]
       }
       send_required_review_reminders: { Args: never; Returns: number }
+      server_now: { Args: never; Returns: string }
       set_my_available_now: { Args: { _until: string }; Returns: string }
       set_my_avatar: { Args: { _path: string }; Returns: undefined }
       shift_effective_start: { Args: { _shift_id: string }; Returns: string }
