@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Check, CheckCheck, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2, AlertTriangle } from "lucide-react";
 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -1981,7 +1981,9 @@ function Thread() {
       .map((m) => {
         const label = m.template_id === CONFIRMATION_TEMPLATE_ID
           ? "Istruzioni operative inviate"
-          : m.action_type === "instructions_acknowledged"
+          : m.template_id === "shift_no_show" || m.action_type === "shift_no_show"
+            ? "No show segnalato dal ristoratore"
+            : m.action_type === "instructions_acknowledged"
             ? "Istruzioni lette dal lavoratore"
             : m.template_id === "chat_closed_completed"
               ? "Turno concluso"
@@ -1989,7 +1991,9 @@ function Thread() {
                 ? "Turno annullato"
                 : (m.body ?? "").replace(/^⚙️ Sistema:\s*/, "").split("\n")[0];
         const tone: TimelineEvent["tone"] =
-          m.action_type === "accept_application"
+          m.action_type === "shift_no_show" || m.template_id === "shift_no_show"
+            ? "error"
+            : m.action_type === "accept_application"
             ? "success"
             : m.action_type === "reject_application" || m.template_id === "chat_closed_cancelled"
               ? "error"
@@ -2669,6 +2673,22 @@ function Thread() {
           );
         })()}
 
+        {shift?.status === "no_show" && (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 mb-4">
+            <div className="flex gap-3">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+              <div className="min-w-0 text-sm">
+                <div className="font-semibold text-destructive">No show segnalato</div>
+                <p className="mt-1 text-muted-foreground">
+                  {role === "worker"
+                    ? "Il ristoratore ha segnalato che non ti sei presentato a questo turno. La segnalazione resta registrata nella cronologia. Se ritieni ci sia un errore, contatta l'assistenza Pupillo."
+                    : "Hai segnalato il no show del lavoratore per questo turno. La segnalazione è registrata in modo permanente e verrà verificata dal controllo Pupillo."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {app && (
           <div className="rounded-2xl border bg-card p-4 mb-4">
             <div className="text-xs font-medium text-muted-foreground mb-3">Stato della richiesta</div>
@@ -2692,7 +2712,9 @@ function Thread() {
               ))}
             </ol>
             {(() => {
-              const ts = buildEventList(app, events);
+              // Cronologia completa: eventi applicativi + eventi di sistema
+              // permanenti (incluso il no-show).
+              const ts = historyEvents;
               if (ts.length === 0) return null;
               return (
                 <ul className="mt-5 border-t pt-4 space-y-3">

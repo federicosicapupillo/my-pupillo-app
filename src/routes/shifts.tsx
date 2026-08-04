@@ -1525,7 +1525,10 @@ function ShiftsPage() {
                   }
                   return;
                 }
-                let notificationSent = false;
+                // La notifica al lavoratore è emessa una sola volta dal
+                // trigger DB `notify_shift_status` (con dedupe_key): NON
+                // inserirla anche qui, altrimenti risulta duplicata.
+                const notificationSent = true;
                 if (user) {
                   supabase.from("activity_logs").insert({
                     user_id: user.id,
@@ -1540,17 +1543,6 @@ function ShiftsPage() {
                       notes: noShowNotes.trim() || null,
                     },
                   } as never).then(() => {}, () => {});
-                  // Notifica al lavoratore (best-effort, non blocca il flusso).
-                  const ann2 = announcementsMap[s.announcement_id || ""];
-                  const startStr = ann2?.service_time ? ` alle ${ann2.service_time.slice(0,5)}` : "";
-                  const dateStr = new Date(s.shift_date).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
-                  const notifRes = await supabase.from("notifications").insert({
-                    user_id: s.worker_id,
-                    title: "Segnalazione No show",
-                    body: `È stato segnalato un No show per il turno del ${dateStr}${startStr}. Puoi contattare l'assistenza se ritieni che ci sia un errore.`,
-                    link: `/shifts?shift=${s.id}`,
-                  } as never);
-                  notificationSent = !notifRes.error;
                 }
                 toast.success("Segnalazione ricevuta. Il caso verrà verificato dal reparto controllo Pupillo.");
                 if (typeof window !== "undefined") {
