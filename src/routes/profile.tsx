@@ -16,7 +16,13 @@ import { KeyRound, Trash2, FileText, Coins, Star, Eye, EyeOff, User, Building2, 
 import { SpokenLanguagesView, SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
-import { provinceCode, splitAddressAndCivic, findCityProvince, isValidCapForCity } from "@/lib/italian-locations";
+import { provinceCode, splitAddressAndCivic } from "@/lib/italian-locations";
+import {
+  RESIDENCE_CITY_OPTIONS,
+  findResidenceComune,
+  isValidResidenceCap,
+  RESIDENCE_HELPER_TEXT,
+} from "@/lib/italian-comuni";
 import { CapField } from "@/components/CapField";
 import { ReferralCard } from "@/components/ReferralCard";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
@@ -413,7 +419,11 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
     error: "Non è stato possibile aggiornare la residenza. Riprova.",
   });
 
-  const provinceForCap = findCityProvince(city)?.province ?? null;
+  // Residenza = dato anagrafico: anagrafica nazionale, nessun vincolo
+  // sull'area operativa (Bologna e provincia).
+  const residenceComune = findResidenceComune(city, profile?.residence_province);
+  const provinceForCap = residenceComune?.province ?? null;
+  const provinceCodeForResidence = residenceComune?.province_code ?? null;
 
   const start = () => {
     const currentLegacyAddress = splitAddressAndCivic(profile?.residence_address);
@@ -431,10 +441,13 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
     if (!city.trim()) next.city = "Seleziona la città di residenza.";
     if (!street.trim()) next.street = "Inserisci la via di residenza.";
     if (!number.trim()) next.number = "Inserisci il numero civico.";
+    if (city.trim() && !residenceComune) {
+      next.city = "Seleziona una città di residenza dall'elenco.";
+    }
     if (!cap.trim()) {
       next.cap = "Inserisci il CAP.";
-    } else if (!isValidCapForCity(provinceForCap, city, cap.trim())) {
-      next.cap = "CAP non valido per la città selezionata.";
+    } else if (!isValidResidenceCap(cap.trim())) {
+      next.cap = "Inserisci un CAP valido (5 cifre).";
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -448,7 +461,9 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
       residence_number: number.trim() || null,
       residence_address: `${street.trim()}, ${number.trim()}`,
       residence_postal_code: cap.trim() || null,
-      ...(provinceForCap ? { residence_province: provinceForCap } : {}),
+      ...(provinceCodeForResidence
+        ? { residence_province: provinceCodeForResidence }
+        : {}),
     });
     if (ok) setEditing(false);
   };
@@ -460,7 +475,7 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
           <div>
             <Label>Città di residenza <span className="text-destructive">*</span></Label>
             <SearchableSelect
-              options={WORKER_CITIES as unknown as string[]}
+              options={RESIDENCE_CITY_OPTIONS}
               value={city}
               onChange={(v) => {
                 setCity(v);
@@ -472,6 +487,7 @@ function ResidenceBox({ profile, userId, onSaved }: { profile: any; userId: stri
               triggerClassName={errors.city ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive/60 focus-visible:border-destructive" : undefined}
             />
             {errors.city && <p className="mt-1 text-xs text-destructive">{errors.city}</p>}
+            <p className="mt-1 text-xs text-muted-foreground">{RESIDENCE_HELPER_TEXT}</p>
           </div>
           <div>
             <Label>CAP <span className="text-destructive">*</span></Label>
