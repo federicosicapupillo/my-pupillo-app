@@ -548,24 +548,35 @@ function AnnouncementDetail() {
     } catch (e) {
       console.error("[PUPILLO_SHIFT_CONFLICT] assign precheck failed", e);
     }
-    // Consume credits BEFORE flipping the status: the RPC is idempotent on
-    // (user, reason, application_id), so a retry can't double-charge.
-    const { consumeCredits } = await import("@/lib/credits");
-    const creditsOk = await consumeCredits(CREDITS_PER_HIRE, "assign_worker", app.id);
-    if (!creditsOk) {
-      setBusyId(null);
-      return;
-    }
-    const { error } = await supabase.from("applications").update({ status: "accepted" }).eq("id", app.id);
+    // Assegnazione atomica lato DB: lock della candidatura, ri-validazione
+    // (scadenza / posti disponibili), consumo crediti e cambio stato in UNA
+    // transazione. In caso di errore non viene scalato nessun credito: questo
+    // percorso non deve mai consumare crediti prima del controllo scadenza.
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "accept_application_atomic",
+      { _application_id: app.id },
+    );
+    const res = (rpcData ?? null) as { ok?: boolean; code?: string } | null;
     setBusyId(null);
-    if (error) {
-      // DB trigger may reject with announcement_full when concurrent accepts race past the limit.
-      if (String(error.message || "").toLowerCase().includes("announcement_full")) {
+    if (rpcError || !res?.ok) {
+      const code = res?.code ?? "assignment_failed";
+      if (code === "announcement_full") {
         setFullDialogOpen(true);
-      } else {
-        toast.error(error.message);
+      } else if (code === "offer_expired") {
+        toast.error("Questa offerta è scaduta: il turno è già iniziato. Nessun credito è stato scalato.");
+        load();
+      } else if (code === "insufficient_credits") {
+        const { data: prof2 } = await supabase
+          .from("profiles").select("credits").eq("id", user.id).maybeSingle();
+        setCreditsAvailable((prof2 as any)?.credits ?? profile?.credits ?? 0);
+        setInsufficientOpen(true);
+      } else if (code === "not_available" || code === "not_found") {
+        toast.error("Questa candidatura non è più disponibile.");
+        load();
+      } else if (code !== "already_assigned") {
+        toast.error(rpcError?.message ?? "Non è stato possibile completare l'assegnazione. Nessun credito è stato scalato.");
       }
-      return;
+      if (code !== "already_assigned") return;
     }
     const newFilled = filledCount + 1;
     const becameFull = newFilled >= workersNeeded;
