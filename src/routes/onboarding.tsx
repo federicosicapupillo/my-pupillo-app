@@ -32,12 +32,15 @@ import {
   isCityInProvince,
   isValidCapForCity,
   isValidCapForDistrict,
-  ALL_CITIES_WITH_PROVINCE,
-  findCityProvince,
-  capsForCity,
   isValidCivicNumber,
   splitAddressAndCivic,
 } from "@/lib/italian-locations";
+import {
+  RESIDENCE_CITY_OPTIONS,
+  findResidenceComune,
+  isValidResidenceCap,
+  RESIDENCE_HELPER_TEXT,
+} from "@/lib/italian-comuni";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
