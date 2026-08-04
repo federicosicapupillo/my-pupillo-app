@@ -2696,7 +2696,9 @@ function Thread() {
               ))}
             </ol>
             {(() => {
-              const ts = buildEventList(app, events);
+              // Cronologia completa: eventi applicativi + eventi di sistema
+              // permanenti (incluso il no-show).
+              const ts = historyEvents;
               if (ts.length === 0) return null;
               return (
                 <ul className="mt-5 border-t pt-4 space-y-3">
