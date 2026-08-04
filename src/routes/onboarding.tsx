@@ -2539,15 +2539,12 @@ function Onboarding() {
                 <div data-field="residence_city" className={cn("scroll-mt-24", hasErr("residence_city") && errorFieldClass)}>
                   <Label>Città di residenza *</Label>
                   <SearchableSelect
-                    options={ALL_CITIES_WITH_PROVINCE.map((c) => ({
-                      value: c.city,
-                      label: `${c.city} (${c.province_code})`,
-                    }))}
+                    options={RESIDENCE_CITY_OPTIONS}
                     value={personal.residence_city}
                     placeholder="Seleziona città"
                     searchPlaceholder="Cerca città"
                     onChange={(city) => {
-                      const entry = findCityProvince(city);
+                      const entry = findResidenceComune(city);
                       setPersonal((s) => ({
                         ...s,
                         residence_city: city,
@@ -2558,6 +2555,9 @@ function Onboarding() {
                       }));
                     }}
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {RESIDENCE_HELPER_TEXT}
+                  </p>
                 </div>
                 <div data-field="residence_province">
                   <Label>Provincia *</Label>
@@ -2571,18 +2571,15 @@ function Onboarding() {
                 </div>
                 <div data-field="residence_postal_code" className={cn("scroll-mt-24", hasErr("residence_postal_code") && errorFieldClass)}>
                   <Label>CAP *</Label>
-                  <SearchableSelect
-                    options={capsForCity(
-                      findCityProvince(personal.residence_city)?.province ?? null,
-                      personal.residence_city,
-                    ).map((c) => ({ value: c, label: c }))}
-                    value={personal.residence_postal_code}
-                    placeholder={
-                      personal.residence_city
-                        ? "Seleziona CAP"
-                        : "Prima seleziona la città"
+                  <CapField
+                    province={
+                      findResidenceComune(
+                        personal.residence_city,
+                        personal.residence_province,
+                      )?.province ?? null
                     }
-                    searchPlaceholder="Cerca CAP"
+                    city={personal.residence_city || null}
+                    value={personal.residence_postal_code}
                     disabled={!personal.residence_city}
                     onChange={(cap) =>
                       setPersonal((s) => ({ ...s, residence_postal_code: cap }))
