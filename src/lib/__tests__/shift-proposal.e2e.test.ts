@@ -82,7 +82,7 @@ beforeEach(() => {
   calls.length = 0;
   fixtures.announcements = {
     id: ANN_ID,
-    service_date: "2026-06-12",
+    service_date: "2099-06-12",
     service_time: "19:00:00",
     end_time: "23:00:00",
     location_address: "Via Roma 1, Milano",
@@ -166,7 +166,7 @@ describe("E2E — restaurant sends a shift proposal", () => {
     const body = buildProposalBody(
       {
         id: ANN_ID,
-        service_date: "2026-06-12",
+        service_date: "2099-06-12",
         service_time: "19:00:00",
         end_time: "23:00:00",
         location_address: "Via Roma 1, Milano",

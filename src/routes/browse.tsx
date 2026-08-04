@@ -24,6 +24,7 @@ import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
 import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialog";
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import { JOB_ROLES } from "@/lib/job-roles";
+import { isAnnouncementExpired } from "@/lib/announcement-time";
 import { normalizeRole } from "@/lib/worker-role-normalization";
 import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import {
@@ -272,6 +273,10 @@ function Browse() {
     const list: Ann[] = [];
     for (const a of restaurantFiltered) {
       if (seen.has(a.id)) continue;
+      // Scadenza: il turno è già iniziato → l'annuncio non è più candidabile.
+      // La vista `announcements_public` filtra già lato DB; questo è un
+      // secondo livello difensivo lato client.
+      if (isAnnouncementExpired(a as any)) continue;
       seen.add(a.id);
       list.push(a);
     }
@@ -626,6 +631,12 @@ function Browse() {
       toast.error(CONFLICT_WORKER_APPLY_MESSAGE);
       return;
     }
+    // Scadenza: il turno è già iniziato → nessuna candidatura (blocco anche DB).
+    if (isAnnouncementExpired(confirmAnn as any)) {
+      setSubmitting(false);
+      toast.error("Questo annuncio è scaduto: il turno è già iniziato.");
+      return;
+    }
     const insertPayload: any = {
       announcement_id: confirmAnn.id,
       worker_id: workerProfile.id,
@@ -646,6 +657,9 @@ function Browse() {
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("moderation_blocked")) {
         return toast.error("Operazione non disponibile al momento");
+      }
+      if (msg.includes("announcement_expired")) {
+        return toast.error("Questo annuncio è scaduto: il turno è già iniziato.");
       }
       if (isDuplicateContactError(error) || msg.includes("duplicate") || msg.includes("unique")) {
         const contact = await checkExistingContact({

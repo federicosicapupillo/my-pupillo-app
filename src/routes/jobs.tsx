@@ -22,7 +22,7 @@ import {
 import { formatTariff, formatTotalService, formatOfferDateTime } from "@/lib/format";
 import { publicLocationLabel } from "@/lib/public-location";
 import { venueTypeLabel } from "@/lib/venue-types";
-import { getShiftEndDate } from "@/lib/announcement-time";
+import { getShiftEndDate, isAnnouncementExpired } from "@/lib/announcement-time";
 import {
   Dialog,
   DialogContent,
@@ -138,6 +138,18 @@ function isCompleted(r: Row): boolean {
   return false;
 }
 
+/**
+ * Offerta scaduta: il turno è già iniziato (regola unica `shift_start_at`,
+ * fuso Europa/Roma) e la candidatura non è mai arrivata alla conferma.
+ * Coerente con il blocco lato database.
+ */
+function isExpiredByTime(r: Row): boolean {
+  if (!r.announcement) return false;
+  if (r.status === "accepted") return false;
+  if (r.shift && r.shift.status !== "cancelled") return false;
+  return isAnnouncementExpired(r.announcement);
+}
+
 function isCancelled(r: Row): boolean {
   if (r.shift?.status === "cancelled") return true;
   if (
@@ -146,7 +158,7 @@ function isCancelled(r: Row): boolean {
     r.status === "expired" ||
     r.status === "cancelled"
   ) return true;
-  return false;
+  return isExpiredByTime(r);
 }
 
 /** Buckets the offer belongs to. An offer can match more than one (e.g. confermata + da_recensire). */
@@ -158,9 +170,7 @@ function bucketsFor(r: Row, lastSeenAt: number): Bucket[] {
     return out;
   }
   if (isCancelled(r)) {
-    if (r.status === "expired" || r.status === "cancelled" || r.shift?.status === "cancelled")
-      out.push("scadute");
-    else if (r.status === "rejected" || r.status === "not_interested") out.push("rifiutate");
+    if (r.status === "rejected" || r.status === "not_interested") out.push("rifiutate");
     else out.push("scadute");
     return out;
   }
@@ -208,6 +218,8 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
       cls: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30",
     };
   if (r.status === "expired")
+    return { label: "Scaduta", cls: "bg-muted text-muted-foreground border-border" };
+  if (isExpiredByTime(r))
     return { label: "Scaduta", cls: "bg-muted text-muted-foreground border-border" };
   if (r.status === "counter_offer")
     return { label: "In attesa conferma ristoratore", cls: "bg-sky-100 text-sky-900 border-sky-200" };
@@ -454,12 +466,23 @@ function Jobs() {
   }, [user]);
 
   const respond = async (id: string, status: "interested" | "not_interested") => {
+    // Guardia UI coerente con il blocco DB: nessuna azione su offerte scadute.
+    const row = rows.find((r) => r.id === id);
+    if (status === "interested" && row && isExpiredByTime(row)) {
+      toast.error("Questa offerta è scaduta: il turno è già iniziato.");
+      return;
+    }
     const { error } = await supabase
       .from("applications")
       .update({ status, worker_response_at: new Date().toISOString() })
       .eq("id", id);
     if (error) {
-      toast.error(error.message);
+      const msg = String(error.message ?? "");
+      if (msg.includes("OFFER_EXPIRED") || msg.includes("ANNOUNCEMENT_EXPIRED")) {
+        toast.error("Questa offerta è scaduta: il turno è già iniziato.");
+      } else {
+        toast.error(msg);
+      }
       return;
     }
     if (status === "interested" && user) {
@@ -701,6 +724,7 @@ function OfferCard({
   const canStillConfirm =
     !confirmed &&
     !isCancelled(r) &&
+    !isExpiredByTime(r) &&
     (r.status === "pending" ||
       r.status === "interested" ||
       r.status === "counter_offer");
@@ -862,7 +886,12 @@ function OfferCard({
 
       {/* Actions */}
       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        {r.status === "pending" && (
+        {r.status === "pending" && isExpiredByTime(r) && (
+          <p className="flex-1 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            Offerta scaduta: il turno è già iniziato e non è più possibile rispondere.
+          </p>
+        )}
+        {r.status === "pending" && !isExpiredByTime(r) && (
           <>
             <Button
               size="lg"
