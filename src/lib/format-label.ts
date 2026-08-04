@@ -1,78 +1,90 @@
 /**
- * Centralized helper to render technical slugs (e.g. `saper_portare_tre_piatti`,
- * `patente_a`, `italiano_intermedio`) as human-readable labels for the UI.
+ * Formatter centralizzato per mostrare all'utente i valori tecnici salvati a
+ * DB (slug, enum, chiavi applicative) come etichette italiane leggibili.
  *
- * Display-only: never use to transform values before saving them to the DB,
- * filtering, matching or any business logic.
+ * Regole (nell'ordine):
+ *  1. se esiste una label ufficiale nei dizionari del progetto, vince quella;
+ *  2. i termini da preservare (HACCP, B&B, part-time…) restano invariati;
+ *  3. gli underscore vengono sempre sostituiti con uno spazio;
+ *  4. i trattini vengono sostituiti SOLO quando il valore è certamente uno
+ *     slug tecnico (tutto minuscolo, senza spazi);
+ *  5. i testi già formattati (con spazi o maiuscole) restano invariati.
+ *
+ * Solo presentazione: non usare mai per trasformare valori prima di salvarli,
+ * filtrarli o confrontarli.
  */
 
-const EXPLICIT_LABELS: Record<string, string> = {
-  saper_portare_tre_piatti: "Saper portare tre piatti",
-  servizio_al_tavolo: "Servizio al tavolo",
-  gestione_cassa: "Gestione cassa",
-  presa_comande: "Presa comande",
-  caffetteria: "Caffetteria",
-  preparazione_caffetteria: "Caffetteria",
-  spillatura_birra: "Spillatura birra",
-  preparazione_cocktail: "Preparazione cocktail",
-  uso_cassa: "Uso cassa",
-  uso_palmare: "Uso palmare/comande",
-  lavapiatti: "Lavapiatti",
-  cucina_base: "Cucina base",
-  banqueting: "Banqueting",
-  fine_dining: "Fine dining",
-  gestione_sala: "Gestione sala",
-  italiano_base: "Italiano base",
-  italiano_intermedio: "Italiano intermedio",
-  italiano_avanzato: "Italiano avanzato",
-  italiano_madrelingua: "Italiano madrelingua",
-  inglese_base: "Inglese base",
-  inglese_intermedio: "Inglese intermedio",
-  inglese_avanzato: "Inglese avanzato",
-  francese_base: "Francese base",
-  francese_intermedio: "Francese intermedio",
-  francese_avanzato: "Francese avanzato",
-  tedesco_base: "Tedesco base",
-  tedesco_intermedio: "Tedesco intermedio",
-  tedesco_avanzato: "Tedesco avanzato",
-  spagnolo_base: "Spagnolo base",
-  spagnolo_intermedio: "Spagnolo intermedio",
-  spagnolo_avanzato: "Spagnolo avanzato",
-  patente_a: "Patente A",
-  patente_b: "Patente B",
-  patente_c: "Patente C",
-  patente_d: "Patente D",
-  patente_e: "Patente E",
-  nessuna: "Nessuna",
-  automunito: "Automunito",
-  altro: "Altro",
-};
+import {
+  ALL_OPTION_LISTS,
+  LEGACY_VALUE_LABELS,
+  PRESERVED_TERM_LABELS,
+} from "@/lib/requirement-options";
+import { JOB_ROLE_CATALOG } from "@/lib/job-roles";
+
+/** Dizionario ufficiale valore tecnico → etichetta, costruito una sola volta. */
+const OFFICIAL_LABELS: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  for (const list of ALL_OPTION_LISTS) {
+    for (const opt of list) {
+      if (!(opt.value in map)) map[opt.value] = opt.label;
+    }
+  }
+  for (const role of JOB_ROLE_CATALOG) {
+    if (!(role.id in map)) map[role.id] = role.label;
+  }
+  for (const [k, v] of Object.entries(LEGACY_VALUE_LABELS)) {
+    if (!(k in map)) map[k] = v;
+  }
+  return map;
+})();
+
+/** Espone il dizionario ufficiale (sola lettura) per test e diagnostica. */
+export function getOfficialLabels(): Readonly<Record<string, string>> {
+  return OFFICIAL_LABELS;
+}
+
+/** true se il valore ha l'aspetto di uno slug tecnico (minuscolo, senza spazi). */
+function isTechnicalSlug(raw: string): boolean {
+  return !/\s/.test(raw) && raw === raw.toLowerCase();
+}
 
 /**
- * Convert a single slug-like value into a human-readable label.
- * - Falls back to a safe formatter that replaces underscores with spaces
- *   and capitalizes the first letter.
- * - Handles the "patente_x" pattern by uppercasing the single-letter suffix.
+ * Converte un singolo valore strutturato in etichetta leggibile.
+ * Restituisce "" per null, undefined e stringhe vuote.
  */
 export function formatDisplayLabel(value: string | null | undefined): string {
   if (value == null) return "";
   const raw = String(value).trim();
   if (!raw) return "";
   const key = raw.toLowerCase();
-  const explicit = EXPLICIT_LABELS[key];
-  if (explicit) return explicit;
 
-  // Handle "patente_<letter>" / "patente_<letter><number>" defensively
+  // 1. label ufficiale del progetto
+  const official = OFFICIAL_LABELS[key];
+  if (official) return official;
+
+  // 2. acronimi e diciture da preservare
+  const preserved = PRESERVED_TERM_LABELS[key];
+  if (preserved) return preserved;
+
+  // Pattern difensivo "patente_<lettera>"
   const patente = /^patente[_\s-]+([a-z]{1,3}[0-9]?)$/i.exec(raw);
   if (patente) return `Patente ${patente[1].toUpperCase()}`;
 
-  const spaced = raw.replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim();
+  // 3/4. underscore sempre, trattini solo sugli slug tecnici
+  const separators = isTechnicalSlug(raw) ? /[_-]+/g : /_+/g;
+  const spaced = raw.replace(separators, " ").replace(/\s+/g, " ").trim();
   if (!spaced) return raw;
+
+  // 5. testo già formattato (contiene maiuscole o spazi originali): non alterarlo
+  if (!isTechnicalSlug(raw)) return spaced;
+
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-/** Map an array of slugs into their readable labels (skips empty entries). */
-export function formatDisplayLabels(values: ReadonlyArray<string | null | undefined> | null | undefined): string[] {
+/** Applica `formatDisplayLabel` a un array, scartando i valori vuoti. */
+export function formatDisplayLabels(
+  values: ReadonlyArray<string | null | undefined> | null | undefined,
+): string[] {
   if (!values || values.length === 0) return [];
   const out: string[] = [];
   for (const v of values) {

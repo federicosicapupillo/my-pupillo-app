@@ -1,3 +1,4 @@
+import { formatDisplayLabel } from "@/lib/format-label";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
@@ -434,7 +435,7 @@ function Page() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-base leading-tight truncate">{r.full_name ?? "Lavoratore"}</div>
-                    <div className="text-xs text-muted-foreground capitalize truncate mt-0.5">{r.primary_role ?? "Collaboratore"}</div>
+                    <div className="text-xs text-muted-foreground capitalize truncate mt-0.5">{formatDisplayLabel(r.primary_role) || "Collaboratore"}</div>
                     {typeof r.rating_avg === "number" && r.rating_avg > 0 && (
                       <div className="flex items-center gap-1 mt-1.5">
                         {[1,2,3,4,5].map(i => (
