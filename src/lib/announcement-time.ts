@@ -21,11 +21,16 @@ function zonedWallTimeToDate(dateStr: string, timeStr: string, tz: string = APP_
   const h = Number(tm[1]), m = Number(tm[2]), s = Number(tm[3] ?? "0");
   // Build a UTC guess for the same wall-clock numbers.
   const utcGuess = Date.UTC(Y, M - 1, D, h, m, s);
-  // Compute the offset of `tz` at that instant by formatting both sides.
-  const tzWall = new Date(new Date(utcGuess).toLocaleString("en-US", { timeZone: tz }));
-  const localWall = new Date(new Date(utcGuess).toLocaleString("en-US", { timeZone: "UTC" }));
-  const offsetMs = tzWall.getTime() - localWall.getTime();
-  const result = new Date(utcGuess - offsetMs);
+  const offsetAt = (instant: number) => {
+    const tzWall = new Date(new Date(instant).toLocaleString("en-US", { timeZone: tz }));
+    const utcWall = new Date(new Date(instant).toLocaleString("en-US", { timeZone: "UTC" }));
+    return tzWall.getTime() - utcWall.getTime();
+  };
+  // Due iterazioni: l'offset va valutato nell'istante RISULTANTE, non nella
+  // stima UTC iniziale. Senza il secondo passaggio, gli orari nella notte del
+  // cambio ora legale/solare risultano sfasati di un'ora.
+  let result = new Date(utcGuess - offsetAt(utcGuess));
+  result = new Date(utcGuess - offsetAt(result.getTime()));
   return isNaN(result.getTime()) ? null : result;
 }
 
