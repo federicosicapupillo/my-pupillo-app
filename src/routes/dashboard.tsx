@@ -1013,7 +1013,7 @@ function FavoriteWorkersSection() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="font-medium truncate">{w.full_name ?? "Lavoratore"}</div>
-                <div className="text-xs text-muted-foreground capitalize truncate">{w.primary_role ?? "—"}</div>
+                <div className="text-xs text-muted-foreground capitalize truncate">{formatDisplayLabel(w.primary_role) || "—"}</div>
                 <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                   {w.rating_avg != null && (
                     <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{Number(w.rating_avg).toFixed(1)}</span>
