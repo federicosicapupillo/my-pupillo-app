@@ -10,14 +10,14 @@ const rid = await mk(rEmail, { full_name:'Audit Rist', role:'restaurant' });
 const wid = await mk(wEmail, { full_name:'Audit Worker', role:'worker' });
 await sb.from('user_roles').upsert([{user_id:rid,role:'restaurant'},{user_id:wid,role:'worker'}],{onConflict:'user_id,role'});
 let e;
-({ error: e } = await sb.from('profiles').update({ full_name:'Audit Rist', business_name:'Trattoria Audit', phone:'+393200001999', phone_full:'+393200001999', phone_verified:true, address:'Via Test 1', city:'Bologna', province:'BO', postal_code:'40121', contact_person_first_name:'Mario', contact_person_last_name:'Audit', contact_person_phone:'+393200001998', profile_completed:true, is_demo:true, seed_batch_id:BATCH }).eq('id', rid));
+({ error: e } = await sb.from('profiles').update({ full_name:'Audit Rist', business_name:'Trattoria Audit', vat_number:'12345678901', phone:'+393200001999', phone_full:'+393200001999', phone_verified:true, address:'Via Test 1', city:'Bologna', province:'BO', postal_code:'40121', contact_person_first_name:'Mario', contact_person_last_name:'Audit', contact_person_phone:'+393200001998', profile_completed:true, is_demo:true, seed_batch_id:BATCH }).eq('id', rid));
 if (e) console.log('rist profile err', e.message);
-({ error: e } = await sb.from('profiles').update({ full_name:'Audit Worker Rossi', first_name:'Audit', last_name:'Rossi', city:'Bologna', province:'BO', phone_verified:true, profile_completed:true, is_demo:true, seed_batch_id:BATCH }).eq('id', wid));
+({ error: e } = await sb.from('profiles').update({ full_name:'Audit Worker Rossi', first_name:'Audit', last_name:'Rossi', avatar_url:'avatars/audit.jpg', city:'Bologna', province:'BO', phone_verified:true, profile_completed:true, is_demo:true, seed_batch_id:BATCH }).eq('id', wid));
 if (e) console.log('worker profile err', e.message);
-const { data: cr, error: ce } = await sb.rpc('grant_credits', { _user_id: rid, _amount: 100, _kind: 'admin_grant', _reason: 'audit', _reference_id: BATCH });
+const { data: cr, error: ce } = await sb.rpc('grant_credits', { _user_id: rid, _amount: 100, _kind: 'grant', _reason: 'audit', _reference_id: BATCH });
 console.log('credits', cr, ce?.message);
 
-const base = o => ({ restaurant_id: rid, service_date: day(6), service_time:'19:00:00', end_time:'23:00:00', duration_hours:4, speed:'standard', tariff_type:'hourly', tariff_amount:12, location_address:'Via Segreta 42, Bologna', job_address:'Via Segreta 42', job_city:'Bologna', job_province:'BO', job_postal_code:'40121', job_contact_person_name:'Mario Audit', job_contact_person_phone:'+393200001998', job_contact_person_email:'m@audit.it', professional_profile:'cameriere', status:'active', expires_at: new Date(Date.now()+5*86400000).toISOString(), is_demo:true, seed_batch_id:BATCH, ...o });
+const base = o => ({ restaurant_id: rid, service_date: day(6), service_time:'19:00:00', end_time:'23:00:00', duration_hours:4, speed:'normal', tariff_type:'hourly', tariff_amount:12, location_address:'Via Segreta 42, Bologna', job_address:'Via Segreta 42', job_city:'Bologna', job_province:'BO', job_postal_code:'40121', job_contact_person_name:'Mario Audit', job_contact_person_phone:'+393200001998', job_contact_person_email:'m@audit.it', professional_profile:'cameriere', status:'active', expires_at: new Date(Date.now()+5*86400000).toISOString(), is_demo:true, seed_batch_id:BATCH, ...o });
 const { data: anns, error: ae } = await sb.from('announcements').insert([
   base({ notes:'A1 overlap' }),
   base({ notes:'A2 overlap' }),
