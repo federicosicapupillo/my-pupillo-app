@@ -2949,6 +2949,7 @@ function Thread() {
                         setProposalStatuses((prev) => ({ ...prev, [m.id]: "accepted" }));
                       } else if (String(respErr.message ?? "").includes("OFFER_EXPIRED")) {
                         toast.error("Questa proposta è scaduta: il turno è già iniziato.");
+                        setProposalStatuses((prev) => ({ ...prev, [m.id]: "expired" }));
                         return;
                       } else if (!String(respErr.message ?? "").toLowerCase().includes("duplicate")) {
                         console.error("[proposal] response insert failed", respErr);
