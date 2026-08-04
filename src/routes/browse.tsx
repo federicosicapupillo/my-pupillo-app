@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
-import { isLocationAllowed } from "@/lib/launch-area";
+import { isInOperationalArea } from "@/lib/operational-area";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useMemo, useState } from "react";
@@ -220,7 +220,7 @@ function Browse() {
     // Difesa in profondità: il DB già filtra gli annunci fuori area di lancio
     // (vista `announcements_public`), ma non mostriamo comunque nulla fuori zona.
     const areaFiltered = statusFiltered.filter((a) =>
-      isLocationAllowed({ city: (a as any).job_city, province: (a as any).job_province }),
+      isInOperationalArea(a as any),
     );
 
     // Carica i profili dei ristoratori per filtrare gli annunci orfani:
