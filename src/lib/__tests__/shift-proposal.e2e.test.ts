@@ -82,7 +82,7 @@ beforeEach(() => {
   calls.length = 0;
   fixtures.announcements = {
     id: ANN_ID,
-    service_date: "2026-06-12",
+    service_date: "2099-06-12",
     service_time: "19:00:00",
     end_time: "23:00:00",
     location_address: "Via Roma 1, Milano",
@@ -153,7 +153,7 @@ describe("E2E — restaurant sends a shift proposal", () => {
     const appUpdate = calls.find((c) => c.table === "applications" && c.op === "update");
     expect(appUpdate, "applications row must be updated so the inbox `lastBody` & `lastAt` refresh in realtime").toBeDefined();
     expect(appUpdate!.filters).toEqual({ id: APP_ID });
-    expect(appUpdate!.payload!.last_message_preview).toBe("Nuova proposta di lavoro");
+    expect(appUpdate!.payload!.last_message_preview).toBe("Proposta: Cameriere · 12/06 · 19:00 - 23:00");
     expect(typeof appUpdate!.payload!.last_message_at).toBe("string");
     // Same timestamp written on the message and on the application so the
     // inbox sort order matches the chat order.
@@ -166,7 +166,7 @@ describe("E2E — restaurant sends a shift proposal", () => {
     const body = buildProposalBody(
       {
         id: ANN_ID,
-        service_date: "2026-06-12",
+        service_date: "2099-06-12",
         service_time: "19:00:00",
         end_time: "23:00:00",
         location_address: "Via Roma 1, Milano",

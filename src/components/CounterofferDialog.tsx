@@ -159,7 +159,7 @@ export function CounterofferDialog({
       onSent?.();
     } catch (e) {
       console.error("[PUPILLO_COUNTEROFFER_FLOW_DEBUG] error", e);
-      if ((e as any)?.name === "WorkerBusyError") {
+      if ((e as any)?.name === "WorkerBusyError" || (e as any)?.name === "AnnouncementExpiredError") {
         toast.error((e as Error).message);
       } else {
         toast.error("Impossibile inviare la controfferta. Riprova.");

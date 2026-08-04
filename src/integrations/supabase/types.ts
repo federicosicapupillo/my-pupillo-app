@@ -156,6 +156,7 @@ export type Database = {
           service_date: string
           service_time: string
           shift_duration_hours: number | null
+          shift_start_at: string | null
           speed: Database["public"]["Enums"]["service_speed"]
           status: Database["public"]["Enums"]["announcement_status"]
           tariff_amount: number
@@ -213,6 +214,7 @@ export type Database = {
           service_date: string
           service_time: string
           shift_duration_hours?: number | null
+          shift_start_at?: string | null
           speed?: Database["public"]["Enums"]["service_speed"]
           status?: Database["public"]["Enums"]["announcement_status"]
           tariff_amount: number
@@ -270,6 +272,7 @@ export type Database = {
           service_date?: string
           service_time?: string
           shift_duration_hours?: number | null
+          shift_start_at?: string | null
           speed?: Database["public"]["Enums"]["service_speed"]
           status?: Database["public"]["Enums"]["announcement_status"]
           tariff_amount?: number
@@ -2186,6 +2189,7 @@ export type Database = {
           service_date: string | null
           service_time: string | null
           shift_duration_hours: number | null
+          shift_start_at: string | null
           speed: Database["public"]["Enums"]["service_speed"] | null
           status: Database["public"]["Enums"]["announcement_status"] | null
           tariff_amount: number | null
@@ -2228,6 +2232,7 @@ export type Database = {
           service_date?: string | null
           service_time?: string | null
           shift_duration_hours?: number | null
+          shift_start_at?: string | null
           speed?: Database["public"]["Enums"]["service_speed"] | null
           status?: Database["public"]["Enums"]["announcement_status"] | null
           tariff_amount?: number | null
@@ -2270,6 +2275,7 @@ export type Database = {
           service_date?: string | null
           service_time?: string | null
           shift_duration_hours?: number | null
+          shift_start_at?: string | null
           speed?: Database["public"]["Enums"]["service_speed"] | null
           status?: Database["public"]["Enums"]["announcement_status"] | null
           tariff_amount?: number | null
@@ -2667,6 +2673,10 @@ export type Database = {
       announcement_effective_end: {
         Args: { p_announcement_id: string }
         Returns: string
+      }
+      announcement_is_open: {
+        Args: { _announcement_id: string }
+        Returns: boolean
       }
       are_coords_in_launch_area: {
         Args: { _lat: number; _lng: number }

@@ -46,7 +46,7 @@ import {
 } from "@/lib/shift-confirmation";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatDateTimeIT, formatTariff, formatOfferDateTime, formatJobLocation } from "@/lib/format";
-import { getShiftEndDate } from "@/lib/announcement-time";
+import { getShiftEndDate, isAnnouncementExpired } from "@/lib/announcement-time";
 import { Calendar, Clock, MapPin, Briefcase, Building2, StickyNote, AlarmClock } from "lucide-react";
 import { Shirt, ListChecks, Languages as LanguagesIcon, BadgeCheck, Info, Lock, Phone, User as UserIcon, Navigation, ExternalLink } from "lucide-react";
 import { ShieldAlert, Unlock, FileText } from "lucide-react";
@@ -1354,6 +1354,16 @@ function Thread() {
   ) => {
     if (!app || !user) return;
     if (transitioning) return;
+    // Scadenza (regola unica: inizio turno passato) — nessuna accettazione
+    // né conferma su un'offerta scaduta. Rifiuto/annullamento restano possibili.
+    if (
+      (next === "interested" || next === "accepted") &&
+      ann &&
+      isAnnouncementExpired(ann as any)
+    ) {
+      toast.error("Questa offerta è scaduta: il turno è già iniziato.");
+      return;
+    }
     setTransitioning(next);
     // True when the assignment has been performed atomically server-side
     // (credits + application status + announcement in one transaction).
@@ -1461,6 +1471,8 @@ function Thread() {
           setInsufficientOpen(true);
         } else if (code === "announcement_full") {
           toast.error("Il turno è già stato assegnato a un altro lavoratore.");
+        } else if (code === "offer_expired") {
+          toast.error("Questa offerta è scaduta: il turno è già iniziato. Nessun credito è stato scalato.");
         } else if (code === "not_available" || code === "not_found") {
           toast.error("Questa proposta non è più disponibile.");
         } else if (code === "forbidden" || code === "not_authenticated") {
@@ -2903,6 +2915,10 @@ function Thread() {
                       toast.error("Non puoi accettare questa proposta perché il turno è stato annullato.");
                       return;
                     }
+                    if (ann && isAnnouncementExpired(ann as any)) {
+                      toast.error("Questa proposta è scaduta: il turno è già iniziato.");
+                      return;
+                    }
                     if (role === "worker" && user) {
                       const fresh = await fetchSpecialAvailabilityBlock(user.id, ann);
                       if (fresh?.blocked) {
@@ -2929,6 +2945,9 @@ function Thread() {
                       } as never);
                       if (!respErr) {
                         setProposalStatuses((prev) => ({ ...prev, [m.id]: "accepted" }));
+                      } else if (String(respErr.message ?? "").includes("OFFER_EXPIRED")) {
+                        toast.error("Questa proposta è scaduta: il turno è già iniziato.");
+                        return;
                       } else if (!String(respErr.message ?? "").toLowerCase().includes("duplicate")) {
                         console.error("[proposal] response insert failed", respErr);
                       }

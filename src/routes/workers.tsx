@@ -1067,7 +1067,7 @@ function WorkersPage() {
           workerId,
         });
       } catch (err: any) {
-        if (err?.name === "WorkerBusyError") {
+        if (err?.name === "WorkerBusyError" || err?.name === "AnnouncementExpiredError") {
           toast.error(err.message);
           setSendingProposal(false);
           return;

@@ -22,7 +22,7 @@ import { formatTariff } from "@/lib/format";
 import { UserAvatar } from "@/components/UserAvatar";
 import { publicLocationLabel, canSeePreciseAddress, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
-import { getShiftEndDate, getShiftStartDate } from "@/lib/announcement-time";
+import { getShiftEndDate, getShiftStartDate, isAnnouncementExpired } from "@/lib/announcement-time";
 import { useProfileGate } from "@/components/ProfileGate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
@@ -462,6 +462,12 @@ function AnnouncementDetail() {
       toast.error(CONFLICT_WORKER_APPLY_MESSAGE);
       return;
     }
+    // Scadenza: nessuna candidatura su un turno già iniziato (blocco anche DB).
+    if (isAnnouncementExpired(ann as any)) {
+      setApplying(false);
+      toast.error("Questo annuncio è scaduto: il turno è già iniziato.");
+      return;
+    }
     const { error } = await supabase.from("applications").insert({
       announcement_id: ann.id,
       worker_id: user.id,
@@ -476,6 +482,10 @@ function AnnouncementDetail() {
       }
       if ((error.message || "").includes("moderation_blocked")) {
         toast.error("Operazione non disponibile al momento");
+        return;
+      }
+      if ((error.message || "").includes("ANNOUNCEMENT_EXPIRED")) {
+        toast.error("Questo annuncio è scaduto: il turno è già iniziato.");
         return;
       }
       toast.error(error.message);

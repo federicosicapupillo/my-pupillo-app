@@ -6,11 +6,22 @@ import {
   checkWorkerShiftConflict,
   CONFLICT_RESTAURANT_REQUEST_MESSAGE,
 } from "@/lib/shift-conflict";
+import { isAnnouncementExpired } from "@/lib/announcement-time";
 
 export class WorkerBusyError extends Error {
   constructor(message = CONFLICT_RESTAURANT_REQUEST_MESSAGE) {
     super(message);
     this.name = "WorkerBusyError";
+  }
+}
+
+export const ANNOUNCEMENT_EXPIRED_MESSAGE =
+  "Questo annuncio è scaduto: il turno è già iniziato.";
+
+export class AnnouncementExpiredError extends Error {
+  constructor(message = ANNOUNCEMENT_EXPIRED_MESSAGE) {
+    super(message);
+    this.name = "AnnouncementExpiredError";
   }
 }
 
@@ -118,6 +129,10 @@ export async function sendShiftProposal(params: {
   // PUPILLO: regola di OCCUPAZIONE — non inviare proposta a un lavoratore
   // gia' occupato in quella fascia oraria (con buffer 1h post-fine).
   if (ann) {
+    // Scadenza: nessuna proposta su un turno già iniziato.
+    if (isAnnouncementExpired(ann as any)) {
+      throw new AnnouncementExpiredError();
+    }
     const conflict = await checkWorkerShiftConflict(workerId, ann as any, {
       ignoreApplicationId: applicationId,
     });
