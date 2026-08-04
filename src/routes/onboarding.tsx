@@ -1143,16 +1143,17 @@ function Onboarding() {
         validateBirthDate(personal.birth_date, today) === null;
       // City must belong to the supported dataset; CAP must match it; civic
       // number must follow the Italian format (e.g. 12, 12A, 24/B).
-      const cityEntry = findCityProvince(personal.residence_city);
+      // Residenza = dato ANAGRAFICO: validata sull'anagrafica nazionale dei
+      // comuni, MAI sull'area operativa Pupillo (Bologna e provincia).
+      const cityEntry = findResidenceComune(
+        personal.residence_city,
+        personal.residence_province,
+      );
       const provinceOk =
         !!cityEntry &&
         personal.residence_province.trim().toUpperCase() ===
           cityEntry.province_code;
-      const capOk = isValidCapForCity(
-        cityEntry?.province ?? null,
-        personal.residence_city,
-        personal.residence_postal_code,
-      );
+      const capOk = isValidResidenceCap(personal.residence_postal_code);
       const civicOk = isValidCivicNumber(personal.residence_street_number);
       // CF coerenza con data/luogo di nascita — decode e verifica.
       // La check formale (cfOk) resta sopra per gestire il messaggio "CF non valido".
