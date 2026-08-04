@@ -1981,7 +1981,9 @@ function Thread() {
       .map((m) => {
         const label = m.template_id === CONFIRMATION_TEMPLATE_ID
           ? "Istruzioni operative inviate"
-          : m.action_type === "instructions_acknowledged"
+          : m.template_id === "shift_no_show" || m.action_type === "shift_no_show"
+            ? "No show segnalato dal ristoratore"
+            : m.action_type === "instructions_acknowledged"
             ? "Istruzioni lette dal lavoratore"
             : m.template_id === "chat_closed_completed"
               ? "Turno concluso"
@@ -1989,7 +1991,9 @@ function Thread() {
                 ? "Turno annullato"
                 : (m.body ?? "").replace(/^⚙️ Sistema:\s*/, "").split("\n")[0];
         const tone: TimelineEvent["tone"] =
-          m.action_type === "accept_application"
+          m.action_type === "shift_no_show" || m.template_id === "shift_no_show"
+            ? "error"
+            : m.action_type === "accept_application"
             ? "success"
             : m.action_type === "reject_application" || m.template_id === "chat_closed_cancelled"
               ? "error"
