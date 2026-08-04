@@ -478,6 +478,7 @@ function Jobs() {
     const row = rows.find((r) => r.id === id);
     if (status === "interested" && row && isExpiredByTime(row)) {
       toast.error("Questa offerta è scaduta: il turno è già iniziato.");
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: "expired" } : r)));
       return;
     }
     const { error } = await supabase
@@ -488,6 +489,8 @@ function Jobs() {
       const msg = String(error.message ?? "");
       if (msg.includes("OFFER_EXPIRED") || msg.includes("ANNOUNCEMENT_EXPIRED")) {
         toast.error("Questa offerta è scaduta: il turno è già iniziato.");
+        // Allinea subito la UI: badge "Scaduta" e niente pulsanti, senza refresh manuale.
+        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: "expired" } : r)));
       } else {
         toast.error(msg);
       }
