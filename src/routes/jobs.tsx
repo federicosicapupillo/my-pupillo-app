@@ -556,7 +556,7 @@ function Jobs() {
       return priorityFor(a, isNewA) - priorityFor(b, isNewB);
     });
     return list;
-  }, [rows, tab, sortMode, lastSeenAt]);
+  }, [rows, tab, sortMode, lastSeenAt, minuteTick]);
 
   if (role !== "worker")
     return (
