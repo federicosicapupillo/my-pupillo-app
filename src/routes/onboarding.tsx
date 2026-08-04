@@ -3018,7 +3018,7 @@ function Onboarding() {
                   );
                 })}
               </div>
-              <LaunchAreaNotice />
+              <LaunchAreaNotice variant="worker" />
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Città di partenza *</Label>
