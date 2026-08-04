@@ -32,12 +32,15 @@ import {
   isCityInProvince,
   isValidCapForCity,
   isValidCapForDistrict,
-  ALL_CITIES_WITH_PROVINCE,
-  findCityProvince,
-  capsForCity,
   isValidCivicNumber,
   splitAddressAndCivic,
 } from "@/lib/italian-locations";
+import {
+  RESIDENCE_CITY_OPTIONS,
+  findResidenceComune,
+  isValidResidenceCap,
+  RESIDENCE_HELPER_TEXT,
+} from "@/lib/italian-comuni";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -1140,16 +1143,17 @@ function Onboarding() {
         validateBirthDate(personal.birth_date, today) === null;
       // City must belong to the supported dataset; CAP must match it; civic
       // number must follow the Italian format (e.g. 12, 12A, 24/B).
-      const cityEntry = findCityProvince(personal.residence_city);
+      // Residenza = dato ANAGRAFICO: validata sull'anagrafica nazionale dei
+      // comuni, MAI sull'area operativa Pupillo (Bologna e provincia).
+      const cityEntry = findResidenceComune(
+        personal.residence_city,
+        personal.residence_province,
+      );
       const provinceOk =
         !!cityEntry &&
         personal.residence_province.trim().toUpperCase() ===
           cityEntry.province_code;
-      const capOk = isValidCapForCity(
-        cityEntry?.province ?? null,
-        personal.residence_city,
-        personal.residence_postal_code,
-      );
+      const capOk = isValidResidenceCap(personal.residence_postal_code);
       const civicOk = isValidCivicNumber(personal.residence_street_number);
       // CF coerenza con data/luogo di nascita — decode e verifica.
       // La check formale (cfOk) resta sopra per gestire il messaggio "CF non valido".
@@ -1234,7 +1238,7 @@ function Onboarding() {
           markErr("residence_city");
           scrollToField("residence_city");
         } else if (!capOk) {
-          toast.error("Seleziona un CAP valido per la città scelta.");
+          toast.error("Inserisci un CAP valido (5 cifre).");
           markErr("residence_postal_code");
           scrollToField("residence_postal_code");
         } else if (!civicOk) {
@@ -2535,15 +2539,12 @@ function Onboarding() {
                 <div data-field="residence_city" className={cn("scroll-mt-24", hasErr("residence_city") && errorFieldClass)}>
                   <Label>Città di residenza *</Label>
                   <SearchableSelect
-                    options={ALL_CITIES_WITH_PROVINCE.map((c) => ({
-                      value: c.city,
-                      label: `${c.city} (${c.province_code})`,
-                    }))}
+                    options={RESIDENCE_CITY_OPTIONS}
                     value={personal.residence_city}
                     placeholder="Seleziona città"
                     searchPlaceholder="Cerca città"
                     onChange={(city) => {
-                      const entry = findCityProvince(city);
+                      const entry = findResidenceComune(city);
                       setPersonal((s) => ({
                         ...s,
                         residence_city: city,
@@ -2554,6 +2555,9 @@ function Onboarding() {
                       }));
                     }}
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {RESIDENCE_HELPER_TEXT}
+                  </p>
                 </div>
                 <div data-field="residence_province">
                   <Label>Provincia *</Label>
@@ -2567,18 +2571,15 @@ function Onboarding() {
                 </div>
                 <div data-field="residence_postal_code" className={cn("scroll-mt-24", hasErr("residence_postal_code") && errorFieldClass)}>
                   <Label>CAP *</Label>
-                  <SearchableSelect
-                    options={capsForCity(
-                      findCityProvince(personal.residence_city)?.province ?? null,
-                      personal.residence_city,
-                    ).map((c) => ({ value: c, label: c }))}
-                    value={personal.residence_postal_code}
-                    placeholder={
-                      personal.residence_city
-                        ? "Seleziona CAP"
-                        : "Prima seleziona la città"
+                  <CapField
+                    province={
+                      findResidenceComune(
+                        personal.residence_city,
+                        personal.residence_province,
+                      )?.province ?? null
                     }
-                    searchPlaceholder="Cerca CAP"
+                    city={personal.residence_city || null}
+                    value={personal.residence_postal_code}
                     disabled={!personal.residence_city}
                     onChange={(cap) =>
                       setPersonal((s) => ({ ...s, residence_postal_code: cap }))
@@ -3017,7 +3018,7 @@ function Onboarding() {
                   );
                 })}
               </div>
-              <LaunchAreaNotice />
+              <LaunchAreaNotice variant="worker" />
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>Città di partenza *</Label>

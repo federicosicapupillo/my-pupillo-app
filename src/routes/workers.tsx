@@ -1246,13 +1246,12 @@ function WorkersPage() {
       : null;
   const activeRoleContext: string | null = advancedRole ?? announcementRole ?? null;
   const filtered = workers.filter((worker) => {
-    // Lancio Bologna: mostra solo lavoratori la cui area di riferimento
-    // rientra nell'area operativa attiva (difesa in profondità lato client).
+    // Lancio Bologna: filtra sull'AREA DI LAVORO dichiarata dal lavoratore.
+    // MAI sulla residenza (dato anagrafico): un lavoratore può risiedere
+    // ovunque e operare comunque a Bologna e provincia.
     const wCity =
       (worker as any).location_city ??
       worker.service_area_city ??
-      (worker as any).residence_city ??
-      (worker as any).city ??
       null;
     if (wCity && !isLocationAllowed({ city: wCity })) return false;
     // PUPILLO: anche se l'utente ha scelto un ruolo specifico nella

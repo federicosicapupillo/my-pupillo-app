@@ -101,6 +101,27 @@ export const LAUNCH_AREAS: LaunchArea[] = [
 
 export const ACTIVE_LAUNCH_AREAS = LAUNCH_AREAS.filter((a) => a.active);
 
+/**
+ * CONFIGURAZIONE CENTRALIZZATA DELL'AREA OPERATIVA.
+ *
+ * Unico punto in cui è definita la/le provincia/e in cui Pupillo è operativo.
+ * Vale per: creazione/pubblicazione annunci, luogo del turno, "Trova offerte",
+ * mappa, suggerimenti e notifiche di nuove offerte.
+ *
+ * NON vale per la residenza del lavoratore, che è un dato anagrafico e può
+ * essere qualsiasi comune (vedi `@/lib/italian-comuni`).
+ *
+ * Per aprire una nuova provincia basta aggiungere un'area in `LAUNCH_AREAS`
+ * (e la riga corrispondente a database): nessuna pagina va modificata.
+ */
+export const OPERATIONAL_PROVINCE_CODES: string[] = ACTIVE_LAUNCH_AREAS.map(
+  (a) => a.province_code,
+);
+
+/** Sigla della provincia operativa principale (es. "BO"). */
+export const OPERATIONAL_PROVINCE_CODE: string | null =
+  OPERATIONAL_PROVINCE_CODES[0] ?? null;
+
 /** True se è in corso una fase di lancio con restrizione territoriale. */
 export const LAUNCH_AREA_RESTRICTED = ACTIVE_LAUNCH_AREAS.length > 0;
 
@@ -111,6 +132,13 @@ export const LAUNCH_AREA_ERROR_MESSAGE =
 /** Comunicazione informativa mostrata dove si sceglie la località. */
 export const LAUNCH_AREA_NOTICE =
   "Pupillo parte da Bologna. In questa fase puoi cercare o pubblicare turni esclusivamente a Bologna e provincia.";
+
+/**
+ * Comunicazione mostrata al lavoratore nelle sezioni offerte/disponibilità:
+ * chiarisce che la limitazione riguarda il LUOGO DI LAVORO, non la residenza.
+ */
+export const LAUNCH_AREA_WORKER_NOTICE =
+  "In questa fase Pupillo è operativo esclusivamente a Bologna e provincia. Potrai visualizzare opportunità lavorative presenti in quest'area.";
 
 export function normalizePlaceName(v: string | null | undefined): string {
   return (v ?? "")
