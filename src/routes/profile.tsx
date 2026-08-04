@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { KeyRound, Trash2, FileText, Coins, Star, Eye, EyeOff, User, Building2, BadgeCheck, ShieldCheck } from "lucide-react";
+import { Trash2, FileText, Coins, Star, User, Building2, BadgeCheck, ShieldCheck } from "lucide-react";
 import { SpokenLanguagesView, SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { venueTypeLabel } from "@/lib/venue-types";
 import { priceRangeLabel } from "@/lib/price-range";
@@ -37,6 +37,7 @@ import { WorkerRolesMultiSelect } from "@/components/WorkerRolesMultiSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Lock } from "lucide-react";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
+import { AccountSecuritySection } from "@/components/AccountSecuritySection";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
@@ -45,45 +46,7 @@ export const Route = createFileRoute("/profile")({
 
 function Profile() {
   const { profile, role, user, refresh } = useAuth();
-  const [currentPwd, setCurrentPwd] = useState("");
-  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
-  const [pwd, setPwd] = useState("");
-  const [pwdConfirm, setPwdConfirm] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
-  const [showPwdConfirm, setShowPwdConfirm] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-
-  const changePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentPwd) { toast.error("Inserisci la password corrente."); return; }
-    if (pwd.length < 6) { toast.error("La nuova password non rispetta i requisiti di sicurezza richiesti."); return; }
-    if (!pwdConfirm) { toast.error("Conferma la nuova password"); return; }
-    if (pwd !== pwdConfirm) { toast.error("Le nuove password non coincidono."); return; }
-    if (pwd === currentPwd) { toast.error("La nuova password deve essere diversa da quella corrente."); return; }
-    const email = user?.email;
-    if (!email) { toast.error("Utente non autenticato."); return; }
-    setBusy(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password: currentPwd,
-    });
-    if (signInError) {
-      setBusy(false);
-      toast.error("La password corrente non è corretta.");
-      return;
-    }
-    const { error } = await supabase.auth.updateUser({ password: pwd });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Password aggiornata correttamente.");
-      setCurrentPwd("");
-      setPwd("");
-      setPwdConfirm("");
-    }
-  };
 
   // Account deletion is handled by DeleteAccountDialog (multi-step flow + RPC).
 
@@ -104,87 +67,7 @@ function Profile() {
         <ReferralCard />
       </div>
 
-      <div className="mt-6 rounded-2xl border bg-card p-6">
-        <h2 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4" />Cambia password</h2>
-        <form onSubmit={changePassword} className="mt-3 space-y-3">
-          <div>
-            <Label htmlFor="current-pwd">Password corrente *</Label>
-            <div className="relative mt-1">
-              <Input
-                id="current-pwd"
-                type={showCurrentPwd ? "text" : "password"}
-                required
-                autoComplete="current-password"
-                placeholder="Password corrente"
-                value={currentPwd}
-                onChange={e => setCurrentPwd(e.target.value)}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrentPwd(v => !v)}
-                aria-label={showCurrentPwd ? "Nascondi password" : "Mostra password"}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
-              >
-                {showCurrentPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="new-pwd">Nuova password *</Label>
-            <div className="relative mt-1">
-              <Input
-                id="new-pwd"
-                type={showPwd ? "text" : "password"}
-                minLength={6}
-                required
-                autoComplete="new-password"
-                placeholder="Nuova password"
-                value={pwd}
-                onChange={e => setPwd(e.target.value)}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd(v => !v)}
-                aria-label={showPwd ? "Nascondi password" : "Mostra password"}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
-              >
-                {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="confirm-pwd">Conferma nuova password *</Label>
-            <div className="relative mt-1">
-              <Input
-                id="confirm-pwd"
-                type={showPwdConfirm ? "text" : "password"}
-                minLength={6}
-                required
-                placeholder="Conferma nuova password"
-                value={pwdConfirm}
-                onChange={e => setPwdConfirm(e.target.value)}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwdConfirm(v => !v)}
-                aria-label={showPwdConfirm ? "Nascondi password" : "Mostra password"}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
-              >
-                {showPwdConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {pwdConfirm && pwd !== pwdConfirm && (
-              <p className="mt-1 text-xs text-destructive">Le nuove password non coincidono.</p>
-            )}
-          </div>
-          <Button type="submit" disabled={busy || !currentPwd || !pwd || !pwdConfirm || pwd !== pwdConfirm}>
-            {busy ? "Aggiornamento..." : "Aggiorna password"}
-          </Button>
-        </form>
-      </div>
+      <AccountSecuritySection email={user?.email ?? null} />
 
       <div className="mt-6 rounded-2xl border bg-card p-6 space-y-4">
         <h2 className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4" />Documenti</h2>
