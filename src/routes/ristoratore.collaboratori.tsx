@@ -1,3 +1,4 @@
+import { formatDisplayLabel } from "@/lib/format-label";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";

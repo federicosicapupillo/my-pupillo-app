@@ -1,3 +1,4 @@
+import { formatDisplayLabel } from "@/lib/format-label";
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { BolognaLaunchBanner } from "@/components/BolognaLaunchBanner";
 import { AvailabilitySetupBanner } from "@/components/AvailabilitySetupBanner";
