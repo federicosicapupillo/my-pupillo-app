@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 const URL=process.env.SUPABASE_URL, PUB=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.VITE_SUPABASE_PUBLISHABLE_KEY, SR=process.env.SUPABASE_SERVICE_ROLE_KEY;
 const adm = createClient(URL, SR, { auth:{persistSession:false} });
-const C = { BATCH:'audit_1785857305444', rid:'8979737c-313e-4782-a3fb-a76e7bce5765', wid:'0cd26ce5-f2ca-4b37-a4e9-154434a29f58',
-  rEmail:'audit.rist.1785857305444@pupillo.test', wEmail:'audit.worker.1785857305444@pupillo.test', PW:'Test1234!',
-  A:{A1:'4e962026-7b4d-41e6-8e3f-6a30cd07560e',A2:'af8c6318-5688-4062-8a90-a9427713dc5c',A3:'d3206721-906d-4b85-a56d-19bbe8bf83dd',A4:'99d19d22-e0a7-4de6-8262-0b346682689f'},
-  APP:{A1:'f9c62836-ee94-4bc3-bc90-edcdc90b1c4d',A2:'ed6b1afb-e985-4a4a-9d33-78e1d1a540bd',A3:'f67ded87-8167-4e00-bc76-a3ee8dbc3592',A4:'afa4b006-5998-4948-b4d5-68df70f462f1'} };
+const C = { BATCH:'audit_1785857369529', rid:'06199e9d-79be-4238-a85f-53ddf58fb79a', wid:'5917c024-a428-4d88-95c8-69e9d6e26cda',
+  rEmail:'audit.rist.1785857369529@pupillo.test', wEmail:'audit.worker.1785857369529@pupillo.test', PW:'Test1234!',
+  A:{A1:'a4339ee0-e4b0-447d-8646-3a569b8b9737',A2:'aa4ee5c5-543b-416e-8597-f5979fb69254',A3:'e62ef3cb-cc1d-4fd4-86a9-a89764646776',A4:'e62dc7ec-dc74-4052-a607-2651dd031160'},
+  APP:{A1:'2d360a52-e278-4999-814f-61c33a0120ec',A2:'c812c8d7-b6bc-4b3d-ba4d-1a79a1ffa147',A3:'1ae641bb-f62e-42ee-b434-a2eda5978b53',A4:'f7a15006-c1c2-473b-8833-716678a137eb'} };
 const fresh = () => createClient(URL, PUB, { auth:{persistSession:false, autoRefreshToken:false}, realtime:{params:{eventsPerSecond:1}} });
 async function signIn(email){ const c=fresh(); const {error}=await c.auth.signInWithPassword({email,password:C.PW}); if(error) throw new Error(email+': '+error.message); return c; }
 const R=[]; const rec=(n,pass,d)=>{R.push({n,pass,d}); console.log((pass?'PASS':'FAIL')+' | '+n+' | '+JSON.stringify(d));};
