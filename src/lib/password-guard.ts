@@ -44,7 +44,8 @@ export function assertCanManagePassword(signupMethod: SignupMethod | string | nu
 export async function fetchMySignupMethod(): Promise<string | null> {
   const { data, error } = await supabase.rpc("my_signup_method" as never);
   if (error) return null;
-  const v = typeof data === "string" ? data.trim().toLowerCase() : "";
+  const raw: unknown = data;
+  const v = typeof raw === "string" ? raw.trim().toLowerCase() : "";
   return v.length > 0 ? v : null;
 }
 
