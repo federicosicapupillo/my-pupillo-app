@@ -43,6 +43,39 @@ function clean(v: unknown): string {
 export const DEFAULT_ARRIVAL_ADVANCE_MINUTES = 10;
 
 /**
+ * Estrae i minuti di anticipo richiesti dal testo dell'annuncio
+ * (es. "Presentarsi almeno 15 minuti prima del turno." → 15).
+ * Ritorna null se il testo non contiene un'indicazione esplicita.
+ */
+export function parseArrivalAdvanceMinutes(text: unknown): number | null {
+  const s = clean(text);
+  if (!s) return null;
+  const m = /(\d{1,3})\s*(?:min\b|min\.|minut)/i.exec(s);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n > 0 && n <= 480 ? n : null;
+}
+
+/**
+ * Fonte unica di verità per i minuti di anticipo mostrati al lavoratore.
+ * Priorità: indicazione esplicita nell'annuncio → default del ristoratore →
+ * default di piattaforma. Evita incoerenze del tipo "il ristoratore chiede 15
+ * minuti ma la UI ne consiglia 10".
+ */
+export function resolveArrivalAdvanceMinutes(input: {
+  announcementTexts?: Array<unknown>;
+  restaurantDefaultMinutes?: number | null;
+}): number {
+  for (const t of input.announcementTexts ?? []) {
+    const parsed = parseArrivalAdvanceMinutes(t);
+    if (parsed != null) return parsed;
+  }
+  const def = Number(input.restaurantDefaultMinutes);
+  if (Number.isFinite(def) && def > 0) return def;
+  return DEFAULT_ARRIVAL_ADVANCE_MINUTES;
+}
+
+/**
  * Subtracts `minutes` from a HH:MM[:SS] service start time and returns the
  * resulting "entry" time as HH:MM. Returns null if the input is invalid.
  * Handles negative roll-over (e.g. 00:05 - 15min → 23:50).
