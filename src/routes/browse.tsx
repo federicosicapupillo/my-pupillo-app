@@ -26,6 +26,7 @@ import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialo
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import { JOB_ROLES } from "@/lib/job-roles";
 import { isAnnouncementExpired } from "@/lib/announcement-time";
+import { resolveArrivalAdvanceMinutes } from "@/lib/shift-confirmation";
 import { normalizeRole } from "@/lib/worker-role-normalization";
 import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import {
