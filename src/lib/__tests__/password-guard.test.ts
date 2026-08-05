@@ -77,6 +77,7 @@ describe("call site: nessun flusso password senza guardia", () => {
       "src/routes/reset-password.tsx",
       "src/components/AccountSecuritySection.tsx",
       "src/lib/account-deletion.server.ts", // admin ban, non password
+      "src/lib/__tests__/password-guard.test.ts",
     ]);
     expect(files.filter((f) => !allowed.has(f))).toEqual([]);
   });
