@@ -18,6 +18,70 @@ export const PASSWORD_SET_METADATA_KEY = "password_set";
 
 export type IdentityLike = { provider?: string | null };
 
+/**
+ * Metodo con cui l'account è stato CREATO (non l'ultimo login usato).
+ * Fonte canonica: `public.profiles.signup_method`, valorizzato dal trigger
+ * `handle_new_user` e retro-compilato dalla prima identità di `auth.identities`.
+ */
+export type SignupMethod = "email" | "google" | "apple" | "facebook" | "oauth";
+
+const SIGNUP_METHODS: SignupMethod[] = ["email", "google", "apple", "facebook", "oauth"];
+
+function normalizeSignupMethod(value: unknown): SignupMethod | null {
+  const v = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!v) return null;
+  if (v === "phone") return "email";
+  if ((SIGNUP_METHODS as string[]).includes(v)) return v as SignupMethod;
+  return "oauth";
+}
+
+export type SignupSourceUser = {
+  app_metadata?: Record<string, unknown> | null;
+  identities?: IdentityLike[] | null;
+} | null | undefined;
+
+export type SignupSourceProfile = { signup_method?: unknown } | null | undefined;
+
+/**
+ * Fonte canonica del metodo di registrazione, con fallback deterministici:
+ * profilo → provider originario dell'account → prima identità → "email".
+ * Non si basa mai sull'indirizzo email.
+ */
+export function getOriginalSignupMethod(
+  user?: SignupSourceUser,
+  profile?: SignupSourceProfile,
+): SignupMethod {
+  const fromProfile = normalizeSignupMethod(profile?.signup_method);
+  if (fromProfile) return fromProfile;
+
+  const appMeta = (user?.app_metadata ?? {}) as Record<string, unknown>;
+  const fromProvider = normalizeSignupMethod(appMeta["provider"]);
+  if (fromProvider) return fromProvider;
+
+  const providers = Array.isArray(appMeta["providers"]) ? (appMeta["providers"] as unknown[]) : [];
+  const fromProviders = normalizeSignupMethod(providers[0]);
+  if (fromProviders) return fromProviders;
+
+  const fromIdentity = normalizeSignupMethod(user?.identities?.[0]?.provider);
+  if (fromIdentity) return fromIdentity;
+
+  return "email";
+}
+
+/** L'account è nato tramite un provider social/OAuth. */
+export function isSocialSignup(user?: SignupSourceUser, profile?: SignupSourceProfile): boolean {
+  return getOriginalSignupMethod(user, profile) !== "email";
+}
+
+/**
+ * Unica regola per la gestione password dentro Pupillo: consentita solo agli
+ * account creati con email e password. Gli account social accedono sempre e
+ * solo tramite il loro provider.
+ */
+export function canManagePassword(user?: SignupSourceUser, profile?: SignupSourceProfile): boolean {
+  return !isSocialSignup(user, profile);
+}
+
 export type AuthMethods = {
   /** Provider collegati, normalizzati e deduplicati (es. ["email","google"]). */
   providers: string[];
@@ -142,18 +206,31 @@ export const IDENTITIES_LOAD_ERROR =
  * Vive qui (non nel componente) per essere testabile e non duplicabile.
  */
 export type SecurityUi = {
-  mode: "change-password" | "set-password" | "password-only";
+  mode: "change-password" | "set-password" | "password-only" | "social-only";
   heading: string;
   providerLines: string[];
   socialNotice: string | null;
   showCurrentPassword: boolean;
-  actionLabel: string;
+  actionLabel: string | null;
 };
 
-export function securityUiFor(methods: AuthMethods): SecurityUi {
+export function securityUiFor(methods: AuthMethods, signupMethod?: SignupMethod): SecurityUi {
   const socialLines = methods.socialProviders.map((p) => `${providerLabel(p)} collegato`);
   const lines = [...socialLines];
   if (methods.hasPasswordLogin) lines.push("Email e password attivi");
+
+  // Account nato da social login: nessuna gestione password, in nessuna forma.
+  if (signupMethod && signupMethod !== "email") {
+    const label = providerLabel(signupMethod === "oauth" ? "il tuo provider" : signupMethod);
+    return {
+      mode: "social-only",
+      heading: "Metodo di accesso",
+      providerLines: socialLines.length ? socialLines : [`${label} collegato`],
+      socialNotice: `Accedi a Pupillo tramite ${label}. La password è gestita direttamente da ${label}: dentro Pupillo non esiste alcuna password per il tuo account.`,
+      showCurrentPassword: false,
+      actionLabel: null,
+    };
+  }
 
   if (methods.isSocialOnlyAccount) {
     return {
