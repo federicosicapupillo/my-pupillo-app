@@ -73,7 +73,7 @@ function Profile() {
         <ReferralCard />
       </div>
 
-      <AccountSecuritySection email={user?.email ?? null} />
+      <AccountSecuritySection email={user?.email ?? null} profile={profile as any} />
 
       <div className="mt-6 rounded-2xl border bg-card p-6 space-y-4">
         <h2 className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4" />Documenti</h2>
