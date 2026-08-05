@@ -4,6 +4,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onThreadRefresh } from "@/lib/thread-refresh";
 import { OUTSIDE_OPERATIONAL_AREA_MESSAGE } from "@/lib/operational-area";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
