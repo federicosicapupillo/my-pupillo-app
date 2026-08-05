@@ -124,9 +124,14 @@ export function buildConfirmationBody(
     const end = ann.end_time ? ` - ${ann.end_time.slice(0, 5)}` : "";
     lines.push(`Orario: ${ann.service_time.slice(0, 5)}${end}`);
   }
-  const advMin = Number.isFinite(Number(arrivalAdvanceMinutes)) && Number(arrivalAdvanceMinutes) > 0
-    ? Number(arrivalAdvanceMinutes)
-    : DEFAULT_ARRIVAL_ADVANCE_MINUTES;
+  const advMin = resolveArrivalAdvanceMinutes({
+    announcementTexts: [
+      (ann as any)?.job_access_restrictions,
+      (ann as any)?.job_additional_directions,
+      (ann as any)?.job_location_notes,
+    ],
+    restaurantDefaultMinutes: arrivalAdvanceMinutes ?? null,
+  });
   const entry = computeEntryTime(ann?.service_time ?? null, advMin);
   if (entry) lines.push(`Orario ingresso: ${entry}`);
   lines.push(`Presentati ${advMin} minuti prima dell'inizio del turno.`);
