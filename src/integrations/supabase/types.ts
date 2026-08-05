@@ -3088,8 +3088,10 @@ export type Database = {
         Returns: string
       }
       mark_overdue_required_reviews: { Args: never; Returns: number }
+      my_signup_method: { Args: never; Returns: string }
       norm_place_name: { Args: { _v: string }; Returns: string }
       normalize_vat: { Args: { _v: string }; Returns: string }
+      password_verification_hook: { Args: { event: Json }; Returns: Json }
       process_restaurant_account_deletion: {
         Args: { _uid: string }
         Returns: Json
