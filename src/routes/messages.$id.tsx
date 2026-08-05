@@ -46,6 +46,8 @@ import {
   computeEntryTime,
   DEFAULT_ARRIVAL_ADVANCE_MINUTES,
   resolveArrivalAdvanceMinutes,
+  resolveArrivalAdvanceMinutesOrNull,
+  formatArrivalInstruction,
 } from "@/lib/shift-confirmation";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatDateTimeIT, formatTariff, formatOfferDateTime, formatJobLocation } from "@/lib/format";
