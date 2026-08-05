@@ -1,0 +1,1 @@
+UPDATE public.profiles SET signup_method = 'email' WHERE signup_method IS NULL;
