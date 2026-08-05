@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   getAuthMethods, hasPasswordLogin, hasSocialIdentity, isSocialOnlyAccount,
   mapPasswordError, providerLabel, PASSWORD_SET_METADATA_KEY, securityUiFor,
+  getOriginalSignupMethod, isSocialSignup, canManagePassword,
 } from "@/lib/auth-methods";
 
 const ids = (...p: string[]) => p.map((provider) => ({ provider }));
@@ -109,5 +110,50 @@ describe("securityUiFor", () => {
     const u = securityUiFor(getAuthMethods(ids("google"), { [PASSWORD_SET_METADATA_KEY]: true }));
     expect(u.actionLabel).toBe("Cambia password");
     expect(u.providerLines).toEqual(["Google collegato", "Email e password attivi"]);
+  });
+});
+
+describe("origine registrazione (fonte canonica)", () => {
+  it("usa il profilo quando disponibile", () => {
+    expect(getOriginalSignupMethod({ app_metadata: { provider: "email" } }, { signup_method: "google" })).toBe("google");
+  });
+  it("fallback su app_metadata.provider, poi providers, poi identità", () => {
+    expect(getOriginalSignupMethod({ app_metadata: { provider: "apple" } })).toBe("apple");
+    expect(getOriginalSignupMethod({ app_metadata: { providers: ["facebook"] } })).toBe("facebook");
+    expect(getOriginalSignupMethod({ identities: [{ provider: "google" }] })).toBe("google");
+    expect(getOriginalSignupMethod()).toBe("email");
+  });
+  it("provider sconosciuti diventano oauth", () => {
+    expect(getOriginalSignupMethod({ app_metadata: { provider: "linkedin_oidc" } })).toBe("oauth");
+  });
+  it("un'email non rende l'account email/password", () => {
+    const user = { app_metadata: { provider: "google" } };
+    expect(isSocialSignup(user)).toBe(true);
+    expect(canManagePassword(user)).toBe(false);
+  });
+  it("solo gli account email possono gestire la password", () => {
+    expect(canManagePassword({ app_metadata: { provider: "email" } })).toBe(true);
+    expect(canManagePassword({ app_metadata: { provider: "apple" } })).toBe(false);
+  });
+});
+
+describe("securityUiFor con origine social", () => {
+  it("account Google: nessuna azione password", () => {
+    const u = securityUiFor(getAuthMethods(ids("google")), "google");
+    expect(u.mode).toBe("social-only");
+    expect(u.actionLabel).toBeNull();
+    expect(u.showCurrentPassword).toBe(false);
+    expect(u.providerLines).toEqual(["Google collegato"]);
+    expect(u.socialNotice).toContain("Google");
+  });
+  it("anche se esiste un'identità email, l'origine social vieta la gestione password", () => {
+    const u = securityUiFor(getAuthMethods(ids("google", "email")), "google");
+    expect(u.mode).toBe("social-only");
+    expect(u.actionLabel).toBeNull();
+  });
+  it("origine email: comportamento invariato", () => {
+    const u = securityUiFor(getAuthMethods(ids("email")), "email");
+    expect(u.mode).toBe("password-only");
+    expect(u.actionLabel).toBe("Cambia password");
   });
 });

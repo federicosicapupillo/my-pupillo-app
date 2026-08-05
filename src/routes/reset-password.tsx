@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { getOriginalSignupMethod, providerLabel } from "@/lib/auth-methods";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({ meta: [{ title: "Reimposta password — Pupillo" }] }),
@@ -18,6 +19,9 @@ function ResetPassword() {
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const [busy, setBusy] = useState(false);
+  // Account nato da social login: nessuna gestione password dentro Pupillo.
+  const [socialProvider, setSocialProvider] = useState<string | null>(null);
+  const socialLabel = socialProvider === "oauth" ? "il tuo provider social" : providerLabel(socialProvider ?? "");
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -27,8 +31,23 @@ function ResetPassword() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!active || !data?.user) return;
+      const method = getOriginalSignupMethod({
+        app_metadata: (data.user.app_metadata ?? {}) as Record<string, unknown>,
+        identities: (data.user.identities ?? null) as { provider?: string | null }[] | null,
+      });
+      if (method !== "email") setSocialProvider(method);
+    })();
+    return () => { active = false; };
+  }, []);
+
   const requestReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (socialProvider) return;
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + "/reset-password",
@@ -40,6 +59,7 @@ function ResetPassword() {
 
   const updatePwd = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (socialProvider) return;
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password: pwd });
     setBusy(false);
@@ -60,7 +80,17 @@ function ResetPassword() {
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm">
-          {mode === "request" ? (
+          {socialProvider ? (
+            <>
+              <h1 className="text-2xl font-semibold">Accesso tramite {socialLabel}</h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                Il tuo account Pupillo è stato creato con {socialLabel}:
+                non esiste una password gestita da Pupillo e non è possibile impostarla o reimpostarla.
+                Continua ad accedere con lo stesso provider.
+              </p>
+              <Link to="/dashboard" className="mt-6 block text-center text-sm text-primary underline">Vai alla dashboard</Link>
+            </>
+          ) : mode === "request" ? (
             <>
               <h1 className="text-2xl font-semibold">Reimposta password</h1>
               <p className="text-sm text-muted-foreground mt-1">Ti invieremo un link via email per scegliere una nuova password.</p>
