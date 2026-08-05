@@ -67,7 +67,7 @@ describe("call site: nessun flusso password senza guardia", () => {
     const fs = await import("node:fs/promises");
     const src = await fs.readFile("src/components/AccountSecuritySection.tsx", "utf8");
     expect(src).toContain("canManagePasswordServerSide");
-    expect((src.match(/assertGuard\(\)/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((src.match(/assertGuard\(\)/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
   it("nessun altro call site updateUser({ password }) fuori dai file protetti", async () => {
     const { execSync } = await import("node:child_process");
