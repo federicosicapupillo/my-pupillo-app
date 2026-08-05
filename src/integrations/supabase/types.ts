@@ -338,6 +338,33 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_hook_invocations: {
+        Row: {
+          created_at: string
+          decision: string
+          hook: string
+          id: string
+          signup_method: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          hook: string
+          id?: string
+          signup_method?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          hook?: string
+          id?: string
+          signup_method?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       backup_logs: {
         Row: {
           completed_at: string | null
