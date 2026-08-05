@@ -1364,7 +1364,13 @@ function ApplyConfirmDialog({
             <div className="rounded-xl border bg-card p-3 text-sm space-y-1">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quando presentarsi</div>
               <div className="text-muted-foreground">
-                Ti consigliamo di presentarti almeno 10 minuti prima dell'orario di ingresso.
+                Ti consigliamo di presentarti almeno {resolveArrivalAdvanceMinutes({
+                  announcementTexts: [
+                    ann.job_access_restrictions,
+                    ann.job_additional_directions,
+                    ann.job_location_notes,
+                  ],
+                })} minuti prima dell'orario di ingresso.
               </div>
             </div>
 
