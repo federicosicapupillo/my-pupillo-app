@@ -46,6 +46,7 @@ function clean(v: unknown): string {
 export const DEFAULT_ARRIVAL_ADVANCE_MINUTES = 10;
 
 function normalizeMinutes(v: unknown): number | null {
+  if (v == null || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 && n <= 480 ? Math.round(n) : null;
 }
