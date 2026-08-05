@@ -26,7 +26,7 @@ import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialo
 import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-compatibility";
 import { JOB_ROLES } from "@/lib/job-roles";
 import { isAnnouncementExpired } from "@/lib/announcement-time";
-import { resolveArrivalAdvanceMinutes } from "@/lib/shift-confirmation";
+import { formatArrivalInstruction, resolveArrivalAdvanceMinutesOrNull } from "@/lib/shift-confirmation";
 import { normalizeRole } from "@/lib/worker-role-normalization";
 import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import {
@@ -69,6 +69,7 @@ type Ann = {
   license_requirement?: string | null;
   notes?: string | null; job_location_notes?: string | null;
   job_additional_directions?: string | null; job_access_restrictions?: string | null;
+  arrival_advance_minutes?: number | null; arrival_advance_reason?: string | null;
 };
 
 type RestaurantInfo = { id: string; full_name: string | null; business_name: string | null; venue_type: string | null; city: string | null; neighborhood: string | null; rating_avg: number | null } | null;
@@ -1364,13 +1365,17 @@ function ApplyConfirmDialog({
             <div className="rounded-xl border bg-card p-3 text-sm space-y-1">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quando presentarsi</div>
               <div className="text-muted-foreground">
-                Ti consigliamo di presentarti almeno {resolveArrivalAdvanceMinutes({
-                  announcementTexts: [
-                    ann.job_access_restrictions,
-                    ann.job_additional_directions,
-                    ann.job_location_notes,
-                  ],
-                })} minuti prima dell'orario di ingresso.
+                {formatArrivalInstruction(
+                  resolveArrivalAdvanceMinutesOrNull({
+                    canonicalMinutes: ann.arrival_advance_minutes ?? null,
+                    announcementTexts: [
+                      ann.job_access_restrictions,
+                      ann.job_additional_directions,
+                      ann.job_location_notes,
+                    ],
+                  }),
+                  ann.arrival_advance_reason ?? null,
+                )}
               </div>
             </div>
 

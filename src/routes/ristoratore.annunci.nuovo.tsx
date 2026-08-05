@@ -188,6 +188,9 @@ function NewRestaurantJobRequest() {
   const [geoState, setGeoState] = useState<{ status: "idle" | "loading" | "ok" | "error"; attempt: number; error?: GeocodeError }>({ status: "idle", attempt: 0 });
   const [accessChoice, setAccessChoice] = useState<"" | "15" | "over15">("");
   const [accessReason, setAccessReason] = useState("");
+  // Minuti esatti quando il ristoratore chiede più di 15 minuti: il valore
+  // mostrato al lavoratore deve essere quello reale, mai un default.
+  const [accessMinutes, setAccessMinutes] = useState("");
   const [languageReqs, setLanguageReqs] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [dressItems, setDressItems] = useState<string[]>([]);
@@ -355,6 +358,7 @@ function NewRestaurantJobRequest() {
       if (savedAdvance > 15 && p.default_arrival_advance_reason) {
         setAccessReason(prev => prev || String(p.default_arrival_advance_reason));
       }
+      if (savedAdvance > 15) setAccessMinutes(prev => prev || String(savedAdvance));
     }
     if (!defaultsToastShownRef.current && hasSavedDefaults(p)) {
       toast.info("Abbiamo caricato le tue impostazioni predefinite. Puoi modificarle per questo annuncio.");
@@ -513,6 +517,7 @@ function NewRestaurantJobRequest() {
       "contact_person_role_other",
       "contact_person_email",
       "accessChoice",
+      "accessMinutes",
       "accessReason",
       "license_requirement",
       "tattoos_allowed",
@@ -562,8 +567,13 @@ function NewRestaurantJobRequest() {
       errs.contact_person_role_other = "Specifica il ruolo del referente.";
     if (f.contact_person_email && !isValidEmail(f.contact_person_email)) errs.contact_person_email = "Email non valida.";
     if (!accessChoice) errs.accessChoice = "Seleziona l'anticipo richiesto.";
-    else if (accessChoice === "over15" && accessReason.trim().length < 10)
-      errs.accessReason = "Motivazione: minimo 10 caratteri.";
+    else if (accessChoice === "over15") {
+      const n = Number(accessMinutes);
+      if (!Number.isFinite(n) || n <= 15 || n > 480)
+        errs.accessMinutes = "Indica i minuti esatti (da 16 a 480).";
+      if (accessReason.trim().length < 10)
+        errs.accessReason = "Motivazione: minimo 10 caratteri.";
+    }
     if (!f.license_requirement || !LICENSE_VALUES.has(f.license_requirement)) errs.license_requirement = "Seleziona il tipo di patente richiesto.";
     if (!f.tattoos_allowed || !TATTOO_VALUES.has(f.tattoos_allowed)) errs.tattoos_allowed = "Indica se i tatuaggi sono ammessi.";
     if (!f.piercings_allowed || !PIERCING_VALUES.has(f.piercings_allowed)) errs.piercings_allowed = "Indica se i piercing sono ammessi.";
@@ -592,9 +602,10 @@ function NewRestaurantJobRequest() {
     }
     setBusy(true);
     clearAll();
+    const advanceMinutes = accessChoice === "15" ? 15 : Math.round(Number(accessMinutes));
     const accessText = accessChoice === "15"
       ? "Presentarsi almeno 15 minuti prima del turno."
-      : `Presentarsi oltre 15 minuti prima del turno. Motivo: ${accessReason.trim()}`;
+      : `Presentarsi almeno ${advanceMinutes} minuti prima del turno. Motivo: ${accessReason.trim()}`;
     const announcementStatus = status === "pubblicato" ? "active" : "draft";
     const streetWithNumber = [f.address, f.street_number].map((s) => s.trim()).filter(Boolean).join(" ");
     const locationAddress = [streetWithNumber, f.district, f.city, f.province, f.postal_code, f.country].filter(Boolean).join(", ");
@@ -634,6 +645,8 @@ function NewRestaurantJobRequest() {
       job_latitude: coords?.lat ?? null,
       job_longitude: coords?.lng ?? null,
       job_access_restrictions: accessText,
+      arrival_advance_minutes: advanceMinutes,
+      arrival_advance_reason: accessChoice === "over15" ? accessReason.trim() : null,
       job_additional_directions: f.additional_directions || null,
       job_location_notes: f.worker_notes || null,
       job_contact_person_name: f.contact_person_name || null,
@@ -685,6 +698,8 @@ function NewRestaurantJobRequest() {
       latitude: coords?.lat ?? null,
       longitude: coords?.lng ?? null,
       access_restrictions: accessText,
+      arrival_advance_minutes: advanceMinutes,
+      arrival_advance_reason: accessChoice === "over15" ? accessReason.trim() : null,
       additional_directions: f.additional_directions || null,
       contact_person_name: f.contact_person_name || null,
       contact_person_phone: f.contact_person_phone || null,
@@ -741,9 +756,8 @@ function NewRestaurantJobRequest() {
           contact_person_email: f.contact_person_email,
           contact_person_role: f.contact_person_role,
           contact_person_role_other: f.contact_person_role_other,
-          arrival_advance_minutes:
-            accessChoice === "15" ? 15 : accessChoice === "over15" ? 30 : null,
-          arrival_advance_reason: accessChoice === "over15" ? accessReason : null,
+          arrival_advance_minutes: advanceMinutes,
+          arrival_advance_reason: accessChoice === "over15" ? accessReason.trim() : null,
         },
         requirements: {
           license_requirement: f.license_requirement,
@@ -998,7 +1012,7 @@ function NewRestaurantJobRequest() {
             )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Anticipo richiesto all'ingresso" required name="accessChoice" error={errors.accessChoice || errors.accessReason}>
+            <Field label="Anticipo richiesto all'ingresso" required name="accessChoice" error={errors.accessChoice || errors.accessMinutes || errors.accessReason}>
               <div className="space-y-2">
                 <Select value={accessChoice} onValueChange={(v) => setAccessChoice(v as "15" | "over15")}>
                   <SelectTrigger><SelectValue placeholder="Seleziona anticipo" /></SelectTrigger>
@@ -1008,7 +1022,18 @@ function NewRestaurantJobRequest() {
                   </SelectContent>
                 </Select>
                 {accessChoice === "over15" && (
-                  <Textarea rows={2} required placeholder="Motivazione obbligatoria (es. accredito, briefing, vestizione)…" value={accessReason} onChange={e => setAccessReason(e.target.value)} />
+                  <>
+                    <Input
+                      type="number"
+                      min={16}
+                      max={480}
+                      required
+                      placeholder="Minuti esatti richiesti (es. 30)"
+                      value={accessMinutes}
+                      onChange={e => setAccessMinutes(e.target.value)}
+                    />
+                    <Textarea rows={2} required placeholder="Motivazione obbligatoria (es. accredito, briefing, vestizione)…" value={accessReason} onChange={e => setAccessReason(e.target.value)} />
+                  </>
                 )}
               </div>
             </Field>

@@ -106,6 +106,8 @@ export type Database = {
       }
       announcements: {
         Row: {
+          arrival_advance_minutes: number | null
+          arrival_advance_reason: string | null
           assigned_at: string | null
           assigned_worker_id: string | null
           beard_allowed: string | null
@@ -164,6 +166,8 @@ export type Database = {
           tattoos_allowed: string | null
         }
         Insert: {
+          arrival_advance_minutes?: number | null
+          arrival_advance_reason?: string | null
           assigned_at?: string | null
           assigned_worker_id?: string | null
           beard_allowed?: string | null
@@ -222,6 +226,8 @@ export type Database = {
           tattoos_allowed?: string | null
         }
         Update: {
+          arrival_advance_minutes?: number | null
+          arrival_advance_reason?: string | null
           assigned_at?: string | null
           assigned_worker_id?: string | null
           beard_allowed?: string | null
@@ -621,6 +627,8 @@ export type Database = {
           additional_directions: string | null
           address: string
           announcement_id: string | null
+          arrival_advance_minutes: number | null
+          arrival_advance_reason: string | null
           beard_allowed: string | null
           break_included: boolean
           city: string | null
@@ -673,6 +681,8 @@ export type Database = {
           additional_directions?: string | null
           address: string
           announcement_id?: string | null
+          arrival_advance_minutes?: number | null
+          arrival_advance_reason?: string | null
           beard_allowed?: string | null
           break_included?: boolean
           city?: string | null
@@ -725,6 +735,8 @@ export type Database = {
           additional_directions?: string | null
           address?: string
           announcement_id?: string | null
+          arrival_advance_minutes?: number | null
+          arrival_advance_reason?: string | null
           beard_allowed?: string | null
           break_included?: boolean
           city?: string | null
@@ -2184,6 +2196,8 @@ export type Database = {
     Views: {
       announcements_public: {
         Row: {
+          arrival_advance_minutes: number | null
+          arrival_advance_reason: string | null
           assigned_worker_id: string | null
           beard_allowed: string | null
           created_at: string | null
@@ -2227,6 +2241,8 @@ export type Database = {
           tattoos_allowed: string | null
         }
         Insert: {
+          arrival_advance_minutes?: number | null
+          arrival_advance_reason?: string | null
           assigned_worker_id?: string | null
           beard_allowed?: string | null
           created_at?: string | null
@@ -2270,6 +2286,8 @@ export type Database = {
           tattoos_allowed?: string | null
         }
         Update: {
+          arrival_advance_minutes?: number | null
+          arrival_advance_reason?: string | null
           assigned_worker_id?: string | null
           beard_allowed?: string | null
           created_at?: string | null
@@ -2805,6 +2823,8 @@ export type Database = {
           additional_directions: string | null
           address: string
           announcement_id: string | null
+          arrival_advance_minutes: number | null
+          arrival_advance_reason: string | null
           beard_allowed: string | null
           break_included: boolean
           city: string | null

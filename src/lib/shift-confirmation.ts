@@ -20,6 +20,8 @@ export type ConfirmationAnnouncement = {
   tariff_type?: string | null;
   professional_profile?: string | null;
   notes?: string | null;
+  arrival_advance_minutes?: number | null;
+  arrival_advance_reason?: string | null;
   required_skills?: string[] | null;
   dress_code_items?: string[] | null;
   dress_code_notes?: string | null;
@@ -37,10 +39,17 @@ function clean(v: unknown): string {
 }
 
 /**
- * Default minutes that the worker should arrive before the shift starts when
- * the restaurant has not specified a custom value.
+ * Default usato SOLO per calcoli tecnici interni (es. stima orario di ingresso
+ * quando il ristoratore non ha indicato nulla). Non deve mai essere mostrato
+ * al lavoratore come se fosse una richiesta dell'annuncio.
  */
 export const DEFAULT_ARRIVAL_ADVANCE_MINUTES = 10;
+
+function normalizeMinutes(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 && n <= 480 ? Math.round(n) : null;
+}
 
 /**
  * Estrae i minuti di anticipo richiesti dal testo dell'annuncio
@@ -63,9 +72,12 @@ export function parseArrivalAdvanceMinutes(text: unknown): number | null {
  * minuti ma la UI ne consiglia 10".
  */
 export function resolveArrivalAdvanceMinutes(input: {
+  canonicalMinutes?: number | null;
   announcementTexts?: Array<unknown>;
   restaurantDefaultMinutes?: number | null;
 }): number {
+  const canonical = normalizeMinutes(input.canonicalMinutes);
+  if (canonical != null) return canonical;
   for (const t of input.announcementTexts ?? []) {
     const parsed = parseArrivalAdvanceMinutes(t);
     if (parsed != null) return parsed;
@@ -73,6 +85,42 @@ export function resolveArrivalAdvanceMinutes(input: {
   const def = Number(input.restaurantDefaultMinutes);
   if (Number.isFinite(def) && def > 0) return def;
   return DEFAULT_ARRIVAL_ADVANCE_MINUTES;
+}
+
+/**
+ * Come `resolveArrivalAdvanceMinutes` ma senza inventare un valore: ritorna
+ * null quando l'annuncio non contiene alcuna indicazione. Da usare in tutte
+ * le schermate che mostrano al lavoratore le condizioni dell'annuncio.
+ */
+export function resolveArrivalAdvanceMinutesOrNull(input: {
+  canonicalMinutes?: number | null;
+  announcementTexts?: Array<unknown>;
+}): number | null {
+  const canonical = normalizeMinutes(input.canonicalMinutes);
+  if (canonical != null) return canonical;
+  for (const t of input.announcementTexts ?? []) {
+    const parsed = parseArrivalAdvanceMinutes(t);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+/**
+ * Frase mostrata al lavoratore: riflette esattamente l'annuncio, oppure
+ * dichiara l'assenza dell'indicazione (mai un numero di default).
+ */
+export function formatArrivalInstruction(
+  minutes: number | null | undefined,
+  reason?: string | null,
+): string {
+  const m = normalizeMinutes(minutes);
+  const why = clean(reason);
+  if (m == null) {
+    return "Il ristoratore non ha indicato un anticipo: presentati puntuale all'orario di inizio del turno.";
+  }
+  if (m === 0) return "Presentati puntuale all'orario di inizio del turno.";
+  const base = `Il ristoratore chiede di presentarti almeno ${m} ${m === 1 ? "minuto" : "minuti"} prima dell'inizio del turno.`;
+  return why ? `${base} Motivo: ${why}` : base;
 }
 
 /**
@@ -124,17 +172,19 @@ export function buildConfirmationBody(
     const end = ann.end_time ? ` - ${ann.end_time.slice(0, 5)}` : "";
     lines.push(`Orario: ${ann.service_time.slice(0, 5)}${end}`);
   }
-  const advMin = resolveArrivalAdvanceMinutes({
+  const advMin = resolveArrivalAdvanceMinutesOrNull({
+    canonicalMinutes: ann?.arrival_advance_minutes ?? null,
     announcementTexts: [
       (ann as any)?.job_access_restrictions,
       (ann as any)?.job_additional_directions,
       (ann as any)?.job_location_notes,
     ],
-    restaurantDefaultMinutes: arrivalAdvanceMinutes ?? null,
-  });
-  const entry = computeEntryTime(ann?.service_time ?? null, advMin);
-  if (entry) lines.push(`Orario ingresso: ${entry}`);
-  lines.push(`Presentati ${advMin} minuti prima dell'inizio del turno.`);
+  }) ?? normalizeMinutes(arrivalAdvanceMinutes);
+  if (advMin != null && advMin > 0) {
+    const entry = computeEntryTime(ann?.service_time ?? null, advMin);
+    if (entry) lines.push(`Orario ingresso: ${entry}`);
+  }
+  lines.push(formatArrivalInstruction(advMin, ann?.arrival_advance_reason ?? null));
   const amt = ann?.tariff_amount == null ? null : Number(ann.tariff_amount);
   if (amt != null && Number.isFinite(amt) && amt > 0) {
     lines.push(`Compenso: ${formatTariff(ann?.tariff_amount ?? null, ann?.tariff_type ?? null)}`);

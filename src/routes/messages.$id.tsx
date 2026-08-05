@@ -46,6 +46,8 @@ import {
   computeEntryTime,
   DEFAULT_ARRIVAL_ADVANCE_MINUTES,
   resolveArrivalAdvanceMinutes,
+  resolveArrivalAdvanceMinutesOrNull,
+  formatArrivalInstruction,
 } from "@/lib/shift-confirmation";
 import { canAssignShift } from "@/lib/proposal-assign.functions";
 import { formatDateIT, formatDateTimeIT, formatTariff, formatOfferDateTime, formatJobLocation } from "@/lib/format";
@@ -4563,15 +4565,21 @@ function ConfirmationCard(props: {
   const end = ann?.end_time ? ann.end_time.slice(0, 5) : null;
   // L'indicazione scritta nell'annuncio (es. "Presentarsi almeno 15 minuti
   // prima") vince sul default del ristoratore e sul default di piattaforma.
-  const advMin = resolveArrivalAdvanceMinutes({
+  const advMinExplicit = resolveArrivalAdvanceMinutesOrNull({
+    canonicalMinutes: (ann as any)?.arrival_advance_minutes ?? null,
     announcementTexts: [
       (ann as any)?.job_access_restrictions,
       (ann as any)?.job_additional_directions,
       (ann as any)?.job_location_notes,
     ],
+  });
+  const advMin = advMinExplicit ?? resolveArrivalAdvanceMinutes({
     restaurantDefaultMinutes: arrivalAdvanceMinutes ?? null,
   });
-  const entryTime = computeEntryTime(ann?.service_time ?? null, advMin);
+  const arrivalText = formatArrivalInstruction(advMinExplicit, (ann as any)?.arrival_advance_reason ?? null);
+  const entryTime = advMinExplicit != null && advMinExplicit > 0
+    ? computeEntryTime(ann?.service_time ?? null, advMinExplicit)
+    : null;
   const skills = labelsOf(ann?.required_skills ?? [], SKILL_OPTIONS as any);
   const dressItems = labelsOf(ann?.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
   const dressNotes = clean(ann?.dress_code_notes);
@@ -4601,8 +4609,8 @@ function ConfirmationCard(props: {
 
   const orarioValue = start ? `${start} – ${end ?? ""}`.trim().replace(/–\s*$/, "") : CONFIRMATION_EMPTY_LABELS.endTime;
   const entryValue = entryTime
-    ? `${entryTime} (presentati ${advMin} min prima)`
-    : `Presentati ${advMin} minuti prima dell'inizio del turno`;
+    ? `${entryTime} (${advMinExplicit} min prima dell'inizio)`
+    : arrivalText;
 
   return (
     <div className="my-2 space-y-3">
@@ -4641,7 +4649,7 @@ function ConfirmationCard(props: {
         </div>
 
         <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
-          Ti consigliamo di arrivare almeno {advMin} minuti prima dell'orario di ingresso.
+          {arrivalText}
         </div>
 
         {acknowledged && (
