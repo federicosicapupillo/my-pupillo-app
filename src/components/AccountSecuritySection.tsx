@@ -61,8 +61,14 @@ function PasswordInput({
  * collegati e, in base a quelli, il cambio password oppure la prima
  * impostazione della password (account solo social).
  */
-export function AccountSecuritySection({ email }: { email: string | null }) {
-  const { methods, loading, error, refresh } = useAuthMethods();
+export function AccountSecuritySection({
+  email,
+  profile,
+}: {
+  email: string | null;
+  profile?: { signup_method?: unknown } | null;
+}) {
+  const { methods, signupMethod, loading, error, refresh } = useAuthMethods(profile);
   const [currentPwd, setCurrentPwd] = useState("");
   const [pwd, setPwd] = useState("");
   const [pwdConfirm, setPwdConfirm] = useState("");
@@ -96,7 +102,20 @@ export function AccountSecuritySection({ email }: { email: string | null }) {
   }
 
   const { hasPasswordLogin, socialProviders } = methods;
-  const ui = securityUiFor(methods);
+  const ui = securityUiFor(methods, signupMethod ?? undefined);
+
+  // Account creato tramite social login: nessuna gestione password in Pupillo.
+  if (ui.mode === "social-only") {
+    return (
+      <div className="mt-6 rounded-2xl border bg-card p-6">
+        <h2 className="font-semibold flex items-center gap-2"><ShieldCheck className="h-4 w-4" />{ui.heading}</h2>
+        <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+          {ui.providerLines.map((line) => <li key={line}>{line}</li>)}
+        </ul>
+        {ui.socialNotice && <p className="mt-2 text-sm text-muted-foreground">{ui.socialNotice}</p>}
+      </div>
+    );
+  }
 
   /** Ricontrolla le identità prima di scrivere: la UI non è una difesa. */
   const assertMode = async (expectPassword: boolean): Promise<boolean> => {
