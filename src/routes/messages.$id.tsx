@@ -2632,21 +2632,21 @@ function Thread() {
                   </div>
                 )}
                 <Button
-                  variant="secondary"
-                  className="gap-2 w-full"
+                  variant="destructive"
+                  className="gap-2 w-full min-w-0 justify-center whitespace-normal h-auto py-2 text-center"
                   onClick={() => setRejectOpen(true)}
                   disabled={transitioning !== null}
                 >
-                  {transitioning === "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                  {transitioning === "rejected" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <X className="h-4 w-4 shrink-0" />}
                   {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
                 </Button>
                 <Button
-                  className="gap-2 w-full bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
+                  className="gap-2 w-full min-w-0 justify-center whitespace-normal h-auto py-2 text-center bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
                   onClick={() => transition("accepted")}
                   disabled={transitioning !== null || waitingWorkerInterest}
                   title={waitingWorkerInterest ? "Attendi la risposta del lavoratore" : undefined}
                 >
-                  {transitioning === "accepted" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {transitioning === "accepted" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Check className="h-4 w-4 shrink-0" />}
                   {transitioning === "accepted"
                     ? "Conferma in corso…"
                     : restaurantProposalMsg
