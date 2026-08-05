@@ -21,6 +21,7 @@ function ResetPassword() {
   const [busy, setBusy] = useState(false);
   // Account nato da social login: nessuna gestione password dentro Pupillo.
   const [socialProvider, setSocialProvider] = useState<string | null>(null);
+  const socialLabel = socialProvider === "oauth" ? "il tuo provider social" : providerLabel(socialProvider ?? "");
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -81,9 +82,9 @@ function ResetPassword() {
         <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm">
           {socialProvider ? (
             <>
-              <h1 className="text-2xl font-semibold">Accesso tramite {providerLabel(socialProvider === "oauth" ? "il tuo provider" : socialProvider)}</h1>
+              <h1 className="text-2xl font-semibold">Accesso tramite {socialLabel}</h1>
               <p className="text-sm text-muted-foreground mt-2">
-                Il tuo account Pupillo è stato creato con {providerLabel(socialProvider === "oauth" ? "il tuo provider" : socialProvider)}:
+                Il tuo account Pupillo è stato creato con {socialLabel}:
                 non esiste una password gestita da Pupillo e non è possibile impostarla o reimpostarla.
                 Continua ad accedere con lo stesso provider.
               </p>

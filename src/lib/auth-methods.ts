@@ -221,7 +221,7 @@ export function securityUiFor(methods: AuthMethods, signupMethod?: SignupMethod)
 
   // Account nato da social login: nessuna gestione password, in nessuna forma.
   if (signupMethod && signupMethod !== "email") {
-    const label = providerLabel(signupMethod === "oauth" ? "il tuo provider" : signupMethod);
+    const label = signupMethod === "oauth" ? "il tuo provider social" : providerLabel(signupMethod);
     return {
       mode: "social-only",
       heading: "Metodo di accesso",
