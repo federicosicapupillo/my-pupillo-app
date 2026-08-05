@@ -4,6 +4,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { onThreadRefresh } from "@/lib/thread-refresh";
 import { OUTSIDE_OPERATIONAL_AREA_MESSAGE } from "@/lib/operational-area";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -615,6 +616,24 @@ function Thread() {
   const [instructionsReminderOpen, setInstructionsReminderOpen] = useState(false);
   const [ackDialogBusy, setAckDialogBusy] = useState(false);
   const reminderShownForRef = useRef<string | null>(null);
+
+  // Refetch on demand: quando l'utente apre questa conversazione da una
+  // notifica (toast "Apri" o notifica browser) mentre è già sulla stessa
+  // route, la navigazione è un no-op e la pagina resterebbe con lo stato
+  // precedente (es. "Richiesta inviata" invece di "Turno confermato").
+  // Ricarichiamo anche quando la tab torna visibile / riprende il focus.
+  useEffect(() => {
+    const bump = () => setRefetchSeq((s) => s + 1);
+    const offEvent = onThreadRefresh(id, bump);
+    const onVisible = () => { if (document.visibilityState === "visible") bump(); };
+    window.addEventListener("focus", bump);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      offEvent();
+      window.removeEventListener("focus", bump);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [id]);
 
   useEffect(() => {
     (async () => {

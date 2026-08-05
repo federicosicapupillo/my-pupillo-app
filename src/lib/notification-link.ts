@@ -1,6 +1,7 @@
 import type { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation";
+import { requestThreadRefresh } from "@/lib/thread-refresh";
 
 type Navigate = ReturnType<typeof useNavigate>;
 
@@ -116,9 +117,14 @@ export async function navigateFromNotificationLink(
       try {
         // Preserve query (e.g. ?action=review) and hash for deep-links.
         const finalHash = hash || (isReviewDeepLink ? "shift-reviews" : undefined);
-        return Object.keys(searchObj).length > 0
+        // Se l'utente è già sulla stessa conversazione la navigazione è un
+        // no-op e la pagina resterebbe con dati stantii: forziamo un refetch.
+        const result = Object.keys(searchObj).length > 0
           ? navigate({ to: "/messages/$id", params: { id }, search: searchObj as never, hash: finalHash })
           : navigate({ to: "/messages/$id", params: { id }, hash: finalHash });
+        await result;
+        requestThreadRefresh(id);
+        return;
       } catch {
         return fallback();
       }
