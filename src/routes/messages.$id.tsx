@@ -4629,9 +4629,16 @@ function ConfirmationCard(props: {
   const fullAddress = clean(ann?.location_address) || clean(ann?.job_address) || clean(ann?.job_city) || "Indirizzo non disponibile";
   const start = ann?.service_time ? ann.service_time.slice(0, 5) : null;
   const end = ann?.end_time ? ann.end_time.slice(0, 5) : null;
-  const advMin = Number.isFinite(Number(arrivalAdvanceMinutes)) && Number(arrivalAdvanceMinutes) > 0
-    ? Number(arrivalAdvanceMinutes)
-    : DEFAULT_ARRIVAL_ADVANCE_MINUTES;
+  // L'indicazione scritta nell'annuncio (es. "Presentarsi almeno 15 minuti
+  // prima") vince sul default del ristoratore e sul default di piattaforma.
+  const advMin = resolveArrivalAdvanceMinutes({
+    announcementTexts: [
+      (ann as any)?.job_access_restrictions,
+      (ann as any)?.job_additional_directions,
+      (ann as any)?.job_location_notes,
+    ],
+    restaurantDefaultMinutes: arrivalAdvanceMinutes ?? null,
+  });
   const entryTime = computeEntryTime(ann?.service_time ?? null, advMin);
   const skills = labelsOf(ann?.required_skills ?? [], SKILL_OPTIONS as any);
   const dressItems = labelsOf(ann?.dress_code_items ?? [], DRESS_CODE_OPTIONS as any);
