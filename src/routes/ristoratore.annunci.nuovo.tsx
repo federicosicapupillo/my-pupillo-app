@@ -517,6 +517,7 @@ function NewRestaurantJobRequest() {
       "contact_person_role_other",
       "contact_person_email",
       "accessChoice",
+      "accessMinutes",
       "accessReason",
       "license_requirement",
       "tattoos_allowed",
