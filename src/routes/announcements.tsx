@@ -130,7 +130,7 @@ function AnnouncementMapBlock({
 
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { status?: string } => ({
     status: typeof s.status === "string" ? s.status : undefined,
   }),
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,

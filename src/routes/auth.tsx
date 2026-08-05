@@ -28,7 +28,7 @@ import { MailCheck } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { role?: "worker" | "restaurant"; ref?: string; deleted?: "1"; redirect?: string } => ({
     role: s.role === "worker" || s.role === "restaurant" ? s.role : undefined,
     ref: typeof s.ref === "string" ? s.ref : undefined,
     deleted: s.deleted === "1" ? "1" : undefined,

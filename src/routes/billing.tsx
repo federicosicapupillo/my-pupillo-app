@@ -22,7 +22,7 @@ import { Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/billing")({
   head: () => ({ meta: [{ title: "Crediti — Pupillo" }] }),
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { returnTo?: string; action?: string; session_id?: string; checkout?: string } => ({
     returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
     action: typeof search.action === "string" ? search.action : undefined,
     session_id: typeof search.session_id === "string" ? search.session_id : undefined,

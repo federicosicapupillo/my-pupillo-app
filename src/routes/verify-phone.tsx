@@ -19,7 +19,7 @@ const TEST_OTP_ENABLED = import.meta.env.VITE_ENABLE_TEST_OTP === "true" && impo
 
 export const Route = createFileRoute("/verify-phone")({
   head: () => ({ meta: [{ title: "Conferma numero WhatsApp — Pupillo" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({ phase: s.phase === "code" ? "code" as const : undefined }),
+  validateSearch: (s: Record<string, unknown>): { phase?: "code" } => ({ phase: s.phase === "code" ? "code" as const : undefined }),
   component: VerifyPhonePage,
 });
 

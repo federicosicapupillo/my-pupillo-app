@@ -52,7 +52,7 @@ import { computeProposalStatus, type ProposalState } from "@/lib/proposal-status
 
 export const Route = createFileRoute("/announcements/$id")({
   head: () => ({ meta: [{ title: "Dettaglio annuncio — Pupillo" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { section?: "candidature" } => ({
     section: s.section === "candidature" ? "candidature" : undefined,
   }),
   component: () => <RequireAuth><AnnouncementDetail /></RequireAuth>,
