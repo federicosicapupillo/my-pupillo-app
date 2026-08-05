@@ -405,11 +405,11 @@ function Page() {
                 key={r.worker_id}
                 role="link"
                 tabIndex={0}
-                onClick={() => navigate({ to: "/workers_/$id", params: { id: r.worker_id } })}
+                onClick={() => navigate({ to: "/workers/$id", params: { id: r.worker_id } })}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    navigate({ to: "/workers_/$id", params: { id: r.worker_id } });
+                    navigate({ to: "/workers/$id", params: { id: r.worker_id } });
                   }
                 }}
                 className="group relative rounded-3xl border bg-card p-5 flex flex-col gap-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/30 transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
@@ -509,7 +509,7 @@ function Page() {
                     <Button size="sm" variant="secondary" className="flex-1 gap-1" onClick={(e) => { e.stopPropagation(); openInvite(r); }}>
                       <Send className="h-3.5 w-3.5" /> Invita
                     </Button>
-                    <Link to="/workers_/$id" params={{ id: r.worker_id }} className="flex-1" onClick={(e) => e.stopPropagation()}>
+                    <Link to="/workers/$id" params={{ id: r.worker_id }} className="flex-1" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant="outline" className="w-full gap-1">
                         Profilo <ArrowRight className="h-3.5 w-3.5" />
                       </Button>
