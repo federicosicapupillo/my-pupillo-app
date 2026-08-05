@@ -47,6 +47,11 @@ export const Route = createFileRoute("/profile")({
 function Profile() {
   const { profile, role, user, refresh } = useAuth();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Gli aggregati di reputazione sono ricalcolati dal DB dopo ogni recensione:
+  // li rileggiamo live invece di usare la copia in cache dell'auth context,
+  // che restava ferma ai valori del login (tipicamente 0).
+  const { stats: liveRep } = useMyReputation(role === "worker" && !!user?.id);
+  const repProfile = { ...((profile as any) ?? {}), ...((liveRep as any) ?? {}) } as any;
 
   // Account deletion is handled by DeleteAccountDialog (multi-step flow + RPC).
 
@@ -91,12 +96,12 @@ function Profile() {
               <Star className="h-4 w-4 text-yellow-500" />
               <div>
                 <div className="text-xs text-muted-foreground">Valutazione</div>
-                <div className="text-sm font-semibold">{Number(profile?.rating_avg ?? 0).toFixed(1)} · {profile?.reviews_count ?? 0} recensioni</div>
+                <div className="text-sm font-semibold">{Number(repProfile?.rating_avg ?? 0).toFixed(1)} · {repProfile?.reviews_count ?? 0} recensioni</div>
               </div>
             </div>
             <div className="rounded-xl border p-3">
               <div className="text-xs text-muted-foreground">Affidabilità</div>
-              <div className="text-sm font-semibold">{profile?.reliability_pct ?? 100}%</div>
+              <div className="text-sm font-semibold">{repProfile?.completion_pct ?? repProfile?.reliability_pct ?? 100}%</div>
             </div>
           </div>
         )}
@@ -105,7 +110,7 @@ function Profile() {
       {role === "worker" && user?.id && (
         <div className="mt-6">
           <h2 className="font-semibold mb-2">La mia reputazione</h2>
-          <WorkerReputationCard workerId={user.id} profile={profile as any} showTips />
+          <WorkerReputationCard workerId={user.id} profile={repProfile} showTips />
         </div>
       )}
 
@@ -113,24 +118,24 @@ function Profile() {
         <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold flex items-center gap-2"><Star className="h-4 w-4 text-yellow-500" />Le mie recensioni</h2>
-            <WorkerReputationBadge profile={profile as any} />
+            <WorkerReputationBadge profile={repProfile} />
           </div>
           <div className="rounded-2xl border bg-card p-4 mb-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
             <div>
               <div className="text-xs text-muted-foreground">Valutazione</div>
-              <div className="text-lg font-semibold">{Number(profile?.rating_avg ?? 0).toFixed(1)} / 5</div>
+              <div className="text-lg font-semibold">{Number(repProfile?.rating_avg ?? 0).toFixed(1)} / 5</div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Recensioni</div>
-              <div className="text-lg font-semibold">{profile?.reviews_count ?? 0}</div>
+              <div className="text-lg font-semibold">{repProfile?.reviews_count ?? 0}</div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Turni completati</div>
-              <div className="text-lg font-semibold">{(profile as any)?.completed_shifts ?? 0}</div>
+              <div className="text-lg font-semibold">{repProfile?.completed_shifts ?? 0}</div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Affidabilità</div>
-              <div className="text-lg font-semibold">{(profile as any)?.completion_pct ?? profile?.reliability_pct ?? 100}%</div>
+              <div className="text-lg font-semibold">{repProfile?.completion_pct ?? repProfile?.reliability_pct ?? 100}%</div>
             </div>
           </div>
           <WorkerMyReviews workerId={user.id} />
