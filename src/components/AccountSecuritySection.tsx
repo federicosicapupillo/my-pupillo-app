@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyRound, ShieldCheck, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { canManagePasswordServerSide, PASSWORD_MANAGEMENT_ERROR_MESSAGE } from "@/lib/password-guard";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,6 +118,14 @@ export function AccountSecuritySection({
     );
   }
 
+  /** Guardia centralizzata: solo gli account nati con email gestiscono password. */
+  const assertGuard = async (): Promise<boolean> => {
+    if (await canManagePasswordServerSide()) return true;
+    toast.error(PASSWORD_MANAGEMENT_ERROR_MESSAGE);
+    await refresh();
+    return false;
+  };
+
   /** Ricontrolla le identità prima di scrivere: la UI non è una difesa. */
   const assertMode = async (expectPassword: boolean): Promise<boolean> => {
     const { data: userData } = await supabase.auth.getUser();
@@ -154,6 +163,7 @@ export function AccountSecuritySection({
     if (pwd === currentPwd) { toast.error("La nuova password deve essere diversa da quella attuale."); return; }
     if (!email) { toast.error("La sessione è scaduta. Accedi di nuovo e riprova."); return; }
     setBusy(true);
+    if (!(await assertGuard())) { setBusy(false); return; }
     if (!(await assertMode(true))) { setBusy(false); return; }
     // Riautenticazione: verifichiamo la password attuale prima del cambio.
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: currentPwd });
@@ -182,6 +192,7 @@ export function AccountSecuritySection({
     if (busy) return;
     if (!validate()) return;
     setBusy(true);
+    if (!(await assertGuard())) { setBusy(false); return; }
     if (!(await assertMode(false))) { setBusy(false); return; }
     const { error: updErr } = await supabase.auth.updateUser({
       password: pwd,

@@ -35,7 +35,7 @@ import { useProfileGate } from "@/components/ProfileGate";
 
 export const Route = createFileRoute("/announcements/new")({
   head: () => ({ meta: [{ title: "Nuovo annuncio — Pupillo" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
+  validateSearch: (s: Record<string, unknown>): { reuse?: string } => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
   component: () => (
     <RequireAuth>
       <RestaurantProfileGate>

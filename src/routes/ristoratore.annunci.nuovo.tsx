@@ -52,7 +52,7 @@ import {
 
 export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
   head: () => ({ meta: [{ title: "Crea Nuovo Annuncio — Pupillo" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
+  validateSearch: (s: Record<string, unknown>): { reuse?: string } => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
   component: () => (
     <RequireAuth>
       <RestaurantProfileGate>

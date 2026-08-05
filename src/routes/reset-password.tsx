@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getOriginalSignupMethod, providerLabel } from "@/lib/auth-methods";
+import { canManagePassword, fetchMySignupMethod, PASSWORD_MANAGEMENT_ERROR_MESSAGE } from "@/lib/password-guard";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({ meta: [{ title: "Reimposta password — Pupillo" }] }),
@@ -36,11 +37,14 @@ function ResetPassword() {
     void (async () => {
       const { data } = await supabase.auth.getUser();
       if (!active || !data?.user) return;
-      const method = getOriginalSignupMethod({
+      // Fonte canonica: il database. Fallback sulle identità solo se assente.
+      const dbMethod = await fetchMySignupMethod();
+      const method = dbMethod ?? getOriginalSignupMethod({
         app_metadata: (data.user.app_metadata ?? {}) as Record<string, unknown>,
         identities: (data.user.identities ?? null) as { provider?: string | null }[] | null,
       });
-      if (method !== "email") setSocialProvider(method);
+      if (!active) return;
+      if (!canManagePassword(method)) setSocialProvider(method);
     })();
     return () => { active = false; };
   }, []);
@@ -61,6 +65,13 @@ function ResetPassword() {
     e.preventDefault();
     if (socialProvider) return;
     setBusy(true);
+    // Ricontrollo server-side prima di scrivere: la UI non è una difesa.
+    if (!canManagePassword(await fetchMySignupMethod())) {
+      setBusy(false);
+      setSocialProvider("google");
+      toast.error(PASSWORD_MANAGEMENT_ERROR_MESSAGE);
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: pwd });
     setBusy(false);
     if (error) toast.error(error.message);

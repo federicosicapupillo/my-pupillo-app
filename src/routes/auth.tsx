@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { lovable } from "@/integrations/lovable";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { isPasswordStrongEnough, doPasswordsMatch, PASSWORD_RULES } from "@/lib/password-validation";
+import { canManagePassword, fetchMySignupMethod, GENERIC_LOGIN_ERROR_MESSAGE } from "@/lib/password-guard";
 import { Check, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
@@ -28,7 +29,7 @@ import { MailCheck } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { role?: "worker" | "restaurant"; ref?: string; deleted?: "1"; redirect?: string } => ({
     role: s.role === "worker" || s.role === "restaurant" ? s.role : undefined,
     ref: typeof s.ref === "string" ? s.ref : undefined,
     deleted: s.deleted === "1" ? "1" : undefined,
@@ -327,6 +328,15 @@ function AuthPage() {
       } else {
         toast.error("Errore durante l'accesso. Riprova.");
       }
+      return;
+    }
+    // Difesa server-side: un account nato da social login non può accedere
+    // con email e password, anche se una password fosse stata impostata
+    // tramite chiamata diretta all'API Auth. Messaggio anti-enumerazione.
+    const method = await fetchMySignupMethod();
+    if (!canManagePassword(method)) {
+      await supabase.auth.signOut();
+      toast.error(GENERIC_LOGIN_ERROR_MESSAGE);
       return;
     }
     toast.dismiss();
