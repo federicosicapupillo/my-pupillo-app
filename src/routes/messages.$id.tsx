@@ -617,6 +617,24 @@ function Thread() {
   const [ackDialogBusy, setAckDialogBusy] = useState(false);
   const reminderShownForRef = useRef<string | null>(null);
 
+  // Refetch on demand: quando l'utente apre questa conversazione da una
+  // notifica (toast "Apri" o notifica browser) mentre è già sulla stessa
+  // route, la navigazione è un no-op e la pagina resterebbe con lo stato
+  // precedente (es. "Richiesta inviata" invece di "Turno confermato").
+  // Ricarichiamo anche quando la tab torna visibile / riprende il focus.
+  useEffect(() => {
+    const bump = () => setRefetchSeq((s) => s + 1);
+    const offEvent = onThreadRefresh(id, bump);
+    const onVisible = () => { if (document.visibilityState === "visible") bump(); };
+    window.addEventListener("focus", bump);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      offEvent();
+      window.removeEventListener("focus", bump);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [id]);
+
   useEffect(() => {
     (async () => {
       setLoading(true);
