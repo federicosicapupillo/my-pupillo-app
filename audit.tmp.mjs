@@ -7,7 +7,6 @@ const R={};
 
 // account "google" tecnico
 const g=(await admin.auth.admin.createUser({email:`audit.google.${stamp}@pupillo-audit.test`,password:PWD,email_confirm:true})).data.user;
-await admin.rpc("exec_noop").catch(()=>{});
 // forza signup_method=google via SQL diretto non disponibile -> usa admin update bloccato dal trigger, quindi usiamo la funzione interna
 // (il trigger consente solo ruoli di sistema): usiamo una connessione psql-like via rpc non disponibile.
 // fallback: creiamo l'utente con identity google reale
