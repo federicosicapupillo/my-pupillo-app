@@ -54,7 +54,7 @@ type Thread = {
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "In attesa",
-  interested: "Interesse mostrato",
+  interested: "Attesa di una risposta",
   counter_offer: "Controproposta",
   accepted: "Confermato",
   rejected: "Rifiutato",
