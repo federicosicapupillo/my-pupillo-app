@@ -452,6 +452,23 @@ function AnnouncementDetail() {
   const [applying, setApplying] = useState(false);
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const [selfCancelledOpen, setSelfCancelledOpen] = useState(false);
+  // Anticipazione UX della regola "almeno un'ora tra due turni". La decisione
+  // finale resta al database (`assert_no_worker_shift_conflict`).
+  const [bufferConflict, setBufferConflict] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (!user || !ann) { setBufferConflict(false); return; }
+    (async () => {
+      try {
+        const busy = await fetchWorkerBusyWindows(user.id);
+        const filtered = busy.filter((b) => b.announcementId !== ann.id);
+        if (alive) setBufferConflict(conflictsWithBusyWindows(ann as any, filtered) !== null);
+      } catch {
+        if (alive) setBufferConflict(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [user?.id, ann, myApp?.status]);
   const applyAsWorker = async () => {
     if (!user || !ann || applying) return;
     // Blocco area operativa (stesso controllo del database).
