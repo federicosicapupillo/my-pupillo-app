@@ -76,9 +76,9 @@ const statusMeta: Record<Shift["status"], { label: string; color: string; icon: 
   cancelled: { label: "Annullato", color: "bg-gray-500/10 text-gray-700 border-gray-500/30", icon: XCircle },
 };
 
-// Finestra No-show lato ristoratore: dall'inizio turno fino a +30 minuti
-// (inclusi). Logica condivisa e testata in `@/lib/no-show-window`; il
-// controllo definitivo è server-side (trigger sul DB).
+// Finestra No-show lato ristoratore: da inizio turno +15 minuti fino a +30
+// minuti (inclusi). Logica condivisa e testata in `@/lib/no-show-window`; il
+// controllo definitivo è server-side (RPC `report_shift_no_show`).
 function getNoShowAvailability(shift: Shift, serviceTime: string | null | undefined, now?: Date) {
   const w = getNoShowWindow({
     status: shift.status,
@@ -89,7 +89,7 @@ function getNoShowAvailability(shift: Shift, serviceTime: string | null | undefi
   return {
     canMark: w.canMarkNoShow,
     canCancel: w.canRestaurantCancel,
-    availableFrom: w.start,
+    availableFrom: w.availableFrom,
     deadline: w.deadline,
     minutesAfterStart: w.start ? Math.floor(((now ?? new Date()).getTime() - w.start.getTime()) / 60_000) : null,
     reasonIfDisabled: w.canMarkNoShow ? null : w.phase,
