@@ -327,22 +327,23 @@ function DashboardInner() {
       )}
 
       {role !== "worker" && (() => {
-        const showApps = role === "restaurant" && stats.applications > 0;
+        const pendingApps = role === "restaurant" ? restaurantStats.pendingWorkerApplicationsCount : stats.applications;
+        const showApps = role === "restaurant" && pendingApps > 0;
         const showMsgs = stats.messages > 0;
         const cards: ReactNode[] = [];
         cards.push(
-          <StatCard key="active" icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? stats.active : stats.applications} />,
+          <StatCard key="active" icon={Briefcase} label={role === "restaurant" ? "Annunci attivi" : "Candidature"} value={role === "restaurant" ? restaurantStats.activeAnnouncementsCount : stats.applications} />,
         );
         if (role === "restaurant") {
           cards.push(
             <Link key="assigned" to="/announcements" search={{ status: "assigned" } as never} className="block">
-              <StatCard icon={CheckCircle2} label="Annunci assegnati" value={stats.assigned} highlight />
+              <StatCard icon={CheckCircle2} label="Annunci assegnati" value={restaurantStats.assignedAnnouncementsCount} highlight />
             </Link>,
           );
         }
         if (showApps) {
           cards.push(
-            <StatCard key="apps" icon={Users} label="Candidature da valutare" value={stats.applications} />,
+            <StatCard key="apps" icon={Users} label="Candidature da valutare" value={pendingApps} />,
           );
         }
         if (showMsgs) {
