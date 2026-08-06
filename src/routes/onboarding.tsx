@@ -1014,6 +1014,20 @@ function Onboarding() {
       return;
     }
     if (role === "restaurant") {
+      // Identità minima obbligatoria: senza nome e cognome il DB rifiuta
+      // `profile_completed = true`.
+      if (!personal.first_name.trim()) {
+        toast.error("Inserisci il tuo nome.");
+        markErr("first_name");
+        scrollToField("first_name");
+        return;
+      }
+      if (!personal.last_name.trim()) {
+        toast.error("Inserisci il tuo cognome.");
+        markErr("last_name");
+        scrollToField("last_name");
+        return;
+      }
       if (!vatValid) {
         toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
         scrollToField("vat_number");
