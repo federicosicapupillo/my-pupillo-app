@@ -338,10 +338,12 @@ function Onboarding() {
 
   useEffect(() => {
     if (!profile) return;
-    if (profile.profile_completed) {
+    // Un profilo "completo" ma privo di nome/cognome deve restare in
+    // onboarding finché l'identità non è compilata.
+    if (isEffectivelyComplete(profile as any, role)) {
       nav({ to: "/dashboard" });
     }
-  }, [profile, nav]);
+  }, [profile, role, nav]);
 
   // Temporary debug log: helps diagnose any case where worker-only sections
   // (availability, weekly days, service area, roles) would otherwise render
