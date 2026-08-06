@@ -19,6 +19,8 @@ export type RestaurantReceivedReview = {
   positive_tags: string[] | null;
   negative_tags: string[] | null;
   tags: string[] | null;
+  visible_at?: string | null;
+  is_visible_to_restaurants?: boolean | null;
 };
 
 type WorkerInfo = { id: string; full_name: string | null; is_deleted?: boolean | null };
