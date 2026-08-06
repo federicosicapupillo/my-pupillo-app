@@ -995,6 +995,13 @@ function AnnouncementDetail() {
               </div>
             ) : isAnnInactive ? (
               <Button disabled className="w-full">Candidature chiuse</Button>
+            ) : bufferConflict ? (
+              <div className="space-y-2">
+                <Button disabled className="w-full">Orario non disponibile</Button>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+                  {CONFLICT_WORKER_HINT_MESSAGE}
+                </p>
+              </div>
             ) : (
               <>
                 <Button
