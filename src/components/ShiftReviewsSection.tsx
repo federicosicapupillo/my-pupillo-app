@@ -1,3 +1,4 @@
+import { emitRestaurantStatsRefresh } from "@/lib/restaurant-dashboard-stats";
 import { useCallback, useEffect, useState } from "react";
 import { Star, Lock, Award, Clock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
