@@ -960,9 +960,7 @@ function Browse() {
                         <Clock className="h-4 w-4" />
                         Orario non disponibile
                       </Button>
-                      <p className="opacity-90">
-                        Hai già un turno confermato in un orario incompatibile. Puoi candidarti solo a turni con almeno 1 ora di distanza.
-                      </p>
+                      <p className="opacity-90">{CONFLICT_WORKER_HINT_MESSAGE}</p>
                     </div>
                   ) : (
                     <Button size="lg" className="flex-1 rounded-xl gap-2" onClick={() => apply(a)}>
