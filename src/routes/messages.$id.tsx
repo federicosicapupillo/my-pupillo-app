@@ -2763,8 +2763,10 @@ function Thread() {
             <div className="flex flex-wrap gap-2">
               {role === "worker" && app.status === "pending" && (() => {
                 // Determina la direzione della richiesta:
-                // - restaurant_proposal: il ristoratore ha inviato una proposta/offerta al lavoratore
-                //   → mostra "Accetta offerta" / "Rifiuta offerta"
+                // - restaurant_proposal: il ristoratore ha inviato una proposta/offerta al
+                //   lavoratore → la coppia "Accetta candidatura" / "Rifiuta candidatura" è
+                //   renderizzata UNA SOLA VOLTA nel box "Azioni disponibili" (ProposalCard):
+                //   qui non deve comparire alcun duplicato.
                 // - worker_application: il lavoratore si è candidato a un annuncio
                 //   → mostra solo "Annulla candidatura" (non riproporre interesse)
                 const restaurantId = app?.restaurant_id;
@@ -2775,7 +2777,6 @@ function Thread() {
                 const source: "restaurant_proposal" | "worker_application" =
                   hasRestaurantProposal ? "restaurant_proposal" : "worker_application";
                 const showCancel = source === "worker_application" && !shiftBlocks;
-                const showDecision = source === "restaurant_proposal";
                 if (typeof window !== "undefined") {
                   // eslint-disable-next-line no-console
                   console.log("[PUPILLO_CHAT_ACTION_BUTTONS_DEBUG]", {
@@ -2784,11 +2785,8 @@ function Thread() {
                     application_id: app?.id,
                     source,
                     application_status: app?.status,
-                    buttons_rendered: showDecision
-                      ? ["Accetta offerta", "Rifiuta offerta"]
-                      : showCancel
-                        ? ["Annulla candidatura"]
-                        : [],
+                    buttons_rendered: showCancel ? ["Annulla candidatura"] : [],
+                    decision_buttons_owner: "proposal_actions_box",
                     cancel_hidden_reason: showCancel
                       ? null
                       : source === "restaurant_proposal"
@@ -2798,18 +2796,6 @@ function Thread() {
                 }
                 return (
                   <>
-                    {showDecision && (
-                      <>
-                        <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => setInterestConfirmOpen(true)}>
-                          {transitioning === "interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
-                          {transitioning === "interested" ? "Invio in corso…" : "Accetta offerta"}
-                        </Button>
-                        <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("not_interested")}>
-                          {transitioning === "not_interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsDown className="h-4 w-4" />}
-                          {transitioning === "not_interested" ? "Invio in corso…" : "Rifiuta offerta"}
-                        </Button>
-                      </>
-                    )}
                     {showCancel && (
                       <Button
                         size="sm"
