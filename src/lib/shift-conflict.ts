@@ -101,7 +101,7 @@ export async function fetchWorkerBusyWindows(
       "id, announcement_id, status, announcements:announcement_id (id, service_date, service_time, end_date, end_time, shift_duration_hours, duration_hours, status)",
     )
     .eq("worker_id", workerId)
-    .in("status", ACTIVE_APPLICATION_STATUSES as unknown as string[]);
+    .in("status", [...ACTIVE_APPLICATION_STATUSES]);
   if (error) {
     console.warn("[PUPILLO_SHIFT_CONFLICT] fetch busy windows failed", error);
     return [];
