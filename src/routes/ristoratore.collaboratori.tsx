@@ -20,6 +20,7 @@ import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canRestaurantInviteWorker } from "@/lib/application-reapply";
+import { restaurantContactWorker } from "@/lib/restaurant-contact";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
