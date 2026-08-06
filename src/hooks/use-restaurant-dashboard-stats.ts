@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { createDebouncedReload } from "@/lib/inbox-realtime";
 import {
   EMPTY_RESTAURANT_DASHBOARD_STATS,
   fetchRestaurantDashboardStats,
@@ -34,9 +36,21 @@ export function useRestaurantDashboardStats(enabled: boolean) {
     const off = onRestaurantStatsRefresh(() => { void reload(); });
     const onVisible = () => { if (document.visibilityState === "visible") void reload(); };
     document.addEventListener("visibilitychange", onVisible);
+    // Realtime: applications (accept/reject), shifts (assignment/completion)
+    // and reviews (received or made visible) all change the aggregates.
+    // Debounced so retries or duplicate events cannot double-trigger.
+    const reloader = createDebouncedReload(() => { void reload(); }, 350);
+    const ch = supabase
+      .channel(`restaurant-dashboard-stats-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => reloader.schedule())
+      .on("postgres_changes", { event: "*", schema: "public", table: "shifts" }, () => reloader.schedule())
+      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, () => reloader.schedule())
+      .subscribe();
     return () => {
       cancelled = true;
       off();
+      reloader.cancel();
+      supabase.removeChannel(ch);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [enabled, reload]);
