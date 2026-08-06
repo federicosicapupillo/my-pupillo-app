@@ -1505,11 +1505,20 @@ function ShiftsPage() {
                   return;
                 }
                 setNoShowSubmitting(true);
-                const { error } = await supabase.from("shifts").update({ status: "no_show" }).eq("id", s.id);
-                if (error) {
-                  toast.error(isNoShowWindowServerError(error.message) ? NO_SHOW_EXPIRED_MESSAGE : error.message);
+                const { data: rpcData, error } = await supabase.rpc("report_shift_no_show", {
+                  _shift_id: s.id,
+                  _notes: noShowNotes.trim() || null,
+                } as never);
+                const result = (rpcData ?? null) as { ok?: boolean; code?: string; message?: string } | null;
+                const failureMessage = error
+                  ? (isNoShowWindowServerError(error.message) ? NO_SHOW_EXPIRED_MESSAGE : error.message)
+                  : result && result.ok === false
+                    ? (result.message ?? "Non puoi segnalare il No-show in questo momento.")
+                    : null;
+                if (failureMessage) {
+                  toast.error(failureMessage);
                   setNoShowSubmitting(false);
-                  if (isNoShowWindowServerError(error.message)) {
+                  if (isNoShowWindowServerError(failureMessage) || result?.code === "expired") {
                     setNoShowDialog(null);
                     setNoShowNotes("");
                   }
@@ -1525,7 +1534,7 @@ function ShiftsPage() {
                       worker_incident_created: false,
                       reliability_updated: false,
                       notification_sent: false,
-                      error: error.message,
+                      error: failureMessage,
                     });
                   }
                   return;
