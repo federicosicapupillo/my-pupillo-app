@@ -2226,6 +2226,10 @@ function Thread() {
     }
     setReviewOpen(false);
     toast.success("Turno completato e recensione inviata al lavoratore.");
+    // Refresh autorevole dopo il successo backend: turno, candidatura,
+    // recensioni e CTA vengono rilette dal database (niente stato ottimistico
+    // e nessun refresh manuale richiesto all'utente).
+    setRefetchSeq((s) => s + 1);
   };
 
   // Centralized privacy-aware display name for the "other" party (used in
