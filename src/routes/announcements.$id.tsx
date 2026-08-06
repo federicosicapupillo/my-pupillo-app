@@ -44,6 +44,9 @@ import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialo
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
+  CONFLICT_WORKER_HINT_MESSAGE,
+  fetchWorkerBusyWindows,
+  conflictsWithBusyWindows,
   CONFLICT_RESTAURANT_ASSIGN_MESSAGE,
   mapShiftConflictError,
 } from "@/lib/shift-conflict";
