@@ -12,6 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ArrowLeft, Check, CheckCheck, X, Euro, ThumbsUp, ThumbsDown, Send, Handshake, Ban, Sparkles, Star, Loader2, AlertTriangle } from "lucide-react";
+import {
+  getProposalDecisionState,
+  isProposalPending,
+  resolveProposalEffectiveStatus,
+} from "@/lib/proposal-decision";
 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -460,7 +465,7 @@ function buildTimeline(
 
   const steps: Step[] = [
     { key: "sent", label: "Inviata", icon: Send, state: "done" },
-    { key: "interest", label: "Interesse", icon: ThumbsUp,
+    { key: "interest", label: "Attesa di una risposta", icon: ThumbsUp,
       state: isReject ? "error" : mark(isInterested || isCounter || isAccepted, s === "pending") },
     { key: "outcome",
       label: isCancelled ? "Annullata" : slotTaken ? "Turno assegnato ad altri" : isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
@@ -2713,7 +2718,7 @@ function Thread() {
 
         {app && (
           <div className="rounded-2xl border bg-card p-4 mb-4">
-            <div className="text-xs font-medium text-muted-foreground mb-3">Stato della richiesta</div>
+            <div className="text-xs font-medium text-muted-foreground mb-3">Stato della candidatura</div>
             <ol className="flex items-start justify-between gap-2">
               {steps.map((s: Step, i: number) => (
                 <li key={s.key} className="flex-1 flex flex-col items-center text-center min-w-0">
@@ -2763,8 +2768,10 @@ function Thread() {
             <div className="flex flex-wrap gap-2">
               {role === "worker" && app.status === "pending" && (() => {
                 // Determina la direzione della richiesta:
-                // - restaurant_proposal: il ristoratore ha inviato una proposta/offerta al lavoratore
-                //   → mostra "Accetta offerta" / "Rifiuta offerta"
+                // - restaurant_proposal: il ristoratore ha inviato una proposta/offerta al
+                //   lavoratore → la coppia "Accetta candidatura" / "Rifiuta candidatura" è
+                //   renderizzata UNA SOLA VOLTA nel box "Azioni disponibili" (ProposalCard):
+                //   qui non deve comparire alcun duplicato.
                 // - worker_application: il lavoratore si è candidato a un annuncio
                 //   → mostra solo "Annulla candidatura" (non riproporre interesse)
                 const restaurantId = app?.restaurant_id;
@@ -2775,7 +2782,6 @@ function Thread() {
                 const source: "restaurant_proposal" | "worker_application" =
                   hasRestaurantProposal ? "restaurant_proposal" : "worker_application";
                 const showCancel = source === "worker_application" && !shiftBlocks;
-                const showDecision = source === "restaurant_proposal";
                 if (typeof window !== "undefined") {
                   // eslint-disable-next-line no-console
                   console.log("[PUPILLO_CHAT_ACTION_BUTTONS_DEBUG]", {
@@ -2784,11 +2790,8 @@ function Thread() {
                     application_id: app?.id,
                     source,
                     application_status: app?.status,
-                    buttons_rendered: showDecision
-                      ? ["Accetta offerta", "Rifiuta offerta"]
-                      : showCancel
-                        ? ["Annulla candidatura"]
-                        : [],
+                    buttons_rendered: showCancel ? ["Annulla candidatura"] : [],
+                    decision_buttons_owner: "proposal_actions_box",
                     cancel_hidden_reason: showCancel
                       ? null
                       : source === "restaurant_proposal"
@@ -2798,18 +2801,6 @@ function Thread() {
                 }
                 return (
                   <>
-                    {showDecision && (
-                      <>
-                        <Button size="sm" className="gap-2" disabled={transitioning !== null} onClick={() => setInterestConfirmOpen(true)}>
-                          {transitioning === "interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
-                          {transitioning === "interested" ? "Invio in corso…" : "Accetta offerta"}
-                        </Button>
-                        <Button size="sm" variant="outline" className="gap-2" disabled={transitioning !== null} onClick={() => transition("not_interested")}>
-                          {transitioning === "not_interested" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsDown className="h-4 w-4" />}
-                          {transitioning === "not_interested" ? "Invio in corso…" : "Rifiuta offerta"}
-                        </Button>
-                      </>
-                    )}
                     {showCancel && (
                       <Button
                         size="sm"
@@ -2918,25 +2909,34 @@ function Thread() {
         {(() => {
           // Static shift page: the proposal recap (role, date, venue, address,
           // compensation, dress code, tasks, languages, requirements) is
-          // already rendered by the summary boxes above, so only proposals
-          // that still need a decision are shown — as a bare action block.
-          const pendingProposals = proposalMessages.filter((m) => {
-            const own = proposalStatuses[m.id];
-            const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
-            const eff = own ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
-            return eff !== "accepted" && eff !== "rejected" && eff !== "not_interested" && eff !== "expired";
-          });
-          if (pendingProposals.length === 0) return null;
+          // already rendered by the summary boxes above, so only the decision
+          // block is shown here. Questa è l'UNICA superficie che renderizza la
+          // coppia "Accetta candidatura" / "Rifiuta candidatura".
+          const effStatusOf = (mid: string) =>
+            resolveProposalEffectiveStatus({
+              ownStatus: proposalStatuses[mid],
+              hasAnyResponse: Object.keys(proposalStatuses).length > 0,
+              applicationStatus: app?.status ?? null,
+            });
+          const isPendingStatus = isProposalPending;
+          // Le proposte già decise restano visibili al lavoratore come esito
+          // NON interattivo (stato canonico dal database), così dopo refresh o
+          // da un altro dispositivo non ricompare alcun pulsante attivo.
+          const visibleProposals = proposalMessages.filter((m) =>
+            isPendingStatus(effStatusOf(m.id)) ? true : role === "worker",
+          );
+          if (visibleProposals.length === 0) return null;
+          const hasPendingDecision = visibleProposals.some((m) => isPendingStatus(effStatusOf(m.id)));
           return (
           <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-proposta">
-            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">Azioni disponibili</h2>
+            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">
+              {hasPendingDecision ? "Azioni disponibili" : "Esito della candidatura"}
+            </h2>
             <div className="space-y-3">
-              {pendingProposals.map((m) => {
-              const ownStatus = proposalStatuses[m.id];
-              const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
+              {visibleProposals.map((m) => {
               // Per-proposal status is authoritative. Legacy proposals (no recorded
               // response anywhere) fall back to the application status once.
-              const effectiveStatus = ownStatus ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
+              const effectiveStatus = effStatusOf(m.id);
               const specialBlock = role === "worker"
                 ? computeSpecialAvailabilityBlock(workerSpecialExceptions, ann)
                 : null;
@@ -4069,11 +4069,16 @@ function ProposalCard(props: {
     return () => clearInterval(id);
   }, [deadline]);
   const timeExpired = deadline ? deadline.getTime() <= now : false;
-  const accepted = status === "accepted";
-  const rejected = status === "rejected" || status === "not_interested";
-  const expired = status === "expired" || (!accepted && !rejected && timeExpired);
-  const locked = lockReason !== null;
-  const decided = accepted || rejected || expired || locked;
+  // Fonte di verità unica (condivisa) per stato/etichette/disabilitazione.
+  const decision = getProposalDecisionState({
+    status,
+    timeExpired,
+    lockReason,
+    busy,
+    isWorker,
+    incompatibleSpecial,
+  });
+  const { accepted, rejected, expired, locked, decided } = decision;
 
   const openAccept = () => {
     if (busy || decided) return;
@@ -4284,9 +4289,9 @@ function ProposalCard(props: {
                 : "bg-destructive/10 text-destructive border-destructive/30"
           }`}>
             {accepted ? <Check className="h-4 w-4" /> : expired ? <AlarmClock className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            {accepted ? (isWorker ? "Hai accettato la proposta. Attendi l'assegnazione definitiva da parte del ristoratore." : "Proposta accettata") :
-              expired ? "Proposta scaduta" :
-              (isWorker ? "Hai rifiutato questa proposta." : "Proposta rifiutata")}
+            {accepted && isWorker
+              ? "Candidatura accettata. Attendi l'assegnazione definitiva da parte del ristoratore."
+              : (decision.outcomeLabel ?? "")}
           </div>
         ) : isWorker ? (
           incompatibleSpecial ? (
@@ -4299,18 +4304,19 @@ function ProposalCard(props: {
                 <p key={e.id} className="mt-0.5 text-xs opacity-90">· {describeSpecialAvailability(e)}</p>
               ))}
               <div className="mt-2 flex gap-2">
-                <Button type="button" disabled className="flex-1 h-11 bg-emerald-600/50 text-white font-semibold gap-2 cursor-not-allowed">
-                  <Check className="h-4 w-4" /> Accetta proposta
+                <Button type="button" data-testid="proposal-accept" disabled className="flex-1 h-11 bg-emerald-600/50 text-white font-semibold gap-2 cursor-not-allowed">
+                  <Check className="h-4 w-4" /> {decision.acceptLabel}
                 </Button>
                 <Button
                   type="button"
+                  data-testid="proposal-reject"
                   onClick={openReject}
-                  disabled={!!busy}
+                  disabled={decision.rejectDisabled}
                   variant="outline"
                   className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
                 >
                   <X className="h-4 w-4" />
-                  {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
+                  {decision.rejectLabel}
                 </Button>
               </div>
             </div>
@@ -4318,22 +4324,24 @@ function ProposalCard(props: {
           <div className="px-4 py-3 border-t bg-secondary/30 flex gap-2">
             <Button
               type="button"
+              data-testid="proposal-accept"
               onClick={openAccept}
-              disabled={!!busy}
+              disabled={decision.acceptDisabled}
               className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
             >
               <Check className="h-4 w-4" />
-              {busy === "accept" ? "Operazione in corso…" : "Accetta proposta"}
+              {decision.acceptLabel}
             </Button>
             <Button
               type="button"
+              data-testid="proposal-reject"
               onClick={openReject}
-              disabled={!!busy}
+              disabled={decision.rejectDisabled}
               variant="outline"
               className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
             >
               <X className="h-4 w-4" />
-              {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
+              {decision.rejectLabel}
             </Button>
           </div>
           )
