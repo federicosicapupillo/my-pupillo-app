@@ -4066,11 +4066,16 @@ function ProposalCard(props: {
     return () => clearInterval(id);
   }, [deadline]);
   const timeExpired = deadline ? deadline.getTime() <= now : false;
-  const accepted = status === "accepted";
-  const rejected = status === "rejected" || status === "not_interested";
-  const expired = status === "expired" || (!accepted && !rejected && timeExpired);
-  const locked = lockReason !== null;
-  const decided = accepted || rejected || expired || locked;
+  // Fonte di verità unica (condivisa) per stato/etichette/disabilitazione.
+  const decision = getProposalDecisionState({
+    status,
+    timeExpired,
+    lockReason,
+    busy,
+    isWorker,
+    incompatibleSpecial,
+  });
+  const { accepted, rejected, expired, locked, decided } = decision;
 
   const openAccept = () => {
     if (busy || decided) return;
