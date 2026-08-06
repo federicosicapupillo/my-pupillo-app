@@ -1316,6 +1316,7 @@ function Thread() {
               .eq("announcement_id", app.announcement_id);
             if (shiftError) throw shiftError;
             await insertSystemMessage("turno completato.", selectedTpl.action);
+            setRefetchSeq((s) => s + 1);
           }
           break;
         case "confirm_arrival":
