@@ -2912,13 +2912,13 @@ function Thread() {
           // already rendered by the summary boxes above, so only the decision
           // block is shown here. Questa è l'UNICA superficie che renderizza la
           // coppia "Accetta candidatura" / "Rifiuta candidatura".
-          const effStatusOf = (mid: string) => {
-            const own = proposalStatuses[mid];
-            const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
-            return own ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
-          };
-          const isPendingStatus = (eff: string) =>
-            eff !== "accepted" && eff !== "rejected" && eff !== "not_interested" && eff !== "expired";
+          const effStatusOf = (mid: string) =>
+            resolveProposalEffectiveStatus({
+              ownStatus: proposalStatuses[mid],
+              hasAnyResponse: Object.keys(proposalStatuses).length > 0,
+              applicationStatus: app?.status ?? null,
+            });
+          const isPendingStatus = isProposalPending;
           // Le proposte già decise restano visibili al lavoratore come esito
           // NON interattivo (stato canonico dal database), così dopo refresh o
           // da un altro dispositivo non ricompare alcun pulsante attivo.
@@ -2934,11 +2934,9 @@ function Thread() {
             </h2>
             <div className="space-y-3">
               {visibleProposals.map((m) => {
-              const ownStatus = proposalStatuses[m.id];
-              const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
               // Per-proposal status is authoritative. Legacy proposals (no recorded
               // response anywhere) fall back to the application status once.
-              const effectiveStatus = ownStatus ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
+              const effectiveStatus = effStatusOf(m.id);
               const specialBlock = role === "worker"
                 ? computeSpecialAvailabilityBlock(workerSpecialExceptions, ann)
                 : null;
@@ -4291,9 +4289,9 @@ function ProposalCard(props: {
                 : "bg-destructive/10 text-destructive border-destructive/30"
           }`}>
             {accepted ? <Check className="h-4 w-4" /> : expired ? <AlarmClock className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            {accepted ? (isWorker ? "Candidatura accettata. Attendi l'assegnazione definitiva da parte del ristoratore." : "Proposta accettata") :
-              expired ? "Proposta scaduta" :
-              (isWorker ? "Candidatura rifiutata." : "Proposta rifiutata")}
+            {accepted && isWorker
+              ? "Candidatura accettata. Attendi l'assegnazione definitiva da parte del ristoratore."
+              : (decision.outcomeLabel ?? "")}
           </div>
         ) : isWorker ? (
           incompatibleSpecial ? (
@@ -4307,18 +4305,18 @@ function ProposalCard(props: {
               ))}
               <div className="mt-2 flex gap-2">
                 <Button type="button" data-testid="proposal-accept" disabled className="flex-1 h-11 bg-emerald-600/50 text-white font-semibold gap-2 cursor-not-allowed">
-                  <Check className="h-4 w-4" /> Accetta candidatura
+                  <Check className="h-4 w-4" /> {decision.acceptLabel}
                 </Button>
                 <Button
                   type="button"
                   data-testid="proposal-reject"
                   onClick={openReject}
-                  disabled={!!busy}
+                  disabled={decision.rejectDisabled}
                   variant="outline"
                   className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
                 >
                   <X className="h-4 w-4" />
-                  {busy === "reject" ? "Operazione in corso…" : "Rifiuta candidatura"}
+                  {decision.rejectLabel}
                 </Button>
               </div>
             </div>
@@ -4328,22 +4326,22 @@ function ProposalCard(props: {
               type="button"
               data-testid="proposal-accept"
               onClick={openAccept}
-              disabled={!!busy}
+              disabled={decision.acceptDisabled}
               className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
             >
               <Check className="h-4 w-4" />
-              {busy === "accept" ? "Operazione in corso…" : "Accetta candidatura"}
+              {decision.acceptLabel}
             </Button>
             <Button
               type="button"
               data-testid="proposal-reject"
               onClick={openReject}
-              disabled={!!busy}
+              disabled={decision.rejectDisabled}
               variant="outline"
               className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
             >
               <X className="h-4 w-4" />
-              {busy === "reject" ? "Operazione in corso…" : "Rifiuta candidatura"}
+              {decision.rejectLabel}
             </Button>
           </div>
           )
