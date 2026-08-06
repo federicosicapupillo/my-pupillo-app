@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
+import { isEffectivelyComplete } from "@/lib/profile-completion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,7 +80,9 @@ export function ProfileGateProvider({ children }: { children: ReactNode }) {
   // Gli admin non sono mai bloccati. Gli utenti non loggati nemmeno (sono
   // già gestiti da RequireAuth lato pagina; il gate è per utenti in sessione).
   const isAdmin = role === "admin";
-  const isComplete = !!profile?.profile_completed;
+  // La completezza include l'identità minima (nome + cognome), non solo il
+  // flag `profile_completed`.
+  const isComplete = isEffectivelyComplete(profile, role);
   const canPerformOperationalAction = !user || isAdmin || isComplete;
 
   const openGate = useCallback((opts?: OpenOptions) => {
@@ -228,9 +231,11 @@ export function useProfileGate(): GateCtx {
  * il click usa sempre `requireComplete` del provider.
  */
 export function canPerformOperationalAction(
-  profile: { profile_completed?: boolean | null } | null | undefined,
+  profile:
+    | { profile_completed?: boolean | null; first_name?: string | null; last_name?: string | null }
+    | null
+    | undefined,
   role?: string | null,
 ): boolean {
-  if (role === "admin") return true;
-  return !!profile?.profile_completed;
+  return isEffectivelyComplete(profile, role);
 }

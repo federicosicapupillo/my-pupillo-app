@@ -1,3 +1,4 @@
+import { isEffectivelyComplete } from "@/lib/profile-completion";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
@@ -338,10 +339,12 @@ function Onboarding() {
 
   useEffect(() => {
     if (!profile) return;
-    if (profile.profile_completed) {
+    // Un profilo "completo" ma privo di nome/cognome deve restare in
+    // onboarding finché l'identità non è compilata.
+    if (isEffectivelyComplete(profile as any, role)) {
       nav({ to: "/dashboard" });
     }
-  }, [profile, nav]);
+  }, [profile, role, nav]);
 
   // Temporary debug log: helps diagnose any case where worker-only sections
   // (availability, weekly days, service area, roles) would otherwise render
@@ -1014,6 +1017,20 @@ function Onboarding() {
       return;
     }
     if (role === "restaurant") {
+      // Identità minima obbligatoria: senza nome e cognome il DB rifiuta
+      // `profile_completed = true`.
+      if (!personal.first_name.trim()) {
+        toast.error("Inserisci il tuo nome.");
+        markErr("first_name");
+        scrollToField("first_name");
+        return;
+      }
+      if (!personal.last_name.trim()) {
+        toast.error("Inserisci il tuo cognome.");
+        markErr("last_name");
+        scrollToField("last_name");
+        return;
+      }
       if (!vatValid) {
         toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
         scrollToField("vat_number");
@@ -1556,19 +1573,9 @@ function Onboarding() {
     const update =
       role === "restaurant"
         ? {
-            full_name: (() => {
-              const metaFirst = ((user as any)?.user_metadata?.first_name as string | undefined) ?? "";
-              const metaLast = ((user as any)?.user_metadata?.last_name as string | undefined) ?? "";
-              const first = ((profile as any)?.first_name ?? metaFirst ?? "").trim();
-              const last = ((profile as any)?.last_name ?? metaLast ?? "").trim();
-              const composed = `${first} ${last}`.trim();
-              return (
-                composed ||
-                ((profile as any)?.full_name ?? "").trim() ||
-                form.full_name ||
-                null
-              );
-            })(),
+            first_name: personal.first_name.trim(),
+            last_name: personal.last_name.trim(),
+            full_name: `${personal.first_name.trim()} ${personal.last_name.trim()}`.trim() || null,
             phone: phoneFull,
             phone_country_code: form.phone_code,
             phone_number: form.phone_number,
@@ -1793,31 +1800,60 @@ function Onboarding() {
           {role !== "worker" ? (
             <div className="space-y-4">
               <div>
-                <Label>Nome e cognome</Label>
-                {(() => {
-                const metaFirst = ((user as any)?.user_metadata?.first_name as string | undefined) ?? "";
-                const metaLast = ((user as any)?.user_metadata?.last_name as string | undefined) ?? "";
-                const first = ((profile as any)?.first_name ?? metaFirst ?? "").trim();
-                const last = ((profile as any)?.last_name ?? metaLast ?? "").trim();
-                const display =
-                  `${first} ${last}`.trim() ||
-                  ((profile as any)?.full_name ?? "").trim() ||
-                  form.full_name ||
-                  "—";
-                return (
-                  <>
-                    <div
-                      className="flex h-10 w-full items-center rounded-lg border border-input bg-muted/40 px-3 text-sm text-foreground"
-                      aria-readonly="true"
-                    >
-                      {display}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Nome e cognome inseriti in fase di registrazione. Per modificarli contatta il supporto clienti.
-                    </p>
-                  </>
-                );
-                })()}
+                {/* Nome e cognome distinti: obbligatori e modificabili se il
+                    login social non li ha forniti. */}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div data-field="first_name" className="scroll-mt-24">
+                    <Label>Nome *</Label>
+                    {firstNameEditableRef.current !== false ? (
+                      <Input
+                        required
+                        value={personal.first_name}
+                        onChange={(e) => setPersonal({ ...personal, first_name: e.target.value })}
+                        className={cn(hasErr("first_name") && errorFieldClass)}
+                        aria-invalid={hasErr("first_name")}
+                      />
+                    ) : (
+                      <>
+                        <Input
+                          required
+                          readOnly
+                          value={personal.first_name}
+                          className="bg-muted/50 cursor-not-allowed"
+                          aria-readonly="true"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <div data-field="last_name" className="scroll-mt-24">
+                    <Label>Cognome *</Label>
+                    {lastNameEditableRef.current !== false ? (
+                      <Input
+                        required
+                        value={personal.last_name}
+                        onChange={(e) => setPersonal({ ...personal, last_name: e.target.value })}
+                        className={cn(hasErr("last_name") && errorFieldClass)}
+                        aria-invalid={hasErr("last_name")}
+                      />
+                    ) : (
+                      <>
+                        <Input
+                          required
+                          readOnly
+                          value={personal.last_name}
+                          className="bg-muted/50 cursor-not-allowed"
+                          aria-readonly="true"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Dato inserito in fase di registrazione. Per modificarlo contatta il supporto clienti.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
               {role === "restaurant" ? (
                 <div>

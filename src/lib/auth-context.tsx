@@ -13,6 +13,9 @@ type Profile = {
   primary_role?: string | null;
   full_name: string | null;
   email: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  role_claimed_at?: string | null;
   business_name: string | null;
   profile_completed: boolean;
   whatsapp_connected: boolean;
@@ -162,26 +165,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await blockDeletedAccount(uid);
       return;
     }
+    const allRoles = (roles ?? []).map((x: { role: string | null }) => x.role).filter((x): x is string => !!x);
     // Registrazione social: applica una sola volta il ruolo scelto prima del
     // redirect OAuth (Google/Apple non trasportano metadati applicativi).
-    const pendingRole = attempt === 0 ? readPendingSignupRole() : null;
-    if (
-      pendingRole &&
-      loadedProfile &&
-      !loadedProfile.profile_completed &&
-      !(loadedProfile as unknown as { role_claimed_at?: string | null }).role_claimed_at
-    ) {
-      clearPendingSignupRole();
-      const { error: claimError } = await supabase.rpc("claim_signup_role" as never, { _role: pendingRole } as never);
-      if (claimError) console.error("[auth] claim_signup_role failed", claimError);
-      else {
-        await loadExtras(uid, attempt + 1);
-        return;
+    // Il DB vince sempre: se esiste già un ruolo canonico il pending viene
+    // scartato senza toccare nulla. In caso di errore il pending NON viene
+    // perso, così il tentativo può essere ripetuto.
+    const pending = attempt === 0 && typeof window !== "undefined" ? readPendingSignupRole() : null;
+    if (pending) {
+      const hasAuthoritativeRole = allRoles.some((candidate) => normalizeAccountRole(candidate) !== null);
+      if (hasAuthoritativeRole) {
+        clearPendingSignupRole();
+      } else {
+        const { error: claimError } = await supabase.rpc(
+          "claim_signup_role" as never,
+          { _role: pending.role } as never,
+        );
+        if (claimError) {
+          console.error("[auth] claim_signup_role failed, pending role preserved", claimError);
+        } else {
+          clearPendingSignupRole();
+          await loadExtras(uid, attempt + 1);
+          return;
+        }
       }
-    } else if (pendingRole) {
-      clearPendingSignupRole();
     }
-    const allRoles = (roles ?? []).map((x: { role: string | null }) => x.role).filter((x): x is string => !!x);
     const resolver = Array.isArray(resolvedRows) ? (resolvedRows[0] as any | undefined) : (resolvedRows as any | undefined);
     const primaryRole = loadedProfile?.primary_role ?? resolver?.profile_role ?? null;
     const userRoleFromRows = allRoles.find((candidate) => normalizeAccountRole(candidate) === "admin")

@@ -26,7 +26,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { MailCheck } from "lucide-react";
-import { rememberPendingSignupRole, clearPendingSignupRole } from "@/lib/signup-role";
+import { rememberPendingSignupRole, clearPendingSignupRole, type SignupRole } from "@/lib/signup-role";
+import { isEffectivelyComplete } from "@/lib/profile-completion";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -52,7 +53,9 @@ function AuthPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
-  const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
+  // Nessun ruolo pre-selezionato: la scelta deve essere esplicita, salvo
+  // quando arriva da una CTA "Ristoratore"/"Lavoratore" (?role=...).
+  const [role, setRole] = useState<SignupRole | null>(roleParam ?? null);
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const justSignedUpRef = useRef(false);
@@ -64,6 +67,7 @@ function AuthPage() {
   const [weakPasswords, setWeakPasswords] = useState<Set<string>>(() => new Set());
   const ageOptions = Array.from({ length: 82 }, (_, i) => 18 + i);
   const restaurantAgeOk = role !== "restaurant" || (repAge !== "" && Number(repAge) >= 18 && Number(repAge) <= 99);
+  const roleChosen = role === "restaurant" || role === "worker";
   const passwordStrongEnough = isPasswordStrongEnough(password);
   const passwordsMatch = doPasswordsMatch(password, confirmPassword);
   const passwordKnownWeak = password.length > 0 && weakPasswords.has(password);
@@ -128,8 +132,15 @@ function AuthPage() {
       }
       return;
     }
-    // Profile incomplete → onboarding (one onboarding route covers both roles)
-    if (profile && profile.profile_completed === false) {
+    // Ruolo assente in DB → scelta ruolo esplicita (mai fallback lavoratore).
+    if (finalRole === null) {
+      console.warn("[PUPILLO_ROLE_RESTORE_DEBUG] no role for authenticated user → /choose-role", redirectDebug);
+      navigate({ to: "/choose-role" });
+      return;
+    }
+    // Profilo incompleto (flag DB oppure identità nome/cognome mancante)
+    // → onboarding. Una sola route copre entrambi i ruoli.
+    if (profile && !isEffectivelyComplete(profile, finalRole)) {
       navigate({ to: "/onboarding" });
       return;
     }
@@ -138,14 +149,6 @@ function AuthPage() {
       navigate({ to: redirectParam as never });
     } else if (finalRole === "restaurant") navigate({ to: "/dashboard" });
     else if (finalRole === "worker") navigate({ to: "/jobs" });
-    else if (finalRole === null) {
-      // Authenticated but no role row in user_roles. Send the user to a
-      // dedicated page with logout / retry / contact-support actions
-      // instead of leaving them stuck on the login screen.
-      console.warn("[PUPILLO_ROLE_RESTORE_DEBUG] missing role for authenticated user", redirectDebug);
-      console.warn("[PUPILLO_ROLE_FINAL_DEBUG] redirecting to account-error", redirectDebug);
-      navigate({ to: "/account-error" });
-    }
   }, [user, userRole, roleDebug, profile, loading, extrasLoaded, navigate, roleParam, redirectParam]);
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -155,6 +158,10 @@ function AuthPage() {
       return;
     }
     console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] click crea profilo", { email: email.trim(), role });
+    if (!roleChosen) {
+      toast.error("Scegli se registrarti come Ristoratore o come Lavoratore.");
+      return;
+    }
     if (!firstNameTrim) {
       toast.error("Inserisci il tuo nome");
       return;
@@ -345,10 +352,15 @@ function AuthPage() {
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
-    // Il ruolo scelto in registrazione deve sopravvivere al redirect OAuth:
-    // Google/Apple non trasportano metadati applicativi.
-    if (tab === "signup") rememberPendingSignupRole(role);
-    else clearPendingSignupRole();
+    if (tab === "signup") {
+      if (!role) {
+        toast.error("Scegli se registrarti come Ristoratore o come Lavoratore.");
+        return;
+      }
+      rememberPendingSignupRole(role, provider);
+    } else {
+      clearPendingSignupRole();
+    }
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
@@ -367,8 +379,15 @@ function AuthPage() {
   };
 
   const handleFacebook = async () => {
-    if (tab === "signup") rememberPendingSignupRole(role);
-    else clearPendingSignupRole();
+    if (tab === "signup") {
+      if (!role) {
+        toast.error("Scegli se registrarti come Ristoratore o come Lavoratore.");
+        return;
+      }
+      rememberPendingSignupRole(role, "facebook");
+    } else {
+      clearPendingSignupRole();
+    }
     setBusy(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "facebook",
@@ -414,8 +433,8 @@ function AuthPage() {
                 <div className="rounded-lg border bg-muted/30 p-3">
                   <Label className="mb-2 block text-sm">Sto creando un account come *</Label>
                   <RadioGroup
-                    value={role}
-                    onValueChange={(v) => setRole(v as "restaurant" | "worker")}
+                    value={role ?? ""}
+                    onValueChange={(v) => setRole(v as SignupRole)}
                     className="grid grid-cols-2 gap-3"
                   >
                     <label className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm cursor-pointer hover:bg-accent">
@@ -425,8 +444,10 @@ function AuthPage() {
                       <RadioGroupItem value="worker" /> Lavoratore
                     </label>
                   </RadioGroup>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Il ruolo selezionato vale anche per la registrazione con Google, Apple o Facebook.
+                  <p className={`mt-2 text-xs ${roleChosen ? "text-muted-foreground" : "text-destructive"}`}>
+                    {roleChosen
+                      ? "Il ruolo selezionato vale anche per la registrazione con Google, Apple o Facebook."
+                      : "Scegli il tipo di account per proseguire: la registrazione (email o social) resta disattivata finché non selezioni un ruolo."}
                   </p>
                 </div>
               )}
@@ -434,7 +455,7 @@ function AuthPage() {
                 type="button"
                 variant="outline"
                 className="w-full gap-2"
-                disabled={busy}
+                disabled={busy || (tab === "signup" && !roleChosen)}
                 onClick={() => handleOAuth("google")}
               >
                 <GoogleIcon /> Continua con Google
@@ -443,12 +464,18 @@ function AuthPage() {
                 type="button"
                 variant="outline"
                 className="w-full gap-2"
-                disabled={busy}
+                disabled={busy || (tab === "signup" && !roleChosen)}
                 onClick={() => handleOAuth("apple")}
               >
                 <AppleIcon /> Continua con Apple
               </Button>
-              <Button type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={handleFacebook}>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={busy || (tab === "signup" && !roleChosen)}
+                onClick={handleFacebook}
+              >
                 <FacebookIcon /> Continua con Facebook
               </Button>
               <div className="flex items-center gap-2 py-1">
@@ -609,21 +636,6 @@ function AuthPage() {
                     <p className="text-xs text-destructive mt-1">Le password non coincidono.</p>
                   )}
                 </div>
-                <div>
-                  <Label className="mb-2 block">Sono un</Label>
-                  <RadioGroup
-                    value={role}
-                    onValueChange={(v) => setRole(v as "restaurant" | "worker")}
-                    className="grid grid-cols-2 gap-3"
-                  >
-                    <label className="flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:bg-accent">
-                      <RadioGroupItem value="restaurant" /> Ristoratore
-                    </label>
-                    <label className="flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:bg-accent">
-                      <RadioGroupItem value="worker" /> Lavoratore
-                    </label>
-                  </RadioGroup>
-                </div>
                 {role === "restaurant" && (
                   <div>
                     <Label>Età del referente</Label>
@@ -651,6 +663,7 @@ function AuthPage() {
                   className="w-full"
                   disabled={
                     busy ||
+                    !roleChosen ||
                     !firstNameOk ||
                     !lastNameOk ||
                     !emailValid ||
