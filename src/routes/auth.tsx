@@ -26,7 +26,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { MailCheck } from "lucide-react";
-import { rememberPendingSignupRole, clearPendingSignupRole } from "@/lib/signup-role";
+import { rememberPendingSignupRole, clearPendingSignupRole, type SignupRole } from "@/lib/signup-role";
+import { isEffectivelyComplete } from "@/lib/profile-completion";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -52,7 +53,9 @@ function AuthPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
-  const [role, setRole] = useState<"restaurant" | "worker">(roleParam ?? "restaurant");
+  // Nessun ruolo pre-selezionato: la scelta deve essere esplicita, salvo
+  // quando arriva da una CTA "Ristoratore"/"Lavoratore" (?role=...).
+  const [role, setRole] = useState<SignupRole | null>(roleParam ?? null);
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const justSignedUpRef = useRef(false);
@@ -345,10 +348,15 @@ function AuthPage() {
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
-    // Il ruolo scelto in registrazione deve sopravvivere al redirect OAuth:
-    // Google/Apple non trasportano metadati applicativi.
-    if (tab === "signup") rememberPendingSignupRole(role);
-    else clearPendingSignupRole();
+    if (tab === "signup") {
+      if (!role) {
+        toast.error("Scegli se registrarti come Ristoratore o come Lavoratore.");
+        return;
+      }
+      rememberPendingSignupRole(role, provider);
+    } else {
+      clearPendingSignupRole();
+    }
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
@@ -367,8 +375,15 @@ function AuthPage() {
   };
 
   const handleFacebook = async () => {
-    if (tab === "signup") rememberPendingSignupRole(role);
-    else clearPendingSignupRole();
+    if (tab === "signup") {
+      if (!role) {
+        toast.error("Scegli se registrarti come Ristoratore o come Lavoratore.");
+        return;
+      }
+      rememberPendingSignupRole(role, "facebook");
+    } else {
+      clearPendingSignupRole();
+    }
     setBusy(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "facebook",
