@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.report_shift_no_show(uuid, text, timestamptz) FROM anon;
