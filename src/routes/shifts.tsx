@@ -680,6 +680,9 @@ function ShiftsPage() {
       setShifts(prev => prev.map(x => x.id === a.shift_id ? { ...x, status: "completed" as const } : x));
       refreshRequiredReviews();
       setReviewDialog(null);
+      // 5. Refetch autorevole SOLO dopo il successo backend: lo stato ottimistico
+      // non basta (CTA "Completa turno"/"Lascia recensione" devono sparire).
+      await load();
     } catch (e: any) {
       toast.error(`Errore durante il salvataggio della recensione. Riprova.`, { id: tId });
       setDialogError(e?.message ?? "Errore di rete");
