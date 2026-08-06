@@ -28,6 +28,7 @@ import { Route as DesignAuditRouteImport } from './routes/design-audit'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
 import { Route as ClaudeVisualAuditRouteImport } from './routes/claude-visual-audit'
+import { Route as ChooseRoleRouteImport } from './routes/choose-role'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AvailabilityRouteImport } from './routes/availability'
@@ -148,6 +149,11 @@ const ComeFunzionaRoute = ComeFunzionaRouteImport.update({
 const ClaudeVisualAuditRoute = ClaudeVisualAuditRouteImport.update({
   id: '/claude-visual-audit',
   path: '/claude-visual-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChooseRoleRoute = ChooseRoleRouteImport.update({
+  id: '/choose-role',
+  path: '/choose-role',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrowseRoute = BrowseRouteImport.update({
@@ -296,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/choose-role': typeof ChooseRoleRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/choose-role': typeof ChooseRoleRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
@@ -391,6 +399,7 @@ export interface FileRoutesById {
   '/availability': typeof AvailabilityRoute
   '/billing': typeof BillingRoute
   '/browse': typeof BrowseRoute
+  '/choose-role': typeof ChooseRoleRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
   '/dashboard': typeof DashboardRoute
@@ -440,6 +449,7 @@ export interface FileRouteTypes {
     | '/availability'
     | '/billing'
     | '/browse'
+    | '/choose-role'
     | '/claude-visual-audit'
     | '/come-funziona'
     | '/dashboard'
@@ -487,6 +497,7 @@ export interface FileRouteTypes {
     | '/availability'
     | '/billing'
     | '/browse'
+    | '/choose-role'
     | '/claude-visual-audit'
     | '/come-funziona'
     | '/dashboard'
@@ -534,6 +545,7 @@ export interface FileRouteTypes {
     | '/availability'
     | '/billing'
     | '/browse'
+    | '/choose-role'
     | '/claude-visual-audit'
     | '/come-funziona'
     | '/dashboard'
@@ -582,6 +594,7 @@ export interface RootRouteChildren {
   AvailabilityRoute: typeof AvailabilityRoute
   BillingRoute: typeof BillingRoute
   BrowseRoute: typeof BrowseRoute
+  ChooseRoleRoute: typeof ChooseRoleRoute
   ClaudeVisualAuditRoute: typeof ClaudeVisualAuditRoute
   ComeFunzionaRoute: typeof ComeFunzionaRoute
   DashboardRoute: typeof DashboardRoute
@@ -749,6 +762,13 @@ declare module '@tanstack/react-router' {
       path: '/claude-visual-audit'
       fullPath: '/claude-visual-audit'
       preLoaderRoute: typeof ClaudeVisualAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/choose-role': {
+      id: '/choose-role'
+      path: '/choose-role'
+      fullPath: '/choose-role'
+      preLoaderRoute: typeof ChooseRoleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/browse': {
@@ -983,6 +1003,7 @@ const rootRouteChildren: RootRouteChildren = {
   AvailabilityRoute: AvailabilityRoute,
   BillingRoute: BillingRoute,
   BrowseRoute: BrowseRoute,
+  ChooseRoleRoute: ChooseRoleRoute,
   ClaudeVisualAuditRoute: ClaudeVisualAuditRoute,
   ComeFunzionaRoute: ComeFunzionaRoute,
   DashboardRoute: DashboardRoute,
