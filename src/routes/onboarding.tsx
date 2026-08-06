@@ -1556,19 +1556,9 @@ function Onboarding() {
     const update =
       role === "restaurant"
         ? {
-            full_name: (() => {
-              const metaFirst = ((user as any)?.user_metadata?.first_name as string | undefined) ?? "";
-              const metaLast = ((user as any)?.user_metadata?.last_name as string | undefined) ?? "";
-              const first = ((profile as any)?.first_name ?? metaFirst ?? "").trim();
-              const last = ((profile as any)?.last_name ?? metaLast ?? "").trim();
-              const composed = `${first} ${last}`.trim();
-              return (
-                composed ||
-                ((profile as any)?.full_name ?? "").trim() ||
-                form.full_name ||
-                null
-              );
-            })(),
+            first_name: personal.first_name.trim(),
+            last_name: personal.last_name.trim(),
+            full_name: `${personal.first_name.trim()} ${personal.last_name.trim()}`.trim() || null,
             phone: phoneFull,
             phone_country_code: form.phone_code,
             phone_number: form.phone_number,
