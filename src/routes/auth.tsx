@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { MailCheck } from "lucide-react";
+import { rememberPendingSignupRole, clearPendingSignupRole } from "@/lib/signup-role";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -344,6 +345,10 @@ function AuthPage() {
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
+    // Il ruolo scelto in registrazione deve sopravvivere al redirect OAuth:
+    // Google/Apple non trasportano metadati applicativi.
+    if (tab === "signup") rememberPendingSignupRole(role);
+    else clearPendingSignupRole();
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
