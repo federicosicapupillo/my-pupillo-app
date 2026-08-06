@@ -2904,20 +2904,31 @@ function Thread() {
         {(() => {
           // Static shift page: the proposal recap (role, date, venue, address,
           // compensation, dress code, tasks, languages, requirements) is
-          // already rendered by the summary boxes above, so only proposals
-          // that still need a decision are shown — as a bare action block.
-          const pendingProposals = proposalMessages.filter((m) => {
-            const own = proposalStatuses[m.id];
+          // already rendered by the summary boxes above, so only the decision
+          // block is shown here. Questa è l'UNICA superficie che renderizza la
+          // coppia "Accetta candidatura" / "Rifiuta candidatura".
+          const effStatusOf = (mid: string) => {
+            const own = proposalStatuses[mid];
             const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
-            const eff = own ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
-            return eff !== "accepted" && eff !== "rejected" && eff !== "not_interested" && eff !== "expired";
-          });
-          if (pendingProposals.length === 0) return null;
+            return own ?? (hasAnyResponse ? "pending" : (app?.status ?? "pending"));
+          };
+          const isPendingStatus = (eff: string) =>
+            eff !== "accepted" && eff !== "rejected" && eff !== "not_interested" && eff !== "expired";
+          // Le proposte già decise restano visibili al lavoratore come esito
+          // NON interattivo (stato canonico dal database), così dopo refresh o
+          // da un altro dispositivo non ricompare alcun pulsante attivo.
+          const visibleProposals = proposalMessages.filter((m) =>
+            isPendingStatus(effStatusOf(m.id)) ? true : role === "worker",
+          );
+          if (visibleProposals.length === 0) return null;
+          const hasPendingDecision = visibleProposals.some((m) => isPendingStatus(effStatusOf(m.id)));
           return (
           <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-proposta">
-            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">Azioni disponibili</h2>
+            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">
+              {hasPendingDecision ? "Azioni disponibili" : "Esito della candidatura"}
+            </h2>
             <div className="space-y-3">
-              {pendingProposals.map((m) => {
+              {visibleProposals.map((m) => {
               const ownStatus = proposalStatuses[m.id];
               const hasAnyResponse = Object.keys(proposalStatuses).length > 0;
               // Per-proposal status is authoritative. Legacy proposals (no recorded
