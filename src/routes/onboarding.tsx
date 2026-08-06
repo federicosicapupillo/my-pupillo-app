@@ -1,3 +1,4 @@
+import { isEffectivelyComplete } from "@/lib/profile-completion";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
