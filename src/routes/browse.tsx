@@ -32,6 +32,7 @@ import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
+  CONFLICT_WORKER_HINT_MESSAGE,
   mapShiftConflictError,
   conflictsWithBusyWindows,
   fetchWorkerBusyWindows,
