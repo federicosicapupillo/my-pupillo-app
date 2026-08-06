@@ -107,7 +107,7 @@ export function routeForRole(role: Role | null): string {
   if (role === "admin") return "/admin";
   if (role === "restaurant") return "/dashboard";
   if (role === "worker") return "/jobs";
-  return "/account-error";
+  return "/choose-role";
 }
 
 const AuthContext = createContext<Ctx | undefined>(undefined);
@@ -198,10 +198,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ?? resolver?.user_role
       ?? null;
     const metadataRole = (user?.user_metadata?.role as string | null | undefined) ?? resolver?.metadata_role ?? null;
+    // I metadati di registrazione (user_metadata.role) sono controllabili dal
+    // client: restano solo diagnostici e non possono determinare il ruolo.
     const r = normalizeAccountRole(resolver?.final_role)
       ?? normalizeAccountRole(userRoleFromRows)
-      ?? normalizeAccountRole(primaryRole)
-      ?? normalizeAccountRole(metadataRole);
+      // primary_role puo' contenere ruoli-mansione ("Cameriere") o valori
+      // storici: non puo' mai conferire privilegi amministrativi.
+      ?? (normalizeAccountRole(primaryRole) === "admin" ? null : normalizeAccountRole(primaryRole));
     const finalRoute = routeForRole(r);
     const debugPayload: RoleDebug = {
       user_id: uid,

@@ -97,7 +97,9 @@ export const listRoleMismatches = createServerFn({ method: "GET" })
         userRoles.find((r) => normalizeStoredRole(r) === "restaurant"),
         userRoles.find((r) => normalizeStoredRole(r) === "worker"),
         profileRole,
-        metaRole,
+        // metaRole e' un dato dichiarato dal client in fase di registrazione:
+        // puo' suggerire solo ruoli non privilegiati.
+        normalizeStoredRole(metaRole) === "admin" ? null : metaRole,
       ].map(normalizeStoredRole).filter((v): v is NonNullable<RoleIssueRow["suggestedRole"]> => !!v && VALID.has(v));
       const suggestedRole = candidates[0] ?? null;
 
