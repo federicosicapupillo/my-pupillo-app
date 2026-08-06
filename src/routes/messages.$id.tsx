@@ -460,7 +460,7 @@ function buildTimeline(
 
   const steps: Step[] = [
     { key: "sent", label: "Inviata", icon: Send, state: "done" },
-    { key: "interest", label: "Interesse", icon: ThumbsUp,
+    { key: "interest", label: "Attesa di una risposta", icon: ThumbsUp,
       state: isReject ? "error" : mark(isInterested || isCounter || isAccepted, s === "pending") },
     { key: "outcome",
       label: isCancelled ? "Annullata" : slotTaken ? "Turno assegnato ad altri" : isReject ? "Rifiutata" : isExpired ? "Scaduta" : "Assegnata",
@@ -2713,7 +2713,7 @@ function Thread() {
 
         {app && (
           <div className="rounded-2xl border bg-card p-4 mb-4">
-            <div className="text-xs font-medium text-muted-foreground mb-3">Stato della richiesta</div>
+            <div className="text-xs font-medium text-muted-foreground mb-3">Stato della candidatura</div>
             <ol className="flex items-start justify-between gap-2">
               {steps.map((s: Step, i: number) => (
                 <li key={s.key} className="flex-1 flex flex-col items-center text-center min-w-0">
