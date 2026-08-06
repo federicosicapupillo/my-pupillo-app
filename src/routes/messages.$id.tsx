@@ -4281,9 +4281,9 @@ function ProposalCard(props: {
                 : "bg-destructive/10 text-destructive border-destructive/30"
           }`}>
             {accepted ? <Check className="h-4 w-4" /> : expired ? <AlarmClock className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            {accepted ? (isWorker ? "Hai accettato la proposta. Attendi l'assegnazione definitiva da parte del ristoratore." : "Proposta accettata") :
+            {accepted ? (isWorker ? "Candidatura accettata. Attendi l'assegnazione definitiva da parte del ristoratore." : "Proposta accettata") :
               expired ? "Proposta scaduta" :
-              (isWorker ? "Hai rifiutato questa proposta." : "Proposta rifiutata")}
+              (isWorker ? "Candidatura rifiutata." : "Proposta rifiutata")}
           </div>
         ) : isWorker ? (
           incompatibleSpecial ? (
@@ -4296,18 +4296,19 @@ function ProposalCard(props: {
                 <p key={e.id} className="mt-0.5 text-xs opacity-90">· {describeSpecialAvailability(e)}</p>
               ))}
               <div className="mt-2 flex gap-2">
-                <Button type="button" disabled className="flex-1 h-11 bg-emerald-600/50 text-white font-semibold gap-2 cursor-not-allowed">
-                  <Check className="h-4 w-4" /> Accetta proposta
+                <Button type="button" data-testid="proposal-accept" disabled className="flex-1 h-11 bg-emerald-600/50 text-white font-semibold gap-2 cursor-not-allowed">
+                  <Check className="h-4 w-4" /> Accetta candidatura
                 </Button>
                 <Button
                   type="button"
+                  data-testid="proposal-reject"
                   onClick={openReject}
                   disabled={!!busy}
                   variant="outline"
                   className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
                 >
                   <X className="h-4 w-4" />
-                  {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
+                  {busy === "reject" ? "Operazione in corso…" : "Rifiuta candidatura"}
                 </Button>
               </div>
             </div>
@@ -4315,22 +4316,24 @@ function ProposalCard(props: {
           <div className="px-4 py-3 border-t bg-secondary/30 flex gap-2">
             <Button
               type="button"
+              data-testid="proposal-accept"
               onClick={openAccept}
               disabled={!!busy}
               className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
             >
               <Check className="h-4 w-4" />
-              {busy === "accept" ? "Operazione in corso…" : "Accetta proposta"}
+              {busy === "accept" ? "Operazione in corso…" : "Accetta candidatura"}
             </Button>
             <Button
               type="button"
+              data-testid="proposal-reject"
               onClick={openReject}
               disabled={!!busy}
               variant="outline"
               className="flex-1 h-11 border-destructive text-destructive hover:bg-destructive/10 font-semibold gap-2"
             >
               <X className="h-4 w-4" />
-              {busy === "reject" ? "Operazione in corso…" : "Rifiuta"}
+              {busy === "reject" ? "Operazione in corso…" : "Rifiuta candidatura"}
             </Button>
           </div>
           )
