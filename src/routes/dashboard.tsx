@@ -263,6 +263,7 @@ function DashboardInner() {
       toast.success("Turno concluso. Lascia ora la recensione.");
       setClosingItem(null);
       await loadAssigned(user.id);
+      await reloadRestaurantStats();
       // porta direttamente alla pagina dettaglio turno con sezione recensione aperta
       if (shiftId) {
         nav({ to: "/ristoratore/turni/$shiftId", params: { shiftId }, search: { section: "recensione" } as never });
