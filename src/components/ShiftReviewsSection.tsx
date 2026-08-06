@@ -339,6 +339,8 @@ export function ShiftReviewsSection({
       await load();
       // Refresh autorevole della pagina contenitore SOLO dopo successo backend.
       try { await onSubmitted?.(); } catch { /* non bloccante */ }
+      // Invalida gli aggregati autorevoli della dashboard ristoratore.
+      emitRestaurantStatsRefresh();
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       if (import.meta.env.DEV) console.error("[shift-reviews] insert threw", { message });
