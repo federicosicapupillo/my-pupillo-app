@@ -159,6 +159,12 @@ export function ShiftReviewsSection({
   applicationId: string | null;
   autoOpen?: boolean;
   className?: string;
+  /**
+   * Chiamata SOLO dopo un invio recensione riuscito a backend: permette alla
+   * pagina contenitore di ricaricare i dati autorevoli (turno, candidatura,
+   * CTA) senza refresh manuale dell'utente.
+   */
+  onSubmitted?: () => void | Promise<void>;
 }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<ShiftReviewStatus | null>(null);
