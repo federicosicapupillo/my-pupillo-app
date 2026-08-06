@@ -3173,6 +3173,10 @@ export type Database = {
         Args: { _code: string; _new_user: string }
         Returns: string
       }
+      report_shift_no_show: {
+        Args: { _notes?: string; _now?: string; _shift_id: string }
+        Returns: Json
+      }
       resolve_current_user_role: {
         Args: never
         Returns: {
