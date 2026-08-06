@@ -297,6 +297,7 @@ export type Database = {
           is_demo: boolean
           last_message_at: string | null
           last_message_preview: string | null
+          origin: string
           proposed_tariff: number | null
           response_deadline: string
           restaurant_id: string
@@ -315,6 +316,7 @@ export type Database = {
           is_demo?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
+          origin?: string
           proposed_tariff?: number | null
           response_deadline?: string
           restaurant_id: string
@@ -333,6 +335,7 @@ export type Database = {
           is_demo?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
+          origin?: string
           proposed_tariff?: number | null
           response_deadline?: string
           restaurant_id?: string
@@ -3196,6 +3199,10 @@ export type Database = {
           user_role: string
           user_roles_error: string
         }[]
+      }
+      restaurant_contact_worker: {
+        Args: { _announcement_id: string; _origin?: string; _worker_id: string }
+        Returns: string
       }
       search_worker_availability_exceptions_public: {
         Args: { _from_date: string; _worker_ids: string[] }

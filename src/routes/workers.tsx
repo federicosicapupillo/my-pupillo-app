@@ -48,6 +48,7 @@ import { computeCompatibility, SLOT_LABELS } from "@/lib/availability";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canRestaurantInviteWorker } from "@/lib/application-reapply";
+import { restaurantContactWorker } from "@/lib/restaurant-contact";
 import {
   collectWorkerCompetenceValues,
   collectWorkerRoleValues,
@@ -1021,43 +1022,25 @@ function WorkersPage() {
         return;
       }
       let applicationId: string;
-      if (inviteDecision.mode === "reactivate") {
-        const { data: updated, error: reErr } = await supabase
-          .from("applications")
-          .update({
-            status: "pending",
-            restaurant_id: user.id,
-            proposed_tariff: null,
-            worker_response_at: null,
-          } as never)
-          .eq("id", inviteDecision.applicationId)
-          .select("id")
-          .single();
-        if (reErr || !updated) {
-          toast.error(reErr?.message ?? "Impossibile riattivare la richiesta.");
+      try {
+        // RPC sicura: origine = proposta diretta del ristoratore, quindi il
+        // database non genera "Nuova candidatura ricevuta" al ristoratore.
+        applicationId = await restaurantContactWorker({
+          announcementId: selected,
+          workerId,
+          origin: "restaurant_direct_request",
+        });
+      } catch (error: any) {
+        if (error?.name === "ActiveApplicationExistsError" || isDuplicateContactError(error)) {
+          const c = await checkExistingContact({ announcementId: selected, workerId });
+          setProposalWorker(null);
+          setAlreadyContactAppId(c.existing ? c.applicationId : null);
           setSendingProposal(false);
           return;
         }
-        applicationId = (updated as { id: string }).id;
-      } else {
-        const { data: created, error } = await supabase
-          .from("applications")
-          .insert({ announcement_id: selected, worker_id: workerId, restaurant_id: user.id, status: "pending" })
-          .select("id")
-          .single();
-        if (error || !created) {
-          if (error && isDuplicateContactError(error)) {
-            const c = await checkExistingContact({ announcementId: selected, workerId });
-            setProposalWorker(null);
-            setAlreadyContactAppId(c.existing ? c.applicationId : null);
-            setSendingProposal(false);
-            return;
-          }
-          toast.error(error?.message ?? "Errore");
-          setSendingProposal(false);
-          return;
-        }
-        applicationId = created.id;
+        toast.error(error?.message ?? "Errore");
+        setSendingProposal(false);
+        return;
       }
       try {
         await sendShiftProposal({

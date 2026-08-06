@@ -20,6 +20,7 @@ import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canRestaurantInviteWorker } from "@/lib/application-reapply";
+import { restaurantContactWorker } from "@/lib/restaurant-contact";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -235,39 +236,23 @@ function Page() {
         return;
       }
       let appId: string;
-      if (inviteDecision.mode === "reactivate") {
-        const { data: updated, error: reErr } = await supabase
-          .from("applications")
-          .update({
-            status: "pending",
-            restaurant_id: user.id,
-            proposed_tariff: null,
-            worker_response_at: null,
-          } as never)
-          .eq("id", inviteDecision.applicationId)
-          .select("id")
-          .single();
-        if (reErr || !updated) throw reErr ?? new Error("Impossibile riattivare la richiesta.");
-        appId = (updated as { id: string }).id;
-      } else {
-        const { data: ins, error } = await supabase.from("applications")
-          .insert({
-            announcement_id: annId,
-            worker_id: inviteFor.worker_id,
-            restaurant_id: user.id,
-            status: "pending",
-          }).select("id").single();
-        if (error) {
-          if (isDuplicateContactError(error)) {
-            const c = await checkExistingContact({ announcementId: annId, workerId: inviteFor.worker_id });
-            setInviteFor(null);
-            setAlreadyContactAppId(c.existing ? c.applicationId : null);
-            setInviteSubmitting(false);
-            return;
-          }
-          throw error;
+      try {
+        // RPC sicura: registra l'origine reale (invito del ristoratore) e
+        // impedisce la notifica "Nuova candidatura ricevuta" al ristoratore.
+        appId = await restaurantContactWorker({
+          announcementId: annId,
+          workerId: inviteFor.worker_id,
+          origin: "restaurant_invitation",
+        });
+      } catch (error: any) {
+        if (error?.name === "ActiveApplicationExistsError" || isDuplicateContactError(error)) {
+          const c = await checkExistingContact({ announcementId: annId, workerId: inviteFor.worker_id });
+          setInviteFor(null);
+          setAlreadyContactAppId(c.existing ? c.applicationId : null);
+          setInviteSubmitting(false);
+          return;
         }
-        appId = ins!.id as string;
+        throw error;
       }
       // Auto-message: graphical shift proposal pre-filled with announcement details.
       await sendShiftProposal({
