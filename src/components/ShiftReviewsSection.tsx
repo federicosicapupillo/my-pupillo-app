@@ -147,6 +147,7 @@ export function ShiftReviewsSection({
   applicationId,
   autoOpen,
   className = "",
+  onSubmitted,
 }: {
   id?: string;
   shiftId: string;
@@ -336,6 +337,8 @@ export function ShiftReviewsSection({
       setWouldRehire(null);
       // Re-read from DB: recompute the reciprocal state (may unlock now).
       await load();
+      // Refresh autorevole della pagina contenitore SOLO dopo successo backend.
+      try { await onSubmitted?.(); } catch { /* non bloccante */ }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       if (import.meta.env.DEV) console.error("[shift-reviews] insert threw", { message });
