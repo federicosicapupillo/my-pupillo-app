@@ -44,6 +44,9 @@ import { WorkerSelfCancelledDialog } from "@/components/WorkerSelfCancelledDialo
 import {
   checkWorkerShiftConflict,
   CONFLICT_WORKER_APPLY_MESSAGE,
+  CONFLICT_WORKER_HINT_MESSAGE,
+  fetchWorkerBusyWindows,
+  conflictsWithBusyWindows,
   CONFLICT_RESTAURANT_ASSIGN_MESSAGE,
   mapShiftConflictError,
 } from "@/lib/shift-conflict";
@@ -449,6 +452,23 @@ function AnnouncementDetail() {
   const [applying, setApplying] = useState(false);
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const [selfCancelledOpen, setSelfCancelledOpen] = useState(false);
+  // Anticipazione UX della regola "almeno un'ora tra due turni". La decisione
+  // finale resta al database (`assert_no_worker_shift_conflict`).
+  const [bufferConflict, setBufferConflict] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (!user || !ann) { setBufferConflict(false); return; }
+    (async () => {
+      try {
+        const busy = await fetchWorkerBusyWindows(user.id);
+        const filtered = busy.filter((b) => b.announcementId !== ann.id);
+        if (alive) setBufferConflict(conflictsWithBusyWindows(ann as any, filtered) !== null);
+      } catch {
+        if (alive) setBufferConflict(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [user?.id, ann, myApp?.status]);
   const applyAsWorker = async () => {
     if (!user || !ann || applying) return;
     // Blocco area operativa (stesso controllo del database).
@@ -975,6 +995,13 @@ function AnnouncementDetail() {
               </div>
             ) : isAnnInactive ? (
               <Button disabled className="w-full">Candidature chiuse</Button>
+            ) : bufferConflict ? (
+              <div className="space-y-2">
+                <Button disabled className="w-full">Orario non disponibile</Button>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+                  {CONFLICT_WORKER_HINT_MESSAGE}
+                </p>
+              </div>
             ) : (
               <>
                 <Button

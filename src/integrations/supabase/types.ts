@@ -2745,7 +2745,12 @@ export type Database = {
         Args: { _announcement_id: string }
         Returns: boolean
       }
+      announcement_shift_bounds: { Args: { _ann: string }; Returns: unknown }
       announcement_shift_interval: { Args: { _ann: string }; Returns: unknown }
+      application_status_is_active: {
+        Args: { _s: Database["public"]["Enums"]["application_status"] }
+        Returns: boolean
+      }
       are_coords_in_launch_area: {
         Args: { _lat: number; _lng: number }
         Returns: boolean
@@ -2753,6 +2758,7 @@ export type Database = {
       assert_no_worker_shift_conflict: {
         Args: {
           _announcement_id: string
+          _exclude_application_id?: string
           _exclude_shift_id?: string
           _worker_id: string
         }
@@ -3232,6 +3238,7 @@ export type Database = {
       server_now: { Args: never; Returns: string }
       set_my_available_now: { Args: { _until: string }; Returns: string }
       set_my_avatar: { Args: { _path: string }; Returns: undefined }
+      shift_buffer_minutes: { Args: never; Returns: number }
       shift_effective_start: { Args: { _shift_id: string }; Returns: string }
       unseed_demo: {
         Args: { _batch: string }
@@ -3269,6 +3276,23 @@ export type Database = {
           _worker_id: string
         }
         Returns: boolean
+      }
+      worker_shift_buffer_conflict: {
+        Args: {
+          _end: string
+          _exclude_application_id?: string
+          _exclude_shift_id?: string
+          _start: string
+          _worker_id: string
+        }
+        Returns: {
+          announcement_id: string
+          application_id: string
+          end_at: string
+          shift_id: string
+          source: string
+          start_at: string
+        }[]
       }
     }
     Enums: {

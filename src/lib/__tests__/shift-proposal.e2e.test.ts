@@ -39,6 +39,14 @@ function makeBuilder(table: string) {
   const api: any = {
     select() { return api; },
     eq(col: string, val: any) { state.filters[col] = val; return api; },
+    // Le query "lista" (es. finestre occupate del lavoratore) vengono attese
+    // direttamente dopo `.in(...)`: restituiamo un thenable vuoto.
+    in(col: string, vals: any[]) {
+      state.filters[col] = vals;
+      calls.push({ table, op: "select", filters: { ...state.filters } });
+      const res = { data: [], error: null };
+      return Object.assign(api, { then: (r: any) => Promise.resolve(res).then(r) });
+    },
     maybeSingle() {
       calls.push({ table, op: "select", filters: { ...state.filters } });
       return Promise.resolve({ data: fixtures[table] ?? null, error: null });
