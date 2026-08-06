@@ -3078,6 +3078,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_restaurant_dashboard_stats: { Args: never; Returns: Json }
       get_shift_review_status: {
         Args: { _shift_id: string }
         Returns: {

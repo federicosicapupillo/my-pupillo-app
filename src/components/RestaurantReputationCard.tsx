@@ -13,6 +13,8 @@ import {
   calculateRestaurantReputationScore,
   type RestaurantReputationResult,
 } from "@/lib/restaurant-reputation";
+import { useRestaurantDashboardStats } from "@/hooks/use-restaurant-dashboard-stats";
+import { receivedReviewsLabel } from "@/lib/restaurant-dashboard-stats";
 
 /**
  * Dashboard summary block for the restaurant: Reputation Score + last
@@ -22,6 +24,7 @@ import {
 export function RestaurantReputationCard({ restaurantId }: { restaurantId: string }) {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<RestaurantReputationResult | null>(null);
+  const { stats, loading: statsLoading } = useRestaurantDashboardStats(!!restaurantId);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,9 +52,17 @@ export function RestaurantReputationCard({ restaurantId }: { restaurantId: strin
     return () => { cancelled = true; };
   }, [restaurantId]);
 
-  if (loading || !result) {
+  if (loading || statsLoading || !result) {
     return <Skeleton className="h-48 w-full rounded-2xl" />;
   }
+
+  // Authoritative aggregates come from the RPC; the local calculation only
+  // provides the weighted score.
+  const reviewsCount = stats.receivedVisibleReviewsCount;
+  const ratingAvg = stats.averageReceivedRating;
+  const completedShifts = stats.completedDistinctShiftsCount;
+  const topPositiveTag = stats.topPositiveTag;
+  const isInConstruction = reviewsCount < 3;
 
   const scoreColor =
     result.score >= 80 ? "text-emerald-600 dark:text-emerald-400" :
@@ -70,17 +81,23 @@ export function RestaurantReputationCard({ restaurantId }: { restaurantId: strin
             Il tuo Reputation Score si basa sulle recensioni ricevute dai lavoratori dopo i turni conclusi.
           </p>
         </div>
-        <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${result.badgeClass}`}>
-          {result.badgeLabel}
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+            isInConstruction
+              ? "bg-muted text-muted-foreground border-border"
+              : result.badgeClass
+          }`}
+        >
+          {isInConstruction ? "In fase di calcolo" : result.badgeLabel}
         </span>
       </div>
 
-      {result.isInConstruction ? (
+      {isInConstruction ? (
         <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-sm">
           <div className="font-medium">Reputazione in fase di calcolo</div>
           <p className="text-xs text-muted-foreground mt-1">
             Il punteggio diventa stabile dopo almeno <strong>3 recensioni ricevute</strong>.
-            Per ora hai <strong className="tabular-nums">{result.reviewsCount}</strong> recensioni.
+            {" "}{receivedReviewsLabel(reviewsCount)}.
           </p>
         </div>
       ) : (
@@ -92,10 +109,10 @@ export function RestaurantReputationCard({ restaurantId }: { restaurantId: strin
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <Metric icon={Star} label="Media recensioni" value={result.reviewsCount > 0 ? `${result.ratingAvg.toFixed(1)}/5` : "—"} />
-        <Metric icon={MessageSquare} label="Recensioni" value={String(result.reviewsCount)} />
-        <Metric icon={CheckCircle2} label="Turni conclusi" value={`${result.completionPct}%`} />
-        <Metric icon={ThumbsUp} label="Tag positivo top" value={result.topPositiveTag ?? "—"} />
+        <Metric icon={Star} label="Media recensioni" value={ratingAvg !== null ? `${ratingAvg.toFixed(1).replace(".", ",")}/5` : "—"} />
+        <Metric icon={MessageSquare} label="Recensioni" value={String(reviewsCount)} />
+        <Metric icon={CheckCircle2} label="Turni conclusi" value={String(completedShifts)} />
+        <Metric icon={ThumbsUp} label="Tag positivo top" value={topPositiveTag ?? "Nessun tag ancora"} />
       </div>
 
       {(result.topPositiveTags.length > 0 || result.topNegativeTags.length > 0) && (

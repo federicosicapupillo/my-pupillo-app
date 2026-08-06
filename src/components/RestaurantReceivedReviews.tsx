@@ -19,6 +19,8 @@ export type RestaurantReceivedReview = {
   positive_tags: string[] | null;
   negative_tags: string[] | null;
   tags: string[] | null;
+  visible_at?: string | null;
+  is_visible_to_restaurants?: boolean | null;
 };
 
 type WorkerInfo = { id: string; full_name: string | null; is_deleted?: boolean | null };
@@ -47,9 +49,11 @@ function formatDate(iso: string | null) {
 }
 
 /**
- * Loads reviews where `target_id = restaurantId` and the author has the
- * `worker` role (direction worker_to_restaurant). RLS already restricts
- * visibility, but we keep the filter explicit for safety.
+ * Loads reviews received by the restaurant, i.e. `target_id = restaurantId`
+ * AND `direction = 'worker_to_restaurant'` (author = worker, recipient =
+ * restaurant). The canonical `direction` column is the only safe filter:
+ * `user_roles` is readable only for one's own rows, so filtering by the
+ * author's role from the restaurant session always returned an empty set.
  */
 export async function loadRestaurantReceivedReviews(restaurantId: string): Promise<{
   rows: RestaurantReceivedReview[];
@@ -60,22 +64,11 @@ export async function loadRestaurantReceivedReviews(restaurantId: string): Promi
   try { console.log("[PUPILLO_RESTAURANT_REVIEW_RLS_CHECK]", { restaurantId }); } catch { /* */ }
   const { data } = await supabase
     .from("reviews")
-    .select("id,rating,comment,created_at,shift_id,application_id,announcement_id,author_id,positive_tags,negative_tags,tags")
+    .select("id,rating,comment,created_at,shift_id,application_id,announcement_id,author_id,positive_tags,negative_tags,tags,visible_at,is_visible_to_restaurants")
     .eq("target_id", restaurantId)
+    .eq("direction", "worker_to_restaurant")
     .order("created_at", { ascending: false });
-  const all = (data ?? []) as RestaurantReceivedReview[];
-  // Keep only reviews whose author is a worker.
-  const authorIds = Array.from(new Set(all.map((r) => r.author_id).filter(Boolean)));
-  let workerIdSet = new Set<string>();
-  if (authorIds.length) {
-    const { data: roleRows } = await supabase
-      .from("user_roles")
-      .select("user_id, role")
-      .in("user_id", authorIds)
-      .eq("role", "worker");
-    workerIdSet = new Set(((roleRows ?? []) as { user_id: string }[]).map((r) => r.user_id));
-  }
-  const rows = all.filter((r) => workerIdSet.has(r.author_id));
+  const rows = (data ?? []) as RestaurantReceivedReview[];
 
   const wIds = Array.from(new Set(rows.map((r) => r.author_id)));
   const shiftIds = Array.from(new Set(rows.map((r) => r.shift_id).filter(Boolean) as string[]));
