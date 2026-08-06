@@ -202,7 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // client: restano solo diagnostici e non possono determinare il ruolo.
     const r = normalizeAccountRole(resolver?.final_role)
       ?? normalizeAccountRole(userRoleFromRows)
-      ?? normalizeAccountRole(primaryRole);
+      // primary_role puo' contenere ruoli-mansione ("Cameriere") o valori
+      // storici: non puo' mai conferire privilegi amministrativi.
+      ?? (normalizeAccountRole(primaryRole) === "admin" ? null : normalizeAccountRole(primaryRole));
     const finalRoute = routeForRole(r);
     const debugPayload: RoleDebug = {
       user_id: uid,
