@@ -34,6 +34,8 @@ import { goToRestaurantOnboarding } from "@/lib/restaurant-onboarding-navigation
 import { CancelShiftDialog } from "@/components/CancelShiftDialog";
 import { countUnreadChats } from "@/lib/unread-chats";
 import { createDebouncedReload } from "@/lib/inbox-realtime";
+import { useRestaurantDashboardStats } from "@/hooks/use-restaurant-dashboard-stats";
+import { emitRestaurantStatsRefresh } from "@/lib/restaurant-dashboard-stats";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -64,6 +66,7 @@ function DashboardInner() {
   const { profile, role, user } = useAuth();
   const nav = useNavigate();
   const [stats, setStats] = useState({ active: 0, assigned: 0, applications: 0, messages: 0 });
+  const { stats: restaurantStats, reload: reloadRestaurantStats } = useRestaurantDashboardStats(role === "restaurant");
   const [assignedList, setAssignedList] = useState<AssignedItem[]>([]);
   const [closingItem, setClosingItem] = useState<AssignedItem | null>(null);
   const [closing, setClosing] = useState(false);
@@ -109,16 +112,12 @@ function DashboardInner() {
       // /messages page all show the SAME number.
       const PENDING_STATUSES = ["pending", "interested", "counter_offer"] as const;
       if (role === "restaurant") {
-        const { count: active } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "active");
-        const { count: assignedCount } = await supabase.from("announcements").select("*", { count: "exact", head: true }).eq("restaurant_id", user.id).eq("status", "assigned");
-        const { count: apps } = await supabase
-          .from("applications")
-          .select("*", { count: "exact", head: true })
-          .eq("restaurant_id", user.id)
-          .in("status", PENDING_STATUSES);
+        // Restaurant aggregates come from the authoritative RPC
+        // (`useRestaurantDashboardStats`); here we only refresh the unread
+        // chats counter and the assigned announcements preview.
         const msgs = await countUnreadChats(user.id, role);
         if (cancelled) return;
-        setStats({ active: active ?? 0, assigned: assignedCount ?? 0, applications: apps ?? 0, messages: msgs });
+        setStats((s) => ({ ...s, messages: msgs }));
         await loadAssigned(user.id);
       } else if (role === "worker") {
         const { count: apps } = await supabase
