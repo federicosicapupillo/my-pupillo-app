@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { MailCheck } from "lucide-react";
+import { rememberPendingSignupRole, clearPendingSignupRole } from "@/lib/signup-role";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -344,6 +345,10 @@ function AuthPage() {
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
+    // Il ruolo scelto in registrazione deve sopravvivere al redirect OAuth:
+    // Google/Apple non trasportano metadati applicativi.
+    if (tab === "signup") rememberPendingSignupRole(role);
+    else clearPendingSignupRole();
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
@@ -362,6 +367,8 @@ function AuthPage() {
   };
 
   const handleFacebook = async () => {
+    if (tab === "signup") rememberPendingSignupRole(role);
+    else clearPendingSignupRole();
     setBusy(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "facebook",
@@ -403,6 +410,26 @@ function AuthPage() {
               <TabsTrigger value="signup">Registrati</TabsTrigger>
             </TabsList>
             <div className="mt-4 space-y-2">
+              {tab === "signup" && (
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <Label className="mb-2 block text-sm">Sto creando un account come *</Label>
+                  <RadioGroup
+                    value={role}
+                    onValueChange={(v) => setRole(v as "restaurant" | "worker")}
+                    className="grid grid-cols-2 gap-3"
+                  >
+                    <label className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm cursor-pointer hover:bg-accent">
+                      <RadioGroupItem value="restaurant" /> Ristoratore
+                    </label>
+                    <label className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm cursor-pointer hover:bg-accent">
+                      <RadioGroupItem value="worker" /> Lavoratore
+                    </label>
+                  </RadioGroup>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Il ruolo selezionato vale anche per la registrazione con Google, Apple o Facebook.
+                  </p>
+                </div>
+              )}
               <Button
                 type="button"
                 variant="outline"

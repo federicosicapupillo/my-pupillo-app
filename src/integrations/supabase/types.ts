@@ -1158,6 +1158,7 @@ export type Database = {
           review_blocked: boolean
           review_blocked_at: string | null
           reviews_count: number | null
+          role_claimed_at: string | null
           sdi_code: string | null
           search_penalty_active: boolean
           search_penalty_reason: string | null
@@ -1330,6 +1331,7 @@ export type Database = {
           review_blocked?: boolean
           review_blocked_at?: string | null
           reviews_count?: number | null
+          role_claimed_at?: string | null
           sdi_code?: string | null
           search_penalty_active?: boolean
           search_penalty_reason?: string | null
@@ -1502,6 +1504,7 @@ export type Database = {
           review_blocked?: boolean
           review_blocked_at?: string | null
           reviews_count?: number | null
+          role_claimed_at?: string | null
           sdi_code?: string | null
           search_penalty_active?: boolean
           search_penalty_reason?: string | null
@@ -2785,6 +2788,7 @@ export type Database = {
         Returns: boolean
       }
       canonical_job_role: { Args: { _value: string }; Returns: string }
+      claim_signup_role: { Args: { _role: string }; Returns: string }
       consume_credits: {
         Args: { _amount: number; _reason: string; _reference_id?: string }
         Returns: boolean
@@ -3019,6 +3023,7 @@ export type Database = {
           review_blocked: boolean
           review_blocked_at: string | null
           reviews_count: number | null
+          role_claimed_at: string | null
           sdi_code: string | null
           search_penalty_active: boolean
           search_penalty_reason: string | null

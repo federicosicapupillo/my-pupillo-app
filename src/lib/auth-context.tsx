@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { applyTheme, persistTheme, readUserTheme } from "@/lib/theme";
 import { clearKnownRestaurantsCache } from "@/lib/known-restaurants-cache";
+import { clearPendingSignupRole, readPendingSignupRole } from "@/lib/signup-role";
 
 export const DELETED_ACCOUNT_MESSAGE = "Questo account è stato eliminato e non può più essere utilizzato.";
 
@@ -139,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loadExtras = async (uid: string) => {
+  const loadExtras = async (uid: string, attempt = 0) => {
     // NON azzeriamo extrasLoaded durante i reload: RequireAuth sostituirebbe
     // i children con "Caricamento…" smontando la pagina attiva (es. onboarding)
     // ogni volta che Supabase riemette un evento auth (TOKEN_REFRESHED al
@@ -160,6 +161,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (loadedProfile?.is_deleted || loadedProfile?.deleted_at) {
       await blockDeletedAccount(uid);
       return;
+    }
+    // Registrazione social: applica una sola volta il ruolo scelto prima del
+    // redirect OAuth (Google/Apple non trasportano metadati applicativi).
+    const pendingRole = attempt === 0 ? readPendingSignupRole() : null;
+    if (
+      pendingRole &&
+      loadedProfile &&
+      !loadedProfile.profile_completed &&
+      !(loadedProfile as unknown as { role_claimed_at?: string | null }).role_claimed_at
+    ) {
+      clearPendingSignupRole();
+      const { error: claimError } = await supabase.rpc("claim_signup_role" as never, { _role: pendingRole } as never);
+      if (claimError) console.error("[auth] claim_signup_role failed", claimError);
+      else {
+        await loadExtras(uid, attempt + 1);
+        return;
+      }
+    } else if (pendingRole) {
+      clearPendingSignupRole();
     }
     const allRoles = (roles ?? []).map((x: { role: string | null }) => x.role).filter((x): x is string => !!x);
     const resolver = Array.isArray(resolvedRows) ? (resolvedRows[0] as any | undefined) : (resolvedRows as any | undefined);
