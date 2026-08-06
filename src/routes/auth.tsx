@@ -433,8 +433,8 @@ function AuthPage() {
                 <div className="rounded-lg border bg-muted/30 p-3">
                   <Label className="mb-2 block text-sm">Sto creando un account come *</Label>
                   <RadioGroup
-                    value={role}
-                    onValueChange={(v) => setRole(v as "restaurant" | "worker")}
+                    value={role ?? ""}
+                    onValueChange={(v) => setRole(v as SignupRole)}
                     className="grid grid-cols-2 gap-3"
                   >
                     <label className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm cursor-pointer hover:bg-accent">
@@ -444,8 +444,10 @@ function AuthPage() {
                       <RadioGroupItem value="worker" /> Lavoratore
                     </label>
                   </RadioGroup>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Il ruolo selezionato vale anche per la registrazione con Google, Apple o Facebook.
+                  <p className={`mt-2 text-xs ${roleChosen ? "text-muted-foreground" : "text-destructive"}`}>
+                    {roleChosen
+                      ? "Il ruolo selezionato vale anche per la registrazione con Google, Apple o Facebook."
+                      : "Scegli il tipo di account per proseguire: la registrazione (email o social) resta disattivata finché non selezioni un ruolo."}
                   </p>
                 </div>
               )}
@@ -453,7 +455,7 @@ function AuthPage() {
                 type="button"
                 variant="outline"
                 className="w-full gap-2"
-                disabled={busy}
+                disabled={busy || (tab === "signup" && !roleChosen)}
                 onClick={() => handleOAuth("google")}
               >
                 <GoogleIcon /> Continua con Google
@@ -462,12 +464,18 @@ function AuthPage() {
                 type="button"
                 variant="outline"
                 className="w-full gap-2"
-                disabled={busy}
+                disabled={busy || (tab === "signup" && !roleChosen)}
                 onClick={() => handleOAuth("apple")}
               >
                 <AppleIcon /> Continua con Apple
               </Button>
-              <Button type="button" variant="outline" className="w-full gap-2" disabled={busy} onClick={handleFacebook}>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={busy || (tab === "signup" && !roleChosen)}
+                onClick={handleFacebook}
+              >
                 <FacebookIcon /> Continua con Facebook
               </Button>
               <div className="flex items-center gap-2 py-1">
@@ -628,21 +636,6 @@ function AuthPage() {
                     <p className="text-xs text-destructive mt-1">Le password non coincidono.</p>
                   )}
                 </div>
-                <div>
-                  <Label className="mb-2 block">Sono un</Label>
-                  <RadioGroup
-                    value={role}
-                    onValueChange={(v) => setRole(v as "restaurant" | "worker")}
-                    className="grid grid-cols-2 gap-3"
-                  >
-                    <label className="flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:bg-accent">
-                      <RadioGroupItem value="restaurant" /> Ristoratore
-                    </label>
-                    <label className="flex items-center gap-2 rounded-lg border p-3 cursor-pointer hover:bg-accent">
-                      <RadioGroupItem value="worker" /> Lavoratore
-                    </label>
-                  </RadioGroup>
-                </div>
                 {role === "restaurant" && (
                   <div>
                     <Label>Età del referente</Label>
@@ -670,6 +663,7 @@ function AuthPage() {
                   className="w-full"
                   disabled={
                     busy ||
+                    !roleChosen ||
                     !firstNameOk ||
                     !lastNameOk ||
                     !emailValid ||
