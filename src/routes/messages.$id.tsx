@@ -1316,6 +1316,7 @@ function Thread() {
               .eq("announcement_id", app.announcement_id);
             if (shiftError) throw shiftError;
             await insertSystemMessage("turno completato.", selectedTpl.action);
+            setRefetchSeq((s) => s + 1);
           }
           break;
         case "confirm_arrival":
@@ -2226,6 +2227,10 @@ function Thread() {
     }
     setReviewOpen(false);
     toast.success("Turno completato e recensione inviata al lavoratore.");
+    // Refresh autorevole dopo il successo backend: turno, candidatura,
+    // recensioni e CTA vengono rilette dal database (niente stato ottimistico
+    // e nessun refresh manuale richiesto all'utente).
+    setRefetchSeq((s) => s + 1);
   };
 
   // Centralized privacy-aware display name for the "other" party (used in
@@ -3133,6 +3138,7 @@ function Thread() {
             targetName={displayOtherName ?? null}
             announcementId={shift.announcement_id ?? app.announcement_id ?? null}
             applicationId={app.id}
+            onSubmitted={() => { setRefetchSeq((s) => s + 1); }}
           />
         )}
         </div>

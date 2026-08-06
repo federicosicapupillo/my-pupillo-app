@@ -147,6 +147,7 @@ export function ShiftReviewsSection({
   applicationId,
   autoOpen,
   className = "",
+  onSubmitted,
 }: {
   id?: string;
   shiftId: string;
@@ -159,6 +160,12 @@ export function ShiftReviewsSection({
   applicationId: string | null;
   autoOpen?: boolean;
   className?: string;
+  /**
+   * Chiamata SOLO dopo un invio recensione riuscito a backend: permette alla
+   * pagina contenitore di ricaricare i dati autorevoli (turno, candidatura,
+   * CTA) senza refresh manuale dell'utente.
+   */
+  onSubmitted?: () => void | Promise<void>;
 }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<ShiftReviewStatus | null>(null);
@@ -330,6 +337,8 @@ export function ShiftReviewsSection({
       setWouldRehire(null);
       // Re-read from DB: recompute the reciprocal state (may unlock now).
       await load();
+      // Refresh autorevole della pagina contenitore SOLO dopo successo backend.
+      try { await onSubmitted?.(); } catch { /* non bloccante */ }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       if (import.meta.env.DEV) console.error("[shift-reviews] insert threw", { message });
