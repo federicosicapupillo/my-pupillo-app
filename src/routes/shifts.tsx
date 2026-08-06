@@ -1098,6 +1098,11 @@ function ShiftsPage() {
                                   {NO_SHOW_EXPIRED_MESSAGE}
                                 </p>
                               )}
+                              {(noShowInfo.reasonIfDisabled === "before_start" || noShowInfo.reasonIfDisabled === "waiting") && (
+                                <p className="max-w-full text-xs text-muted-foreground sm:max-w-xs" role="note">
+                                  {noShowInfo.disabledMessage}
+                                </p>
+                              )}
                             </div>
                           );
                         })()}
