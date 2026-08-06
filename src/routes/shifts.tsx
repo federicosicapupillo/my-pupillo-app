@@ -76,9 +76,9 @@ const statusMeta: Record<Shift["status"], { label: string; color: string; icon: 
   cancelled: { label: "Annullato", color: "bg-gray-500/10 text-gray-700 border-gray-500/30", icon: XCircle },
 };
 
-// Finestra No-show lato ristoratore: dall'inizio turno fino a +30 minuti
-// (inclusi). Logica condivisa e testata in `@/lib/no-show-window`; il
-// controllo definitivo è server-side (trigger sul DB).
+// Finestra No-show lato ristoratore: da inizio turno +15 minuti fino a +30
+// minuti (inclusi). Logica condivisa e testata in `@/lib/no-show-window`; il
+// controllo definitivo è server-side (RPC `report_shift_no_show`).
 function getNoShowAvailability(shift: Shift, serviceTime: string | null | undefined, now?: Date) {
   const w = getNoShowWindow({
     status: shift.status,
@@ -89,7 +89,7 @@ function getNoShowAvailability(shift: Shift, serviceTime: string | null | undefi
   return {
     canMark: w.canMarkNoShow,
     canCancel: w.canRestaurantCancel,
-    availableFrom: w.start,
+    availableFrom: w.availableFrom,
     deadline: w.deadline,
     minutesAfterStart: w.start ? Math.floor(((now ?? new Date()).getTime() - w.start.getTime()) / 60_000) : null,
     reasonIfDisabled: w.canMarkNoShow ? null : w.phase,
@@ -1098,6 +1098,11 @@ function ShiftsPage() {
                                   {NO_SHOW_EXPIRED_MESSAGE}
                                 </p>
                               )}
+                              {(noShowInfo.reasonIfDisabled === "before_start" || noShowInfo.reasonIfDisabled === "waiting") && (
+                                <p className="max-w-full text-xs text-muted-foreground sm:max-w-xs" role="note">
+                                  {noShowInfo.disabledMessage}
+                                </p>
+                              )}
                             </div>
                           );
                         })()}
@@ -1500,11 +1505,20 @@ function ShiftsPage() {
                   return;
                 }
                 setNoShowSubmitting(true);
-                const { error } = await supabase.from("shifts").update({ status: "no_show" }).eq("id", s.id);
-                if (error) {
-                  toast.error(isNoShowWindowServerError(error.message) ? NO_SHOW_EXPIRED_MESSAGE : error.message);
+                const { data: rpcData, error } = await supabase.rpc("report_shift_no_show", {
+                  _shift_id: s.id,
+                  _notes: noShowNotes.trim() || null,
+                } as never);
+                const result = (rpcData ?? null) as { ok?: boolean; code?: string; message?: string } | null;
+                const failureMessage = error
+                  ? (isNoShowWindowServerError(error.message) ? NO_SHOW_EXPIRED_MESSAGE : error.message)
+                  : result && result.ok === false
+                    ? (result.message ?? "Non puoi segnalare il No-show in questo momento.")
+                    : null;
+                if (failureMessage) {
+                  toast.error(failureMessage);
                   setNoShowSubmitting(false);
-                  if (isNoShowWindowServerError(error.message)) {
+                  if (isNoShowWindowServerError(failureMessage) || result?.code === "expired") {
                     setNoShowDialog(null);
                     setNoShowNotes("");
                   }
@@ -1520,7 +1534,7 @@ function ShiftsPage() {
                       worker_incident_created: false,
                       reliability_updated: false,
                       notification_sent: false,
-                      error: error.message,
+                      error: failureMessage,
                     });
                   }
                   return;
