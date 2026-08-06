@@ -3133,6 +3133,7 @@ function Thread() {
             targetName={displayOtherName ?? null}
             announcementId={shift.announcement_id ?? app.announcement_id ?? null}
             applicationId={app.id}
+            onSubmitted={() => { setRefetchSeq((s) => s + 1); }}
           />
         )}
         </div>
