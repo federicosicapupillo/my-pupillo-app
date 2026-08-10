@@ -220,7 +220,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {role && (
               <span className="hidden sm:inline-flex text-[10px] rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
             )}
-            {role === "restaurant" && (
+            {role === "restaurant" && !navLocked && (
               <Link to="/billing" title="Saldo crediti">
                 <span className="inline-flex items-center gap-1 text-xs rounded-full bg-primary/10 text-primary px-2 py-1 font-medium hover:bg-primary/20 transition-colors">
                   <Coins className="h-3.5 w-3.5" />
@@ -228,9 +228,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </span>
               </Link>
             )}
-            {user && <NotificationBell />}
+            {user && !navLocked && <NotificationBell />}
             <ThemeToggle />
-            {user && (
+            {user && !navLocked && (
               <Link
                 to="/profile"
                 aria-label="Vai al profilo"
@@ -252,6 +252,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <div role="menubar" aria-orientation="vertical" className="flex flex-col gap-1 px-2 py-2">
             {visibleItems.map((i) => {
+              if (navLocked) {
+                return (
+                  <span
+                    key={i.to}
+                    role="menuitem"
+                    aria-disabled="true"
+                    title={ONBOARDING_LOCKED_MESSAGE}
+                    className="block rounded-md cursor-not-allowed"
+                  >
+                    <Button variant="ghost" size="sm" disabled tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap pointer-events-none opacity-50">
+                      <i.icon className="h-4 w-4" />{i.label}
+                    </Button>
+                  </span>
+                );
+              }
               const isActive = loc.pathname.startsWith(i.to);
               return (
                 <Link
