@@ -13,6 +13,8 @@ import { countUnreadChats } from "@/lib/unread-chats";
 import pupilloLogo from "@/assets/pupillo-logo.png";
 import { AssistantFab } from "@/components/assistant/AssistantFab";
 import { useMapEnabledForRole } from "@/lib/use-map-enabled";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { isOnboardingLocked, ONBOARDING_LOCKED_MESSAGE } from "@/lib/onboarding-gate";
 
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -21,13 +23,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const loc = useLocation();
   const mapStatus = useMapEnabledForRole(role);
   const showMapNav = mapStatus === "enabled"; // fail-closed: loading/disabled/error → nascosto
+  // Onboarding non completato → voci visibili ma disabilitate.
+  const navLocked = !!user && isOnboardingLocked(profile, role);
 
   // Home dinamica in base al ruolo dell'utente
   const homeTo: string = !user
     ? "/"
     : role === "admin"
       ? "/admin"
-      : "/dashboard";
+      : navLocked
+        ? "/onboarding"
+        : "/dashboard";
 
   const items = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -165,7 +171,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
           </Link>
           <div className="hidden md:flex items-center gap-1">
-            {visibleItems.map((i) => (
+            {visibleItems.map((i) => navLocked ? (
+              <TooltipProvider key={i.to} delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex rounded-md cursor-not-allowed" aria-disabled="true">
+                      <Button variant="ghost" size="sm" disabled className="gap-2 pointer-events-none opacity-50">
+                        <i.icon className="h-4 w-4" />{i.label}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{ONBOARDING_LOCKED_MESSAGE}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
               <Link key={i.to} to={i.to as never} className="inline-flex rounded-md">
                 <Button variant={loc.pathname.startsWith(i.to) ? "secondary" : "ghost"} size="sm" className="gap-2">
                   <i.icon className="h-4 w-4" />{i.label}
@@ -201,7 +220,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {role && (
               <span className="hidden sm:inline-flex text-[10px] rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
             )}
-            {role === "restaurant" && (
+            {role === "restaurant" && !navLocked && (
               <Link to="/billing" title="Saldo crediti">
                 <span className="inline-flex items-center gap-1 text-xs rounded-full bg-primary/10 text-primary px-2 py-1 font-medium hover:bg-primary/20 transition-colors">
                   <Coins className="h-3.5 w-3.5" />
@@ -209,9 +228,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </span>
               </Link>
             )}
-            {user && <NotificationBell />}
+            {user && !navLocked && <NotificationBell />}
             <ThemeToggle />
-            {user && (
+            {user && !navLocked && (
               <Link
                 to="/profile"
                 aria-label="Vai al profilo"
@@ -233,6 +252,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <div role="menubar" aria-orientation="vertical" className="flex flex-col gap-1 px-2 py-2">
             {visibleItems.map((i) => {
+              if (navLocked) {
+                return (
+                  <span
+                    key={i.to}
+                    role="menuitem"
+                    aria-disabled="true"
+                    title={ONBOARDING_LOCKED_MESSAGE}
+                    className="block rounded-md cursor-not-allowed"
+                  >
+                    <Button variant="ghost" size="sm" disabled tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap pointer-events-none opacity-50">
+                      <i.icon className="h-4 w-4" />{i.label}
+                    </Button>
+                  </span>
+                );
+              }
               const isActive = loc.pathname.startsWith(i.to);
               return (
                 <Link

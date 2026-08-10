@@ -1762,7 +1762,9 @@ function Onboarding() {
           prompt_dismissed: promptDismissed,
           show_popup: !hasAvailability && !promptDismissed,
         });
-        void refresh();
+        // Il gate delle rotte legge lo stato del contesto auth: attendiamo il
+        // refresh prima di navigare, altrimenti la guardia rimanda qui.
+        await refresh();
         if (!hasAvailability && !promptDismissed) {
           setAvailabilityPromptOpen(true);
           return;
@@ -1771,11 +1773,10 @@ function Onboarding() {
         console.error("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG] check failed", e);
       }
     }
-    // Naviga subito al dashboard senza attendere il refresh del contesto
-    // auth: il refresh può essere lento e non è bloccante per l'UI. Il
-    // contesto viene comunque rinfrescato in background.
+    // Prima aggiorniamo lo stato utente (sblocca il menu e le rotte),
+    // poi navighiamo: il gate onboarding è basato sul contesto auth.
+    await refresh();
     nav({ to: "/dashboard" });
-    void refresh();
   };
 
   return (
