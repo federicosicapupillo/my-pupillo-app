@@ -44,6 +44,6 @@ export function isOnboardingLocked(
   profile: IdentityProfile,
   role?: string | null,
 ): boolean {
-  if (role === "admin") return true === false;
+  if (role === "admin") return false;
   return !isEffectivelyComplete(profile, role);
 }
