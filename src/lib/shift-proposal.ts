@@ -135,6 +135,7 @@ export async function sendShiftProposal(params: {
     }
     const conflict = await checkWorkerShiftConflict(workerId, ann as any, {
       ignoreApplicationId: applicationId,
+      ignoreAnnouncementId: announcementId,
     });
     if (conflict) {
       throw new WorkerBusyError();
