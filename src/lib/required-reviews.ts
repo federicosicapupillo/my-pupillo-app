@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { getShiftEndDate } from "@/lib/announcement-time";
+import { formatDisplayLabel } from "@/lib/format-label";
 
 export type RequiredReview = {
   id: string;
@@ -203,7 +204,11 @@ export function useRequiredReviews() {
         application_id: appId,
         worker_id: s.worker_id,
         worker_name: prof?.full_name ?? null,
-        worker_role: ann?.professional_profile ?? prof?.primary_role ?? null,
+        worker_role: ann?.professional_profile
+          ? formatDisplayLabel(ann.professional_profile)
+          : prof?.primary_role
+            ? formatDisplayLabel(prof.primary_role)
+            : null,
         service_date: ann?.service_date ?? s.shift_date,
         service_time: ann?.service_time ?? null,
         end_time: ann?.end_time ?? null,
@@ -249,10 +254,13 @@ export function useRequiredReviews() {
         reqRows.map((r) => ({
           ...r,
           worker_name: pmap[r.worker_user_id]?.full_name ?? null,
-          worker_role:
-            (r.announcement_id ? amap[r.announcement_id]?.professional_profile : null) ??
-            pmap[r.worker_user_id]?.primary_role ??
-            null,
+          worker_role: (() => {
+            const raw =
+              (r.announcement_id ? amap[r.announcement_id]?.professional_profile : null) ??
+              pmap[r.worker_user_id]?.primary_role ??
+              null;
+            return raw ? formatDisplayLabel(raw) : null;
+          })(),
           shift_date: r.shift_id ? smap[r.shift_id]?.shift_date ?? null : null,
           announcement_address: r.announcement_id ? amap[r.announcement_id]?.location_address ?? null : null,
         }))
