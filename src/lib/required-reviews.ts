@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { getShiftEndDate } from "@/lib/announcement-time";
+import { formatDisplayLabel } from "@/lib/format-label";
 
 export type RequiredReview = {
   id: string;
@@ -36,6 +37,11 @@ export type ActionShift = {
   application_id: string | null;
   worker_id: string;
   worker_name: string | null;
+  /**
+   * Mansione del turno: proviene SEMPRE dall'annuncio collegato allo specifico
+   * shift (announcements.professional_profile), mai dal ruolo del profilo
+   * lavoratore. Fallback al primary_role solo se l'annuncio non è disponibile.
+   */
   worker_role: string | null;
   service_date: string;
   service_time: string | null;
@@ -123,7 +129,7 @@ export function useRequiredReviews() {
         annIds.length
           ? supabase
               .from("announcements")
-              .select("id, service_date, service_time, end_time, end_date, duration_hours, shift_duration_hours, location_address")
+              .select("id, service_date, service_time, end_time, end_date, duration_hours, shift_duration_hours, location_address, professional_profile")
               .in("id", annIds)
           : Promise.resolve({ data: [] as any[] }),
         workerIds.length
@@ -198,7 +204,11 @@ export function useRequiredReviews() {
         application_id: appId,
         worker_id: s.worker_id,
         worker_name: prof?.full_name ?? null,
-        worker_role: prof?.primary_role ?? null,
+        worker_role: ann?.professional_profile
+          ? formatDisplayLabel(ann.professional_profile)
+          : prof?.primary_role
+            ? formatDisplayLabel(prof.primary_role)
+            : null,
         service_date: ann?.service_date ?? s.shift_date,
         service_time: ann?.service_time ?? null,
         end_time: ann?.end_time ?? null,
@@ -228,7 +238,7 @@ export function useRequiredReviews() {
           ? supabase.from("public_profiles").select("id, full_name, primary_role").in("id", reqWorkerIds)
           : Promise.resolve({ data: [] as any[] }),
         reqAnnIds.length
-          ? supabase.from("announcements").select("id, location_address").in("id", reqAnnIds)
+          ? supabase.from("announcements").select("id, location_address, professional_profile").in("id", reqAnnIds)
           : Promise.resolve({ data: [] as any[] }),
         reqShiftIds.length
           ? supabase.from("shifts").select("id, shift_date").in("id", reqShiftIds)
@@ -244,7 +254,13 @@ export function useRequiredReviews() {
         reqRows.map((r) => ({
           ...r,
           worker_name: pmap[r.worker_user_id]?.full_name ?? null,
-          worker_role: pmap[r.worker_user_id]?.primary_role ?? null,
+          worker_role: (() => {
+            const raw =
+              (r.announcement_id ? amap[r.announcement_id]?.professional_profile : null) ??
+              pmap[r.worker_user_id]?.primary_role ??
+              null;
+            return raw ? formatDisplayLabel(raw) : null;
+          })(),
           shift_date: r.shift_id ? smap[r.shift_id]?.shift_date ?? null : null,
           announcement_address: r.announcement_id ? amap[r.announcement_id]?.location_address ?? null : null,
         }))
