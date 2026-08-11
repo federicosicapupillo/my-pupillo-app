@@ -3,9 +3,10 @@ import { getShiftStartDate, getShiftEndDate, type AnnTimeInput } from "@/lib/ann
 
 /**
  * REGOLA BUFFER TRA TURNI (PUPILLO):
- * Un lavoratore con una candidatura ATTIVA (inviata, in valutazione,
- * controproposta, accettata) o un turno programmato può candidarsi a un altro
- * turno solo se tra i due c'è almeno UN'ORA piena:
+ * Solo gli incarichi realmente CONFERMATI occupano il calendario del
+ * lavoratore: candidature `accepted` e turni `scheduled`. Candidature
+ * pending/interested/counter_offer NON generano conflitto.
+ * Tra due incarichi confermati deve esserci almeno UN'ORA piena:
  *
  *   nuovo.start >= esistente.end + 1h  OPPURE  esistente.start >= nuovo.end + 1h
  *
@@ -20,6 +21,8 @@ export const MINIMUM_BUFFER_MINUTES = BUFFER_HOURS * 60;
 const BUFFER_MS = BUFFER_HOURS * 3_600_000;
 
 /** Stati candidatura ancora operativi: bloccano nuove candidature vicine. */
+export const ASSIGNED_APPLICATION_STATUSES = ["accepted"] as const;
+
 export const ACTIVE_APPLICATION_STATUSES = [
   "pending",
   "interested",
@@ -39,18 +42,23 @@ export function isActiveApplicationStatus(status: string | null | undefined): bo
   return (ACTIVE_APPLICATION_STATUSES as readonly string[]).includes(String(status ?? ""));
 }
 
+/** Solo questi stati rappresentano un incarico confermato che occupa il calendario. */
+export function isAssignedApplicationStatus(status: string | null | undefined): boolean {
+  return (ASSIGNED_APPLICATION_STATUSES as readonly string[]).includes(String(status ?? ""));
+}
+
 export const BUFFER_CONFLICT_CODE = "SHIFT_APPLICATION_BUFFER_CONFLICT";
 
 export const CONFLICT_WORKER_APPLY_MESSAGE =
-  "Non puoi candidarti a questo turno perché hai già una candidatura per un turno troppo vicino. Tra due turni deve esserci almeno un'ora.";
+  "Hai già un turno confermato e non avresti almeno un'ora per raggiungere il nuovo locale.";
 export const CONFLICT_WORKER_ACCEPT_MESSAGE =
-  "Non puoi accettare questo turno: hai già una candidatura per un turno troppo vicino. Tra due turni deve esserci almeno un'ora.";
+  "Hai già un turno confermato e non avresti almeno un'ora per raggiungere il nuovo locale.";
 export const CONFLICT_WORKER_HINT_MESSAGE =
-  "Hai già una candidatura per un turno troppo vicino. È richiesta almeno un'ora tra la fine di un turno e l'inizio del successivo.";
+  "Hai già un turno confermato e non avresti almeno un'ora per raggiungere il nuovo locale.";
 export const CONFLICT_RESTAURANT_REQUEST_MESSAGE =
-  "Questo lavoratore risulta già occupato: serve almeno un'ora tra due turni.";
+  "Il lavoratore ha già un turno confermato e non avrebbe almeno un'ora per raggiungere il nuovo locale.";
 export const CONFLICT_RESTAURANT_ASSIGN_MESSAGE =
-  "Non puoi confermare questo lavoratore: ha un altro turno a meno di un'ora di distanza.";
+  "Il lavoratore ha già un turno confermato e non avrebbe almeno un'ora per raggiungere il nuovo locale.";
 export const CONFLICT_MISSING_END_MESSAGE =
   "Questo annuncio non ha un orario di fine valido: impossibile verificare la compatibilità con i tuoi turni.";
 
@@ -101,7 +109,7 @@ export async function fetchWorkerBusyWindows(
       "id, announcement_id, status, announcements:announcement_id (id, service_date, service_time, end_date, end_time, shift_duration_hours, duration_hours, status)",
     )
     .eq("worker_id", workerId)
-    .in("status", [...ACTIVE_APPLICATION_STATUSES]);
+    .in("status", [...ASSIGNED_APPLICATION_STATUSES]);
   if (error) {
     console.warn("[PUPILLO_SHIFT_CONFLICT] fetch busy windows failed", error);
     return [];
