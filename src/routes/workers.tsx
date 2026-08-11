@@ -49,6 +49,7 @@ import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canRestaurantInviteWorker } from "@/lib/application-reapply";
 import { restaurantContactWorker } from "@/lib/restaurant-contact";
+import { mapShiftConflictError } from "@/lib/shift-conflict";
 import {
   collectWorkerCompetenceValues,
   collectWorkerRoleValues,
