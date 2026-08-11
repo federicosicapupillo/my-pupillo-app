@@ -162,13 +162,15 @@ export function conflictsWithBusyWindows(
 export async function checkWorkerShiftConflict(
   workerId: string,
   ann: AnnTimeInput | null | undefined,
-  options: { ignoreApplicationId?: string } = {},
+  options: { ignoreApplicationId?: string; ignoreAnnouncementId?: string } = {},
 ): Promise<BusyWindow | null> {
   if (!ann) return null;
   const busy = await fetchWorkerBusyWindows(workerId);
-  const filtered = options.ignoreApplicationId
-    ? busy.filter((b) => b.applicationId !== options.ignoreApplicationId)
-    : busy;
+  const filtered = busy.filter(
+    (b) =>
+      b.applicationId !== options.ignoreApplicationId &&
+      b.announcementId !== options.ignoreAnnouncementId,
+  );
   const conflict = conflictsWithBusyWindows(ann, filtered);
   if (conflict) {
     console.warn("[PUPILLO_SHIFT_CONFLICT] worker busy", {
