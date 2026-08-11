@@ -46,6 +46,14 @@ export type AnnTimeInput = {
   expires_at?: string | null;
 };
 
+/** `yyyy-mm-dd` del giorno successivo (calendario, indipendente dal fuso). */
+function nextIsoDay(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
 /**
  * Inizio del turno nel fuso Europa/Roma.
  * Fallback: se manca `service_time` usa le 00:00 della `service_date`.
@@ -62,13 +70,24 @@ export function getShiftStartDate(a: AnnTimeInput): Date | null {
  *  2. `service_date` + `end_time`
  *  3. start + `shift_duration_hours` / `duration_hours`
  *  4. fine giornata della `service_date` (23:59 Europa/Roma)
+ *
+ * Turni che attraversano la mezzanotte: se non è indicata una `end_date` e
+ * l'orario di fine risulta <= all'inizio, la fine appartiene al giorno
+ * successivo (stessa regola di `announcement_shift_interval` sul database).
  */
 export function getShiftEndDate(a: AnnTimeInput): Date | null {
   if (!a.service_date) return null;
   const endDate = a.end_date || a.service_date;
   if (a.end_time) {
     const d = zonedWallTimeToDate(endDate, a.end_time);
-    if (d) return d;
+    if (d) {
+      const start = getShiftStartDate(a);
+      if (!a.end_date && start && d.getTime() <= start.getTime()) {
+        const next = zonedWallTimeToDate(nextIsoDay(a.service_date), a.end_time);
+        if (next) return next;
+      }
+      return d;
+    }
   }
   const start = getShiftStartDate(a);
   const hours = a.shift_duration_hours ?? a.duration_hours ?? null;
