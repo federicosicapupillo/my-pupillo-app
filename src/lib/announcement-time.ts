@@ -62,13 +62,27 @@ export function getShiftStartDate(a: AnnTimeInput): Date | null {
  *  2. `service_date` + `end_time`
  *  3. start + `shift_duration_hours` / `duration_hours`
  *  4. fine giornata della `service_date` (23:59 Europa/Roma)
+ *
+ * Turni che attraversano la mezzanotte: se non è indicata una `end_date` e
+ * l'orario di fine risulta <= all'inizio, la fine appartiene al giorno
+ * successivo (stessa regola di `announcement_shift_interval` sul database).
  */
 export function getShiftEndDate(a: AnnTimeInput): Date | null {
   if (!a.service_date) return null;
   const endDate = a.end_date || a.service_date;
   if (a.end_time) {
     const d = zonedWallTimeToDate(endDate, a.end_time);
-    if (d) return d;
+    if (d) {
+      const start = getShiftStartDate(a);
+      if (!a.end_date && start && d.getTime() <= start.getTime()) {
+        const next = zonedWallTimeToDate(
+          toIsoDate(addDaysIso(a.service_date, 1)),
+          a.end_time,
+        );
+        if (next) return next;
+      }
+      return d;
+    }
   }
   const start = getShiftStartDate(a);
   const hours = a.shift_duration_hours ?? a.duration_hours ?? null;
