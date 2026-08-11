@@ -37,6 +37,7 @@ function zonedWallTimeToDate(dateStr: string, timeStr: string, tz: string = APP_
 }
 
 export type AnnTimeInput = {
+  [k: string]: unknown;
   service_date?: string | null;
   service_time?: string | null;
   end_date?: string | null;
