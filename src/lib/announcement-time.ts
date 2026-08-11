@@ -46,6 +46,24 @@ export type AnnTimeInput = {
   expires_at?: string | null;
 };
 
+/** `yyyy-mm-dd` del giorno successivo (calendario, indipendente dal fuso). */
+function nextIsoDay(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+type _AnnTimeInputLegacy = {
+  service_date?: string | null;
+  service_time?: string | null;
+  end_date?: string | null;
+  end_time?: string | null;
+  duration_hours?: number | null;
+  shift_duration_hours?: number | null;
+  expires_at?: string | null;
+};
+
 /**
  * Inizio del turno nel fuso Europa/Roma.
  * Fallback: se manca `service_time` usa le 00:00 della `service_date`.
