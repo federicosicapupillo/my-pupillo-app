@@ -2754,6 +2754,10 @@ export type Database = {
         Args: { _s: Database["public"]["Enums"]["application_status"] }
         Returns: boolean
       }
+      application_status_is_assigned: {
+        Args: { _s: Database["public"]["Enums"]["application_status"] }
+        Returns: boolean
+      }
       are_coords_in_launch_area: {
         Args: { _lat: number; _lng: number }
         Returns: boolean
@@ -3285,23 +3289,42 @@ export type Database = {
         }
         Returns: boolean
       }
-      worker_shift_buffer_conflict: {
-        Args: {
-          _end: string
-          _exclude_application_id?: string
-          _exclude_shift_id?: string
-          _start: string
-          _worker_id: string
-        }
-        Returns: {
-          announcement_id: string
-          application_id: string
-          end_at: string
-          shift_id: string
-          source: string
-          start_at: string
-        }[]
-      }
+      worker_shift_buffer_conflict:
+        | {
+            Args: {
+              _end: string
+              _exclude_application_id?: string
+              _exclude_shift_id?: string
+              _start: string
+              _worker_id: string
+            }
+            Returns: {
+              announcement_id: string
+              application_id: string
+              end_at: string
+              shift_id: string
+              source: string
+              start_at: string
+            }[]
+          }
+        | {
+            Args: {
+              _end: string
+              _exclude_announcement_id?: string
+              _exclude_application_id?: string
+              _exclude_shift_id?: string
+              _start: string
+              _worker_id: string
+            }
+            Returns: {
+              announcement_id: string
+              application_id: string
+              end_at: string
+              shift_id: string
+              source: string
+              start_at: string
+            }[]
+          }
     }
     Enums: {
       account_status: "active" | "pending" | "suspended"
