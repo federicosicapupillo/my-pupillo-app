@@ -630,7 +630,9 @@ function Browse() {
     setSubmitting(true);
     // PUPILLO: regola di OCCUPAZIONE — blocco hard candidatura su conflitto
     // con un turno già accettato dal lavoratore (buffer 1h post-fine).
-    const conflict = await checkWorkerShiftConflict(workerProfile.id, confirmAnn as any);
+    const conflict = await checkWorkerShiftConflict(workerProfile.id, confirmAnn as any, {
+      ignoreAnnouncementId: (confirmAnn as any)?.id,
+    });
     if (conflict) {
       setSubmitting(false);
       toast.error(CONFLICT_WORKER_APPLY_MESSAGE);

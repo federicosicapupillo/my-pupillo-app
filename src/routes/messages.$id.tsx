@@ -1464,7 +1464,7 @@ function Thread() {
         const conflict = await checkWorkerShiftConflict(
           app.worker_id as string,
           ann as any,
-          { ignoreApplicationId: app.id },
+          { ignoreApplicationId: app.id, ignoreAnnouncementId: app.announcement_id as string },
         );
         if (conflict) {
           console.warn("[accept-candidature] worker busy conflict", { ...techCtx, conflictApp: conflict.applicationId });
@@ -2999,6 +2999,7 @@ function Thread() {
                       // in conflitto (buffer 1h post-fine).
                       const conflict = await checkWorkerShiftConflict(user.id, ann as any, {
                         ignoreApplicationId: id,
+                        ignoreAnnouncementId: (ann as any)?.id,
                       });
                       if (conflict) {
                         toast.error(CONFLICT_WORKER_ACCEPT_MESSAGE);

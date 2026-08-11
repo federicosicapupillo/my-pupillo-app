@@ -491,7 +491,9 @@ function AnnouncementDetail() {
     }
     // PUPILLO: regola di OCCUPAZIONE — blocca candidatura se in conflitto con
     // un altro turno già accettato (buffer 1h post-fine).
-    const conflict = await checkWorkerShiftConflict(user.id, ann as any);
+    const conflict = await checkWorkerShiftConflict(user.id, ann as any, {
+      ignoreAnnouncementId: (ann as any)?.id,
+    });
     if (conflict) {
       setApplying(false);
       toast.error(CONFLICT_WORKER_APPLY_MESSAGE);
@@ -582,7 +584,7 @@ function AnnouncementDetail() {
       const otherConflict = await checkWorkerShiftConflict(
         app.worker_id as string,
         ann as any,
-        { ignoreApplicationId: app.id },
+        { ignoreApplicationId: app.id, ignoreAnnouncementId: (ann as any)?.id },
       );
       if (otherConflict) {
         setBusyId(null);
