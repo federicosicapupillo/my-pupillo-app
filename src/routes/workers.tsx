@@ -1038,7 +1038,9 @@ function WorkersPage() {
           setSendingProposal(false);
           return;
         }
-        toast.error(error?.message ?? "Errore");
+        toast.error(
+          mapShiftConflictError(error, "restaurant_request") ?? error?.message ?? "Errore",
+        );
         setSendingProposal(false);
         return;
       }
