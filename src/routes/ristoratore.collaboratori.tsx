@@ -21,6 +21,7 @@ import { AlreadyInContactDialog } from "@/components/AlreadyInContactDialog";
 import { checkExistingContact, isDuplicateContactError } from "@/lib/already-in-contact";
 import { canRestaurantInviteWorker } from "@/lib/application-reapply";
 import { restaurantContactWorker } from "@/lib/restaurant-contact";
+import { mapShiftConflictError } from "@/lib/shift-conflict";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
   head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
@@ -273,7 +274,9 @@ function Page() {
       setInviteFor(null);
       navigate({ to: "/messages/$id", params: { id: appId } });
     } catch (e: any) {
-      toast.error(e.message ?? "Errore invio invito");
+      toast.error(
+        mapShiftConflictError(e, "restaurant_request") ?? e?.message ?? "Errore invio invito",
+      );
     } finally {
       setInviteSubmitting(false);
     }
