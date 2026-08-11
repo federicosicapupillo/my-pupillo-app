@@ -37,7 +37,6 @@ function zonedWallTimeToDate(dateStr: string, timeStr: string, tz: string = APP_
 }
 
 export type AnnTimeInput = {
-  [k: string]: unknown;
   service_date?: string | null;
   service_time?: string | null;
   end_date?: string | null;
@@ -76,10 +75,7 @@ export function getShiftEndDate(a: AnnTimeInput): Date | null {
     if (d) {
       const start = getShiftStartDate(a);
       if (!a.end_date && start && d.getTime() <= start.getTime()) {
-        const next = zonedWallTimeToDate(
-          toIsoDate(addDaysIso(a.service_date, 1)),
-          a.end_time,
-        );
+        const next = zonedWallTimeToDate(nextIsoDay(a.service_date), a.end_time);
         if (next) return next;
       }
       return d;
