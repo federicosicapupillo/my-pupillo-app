@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.worker_shift_buffer_conflict(uuid, timestamptz, timestamptz, uuid, uuid);
