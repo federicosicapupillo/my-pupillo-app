@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.tmp_test_overlap_notifications() TO PUBLIC;
