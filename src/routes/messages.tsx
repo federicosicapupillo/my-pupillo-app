@@ -344,9 +344,16 @@ function MessagesLayout() {
         setThreads((prev) => {
           const prevStatus = prev.find((t) => t.id === row.id)?.status;
           if (prevStatus && row.status && prevStatus !== row.status && STATUS_LABELS[row.status]) {
-            toast.message(`Stato aggiornato: ${STATUS_LABELS[row.status]}`);
+            toast.message(`Stato aggiornato: ${threadStatusLabel(row.status, row.closed_reason ?? null)}`);
           }
-          return mergeThreadUpdate(prev as any, row) as typeof prev;
+          const merged = mergeThreadUpdate(prev as any, row) as typeof prev;
+          // La causa tecnica di chiusura arriva con la stessa UPDATE: va
+          // applicata insieme allo stato, altrimenti la label resta "Scaduto".
+          return merged.map((t) =>
+            t.id === row.id && row.closed_reason !== undefined
+              ? { ...t, closedReason: (row.closed_reason as string | null) ?? null }
+              : t,
+          );
         });
       })
       // Message activity in conversations the current user participates in.
