@@ -2751,6 +2751,10 @@ export type Database = {
         Args: { _announcement_id: string }
         Returns: boolean
       }
+      announcement_role_label: {
+        Args: { _announcement_id: string }
+        Returns: string
+      }
       announcement_shift_bounds: { Args: { _ann: string }; Returns: unknown }
       announcement_shift_interval: { Args: { _ann: string }; Returns: unknown }
       application_role_label: {
@@ -3146,6 +3150,7 @@ export type Database = {
         Args: { _review_id: string; _user_id: string }
         Returns: boolean
       }
+      italian_day_month: { Args: { _d: string }; Returns: string }
       list_worker_user_ids: {
         Args: never
         Returns: {
