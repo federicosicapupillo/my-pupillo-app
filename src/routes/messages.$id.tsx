@@ -1,4 +1,5 @@
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
+import { formatDisplayLabel } from "@/lib/format-label";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/lib/auth-context";
