@@ -727,8 +727,8 @@ function MessagesLayout() {
                         <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
                           {t.lastBody ?? "Nessun messaggio"}
                         </div>
-                        <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
-                          {STATUS_LABELS[t.status] || t.status}
+                        <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${threadStatusClass(t.status, t.closedReason) || "bg-muted text-muted-foreground"}`}>
+                          {threadStatusLabel(t.status, t.closedReason)}
                         </span>
                       </div>
                     </div>
