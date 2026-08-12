@@ -62,19 +62,34 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
           return new Response(JSON.stringify({ error: appErr.message }), { status: 500 })
         }
 
-        // Notify restaurants of expired announcements
+        // Notify restaurants of expired announcements.
+        // Gli annunci scaduti SENZA alcuna candidatura hanno un evento
+        // dedicato ("Annuncio scaduto senza candidature") emesso dal trigger
+        // `trg_notify_announcement_expired_no_applications`: qui li
+        // escludiamo per non generare una seconda notifica generica ambigua.
         if (expiredAnn && expiredAnn.length > 0) {
-          await (supabaseAdmin.from('notifications') as any).upsert(
-            expiredAnn.map((a: any) => ({
+          const expiredIds = expiredAnn.map((a: any) => a.id)
+          const { data: appsForExpired } = await supabaseAdmin
+            .from('applications')
+            .select('announcement_id')
+            .in('announcement_id', expiredIds)
+          const withApplications = new Set(
+            ((appsForExpired ?? []) as any[]).map((r) => r.announcement_id as string),
+          )
+          const genericTargets = expiredAnn.filter((a: any) => withApplications.has(a.id))
+          if (genericTargets.length > 0) {
+            await (supabaseAdmin.from('notifications') as any).upsert(
+              genericTargets.map((a: any) => ({
               user_id: a.restaurant_id,
               title: 'Annuncio scaduto',
               body: 'Il tuo annuncio è scaduto senza essere assegnato.',
-              link: '/announcements',
+              link: '/announcements/' + a.id,
               metadata: { kind: 'announcement_expired', announcement_id: a.id },
               dedupe_key: `announcement_expired:${a.id}:${a.restaurant_id}`,
-            })),
-            { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true }
-          )
+              })),
+              { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true }
+            )
+          }
         }
 
         // Notify both parties of expired applications
