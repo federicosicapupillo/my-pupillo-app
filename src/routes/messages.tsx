@@ -861,8 +861,8 @@ function MessagesLayout() {
                                       Recensione
                                     </span>
                                   )}
-                                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
-                                    {STATUS_LABELS[t.status] || t.status}
+                                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${threadStatusClass(t.status, t.closedReason) || "bg-muted text-muted-foreground"}`}>
+                                    {threadStatusLabel(t.status, t.closedReason)}
                                   </span>
                                 </div>
                               </div>
