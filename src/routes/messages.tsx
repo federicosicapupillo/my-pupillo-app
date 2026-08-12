@@ -50,6 +50,7 @@ type Thread = {
   annTime: string | null;
   annEndTime: string | null;
   hasWorkedTogether: boolean;
+  closedReason: string | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -60,6 +61,22 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Rifiutato",
   expired: "Scaduto",
 };
+
+/**
+ * Label mostrata all'utente per una conversazione. La causa tecnica
+ * (`closed_reason`) resta distinta: una candidatura chiusa automaticamente
+ * per sovrapposizione (`overlap`) viene presentata come "Turno rifiutato",
+ * mentre una scadenza temporale reale resta "Scaduto".
+ */
+function threadStatusLabel(status: string, closedReason: string | null): string {
+  if (status === "expired" && closedReason === "overlap") return "Turno rifiutato";
+  return STATUS_LABELS[status] || status;
+}
+
+function threadStatusClass(status: string, closedReason: string | null): string {
+  if (status === "expired" && closedReason === "overlap") return STATUS_CLS.rejected;
+  return STATUS_CLS[status] ?? "";
+}
 const STATUS_CLS: Record<string, string> = {
   pending: "bg-amber-500/15 text-amber-700",
   interested: "bg-sky-500/15 text-sky-700",
@@ -171,7 +188,7 @@ function MessagesLayout() {
     const otherCol = otherColumnForRole(role);
     const { data: apps, error: appsError } = await supabase
       .from("applications")
-      .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
+      .select(`id, status, closed_reason, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
       .eq(col, user.id);
     if (appsError) {
       toast.error(appsError.message);
@@ -254,6 +271,7 @@ function MessagesLayout() {
         annTime: ann?.service_time ?? null,
         annEndTime: ann?.end_time ?? null,
         hasWorkedTogether,
+        closedReason: (a.closed_reason as string | null) ?? null,
       };
     });
     next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
@@ -326,9 +344,16 @@ function MessagesLayout() {
         setThreads((prev) => {
           const prevStatus = prev.find((t) => t.id === row.id)?.status;
           if (prevStatus && row.status && prevStatus !== row.status && STATUS_LABELS[row.status]) {
-            toast.message(`Stato aggiornato: ${STATUS_LABELS[row.status]}`);
+            toast.message(`Stato aggiornato: ${threadStatusLabel(row.status, row.closed_reason ?? null)}`);
           }
-          return mergeThreadUpdate(prev as any, row) as typeof prev;
+          const merged = mergeThreadUpdate(prev as any, row) as typeof prev;
+          // La causa tecnica di chiusura arriva con la stessa UPDATE: va
+          // applicata insieme allo stato, altrimenti la label resta "Scaduto".
+          return merged.map((t) =>
+            t.id === row.id && row.closed_reason !== undefined
+              ? { ...t, closedReason: (row.closed_reason as string | null) ?? null }
+              : t,
+          );
         });
       })
       // Message activity in conversations the current user participates in.
@@ -709,8 +734,8 @@ function MessagesLayout() {
                         <div className={`text-xs truncate ${t.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
                           {t.lastBody ?? "Nessun messaggio"}
                         </div>
-                        <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
-                          {STATUS_LABELS[t.status] || t.status}
+                        <span className={`shrink-0 inline-block text-[10px] rounded-full px-2 py-0.5 ${threadStatusClass(t.status, t.closedReason) || "bg-muted text-muted-foreground"}`}>
+                          {threadStatusLabel(t.status, t.closedReason)}
                         </span>
                       </div>
                     </div>
@@ -787,10 +812,10 @@ function MessagesLayout() {
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {latestStatus && (
                           <span
-                            className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ring-foreground/10 ${STATUS_CLS[latestStatus] || "bg-muted text-muted-foreground"}`}
+                            className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ring-foreground/10 ${threadStatusClass(latestStatus, last?.closedReason ?? null) || "bg-muted text-muted-foreground"}`}
                             title="Stato più recente"
                           >
-                            Ultimo: {STATUS_LABELS[latestStatus] || latestStatus}
+                            Ultimo: {threadStatusLabel(latestStatus, last?.closedReason ?? null)}
                           </span>
                         )}
                         {hasPendingReview && (
@@ -843,8 +868,8 @@ function MessagesLayout() {
                                       Recensione
                                     </span>
                                   )}
-                                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${STATUS_CLS[t.status] || "bg-muted text-muted-foreground"}`}>
-                                    {STATUS_LABELS[t.status] || t.status}
+                                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${threadStatusClass(t.status, t.closedReason) || "bg-muted text-muted-foreground"}`}>
+                                    {threadStatusLabel(t.status, t.closedReason)}
                                   </span>
                                 </div>
                               </div>

@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.tmp_test_overlap_notifications();
