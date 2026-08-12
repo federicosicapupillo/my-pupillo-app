@@ -50,6 +50,7 @@ type Thread = {
   annTime: string | null;
   annEndTime: string | null;
   hasWorkedTogether: boolean;
+  closedReason: string | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -60,6 +61,22 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Rifiutato",
   expired: "Scaduto",
 };
+
+/**
+ * Label mostrata all'utente per una conversazione. La causa tecnica
+ * (`closed_reason`) resta distinta: una candidatura chiusa automaticamente
+ * per sovrapposizione (`overlap`) viene presentata come "Turno rifiutato",
+ * mentre una scadenza temporale reale resta "Scaduto".
+ */
+function threadStatusLabel(status: string, closedReason: string | null): string {
+  if (status === "expired" && closedReason === "overlap") return "Turno rifiutato";
+  return STATUS_LABELS[status] || status;
+}
+
+function threadStatusClass(status: string, closedReason: string | null): string {
+  if (status === "expired" && closedReason === "overlap") return STATUS_CLS.rejected;
+  return STATUS_CLS[status] ?? "";
+}
 const STATUS_CLS: Record<string, string> = {
   pending: "bg-amber-500/15 text-amber-700",
   interested: "bg-sky-500/15 text-sky-700",
