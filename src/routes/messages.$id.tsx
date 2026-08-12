@@ -189,6 +189,7 @@ type Msg = {
 type App = {
   id: string; status: string; restaurant_id: string; worker_id: string;
   announcement_id: string; proposed_tariff: number | null;
+  closed_reason?: string | null;
 };
 type Ann = {
   id: string;
@@ -2724,6 +2725,14 @@ function Thread() {
         {app && (
           <div className="rounded-2xl border bg-card p-4 mb-4">
             <div className="text-xs font-medium text-muted-foreground mb-3">Stato della candidatura</div>
+            {app.status === "expired" && app.closed_reason === "overlap" && (
+              <div className="mb-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                <span className="font-semibold">Turno rifiutato</span> — questa candidatura
+                {ann?.professional_profile ? ` per ${formatDisplayLabel(ann.professional_profile)}` : ""} è stata
+                chiusa automaticamente perché hai confermato un altro turno nello stesso orario.
+                La conversazione resta consultabile in sola lettura.
+              </div>
+            )}
             <ol className="flex items-start justify-between gap-2">
               {steps.map((s: Step, i: number) => (
                 <li key={s.key} className="flex-1 flex flex-col items-center text-center min-w-0">
@@ -3355,7 +3364,9 @@ function Thread() {
               <dl className="space-y-1.5 text-sm">
                 <div className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">Mansione</dt>
-                  <dd className="text-right font-medium">{ann.professional_profile ?? "Da definire"}</dd>
+                  <dd className="text-right font-medium">
+                    {ann.professional_profile ? formatDisplayLabel(ann.professional_profile) : "Da definire"}
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">Data</dt>
