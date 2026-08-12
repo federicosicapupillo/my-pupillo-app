@@ -812,10 +812,10 @@ function MessagesLayout() {
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {latestStatus && (
                           <span
-                            className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ring-foreground/10 ${STATUS_CLS[latestStatus] || "bg-muted text-muted-foreground"}`}
+                            className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ring-foreground/10 ${threadStatusClass(latestStatus, last?.closedReason ?? null) || "bg-muted text-muted-foreground"}`}
                             title="Stato più recente"
                           >
-                            Ultimo: {STATUS_LABELS[latestStatus] || latestStatus}
+                            Ultimo: {threadStatusLabel(latestStatus, last?.closedReason ?? null)}
                           </span>
                         )}
                         {hasPendingReview && (
