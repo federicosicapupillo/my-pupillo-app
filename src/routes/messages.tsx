@@ -188,7 +188,7 @@ function MessagesLayout() {
     const otherCol = otherColumnForRole(role);
     const { data: apps, error: appsError } = await supabase
       .from("applications")
-      .select(`id, status, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
+      .select(`id, status, closed_reason, announcement_id, restaurant_id, worker_id, last_message_preview, last_message_at, ${otherCol}`)
       .eq(col, user.id);
     if (appsError) {
       toast.error(appsError.message);
@@ -271,6 +271,7 @@ function MessagesLayout() {
         annTime: ann?.service_time ?? null,
         annEndTime: ann?.end_time ?? null,
         hasWorkedTogether,
+        closedReason: (a.closed_reason as string | null) ?? null,
       };
     });
     next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
