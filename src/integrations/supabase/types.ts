@@ -3259,6 +3259,7 @@ export type Database = {
       set_my_avatar: { Args: { _path: string }; Returns: undefined }
       shift_buffer_minutes: { Args: never; Returns: number }
       shift_effective_start: { Args: { _shift_id: string }; Returns: string }
+      tmp_test_overlap_notifications: { Args: never; Returns: Json }
       unseed_demo: {
         Args: { _batch: string }
         Returns: {
