@@ -292,6 +292,7 @@ export type Database = {
           accepted_at: string | null
           announcement_id: string
           binding_offer: boolean | null
+          closed_reason: string | null
           created_at: string
           id: string
           is_demo: boolean
@@ -311,6 +312,7 @@ export type Database = {
           accepted_at?: string | null
           announcement_id: string
           binding_offer?: boolean | null
+          closed_reason?: string | null
           created_at?: string
           id?: string
           is_demo?: boolean
@@ -330,6 +332,7 @@ export type Database = {
           accepted_at?: string | null
           announcement_id?: string
           binding_offer?: boolean | null
+          closed_reason?: string | null
           created_at?: string
           id?: string
           is_demo?: boolean
@@ -2750,6 +2753,10 @@ export type Database = {
       }
       announcement_shift_bounds: { Args: { _ann: string }; Returns: unknown }
       announcement_shift_interval: { Args: { _ann: string }; Returns: unknown }
+      application_role_label: {
+        Args: { _application_id: string }
+        Returns: string
+      }
       application_status_is_active: {
         Args: { _s: Database["public"]["Enums"]["application_status"] }
         Returns: boolean
