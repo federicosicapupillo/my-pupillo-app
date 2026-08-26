@@ -1060,7 +1060,11 @@ function Onboarding() {
         scrollToField("postal_code");
         return;
       }
-      if (!form.district.trim()) {
+      // La zona/quartiere è obbligatoria solo se il Comune selezionato
+      // dispone di zone censite (stessa fonte dati di DistrictField).
+      // Per i Comuni senza zone il campo resta facoltativo e si salva NULL.
+      const cityHasZones = districtZonesForCity(form.city).length > 0;
+      if (cityHasZones && !form.district.trim()) {
         toast.error("Seleziona la zona/quartiere del locale.");
         scrollToField("district");
         return;
