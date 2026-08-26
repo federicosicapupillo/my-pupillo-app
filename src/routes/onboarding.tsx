@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { geocodeAddressWithRetry } from "@/lib/geocode";
-import { verifyVat } from "@/lib/vat.functions";
+
 import { useServerFn } from "@tanstack/react-start";
 import {
   RestaurantRequirementsEditor,
@@ -259,7 +259,7 @@ export const Route = createFileRoute("/onboarding")({
 function Onboarding() {
   const { user, role, profile, refresh, patchProfile } = useAuth();
   const nav = useNavigate();
-  const verifyVatFn = useServerFn(verifyVat);
+  
   const uploadAvatarFn = useServerFn(uploadAvatar);
   const validateWorkerDatesFn = useServerFn(validateWorkerDocumentDates);
   const uploadIdDocumentFn = useServerFn(uploadWorkerIdDocument);
@@ -415,10 +415,6 @@ function Onboarding() {
   const [availabilityPromptOpen, setAvailabilityPromptOpen] = useState(false);
   const [requirements, setRequirements] = useState<RestaurantRequirements>(EMPTY_REQ);
   const [spokenLanguages, setSpokenLanguages] = useState<SpokenLanguage[]>([]);
-  const [vatChecking, setVatChecking] = useState(false);
-  const [vatResult, setVatResult] = useState<{ status: string; message: string; companyName?: string | null } | null>(
-    null,
-  );
   // Worker ID document — stored as two separate files (fronte + retro).
   const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [idDocPath, setIdDocPath] = useState<string | null>(null);
@@ -756,34 +752,6 @@ function Onboarding() {
     ];
   })();
 
-  const handleVerifyVat = async () => {
-    if (!vatValid) {
-      toast.error("La Partita IVA deve contenere 11 cifre numeriche.");
-      return;
-    }
-    setVatChecking(true);
-    setVatResult(null);
-    try {
-      const r = await verifyVatFn({ data: { vat_number: vatDigits } });
-      setVatResult({ status: r.status, message: r.message ?? "", companyName: r.companyName });
-      if (r.status === "valid") {
-        toast.success(r.message || "Partita IVA verificata");
-        if (r.companyName && !form.business_name.trim()) {
-          setForm((f) => ({ ...f, business_name: r.companyName as string }));
-        }
-      } else if ((r as any).duplicate) {
-        toast.error(r.message);
-      } else if (r.status === "invalid") {
-        toast.error(r.message || "Partita IVA non valida");
-      } else {
-        toast.message(r.message || "Verifica non disponibile, formato valido.");
-      }
-    } catch (e: any) {
-      toast.error("Verifica non riuscita");
-    } finally {
-      setVatChecking(false);
-    }
-  };
 
   useEffect(() => {
     if (otpJustVerifiedRef.current) {
@@ -2145,35 +2113,21 @@ function Onboarding() {
             <div id="sec-business" className="grid gap-x-6 gap-y-4 md:grid-cols-2 items-start scroll-mt-24">
               <div id="sec-vat" className="md:col-span-1 scroll-mt-24">
                 <Label>Partita IVA *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    required
-                    inputMode="numeric"
-                    pattern="\d{11}"
-                    maxLength={11}
-                    placeholder="Inserisci la Partita IVA"
-                    value={form.vat_number}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, "").slice(0, 11);
-                      setForm({ ...form, vat_number: v });
-                      setVatResult(null);
-                    }}
-                    data-field="vat_number"
-                  />
-                  <Button type="button" variant="outline" disabled={!vatValid || vatChecking} onClick={handleVerifyVat}>
-                    {vatChecking ? "Verifico…" : "Verifica"}
-                  </Button>
-                </div>
+                <Input
+                  required
+                  inputMode="numeric"
+                  pattern="\d{11}"
+                  maxLength={11}
+                  placeholder="Inserisci la Partita IVA"
+                  value={form.vat_number}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 11);
+                    setForm({ ...form, vat_number: v });
+                  }}
+                  data-field="vat_number"
+                />
                 {!vatValid && form.vat_number.length > 0 && (
                   <p className="text-xs text-destructive mt-1">La Partita IVA deve contenere 11 cifre numeriche.</p>
-                )}
-                {vatResult && (
-                  <p
-                    className={`text-xs mt-1 ${vatResult.status === "valid" ? "text-emerald-600" : vatResult.status === "invalid" ? "text-destructive" : "text-muted-foreground"}`}
-                  >
-                    {vatResult.message}
-                    {vatResult.companyName ? ` (${vatResult.companyName})` : ""}
-                  </p>
                 )}
               </div>
               <div data-field="venue_type" className="scroll-mt-24">

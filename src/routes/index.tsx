@@ -16,8 +16,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import pupilloLogo from "@/assets/pupillo-logo.png";
-import { useEffect, useState } from "react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,18 +45,8 @@ const NEON = {
 };
 
 function Index() {
-  const [isLight, setIsLight] = useState(false);
-  useEffect(() => {
-    const update = () =>
-      setIsLight((prev) => {
-        const next = document.documentElement.classList.contains("light");
-        return prev === next ? prev : next;
-      });
-    update();
-    const obs = new MutationObserver(update);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
+  // Tema unico della piattaforma: scuro.
+  const isLight = false;
   const textMain = isLight ? "text-zinc-900" : "text-white";
   const textSoft = isLight ? "text-zinc-700" : "text-white/75";
   const textDim = isLight ? "text-zinc-600" : "text-white/70";
@@ -81,7 +71,7 @@ function Index() {
             <img src={pupilloLogo} alt="Pupillo" className="h-10 w-auto md:h-12" style={{ filter: "drop-shadow(0 0 12px rgba(216,255,54,0.35))" }} />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle className={isLight ? "text-zinc-900 hover:bg-black/5" : "text-white hover:bg-white/10 hover:text-white"} />
+            
             <Link to="/auth">
               <Button
                 variant="ghost"

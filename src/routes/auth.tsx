@@ -16,7 +16,6 @@ import pupilloLogo from "@/assets/pupillo-logo.png";
 import { isPasswordStrongEnough, doPasswordsMatch, PASSWORD_RULES } from "@/lib/password-validation";
 import { canManagePassword, fetchMySignupMethod, GENERIC_LOGIN_ERROR_MESSAGE } from "@/lib/password-guard";
 import { Check, X } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Dialog,
   DialogContent,
@@ -416,7 +415,6 @@ function AuthPage() {
           >
             <img src={pupilloLogo} alt="Logo Pupillo" className="h-10 w-auto object-contain md:h-12" />
           </Link>
-          <ThemeToggle />
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12">

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { getOriginalSignupMethod, providerLabel } from "@/lib/auth-methods";
 import { canManagePassword, fetchMySignupMethod, PASSWORD_MANAGEMENT_ERROR_MESSAGE } from "@/lib/password-guard";
 
@@ -86,7 +85,6 @@ function ResetPassword() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">P</div>
             <span className="text-xl font-semibold">Pupillo</span>
           </Link>
-          <ThemeToggle />
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center px-4 py-12">

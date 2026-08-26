@@ -129,7 +129,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('pupillo-theme');var c=document.documentElement.classList;if(t==='light'){c.add('light');c.remove('dark');}else{c.add('dark');c.remove('light');}}catch(e){document.documentElement.classList.add('dark');}})();`,
+            __html: `(function(){var c=document.documentElement.classList;c.add('dark');c.remove('light');try{localStorage.removeItem('pupillo-theme');Object.keys(localStorage).forEach(function(k){if(k.indexOf('pupillo-theme:user:')===0)localStorage.removeItem(k);});}catch(e){}})();`,
           }}
         />
       </head>
