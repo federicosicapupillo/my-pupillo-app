@@ -35,6 +35,7 @@ import {
   isValidCapForDistrict,
   isValidCivicNumber,
   splitAddressAndCivic,
+  zonesForCity as districtZonesForCity,
 } from "@/lib/italian-locations";
 import {
   RESIDENCE_CITY_OPTIONS,
