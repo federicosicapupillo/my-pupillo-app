@@ -61,7 +61,7 @@ export function DistrictField({ city, value, onChange, disabled }: Props) {
     );
   }
 
-  // ---- Città senza elenco predefinito: campo disabilitato con avviso ----
+  // ---- Città senza zone censite: campo facoltativo, non blocca il salvataggio ----
   if (zones.length === 0) {
     return (
       <div className="space-y-1">
@@ -69,11 +69,10 @@ export function DistrictField({ city, value, onChange, disabled }: Props) {
           value=""
           readOnly
           disabled
-          placeholder="Nessuna zona disponibile per questa città"
+          placeholder="Nessuna zona prevista per questa città"
         />
         <p className="text-xs text-muted-foreground">
-          Per questa città non è ancora disponibile l'elenco delle zone.
-          Contatta il supporto per richiedere l'aggiunta.
+          Per questa città non è richiesta la zona/quartiere: puoi proseguire senza selezionarla.
         </p>
       </div>
     );
