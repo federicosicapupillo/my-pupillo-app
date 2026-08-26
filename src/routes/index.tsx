@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { HomepageLaunchBanner } from "@/components/HomepageLaunchBanner";
 import {
   UserPlus,
   Play,
