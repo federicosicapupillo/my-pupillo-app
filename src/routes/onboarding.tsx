@@ -35,6 +35,7 @@ import {
   isValidCapForDistrict,
   isValidCivicNumber,
   splitAddressAndCivic,
+  zonesForCity as districtZonesForCity,
 } from "@/lib/italian-locations";
 import {
   RESIDENCE_CITY_OPTIONS,
@@ -1059,7 +1060,11 @@ function Onboarding() {
         scrollToField("postal_code");
         return;
       }
-      if (!form.district.trim()) {
+      // La zona/quartiere è obbligatoria solo se il Comune selezionato
+      // dispone di zone censite (stessa fonte dati di DistrictField).
+      // Per i Comuni senza zone il campo resta facoltativo e si salva NULL.
+      const cityHasZones = districtZonesForCity(form.city).length > 0;
+      if (cityHasZones && !form.district.trim()) {
         toast.error("Seleziona la zona/quartiere del locale.");
         scrollToField("district");
         return;
@@ -2230,7 +2235,12 @@ function Onboarding() {
             </div>
             <div className="grid gap-x-6 gap-y-4 md:grid-cols-3 items-start">
               <div data-field="district" className="scroll-mt-24">
-                 <Label>Zona / quartiere</Label>
+                 <Label>
+                   Zona / quartiere
+                   {form.city && districtZonesForCity(form.city).length === 0 && (
+                     <span className="ml-1 text-xs font-normal text-muted-foreground">(facoltativo)</span>
+                   )}
+                 </Label>
                  <DistrictField
                    province={form.province}
                    city={form.city}
