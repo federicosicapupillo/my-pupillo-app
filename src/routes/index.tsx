@@ -282,10 +282,9 @@ function Index() {
         </div>
       </section>
 
-      <HomepageLaunchBanner />
-
       {/* HOW IT WORKS */}
       <section id="come-funziona" className="relative z-10 py-16 md:py-24">
+
         <div className="mx-auto max-w-6xl px-4">
           <div className="mb-12 text-center">
             <span
