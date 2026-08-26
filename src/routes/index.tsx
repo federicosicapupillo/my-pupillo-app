@@ -100,9 +100,12 @@ function Index() {
         </div>
       </header>
 
+      <HomepageLaunchBanner />
+
       {/* HERO */}
       <section className="relative z-10">
         <div className="mx-auto grid max-w-3xl gap-10 px-4 pb-10 pt-6 md:gap-6 md:pb-16 md:pt-12">
+
           {/* Left */}
           <div className="flex flex-col justify-center">
             <span
@@ -279,10 +282,9 @@ function Index() {
         </div>
       </section>
 
-      <HomepageLaunchBanner />
-
       {/* HOW IT WORKS */}
       <section id="come-funziona" className="relative z-10 py-16 md:py-24">
+
         <div className="mx-auto max-w-6xl px-4">
           <div className="mb-12 text-center">
             <span
