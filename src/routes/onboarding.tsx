@@ -2235,7 +2235,12 @@ function Onboarding() {
             </div>
             <div className="grid gap-x-6 gap-y-4 md:grid-cols-3 items-start">
               <div data-field="district" className="scroll-mt-24">
-                 <Label>Zona / quartiere</Label>
+                 <Label>
+                   Zona / quartiere
+                   {form.city && districtZonesForCity(form.city).length === 0 && (
+                     <span className="ml-1 text-xs font-normal text-muted-foreground">(facoltativo)</span>
+                   )}
+                 </Label>
                  <DistrictField
                    province={form.province}
                    city={form.city}
