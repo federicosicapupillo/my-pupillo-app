@@ -201,7 +201,7 @@ function Index() {
             >
               <div className="text-base font-bold">Turni vicino a te</div>
               <div className="mt-1 inline-flex items-center gap-1 text-xs text-white/70">
-                <MapPin className="h-3 w-3" /> Milano centro
+                <MapPin className="h-3 w-3" /> Bologna e provincia
               </div>
               <svg viewBox="0 0 200 30" className="mt-2 h-6 w-full">
                 <defs>
@@ -278,6 +278,8 @@ function Index() {
           <Sparkle className="absolute -right-2 top-32" color={NEON.orange} />
         </div>
       </section>
+
+      <HomepageLaunchBanner />
 
       {/* HOW IT WORKS */}
       <section id="come-funziona" className="relative z-10 py-16 md:py-24">
