@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
-import { applyTheme, persistTheme, readUserTheme } from "@/lib/theme";
+
 import { clearKnownRestaurantsCache } from "@/lib/known-restaurants-cache";
 import { clearPendingSignupRole, readPendingSignupRole } from "@/lib/signup-role";
 
@@ -230,14 +230,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRole(r);
     setProfile(loadedProfile);
     setRoleDebug(debugPayload);
-    // Apply per-user theme preference. Default restaurants to light.
-    const saved = readUserTheme(uid);
-    if (saved) {
-      applyTheme(saved);
-    } else if (r === "restaurant") {
-      applyTheme("light");
-      persistTheme("light", uid);
-    }
     setExtrasLoaded(true);
   };
 

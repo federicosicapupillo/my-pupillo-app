@@ -10,7 +10,6 @@ import { PhoneInput } from "@/components/PhoneInput";
 import { DEFAULT_PHONE_PREFIX, isValidPhone, splitPhone } from "@/lib/phone-prefixes";
 import { startPhoneVerification, verifyPhoneOtp, resendPhoneOtp } from "@/lib/phone-verification.functions";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Mail } from "lucide-react";
 import { clearPendingRegistrationOtpState, readPendingRegistrationOtpState, savePendingRegistrationOtpState } from "@/lib/registration-otp-state";
@@ -296,7 +295,6 @@ function VerifyPhonePage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
-      <div className="absolute top-4 right-4"><ThemeToggle /></div>
       <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm">
         <h1 className="text-2xl font-semibold">Conferma il tuo numero</h1>
         {phase === "phone" ? (
