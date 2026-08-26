@@ -100,9 +100,12 @@ function Index() {
         </div>
       </header>
 
+      <HomepageLaunchBanner />
+
       {/* HERO */}
       <section className="relative z-10">
         <div className="mx-auto grid max-w-3xl gap-10 px-4 pb-10 pt-6 md:gap-6 md:pb-16 md:pt-12">
+
           {/* Left */}
           <div className="flex flex-col justify-center">
             <span
