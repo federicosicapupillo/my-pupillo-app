@@ -37,7 +37,12 @@ export function DistrictField({ city, value, onChange, disabled }: Props) {
   // per evitare di tenere valori "vecchi" o liberi non più validi.
   React.useEffect(() => {
     if (!value) return;
-    if (zones.length === 0) return;
+    // Città senza zone censite: il valore va azzerato (salvato come NULL),
+    // il campo non deve bloccare il salvataggio.
+    if (zones.length === 0) {
+      onChange("");
+      return;
+    }
     if (!zones.some((z) => z.toLowerCase() === value.toLowerCase())) {
       onChange("");
     }
