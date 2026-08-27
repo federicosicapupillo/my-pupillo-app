@@ -2786,6 +2786,7 @@ export type Database = {
         Args: { _referred_user_id: string }
         Returns: undefined
       }
+      can_notify_user: { Args: { _target: string }; Returns: boolean }
       can_read_application: {
         Args: {
           _announcement_id: string
