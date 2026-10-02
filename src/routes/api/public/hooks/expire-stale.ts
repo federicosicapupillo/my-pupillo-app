@@ -277,18 +277,22 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
               }
             }
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error('[PUPILLO_REVIEW_REMINDER_UNEXPECTED]', e)
+          logErr('review_reminders', e?.message ?? String(e))
         }
 
+        const ALL_PHASES = 5
+        const allFailed = failedPhases.size >= ALL_PHASES
         return new Response(
           JSON.stringify({
-            success: true,
-            announcements_expired: expiredAnn?.length || 0,
-            applications_expired: expiredApps?.length || 0,
+            success: !allFailed,
+            announcements_expired: expiredAnn.length,
+            applications_expired: expiredApps.length,
             review_reminders_created: reviewReminderInserted,
+            errors,
           }),
-          { headers: { 'Content-Type': 'application/json' } }
+          { status: allFailed ? 500 : 200, headers: { 'Content-Type': 'application/json' } }
         )
       },
     },
