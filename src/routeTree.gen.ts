@@ -51,6 +51,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
 import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
+import { Route as ApiPublicJarvisKpiRouteImport } from './routes/api/public/jarvis-kpi'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -269,6 +270,11 @@ const RistoratoreAnnunciNuovoRoute = RistoratoreAnnunciNuovoRouteImport.update({
   path: '/ristoratore/annunci/nuovo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicJarvisKpiRoute = ApiPublicJarvisKpiRouteImport.update({
+  id: '/api/public/jarvis-kpi',
+  path: '/api/public/jarvis-kpi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -336,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/workers/$id': typeof WorkersIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/jarvis-kpi': typeof ApiPublicJarvisKpiRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -384,6 +391,7 @@ export interface FileRoutesByTo {
   '/workers/$id': typeof WorkersIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/jarvis-kpi': typeof ApiPublicJarvisKpiRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -433,6 +441,7 @@ export interface FileRoutesById {
   '/workers_/$id': typeof WorkersIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/jarvis-kpi': typeof ApiPublicJarvisKpiRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
@@ -483,6 +492,7 @@ export interface FileRouteTypes {
     | '/workers/$id'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/jarvis-kpi'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -531,6 +541,7 @@ export interface FileRouteTypes {
     | '/workers/$id'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/jarvis-kpi'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -579,6 +590,7 @@ export interface FileRouteTypes {
     | '/workers_/$id'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/jarvis-kpi'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
@@ -623,6 +635,7 @@ export interface RootRouteChildren {
   WorkersIdRoute: typeof WorkersIdRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicJarvisKpiRoute: typeof ApiPublicJarvisKpiRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
   ApiPublicHooksExpireStaleRoute: typeof ApiPublicHooksExpireStaleRoute
@@ -925,6 +938,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RistoratoreAnnunciNuovoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jarvis-kpi': {
+      id: '/api/public/jarvis-kpi'
+      path: '/api/public/jarvis-kpi'
+      fullPath: '/api/public/jarvis-kpi'
+      preLoaderRoute: typeof ApiPublicJarvisKpiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -1033,6 +1053,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkersIdRoute: WorkersIdRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicJarvisKpiRoute: ApiPublicJarvisKpiRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
   ApiPublicHooksExpireStaleRoute: ApiPublicHooksExpireStaleRoute,
