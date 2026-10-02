@@ -134,7 +134,7 @@ export const Route = createFileRoute("/announcements")({
     status: typeof s.status === "string" ? s.status : undefined,
   }),
   component: () => <RequireAuth><AnnouncementsPage /></RequireAuth>,
-  errorComponent: AnnouncementsErrorFallback,
+  errorComponent: (p) => <AnnouncementsErrorFallback error={p.error} reset={p.reset} />,
   notFoundComponent: () => <AnnouncementsErrorFallback />,
 });
 
