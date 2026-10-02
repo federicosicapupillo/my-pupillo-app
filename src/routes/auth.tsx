@@ -27,6 +27,7 @@ import {
 import { MailCheck } from "lucide-react";
 import { rememberPendingSignupRole, clearPendingSignupRole, type SignupRole } from "@/lib/signup-role";
 import { isEffectivelyComplete } from "@/lib/profile-completion";
+import { rememberReferralCode, readReferralCode, normalizeReferralCode, clearReferralCode } from "@/lib/referral-capture";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
@@ -58,6 +59,11 @@ function AuthPage() {
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const justSignedUpRef = useRef(false);
+  // Presenta un amico: salva il codice all'arrivo (sopravvive ai redirect).
+  useEffect(() => {
+    if (refParam) rememberReferralCode(refParam);
+  }, [refParam]);
+  const referralCode = normalizeReferralCode(refParam) ?? (typeof window !== "undefined" ? readReferralCode() : null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
   const [resendBusy, setResendBusy] = useState(false);
@@ -227,6 +233,7 @@ function AuthPage() {
           last_name: lastNameTrim,
           role,
           representative_age: role === "restaurant" && repAge.trim() ? Number(repAge) : null,
+          ...(referralCode ? { referral_code: referralCode } : {}),
         },
       },
     });
@@ -266,14 +273,8 @@ function AuthPage() {
       toast.error("Questa email risulta già registrata. Accedi oppure recupera la password.");
       return;
     }
-    // Register referral if a code was passed via ?ref= (best-effort).
-    if (refParam && data?.user?.id) {
-      try {
-        await supabase.rpc("register_referral", { _new_user: data.user.id, _code: refParam });
-      } catch (err) {
-        console.error("register_referral failed", err);
-      }
-    }
+    // Il codice invito viaggia nei metadati: il collegamento lo fa il database.
+    if (referralCode) clearReferralCode();
     console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] signup ok, confirmation email dispatched", {
       email: emailTrim,
       has_session: !!data?.session,
