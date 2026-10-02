@@ -1,57 +1,51 @@
-## Analisi dell'implementazione attuale
+# jarvis-kpi — endpoint KPI aggregati (sola lettura)
 
-**Route usata dalla chat**
-- `/messages` (`src/routes/messages.tsx`, 946 righe) — lista conversazioni/inbox realtime.
-- `/messages/$id` (`src/routes/messages.$id.tsx`, **4.593 righe**) — il thread vero e proprio. È qui che vive tutto.
+## Risposte preliminari
 
-**Componenti che visualizzano i messaggi**
-Non esistono componenti chat separati: tutto è inline in `messages.$id.tsx` (bolle, avatar `UserAvatar`, composer `Textarea` + pulsante Invia, template picker). Componenti collegati (business, non chat): `ProposalCard`, `ConfirmationCard`, `ConfirmedWorkerCard`, `CounterofferDialog`, `ReviewDialog`/`ReviewBlock`, `BlindReciprocalReviewDialog`, `SaveToFavoritesPrompt`, `InsufficientCreditsDialog`, `BlockedContactDialog`, `WorkerIncidentDialogs`, `PayOnHireBox`, `FreeLaunchBanner`.
+**a) URL**
+Questo progetto non usa le Edge Functions classiche: il backend gira dentro l'app stessa. Il percorso equivalente, protetto solo dalla tua chiave, è:
+- Produzione: `https://pupillo.life/api/public/jarvis-kpi` (anche `https://my-pupillo-app.lovable.app/api/public/jarvis-kpi`)
+- Preview: `https://project--81341205-eede-4204-8584-66229ea985c7-dev.lovable.app/api/public/jarvis-kpi`
 
-**Dati letti**
-`applications` (riga completa), `announcements` (orari, tariffa, requisiti, dress code, indicazioni), `public_profiles` (controparte + reputazione), `messages`, `activity_logs` (timeline), `shifts`, `reviews`, `proposal_responses`, `notifications`, RPC `get_announcement_contact` (referente sbloccato), `canAssignShift`, feature flag pagamenti/controfferta.
+Il comportamento è identico a quello di una Edge Function (GET, header `X-Jarvis-Key`, risposta JSON). In produzione diventa attivo solo dopo la pubblicazione.
 
-**Azioni che oggi dipendono dalla chat**
-Accetta/rifiuta proposta, candidatura, controfferta, conferma assegnazione (con consumo crediti), invio istruzioni operative (template `shift_confirmation`), conferma lettura istruzioni (`action_type=instructions_acknowledged`), completamento turno, annullamento, segnalazioni ritardo/no-show, recensioni cieche reciproche, chiusura chat. Tutte scrivono una riga in `messages` come "evento".
+**b) Secret `JARVIS_KPI_KEY`**
+Vai in Project Settings → Secrets → Aggiungi, nome `JARVIS_KPI_KEY`, e incolla un valore casuale lungo (es. `openssl rand -hex 32` sul Mac). Usa lo stesso valore in Jarvis. Io non genero la chiave e non la scrivo nel codice.
 
-**La chat è usata per messaggi liberi?**
-**No.** In produzione: 136 messaggi totali, **0 messaggi liberi** (`template_id IS NULL` e `message_type='user'`). Sono tutti template/system: `shift_proposal` (26), `shift_confirmation` (24), system (29), `review_submitted` (14), chiusure chat (15), ecc. Quindi la card "Comunicazioni registrate" oggi sarebbe sempre vuota, ma la implemento comunque come previsto.
+**c) Campi mancanti o con nome diverso**
+- `user_roles` non ha `created_at` né `is_demo`/`is_deleted`: lo collego a `profiles` (id = user_id) per le date e per escludere demo e profili cancellati. I ruoli sono `restaurant` / `worker` (`admin` escluso dai totali).
+- `credit_transactions` non ha `is_demo`: escludo i movimenti di utenti demo o cancellati tramite `profiles`.
+- `worker_incidents.incident_type` può essere vuoto nei record più vecchi: in quel caso uso `kind` come ripiego (valore "non_specificato" se mancano entrambi).
+- `reviews`: le colonne `rating`, `punctuality`, `professionalism`, `competence`, `reliability`, `teamwork` esistono. Le medie ignorano i valori vuoti.
+- `shifts`: `hours`, `amount`, `status` e `completed_at` esistono. Per "turni completati per settimana" uso `completed_at`.
+- Tutti gli altri campi richiesti esistono con il nome indicato.
 
-**Rischi della sostituzione**
-1. `messages` non è solo UI: è il **log di stato**. Molte logiche (gate anti-duplicato proposta, "istruzioni già inviate", "lettura confermata", chiusura chat, trigger DB `notify_new_message`) leggono/scrivono lì. Le insert devono restare identiche, cambia solo la resa grafica.
-2. Il trigger DB `notify_new_message` genera le notifiche a partire da `template_id`: se smetto di inserire quelle righe, si perdono le notifiche.
-3. Il badge "messaggi non letti" in `AppShell` e l'inbox realtime dipendono da `read_at` / `last_message_preview`.
-4. Rischio regressione su privacy: nome locale/indirizzo/referente vanno mostrati solo dopo lo sblocco esistente (`get_announcement_contact` + stato accettato/confermato).
-5. ~20 punti di navigazione puntano a `/messages/$id`: vanno tutti rediretti.
+## Cosa costruisco
+Un solo file nuovo: `src/routes/api/public/jarvis-kpi.ts`.
+- `OPTIONS` → risposta CORS (header permessi: `X-Jarvis-Key`), `GET` → KPI, tutti gli altri metodi → 405.
+- Se manca il secret, manca l'header o la chiave non corrisponde: 401 con `{"error":"unauthorized"}`. Il confronto usa `timingSafeEqual` sugli hash SHA-256 di entrambi i valori, così la lunghezza è sempre la stessa.
+- Nessun parametro letto da query string o body.
+- Le letture usano il client privilegiato lato server (serve per sommare dati di tutti gli utenti), caricato solo dopo il controllo della chiave. Solo `select`, nessuna scrittura.
+- Selezioni limitate alle colonne necessarie (status, date, numeri, flag). L'aggregazione avviene in memoria e la risposta contiene solo conteggi, somme, medie e date di inizio settimana. Nessun id e nessun testo.
+- Lettura paginata (blocchi da 1000 righe) per non troncare i totali.
+- Header `Cache-Control: no-store`.
 
-Nessuna modifica a DB, RLS, trigger o matching.
+## Forma JSON
+```text
+{ generato_il,
+  utenti: { totali, ristoranti, lavoratori, nuovi_7g, nuovi_30g },
+  annunci: { totali, per_stato{}, ultimi_30g },
+  candidature: { totali, per_stato{}, ultimi_30g, perc_accettate },
+  turni: { totali, per_stato{}, completati, ore_totali, importo_totale, ultimi_30g },
+  recensioni: { totali, media_rating, medie{punctuality,...,teamwork} },
+  incidenti: { totali, per_tipo{}, ultimi_30g },
+  crediti: { movimenti, somma_positivi, somma_negativi, per_kind{} },
+  serie_settimanale: [ { settimana, nuovi_utenti, annunci, candidature, turni_completati } x12 ] }
+```
+`perc_accettate` conta come accettate le candidature con stato accepted o equivalente "assegnato".
 
-## Piano di implementazione
+## Cosa non tocco
+Nessuna modifica a interfaccia, database, migrazioni, RLS o altri file. Aggiungo una riga in AGENTS.md per registrare questo endpoint.
 
-### Fase 1 — Nuova pagina di riepilogo
-- Nuova route `src/routes/pratiche.$id.tsx` ("Dettagli proposta" / "Riepilogo candidatura" / "Dettagli turno" in base allo stato), che **riusa lo stesso data-loader** di `messages.$id.tsx` estratto in `src/lib/application-detail.ts` (query, derivazione stato, sblocco privacy, timeline da `activity_logs` + `messages`).
-- Layout desktop 2 colonne (`max-w-6xl`), mobile impilato:
-  - principale: Header con badge stato → Card 1 Riepilogo turno → Card 2 Locale e luogo → Card 3 Requisiti e mansioni → Card 4 Proposta e risposta → Card 5 Istruzioni operative (con stato lettura e data/ora) → Card 6 Comunicazioni registrate (solo se esistono).
-  - laterale: riepilogo economico, CTA per stato+ruolo, referente (se sbloccato), mappa/"Apri in mappa", cronologia sintetica (Card 7 timeline verticale dai dati reali).
-- Stati vuoti/errore in italiano: caricamento, errore, non trovata, non autorizzato, istruzioni non inviate, dati bloccati, nessuna comunicazione, turno annullato, proposta scaduta.
-
-### Fase 2 — Azioni senza chat
-- Le CTA riusano le funzioni esistenti (accetta/rifiuta/assegna/annulla/recensisci/segnala), spostate in `src/lib/application-actions.ts` senza cambiarne il comportamento (stesse insert su `messages`, stessi `template_id`, stessi update su `applications`).
-- Invio istruzioni operative: **modulo strutturato** in dialog (referente, telefono, punto di accesso, orario arrivo, dress code, parcheggio, indicazioni, note) che produce lo stesso messaggio `shift_confirmation` di oggi → appare nella Card 5.
-- Conferma lettura worker: pulsante "Ho letto le istruzioni" → stessa insert `action_type=instructions_acknowledged` (data/ora mostrata in Card 5).
-- Rimosso: composer, pulsante Invia, template picker libero, bolle, avatar messaggio.
-
-### Fase 3 — Navigazione
-- `/messages/$id` diventa un redirect verso la nuova route (nessun deep-link rotto); aggiorno i ~20 link interni (dashboard, jobs, shifts, announcements, workers, mappa, collaboratori, turni ristoratore, `notification-link.ts`, `NotificationBell`, dialog vari).
-- `/messages` (inbox) resta come elenco pratiche, ma le righe aprono la nuova pagina; rinomino la voce di menu in "Candidature/Turni" se confermi.
-
-### Fase 4 — Verifica
-Test 1-15 richiesti via Playwright con account worker e ristoratore autenticati, screenshot desktop e mobile.
-
-### Dettagli tecnici
-- Nessuna migration. Nessuna modifica a RLS, trigger, RPC, matching.
-- Nessuna cancellazione di dati o tabelle: `messages` continua a essere scritta come log eventi.
-- `messages.$id.tsx` resta nel repo solo come redirect; il codice riusabile viene estratto, non duplicato.
-
-### Domande aperte
-1. La voce di menu "Messaggi" va rinominata (es. "Candidature") o resta?
-2. Il nome della nuova route: `/pratiche/$id` va bene o preferisci `/candidature/$id`?
+## Verifica
+Chiamo l'endpoint senza header (atteso 401), con chiave errata (atteso 401) e, quando avrai impostato il secret, con la chiave giusta (atteso JSON senza dati personali).
