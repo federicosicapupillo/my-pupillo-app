@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { clearPendingSignupRole, type SignupRole } from "@/lib/signup-role";
+import { registerStoredReferral } from "@/lib/referral-capture";
 
 export const Route = createFileRoute("/choose-role")({
   head: () => ({
@@ -56,6 +57,7 @@ function ChooseRolePage() {
       return;
     }
     clearPendingSignupRole();
+    if (user?.id) await registerStoredReferral(user.id).catch((e) => console.error("[referral]", e));
     await refresh();
     setBusy(false);
     nav({ to: "/onboarding" });
