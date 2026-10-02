@@ -11,110 +11,140 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
         }
 
         const nowIso = new Date().toISOString()
-
-        // Scadenza annuncio = inizio turno (service_date + service_time, Europa/Roma).
-        // Selezioniamo i candidati e filtriamo lato JS confrontando l'inizio turno
-        // con "adesso" nel fuso operativo, così non dipendiamo dal valore legacy
-        // della colonna `expires_at`.
-        const { data: candidates, error: candErr } = await supabaseAdmin
-          .from('announcements')
-          .select('id, restaurant_id, service_date, service_time, end_date, end_time, shift_duration_hours, duration_hours, expires_at')
-          .in('status', ['active', 'draft'])
-
-        if (candErr) {
-          console.error('load announcement candidates error', candErr)
-          return new Response(JSON.stringify({ error: candErr.message }), { status: 500 })
-        }
-
-        const { getShiftStartDate } = await import('@/lib/announcement-time')
         const now = new Date()
-        const toExpire = (candidates ?? []).filter((a: any) => {
-          const start = getShiftStartDate(a)
-          return start ? start.getTime() <= now.getTime() : false
-        })
+        const errors: { phase: string; id?: string; message: string }[] = []
+        const failedPhases = new Set<string>()
+        const logErr = (phase: string, message: string, id?: string, fatal = true) => {
+          errors.push({ phase, id, message })
+          if (fatal) failedPhases.add(phase)
+          console.error('[PUPILLO_EXPIRE_STALE]', { phase, id, message })
+        }
 
+        // FASE A — scadenza annunci (esclusi demo). Scadenza = inizio turno (Europa/Roma).
         let expiredAnn: { id: string; restaurant_id: string }[] = []
-        if (toExpire.length > 0) {
-          const ids = toExpire.map((a: any) => a.id)
-          const { data, error: annErr } = await supabaseAdmin
+        try {
+          const { data: candidates, error: candErr } = await supabaseAdmin
             .from('announcements')
-            .update({ status: 'expired' })
-            .in('id', ids)
+            .select('id, restaurant_id, service_date, service_time, end_date, end_time, shift_duration_hours, duration_hours, expires_at')
             .in('status', ['active', 'draft'])
-            .select('id, restaurant_id')
-          if (annErr) {
-            console.error('expire announcements error', annErr)
-            return new Response(JSON.stringify({ error: annErr.message }), { status: 500 })
+            .eq('is_demo', false)
+          if (candErr) throw candErr
+
+          const { getShiftStartDate } = await import('@/lib/announcement-time')
+          const ids = (candidates ?? [])
+            .filter((a: any) => {
+              const start = getShiftStartDate(a)
+              return start ? start.getTime() <= now.getTime() : false
+            })
+            .map((a: any) => a.id as string)
+
+          const CHUNK = 100
+          for (let i = 0; i < ids.length; i += CHUNK) {
+            const chunk = ids.slice(i, i + CHUNK)
+            const { data, error } = await supabaseAdmin
+              .from('announcements')
+              .update({ status: 'expired' })
+              .in('id', chunk)
+              .in('status', ['active', 'draft'])
+              .eq('is_demo', false)
+              .select('id, restaurant_id')
+            if (!error) {
+              expiredAnn.push(...((data ?? []) as any))
+              continue
+            }
+            // Fallback riga per riga: una riga rifiutata non blocca le altre.
+            for (const id of chunk) {
+              const { data: one, error: oneErr } = await supabaseAdmin
+                .from('announcements')
+                .update({ status: 'expired' })
+                .eq('id', id)
+                .in('status', ['active', 'draft'])
+                .eq('is_demo', false)
+                .select('id, restaurant_id')
+              if (oneErr) logErr('announcements', oneErr.message, id, false)
+              else expiredAnn.push(...((one ?? []) as any))
+            }
           }
-          expiredAnn = (data ?? []) as any
+        } catch (e: any) {
+          logErr('announcements', e?.message ?? String(e))
         }
 
-        // Expire applications past response_deadline still pending/counter_offer/interested
-        const { data: expiredApps, error: appErr } = await supabaseAdmin
-          .from('applications')
-          .update({ status: 'expired' })
-          .lt('response_deadline', nowIso)
-          .in('status', ['pending', 'counter_offer', 'interested'])
-          .select('id, worker_id, restaurant_id')
-
-        if (appErr) {
-          console.error('expire applications error', appErr)
-          return new Response(JSON.stringify({ error: appErr.message }), { status: 500 })
-        }
-
-        // Notify restaurants of expired announcements.
-        // Gli annunci scaduti SENZA alcuna candidatura hanno un evento
-        // dedicato ("Annuncio scaduto senza candidature") emesso dal trigger
-        // `trg_notify_announcement_expired_no_applications`: qui li
-        // escludiamo per non generare una seconda notifica generica ambigua.
-        if (expiredAnn && expiredAnn.length > 0) {
-          const expiredIds = expiredAnn.map((a: any) => a.id)
-          const { data: appsForExpired } = await supabaseAdmin
+        // FASE B — scadenza candidature oltre response_deadline
+        let expiredApps: { id: string; worker_id: string; restaurant_id: string }[] = []
+        try {
+          const { data, error: appErr } = await supabaseAdmin
             .from('applications')
-            .select('announcement_id')
-            .in('announcement_id', expiredIds)
-          const withApplications = new Set(
-            ((appsForExpired ?? []) as any[]).map((r) => r.announcement_id as string),
-          )
-          const genericTargets = expiredAnn.filter((a: any) => withApplications.has(a.id))
-          if (genericTargets.length > 0) {
-            await (supabaseAdmin.from('notifications') as any).upsert(
-              genericTargets.map((a: any) => ({
-              user_id: a.restaurant_id,
-              title: 'Annuncio scaduto',
-              body: 'Il tuo annuncio è scaduto senza essere assegnato.',
-              link: '/announcements/' + a.id,
-              metadata: { kind: 'announcement_expired', announcement_id: a.id },
-              dedupe_key: `announcement_expired:${a.id}:${a.restaurant_id}`,
-              })),
-              { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true }
-            )
-          }
+            .update({ status: 'expired' })
+            .lt('response_deadline', nowIso)
+            .in('status', ['pending', 'counter_offer', 'interested'])
+            .select('id, worker_id, restaurant_id')
+          if (appErr) throw appErr
+          expiredApps = (data ?? []) as any
+        } catch (e: any) {
+          logErr('applications', e?.message ?? String(e))
         }
 
-        // Notify both parties of expired applications
-        if (expiredApps && expiredApps.length > 0) {
-          const notifs = expiredApps.flatMap((a: any) => [
-            {
-              user_id: a.worker_id,
-              title: 'Candidatura scaduta',
-              body: 'Non hai risposto entro 24h. La candidatura è scaduta.',
-              link: '/messages/' + a.id,
-              metadata: { kind: 'application_expired', application_id: a.id },
-              dedupe_key: `application_expired:${a.id}:${a.worker_id}`,
-            },
-            {
-              user_id: a.restaurant_id,
-              title: 'Candidatura scaduta',
-              body: 'Il lavoratore non ha risposto in tempo.',
-              link: '/messages/' + a.id,
-              metadata: { kind: 'application_expired', application_id: a.id },
-              dedupe_key: `application_expired:${a.id}:${a.restaurant_id}`,
-            },
-          ])
-          await (supabaseAdmin.from('notifications') as any).upsert(notifs, {
-            onConflict: 'user_id,dedupe_key', ignoreDuplicates: true,
-          })
+        // FASE C1 — notifiche annunci scaduti (quelli senza candidature hanno
+        // la notifica dedicata dal trigger trg_notify_announcement_expired_no_applications).
+        try {
+          if (expiredAnn.length > 0) {
+            const expiredIds = expiredAnn.map((a) => a.id)
+            const { data: appsForExpired, error } = await supabaseAdmin
+              .from('applications')
+              .select('announcement_id')
+              .in('announcement_id', expiredIds)
+            if (error) throw error
+            const withApplications = new Set(
+              ((appsForExpired ?? []) as any[]).map((r) => r.announcement_id as string),
+            )
+            const genericTargets = expiredAnn.filter((a) => withApplications.has(a.id))
+            if (genericTargets.length > 0) {
+              const { error: nErr } = await (supabaseAdmin.from('notifications') as any).upsert(
+                genericTargets.map((a) => ({
+                  user_id: a.restaurant_id,
+                  title: 'Annuncio scaduto',
+                  body: 'Il tuo annuncio è scaduto senza essere assegnato.',
+                  link: '/announcements/' + a.id,
+                  metadata: { kind: 'announcement_expired', announcement_id: a.id },
+                  dedupe_key: `announcement_expired:${a.id}:${a.restaurant_id}`,
+                })),
+                { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true }
+              )
+              if (nErr) throw nErr
+            }
+          }
+        } catch (e: any) {
+          logErr('announcement_notifications', e?.message ?? String(e))
+        }
+
+        // FASE C2 — notifiche candidature scadute
+        try {
+          if (expiredApps.length > 0) {
+            const notifs = expiredApps.flatMap((a) => [
+              {
+                user_id: a.worker_id,
+                title: 'Candidatura scaduta',
+                body: 'Non hai risposto entro 24h. La candidatura è scaduta.',
+                link: '/messages/' + a.id,
+                metadata: { kind: 'application_expired', application_id: a.id },
+                dedupe_key: `application_expired:${a.id}:${a.worker_id}`,
+              },
+              {
+                user_id: a.restaurant_id,
+                title: 'Candidatura scaduta',
+                body: 'Il lavoratore non ha risposto in tempo.',
+                link: '/messages/' + a.id,
+                metadata: { kind: 'application_expired', application_id: a.id },
+                dedupe_key: `application_expired:${a.id}:${a.restaurant_id}`,
+              },
+            ])
+            const { error } = await (supabaseAdmin.from('notifications') as any).upsert(notifs, {
+              onConflict: 'user_id,dedupe_key', ignoreDuplicates: true,
+            })
+            if (error) throw error
+          }
+        } catch (e: any) {
+          logErr('application_notifications', e?.message ?? String(e))
         }
 
         // ---------------------------------------------------------------
