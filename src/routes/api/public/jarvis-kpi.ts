@@ -77,7 +77,7 @@ export const Route = createFileRoute('/api/public/jarvis-kpi')({
           const { supabaseAdmin: db } = await import('@/integrations/supabase/client.server')
 
           const [profiles, roles, anns, apps, shifts, reviews, incidents, credits] = await Promise.all([
-            fetchAll(db, 'profiles', 'id, created_at, is_deleted'),
+            fetchAll(db, 'profiles', 'id, created_at, is_deleted, referral_code_submitted_at, referred_by_user_id'),
             fetchAll(db, 'user_roles', 'user_id, role', false),
             fetchAll(db, 'announcements', 'status, created_at'),
             fetchAll(db, 'applications', 'status, created_at'),
@@ -136,6 +136,10 @@ export const Route = createFileRoute('/api/public/jarvis-kpi')({
 
           return json({
             generato_il: new Date().toISOString(),
+            referral: {
+              iscrizioni_con_codice_30g: live.filter((p) => since(p.referral_code_submitted_at, 30)).length,
+              di_cui_collegate_30g: live.filter((p) => since(p.referral_code_submitted_at, 30) && p.referred_by_user_id).length,
+            },
             utenti: {
               totali: users.length,
               ristoranti: restIds.size,

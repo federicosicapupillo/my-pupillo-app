@@ -4,6 +4,7 @@ import type { Session, User } from "@supabase/supabase-js";
 
 import { clearKnownRestaurantsCache } from "@/lib/known-restaurants-cache";
 import { clearPendingSignupRole, readPendingSignupRole } from "@/lib/signup-role";
+import { registerStoredReferral } from "@/lib/referral-capture";
 
 export const DELETED_ACCOUNT_MESSAGE = "Questo account è stato eliminato e non può più essere utilizzato.";
 
@@ -185,6 +186,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("[auth] claim_signup_role failed, pending role preserved", claimError);
         } else {
           clearPendingSignupRole();
+          // Nuova iscrizione social: collega l'eventuale invitante.
+          await registerStoredReferral(uid).catch((e) => console.error("[referral]", e));
           await loadExtras(uid, attempt + 1);
           return;
         }
