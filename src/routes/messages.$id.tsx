@@ -117,7 +117,7 @@ export const Route = createFileRoute("/messages/$id")({
   // Fallback friendly se il caricamento della conversazione fallisce
   // (link rotto, RLS, errore di rete). Niente più "This page didn't load":
   // mostriamo un messaggio chiaro e un bottone per tornare alla lista.
-  errorComponent: (p) => <ConversationErrorFallback error={p.error} reset={p.reset} />,
+  errorComponent: (p) => <ConversationErrorFallback error={p.error as Error} reset={p.reset} />,
   notFoundComponent: ConversationNotFoundFallback,
 });
 
