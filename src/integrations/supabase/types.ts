@@ -1141,6 +1141,7 @@ export type Database = {
           punctuality_pct: number
           rating_avg: number | null
           referral_code: string | null
+          referral_code_submitted_at: string | null
           referral_credits_earned: number
           referred_by_user_id: string | null
           registered_office_address: string | null
@@ -1314,6 +1315,7 @@ export type Database = {
           punctuality_pct?: number
           rating_avg?: number | null
           referral_code?: string | null
+          referral_code_submitted_at?: string | null
           referral_credits_earned?: number
           referred_by_user_id?: string | null
           registered_office_address?: string | null
@@ -1487,6 +1489,7 @@ export type Database = {
           punctuality_pct?: number
           rating_avg?: number | null
           referral_code?: string | null
+          referral_code_submitted_at?: string | null
           referral_credits_earned?: number
           referred_by_user_id?: string | null
           registered_office_address?: string | null
@@ -2713,6 +2716,10 @@ export type Database = {
         Args: { _allowed: string[]; _patch: Json }
         Returns: undefined
       }
+      _link_referral: {
+        Args: { _code: string; _new_user: string }
+        Returns: string
+      }
       accept_application_atomic: {
         Args: { _application_id: string }
         Returns: Json
@@ -3025,6 +3032,7 @@ export type Database = {
           punctuality_pct: number
           rating_avg: number | null
           referral_code: string | null
+          referral_code_submitted_at: string | null
           referral_credits_earned: number
           referred_by_user_id: string | null
           registered_office_address: string | null
