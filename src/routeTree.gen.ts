@@ -9,182 +9,57 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WorkersRouteImport } from './routes/workers'
-import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as ShiftsRouteImport } from './routes/shifts'
-import { Route as RistoratoriRouteImport } from './routes/ristoratori'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RegistrationSuccessRouteImport } from './routes/registration-success'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as MessagesRouteImport } from './routes/messages'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as MappaRouteImport } from './routes/mappa'
-import { Route as JobsRouteImport } from './routes/jobs'
-import { Route as ForbiddenRouteImport } from './routes/forbidden'
-import { Route as DesignAuditRouteImport } from './routes/design-audit'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
-import { Route as ClaudeVisualAuditRouteImport } from './routes/claude-visual-audit'
-import { Route as ChooseRoleRouteImport } from './routes/choose-role'
-import { Route as BrowseRouteImport } from './routes/browse'
-import { Route as BillingRouteImport } from './routes/billing'
-import { Route as AvailabilityRouteImport } from './routes/availability'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AnnouncementsRouteImport } from './routes/announcements'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AccountErrorRouteImport } from './routes/account-error'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkersIdRouteImport } from './routes/workers_.$id'
-import { Route as RistoratoreRecensioniRouteImport } from './routes/ristoratore.recensioni'
-import { Route as RistoratoreCollaboratoriRouteImport } from './routes/ristoratore.collaboratori'
-import { Route as ReviewsIdRouteImport } from './routes/reviews.$id'
-import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
-import { Route as MessagesIdRouteImport } from './routes/messages.$id'
-import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
-import { Route as AnnouncementsIdRouteImport } from './routes/announcements.$id'
-import { Route as AdminResetTestDbRouteImport } from './routes/admin.reset-test-db'
-import { Route as AdminBackendRouteImport } from './routes/admin.backend'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AccountErrorRouteImport } from './routes/account-error'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AnnouncementsRouteImport } from './routes/announcements'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AvailabilityRouteImport } from './routes/availability'
+import { Route as BillingRouteImport } from './routes/billing'
+import { Route as BrowseRouteImport } from './routes/browse'
+import { Route as ChooseRoleRouteImport } from './routes/choose-role'
+import { Route as ClaudeVisualAuditRouteImport } from './routes/claude-visual-audit'
+import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DesignAuditRouteImport } from './routes/design-audit'
+import { Route as ForbiddenRouteImport } from './routes/forbidden'
+import { Route as JobsRouteImport } from './routes/jobs'
+import { Route as MappaRouteImport } from './routes/mappa'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RegistrationSuccessRouteImport } from './routes/registration-success'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RistoratoriRouteImport } from './routes/ristoratori'
+import { Route as ShiftsRouteImport } from './routes/shifts'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
+import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
-import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
-import { Route as ApiPublicJarvisKpiRouteImport } from './routes/api/public/jarvis-kpi'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdminBackendRouteImport } from './routes/admin.backend'
+import { Route as AdminResetTestDbRouteImport } from './routes/admin.reset-test-db'
+import { Route as AnnouncementsIdRouteImport } from './routes/announcements.$id'
+import { Route as AnnouncementsNewRouteImport } from './routes/announcements.new'
+import { Route as MessagesIdRouteImport } from './routes/messages.$id'
+import { Route as RestaurantsIdRouteImport } from './routes/restaurants.$id'
+import { Route as ReviewsIdRouteImport } from './routes/reviews.$id'
+import { Route as RistoratoreCollaboratoriRouteImport } from './routes/ristoratore.collaboratori'
+import { Route as RistoratoreRecensioniRouteImport } from './routes/ristoratore.recensioni'
+import { Route as WorkersIdRouteImport } from './routes/workers_.$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiPublicJarvisKpiRouteImport } from './routes/api/public/jarvis-kpi'
+import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
+import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
 import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/public/hooks/expire-stale'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
-const WorkersRoute = WorkersRouteImport.update({
-  id: '/workers',
-  path: '/workers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VerifyPhoneRoute = VerifyPhoneRouteImport.update({
-  id: '/verify-phone',
-  path: '/verify-phone',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ShiftsRoute = ShiftsRouteImport.update({
-  id: '/shifts',
-  path: '/shifts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RistoratoriRoute = RistoratoriRouteImport.update({
-  id: '/ristoratori',
-  path: '/ristoratori',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegistrationSuccessRoute = RegistrationSuccessRouteImport.update({
-  id: '/registration-success',
-  path: '/registration-success',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MessagesRoute = MessagesRouteImport.update({
-  id: '/messages',
-  path: '/messages',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MappaRoute = MappaRouteImport.update({
-  id: '/mappa',
-  path: '/mappa',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const JobsRoute = JobsRouteImport.update({
-  id: '/jobs',
-  path: '/jobs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForbiddenRoute = ForbiddenRouteImport.update({
-  id: '/forbidden',
-  path: '/forbidden',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignAuditRoute = DesignAuditRouteImport.update({
-  id: '/design-audit',
-  path: '/design-audit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ComeFunzionaRoute = ComeFunzionaRouteImport.update({
-  id: '/come-funziona',
-  path: '/come-funziona',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClaudeVisualAuditRoute = ClaudeVisualAuditRouteImport.update({
-  id: '/claude-visual-audit',
-  path: '/claude-visual-audit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChooseRoleRoute = ChooseRoleRouteImport.update({
-  id: '/choose-role',
-  path: '/choose-role',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BrowseRoute = BrowseRouteImport.update({
-  id: '/browse',
-  path: '/browse',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillingRoute = BillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AvailabilityRoute = AvailabilityRouteImport.update({
-  id: '/availability',
-  path: '/availability',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnnouncementsRoute = AnnouncementsRouteImport.update({
-  id: '/announcements',
-  path: '/announcements',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountErrorRoute = AccountErrorRouteImport.update({
@@ -192,19 +67,181 @@ const AccountErrorRoute = AccountErrorRouteImport.update({
   path: '/account-error',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkersIdRoute = WorkersIdRouteImport.update({
-  id: '/workers_/$id',
-  path: '/workers/$id',
+const AnnouncementsRoute = AnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RistoratoreRecensioniRoute = RistoratoreRecensioniRouteImport.update({
-  id: '/ristoratore/recensioni',
-  path: '/ristoratore/recensioni',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AvailabilityRoute = AvailabilityRouteImport.update({
+  id: '/availability',
+  path: '/availability',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingRoute = BillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChooseRoleRoute = ChooseRoleRouteImport.update({
+  id: '/choose-role',
+  path: '/choose-role',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClaudeVisualAuditRoute = ClaudeVisualAuditRouteImport.update({
+  id: '/claude-visual-audit',
+  path: '/claude-visual-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComeFunzionaRoute = ComeFunzionaRouteImport.update({
+  id: '/come-funziona',
+  path: '/come-funziona',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesignAuditRoute = DesignAuditRouteImport.update({
+  id: '/design-audit',
+  path: '/design-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForbiddenRoute = ForbiddenRouteImport.update({
+  id: '/forbidden',
+  path: '/forbidden',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsRoute = JobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MappaRoute = MappaRouteImport.update({
+  id: '/mappa',
+  path: '/mappa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistrationSuccessRoute = RegistrationSuccessRouteImport.update({
+  id: '/registration-success',
+  path: '/registration-success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RistoratoriRoute = RistoratoriRouteImport.update({
+  id: '/ristoratori',
+  path: '/ristoratori',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsRoute = ShiftsRouteImport.update({
+  id: '/shifts',
+  path: '/shifts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyPhoneRoute = VerifyPhoneRouteImport.update({
+  id: '/verify-phone',
+  path: '/verify-phone',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkersRoute = WorkersRouteImport.update({
+  id: '/workers',
+  path: '/workers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminBackendRoute = AdminBackendRouteImport.update({
+  id: '/backend',
+  path: '/backend',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminResetTestDbRoute = AdminResetTestDbRouteImport.update({
+  id: '/reset-test-db',
+  path: '/reset-test-db',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AnnouncementsIdRoute = AnnouncementsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AnnouncementsRoute,
+} as any)
+const AnnouncementsNewRoute = AnnouncementsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AnnouncementsRoute,
+} as any)
+const MessagesIdRoute = MessagesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => MessagesRoute,
+} as any)
+const RestaurantsIdRoute = RestaurantsIdRouteImport.update({
+  id: '/restaurants/$id',
+  path: '/restaurants/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewsIdRoute = ReviewsIdRouteImport.update({
+  id: '/reviews/$id',
+  path: '/reviews/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RistoratoreCollaboratoriRoute =
@@ -213,66 +250,19 @@ const RistoratoreCollaboratoriRoute =
     path: '/ristoratore/collaboratori',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ReviewsIdRoute = ReviewsIdRouteImport.update({
-  id: '/reviews/$id',
-  path: '/reviews/$id',
+const RistoratoreRecensioniRoute = RistoratoreRecensioniRouteImport.update({
+  id: '/ristoratore/recensioni',
+  path: '/ristoratore/recensioni',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RestaurantsIdRoute = RestaurantsIdRouteImport.update({
-  id: '/restaurants/$id',
-  path: '/restaurants/$id',
+const WorkersIdRoute = WorkersIdRouteImport.update({
+  id: '/workers_/$id',
+  path: '/workers/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MessagesIdRoute = MessagesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => MessagesRoute,
-} as any)
-const AnnouncementsNewRoute = AnnouncementsNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => AnnouncementsRoute,
-} as any)
-const AnnouncementsIdRoute = AnnouncementsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AnnouncementsRoute,
-} as any)
-const AdminResetTestDbRoute = AdminResetTestDbRouteImport.update({
-  id: '/reset-test-db',
-  path: '/reset-test-db',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminBackendRoute = AdminBackendRouteImport.update({
-  id: '/backend',
-  path: '/backend',
-  getParentRoute: () => AdminRoute,
-} as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const RistoratoreTurniShiftIdRoute = RistoratoreTurniShiftIdRouteImport.update({
-  id: '/ristoratore/turni/$shiftId',
-  path: '/ristoratore/turni/$shiftId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RistoratoreAnnunciNuovoRoute = RistoratoreAnnunciNuovoRouteImport.update({
-  id: '/ristoratore/annunci/nuovo',
-  path: '/ristoratore/annunci/nuovo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicJarvisKpiRoute = ApiPublicJarvisKpiRouteImport.update({
-  id: '/api/public/jarvis-kpi',
-  path: '/api/public/jarvis-kpi',
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
@@ -281,21 +271,31 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
+const ApiPublicJarvisKpiRoute = ApiPublicJarvisKpiRouteImport.update({
+  id: '/api/public/jarvis-kpi',
+  path: '/api/public/jarvis-kpi',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const RistoratoreAnnunciNuovoRoute = RistoratoreAnnunciNuovoRouteImport.update({
+  id: '/ristoratore/annunci/nuovo',
+  path: '/ristoratore/annunci/nuovo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RistoratoreTurniShiftIdRoute = RistoratoreTurniShiftIdRouteImport.update({
+  id: '/ristoratore/turni/$shiftId',
+  path: '/ristoratore/turni/$shiftId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksExpireStaleRoute =
   ApiPublicHooksExpireStaleRouteImport.update({
     id: '/api/public/hooks/expire-stale',
     path: '/api/public/hooks/expire-stale',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -644,186 +644,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/workers': {
-      id: '/workers'
-      path: '/workers'
-      fullPath: '/workers'
-      preLoaderRoute: typeof WorkersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/verify-phone': {
-      id: '/verify-phone'
-      path: '/verify-phone'
-      fullPath: '/verify-phone'
-      preLoaderRoute: typeof VerifyPhoneRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/shifts': {
-      id: '/shifts'
-      path: '/shifts'
-      fullPath: '/shifts'
-      preLoaderRoute: typeof ShiftsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ristoratori': {
-      id: '/ristoratori'
-      path: '/ristoratori'
-      fullPath: '/ristoratori'
-      preLoaderRoute: typeof RistoratoriRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/registration-success': {
-      id: '/registration-success'
-      path: '/registration-success'
-      fullPath: '/registration-success'
-      preLoaderRoute: typeof RegistrationSuccessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/messages': {
-      id: '/messages'
-      path: '/messages'
-      fullPath: '/messages'
-      preLoaderRoute: typeof MessagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mappa': {
-      id: '/mappa'
-      path: '/mappa'
-      fullPath: '/mappa'
-      preLoaderRoute: typeof MappaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/jobs': {
-      id: '/jobs'
-      path: '/jobs'
-      fullPath: '/jobs'
-      preLoaderRoute: typeof JobsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forbidden': {
-      id: '/forbidden'
-      path: '/forbidden'
-      fullPath: '/forbidden'
-      preLoaderRoute: typeof ForbiddenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design-audit': {
-      id: '/design-audit'
-      path: '/design-audit'
-      fullPath: '/design-audit'
-      preLoaderRoute: typeof DesignAuditRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/come-funziona': {
-      id: '/come-funziona'
-      path: '/come-funziona'
-      fullPath: '/come-funziona'
-      preLoaderRoute: typeof ComeFunzionaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/claude-visual-audit': {
-      id: '/claude-visual-audit'
-      path: '/claude-visual-audit'
-      fullPath: '/claude-visual-audit'
-      preLoaderRoute: typeof ClaudeVisualAuditRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/choose-role': {
-      id: '/choose-role'
-      path: '/choose-role'
-      fullPath: '/choose-role'
-      preLoaderRoute: typeof ChooseRoleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/browse': {
-      id: '/browse'
-      path: '/browse'
-      fullPath: '/browse'
-      preLoaderRoute: typeof BrowseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/billing': {
-      id: '/billing'
-      path: '/billing'
-      fullPath: '/billing'
-      preLoaderRoute: typeof BillingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/availability': {
-      id: '/availability'
-      path: '/availability'
-      fullPath: '/availability'
-      preLoaderRoute: typeof AvailabilityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/announcements': {
-      id: '/announcements'
-      path: '/announcements'
-      fullPath: '/announcements'
-      preLoaderRoute: typeof AnnouncementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account-error': {
@@ -833,88 +658,186 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workers_/$id': {
-      id: '/workers_/$id'
-      path: '/workers/$id'
-      fullPath: '/workers/$id'
-      preLoaderRoute: typeof WorkersIdRouteImport
+    '/announcements': {
+      id: '/announcements'
+      path: '/announcements'
+      fullPath: '/announcements'
+      preLoaderRoute: typeof AnnouncementsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ristoratore/recensioni': {
-      id: '/ristoratore/recensioni'
-      path: '/ristoratore/recensioni'
-      fullPath: '/ristoratore/recensioni'
-      preLoaderRoute: typeof RistoratoreRecensioniRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ristoratore/collaboratori': {
-      id: '/ristoratore/collaboratori'
-      path: '/ristoratore/collaboratori'
-      fullPath: '/ristoratore/collaboratori'
-      preLoaderRoute: typeof RistoratoreCollaboratoriRouteImport
+    '/availability': {
+      id: '/availability'
+      path: '/availability'
+      fullPath: '/availability'
+      preLoaderRoute: typeof AvailabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reviews/$id': {
-      id: '/reviews/$id'
-      path: '/reviews/$id'
-      fullPath: '/reviews/$id'
-      preLoaderRoute: typeof ReviewsIdRouteImport
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/restaurants/$id': {
-      id: '/restaurants/$id'
-      path: '/restaurants/$id'
-      fullPath: '/restaurants/$id'
-      preLoaderRoute: typeof RestaurantsIdRouteImport
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/messages/$id': {
-      id: '/messages/$id'
-      path: '/$id'
-      fullPath: '/messages/$id'
-      preLoaderRoute: typeof MessagesIdRouteImport
-      parentRoute: typeof MessagesRoute
+    '/choose-role': {
+      id: '/choose-role'
+      path: '/choose-role'
+      fullPath: '/choose-role'
+      preLoaderRoute: typeof ChooseRoleRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/announcements/new': {
-      id: '/announcements/new'
-      path: '/new'
-      fullPath: '/announcements/new'
-      preLoaderRoute: typeof AnnouncementsNewRouteImport
-      parentRoute: typeof AnnouncementsRoute
+    '/claude-visual-audit': {
+      id: '/claude-visual-audit'
+      path: '/claude-visual-audit'
+      fullPath: '/claude-visual-audit'
+      preLoaderRoute: typeof ClaudeVisualAuditRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/announcements/$id': {
-      id: '/announcements/$id'
-      path: '/$id'
-      fullPath: '/announcements/$id'
-      preLoaderRoute: typeof AnnouncementsIdRouteImport
-      parentRoute: typeof AnnouncementsRoute
+    '/come-funziona': {
+      id: '/come-funziona'
+      path: '/come-funziona'
+      fullPath: '/come-funziona'
+      preLoaderRoute: typeof ComeFunzionaRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/reset-test-db': {
-      id: '/admin/reset-test-db'
-      path: '/reset-test-db'
-      fullPath: '/admin/reset-test-db'
-      preLoaderRoute: typeof AdminResetTestDbRouteImport
-      parentRoute: typeof AdminRoute
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/backend': {
-      id: '/admin/backend'
-      path: '/backend'
-      fullPath: '/admin/backend'
-      preLoaderRoute: typeof AdminBackendRouteImport
-      parentRoute: typeof AdminRoute
+    '/design-audit': {
+      id: '/design-audit'
+      path: '/design-audit'
+      fullPath: '/design-audit'
+      preLoaderRoute: typeof DesignAuditRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/forbidden': {
+      id: '/forbidden'
+      path: '/forbidden'
+      fullPath: '/forbidden'
+      preLoaderRoute: typeof ForbiddenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs': {
+      id: '/jobs'
+      path: '/jobs'
+      fullPath: '/jobs'
+      preLoaderRoute: typeof JobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mappa': {
+      id: '/mappa'
+      path: '/mappa'
+      fullPath: '/mappa'
+      preLoaderRoute: typeof MappaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registration-success': {
+      id: '/registration-success'
+      path: '/registration-success'
+      fullPath: '/registration-success'
+      preLoaderRoute: typeof RegistrationSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ristoratori': {
+      id: '/ristoratori'
+      path: '/ristoratori'
+      fullPath: '/ristoratori'
+      preLoaderRoute: typeof RistoratoriRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts': {
+      id: '/shifts'
+      path: '/shifts'
+      fullPath: '/shifts'
+      preLoaderRoute: typeof ShiftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-phone': {
+      id: '/verify-phone'
+      path: '/verify-phone'
+      fullPath: '/verify-phone'
+      preLoaderRoute: typeof VerifyPhoneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workers': {
+      id: '/workers'
+      path: '/workers'
+      fullPath: '/workers'
+      preLoaderRoute: typeof WorkersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -924,32 +847,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ristoratore/turni/$shiftId': {
-      id: '/ristoratore/turni/$shiftId'
-      path: '/ristoratore/turni/$shiftId'
-      fullPath: '/ristoratore/turni/$shiftId'
-      preLoaderRoute: typeof RistoratoreTurniShiftIdRouteImport
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ristoratore/annunci/nuovo': {
-      id: '/ristoratore/annunci/nuovo'
-      path: '/ristoratore/annunci/nuovo'
-      fullPath: '/ristoratore/annunci/nuovo'
-      preLoaderRoute: typeof RistoratoreAnnunciNuovoRouteImport
+    '/admin/backend': {
+      id: '/admin/backend'
+      path: '/backend'
+      fullPath: '/admin/backend'
+      preLoaderRoute: typeof AdminBackendRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reset-test-db': {
+      id: '/admin/reset-test-db'
+      path: '/reset-test-db'
+      fullPath: '/admin/reset-test-db'
+      preLoaderRoute: typeof AdminResetTestDbRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/announcements/$id': {
+      id: '/announcements/$id'
+      path: '/$id'
+      fullPath: '/announcements/$id'
+      preLoaderRoute: typeof AnnouncementsIdRouteImport
+      parentRoute: typeof AnnouncementsRoute
+    }
+    '/announcements/new': {
+      id: '/announcements/new'
+      path: '/new'
+      fullPath: '/announcements/new'
+      preLoaderRoute: typeof AnnouncementsNewRouteImport
+      parentRoute: typeof AnnouncementsRoute
+    }
+    '/messages/$id': {
+      id: '/messages/$id'
+      path: '/$id'
+      fullPath: '/messages/$id'
+      preLoaderRoute: typeof MessagesIdRouteImport
+      parentRoute: typeof MessagesRoute
+    }
+    '/restaurants/$id': {
+      id: '/restaurants/$id'
+      path: '/restaurants/$id'
+      fullPath: '/restaurants/$id'
+      preLoaderRoute: typeof RestaurantsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/jarvis-kpi': {
-      id: '/api/public/jarvis-kpi'
-      path: '/api/public/jarvis-kpi'
-      fullPath: '/api/public/jarvis-kpi'
-      preLoaderRoute: typeof ApiPublicJarvisKpiRouteImport
+    '/reviews/$id': {
+      id: '/reviews/$id'
+      path: '/reviews/$id'
+      fullPath: '/reviews/$id'
+      preLoaderRoute: typeof ReviewsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+    '/ristoratore/collaboratori': {
+      id: '/ristoratore/collaboratori'
+      path: '/ristoratore/collaboratori'
+      fullPath: '/ristoratore/collaboratori'
+      preLoaderRoute: typeof RistoratoreCollaboratoriRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ristoratore/recensioni': {
+      id: '/ristoratore/recensioni'
+      path: '/ristoratore/recensioni'
+      fullPath: '/ristoratore/recensioni'
+      preLoaderRoute: typeof RistoratoreRecensioniRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workers_/$id': {
+      id: '/workers_/$id'
+      path: '/workers/$id'
+      fullPath: '/workers/$id'
+      preLoaderRoute: typeof WorkersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
@@ -959,11 +931,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/jarvis-kpi': {
+      id: '/api/public/jarvis-kpi'
+      path: '/api/public/jarvis-kpi'
+      fullPath: '/api/public/jarvis-kpi'
+      preLoaderRoute: typeof ApiPublicJarvisKpiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ristoratore/annunci/nuovo': {
+      id: '/ristoratore/annunci/nuovo'
+      path: '/ristoratore/annunci/nuovo'
+      fullPath: '/ristoratore/annunci/nuovo'
+      preLoaderRoute: typeof RistoratoreAnnunciNuovoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ristoratore/turni/$shiftId': {
+      id: '/ristoratore/turni/$shiftId'
+      path: '/ristoratore/turni/$shiftId'
+      fullPath: '/ristoratore/turni/$shiftId'
+      preLoaderRoute: typeof RistoratoreTurniShiftIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/expire-stale': {
@@ -971,6 +964,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/expire-stale'
       fullPath: '/api/public/hooks/expire-stale'
       preLoaderRoute: typeof ApiPublicHooksExpireStaleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
