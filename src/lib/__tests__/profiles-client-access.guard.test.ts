@@ -48,9 +48,7 @@ export function scanSource(rel: string, src: string): Finding[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(src))) {
     const before = src.slice(Math.max(0, m.index - 80), m.index);
-    if (/supabaseAdmin[\s\S]*$/.test(before) && !/;\s*[^;]*$/.test(before.split("supabaseAdmin").pop() ?? "")) {
-      continue; // accesso privilegiato lato server
-    }
+    if (/supabaseAdmin\s*$/.test(before)) continue; // accesso privilegiato lato server
     // Catena fino al primo ";" o max 800 caratteri
     const rest = src.slice(m.index, m.index + 800);
     const end = rest.indexOf(";");
