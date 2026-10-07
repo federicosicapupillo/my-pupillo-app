@@ -1,21 +1,13 @@
-# Report errori ultime 24 ore (sola lettura, 06/10/2026 06:51 UTC)
+# Errori nei registri, ultime 24 ore (controllo del 07/10/2026 alle 09:51 UTC)
 
-Nessuna modifica fatta. Questo è un report, non c'è niente da costruire.
+Solo un elenco. Non c'è niente da costruire e non ho modificato nulla.
 
-## Limite importante
-I registri accessibili coprono di fatto solo l'ultima ora circa (dalle 05:54 UTC). Nelle "24 ore" il database restituisce solo 101 righe in totale, tutte recenti. Per le ore precedenti non posso dire niente.
+**Limite:** i registri disponibili risalgono solo a circa un'ora fa (dalle 08:54 UTC). Prima di quell'ora non ci sono righe da controllare.
 
-## Fatti verificati
-1. Database (Postgres): 0 righe ERROR/FATAL, 0 "permission denied". Prova: query per gravità e testo, risultato vuoto.
-2. Accessi (auth): 0 risposte 4xx/5xx o errori. Prova: query su status >= 400 e livello error/fatal, risultato vuoto (4 righe totali, tutte ok).
-3. Richieste al backend (edge): 0 risposte 4xx/5xx su 15 richieste.
-4. Funzioni server del sito:
-   - `POST /mcp` -> 400: 2 volte, l'ultima alle 06:50:51 UTC. Causa probabile (non confermata): primo tentativo del client MCP prima dell'autenticazione; subito dopo seguono risposte 200 con login valido.
-   - Strumento MCP `search_announcements` -> esito "tool_error": 1 volta, alle 06:04:53 UTC. Causa non visibile nei registri (manca il dettaglio).
-   - Job `expire-stale`: 4 esecuzioni (06:00, 06:15, 06:30, 06:45), tutte 200, nessun errore.
-   - Pagine `pupillo.life/`: tutte 200.
-   - Nessuna chiamata a `jarvis-kpi` nel periodo.
-
-## Ipotesi da verificare (non fatti)
-- Il job crea "18 promemoria recensione" a ogni giro con gli stessi 18 turni. Potrebbe essere solo un conteggio dei candidati (con blocco dei doppioni a valle) oppure creare notifiche doppie. Da controllare sulle notifiche reali prima di concludere.
-- Avviso innocuo nell'anteprima: due file di test in `src/routes/__tests__/` generano un warning "does not export a Route".
+1. **Database:** nessun ERROR, FATAL o «permission denied». Prova: la ricerca non ha trovato righe.
+2. **Accessi:** nessuna risposta 4xx/5xx e nessun errore. Prova: 13 righe controllate, nessuna con errore.
+3. **Richieste al backend:** nessuna risposta 4xx/5xx. Prova: 38 richieste controllate.
+4. **Funzioni server**, l'unico errore trovato:
+   - `POST pupillo.life/mcp` ha risposto 400 per 2 volte, l'ultima alle 09:50:26 UTC.
+   - Causa: non è scritta nei registri. Ogni 400 arriva subito prima di una serie di risposte 200 con accesso valido. Probabilmente è la prima chiamata di apertura del collegamento, ma non è confermato.
+   - Tutto il resto ha risposto 200: il lavoro automatico `expire-stale` (alle 09:00, 09:15, 09:30 e 09:45), `jarvis-kpi` (alle 09:50:47) e la homepage.
