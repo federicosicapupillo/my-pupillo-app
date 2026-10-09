@@ -1,15 +1,17 @@
-# Errori nei registri (controllo dell'08/10/2026, ore 11:26 UTC)
+# Errori nei registri (controllo del 09/10/2026, ore 11:32 UTC)
 
-Solo un elenco: non c'è nessuna modifica da fare. Non ho toccato niente.
+Ecco solo l'elenco: non c'è nulla da modificare e non ho toccato niente.
 
-**Limite:** i registri coprono solo dalle 11:16 alle 11:26 UTC circa, non le 24 ore richieste. Per le ore precedenti non ci sono righe da controllare.
+**Limite:** non ci sono registri per tutte le 24 ore.
+- Database, accessi e richieste al backend: registri solo dalle 11:22 UTC circa.
+- Funzioni del sito: registri solo dalle 10:35 UTC circa.
 
-1. **Database:** nessun ERROR, nessun FATAL, nessun «permission denied». Prova: la ricerca non ha restituito righe.
-2. **Accessi:** nessuna risposta 4xx/5xx e nessun errore. Prova: 18 righe controllate.
-3. **Richieste al backend:** nessuna risposta 4xx/5xx. Prova: 34 richieste controllate.
-4. **Funzioni del sito pubblicato:** un solo tipo di errore.
-   - **Cosa:** `POST pupillo.life/mcp` ha risposto 400.
-   - **Quante volte:** 2, alle 11:17:02 e alle 11:24:59 UTC.
-   - **Causa:** non è scritta nei registri. Ogni 400 arriva subito prima di una serie di risposte 200 con accesso valido. È probabile, ma non confermato, che sia la prima chiamata con cui si apre il collegamento.
-   - **Altre risposte:** `jarvis-kpi` alle 11:25:26 e la homepage hanno risposto 200.
-5. **Anteprima (non il sito pubblicato):** alle 11:26 il server di anteprima si è riavviato da solo (codice 143, cioè arresto richiesto) ed è ripartito subito. Non è un errore dell'app.
+Per le ore precedenti non c'è niente da controllare.
+
+1. **Database:** nessun ERROR, FATAL o «permission denied». Prova: la ricerca non ha trovato righe.
+2. **Accessi:** nessuna risposta 4xx/5xx e nessun errore. Prova: controllate 10 righe.
+3. **Richieste al backend:** nessuna risposta 4xx/5xx. Prova: controllate 24 richieste.
+4. **Funzioni del sito pubblicato:**
+   - `POST pupillo.life/mcp` → 400, 2 volte, l'ultima alle 11:31:41 UTC. La causa non compare nei registri. Subito dopo arrivano risposte 200 con accesso valido, quindi probabilmente è la prima chiamata di apertura del collegamento (non confermato).
+   - `GET pupillo.life/robots.txt` → 404, 1 volta alle 10:35:18 UTC. La causa è che il sito non contiene un file `robots.txt` (il file usato dai motori di ricerca). Non blocca gli utenti.
+   - Hanno risposto tutti 200: il lavoro automatico `expire-stale` (10:45, 11:00, 11:15, 11:30), `jarvis-kpi` (11:31:59) e la homepage.
