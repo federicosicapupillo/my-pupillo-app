@@ -79,13 +79,12 @@ function Index() {
         </section>
 
         {/* Selettore mobile */}
-        <div role="tablist" aria-label="Scegli il tuo profilo" className="mx-auto mb-5 grid max-w-md grid-cols-2 gap-2 rounded-full border border-border p-1 md:hidden">
+        <div role="group" aria-label="Scegli il tuo profilo" className="mx-auto mb-5 grid max-w-md grid-cols-2 gap-2 rounded-full border border-border p-1 md:hidden">
           {(["worker", "restaurant"] as const).map((a) => (
             <button
               key={a}
-              role="tab"
-              id={`tab-${a}`}
-              aria-selected={audience === a}
+              type="button"
+              aria-pressed={audience === a}
               aria-controls={a === "worker" ? "per-lavoratori" : "per-locali"}
               onClick={() => setAudience(a)}
               className="rounded-full px-3 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
@@ -198,13 +197,12 @@ function AudienceCard(props: {
   return (
     <article
       id={props.id}
-      role="tabpanel"
-      aria-labelledby={`tab-${props.id === "per-lavoratori" ? "worker" : "restaurant"}`}
+      aria-labelledby={`${props.id}-title`}
       className={`scroll-mt-6 flex-col gap-4 rounded-3xl border bg-card/40 p-6 md:flex md:p-8 ${props.hidden ? "hidden" : "flex"}`}
       style={{ borderColor: "color-mix(in oklab, var(--neon-violet) 35%, transparent)" }}
     >
       <span className="text-xs font-bold uppercase tracking-wider" style={{ color: props.accent }}>{props.label}</span>
-      <h2 className="text-2xl font-black md:text-3xl">{props.title}</h2>
+      <h2 id={`${props.id}-title`} className="text-2xl font-black md:text-3xl">{props.title}</h2>
       <p className="text-muted-foreground">{props.text}</p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         {props.cta}
