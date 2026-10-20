@@ -110,6 +110,7 @@ function Index() {
             note="Sempre gratuito per i lavoratori"
             accent={LIME}
             video={<AudienceVideo video={HOME_VIDEOS.worker} accent={LIME} />}
+            videoCaption="Per te che cerchi lavoro."
           />
           <AudienceCard
             id="per-locali"
@@ -125,6 +126,7 @@ function Index() {
             note={promoActive ? "Gratis fino al 31/12/2026" : null}
             accent={VIOLET}
             video={<AudienceVideo video={HOME_VIDEOS.restaurant} accent={VIOLET} />}
+            videoCaption="Per te che cerchi personale per il tuo locale."
           />
         </section>
 
@@ -193,6 +195,7 @@ function AudienceCard(props: {
   note: string | null;
   accent: string;
   video: React.ReactNode;
+  videoCaption: string;
 }) {
   return (
     <article
@@ -201,14 +204,25 @@ function AudienceCard(props: {
       className={`scroll-mt-6 flex-col gap-4 rounded-3xl border bg-card/40 p-6 md:flex md:p-8 ${props.hidden ? "hidden" : "flex"}`}
       style={{ borderColor: "color-mix(in oklab, var(--neon-violet) 35%, transparent)" }}
     >
-      <span className="text-xs font-bold uppercase tracking-wider" style={{ color: props.accent }}>{props.label}</span>
+      <span
+        className="self-start rounded-full border px-3 py-1 text-sm font-extrabold uppercase tracking-wider"
+        style={{ color: props.accent, borderColor: props.accent, background: `color-mix(in oklab, ${props.accent} 12%, transparent)` }}
+      >
+        {props.label}
+      </span>
       <h2 id={`${props.id}-title`} className="text-2xl font-black md:text-3xl">{props.title}</h2>
       <p className="text-muted-foreground">{props.text}</p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         {props.cta}
         {props.note && <span className="text-sm font-semibold text-muted-foreground">{props.note}</span>}
       </div>
-      <div className="mt-2">{props.video}</div>
+      <div className="mt-2 flex flex-col gap-3">
+        <div>
+          <h3 className="text-lg font-extrabold">Scopri come funziona</h3>
+          <p className="text-sm text-muted-foreground">{props.videoCaption}</p>
+        </div>
+        {props.video}
+      </div>
     </article>
   );
 }

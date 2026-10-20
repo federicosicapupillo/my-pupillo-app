@@ -7,7 +7,11 @@ export function AudienceVideo({ video, accent }: { video: HomeVideo; accent: str
   if (video.src) {
     return (
       <video
-        className="aspect-video w-full rounded-2xl border border-border bg-muted"
+        className={
+          video.vertical
+            ? "mx-auto block aspect-[9/16] max-h-[560px] w-auto max-w-full rounded-2xl border border-border bg-muted"
+            : "aspect-video w-full rounded-2xl border border-border bg-muted"
+        }
         controls
         preload="none"
         playsInline
