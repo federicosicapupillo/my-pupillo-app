@@ -4,7 +4,7 @@
  * (nessun pulsante play finto). Inserire qui l'URL reale quando disponibile.
  */
 import workerVideo from "@/assets/pupillo-lavoratori-v2.mp4.asset.json";
-import workerPoster from "@/assets/pupillo-lavoratori-v2-poster.jpg.asset.json";
+import workerPoster from "@/assets/pupillo-lavoratori-v3-poster.jpg.asset.json";
 import restaurantVideo from "@/assets/pupillo-ristoratori-stream.mp4.asset.json";
 import restaurantPoster from "@/assets/pupillo-ristoratori-poster.jpg.asset.json";
 
