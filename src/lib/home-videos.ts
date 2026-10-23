@@ -3,8 +3,8 @@
  * Finché `src` è null il riquadro mostra un'anteprima con «Video in arrivo»
  * (nessun pulsante play finto). Inserire qui l'URL reale quando disponibile.
  */
-import workerVideo from "@/assets/pupillo-lavoratori.mp4.asset.json";
-import workerPoster from "@/assets/pupillo-lavoratori-poster.jpg.asset.json";
+import workerVideo from "@/assets/pupillo-lavoratori-v2.mp4.asset.json";
+import workerPoster from "@/assets/pupillo-lavoratori-v2-poster.jpg.asset.json";
 import restaurantVideo from "@/assets/pupillo-ristoratori-stream.mp4.asset.json";
 import restaurantPoster from "@/assets/pupillo-ristoratori-poster.jpg.asset.json";
 
