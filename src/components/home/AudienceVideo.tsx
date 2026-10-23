@@ -2,7 +2,7 @@ import { Clock } from "lucide-react";
 import mascot from "@/assets/pupillo-mascot.png";
 import type { HomeVideo } from "@/lib/home-videos";
 
-/** Video nativo (no autoplay, preload none) oppure anteprima onesta «Video in arrivo». */
+/** Video nativo senza autoplay, caricamento configurabile, oppure anteprima «Video in arrivo». */
 export function AudienceVideo({ video, accent }: { video: HomeVideo; accent: string }) {
   if (video.src) {
     return (
@@ -13,7 +13,7 @@ export function AudienceVideo({ video, accent }: { video: HomeVideo; accent: str
             : "aspect-video w-full rounded-2xl border border-border bg-muted"
         }
         controls
-        preload="none"
+        preload={video.preload ?? "none"}
         playsInline
         poster={video.poster ?? undefined}
         aria-label={video.title}
