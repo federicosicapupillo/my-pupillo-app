@@ -394,6 +394,11 @@ function AvailabilityPage() {
 
   /** Unico menu "Disponibilità": imposta la fascia del giorno selezionato. */
   const setDaySlot = (slot: TimeSlot) => {
+    if (primaryDow != null) setDisabledDayEditors(prev => {
+      const next = new Set(prev);
+      next.delete(primaryDow);
+      return next;
+    });
     const def = SLOT_DEFAULT_TIMES[slot];
     applyToSelected((d) => {
       const prev = d.slots[0];
@@ -1151,28 +1156,34 @@ function AvailabilityPage() {
               </CardHeader>
 
               <CardContent className="space-y-3">
+                <div>
+                  <div className="mb-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <label htmlFor="day-availability" className="text-xs font-medium text-muted-foreground">Disponibilità</label>
+                    <span className="text-xs text-muted-foreground">Seleziona la tua disponibilità</span>
+                  </div>
+                  <Select value={!dayEditorEnabled ? "non_disponibile" : daySlot?.time_slot ?? undefined} onValueChange={(v) => {
+                    if (v === "non_disponibile") setDayAvailable(false);
+                    else setDaySlot(v as TimeSlot);
+                  }}>
+                    <SelectTrigger id="day-availability" className="h-10">
+                      <SelectValue placeholder="Seleziona una fascia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="non_disponibile">Non disponibile</SelectItem>
+                      {PANEL_SLOTS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt === "intera_giornata" ? "Tutto il giorno" : opt === "personalizzata" ? "Personalizzato" : SLOT_LABELS[opt]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {!dayEditorEnabled ? (
                   <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
-                    Attiva il selettore per impostare la disponibilità di questo giorno.
+                    Non disponibile per questo giorno.
                   </div>
                 ) : (
                   <>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Disponibilità</label>
-                      <Select value={daySlot?.time_slot ?? undefined} onValueChange={(v) => setDaySlot(v as TimeSlot)}>
-                        <SelectTrigger className="h-10">
-                          <SelectValue placeholder="Seleziona una fascia" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PANEL_SLOTS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>
-                              {opt === "intera_giornata" ? "Tutto il giorno" : opt === "personalizzata" ? "Personalizzato" : SLOT_LABELS[opt]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
                     {daySlot && daySlot.time_slot !== "personalizzata" && (
                       <p className="rounded-lg border bg-background/60 px-3 py-2 text-sm tabular-nums">
                         {daySlot.start_time && daySlot.end_time
