@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { isDayEditorEnabled } from '../availability';
+import { dayAvailabilityValue } from '../availability';
 
-describe('Selettore disponibilità del giorno', () => {
-  it('è acceso inizialmente anche senza orari salvati', () => {
-    expect(isDayEditorEnabled(false, false)).toBe(true);
+describe('Menu disponibilità del giorno', () => {
+  it('parte da non disponibile senza orari salvati', () => {
+    expect(dayAvailabilityValue(false, undefined, false)).toBe('non_disponibile');
   });
-  it('può essere spento esplicitamente', () => {
-    expect(isDayEditorEnabled(false, true)).toBe(false);
+  it('mostra non disponibile dopo disattivazione anche con orari precedenti', () => {
+    expect(dayAvailabilityValue(false, 'cena', false)).toBe('non_disponibile');
   });
-  it('resta acceso per disponibilità già salvate', () => {
-    expect(isDayEditorEnabled(true, false)).toBe(true);
+  it('mantiene la fascia già salvata', () => {
+    expect(dayAvailabilityValue(true, 'cena', false)).toBe('cena');
+  });
+  it('mantiene disponibilità flessibili già salvate', () => {
+    expect(dayAvailabilityValue(true, undefined, true)).toBe('flessibile');
   });
 });

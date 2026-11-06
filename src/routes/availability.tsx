@@ -56,7 +56,7 @@ import {
   type AvailabilityExceptionRow,
   crossesMidnight,
   isValidTimeRange,
-  isDayEditorEnabled,
+  dayAvailabilityValue,
 } from "@/lib/availability";
 import {
   addMonths,
@@ -234,7 +234,6 @@ function AvailabilityPage() {
   }, [profile]);
 
   const [days, setDays] = useState<DayState[]>(() => Array.from({ length: 7 }, () => emptyDay()));
-  const [disabledDayEditors, setDisabledDayEditors] = useState<Set<number>>(() => new Set());
   const [area, setArea] = useState<WorkArea>({ city: "", province: "", district: "", radius_km: null, notes: "" });
   const [exceptions, setExceptions] = useState<AvailabilityExceptionRow[]>([]);
   const [newExc, setNewExc] = useState<NewExc>(() => emptyNewExc());
@@ -377,11 +376,6 @@ function AvailabilityPage() {
   // ─────────── Editing fasce ───────────
   const setDayAvailable = (on: boolean) => {
     if (primaryDow == null) return;
-    setDisabledDayEditors(prev => {
-      const next = new Set(prev);
-      if (on) next.delete(primaryDow); else next.add(primaryDow);
-      return next;
-    });
     applyToSelected((d) => ({
       ...d,
       is_available: on && (d.flexible || d.slots.length > 0),
@@ -394,11 +388,6 @@ function AvailabilityPage() {
 
   /** Unico menu "Disponibilità": imposta la fascia del giorno selezionato. */
   const setDaySlot = (slot: TimeSlot) => {
-    if (primaryDow != null) setDisabledDayEditors(prev => {
-      const next = new Set(prev);
-      next.delete(primaryDow);
-      return next;
-    });
     const def = SLOT_DEFAULT_TIMES[slot];
     applyToSelected((d) => {
       const prev = d.slots[0];
@@ -752,7 +741,7 @@ function AvailabilityPage() {
   }[saveStatus];
 
   const panelDay = primaryDow != null ? days[primaryDow] : null;
-  const dayEditorEnabled = panelDay != null && isDayEditorEnabled(panelDay.is_available, primaryDow != null && disabledDayEditors.has(primaryDow));
+  const dayEditorEnabled = !!panelDay?.is_available;
   const daySlot = panelDay?.slots[0] ?? null;
 
   // ─────────── Navigazione interna: blocco con dialog personalizzato ───────────
@@ -1147,12 +1136,6 @@ function AvailabilityPage() {
                     Questa impostazione vale per tutti i {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className={cn("text-xs font-medium", panelDay.is_available ? "text-primary" : "text-muted-foreground")}>
-                    {dayEditorEnabled ? "Disponibile" : "Non disponibile"}
-                  </span>
-                  <Switch checked={dayEditorEnabled} onCheckedChange={setDayAvailable} aria-label="Disponibile" />
-                </div>
               </CardHeader>
 
               <CardContent className="space-y-3">
@@ -1161,7 +1144,7 @@ function AvailabilityPage() {
                     <label htmlFor="day-availability" className="text-xs font-medium text-muted-foreground">Disponibilità</label>
                     <span className="text-xs text-muted-foreground">Seleziona la tua disponibilità</span>
                   </div>
-                  <Select value={!dayEditorEnabled ? "non_disponibile" : daySlot?.time_slot ?? undefined} onValueChange={(v) => {
+                  <Select value={dayAvailabilityValue(panelDay.is_available, daySlot?.time_slot, panelDay.flexible)} onValueChange={(v) => {
                     if (v === "non_disponibile") setDayAvailable(false);
                     else setDaySlot(v as TimeSlot);
                   }}>
@@ -1170,6 +1153,7 @@ function AvailabilityPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="non_disponibile">Non disponibile</SelectItem>
+                      {panelDay.flexible && <SelectItem value="flessibile">{SLOT_LABELS.flessibile}</SelectItem>}
                       {PANEL_SLOTS.map((opt) => (
                         <SelectItem key={opt} value={opt}>
                           {opt === "intera_giornata" ? "Tutto il giorno" : opt === "personalizzata" ? "Personalizzato" : SLOT_LABELS[opt]}
