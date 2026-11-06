@@ -15,5 +15,6 @@ Errori reali mai nascosti con popup generici: messaggio chiaro + fix della causa
 Dopo ogni modifica riportare: file modificati, tabelle toccate, policy RLS create/modificate, logica cambiata, test eseguiti, rischi residui.
 
 ## Memories
+- [Valutazione curriculum](mem://preferences/curriculum-assessment.md) — Stelle Pupillo separate dalle recensioni dei turni; pubblicare solo 4/5 o 5/5 con consenso e controllo umano.
 - [Località onboarding lavoratori](mem://preferences/worker-onboarding-location.md) — Partenza solo Torino con quartiere; residenza in tutta Italia, con menu regioni.
 - [Regole globali progetto](mem://rules/global) — Versione estesa delle 12 regole Pupillo (sicurezza, candidature, crediti, privacy, test obbligatori).

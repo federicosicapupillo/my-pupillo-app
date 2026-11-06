@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Valutazione curriculum Pupillo: richiesta e consenso, analisi per mansione, approvazione admin, stelle separate sul profilo; test e verifica in sessione.
+
 - [x] Curriculum facoltativo privato in Esperienza e preferenze: PDF max 5 MB, apertura, sostituzione, rimozione; 4 test e flusso verificato in sessione su desktop/mobile, file di prova rimosso.
 
 - [x] Onboarding lavoratori: partenza Torino, quartieri e residenza regione/provincia/comune; area operativa allineata senza cancellazioni. 35 test superati; menu provati in sessione su desktop/mobile senza salvare un profilo.
