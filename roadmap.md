@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Valutazione curriculum Pupillo: richiesta e consenso, analisi per mansione, approvazione admin, stelle separate sul profilo; test e verifica in sessione.
+- [x] Valutazione curriculum Pupillo: richiesta e consenso, analisi per mansione, approvazione admin, stelle separate sul profilo; 11 test passati, chiamata IA su PDF fittizio riuscita, richiesta/persistenza/revoca verificate nell'onboarding autenticato; PDF di prova rimosso.
+- [ ] Verifica integrale approvazione admin → stelle visibili su profilo completo — sessione disponibile solo lavoratore con onboarding incompleto; serve un account admin autorizzato e un profilo di prova completo.
 
 - [x] Curriculum facoltativo privato in Esperienza e preferenze: PDF max 5 MB, apertura, sostituzione, rimozione; 4 test e flusso verificato in sessione su desktop/mobile, file di prova rimosso.
 

@@ -1,5 +1,7 @@
 # Project rules
 
+- Keep CV assessments outside reviews/reputation; only server-side AI produces proposals and an admin RPC publishes them after owner consent, using version checks and sanitized reads so replacing/revoking a CV removes its badge.
+
 - Store optional worker curricula separately from profile completion fields in private owner-only storage; validate PDF bytes server-side and keep upload independent of onboarding completion.
 
 - Keep residence region/province selectors separate from operational-area configuration; onboarding start-city rules are narrower than job geography, so national residence choices never authorize a work area.

@@ -17,9 +17,10 @@ import { formatWorkerLocation, resolveWorkerCity, resolveWorkerZone } from "@/li
 import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summary";
 import type { AvailabilityRow } from "@/lib/availability";
 import { reliabilityDisplayValue } from "@/lib/worker-reliability";
+import { CurriculumRating } from '@/components/CurriculumAssessment';
 
 export const Route = createFileRoute("/workers_/$id")({
-  head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }, { name:'description',content:'Esperienza, curriculum valutato e recensioni dei turni del lavoratore su Pupillo.' }, { property:'og:title',content:'Profilo lavoratore — Pupillo' }, { property:'og:description',content:'Esperienza, curriculum valutato e recensioni dei turni del lavoratore su Pupillo.' }, { property:'og:type',content:'website' }, { name:'twitter:card',content:'summary' }] }),
   component: () => <RequireAuth><WorkerDetailPage /></RequireAuth>,
 });
 
@@ -221,6 +222,7 @@ function WorkerDetailPage() {
 
         <div className="space-y-4">
           <WorkerReputationCard workerId={w.id} profile={w} />
+          <CurriculumRating workerId={w.id} />
 
           <Card title="Esperienza">
             <Row label="Anni di esperienza" value={fmtExperienceYears(w.experience_years)} />

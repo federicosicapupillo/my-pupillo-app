@@ -464,6 +464,27 @@ export type Database = {
         }
         Relationships: []
       }
+      curriculum_analysis_service_state: {
+        Row: {
+          id: boolean
+          message: string | null
+          paused: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          message?: string | null
+          paused?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          message?: string | null
+          paused?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discount_codes: {
         Row: {
           applies_to: Database["public"]["Enums"]["discount_applies_to"]
@@ -2165,6 +2186,84 @@ export type Database = {
           },
         ]
       }
+      worker_curriculum_assessments: {
+        Row: {
+          consent_at: string | null
+          curriculum_path: string
+          doubts: boolean
+          error_message: string | null
+          evaluable: boolean
+          evidence: Json | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role_label: string
+          rubric_version: string
+          scores: Json | null
+          stars: number | null
+          status: string
+          total: number | null
+          updated_at: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          consent_at?: string | null
+          curriculum_path: string
+          doubts?: boolean
+          error_message?: string | null
+          evaluable?: boolean
+          evidence?: Json | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role_label: string
+          rubric_version?: string
+          scores?: Json | null
+          stars?: number | null
+          status?: string
+          total?: number | null
+          updated_at?: string
+          user_id: string
+          version?: string
+        }
+        Update: {
+          consent_at?: string | null
+          curriculum_path?: string
+          doubts?: boolean
+          error_message?: string | null
+          evaluable?: boolean
+          evidence?: Json | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role_label?: string
+          rubric_version?: string
+          scores?: Json | null
+          stars?: number | null
+          status?: string
+          total?: number | null
+          updated_at?: string
+          user_id?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_curriculum_assessments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_curriculum_assessments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_incidents: {
         Row: {
           actual_delay_minutes: number | null
@@ -2858,6 +2957,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      cancel_curriculum_analysis: {
+        Args: { _user_id: string; _version: string }
+        Returns: undefined
+      }
       canonical_job_role: { Args: { _value: string }; Returns: string }
       claim_signup_role: { Args: { _role: string }; Returns: string }
       consume_credits: {
@@ -3155,6 +3258,14 @@ export type Database = {
           viewer_role: string
         }[]
       }
+      get_worker_curriculum_rating: {
+        Args: { _worker_id: string }
+        Returns: {
+          reviewed_at: string
+          role_label: string
+          stars: number
+        }[]
+      }
       grant_credits: {
         Args: {
           _amount: number
@@ -3251,6 +3362,10 @@ export type Database = {
         Args: { _notes?: string; _now?: string; _shift_id: string }
         Returns: Json
       }
+      request_curriculum_assessment: {
+        Args: { _role: string }
+        Returns: undefined
+      }
       resolve_current_user_role: {
         Args: never
         Returns: {
@@ -3268,6 +3383,16 @@ export type Database = {
       restaurant_contact_worker: {
         Args: { _announcement_id: string; _origin?: string; _worker_id: string }
         Returns: string
+      }
+      resume_curriculum_analysis: { Args: never; Returns: undefined }
+      review_curriculum_assessment: {
+        Args: {
+          _approve: boolean
+          _note: string
+          _user_id: string
+          _version: string
+        }
+        Returns: undefined
       }
       search_worker_availability_exceptions_public: {
         Args: { _from_date: string; _worker_ids: string[] }
@@ -3332,6 +3457,7 @@ export type Database = {
         Args: { _city: string; _lat?: number; _lng?: number; _province: string }
         Returns: boolean
       }
+      withdraw_curriculum_assessment: { Args: never; Returns: undefined }
       worker_conflicts_with_announcement: {
         Args: {
           _announcement_id: string

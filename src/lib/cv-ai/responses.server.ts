@@ -1,11 +1,21 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, type ModelMessage } from "ai";
+import { streamText, Output, type ModelMessage } from "ai";
+import { z } from 'zod';
 
 import {
   createLovableAiGatewayRunIdFetch,
   getLovableAiGatewayRunId,
   withLovableAiGatewayRunIdHeader,
-} from "../../ai-apps-gateway-sdk/examples/run-id.ts";
+} from "./run-id.server.ts";
+
+export const cvOutput = z.object({
+  evaluable: z.boolean(), doubts: z.boolean(),
+  experience: z.number(), skills: z.number(), responsibility: z.number(), training: z.number(), clarity: z.number(),
+  evidence: z.array(z.object({ criterion: z.string(), quote: z.string(), explanation: z.string() })),
+});
+export class CvGatewayError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
 
 export function createResponsesCall(
   request: Request,
@@ -18,11 +28,20 @@ export function createResponsesCall(
     baseURL: `${config.baseURL.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1`,
     apiKey: config.apiKey,
     headers: { "Lovable-API-Key": config.apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    fetch: runIdFetch.fetch,
+    fetch: async (input, init) => {
+      const response = await runIdFetch.fetch(input, init);
+      if (!response.ok) {
+        const body = await response.clone().json().catch(() => null) as { message?: string; error?: { message?: string } } | null;
+        throw new CvGatewayError(response.status, body?.message ?? body?.error?.message ?? 'Il servizio di analisi non è disponibile.');
+      }
+      return response;
+    },
   });
   const reasoning = config.model !== "openai/chat-latest";
   const result = streamText({
     model: provider.responses(config.model),
+    output: Output.object({ schema: cvOutput }),
+    maxRetries: 0,
     // AI SDK 6 lacks `instructions`: rename this key to `system` there.
     ...(instructions ? { instructions } : {}),
     messages,

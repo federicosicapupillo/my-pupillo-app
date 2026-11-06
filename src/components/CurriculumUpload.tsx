@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadCurriculum } from "@/lib/curriculum.functions";
 import { CURRICULUM_BUCKET } from "@/lib/curriculum-file";
 import { toast } from "sonner";
+import { CurriculumAssessmentRequest } from '@/components/CurriculumAssessment';
 
 type Curriculum = { storage_path: string; file_name: string };
 
@@ -82,6 +83,7 @@ export function CurriculumUpload({ userId }: { userId: string }) {
             <Button type="button" variant="ghost" size="icon" disabled={busy} aria-label="Rimuovi curriculum" title="Rimuovi curriculum" onClick={() => void remove()}><Trash2 className="h-4 w-4" /></Button>
           </>}
         </div>
+        {curriculum && <CurriculumAssessmentRequest userId={userId} curriculumPath={curriculum.storage_path} />}
       </>}
   </div>;
 }

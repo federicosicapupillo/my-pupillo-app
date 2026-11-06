@@ -39,9 +39,11 @@ import { Lock } from "lucide-react";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 import { AccountSecuritySection } from "@/components/AccountSecuritySection";
 import { useMyReputation } from "@/hooks/use-my-reputation";
+import { CurriculumRating } from '@/components/CurriculumAssessment';
+import { CurriculumUpload } from '@/components/CurriculumUpload';
 
 export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "Profilo — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Profilo — Pupillo" }, { name:'description',content:'Profilo personale, curriculum e reputazione su Pupillo.' }, { property:'og:title',content:'Profilo — Pupillo' }, { property:'og:description',content:'Profilo personale, curriculum e reputazione su Pupillo.' }, { property:'og:type',content:'website' }, { name:'twitter:card',content:'summary' }] }),
   component: () => <RequireAuth><Profile /></RequireAuth>,
 });
 
@@ -111,6 +113,7 @@ function Profile() {
       {role === "worker" && user?.id && (
         <div className="mt-6">
           <h2 className="font-semibold mb-2">La mia reputazione</h2>
+          <CurriculumRating workerId={user.id} />
           <WorkerReputationCard workerId={user.id} profile={repProfile} showTips />
         </div>
       )}
@@ -676,6 +679,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
           <Row label="Automunito" value={motorLabel} />
         </div>
       )}
+      {userId && <CurriculumUpload userId={userId} />}
     </ProfileBox>
   );
 }

@@ -36,6 +36,20 @@
       "when": 1793978361828,
       "tag": "0004_private_worker_curricula",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793979790217,
+      "tag": "0005_worker_curriculum_assessments",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793980058127,
+      "tag": "0006_cv_analysis_service_guard",
+      "breakpoints": true
     }
   ]
 }

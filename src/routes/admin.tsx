@@ -22,9 +22,10 @@ import { AdminRoleRepairSection } from "@/components/AdminRoleRepairSection";
 import { AdminLaunchAreasSection } from "@/components/AdminLaunchAreasSection";
 import { AdminFeatureFlagsSection } from "@/components/AdminFeatureFlagsSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AdminCurriculumAssessments } from '@/components/AdminCurriculumAssessments';
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Admin — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Admin — Pupillo" }, { name:'description',content:'Gestione e verifica della piattaforma Pupillo.' }, { property:'og:title',content:'Admin — Pupillo' }, { property:'og:description',content:'Gestione e verifica della piattaforma Pupillo.' }, { property:'og:type',content:'website' }, { name:'twitter:card',content:'summary' }] }),
   component: () => <RequireRole allow={["admin"]}><Admin /></RequireRole>,
 });
 
@@ -286,6 +287,7 @@ function Admin() {
           <TabsTrigger value="announcements">Annunci</TabsTrigger>
           <TabsTrigger value="credits">Crediti</TabsTrigger>
           <TabsTrigger value="reviews">Recensioni</TabsTrigger>
+          <TabsTrigger value="curricula">Curriculum</TabsTrigger>
           <TabsTrigger value="backups">Backup</TabsTrigger>
           <TabsTrigger value="support">Segnalazioni</TabsTrigger>
           <TabsTrigger value="features">Funzionalità</TabsTrigger>
@@ -293,6 +295,7 @@ function Admin() {
         </TabsList>
 
         {/* PANORAMICA */}
+        <TabsContent value="curricula"><AdminCurriculumAssessments /></TabsContent>
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-4 md:grid-cols-4">
             {[
