@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Mostrare la valutazione curriculum approvata nella sezione Reputation Score della dashboard, separata dalle recensioni, e chiarire la visibilità ai ristoratori nella richiesta e nel consenso.
+
 - [x] Valutazione curriculum Pupillo: richiesta e consenso, analisi per mansione, approvazione admin, stelle separate sul profilo; 11 test passati, chiamata IA su PDF fittizio riuscita, richiesta/persistenza/revoca verificate nell'onboarding autenticato; PDF di prova rimosso.
 - [ ] Verifica integrale approvazione admin → stelle visibili su profilo completo — sessione disponibile solo lavoratore con onboarding incompleto; serve un account admin autorizzato e un profilo di prova completo.
 

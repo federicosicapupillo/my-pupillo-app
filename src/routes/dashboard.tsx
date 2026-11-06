@@ -39,7 +39,14 @@ import { emitRestaurantStatsRefresh } from "@/lib/restaurant-dashboard-stats";
 
 
 export const Route = createFileRoute("/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Pupillo" }] }),
+  head: () => ({ meta: [
+    { title: "Dashboard — Pupillo" },
+    { name: "description", content: "Turni, disponibilità e valutazioni del tuo profilo Pupillo." },
+    { property: "og:title", content: "Dashboard — Pupillo" },
+    { property: "og:description", content: "Turni, disponibilità e valutazioni del tuo profilo Pupillo." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => <RequireAuth><DashboardInner /></RequireAuth>,
 });
 
