@@ -23,6 +23,9 @@ export function canPublishCurriculum(a: CvPublicationState, currentCurriculum: b
     typeof clarity === 'number' && clarity >= 5 && a.total !== null && a.total >= 70 &&
     a.stars === (a.total >= 85 ? 5 : 4);
 }
+export function shouldAutoPublishCurriculum(a: CvPublicationState, currentCurriculum: boolean, publicationConsent: boolean) {
+  return publicationConsent && canPublishCurriculum(a, currentCurriculum);
+}
 export function scoreCurriculum(scores: CvScores, evaluable: boolean, doubts: boolean) {
   if (!CV_CRITERIA.every(c => Number.isInteger(scores[c.key]) && scores[c.key] >= 0 && scores[c.key] <= c.max)) {
     throw new Error('Punteggio non valido');

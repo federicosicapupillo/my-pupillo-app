@@ -2188,6 +2188,7 @@ export type Database = {
       }
       worker_curriculum_assessments: {
         Row: {
+          auto_publication_consent: boolean
           consent_at: string | null
           curriculum_path: string
           doubts: boolean
@@ -2209,6 +2210,7 @@ export type Database = {
           version: string
         }
         Insert: {
+          auto_publication_consent?: boolean
           consent_at?: string | null
           curriculum_path: string
           doubts?: boolean
@@ -2230,6 +2232,7 @@ export type Database = {
           version?: string
         }
         Update: {
+          auto_publication_consent?: boolean
           consent_at?: string | null
           curriculum_path?: string
           doubts?: boolean
@@ -3364,6 +3367,10 @@ export type Database = {
       report_shift_no_show: {
         Args: { _notes?: string; _now?: string; _shift_id: string }
         Returns: Json
+      }
+      request_auto_public_curriculum_assessment: {
+        Args: { _publication_consent: boolean; _role: string }
+        Returns: undefined
       }
       request_curriculum_assessment: {
         Args: { _role: string }

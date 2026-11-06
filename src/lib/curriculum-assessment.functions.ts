@@ -4,13 +4,13 @@ import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { z } from 'zod';
 import { JOB_ROLES } from '@/lib/job-roles';
 import { CURRICULUM_BUCKET, validateCurriculumBytes } from '@/lib/curriculum-file';
-import { scoreCurriculum, CV_CRITERIA, canAnalyzeCurriculum } from '@/lib/curriculum-assessment';
+import { scoreCurriculum, CV_CRITERIA, canAnalyzeCurriculum, shouldAutoPublishCurriculum } from '@/lib/curriculum-assessment';
 
 export const requestCvAssessment = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ role: z.string(), consent: z.literal(true) }))
+  .inputValidator(z.object({ role: z.string(), consent: z.literal(true), publicationConsent: z.literal(true) }))
   .handler(async ({ data, context }) => {
     if (!JOB_ROLES.includes(data.role)) return { ok: false, error: 'Seleziona una mansione valida.' };
-    const { error } = await context.supabase.rpc('request_curriculum_assessment', { _role: data.role });
+    const { error } = await context.supabase.rpc('request_auto_public_curriculum_assessment', { _role: data.role, _publication_consent: data.publicationConsent });
     return error ? { ok: false, error: error.message } : { ok: true, error: '' };
   });
 
@@ -60,7 +60,9 @@ export const analyzeCvAssessment = createServerFn({ method: 'POST' }).middleware
       const evidence = output.evidence.slice(0,10).map(e => ({ criterion: e.criterion, quote: e.quote.slice(0,300), explanation: e.explanation.slice(0,300) }));
       const doubts = output.doubts || CV_CRITERIA.some(c => scores[c.key]>0 && !evidence.some(e => e.criterion===c.key && e.quote.trim()));
       const scoring = scoreCurriculum(scores, output.evaluable, doubts);
-      const { error, data: saved } = await save({ scores, evidence, ...scoring, evaluable: output.evaluable, doubts, status: output.evaluable ? 'approved' : 'not_evaluable', reviewed_by: null, reviewed_at: new Date().toISOString(), review_note: 'Valutazione automatica Pupillo delle informazioni dichiarate nel curriculum.', error_message: null, public_visible: false });
+      const status = output.evaluable ? 'approved' : 'not_evaluable';
+      const publicVisible = shouldAutoPublishCurriculum({ scores, ...scoring, evaluable: output.evaluable, doubts, status, consent_at: assessment.consent_at }, true, assessment.auto_publication_consent);
+      const { error, data: saved } = await save({ scores, evidence, ...scoring, evaluable: output.evaluable, doubts, status, reviewed_by: null, reviewed_at: new Date().toISOString(), review_note: 'Valutazione automatica Pupillo delle informazioni dichiarate nel curriculum.', error_message: null, public_visible: publicVisible });
       if (error || !saved?.length) return { ok: false, error: 'La richiesta è cambiata: valutazione non salvata.' };
       return { ok: true, error: '' };
     } catch (error) {

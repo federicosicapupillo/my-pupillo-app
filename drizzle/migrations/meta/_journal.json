@@ -71,6 +71,13 @@
       "when": 1793983000495,
       "tag": "0009_availability_dates_verified_function",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793985054400,
+      "tag": "0010_cv_explicit_automatic_publication",
+      "breakpoints": true
     }
   ]
 }

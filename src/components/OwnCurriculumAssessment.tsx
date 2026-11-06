@@ -73,8 +73,9 @@ export function OwnCurriculumAssessment({ workerId }: { workerId: string }) {
           return typeof value === 'number' ? <div key={c.key} className="flex justify-between gap-3"><dt>{c.label}</dt><dd className="tabular-nums">{value}/{c.max}</dd></div> : null;
         })}</dl>
       </> : <p className="text-sm text-muted-foreground">{assessment.status === 'not_evaluable' ? 'Non è disponibile un punteggio per questo curriculum.' : 'Il punteggio non è ancora disponibile.'}</p>}
-      <p className="flex items-start gap-2 text-xs text-muted-foreground"><Eye className="h-4 w-4 shrink-0" />{assessment.public_visible && publishable ? 'Hai scelto di mostrare la valutazione ai ristoratori sul tuo profilo completato.' : 'La valutazione è privata: i ristoratori non vedono questo punteggio.'}</p>
-      {publishable ? <div className="flex items-center gap-3"><Switch id={`cv-public-${workerId}`} checked={assessment.public_visible} disabled={busy} onCheckedChange={v => void changeVisibility(v)} /><Label htmlFor={`cv-public-${workerId}`} className="text-sm">Mostra la valutazione ai ristoratori</Label></div> : <p className="text-xs text-muted-foreground">La pubblicazione è disponibile solo per valutazioni completate da 4 o 5 stelle, con consenso attivo e informazioni sufficienti.</p>}
+      <p className="flex items-start gap-2 text-xs text-muted-foreground"><Eye className="h-4 w-4 shrink-0" />{assessment.public_visible && publishable ? 'La valutazione è visibile ai ristoratori sul tuo profilo completato. Il documento rimane privato.' : assessment.status === 'approved' || assessment.status === 'not_evaluable' ? 'Il tuo curriculum non verrà pubblicato.' : 'La valutazione sarà pubblicata solo se raggiunge 4 o 5 stelle e hai dato il consenso.'}</p>
+      {publishable && !assessment.auto_publication_consent && <div className="flex items-center gap-3"><Switch id={`cv-public-${workerId}`} checked={assessment.public_visible} disabled={busy} onCheckedChange={v => void changeVisibility(v)} /><Label htmlFor={`cv-public-${workerId}`} className="text-sm">Acconsento a mostrare la valutazione ai ristoratori</Label></div>}
+      <Link to="/profile"><Button type="button" variant="outline" size="sm">Sostituisci curriculum</Button></Link>
     </>}
   </section>;
 }

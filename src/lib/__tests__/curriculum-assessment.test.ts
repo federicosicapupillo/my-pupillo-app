@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreCurriculum, canPublishCurriculum, canAnalyzeCurriculum, shouldStartCurriculumAnalysis } from '../curriculum-assessment';
+import { scoreCurriculum, canPublishCurriculum, shouldAutoPublishCurriculum, canAnalyzeCurriculum, shouldStartCurriculumAnalysis } from '../curriculum-assessment';
 describe('Valutazione curriculum', () => {
   it('assegna cinque stelle a 85 punti', () => expect(scoreCurriculum({ experience: 30, skills: 25, responsibility: 15, training: 5, clarity: 10 }, true, false)).toEqual({ total: 85, stars: 5 }));
   it('assegna quattro stelle a 70 punti', () => expect(scoreCurriculum({ experience: 25, skills: 20, responsibility: 10, training: 5, clarity: 10 }, true, false)).toEqual({ total: 70, stars: 4 }));
@@ -29,4 +29,13 @@ describe('Analisi diretta senza approvazione manuale', () => {
   it('non avvia analisi dopo revoca del consenso', () => expect(shouldStartCurriculumAnalysis('requested', null, true)).toBe(false));
   it('non avvia analisi di documenti sostituiti', () => expect(shouldStartCurriculumAnalysis('requested', '2026-11-06', false)).toBe(false));
   it.each(['approved', 'error', 'blocked', 'analyzing'])('non ripete automaticamente lo stato %s', status => expect(shouldStartCurriculumAnalysis(status, '2026-11-06', true)).toBe(false));
+});
+describe('Pubblicazione automatica con consenso esplicito', () => {
+  const completed = { status: 'approved', consent_at: '2026-11-06', evaluable: true, doubts: false, total: 70, stars: 4, scores: { clarity: 10 } };
+  it('pubblica automaticamente quattro stelle con consenso', () => expect(shouldAutoPublishCurriculum(completed, true, true)).toBe(true));
+  it('pubblica automaticamente cinque stelle con consenso', () => expect(shouldAutoPublishCurriculum({ ...completed, total: 85, stars: 5 }, true, true)).toBe(true));
+  it('non pubblica sotto quattro stelle', () => expect(shouldAutoPublishCurriculum({ ...completed, total: 69, stars: null }, true, true)).toBe(false));
+  it('non pubblica retroattivamente senza consenso alla pubblicazione', () => expect(shouldAutoPublishCurriculum(completed, true, false)).toBe(false));
+  it('non pubblica dopo sostituzione del documento', () => expect(shouldAutoPublishCurriculum(completed, false, true)).toBe(false));
+  it('non pubblica dopo rimozione del consenso', () => expect(shouldAutoPublishCurriculum({ ...completed, consent_at: null }, true, true)).toBe(false));
 });

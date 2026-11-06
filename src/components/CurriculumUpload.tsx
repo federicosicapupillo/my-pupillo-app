@@ -66,6 +66,7 @@ export function CurriculumUpload({ userId }: { userId: string }) {
   return <div className="space-y-2 border-t pt-4">
     <h4 className="font-medium">Curriculum <span className="text-sm font-normal text-muted-foreground">(facoltativo)</span></h4>
     <p className="text-xs text-muted-foreground">PDF · massimo 5 MB · documento privato</p>
+    {curriculum && <p className="text-xs text-muted-foreground">Puoi caricare un curriculum aggiornato e richiedere una nuova valutazione. Il nuovo punteggio dipenderà dalle informazioni dichiarate.</p>}
     <input ref={input} type="file" accept="application/pdf,.pdf" className="hidden" aria-label="Carica curriculum" onChange={(e) => {
       const file = e.target.files?.[0];
       if (file) void select(file);
