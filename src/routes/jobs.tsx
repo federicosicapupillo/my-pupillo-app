@@ -32,6 +32,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 function roleEmoji(role: string | null | undefined): string {
   const r = (role || "").toLowerCase();
@@ -48,7 +49,14 @@ function roleEmoji(role: string | null | undefined): string {
 }
 
 export const Route = createFileRoute("/jobs")({
-  head: () => ({ meta: [{ title: "Offerte ricevute — Pupillo" }] }),
+  head: () => ({ meta: [
+    { title: "Offerte ricevute — Pupillo" },
+    { name: "description", content: "Le tue proposte di lavoro su Pupillo: offerte ricevute, risposte e turni confermati." },
+    { property: "og:title", content: "Offerte ricevute — Pupillo" },
+    { property: "og:description", content: "Consulta le proposte ricevute dai ristoratori e i tuoi turni su Pupillo." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => (
     <RequireAuth>
       <Jobs />
@@ -232,85 +240,22 @@ function statusBadge(r: Row, isNew: boolean): { label: string; cls: string } {
   return { label: r.status, cls: "bg-secondary text-foreground border-border" };
 }
 
-const TABS: {
-  key: Bucket;
-  label: string;
-  // Tailwind classes for active and inactive states (light + dark friendly).
-  activeCls: string;
-  inactiveCls: string;
-  badgeActiveCls: string;
-  badgeInactiveCls: string;
-}[] = [
-  {
-    key: "nuove",
-    label: "Nuove",
-    activeCls:
-      "bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-500/30",
-    inactiveCls:
-      "bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 dark:bg-sky-500/10 dark:text-sky-200 dark:border-sky-500/30 dark:hover:bg-sky-500/20",
-    badgeActiveCls: "bg-white/25 text-white",
-    badgeInactiveCls: "bg-sky-500/20 text-sky-900 dark:bg-sky-400/20 dark:text-sky-100",
-  },
-  {
-    key: "da_rispondere",
-    label: "Da rispondere",
-    activeCls:
-      "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/30",
-    inactiveCls:
-      "bg-orange-50 text-orange-800 border-orange-200 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-200 dark:border-orange-500/30 dark:hover:bg-orange-500/20",
-    badgeActiveCls: "bg-white/25 text-white",
-    badgeInactiveCls: "bg-orange-500/20 text-orange-900 dark:bg-orange-400/20 dark:text-orange-100",
-  },
-  {
-    key: "accettate",
-    label: "Accettate",
-    activeCls:
-      "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/30",
-    inactiveCls:
-      "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-500/30 dark:hover:bg-emerald-500/20",
-    badgeActiveCls: "bg-white/25 text-white",
-    badgeInactiveCls: "bg-emerald-500/20 text-emerald-900 dark:bg-emerald-400/20 dark:text-emerald-100",
-  },
-  {
-    key: "rifiutate",
-    label: "Rifiutate",
-    activeCls:
-      "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/30",
-    inactiveCls:
-      "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:border-rose-500/30 dark:hover:bg-rose-500/20",
-    badgeActiveCls: "bg-white/25 text-white",
-    badgeInactiveCls: "bg-rose-500/20 text-rose-900 dark:bg-rose-400/20 dark:text-rose-100",
-  },
-  {
-    key: "scadute",
-    label: "Scadute",
-    activeCls:
-      "bg-slate-600 text-white border-slate-600 shadow-md shadow-slate-600/30",
-    inactiveCls:
-      "bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200 dark:bg-slate-500/10 dark:text-slate-200 dark:border-slate-500/30 dark:hover:bg-slate-500/20",
-    badgeActiveCls: "bg-white/25 text-white",
-    badgeInactiveCls: "bg-slate-500/20 text-slate-900 dark:bg-slate-400/20 dark:text-slate-100",
-  },
-  {
-    key: "da_recensire",
-    label: "Da recensire",
-    activeCls:
-      "bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-500/30",
-    inactiveCls:
-      "bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100 dark:bg-violet-500/10 dark:text-violet-200 dark:border-violet-500/30 dark:hover:bg-violet-500/20",
-    badgeActiveCls: "bg-white/25 text-white",
-    badgeInactiveCls: "bg-violet-500/20 text-violet-900 dark:bg-violet-400/20 dark:text-violet-100",
-  },
-  {
-    key: "concluse",
-    label: "Concluse",
-    activeCls:
-      "bg-teal-500 text-white border-teal-500 shadow-md shadow-teal-500/30",
-    inactiveCls:
-      "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100 dark:bg-teal-500/10 dark:text-teal-200 dark:border-teal-500/30 dark:hover:bg-teal-500/20",
-    badgeActiveCls: "bg-white/25 text-white",
-    badgeInactiveCls: "bg-teal-500/20 text-teal-900 dark:bg-teal-400/20 dark:text-teal-100",
-  },
+const TABS: { key: Bucket; label: string }[] = [
+  { key: "nuove", label: "Nuove" },
+  { key: "da_rispondere", label: "Da rispondere" },
+  { key: "accettate", label: "Accettate" },
+  { key: "rifiutate", label: "Rifiutate" },
+  { key: "scadute", label: "Scadute" },
+  { key: "da_recensire", label: "Da recensire" },
+  { key: "concluse", label: "Concluse" },
+];
+
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: "service_date", label: "Data servizio" },
+  { value: "received", label: "Offerta più recente" },
+  { value: "tariff", label: "Compenso più alto" },
+  { value: "role", label: "Ruolo" },
+  { value: "status", label: "Stato" },
 ];
 
 function priorityFor(r: Row, isNew: boolean): number {
@@ -572,106 +517,92 @@ function Jobs() {
   return (
     <AppShell>
       <PageHeader
-        title="Offerte per te"
+        title="Offerte ricevute"
         subtitle="Proposte ricevute dai ristoratori"
       />
 
-      {/* Privacy hint */}
-      <div className="mt-5 flex items-start gap-2 rounded-2xl border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+      {/* Keep the shared AppShell background visible. */}
+      <div className="mt-5 flex items-start gap-2.5 rounded-lg border border-border/60 bg-muted/20 p-3.5 text-sm text-muted-foreground">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>
-          Per proteggere entrambe le parti, i dati completi del locale vengono mostrati solo dopo la conferma
-          reciproca del servizio.
-        </span>
+        <span>I dati completi del locale saranno visibili dopo la conferma reciproca del servizio.</span>
       </div>
 
-      {/* Filtri — tab colorate, grandi, scrollabili su mobile e a griglia su desktop */}
       <div
-        role="tablist"
+        role="group"
         aria-label="Filtra offerte"
-        className="mt-5 -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 lg:grid-cols-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-6 flex gap-1 overflow-x-auto border-b border-border/70 [scrollbar-width:thin] lg:justify-between"
       >
         {TABS.map((t) => {
           const active = tab === t.key;
-          const count = counts[t.key];
           return (
-            <button
+            <Button
               key={t.key}
-              role="tab"
-              aria-selected={active}
+              type="button"
+              variant="ghost"
+              aria-pressed={active}
+              aria-controls="received-offers-list"
               onClick={() => setTab(t.key)}
               className={
-                "group flex shrink-0 items-center justify-between gap-2 rounded-2xl border-2 px-4 py-3 text-sm font-semibold tracking-tight transition-all duration-150 active:scale-[0.98] sm:px-4 sm:py-3.5 " +
-                (active
-                  ? `${t.activeCls} scale-[1.01]`
-                  : t.inactiveCls)
+                "h-12 shrink-0 gap-2 rounded-none border-b-2 px-3 text-sm font-semibold tracking-normal transition-colors hover:bg-muted/30 " +
+                (active ? "border-primary text-primary hover:text-primary" : "border-transparent text-muted-foreground hover:text-foreground")
               }
             >
-              <span className="truncate">{t.label}</span>
-              <span
-                className={
-                  "inline-flex min-w-[1.75rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums " +
-                  (active ? t.badgeActiveCls : t.badgeInactiveCls)
-                }
-              >
-                {count}
-              </span>
-            </button>
+              <span>{t.label}</span>
+              <span className={
+                "inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs tabular-nums " +
+                (active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")
+              }>{counts[t.key]}</span>
+            </Button>
           );
         })}
       </div>
 
-      {/* Ordina per */}
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="font-medium">Ordina per:</span>
-        {(
-          [
-            ["service_date", "Data servizio"],
-            ["received", "Offerta più recente"],
-            ["tariff", "Compenso più alto"],
-            ["role", "Ruolo"],
-            ["status", "Stato"],
-          ] as [SortMode, string][]
-        ).map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setSortMode(k)}
-            className={
-              "rounded-full border px-3 py-1 transition " +
-              (sortMode === k
-                ? "border-foreground bg-foreground text-background"
-                : "border-border bg-card hover:bg-accent")
-            }
-          >
-            {label}
-          </button>
-        ))}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="flex items-center gap-2.5 text-lg font-semibold">
+          {tab === "nuove" ? "Nuove offerte" : TABS.find((t) => t.key === tab)?.label}
+          <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground tabular-nums">{counts[tab]}</span>
+        </h2>
+        <div className="flex items-center gap-2.5">
+          <label htmlFor="received-offers-sort" className="shrink-0 text-xs text-muted-foreground sm:text-sm">Ordina per:</label>
+          <Select value={sortMode} onValueChange={(value) => {
+            const option = SORT_OPTIONS.find((option) => option.value === value);
+            if (option) setSortMode(option.value);
+          }}>
+            <SelectTrigger id="received-offers-sort" className="h-10 w-[190px] bg-card/30">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Lista */}
-      <div className="mt-6">
+      <div id="received-offers-list" className="mt-6" aria-busy={loading}>
         {loading ? (
           <div className="grid gap-4 md:grid-cols-2">
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-56 animate-pulse rounded-2xl border bg-card"
+                className="h-56 animate-pulse rounded-lg border bg-card"
               />
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <div className="rounded-3xl border bg-card p-12 text-center shadow-sm">
+          <div className="flex min-h-[320px] flex-col items-center justify-center px-4 py-12 text-center sm:min-h-[380px]">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
               <Briefcase className="h-6 w-6 text-muted-foreground" />
             </div>
             <div className="mt-4 text-lg font-semibold">Non hai ancora ricevuto offerte</div>
             <div className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              Quando un ristoratore ti invierà una proposta di lavoro, la troverai qui con tutti i
-              dettagli del turno.
+              Quando riceverai una proposta, troverai qui i dettagli del turno.
             </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
+          <div className="flex min-h-[280px] items-center justify-center px-4 py-12 text-center text-sm text-muted-foreground">
             Nessuna offerta in questa sezione.
           </div>
         ) : (
