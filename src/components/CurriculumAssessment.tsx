@@ -11,6 +11,7 @@ import { CV_STATUS } from '@/lib/curriculum-assessment';
 import { JOB_ROLES } from '@/lib/job-roles';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+import { useCurriculumAnalysis } from '@/lib/use-curriculum-analysis';
 
 export function CurriculumRating({ workerId }: { workerId: string }) {
   const [rating, setRating] = useState<{ stars: number; role_label: string; reviewed_at: string } | null>(null);
@@ -28,7 +29,7 @@ export function CurriculumRating({ workerId }: { workerId: string }) {
         {Array.from({ length: 5 }, (_, i) => <Star key={i} className={`h-5 w-5 ${i < rating.stars ? 'fill-current' : 'text-muted-foreground'}`} />)}
       </span><span className="text-sm">{rating.stars}/5 · {rating.role_label}</span>
     </div>
-    <p className="text-xs text-muted-foreground">Valutazione delle informazioni dichiarate nel curriculum, non delle prestazioni sul lavoro. Non costituisce verifica delle esperienze né recensione di un turno svolto.</p>
+    <p className="text-xs text-muted-foreground">Valutazione automatica delle informazioni dichiarate nel curriculum, non delle prestazioni sul lavoro. Non costituisce verifica delle esperienze né recensione di un turno svolto.</p>
     <p className="text-xs text-muted-foreground">La valutazione è visibile ai ristoratori sul profilo del lavoratore ed è separata dal Reputation Score delle recensioni dei turni.</p>
   </section>;
 }
@@ -47,12 +48,13 @@ export function CurriculumAssessmentRequest({ userId, curriculumPath }: { userId
     if (!error) setAssessment(data);
   }
   useEffect(() => { setAssessment(null); setConsent(false); void load(); }, [userId, curriculumPath]);
+  const { analyzing, analysisError, run } = useCurriculumAnalysis(assessment, assessment?.curriculum_path === curriculumPath, load);
   async function submit() {
     setBusy(true);
     try {
       const result = await request({ data: { role, consent: true } });
       if (!result.ok) { toast.error(result.error); return; }
-      await load(); toast.success('Richiesta inviata a Pupillo.');
+      await load(); toast.success('Analisi del curriculum avviata.');
     } catch { toast.error('Invio non riuscito. Riprova.'); }
     finally { setBusy(false); }
   }
@@ -68,18 +70,19 @@ export function CurriculumAssessmentRequest({ userId, curriculumPath }: { userId
   const canRequest = !active || ['rejected','not_evaluable','stale','error'].includes(assessment?.status ?? '');
   return <section className="space-y-3 pt-3">
     <h4 className="font-medium">Valutazione curriculum Pupillo</h4>
-    <p className="text-sm text-muted-foreground">Il punteggio del curriculum sarà visibile privatamente nella tua dashboard, separato dalle recensioni dei turni. Da 4 stelle, dopo approvazione Pupillo, potrai scegliere nella dashboard se mostrare la valutazione ai ristoratori oppure mantenerla privata.</p>
+    <p className="text-sm text-muted-foreground">Pupillo calcola automaticamente il punteggio del curriculum, senza attesa di approvazione manuale. Sarà visibile privatamente nella tua dashboard, separato dalle recensioni dei turni. Da 4 stelle potrai scegliere se mostrarlo ai ristoratori oppure mantenerlo privato.</p>
     {loadError ? <p role="alert" className="text-sm text-destructive">Impossibile leggere la valutazione. <Button type="button" variant="outline" onClick={() => void load()}>Riprova</Button></p> : <>
       {active && assessment && <>
-        <p className="text-sm">{CV_STATUS[assessment.status] ?? 'In verifica'} · {assessment.role_label}</p>
-        {assessment.total != null && <p className="text-sm text-muted-foreground">Punteggio proposto: {assessment.total}/100{assessment.stars ? ` · ${assessment.stars}/5` : ' · non pubblicabile'}.</p>}
-        {assessment.error_message && <p role="alert" className="text-sm text-destructive">{assessment.error_message}</p>}
+        <p className="text-sm">{analyzing ? 'Analisi in corso' : CV_STATUS[assessment.status] ?? 'In verifica'} · {assessment.role_label}</p>
+        {assessment.total != null && <p className="text-sm text-muted-foreground">Punteggio curriculum: {assessment.total}/100{assessment.stars ? ` · ${assessment.stars}/5` : ' · non pubblicabile'}.</p>}
+        {(analysisError || assessment.error_message) && <p role="alert" className="text-sm text-destructive">{analysisError || assessment.error_message}</p>}
+        {assessment.status === 'error' && <Button type="button" variant="outline" disabled={analyzing} onClick={() => void run()}>Riprova analisi</Button>}
         <Button type="button" variant="outline" disabled={busy} onClick={() => void withdraw()}>Revoca consenso</Button>
       </>}
       {canRequest && <>
         <Label htmlFor={`cv-role-${userId}`}>Mansione da valutare</Label>
         <Select value={role} onValueChange={setRole}><SelectTrigger id={`cv-role-${userId}`}><SelectValue placeholder="Seleziona mansione" /></SelectTrigger><SelectContent>{JOB_ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
-        <div className="flex items-start gap-2"><Checkbox id={`cv-consent-${userId}`} checked={consent} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor={`cv-consent-${userId}`} className="text-xs leading-relaxed">Acconsento all’analisi del curriculum tramite IA e alla verifica da parte di Pupillo. Vedrò il punteggio privatamente nella dashboard. Solo per una valutazione approvata da 4 o 5 stelle potrò scegliere separatamente di renderla visibile ai ristoratori sul mio profilo. Posso revocare il consenso in qualsiasi momento.</Label></div>
+        <div className="flex items-start gap-2"><Checkbox id={`cv-consent-${userId}`} checked={consent} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor={`cv-consent-${userId}`} className="text-xs leading-relaxed">Acconsento all’analisi automatica del curriculum tramite IA da parte di Pupillo. Vedrò il punteggio privatamente nella dashboard. Solo per una valutazione completata da 4 o 5 stelle potrò scegliere separatamente di renderla visibile ai ristoratori sul mio profilo. Non è una verifica delle esperienze dichiarate. Posso revocare il consenso in qualsiasi momento.</Label></div>
         <Button type="button" disabled={!role || !consent || busy || loadError} onClick={() => void submit()}>{busy ? 'Invio in corso…' : 'Richiedi valutazione'}</Button>
       </>}
     </>}

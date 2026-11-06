@@ -7,6 +7,12 @@ export const CV_CRITERIA = [
 ] as const;
 export type CvCriterion = typeof CV_CRITERIA[number]['key'];
 export type CvScores = Record<CvCriterion, number>;
+export function canAnalyzeCurriculum(callerId: string, workerId: string, admin: boolean, worker: boolean) {
+  return admin || (worker && callerId === workerId);
+}
+export function shouldStartCurriculumAnalysis(status: string, consent: string | null, current: boolean) {
+  return current && !!consent && ['requested', 'pending_review'].includes(status);
+}
 export type CvPublicationState = {
   status: string; consent_at: string | null; evaluable: boolean; doubts: boolean;
   total: number | null; stars: number | null; scores: unknown;
@@ -26,7 +32,7 @@ export function scoreCurriculum(scores: CvScores, evaluable: boolean, doubts: bo
   return { total, stars };
 }
 export const CV_STATUS: Record<string, string> = {
-  requested: 'Richiesta ricevuta', analyzing: 'Analisi in corso', pending_review: 'In attesa di verifica Pupillo',
-  approved: 'Approvata da Pupillo', rejected: 'Non pubblicata', not_evaluable: 'Curriculum non valutabile',
+  requested: 'Richiesta ricevuta', analyzing: 'Analisi in corso', pending_review: 'Analisi da completare',
+  approved: 'Valutazione Pupillo completata', rejected: 'Non pubblicata', not_evaluable: 'Curriculum non valutabile',
   stale: 'Valutazione non attiva', error: 'Analisi non riuscita', blocked: 'Analisi sospesa: serve un controllo Pupillo',
 };

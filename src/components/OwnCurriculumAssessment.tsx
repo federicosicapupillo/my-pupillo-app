@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { CV_CRITERIA, CV_STATUS, canPublishCurriculum } from '@/lib/curriculum-assessment';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
+import { useCurriculumAnalysis } from '@/lib/use-curriculum-analysis';
 
 type Assessment = Database['public']['Tables']['worker_curriculum_assessments']['Row'];
 
@@ -29,6 +30,7 @@ export function OwnCurriculumAssessment({ workerId }: { workerId: string }) {
     }
     setLoading(false);
   }, [workerId]);
+  const { analyzing, analysisError, run } = useCurriculumAnalysis(assessment, current, load);
   useEffect(() => {
     setAssessment(null); setCurrent(false); setLoading(true);
     void load();
@@ -60,17 +62,19 @@ export function OwnCurriculumAssessment({ workerId }: { workerId: string }) {
       <p className="text-sm text-muted-foreground">Non hai una valutazione attiva del curriculum.</p>
       <Link to="/profile"><Button type="button" variant="outline" size="sm">Gestisci curriculum</Button></Link>
     </div> : <>
-      <p className="text-sm">{CV_STATUS[assessment.status] ?? 'In verifica'} · {assessment.role_label}</p>
+      <p className="text-sm">{analyzing ? 'Analisi in corso' : CV_STATUS[assessment.status] ?? 'In verifica'} · {assessment.role_label}</p>
+      {(analysisError || assessment.error_message) && <p role="alert" className="text-sm text-destructive">{analysisError || assessment.error_message}</p>}
+      {assessment.status === 'error' && <Button type="button" variant="outline" disabled={analyzing} onClick={() => void run()}>Riprova analisi</Button>}
       {assessment.total !== null ? <>
         <div className="flex flex-wrap items-baseline gap-2"><span className="text-3xl font-bold tabular-nums">{assessment.total}<span className="text-base font-normal text-muted-foreground">/100</span></span>{assessment.stars && <span className="text-sm text-primary">{assessment.stars}/5 stelle</span>}</div>
-        {assessment.status !== 'approved' && <p className="text-xs text-muted-foreground">Punteggio dell’analisi del curriculum; non è una valutazione approvata per la pubblicazione.</p>}
+        <p className="text-xs text-muted-foreground">Punteggio calcolato automaticamente da Pupillo sui criteri indicati, senza verifica manuale delle esperienze dichiarate.</p>
         <dl className="space-y-1 text-xs">{CV_CRITERIA.map(c => {
           const value = scores && typeof scores === 'object' && !Array.isArray(scores) ? scores[c.key] : null;
           return typeof value === 'number' ? <div key={c.key} className="flex justify-between gap-3"><dt>{c.label}</dt><dd className="tabular-nums">{value}/{c.max}</dd></div> : null;
         })}</dl>
       </> : <p className="text-sm text-muted-foreground">{assessment.status === 'not_evaluable' ? 'Non è disponibile un punteggio per questo curriculum.' : 'Il punteggio non è ancora disponibile.'}</p>}
       <p className="flex items-start gap-2 text-xs text-muted-foreground"><Eye className="h-4 w-4 shrink-0" />{assessment.public_visible && publishable ? 'Hai scelto di mostrare la valutazione ai ristoratori sul tuo profilo completato.' : 'La valutazione è privata: i ristoratori non vedono questo punteggio.'}</p>
-      {publishable ? <div className="flex items-center gap-3"><Switch id={`cv-public-${workerId}`} checked={assessment.public_visible} disabled={busy} onCheckedChange={v => void changeVisibility(v)} /><Label htmlFor={`cv-public-${workerId}`} className="text-sm">Mostra la valutazione ai ristoratori</Label></div> : <p className="text-xs text-muted-foreground">La pubblicazione è disponibile solo per valutazioni da 4 o 5 stelle approvate da Pupillo, con consenso attivo.</p>}
+      {publishable ? <div className="flex items-center gap-3"><Switch id={`cv-public-${workerId}`} checked={assessment.public_visible} disabled={busy} onCheckedChange={v => void changeVisibility(v)} /><Label htmlFor={`cv-public-${workerId}`} className="text-sm">Mostra la valutazione ai ristoratori</Label></div> : <p className="text-xs text-muted-foreground">La pubblicazione è disponibile solo per valutazioni completate da 4 o 5 stelle, con consenso attivo e informazioni sufficienti.</p>}
     </>}
   </section>;
 }

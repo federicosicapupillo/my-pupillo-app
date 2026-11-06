@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { z } from 'zod';
 import { JOB_ROLES } from '@/lib/job-roles';
 import { CURRICULUM_BUCKET, validateCurriculumBytes } from '@/lib/curriculum-file';
-import { scoreCurriculum, CV_CRITERIA } from '@/lib/curriculum-assessment';
+import { scoreCurriculum, CV_CRITERIA, canAnalyzeCurriculum } from '@/lib/curriculum-assessment';
 
 export const requestCvAssessment = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator(z.object({ role: z.string(), consent: z.literal(true) }))
@@ -18,16 +18,18 @@ export const analyzeCvAssessment = createServerFn({ method: 'POST' }).middleware
   .inputValidator(z.object({ userId: z.uuid(), version: z.uuid() }))
   .handler(async ({ data, context }) => {
     const { data: admin } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
-    if (!admin) return { ok: false, error: 'Operazione non autorizzata.' };
+    const { data: worker } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'worker' });
+    if (!canAnalyzeCurriculum(context.userId, data.userId, !!admin, !!worker)) return { ok: false, error: 'Operazione non autorizzata.' };
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
     const { data: service, error: gateError } = await supabaseAdmin.from('curriculum_analysis_service_state').select('paused,message').eq('id',true).maybeSingle();
     if (gateError || service?.paused) return { ok: false, error: service?.message ?? 'Analisi sospesa. Verifica il servizio prima di riattivarlo.' };
     const { data: assessment } = await context.supabase.from('worker_curriculum_assessments').select('*').eq('user_id', data.userId).eq('version', data.version).maybeSingle();
-    if (!assessment || !assessment.consent_at || !['requested','error'].includes(assessment.status)) return { ok: false, error: 'Richiesta non disponibile.' };
+    if (!assessment || !assessment.consent_at || !['requested','pending_review','error'].includes(assessment.status)) return { ok: false, error: 'Richiesta non disponibile.' };
     const { data: current } = await supabaseAdmin.from('worker_curricula').select('storage_path').eq('user_id', data.userId).maybeSingle();
     if (current?.storage_path !== assessment.curriculum_path) return { ok: false, error: 'Il curriculum è cambiato.' };
     const { data: lock, error: lockError } = await supabaseAdmin.from('worker_curriculum_assessments').update({ status: 'analyzing' }).eq('user_id', data.userId).eq('version',data.version).eq('status',assessment.status).select('user_id').maybeSingle();
-    if (lockError || !lock) return { ok: false, error: 'Analisi già avviata.' };
+    if (lockError) return { ok: false, error: 'Non è stato possibile avviare l’analisi.' };
+    if (!lock) return { ok: true, error: '' };
     const save = (patch: Record<string, unknown>) => supabaseAdmin.from('worker_curriculum_assessments').update({ ...patch, updated_at: new Date().toISOString() }).eq('user_id',data.userId).eq('version',data.version).eq('status','analyzing').select('user_id');
     try {
       const { data: pdf, error: downloadError } = await supabaseAdmin.storage.from(CURRICULUM_BUCKET).download(assessment.curriculum_path);
@@ -58,7 +60,7 @@ export const analyzeCvAssessment = createServerFn({ method: 'POST' }).middleware
       const evidence = output.evidence.slice(0,10).map(e => ({ criterion: e.criterion, quote: e.quote.slice(0,300), explanation: e.explanation.slice(0,300) }));
       const doubts = output.doubts || CV_CRITERIA.some(c => scores[c.key]>0 && !evidence.some(e => e.criterion===c.key && e.quote.trim()));
       const scoring = scoreCurriculum(scores, output.evaluable, doubts);
-      const { error, data: saved } = await save({ scores, evidence, ...scoring, evaluable: output.evaluable, doubts, status: output.evaluable ? 'pending_review' : 'not_evaluable', error_message: null });
+      const { error, data: saved } = await save({ scores, evidence, ...scoring, evaluable: output.evaluable, doubts, status: output.evaluable ? 'approved' : 'not_evaluable', reviewed_by: null, reviewed_at: new Date().toISOString(), review_note: 'Valutazione automatica Pupillo delle informazioni dichiarate nel curriculum.', error_message: null, public_visible: false });
       if (error || !saved?.length) return { ok: false, error: 'La richiesta è cambiata: valutazione non salvata.' };
       return { ok: true, error: '' };
     } catch (error) {

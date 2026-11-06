@@ -1,11 +1,13 @@
 # Roadmap
 
+- [x] Calcolo diretto del curriculum con consenso, senza attesa di approvazione manuale; analisi reale completata a 29/100 e persistente nella dashboard, privata sotto soglia. Desktop/mobile verificati, 30 test passati e build OK; scelta pubblicazione da 4 stelle mantenuta.
+
 - [x] Punteggio curriculum privato nella dashboard, criteri e scelta di visibilità ai ristoratori per valutazioni approvate da 4 stelle; 18 test passati, build OK, stato reale «Richiesta ricevuta» verificato in sessione e nessun overflow mobile. Nessuna analisi già completata disponibile per verificare il cambio visibilità integrale.
 
 - [x] Mostrare la valutazione curriculum approvata nella sezione Reputation Score della dashboard, separata dalle recensioni, e chiarire la visibilità ai ristoratori nella richiesta e nel consenso.
 
 - [x] Valutazione curriculum Pupillo: richiesta e consenso, analisi per mansione, approvazione admin, stelle separate sul profilo; 11 test passati, chiamata IA su PDF fittizio riuscita, richiesta/persistenza/revoca verificate nell'onboarding autenticato; PDF di prova rimosso.
-- [ ] Verifica integrale approvazione admin → stelle visibili su profilo completo — sessione disponibile solo lavoratore con onboarding incompleto; serve un account admin autorizzato e un profilo di prova completo.
+- [ ] Verifica integrale scelta lavoratore → stelle visibili su profilo completo — approvazione manuale superata dal calcolo diretto; il curriculum disponibile è sotto soglia (29/100), serve un profilo completo con valutazione idonea per provare la pubblicazione senza alterare punteggi reali.
 
 - [x] Curriculum facoltativo privato in Esperienza e preferenze: PDF max 5 MB, apertura, sostituzione, rimozione; 4 test e flusso verificato in sessione su desktop/mobile, file di prova rimosso.
 
