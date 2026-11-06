@@ -4,7 +4,7 @@
 
 - Keep CV assessments outside reviews/reputation; server-side AI completes consented assessments without manual approval, authorized only for the owner-worker or admin. New requests explicitly consent to automatic eligible publication; legacy private results require version-checked owner opt-in, so old analysis consent never becomes publication consent. Use approved for automatic completed results without claiming human review. Dashboard uses owner RLS and restaurant views sanitized reads; reset visibility and publication consent on replacement, new request or withdrawal to prevent stale publication.
 
-- Store optional worker curricula separately from profile completion fields in private owner-only storage; validate PDF bytes server-side and keep upload independent of onboarding completion.
+- Store optional worker curricula separately from profile completion fields in private owner-only storage; validate PDF bytes server-side and keep upload independent of onboarding completion. Each consented upload requests assessment automatically using the previous assessment role, profile role or hospitality fallback, without a separate role/request form; obtain fresh analysis/publication consent before uploading to avoid silently reusing legacy consent.
 
 - Keep residence region/province selectors separate from operational-area configuration; onboarding start-city rules are narrower than job geography, so national residence choices never authorize a work area.
 

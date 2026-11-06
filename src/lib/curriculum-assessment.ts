@@ -7,6 +7,9 @@ export const CV_CRITERIA = [
 ] as const;
 export type CvCriterion = typeof CV_CRITERIA[number]['key'];
 export type CvScores = Record<CvCriterion, number>;
+export function automaticCurriculumRole(previousRole: string | null | undefined, primaryRole: string | null | undefined) {
+  return previousRole?.trim() || primaryRole?.trim() || 'Ristorazione e ospitalità';
+}
 export function canAnalyzeCurriculum(callerId: string, workerId: string, admin: boolean, worker: boolean) {
   return admin || (worker && callerId === workerId);
 }

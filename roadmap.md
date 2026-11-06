@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Valutazione automatica al caricamento/sostituzione senza richiesta separata né scelta della mansione; consenso raccolto prima dell’upload. Verificato ricaricando lo stesso PDF reale: analisi completata a 73/100, 4 stelle, risultato persistente e visibile ai ristoratori; 39 test passati, build OK, mobile senza overflow. Non pubblicato.
+
 - [x] Curriculum nel profilo: Revoca consenso rimosso, sostituzione disponibile, nuove analisi con consenso esplicito alla pubblicazione automatica da quattro stelle; messaggio sotto soglia verificato sul punteggio reale 29/100, curriculum non sovrascritto. 36 test passati, build OK, desktop/mobile verificati; nessuna pubblicazione retroattiva. Verifica integrale di una nuova valutazione idonea resta bloccata dall'assenza di un curriculum reale idoneo, come indicato sotto.
 
 - [x] Grafica approvata applicata alle offerte ricevute, sfondo viola condiviso preservato; sette filtri e cinque ordinamenti verificati in sessione su desktop/mobile, nessun overflow o errore runtime, build OK. Nessuna offerta presente nell'account di verifica; azioni sulle offerte lasciate invariate.

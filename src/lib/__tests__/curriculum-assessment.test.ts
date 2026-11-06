@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { scoreCurriculum, canPublishCurriculum, shouldAutoPublishCurriculum, canAnalyzeCurriculum, shouldStartCurriculumAnalysis } from '../curriculum-assessment';
+import { automaticCurriculumRole, scoreCurriculum, canPublishCurriculum, shouldAutoPublishCurriculum, canAnalyzeCurriculum, shouldStartCurriculumAnalysis } from '../curriculum-assessment';
+describe('Mansione automatica senza richiesta separata', () => {
+  it('riusa la mansione già valutata alla sostituzione', () => expect(automaticCurriculumRole('Cameriere', 'Barista')).toBe('Cameriere'));
+  it('usa la mansione del profilo al primo caricamento', () => expect(automaticCurriculumRole(null, 'Barista')).toBe('Barista'));
+  it('consente la valutazione prima del completamento del profilo', () => expect(automaticCurriculumRole(null, null)).toBe('Ristorazione e ospitalità'));
+});
 describe('Valutazione curriculum', () => {
   it('assegna cinque stelle a 85 punti', () => expect(scoreCurriculum({ experience: 30, skills: 25, responsibility: 15, training: 5, clarity: 10 }, true, false)).toEqual({ total: 85, stars: 5 }));
   it('assegna quattro stelle a 70 punti', () => expect(scoreCurriculum({ experience: 25, skills: 20, responsibility: 10, training: 5, clarity: 10 }, true, false)).toEqual({ total: 70, stars: 4 }));

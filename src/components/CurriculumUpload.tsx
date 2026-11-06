@@ -7,6 +7,8 @@ import { uploadCurriculum } from "@/lib/curriculum.functions";
 import { CURRICULUM_BUCKET } from "@/lib/curriculum-file";
 import { toast } from "sonner";
 import { CurriculumAssessmentRequest } from '@/components/CurriculumAssessment';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 type Curriculum = { storage_path: string; file_name: string };
 
@@ -15,6 +17,7 @@ export function CurriculumUpload({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [consent, setConsent] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const upload = useServerFn(uploadCurriculum);
 
@@ -31,10 +34,13 @@ export function CurriculumUpload({ userId }: { userId: string }) {
     try {
       const form = new FormData();
       form.set("file", file);
+      form.set('assessmentConsent', String(consent));
       const result = await upload({ data: form });
       if (!result.ok) { toast.error(result.error); return; }
       await load();
-      toast.success("Curriculum caricato.");
+      setConsent(false);
+      if (result.assessmentError) toast.error(result.assessmentError);
+      else toast.success("Curriculum caricato. Valutazione automatica avviata.");
     } catch { toast.error("Caricamento del curriculum non riuscito. Riprova."); }
     finally { setBusy(false); }
   }
@@ -66,7 +72,8 @@ export function CurriculumUpload({ userId }: { userId: string }) {
   return <div className="space-y-2 border-t pt-4">
     <h4 className="font-medium">Curriculum <span className="text-sm font-normal text-muted-foreground">(facoltativo)</span></h4>
     <p className="text-xs text-muted-foreground">PDF · massimo 5 MB · documento privato</p>
-    {curriculum && <p className="text-xs text-muted-foreground">Puoi caricare un curriculum aggiornato e richiedere una nuova valutazione. Il nuovo punteggio dipenderà dalle informazioni dichiarate.</p>}
+    <p className="text-xs text-muted-foreground">Ogni nuovo curriculum viene valutato automaticamente. Il punteggio dipende dalle informazioni dichiarate.</p>
+    <div className="flex items-start gap-2"><Checkbox id={`upload-cv-consent-${userId}`} checked={consent} disabled={busy} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor={`upload-cv-consent-${userId}`} className="text-xs leading-relaxed">Acconsento all’analisi automatica del nuovo curriculum tramite IA e alla pubblicazione della valutazione sul mio profilo se raggiunge 4 o 5 stelle. Sotto soglia il punteggio resta visibile solo a me. Il documento rimane privato; le esperienze dichiarate non vengono verificate.</Label></div>
     <input ref={input} type="file" accept="application/pdf,.pdf" className="hidden" aria-label="Carica curriculum" onChange={(e) => {
       const file = e.target.files?.[0];
       if (file) void select(file);
@@ -76,7 +83,7 @@ export function CurriculumUpload({ userId }: { userId: string }) {
       <div className="flex flex-wrap items-center gap-2"><p role="alert" className="text-sm text-destructive">Impossibile leggere il curriculum.</p><Button type="button" variant="outline" onClick={() => void load()}>Riprova</Button></div> : <>
         {curriculum && <p className="flex items-start gap-2 text-sm"><FileText className="h-4 w-4 shrink-0 mt-0.5" /><span className="break-all">{curriculum.file_name}</span></p>}
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => input.current?.click()}>
+          <Button type="button" variant="outline" disabled={busy || !consent} onClick={() => input.current?.click()}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{curriculum ? "Sostituisci curriculum" : "Carica curriculum"}
           </Button>
           {curriculum && <>

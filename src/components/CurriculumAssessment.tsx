@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useServerFn } from '@tanstack/react-start';
 import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { requestCvAssessment } from '@/lib/curriculum-assessment.functions';
 import { CV_STATUS } from '@/lib/curriculum-assessment';
-import { JOB_ROLES } from '@/lib/job-roles';
-import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 import { useCurriculumAnalysis } from '@/lib/use-curriculum-analysis';
 
@@ -37,29 +30,15 @@ export function CurriculumRating({ workerId }: { workerId: string }) {
 type Assessment = Database['public']['Tables']['worker_curriculum_assessments']['Row'];
 export function CurriculumAssessmentRequest({ userId, curriculumPath }: { userId: string; curriculumPath: string }) {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
-  const [role, setRole] = useState('');
-  const [consent, setConsent] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const request = useServerFn(requestCvAssessment);
   async function load() {
     const { data, error } = await supabase.from('worker_curriculum_assessments').select('*').eq('user_id',userId).maybeSingle();
     setLoadError(!!error);
     if (!error) setAssessment(data);
   }
-  useEffect(() => { setAssessment(null); setConsent(false); void load(); }, [userId, curriculumPath]);
+  useEffect(() => { setAssessment(null); void load(); }, [userId, curriculumPath]);
   const { analyzing, analysisError, run } = useCurriculumAnalysis(assessment, assessment?.curriculum_path === curriculumPath, load);
-  async function submit() {
-    setBusy(true);
-    try {
-      const result = await request({ data: { role, consent: true, publicationConsent: true } });
-      if (!result.ok) { toast.error(result.error); return; }
-      await load(); toast.success('Analisi del curriculum avviata.');
-    } catch { toast.error('Invio non riuscito. Riprova.'); }
-    finally { setBusy(false); }
-  }
   const active = assessment?.consent_at && assessment.curriculum_path === curriculumPath;
-  const canRequest = !active || ['rejected','not_evaluable','stale','error'].includes(assessment?.status ?? '');
   return <section className="space-y-3 pt-3">
     <h4 className="font-medium">Valutazione curriculum Pupillo</h4>
     <p className="text-sm text-muted-foreground">Pupillo valuta il curriculum secondo criteri di esperienza, competenze, responsabilità, formazione e informazioni sufficienti. Vedrai sempre il punteggio nella dashboard. Con il tuo consenso, una nuova valutazione da 4 o 5 stelle sarà visibile automaticamente ai ristoratori; il documento rimane privato.</p>
@@ -71,12 +50,7 @@ export function CurriculumAssessmentRequest({ userId, curriculumPath }: { userId
         {assessment.status === 'error' && <Button type="button" variant="outline" disabled={analyzing} onClick={() => void run()}>Riprova analisi</Button>}
         {assessment.status === 'approved' && !assessment.stars && <p className="text-sm text-muted-foreground">Il tuo curriculum non verrà pubblicato.</p>}
       </>}
-      {canRequest && <>
-        <Label htmlFor={`cv-role-${userId}`}>Mansione da valutare</Label>
-        <Select value={role} onValueChange={setRole}><SelectTrigger id={`cv-role-${userId}`}><SelectValue placeholder="Seleziona mansione" /></SelectTrigger><SelectContent>{JOB_ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
-        <div className="flex items-start gap-2"><Checkbox id={`cv-consent-${userId}`} checked={consent} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor={`cv-consent-${userId}`} className="text-xs leading-relaxed">Acconsento all’analisi automatica del curriculum tramite IA da parte di Pupillo e alla pubblicazione automatica della valutazione sul mio profilo se raggiunge 4 o 5 stelle. Sotto soglia, il punteggio rimane visibile soltanto a me. Il documento resta privato e le esperienze dichiarate non vengono verificate. Posso rimuovere il curriculum per interrompere l’uso della valutazione.</Label></div>
-        <Button type="button" disabled={!role || !consent || busy || loadError} onClick={() => void submit()}>{busy ? 'Invio in corso…' : 'Richiedi valutazione'}</Button>
-      </>}
+      {!active && <p className="text-sm text-muted-foreground">Carica un nuovo curriculum con il consenso alla valutazione automatica.</p>}
     </>}
   </section>;
 }

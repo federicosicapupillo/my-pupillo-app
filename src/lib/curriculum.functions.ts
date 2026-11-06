@@ -1,15 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CURRICULUM_BUCKET, CURRICULUM_MAX_BYTES, validateCurriculumBytes } from "@/lib/curriculum-file";
+import { automaticCurriculumRole } from '@/lib/curriculum-assessment';
 
 export const uploadCurriculum = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => {
     const value = input instanceof FormData ? input.get("file") : null;
-    return { file: value instanceof File ? value : null };
+    return { file: value instanceof File ? value : null, consent: input instanceof FormData && input.get('assessmentConsent') === 'true' };
   })
   .handler(async ({ data, context }) => {
-    const { file } = data;
+    const { file, consent } = data;
+    if (!consent) return { ok: false as const, error: "Conferma il consenso alla valutazione automatica del nuovo curriculum." };
     if (!file || !file.size) return { ok: false as const, error: "Seleziona un curriculum." };
     if (file.size > CURRICULUM_MAX_BYTES) return { ok: false as const, error: "Il curriculum supera il limite di 5 MB." };
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -19,6 +21,12 @@ export const uploadCurriculum = createServerFn({ method: "POST" })
     if (roleError || !worker) return { ok: false as const, error: "Il curriculum è disponibile solo per i lavoratori." };
     const { data: old, error: readError } = await context.supabase.from("worker_curricula").select("storage_path").eq("user_id", context.userId).maybeSingle();
     if (readError) return { ok: false as const, error: "Impossibile leggere il curriculum. Riprova." };
+    const [{ data: previous, error: assessmentReadError }, { data: profile, error: profileError }] = await Promise.all([
+      context.supabase.from('worker_curriculum_assessments').select('role_label').eq('user_id', context.userId).maybeSingle(),
+      context.supabase.from('profiles').select('primary_role').eq('id', context.userId).maybeSingle(),
+    ]);
+    if (assessmentReadError || profileError) return { ok: false as const, error: 'Impossibile preparare la valutazione. Riprova.' };
+    const role = automaticCurriculumRole(previous?.role_label, profile?.primary_role);
     const path = `${context.userId}/${crypto.randomUUID()}.pdf`;
     const storage = context.supabase.storage.from(CURRICULUM_BUCKET);
     const { error: uploadError } = await storage.upload(path, bytes, { contentType: "application/pdf", upsert: false });
@@ -30,5 +38,6 @@ export const uploadCurriculum = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Salvataggio del curriculum non riuscito. Il precedente documento è rimasto invariato." };
     }
     if (old?.storage_path) await storage.remove([old.storage_path]);
-    return { ok: true as const, name };
+    const { error: assessmentError } = await context.supabase.rpc('request_auto_public_curriculum_assessment', { _role: role, _publication_consent: consent });
+    return { ok: true as const, name, assessmentError: assessmentError ? 'Curriculum caricato, ma non è stato possibile avviare la valutazione. Riprova il caricamento.' : null };
   });
