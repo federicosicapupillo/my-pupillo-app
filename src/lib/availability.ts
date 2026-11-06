@@ -43,6 +43,11 @@ export const DAY_LABELS: string[] = [
   "Domenica",
 ];
 
+/** Empty days are ready to edit, but are not saved as availability until a slot is chosen. */
+export function isDayEditorEnabled(available: boolean, explicitlyDisabled: boolean): boolean {
+  return available || !explicitlyDisabled;
+}
+
 // ISO day index: 1=Mon..7=Sun. We store 0..6 with 0=Mon for simplicity.
 export function jsDayToDow(jsDay: number): number {
   // JS: 0=Sun..6=Sat → our: 0=Mon..6=Sun

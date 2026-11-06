@@ -56,6 +56,7 @@ import {
   type AvailabilityExceptionRow,
   crossesMidnight,
   isValidTimeRange,
+  isDayEditorEnabled,
 } from "@/lib/availability";
 import {
   addMonths,
@@ -81,6 +82,10 @@ export const Route = createFileRoute("/availability")({
     meta: [
       { title: "Le mie disponibilità — Pupillo" },
       { name: "description", content: "Imposta giorni, fasce orarie, città e zone in cui sei disponibile a ricevere proposte di lavoro." },
+      { property: "og:title", content: "Le mie disponibilità — Pupillo" },
+      { property: "og:description", content: "Scegli i giorni e gli orari delle tue disponibilità di lavoro su Pupillo." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: () => (
@@ -229,6 +234,7 @@ function AvailabilityPage() {
   }, [profile]);
 
   const [days, setDays] = useState<DayState[]>(() => Array.from({ length: 7 }, () => emptyDay()));
+  const [disabledDayEditors, setDisabledDayEditors] = useState<Set<number>>(() => new Set());
   const [area, setArea] = useState<WorkArea>({ city: "", province: "", district: "", radius_km: null, notes: "" });
   const [exceptions, setExceptions] = useState<AvailabilityExceptionRow[]>([]);
   const [newExc, setNewExc] = useState<NewExc>(() => emptyNewExc());
@@ -369,15 +375,22 @@ function AvailabilityPage() {
   );
 
   // ─────────── Editing fasce ───────────
-  const setDayAvailable = (on: boolean) =>
+  const setDayAvailable = (on: boolean) => {
+    if (primaryDow == null) return;
+    setDisabledDayEditors(prev => {
+      const next = new Set(prev);
+      if (on) next.delete(primaryDow); else next.add(primaryDow);
+      return next;
+    });
     applyToSelected((d) => ({
       ...d,
-      is_available: on,
+      is_available: on && (d.flexible || d.slots.length > 0),
       city: on ? (d.city || area.city) : d.city,
       province: on ? (d.province || area.province) : d.province,
       district: on ? (d.district || area.district) : d.district,
       radius_km: on ? (d.radius_km ?? area.radius_km) : d.radius_km,
     }));
+  };
 
   /** Unico menu "Disponibilità": imposta la fascia del giorno selezionato. */
   const setDaySlot = (slot: TimeSlot) => {
@@ -734,6 +747,7 @@ function AvailabilityPage() {
   }[saveStatus];
 
   const panelDay = primaryDow != null ? days[primaryDow] : null;
+  const dayEditorEnabled = panelDay != null && isDayEditorEnabled(panelDay.is_available, primaryDow != null && disabledDayEditors.has(primaryDow));
   const daySlot = panelDay?.slots[0] ?? null;
 
   // ─────────── Navigazione interna: blocco con dialog personalizzato ───────────
@@ -1130,14 +1144,14 @@ function AvailabilityPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className={cn("text-xs font-medium", panelDay.is_available ? "text-primary" : "text-muted-foreground")}>
-                    {panelDay.is_available ? "Disponibile" : "Non disponibile"}
+                    {dayEditorEnabled ? "Disponibile" : "Non disponibile"}
                   </span>
-                  <Switch checked={panelDay.is_available} onCheckedChange={setDayAvailable} aria-label="Disponibile" />
+                  <Switch checked={dayEditorEnabled} onCheckedChange={setDayAvailable} aria-label="Disponibile" />
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-3">
-                {!panelDay.is_available ? (
+                {!dayEditorEnabled ? (
                   <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
                     Attiva il selettore per impostare la disponibilità di questo giorno.
                   </div>
