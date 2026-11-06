@@ -1,4 +1,11 @@
 import { ALLOWED_COMUNI, ACTIVE_LAUNCH_AREAS, normalizePlaceName } from "@/lib/launch-area";
+import { CITY_ZONES as LOCATION_CITY_ZONES } from "@/lib/italian-locations";
+
+/** Onboarding start city is narrower than the province-wide job area. */
+export const WORKER_ONBOARDING_CITY = "Torino";
+export function isWorkerOnboardingCity(city: string): boolean {
+  return city === WORKER_ONBOARDING_CITY;
+}
 
 /**
  * Comuni selezionabili dal lavoratore per la zona di lavoro.
@@ -20,6 +27,7 @@ export function provinceCodeForCity(city: string | null | undefined): string {
 
 /** Quartieri/zone note (solo per i comuni capoluogo con zone mappate). */
 export const CITY_ZONES: Record<string, string[]> = {
+  Torino: LOCATION_CITY_ZONES.Torino ?? [],
   Bologna: ["Centro Storico", "Bolognina", "San Donato", "Santo Stefano", "Saragozza", "Murri", "Navile", "Borgo Panigale", "Savena"],
 };
 

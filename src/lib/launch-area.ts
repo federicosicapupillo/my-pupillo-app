@@ -9,6 +9,8 @@
  * (e la riga corrispondente a database): nessuna pagina va modificata.
  */
 
+import { TORINO_COMUNI } from "@/lib/torino-comuni";
+
 export type LaunchAreaComune = { name: string; caps: string[] };
 
 export type LaunchArea = {
@@ -27,75 +29,17 @@ export type LaunchArea = {
   comuni: LaunchAreaComune[];
 };
 
-const BOLOGNA_COMUNI: LaunchAreaComune[] = [
-  { name: "Alto Reno Terme", caps: ["40046"] },
-  { name: "Anzola dell'Emilia", caps: ["40011"] },
-  { name: "Argelato", caps: ["40050"] },
-  { name: "Baricella", caps: ["40052"] },
-  { name: "Bentivoglio", caps: ["40010"] },
-  { name: "Bologna", caps: ["40121","40122","40123","40124","40125","40126","40127","40128","40129","40131","40132","40133","40134","40135","40136","40137","40138","40139","40141"] },
-  { name: "Borgo Tossignano", caps: ["40021"] },
-  { name: "Budrio", caps: ["40054"] },
-  { name: "Calderara di Reno", caps: ["40012"] },
-  { name: "Camugnano", caps: ["40032"] },
-  { name: "Casalecchio di Reno", caps: ["40033"] },
-  { name: "Casalfiumanese", caps: ["40020"] },
-  { name: "Castel d'Aiano", caps: ["40034"] },
-  { name: "Castel del Rio", caps: ["40022"] },
-  { name: "Castel di Casio", caps: ["40030"] },
-  { name: "Castel Guelfo di Bologna", caps: ["40023"] },
-  { name: "Castel Maggiore", caps: ["40013"] },
-  { name: "Castel San Pietro Terme", caps: ["40024"] },
-  { name: "Castello d'Argile", caps: ["40050"] },
-  { name: "Castenaso", caps: ["40055"] },
-  { name: "Castiglione dei Pepoli", caps: ["40035"] },
-  { name: "Crevalcore", caps: ["40014"] },
-  { name: "Dozza", caps: ["40060"] },
-  { name: "Fontanelice", caps: ["40025"] },
-  { name: "Gaggio Montano", caps: ["40041"] },
-  { name: "Galliera", caps: ["40015"] },
-  { name: "Granarolo dell'Emilia", caps: ["40057"] },
-  { name: "Grizzana Morandi", caps: ["40030"] },
-  { name: "Imola", caps: ["40026"] },
-  { name: "Lizzano in Belvedere", caps: ["40042"] },
-  { name: "Loiano", caps: ["40050"] },
-  { name: "Malalbergo", caps: ["40051"] },
-  { name: "Marzabotto", caps: ["40043"] },
-  { name: "Medicina", caps: ["40059"] },
-  { name: "Minerbio", caps: ["40061"] },
-  { name: "Molinella", caps: ["40062"] },
-  { name: "Monghidoro", caps: ["40063"] },
-  { name: "Monte San Pietro", caps: ["40050"] },
-  { name: "Monterenzio", caps: ["40050"] },
-  { name: "Monzuno", caps: ["40036"] },
-  { name: "Mordano", caps: ["40027"] },
-  { name: "Ozzano dell'Emilia", caps: ["40064"] },
-  { name: "Pianoro", caps: ["40065"] },
-  { name: "Pieve di Cento", caps: ["40066"] },
-  { name: "Sala Bolognese", caps: ["40010"] },
-  { name: "San Benedetto Val di Sambro", caps: ["40048"] },
-  { name: "San Giorgio di Piano", caps: ["40016"] },
-  { name: "San Giovanni in Persiceto", caps: ["40017"] },
-  { name: "San Lazzaro di Savena", caps: ["40068"] },
-  { name: "San Pietro in Casale", caps: ["40018"] },
-  { name: "Sant'Agata Bolognese", caps: ["40019"] },
-  { name: "Sasso Marconi", caps: ["40037"] },
-  { name: "Valsamoggia", caps: ["40053"] },
-  { name: "Vergato", caps: ["40038"] },
-  { name: "Zola Predosa", caps: ["40069"] },
-];
-
 export const LAUNCH_AREAS: LaunchArea[] = [
   {
-    code: "BO",
-    name: "Città metropolitana di Bologna",
-    region: "Emilia-Romagna",
-    province: "Bologna",
-    province_code: "BO",
-    center: [44.4949, 11.3426],
-    radius_km: 60,
+    code: "TO",
+    name: "Città metropolitana di Torino",
+    region: "Piemonte",
+    province: "Torino",
+    province_code: "TO",
+    center: [45.0703, 7.6869],
+    radius_km: 120,
     active: true,
-    comuni: BOLOGNA_COMUNI,
+    comuni: TORINO_COMUNI,
   },
 ];
 
@@ -127,18 +71,18 @@ export const LAUNCH_AREA_RESTRICTED = ACTIVE_LAUNCH_AREAS.length > 0;
 
 /** Messaggio di errore per località non consentita. */
 export const LAUNCH_AREA_ERROR_MESSAGE =
-  "Pupillo è attualmente disponibile esclusivamente a Bologna e nei comuni della Città metropolitana di Bologna.";
+  "Pupillo è attualmente disponibile esclusivamente a Torino e nei comuni della Città metropolitana di Torino.";
 
 /** Comunicazione informativa mostrata dove si sceglie la località. */
 export const LAUNCH_AREA_NOTICE =
-  "Pupillo parte da Bologna. In questa fase puoi cercare o pubblicare turni esclusivamente a Bologna e provincia.";
+  "Pupillo parte da Torino. In questa fase puoi cercare o pubblicare turni esclusivamente a Torino e provincia.";
 
 /**
  * Comunicazione mostrata al lavoratore nelle sezioni offerte/disponibilità:
  * chiarisce che la limitazione riguarda il LUOGO DI LAVORO, non la residenza.
  */
 export const LAUNCH_AREA_WORKER_NOTICE =
-  "In questa fase Pupillo è operativo esclusivamente a Bologna e provincia. Potrai visualizzare opportunità lavorative presenti in quest'area.";
+  "In questa fase Pupillo è operativo esclusivamente a Torino e provincia. Potrai visualizzare opportunità lavorative presenti in quest'area.";
 
 export function normalizePlaceName(v: string | null | undefined): string {
   return (v ?? "")

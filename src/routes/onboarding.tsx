@@ -38,11 +38,11 @@ import {
   zonesForCity as districtZonesForCity,
 } from "@/lib/italian-locations";
 import {
-  RESIDENCE_CITY_OPTIONS,
   findResidenceComune,
   isValidResidenceCap,
   RESIDENCE_HELPER_TEXT,
 } from "@/lib/italian-comuni";
+import { RESIDENCE_REGION_OPTIONS, residenceRegionForProvince, residenceProvincesForRegion, residenceCitiesForProvince } from "@/lib/italian-residence-regions";
 import { CapField } from "@/components/CapField";
 import { DistrictField } from "@/components/DistrictField";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -70,7 +70,7 @@ import { WORKER_ROLES } from "@/lib/worker-roles";
 import { normalizeRole } from "@/lib/worker-role-normalization";
 import { LaunchAreaNotice } from "@/components/LaunchAreaNotice";
 import { isLocationAllowed, LAUNCH_AREA_ERROR_MESSAGE } from "@/lib/launch-area";
-import { WORKER_CITIES, zonesForCity, ALL_ZONES_OPTION } from "@/lib/worker-cities";
+import { WORKER_ONBOARDING_CITY, isWorkerOnboardingCity, zonesForCity, ALL_ZONES_OPTION } from "@/lib/worker-cities";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { NATIONALITIES } from "@/lib/nationalities";
 import { ZonesMultiSelect } from "@/components/ZonesMultiSelect";
@@ -249,7 +249,14 @@ function pickNumberString(
 }
 
 export const Route = createFileRoute("/onboarding")({
-  head: () => ({ meta: [{ title: "Completa il profilo — Pupillo" }] }),
+  head: () => ({ meta: [
+    { title: "Completa il profilo — Pupillo" },
+    { name: "description", content: "Completa il tuo profilo Pupillo per cercare turni o personale a Torino e provincia." },
+    { property: "og:title", content: "Completa il profilo — Pupillo" },
+    { property: "og:description", content: "Completa il tuo profilo Pupillo per cercare turni o personale a Torino e provincia." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => (
     <RequireAuth>
       <Onboarding />
@@ -391,7 +398,7 @@ function Onboarding() {
     address: "",
     price_range: "",
     service_area_radius_m: "10000",
-    service_area_city: "",
+    service_area_city: WORKER_ONBOARDING_CITY,
     service_area_district: "",
     street_number: "",
     district: "",
@@ -536,6 +543,8 @@ function Onboarding() {
     id_document_expires_at: "",
     id_document_issuer: "",
   });
+  const [residenceRegionSelection, setResidenceRegionSelection] = useState("");
+  const residenceRegion = residenceRegionForProvince(personal.residence_province) || residenceRegionSelection;
 
   // Per-field inline errors for the three date inputs. Cleared whenever the
   // user edits the field. Populated on submit attempt (and by live cross-checks
@@ -801,11 +810,11 @@ function Onboarding() {
           if (v === null || v === undefined) return f.service_area_radius_m;
           return String(ALLOWED_RADIUS_M.has(v) ? v : 10000);
         })(),
-        service_area_city: pick((profile as any).service_area_city, f.service_area_city),
+        service_area_city: role === "worker" ? WORKER_ONBOARDING_CITY : pick((profile as any).service_area_city, f.service_area_city),
         // Calcola il valore derivato dal DB, poi applica `pick` così che
         // un DB vuoto ("") non spazzi via una zona già digitata localmente.
         service_area_district: pick(
-          loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL
+          (role === "worker" && (profile as any).service_area_city !== WORKER_ONBOARDING_CITY) || loadedMode === "georadar" || loadedDistrict === GEORADAR_SENTINEL
             ? ""
             : loadedAllZones
               ? ALL_ZONES_OPTION
@@ -1490,9 +1499,9 @@ function Onboarding() {
         toast.error("Indica la città di partenza per la tua area di interesse.");
         return;
       }
-      if (!isLocationAllowed({ city: form.service_area_city.trim() })) {
+      if (!isWorkerOnboardingCity(form.service_area_city.trim())) {
         setBusy(false); submittingRef.current = false;
-        toast.error(LAUNCH_AREA_ERROR_MESSAGE);
+        toast.error("La città di partenza deve essere Torino.");
         return;
       }
       if (areaMode === "zones" && selectedZones.length === 0) {
@@ -2537,15 +2546,40 @@ function Onboarding() {
                     </p>
                   )}
                 </div>
+                <div data-field="residence_region">
+                  <Label>Regione di residenza *</Label>
+                  <SearchableSelect
+                    options={RESIDENCE_REGION_OPTIONS}
+                    value={residenceRegion}
+                    placeholder="Seleziona regione"
+                    searchPlaceholder="Cerca regione"
+                    onChange={(region) => {
+                      setResidenceRegionSelection(region);
+                      setPersonal((s) => ({ ...s, residence_province: "", residence_city: "", residence_postal_code: "" }));
+                    }}
+                  />
+                </div>
+                <div data-field="residence_province">
+                  <Label>Provincia di residenza *</Label>
+                  <SearchableSelect
+                    options={residenceProvincesForRegion(residenceRegion)}
+                    value={personal.residence_province}
+                    disabled={!residenceRegion}
+                    placeholder="Seleziona provincia"
+                    searchPlaceholder="Cerca provincia"
+                    onChange={(province) => setPersonal((s) => ({ ...s, residence_province: province, residence_city: "", residence_postal_code: "" }))}
+                  />
+                </div>
                 <div data-field="residence_city" className={cn("scroll-mt-24", hasErr("residence_city") && errorFieldClass)}>
                   <Label>Città di residenza *</Label>
                   <SearchableSelect
-                    options={RESIDENCE_CITY_OPTIONS}
+                    options={residenceCitiesForProvince(personal.residence_province)}
+                    disabled={!personal.residence_province}
                     value={personal.residence_city}
                     placeholder="Seleziona città"
                     searchPlaceholder="Cerca città"
                     onChange={(city) => {
-                      const entry = findResidenceComune(city);
+                      const entry = findResidenceComune(city, personal.residence_province);
                       setPersonal((s) => ({
                         ...s,
                         residence_city: city,
@@ -2559,16 +2593,6 @@ function Onboarding() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {RESIDENCE_HELPER_TEXT}
                   </p>
-                </div>
-                <div data-field="residence_province">
-                  <Label>Provincia *</Label>
-                  <Input
-                    value={personal.residence_province}
-                    readOnly
-                    disabled
-                    placeholder="Auto"
-                    aria-readonly="true"
-                  />
                 </div>
                 <div data-field="residence_postal_code" className={cn("scroll-mt-24", hasErr("residence_postal_code") && errorFieldClass)}>
                   <Label>CAP *</Label>
@@ -3022,21 +3046,8 @@ function Onboarding() {
               <LaunchAreaNotice variant="worker" />
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <Label>Città di partenza *</Label>
-                  <SearchableSelect
-                    options={WORKER_CITIES as unknown as string[]}
-                    value={form.service_area_city}
-                    onChange={(v) =>
-                      setForm({
-                        ...form,
-                        service_area_city: v,
-                        // reset zones when city changes
-                        service_area_district: "",
-                      })
-                    }
-                    placeholder="Seleziona città"
-                    searchPlaceholder="Cerca città…"
-                  />
+                  <Label htmlFor="worker-start-city">Città di partenza *</Label>
+                  <Input id="worker-start-city" value={WORKER_ONBOARDING_CITY} readOnly className="h-12" />
                 </div>
                 {(areaMode === "zones" || areaMode === "georadar") && (
                 <div>
@@ -3075,15 +3086,14 @@ function Onboarding() {
                 <div className="space-y-2 rounded-md border bg-muted/30 p-3">
                   <UseCurrentLocationButton
                     onLocated={(loc) => {
-                      const knownCity = (WORKER_CITIES as readonly string[]).includes(
-                        loc.city,
-                      )
-                        ? loc.city
-                        : form.service_area_city || loc.city;
+                      if (!isWorkerOnboardingCity(loc.city)) {
+                        toast.error("La posizione di partenza deve essere a Torino.");
+                        return;
+                      }
                       setForm((prev) => ({
                         ...prev,
-                        service_area_city: knownCity,
-                        service_area_district: loc.district || prev.service_area_district,
+                        service_area_city: WORKER_ONBOARDING_CITY,
+                        service_area_district: zonesForCity(WORKER_ONBOARDING_CITY).includes(loc.district) ? loc.district : prev.service_area_district,
                       }));
                       setGpsServiceArea({ lat: loc.lat, lng: loc.lng });
                       setServiceAreaPreview({ lat: loc.lat, lng: loc.lng });

@@ -62,18 +62,18 @@ describe("residenza lavoratore — anagrafica nazionale", () => {
 
 describe("area operativa — luogo di lavoro", () => {
   it("è configurata in un unico punto", () => {
-    expect(OPERATIONAL_PROVINCE_CODE).toBe("BO");
-    expect(OPERATIONAL_PROVINCE_CODES).toEqual(["BO"]);
+    expect(OPERATIONAL_PROVINCE_CODE).toBe("TO");
+    expect(OPERATIONAL_PROVINCE_CODES).toEqual(["TO"]);
   });
 
-  it("consente annunci a Bologna e nei comuni della provincia", () => {
-    expect(isLocationAllowed({ city: "Bologna", province: "Bologna" })).toBe(true);
-    expect(isLocationAllowed({ city: "Imola", province: "BO" })).toBe(true);
-    expect(isComuneAllowed("Casalecchio di Reno")).toBe(true);
+  it("consente annunci a Torino e nei comuni della provincia", () => {
+    expect(isLocationAllowed({ city: "Torino", province: "Torino" })).toBe(true);
+    expect(isLocationAllowed({ city: "Moncalieri", province: "TO" })).toBe(true);
+    expect(isComuneAllowed("Rivoli")).toBe(true);
   });
 
-  it("blocca annunci fuori provincia di Bologna", () => {
-    for (const city of ["Milano", "Roma", "Palermo", "Pontremoli", "Torino"]) {
+  it("blocca annunci fuori provincia di Torino", () => {
+    for (const city of ["Milano", "Roma", "Palermo", "Pontremoli", "Bologna"]) {
       expect(isLocationAllowed({ city })).toBe(false);
     }
     expect(validateLaunchLocation({ city: "Milano", province: "MI" })).toBe(false);
@@ -81,27 +81,27 @@ describe("area operativa — luogo di lavoro", () => {
 
   it("non è aggirabile con testo libero o payload incoerenti", () => {
     expect(isComuneAllowed("bologna sud")).toBe(false);
-    expect(isComuneAllowed("Comune di Bologna")).toBe(false);
-    expect(validateLaunchLocation({ city: "Bologna", province: "MI" })).toBe(false);
+    expect(isComuneAllowed("Comune di Torino")).toBe(false);
+    expect(validateLaunchLocation({ city: "Torino", province: "MI" })).toBe(false);
     // coordinate fuori area anche con comune "giusto"
-    expect(validateLaunchLocation({ city: "Bologna", province: "BO", lat: 45.4642, lng: 9.19 })).toBe(false);
+    expect(validateLaunchLocation({ city: "Torino", province: "TO", lat: 45.4642, lng: 9.19 })).toBe(false);
   });
 
   it("normalizza accenti/apostrofi e maiuscole (nessun confronto fragile)", () => {
-    expect(isComuneAllowed("ANZOLA DELL'EMILIA")).toBe(true);
-    expect(isComuneAllowed("anzola dell emilia")).toBe(true);
-    expect(isComuneAllowed("Sant'Agata Bolognese")).toBe(true);
+    expect(isComuneAllowed("RIVA PRESSO CHIERI")).toBe(true);
+    expect(isComuneAllowed("riva presso chieri")).toBe(true);
+    expect(isComuneAllowed("Sant'Ambrogio di Torino")).toBe(true);
   });
 });
 
 describe("la residenza non influenza 'Trova offerte'", () => {
-  const residenze = ["Bologna", "Pontremoli", "Milano", "Roma"];
+  const residenze = ["Torino", "Pontremoli", "Milano", "Roma"];
   const annunci = [
-    { job_city: "Bologna", job_province: "Bologna", visibile: true },
-    { job_city: "Imola", job_province: "Bologna", visibile: true },
-    { job_city: "Casalecchio di Reno", job_province: "BO", visibile: true },
+    { job_city: "Torino", job_province: "Torino", visibile: true },
+    { job_city: "Moncalieri", job_province: "Torino", visibile: true },
+    { job_city: "Rivoli", job_province: "TO", visibile: true },
     { job_city: "Milano", job_province: "Milano", visibile: false },
-    { job_city: "Torino", job_province: "Torino", visibile: false },
+    { job_city: "Bologna", job_province: "Bologna", visibile: false },
   ];
 
   it.each(residenze)("stessi risultati per un lavoratore residente a %s", (residenza) => {
@@ -112,9 +112,9 @@ describe("la residenza non influenza 'Trova offerte'", () => {
       isLocationAllowed({ city: a.job_city, province: a.job_province }),
     );
     expect(visibili.map((a) => a.job_city)).toEqual([
-      "Bologna",
-      "Imola",
-      "Casalecchio di Reno",
+      "Torino",
+      "Moncalieri",
+      "Rivoli",
     ]);
     expect(annunci.every((a) => isLocationAllowed({ city: a.job_city, province: a.job_province }) === a.visibile)).toBe(true);
   });
