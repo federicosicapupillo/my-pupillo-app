@@ -66,7 +66,7 @@ function Index() {
       <main className="mx-auto max-w-[1200px] px-4">
         <section className="pb-8 pt-6 text-center md:pt-14">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" aria-hidden /> Bologna e provincia
+            <MapPin className="h-3.5 w-3.5" aria-hidden /> Torino e provincia
           </span>
           <h1 className="mx-auto mt-5 max-w-4xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl md:text-7xl">
             Il turno giusto. <span style={{ color: LIME }}>La persona giusta.</span>
