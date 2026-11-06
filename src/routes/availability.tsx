@@ -748,6 +748,23 @@ function AvailabilityPage() {
 
       <LaunchAreaNotice className="mb-4" variant="worker" />
 
+      {/* ── 6. COME FUNZIONA ── */}
+      <Card className="border-primary/25 bg-primary/5">
+        <CardContent className="space-y-2 p-3.5">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Repeat className="h-4 w-4 text-primary" /> Come funziona
+          </div>
+          <ul className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+            <li>Le disponibilità che imposti valgono <strong className="text-foreground">solo per le date scelte</strong>.</li>
+            <li>Seleziona una data per impostare gli orari di <strong className="text-foreground">quel giorno soltanto</strong>.</li>
+            <li>Città, zona e raggio si impostano una sola volta in "Area di lavoro".</li>
+          </ul>
+          <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={() => setHowItWorks(true)}>
+            <Info className="h-3.5 w-3.5" /> Maggiori dettagli
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         {/* ══════════ COLONNA SINISTRA ══════════ */}
         <div className="space-y-4">
@@ -1020,22 +1037,7 @@ function AvailabilityPage() {
             </CardContent>
           </Card>
 
-          {/* ── 6. COME FUNZIONA ── */}
-          <Card className="border-primary/25 bg-primary/5">
-            <CardContent className="space-y-2 p-3.5">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Repeat className="h-4 w-4 text-primary" /> Come funziona
-              </div>
-              <ul className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
-                <li>Le disponibilità che imposti valgono <strong className="text-foreground">solo per le date scelte</strong>.</li>
-                <li>Seleziona una data per impostare gli orari di <strong className="text-foreground">quel giorno soltanto</strong>.</li>
-                <li>Città, zona e raggio si impostano una sola volta in "Area di lavoro".</li>
-              </ul>
-              <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={() => setHowItWorks(true)}>
-                <Info className="h-3.5 w-3.5" /> Maggiori dettagli
-              </Button>
-            </CardContent>
-          </Card>
+
         </div>
 
         {/* ══════════ COLONNA DESTRA ══════════ */}
