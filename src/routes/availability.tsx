@@ -2,11 +2,12 @@ import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { RequireRole } from "@/components/RequireRole";
 import { AppShell } from "@/components/AppShell";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { setMyAvailableNow } from "@/lib/profile-self-update";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +61,7 @@ import {
 } from "@/lib/availability";
 import {
   addMonths,
+  availabilityCopyDates,
   buildMonthGrid,
   dowOfIso,
   formatDateLong,
@@ -233,9 +235,13 @@ function AvailabilityPage() {
     };
   }, [profile]);
 
+  const [dateDrafts, setDateDrafts] = useState<Record<string, DayState>>({});
+  const [copyMode, setCopyMode] = useState<"week" | "month">("month");
+  const [copyDates, setCopyDates] = useState<string[]>([]);
   const [days, setDays] = useState<DayState[]>(() => Array.from({ length: 7 }, () => emptyDay()));
   const [area, setArea] = useState<WorkArea>({ city: "", province: "", district: "", radius_km: null, notes: "" });
   const [exceptions, setExceptions] = useState<AvailabilityExceptionRow[]>([]);
+  const [datesLoaded, setDatesLoaded] = useState(false);
   const [newExc, setNewExc] = useState<NewExc>(() => emptyNewExc());
   const [availableNow, setAvailableNow] = useState(false);
   const [availableNowUntil, setAvailableNowUntil] = useState<string | null>(null);
@@ -326,28 +332,17 @@ function AvailabilityPage() {
     return () => { cancelled = true; };
   }, [user, profile, defaults.city, defaults.province, defaults.district, defaults.radius_km]);
 
-  // Disponibilità speciali: nessuna query quando il flag è OFF/loading/error.
   useEffect(() => {
-    if (!user || !specialAvailabilityEnabled) {
-      setExceptions([]);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("worker_availability_exceptions")
-        .select("*")
-        .eq("worker_id", user.id)
-        .order("date", { ascending: true });
-      if (cancelled) return;
-      setExceptions((data ?? []) as unknown as AvailabilityExceptionRow[]);
-    })();
-    return () => { cancelled = true; };
-  }, [user, specialAvailabilityEnabled]);
+    if (!user) return;
+    void supabase.from("worker_availability_exceptions").select("*").eq("worker_id", user.id).order("date").then(({ data, error }) => {
+      if (error) toast.error("Non è stato possibile caricare le disponibilità per data.");
+      else { setExceptions((data ?? []) as unknown as AvailabilityExceptionRow[]); setDatesLoaded(true); }
+    });
+  }, [user]);
 
   /** Stato dirty = differenza fra stato corrente e snapshot dell'ultimo salvataggio. */
   const currentSignature = useMemo(() => signatureOf(days, area), [days, area]);
-  const dirty = savedSignature != null && currentSignature !== savedSignature;
+  const dirty = Object.keys(dateDrafts).length > 0 || (savedSignature != null && currentSignature !== savedSignature);
 
   // Refresh / chiusura scheda: protezione nativa del browser.
   useEffect(() => {
@@ -366,12 +361,27 @@ function AvailabilityPage() {
   /** Single-select: cliccare una data deseleziona automaticamente la precedente. */
   const selectDate = (iso: string) => setSelectedDate(iso);
 
-  const applyToSelected = useCallback(
-    (fn: (d: DayState) => DayState) => {
-      setDays((prev) => prev.map((d, i) => (i === primaryDow ? fn(d) : d)));
-    },
-    [primaryDow],
-  );
+  const dayForDate = (iso: string): DayState => {
+    if (dateDrafts[iso]) return dateDrafts[iso];
+    const rows = exceptions.filter(e => e.date === iso);
+    if (!rows.length) return days[dowOfIso(iso)] ?? emptyDay(area.city, area.province, area.district, area.radius_km);
+    const first = rows[0];
+    const day = emptyDay(first.city || area.city, first.province || area.province, first.district || area.district, first.radius_km ?? area.radius_km);
+    if (rows.some(e => !e.is_available)) return day;
+    day.is_available = true; day.notes = first.notes || "";
+    day.flexible = rows.some(e => e.time_slot === "flessibile");
+    day.slots = rows.filter(e => e.time_slot && e.time_slot !== "flessibile").map(e => {
+      const slot = e.time_slot as TimeSlot;
+      return { uid: e.id, time_slot: slot, start_time: e.start_time?.slice(0,5) ?? SLOT_DEFAULT_TIMES[slot].start, end_time: e.end_time?.slice(0,5) ?? SLOT_DEFAULT_TIMES[slot].end, is_flexible: false, is_last_minute: slot === "last_minute" };
+    });
+    return day;
+  };
+  const applyToSelected = (fn: (d: DayState) => DayState) => {
+    if (!selectedDate) return;
+    const date = selectedDate;
+    const updated = fn(dayForDate(date));
+    setDateDrafts(prev => ({ ...prev, [date]: updated }));
+  };
 
   // ─────────── Editing fasce ───────────
   const setDayAvailable = (on: boolean) => {
@@ -430,13 +440,12 @@ function AvailabilityPage() {
   };
 
   const applyAreaToAllDays = () => {
-    setDays((prev) =>
-      prev.map((d) =>
-        d.is_available
-          ? { ...d, city: area.city, province: area.province, district: area.district, radius_km: area.radius_km, notes: area.notes }
-          : d,
-      ),
-    );
+    const updated: Record<string, DayState> = {};
+    grid.filter(c => c.inMonth && !c.isPast).forEach(c => {
+      const day = dayForDate(c.iso);
+      if (day.is_available) updated[c.iso] = { ...day, city: area.city, province: area.province, district: area.district, radius_km: area.radius_km, notes: area.notes };
+    });
+    setDateDrafts(prev => ({ ...prev, ...updated }));
     setConfirmApplyArea(false);
     toast.success("Area di lavoro applicata a tutti i giorni disponibili.");
   };
@@ -475,134 +484,57 @@ function AvailabilityPage() {
     return null;
   };
 
-  const persistAll = async (
-    override?: DayState[],
-    opts: { silent?: boolean } = {},
-  ): Promise<boolean> => {
-    if (!user) return false;
-    const list = override ?? days;
-    const err = validateBeforeSave(list);
-    if (err) { toast.error(err); return false; }
+  const persistAll = async (_override?: DayState[], opts: { silent?: boolean } = {}): Promise<boolean> => {
+    if (!user || !datesLoaded) { toast.error("Attendi il caricamento delle disponibilità prima di salvare."); return false; }
+    const entries = Object.entries(dateDrafts);
+    for (const [, day] of entries) {
+      const error = validateBeforeSave([day]);
+      if (error) { toast.error(error); return false; }
+    }
+    if (!entries.length) { setSavedSignature(currentSignature); return true; }
     setSaving(true);
     try {
-      const { error: delErr } = await supabase.from("worker_availability").delete().eq("worker_id", user.id);
-      if (delErr) throw delErr;
-
-      const inserts: Array<Omit<AvailabilityRow, "id">> = [];
-      list.forEach((d, dow) => {
-        if (!d.is_available) return;
-        const loc = {
-          city: d.city.trim() || null,
-          province: d.province.trim() || null,
-          district: d.district.trim() || null,
-          latitude: null,
-          longitude: null,
-          radius_km: d.radius_km,
-        };
-        if (d.flexible) {
-          inserts.push({
-            worker_id: user.id,
-            day_of_week: dow,
-            time_slot: "flessibile",
-            start_time: null,
-            end_time: null,
-            is_flexible: true,
-            is_last_minute: false,
-            notes: d.notes || null,
-            ...loc,
-          });
-        }
-        d.slots.forEach((s) => {
-          inserts.push({
-            worker_id: user.id,
-            day_of_week: dow,
-            time_slot: s.time_slot,
-            start_time: s.start_time,
-            end_time: s.end_time,
-            is_flexible: false,
-            is_last_minute: s.time_slot === "last_minute",
-            notes: d.notes || null,
-            ...loc,
-          });
-        });
+      const payload = entries.map(([date, day]) => {
+        const location = { city: day.city || null, province: day.province || null, district: day.district || null, radius_km: day.radius_km, notes: day.notes || null };
+        const slots = !day.is_available ? [{ is_available: false, time_slot: null, start_time: null, end_time: null, ...location }] : [
+          ...(day.flexible ? [{ is_available: true, time_slot: "flessibile", start_time: null, end_time: null, ...location }] : []),
+          ...day.slots.map(slot => ({ is_available: true, time_slot: slot.time_slot, start_time: slot.start_time, end_time: slot.end_time, ...location })),
+        ];
+        return { date, slots };
       });
-
-      if (inserts.length > 0) {
-        const { error: insErr } = await supabase.from("worker_availability").insert(inserts as never);
-        if (insErr) throw insErr;
-      }
-      setLastSavedAt(new Date());
-      snapshotRef.current = {
-        days: list.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })),
-        area: { ...area },
-      };
-      setSavedSignature(signatureOf(list, area));
+      const { error } = await supabase.rpc("save_my_availability_dates", { _entries: payload });
+      if (error) throw error;
+      const { data, error: readError } = await supabase.from("worker_availability_exceptions").select("*").eq("worker_id", user.id).order("date");
+      if (readError) throw readError;
+      setExceptions((data ?? []) as unknown as AvailabilityExceptionRow[]);
+      setDateDrafts({}); setLastSavedAt(new Date()); setSavedSignature(currentSignature);
+      snapshotRef.current = { days, area: { ...area } };
       void invalidateAvailabilityStatus(user.id);
-      if (!opts.silent) toast.success("Disponibilità salvate correttamente");
+      if (!opts.silent) toast.success("Disponibilità salvata per le date impostate.");
       return true;
-    } catch (e: unknown) {
-      const pg = e as { message?: string; code?: string; details?: string; hint?: string };
-      console.error("[availability] save failed", {
-        message: pg?.message,
-        code: pg?.code,
-        details: pg?.details,
-        hint: pg?.hint,
-      });
-      const userMsg =
-        pg?.code === "23514"
-          ? "Una delle fasce orarie selezionate non è ammessa. Riprova o scegli un'altra fascia."
-          : pg?.code === "23505"
-            ? "Hai inserito due volte la stessa fascia per lo stesso giorno."
-            : pg?.code === "42501"
-              ? "Non hai i permessi per salvare le disponibilità."
-              : "Non è stato possibile salvare la disponibilità. Riprova.";
-      toast.error(userMsg);
-      return false;
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.error("Non è stato possibile salvare le disponibilità. Riprova."); return false; }
+    finally { setSaving(false); }
   };
-
   const save = async (): Promise<void> => { await persistAll(); };
-
-  // ─────────── Copia su tutti i giorni della settimana ───────────
-  /** Giorni che verrebbero sovrascritti (hanno già una disponibilità impostata). */
-  const overwriteTargets = useMemo(
-    () =>
-      days
-        .map((d, i) => ({ d, i }))
-        .filter(({ d, i }) => i !== primaryDow && (d.is_available || d.slots.length > 0))
-        .map(({ i }) => DAY_LABELS[i]),
-    [days, primaryDow],
-  );
-
-  /** Copia locale: nessun salvataggio automatico, resta una modifica non salvata. */
+  const openCopy = (mode: "week" | "month") => {
+    if (!selectedDate) return;
+    setCopyMode(mode); setCopyDates(availabilityCopyDates(selectedDate, mode)); setCopyOpen(true);
+  };
+  const overwriteTargets = copyDates.filter(iso => dayForDate(iso).is_available).map(formatDateLong);
   const applyCopy = () => {
-    if (primaryDow == null) return;
-    const src = days[primaryDow];
-    const next = days.map((d, i) =>
-      i === primaryDow
-        ? d
-        : { ...src, slots: src.slots.map((s) => ({ ...s, uid: nextUid(), id: undefined })) },
-    );
-    setDays(next);
-    setCopyOpen(false);
-    toast.success("Disponibilità copiata su tutta la settimana. Ricordati di salvare.");
+    if (!selectedDate) return;
+    const source = dayForDate(selectedDate);
+    setDateDrafts(prev => ({ ...prev, ...Object.fromEntries(copyDates.map(iso => [iso, { ...source, slots: source.slots.map(slot => ({ ...slot, uid: nextUid(), id: undefined })) }])) }));
+    setCopyOpen(false); toast.success("Copia preparata per le date scelte. Salva per confermare.");
   };
-
   const clearAll = () => {
-    setDays(Array.from({ length: 7 }, () => emptyDay(area.city, area.province, area.district, area.radius_km)));
-    setConfirmClear(false);
-    toast.success("Tutte le disponibilità sono state cancellate.");
+    setDateDrafts(prev => ({ ...prev, ...Object.fromEntries(grid.filter(c => c.inMonth && !c.isPast).map(c => [c.iso, emptyDay(area.city, area.province, area.district, area.radius_km)])) }));
+    setConfirmClear(false); toast.success("Disponibilità del mese azzerate. Salva per confermare.");
   };
-
-  /** Ripristina l'ultimo stato salvato (o caricato) senza toccare il DB. */
   const revertChanges = () => {
     const snap = snapshotRef.current;
     if (!snap) return;
-    setDays(snap.days.map((d) => ({ ...d, slots: d.slots.map((s) => ({ ...s })) })));
-    setArea({ ...snap.area });
-    setAreaEditing(false);
+    setDateDrafts({}); setArea({ ...snap.area }); setAreaEditing(false);
     toast.success("Modifiche annullate.");
   };
 
@@ -710,8 +642,8 @@ function AvailabilityPage() {
   const grid = useMemo(() => buildMonthGrid(month), [month]);
 
   const monthSetCount = useMemo(
-    () => grid.filter((c) => c.inMonth && !c.isPast && days[c.dow]?.is_available).length,
-    [grid, days],
+    () => grid.filter((c) => c.inMonth && !c.isPast && dayForDate(c.iso).is_available).length,
+    [grid, days, exceptions, dateDrafts],
   );
 
   const summary = useMemo(() => {
@@ -740,7 +672,7 @@ function AvailabilityPage() {
     idle: { label: "Nessuna modifica", cls: "border-border bg-muted text-muted-foreground", Icon: CheckCircle2, spin: false },
   }[saveStatus];
 
-  const panelDay = primaryDow != null ? days[primaryDow] : null;
+  const panelDay = selectedDate != null ? dayForDate(selectedDate) : null;
   const dayEditorEnabled = !!panelDay?.is_available;
   const daySlot = panelDay?.slots[0] ?? null;
 
@@ -995,7 +927,7 @@ function AvailabilityPage() {
               <div className="grid grid-cols-7 gap-1">
                 {grid.map((c) => {
                   const isSelected = selectedDate === c.iso;
-                  const hasAvail = days[c.dow]?.is_available;
+                  const hasAvail = dayForDate(c.iso).is_available;
                   return (
                     <button
                       key={c.iso}
@@ -1049,7 +981,11 @@ function AvailabilityPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1.5 pb-4">
-              {days.map((d, i) => {
+              {days.map((_, i) => {
+                const weekStart = selectedDate ? new Date(selectedDate + "T00:00:00") : new Date();
+                weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7) + i);
+                const weekDate = toIso(weekStart);
+                const d = dayForDate(weekDate);
                 const isSel = primaryDow === i;
                 const labels = d.flexible
                   ? ["Flessibile"]
@@ -1061,21 +997,8 @@ function AvailabilityPage() {
                     key={i}
                     type="button"
                     data-testid={`week-row-${i}`}
-                    onClick={() => {
-                      const target = grid.find((c) => c.inMonth && !c.isPast && c.dow === i);
-                      if (target) {
-                        setSelectedDate(target.iso);
-                        return;
-                      }
-                      // Nessuna occorrenza futura nel mese visualizzato:
-                      // salta alla prossima occorrenza di quel giorno.
-                      const d0 = new Date();
-                      d0.setHours(0, 0, 0, 0);
-                      const delta = (i - ((d0.getDay() + 6) % 7) + 7) % 7;
-                      d0.setDate(d0.getDate() + delta);
-                      setMonth(startOfMonth(d0));
-                      setSelectedDate(toIso(d0));
-                    }}
+                    disabled={weekDate < toIso(new Date())}
+                    onClick={() => setSelectedDate(weekDate)}
                     className={cn(
                       "grid w-full grid-cols-[38px_minmax(0,1fr)] items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
                       isSel
@@ -1104,8 +1027,8 @@ function AvailabilityPage() {
                 <Repeat className="h-4 w-4 text-primary" /> Come funziona
               </div>
               <ul className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
-                <li>Le disponibilità che imposti valgono <strong className="text-foreground">ogni settimana</strong>.</li>
-                <li>Seleziona un giorno per modificare gli orari ricorrenti di quel giorno: es. un mercoledì vale per <strong className="text-foreground">tutti i mercoledì</strong>.</li>
+                <li>Le disponibilità che imposti valgono <strong className="text-foreground">solo per le date scelte</strong>.</li>
+                <li>Seleziona una data per impostare gli orari di <strong className="text-foreground">quel giorno soltanto</strong>.</li>
                 <li>Città, zona e raggio si impostano una sola volta in "Area di lavoro".</li>
               </ul>
               <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={() => setHowItWorks(true)}>
@@ -1121,7 +1044,7 @@ function AvailabilityPage() {
           {panelDay == null ? (
             <Card className="border-dashed">
               <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                Seleziona un giorno sul calendario per impostare le fasce orarie ricorrenti.
+                Seleziona una data sul calendario per impostare le fasce orarie.
               </CardContent>
             </Card>
           ) : (
@@ -1129,11 +1052,11 @@ function AvailabilityPage() {
               <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 space-y-0 pb-3">
                 <div className="min-w-0">
                   <CardTitle className="truncate text-base font-semibold capitalize">
-                    Disponibilità del {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
+                    Disponibilità del {selectedDate ? formatDateLong(selectedDate).toLowerCase() : ""}
                   </CardTitle>
                   <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Repeat className="h-3.5 w-3.5 shrink-0 text-primary" />
-                    Questa impostazione vale per tutti i {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""}
+                    Solo per questa data
                   </p>
                 </div>
               </CardHeader>
@@ -1242,11 +1165,14 @@ function AvailabilityPage() {
                       variant="outline"
                       className="w-full gap-2"
                       disabled={copying || saving}
-                      onClick={() => setCopyOpen(true)}
+                      onClick={() => openCopy("week")}
                     >
-                      <Copy className="h-4 w-4" /> Copia su tutti i giorni della settimana
+                      <Copy className="h-4 w-4" /> Copia sui giorni della settimana
                     </Button>
 
+                    <Button type="button" variant="outline" className="w-full gap-2" disabled={saving} onClick={() => openCopy("month")}>
+                      <Copy className="h-4 w-4" /> Copia sui giorni uguali del mese
+                    </Button>
                     <div className="space-y-2 border-t pt-3">
                       <Button
                         onClick={saveGated}
@@ -1550,12 +1476,12 @@ function AvailabilityPage() {
           <DialogHeader>
             <DialogTitle>Come funziona il calendario</DialogTitle>
             <DialogDescription>
-              Il calendario è una vista sul tuo schema settimanale ricorrente.
+              Ogni data ha una disponibilità indipendente.
             </DialogDescription>
           </DialogHeader>
           <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-            <li>Selezionando una data modifichi <strong className="text-foreground">tutti i giorni della settimana corrispondenti</strong> (es. tocca un mercoledì → vale per tutti i mercoledì).</li>
-            <li>Puoi selezionare più date insieme: le modifiche si applicano a tutti i giorni della settimana coinvolti.</li>
+            <li>Selezionando una data modifichi <strong className="text-foreground">solo quella data</strong>.</li>
+            <li>La copia si applica soltanto alle date che scegli nella settimana o nel mese.</li>
             <li>Città, zona e raggio si impostano una sola volta nella sezione "Area di lavoro".</li>
             <li>Le date passate non sono selezionabili.</li>
           </ul>
@@ -1568,11 +1494,17 @@ function AvailabilityPage() {
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Copiare su tutti i giorni della settimana?</DialogTitle>
+            <DialogTitle>Copia disponibilità sulle date scelte</DialogTitle>
             <DialogDescription>
-              La disponibilità di {primaryDow != null ? DAY_LABELS[primaryDow].toLowerCase() : ""} verrà copiata su tutti gli altri giorni.
+              Scegli le date {copyMode === "month" ? "del mese" : "della settimana"} su cui copiare la disponibilità.
             </DialogDescription>
           </DialogHeader>
+          <div className="max-h-64 space-y-3 overflow-y-auto">
+            {selectedDate && availabilityCopyDates(selectedDate, copyMode).map(iso => <label key={iso} className="flex items-center gap-3 text-sm">
+              <Checkbox checked={copyDates.includes(iso)} onCheckedChange={checked => setCopyDates(prev => checked ? [...prev, iso] : prev.filter(date => date !== iso))} />{formatDateLong(iso)}
+            </label>)}
+            {copyDates.length === 0 && <p className="text-sm text-muted-foreground">Seleziona almeno una data futura.</p>}
+          </div>
           {overwriteTargets.length > 0 && (
             <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
               Attenzione: verranno sovrascritte le disponibilità già impostate per {overwriteTargets.join(", ")}.
@@ -1580,7 +1512,7 @@ function AvailabilityPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCopyOpen(false)} disabled={copying}>Annulla</Button>
-            <Button onClick={applyCopy} disabled={copying || saving}>
+            <Button onClick={applyCopy} disabled={copying || saving || copyDates.length === 0}>
               {copying ? "Copia in corso…" : "Conferma e copia"}
             </Button>
           </DialogFooter>
@@ -1607,7 +1539,7 @@ function AvailabilityPage() {
           <DialogHeader>
             <DialogTitle>Cancella tutte le disponibilità</DialogTitle>
             <DialogDescription>
-              Stai per cancellare tutte le disponibilità impostate. Vuoi continuare?
+              Stai per azzerare le disponibilità future del mese visualizzato. Salva per confermare.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

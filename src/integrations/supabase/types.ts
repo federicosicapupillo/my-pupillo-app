@@ -3397,6 +3397,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_my_availability_dates: {
+        Args: { _entries: Json }
+        Returns: undefined
+      }
       search_worker_availability_exceptions_public: {
         Args: { _from_date: string; _worker_ids: string[] }
         Returns: {

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Disponibilità per singola data con salvataggio atomico; copia esplicita su settimana o giorni omonimi futuri del mese selezionati. Verificati in sessione 7 novembre colazione / 14 pranzo persistenti, 21 invariato e copia selettiva senza il 14; 7 test passati, build OK, nessun overflow mobile. Disponibilità settimanali preesistenti preservate come base.
+
 - [x] Calcolo diretto del curriculum con consenso, senza attesa di approvazione manuale; analisi reale completata a 29/100 e persistente nella dashboard, privata sotto soglia. Desktop/mobile verificati, 30 test passati e build OK; scelta pubblicazione da 4 stelle mantenuta.
 
 - [x] Punteggio curriculum privato nella dashboard, criteri e scelta di visibilità ai ristoratori per valutazioni approvate da 4 stelle; 18 test passati, build OK, stato reale «Richiesta ricevuta» verificato in sessione e nessun overflow mobile. Nessuna analisi già completata disponibile per verificare il cambio visibilità integrale.

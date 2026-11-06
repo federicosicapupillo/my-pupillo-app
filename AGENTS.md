@@ -1,5 +1,7 @@
 # Project rules
 
+- Edit calendar availability as date overrides through an atomic owner-scoped RPC; keep weekly rows as a read fallback and copy only explicitly selected dates, so a later single-date edit cannot change other weekdays or months.
+
 - Keep CV assessments outside reviews/reputation; server-side AI completes consented assessments without manual approval, authorized only for the owner-worker or admin, and a version-checked owner RPC opts into public visibility. Use the approved state for completed automatic results without claiming human review. Dashboard reads private assessments through owner RLS; restaurant views use sanitized public reads. Reset visibility on replacement, new analysis or consent withdrawal to prevent stale publication.
 
 - Store optional worker curricula separately from profile completion fields in private owner-only storage; validate PDF bytes server-side and keep upload independent of onboarding completion.

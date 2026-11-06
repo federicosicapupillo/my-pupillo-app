@@ -1,10 +1,7 @@
 /**
  * Pure helpers for the monthly calendar view of the worker availability page.
  *
- * IMPORTANT: the underlying data model is the RECURRING weekly schedule
- * (`worker_availability.day_of_week`, 0 = Monday … 6 = Sunday). The calendar is
- * only a *view* over that model: touching a date edits the pattern of that
- * date's weekday. No per-date rows are created here.
+ * Dates are edited independently; existing weekly schedules are only a fallback.
  */
 
 export type MonthCell = {
@@ -42,6 +39,18 @@ export function startOfMonth(d: Date): Date {
 
 export function addMonths(d: Date, delta: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + delta, 1);
+}
+
+export function availabilityCopyDates(source: string, mode: 'week' | 'month', now: Date = new Date()): string[] {
+  const date = fromIso(source);
+  const today = toIso(now);
+  if (mode === 'month') return buildMonthGrid(startOfMonth(date), now)
+    .filter(c => c.inMonth && !c.isPast && c.iso >= source && c.dow === dowOfIso(source) && c.iso !== source).map(c => c.iso);
+  const monday = fromIso(source);
+  monday.setDate(monday.getDate() - dowOfIso(source));
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(monday); day.setDate(day.getDate() + i); return toIso(day);
+  }).filter(iso => iso >= today && iso !== source);
 }
 
 export function formatMonthLabel(d: Date): string {

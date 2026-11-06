@@ -57,6 +57,20 @@
       "when": 1793981185346,
       "tag": "0007_cv_owner_public_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793982852711,
+      "tag": "0008_save_availability_dates_atomic",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793983000495,
+      "tag": "0009_availability_dates_verified_function",
+      "breakpoints": true
     }
   ]
 }
