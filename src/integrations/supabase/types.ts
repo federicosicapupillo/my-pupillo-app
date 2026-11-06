@@ -2194,6 +2194,7 @@ export type Database = {
           error_message: string | null
           evaluable: boolean
           evidence: Json | null
+          public_visible: boolean
           review_note: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -2214,6 +2215,7 @@ export type Database = {
           error_message?: string | null
           evaluable?: boolean
           evidence?: Json | null
+          public_visible?: boolean
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -2234,6 +2236,7 @@ export type Database = {
           error_message?: string | null
           evaluable?: boolean
           evidence?: Json | null
+          public_visible?: boolean
           review_note?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -3433,6 +3436,10 @@ export type Database = {
       }
       send_required_review_reminders: { Args: never; Returns: number }
       server_now: { Args: never; Returns: string }
+      set_curriculum_rating_visibility: {
+        Args: { _version: string; _visible: boolean }
+        Returns: undefined
+      }
       set_my_available_now: { Args: { _until: string }; Returns: string }
       set_my_avatar: { Args: { _path: string }; Returns: undefined }
       shift_buffer_minutes: { Args: never; Returns: number }

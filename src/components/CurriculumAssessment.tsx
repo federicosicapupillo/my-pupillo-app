@@ -68,7 +68,7 @@ export function CurriculumAssessmentRequest({ userId, curriculumPath }: { userId
   const canRequest = !active || ['rejected','not_evaluable','stale','error'].includes(assessment?.status ?? '');
   return <section className="space-y-3 pt-3">
     <h4 className="font-medium">Valutazione curriculum Pupillo</h4>
-    <p className="text-sm text-muted-foreground">Dopo l’approvazione di Pupillo, la valutazione da 4 o 5 stelle sarà visibile nella tua dashboard e ai ristoratori sul tuo profilo, separata dalle recensioni dei turni. Il completamento dell’onboarding non comporta la pubblicazione automatica.</p>
+    <p className="text-sm text-muted-foreground">Il punteggio del curriculum sarà visibile privatamente nella tua dashboard, separato dalle recensioni dei turni. Da 4 stelle, dopo approvazione Pupillo, potrai scegliere nella dashboard se mostrare la valutazione ai ristoratori oppure mantenerla privata.</p>
     {loadError ? <p role="alert" className="text-sm text-destructive">Impossibile leggere la valutazione. <Button type="button" variant="outline" onClick={() => void load()}>Riprova</Button></p> : <>
       {active && assessment && <>
         <p className="text-sm">{CV_STATUS[assessment.status] ?? 'In verifica'} · {assessment.role_label}</p>
@@ -79,7 +79,7 @@ export function CurriculumAssessmentRequest({ userId, curriculumPath }: { userId
       {canRequest && <>
         <Label htmlFor={`cv-role-${userId}`}>Mansione da valutare</Label>
         <Select value={role} onValueChange={setRole}><SelectTrigger id={`cv-role-${userId}`}><SelectValue placeholder="Seleziona mansione" /></SelectTrigger><SelectContent>{JOB_ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
-        <div className="flex items-start gap-2"><Checkbox id={`cv-consent-${userId}`} checked={consent} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor={`cv-consent-${userId}`} className="text-xs leading-relaxed">Acconsento all’analisi del curriculum tramite IA e alla verifica da parte di Pupillo. Autorizzo la pubblicazione nella mia dashboard e sul mio profilo, visibile ai ristoratori, solo di una valutazione approvata da 4 o 5 stelle, distinta dalle recensioni dei turni. Posso revocare il consenso in qualsiasi momento.</Label></div>
+        <div className="flex items-start gap-2"><Checkbox id={`cv-consent-${userId}`} checked={consent} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor={`cv-consent-${userId}`} className="text-xs leading-relaxed">Acconsento all’analisi del curriculum tramite IA e alla verifica da parte di Pupillo. Vedrò il punteggio privatamente nella dashboard. Solo per una valutazione approvata da 4 o 5 stelle potrò scegliere separatamente di renderla visibile ai ristoratori sul mio profilo. Posso revocare il consenso in qualsiasi momento.</Label></div>
         <Button type="button" disabled={!role || !consent || busy || loadError} onClick={() => void submit()}>{busy ? 'Invio in corso…' : 'Richiedi valutazione'}</Button>
       </>}
     </>}

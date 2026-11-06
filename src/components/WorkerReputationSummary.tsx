@@ -3,7 +3,7 @@ import { Award, Star, ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CurriculumRating } from "@/components/CurriculumAssessment";
+import { OwnCurriculumAssessment } from "@/components/OwnCurriculumAssessment";
 
 /**
  * Worker dashboard "Reputation Score" box.
@@ -92,7 +92,7 @@ export function WorkerReputationSummary({ workerId }: { workerId: string }) {
         </div>
       )}
       <div className="mt-4">
-        <CurriculumRating workerId={workerId} />
+        <OwnCurriculumAssessment workerId={workerId} />
       </div>
     </div>
   );

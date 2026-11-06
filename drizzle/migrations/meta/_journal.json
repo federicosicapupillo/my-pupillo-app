@@ -50,6 +50,13 @@
       "when": 1793980058127,
       "tag": "0006_cv_analysis_service_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793981185346,
+      "tag": "0007_cv_owner_public_visibility",
+      "breakpoints": true
     }
   ]
 }

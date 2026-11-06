@@ -1,6 +1,6 @@
 # Project rules
 
-- Keep CV assessments outside reviews/reputation; only server-side AI produces proposals and an admin RPC publishes them after owner consent, using version checks and sanitized reads so replacing/revoking a CV removes its badge.
+- Keep CV assessments outside reviews/reputation; server-side AI proposes scores, admin RPC approves, and a version-checked owner RPC opts into public visibility. Dashboard reads private assessments through owner RLS; restaurant views use sanitized public reads. Reset visibility on replacement, new analysis or consent withdrawal to prevent stale publication.
 
 - Store optional worker curricula separately from profile completion fields in private owner-only storage; validate PDF bytes server-side and keep upload independent of onboarding completion.
 

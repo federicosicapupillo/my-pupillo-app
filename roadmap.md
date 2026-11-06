@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Punteggio curriculum privato nella dashboard, criteri e scelta di visibilità ai ristoratori per valutazioni approvate da 4 stelle; 18 test passati, build OK, stato reale «Richiesta ricevuta» verificato in sessione e nessun overflow mobile. Nessuna analisi già completata disponibile per verificare il cambio visibilità integrale.
+
 - [x] Mostrare la valutazione curriculum approvata nella sezione Reputation Score della dashboard, separata dalle recensioni, e chiarire la visibilità ai ristoratori nella richiesta e nel consenso.
 
 - [x] Valutazione curriculum Pupillo: richiesta e consenso, analisi per mansione, approvazione admin, stelle separate sul profilo; 11 test passati, chiamata IA su PDF fittizio riuscita, richiesta/persistenza/revoca verificate nell'onboarding autenticato; PDF di prova rimosso.

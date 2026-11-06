@@ -7,6 +7,16 @@ export const CV_CRITERIA = [
 ] as const;
 export type CvCriterion = typeof CV_CRITERIA[number]['key'];
 export type CvScores = Record<CvCriterion, number>;
+export type CvPublicationState = {
+  status: string; consent_at: string | null; evaluable: boolean; doubts: boolean;
+  total: number | null; stars: number | null; scores: unknown;
+};
+export function canPublishCurriculum(a: CvPublicationState, currentCurriculum: boolean) {
+  const clarity = a.scores && typeof a.scores === 'object' && 'clarity' in a.scores ? a.scores.clarity : null;
+  return currentCurriculum && a.status === 'approved' && !!a.consent_at && a.evaluable && !a.doubts &&
+    typeof clarity === 'number' && clarity >= 5 && a.total !== null && a.total >= 70 &&
+    a.stars === (a.total >= 85 ? 5 : 4);
+}
 export function scoreCurriculum(scores: CvScores, evaluable: boolean, doubts: boolean) {
   if (!CV_CRITERIA.every(c => Number.isInteger(scores[c.key]) && scores[c.key] >= 0 && scores[c.key] <= c.max)) {
     throw new Error('Punteggio non valido');
