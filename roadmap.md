@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Curriculum facoltativo privato in Esperienza e preferenze: PDF max 5 MB, apertura, sostituzione, rimozione; 4 test e flusso verificato in sessione su desktop/mobile, file di prova rimosso.
+
 - [x] Onboarding lavoratori: partenza Torino, quartieri e residenza regione/provincia/comune; area operativa allineata senza cancellazioni. 35 test superati; menu provati in sessione su desktop/mobile senza salvare un profilo.
 
 - [x] Restyling homepage (solo presentazione, anteprima, nessuna pubblicazione) — baseline bce06cebb4d123475d0746762d29a3b730be9f7a

@@ -75,6 +75,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { NATIONALITIES } from "@/lib/nationalities";
 import { ZonesMultiSelect } from "@/components/ZonesMultiSelect";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { CurriculumUpload } from "@/components/CurriculumUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
 import { uploadWorkerIdDocument } from "@/lib/id-document-upload.functions";
@@ -2985,6 +2986,7 @@ function Onboarding() {
                   </Select>
                 </div>
               </div>
+              {user && <CurriculumUpload userId={user.id} />}
             </div>
             <div id="sec-availability" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">
               <div>

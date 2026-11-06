@@ -29,6 +29,13 @@
       "when": 1793978116443,
       "tag": "0003_torino_launch_area_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793978361828,
+      "tag": "0004_private_worker_curricula",
+      "breakpoints": true
     }
   ]
 }

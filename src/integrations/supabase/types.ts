@@ -2126,6 +2126,45 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_curricula: {
+        Row: {
+          file_name: string
+          file_size: number
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          file_name: string
+          file_size: number
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          file_name?: string
+          file_size?: number
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_curricula_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_curricula_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_incidents: {
         Row: {
           actual_delay_minutes: number | null
