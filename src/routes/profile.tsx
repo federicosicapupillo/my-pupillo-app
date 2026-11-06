@@ -146,10 +146,10 @@ function Profile() {
         </div>
       )}
 
-      <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-        <h2 className="font-semibold flex items-center gap-2 text-destructive"><Trash2 className="h-4 w-4" />Cancella account</h2>
-        <p className="text-sm text-muted-foreground mt-1">Cancella i tuoi dati personali dalla piattaforma. L'operazione è irreversibile.</p>
-        <Button variant="destructive" className="mt-3" onClick={() => setDeleteOpen(true)}>Elimina account</Button>
+      <div className="mt-6 border-t border-border/60 pt-4">
+        <h2 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Trash2 className="h-3 w-3" />Cancella account</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Cancella i tuoi dati personali dalla piattaforma. L'operazione è irreversibile.</p>
+        <Button type="button" variant="outline" size="sm" className="mt-2 h-8 px-2.5 text-xs text-destructive hover:text-destructive" onClick={() => setDeleteOpen(true)}>Elimina account</Button>
       </div>
       <DeleteAccountDialog open={deleteOpen} onOpenChange={setDeleteOpen} />
     </AppShell>
