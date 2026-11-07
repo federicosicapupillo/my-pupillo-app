@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { OwnCurriculumAssessment } from "@/components/OwnCurriculumAssessment";
+import { ReputationLevelsExplanation } from '@/components/ReputationLevelsExplanation';
 
 /**
  * Worker dashboard "Reputation Score" box.
@@ -50,6 +51,7 @@ export function WorkerReputationSummary({ workerId }: { workerId: string }) {
           <div className="flex items-center gap-2 text-base font-semibold">
             <Award className="h-4 w-4 text-primary" />
             Reputation Score
+            <ReputationLevelsExplanation />
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Basato sulle recensioni ricevute dai ristoratori.

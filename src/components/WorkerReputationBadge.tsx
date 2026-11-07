@@ -1,4 +1,5 @@
 import { Award, Star } from "lucide-react";
+import { ReputationLevelsExplanation } from '@/components/ReputationLevelsExplanation';
 import {
   summarizeReputation,
   levelChipClass,
@@ -74,6 +75,7 @@ export function WorkerReputationBadge({
   const s = summarizeReputation(profile);
   const hasEnoughReviews = s.reviewsCount >= 3;
   return (
+    <span className="inline-flex items-center gap-1">
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -101,5 +103,7 @@ export function WorkerReputationBadge({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+    <ReputationLevelsExplanation />
+    </span>
   );
 }

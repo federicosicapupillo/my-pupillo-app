@@ -1,5 +1,7 @@
 # Project rules
 
+- Share the reputation-level explanation between worker badges and the dashboard through ReputationLevelsExplanation so eligibility descriptions stay consistent without changing scoring logic.
+
 - Use the shared CurriculumStars display for CV star ratings across owner and public views so dashboard and profile stay consistent.
 
 - Resolve cross-user avatar paths through public_profiles as the viewer, then sign only owner-validated private avatar paths server-side; owner-only profile reads otherwise silently omit restaurant-visible worker photos.
