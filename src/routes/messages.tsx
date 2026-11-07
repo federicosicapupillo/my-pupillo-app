@@ -4,12 +4,13 @@ import { AppShell, PageHeader } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, ChevronDown, ChevronUp, Calendar, Clock, CheckCheck, ExternalLink, Inbox, UserCheck, Archive, Briefcase } from "lucide-react";
+import { MapPin, Shirt, ListChecks, Navigation, StickyNote, BadgeCheck, Check, Loader2, MessageSquare, ChevronDown, ChevronUp, Calendar, Clock, CheckCheck, ExternalLink, Inbox, UserCheck, Archive, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { UserAvatar } from "@/components/UserAvatar";
+import { labelsOf, SKILL_OPTIONS, DRESS_CODE_OPTIONS } from "@/lib/announcement-requirements";
 import { otherColumnForRole, groupThreadsByOther, ThreadGroup } from "@/lib/messages-grouping";
 import {
   mergeThreadUpdate,
@@ -51,6 +52,8 @@ type Thread = {
   annEndTime: string | null;
   hasWorkedTogether: boolean;
   closedReason: string | null;
+  acknowledged: boolean;
+  ann: any | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -207,12 +210,12 @@ function MessagesLayout() {
       ids.length
         ? supabase
             .from("messages")
-            .select("application_id, sender_id, body, created_at, read_at")
+            .select("application_id, sender_id, body, created_at, read_at, action_type")
             .in("application_id", ids)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
       annIds.length
-        ? supabase.from("announcements").select("id, professional_profile, service_date, service_time, end_time").in("id", annIds)
+        ? supabase.from("announcements").select("id, professional_profile, service_date, service_time, end_time, location_address, job_address, job_city, dress_code_items, dress_code_notes, required_skills, notes, job_additional_directions, job_location_notes").in("id", annIds)
         : Promise.resolve({ data: [] as any[] }),
       // "Have I worked with them?" — any shift row (other than cancelled/no_show)
       // between me and any of these partners proves a confirmed past relationship.
@@ -231,6 +234,10 @@ function MessagesLayout() {
     for (const s of (priorShifts ?? []) as any[]) {
       const partner = role === "restaurant" ? s.worker_id : s.restaurant_id;
       if (partner) workedSet.add(partner);
+    }
+    const ackSet = new Set<string>();
+    for (const m of (msgs ?? []) as any[]) {
+      if (m.action_type === "instructions_acknowledged") ackSet.add(m.application_id);
     }
     const lastByApp = new Map<string, any>();
     const unreadByApp = new Map<string, number>();
@@ -272,6 +279,8 @@ function MessagesLayout() {
         annEndTime: ann?.end_time ?? null,
         hasWorkedTogether,
         closedReason: (a.closed_reason as string | null) ?? null,
+        acknowledged: ackSet.has(a.id),
+        ann: ann ?? null,
       };
     });
     next.sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.other.name.localeCompare(b.other.name));
@@ -800,7 +809,8 @@ function MessagesLayout() {
                     {open && (
                       <ul className="border-t border-border/60" role="list">
                         {ag.items.map((x) => (
-                          <li key={x.id} className="flex flex-wrap items-center gap-3 border-b border-border/40 px-4 py-3 last:border-b-0 sm:px-5">
+                          <li key={x.id} className="border-b border-border/40 last:border-b-0">
+                          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
                             <UserAvatar userId={role === "restaurant" ? x.workerId : x.other.id} name={x.other.name} className="h-11 w-11" zoomable />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
@@ -825,6 +835,10 @@ function MessagesLayout() {
                                 Apri
                               </Link>
                             </div>
+                          </div>
+                          {role === "worker" && isApplicationConfirmed(x.status) && (
+                            <WorkerInstructionsRecap thread={x} userId={user?.id ?? null} onAck={() => setThreads((prev) => prev.map((t) => t.id === x.id ? { ...t, acknowledged: true } : t))} />
+                          )}
                           </li>
                         ))}
                         {role === "restaurant" && <li className="px-4 py-2.5 sm:px-5">
@@ -1059,3 +1073,90 @@ function MessagesLayout() {
   );
 }
 
+
+function WorkerInstructionsRecap({ thread, userId, onAck }: { thread: Thread; userId: string | null; onAck: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const a = thread.ann ?? {};
+  const clean = (v: unknown) => (v == null ? "" : String(v).trim());
+  const address = clean(a.location_address) || clean(a.job_address) || clean(a.job_city);
+  const dress = [labelsOf(a.dress_code_items ?? [], DRESS_CODE_OPTIONS as any).join(", "), clean(a.dress_code_notes)].filter(Boolean).join(" — ");
+  const skills = labelsOf(a.required_skills ?? [], SKILL_OPTIONS as any).join(", ");
+  const directions = clean(a.job_additional_directions) || clean(a.job_location_notes);
+  const notes = clean(a.notes);
+  const st = clean(a.service_time).slice(0, 5);
+  const when = [
+    a.service_date ? new Date(`${a.service_date}T00:00:00`).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }) : "",
+    st ? `${st}${a.end_time ? `–${String(a.end_time).slice(0, 5)}` : ""}` : "",
+  ].filter(Boolean).join(" · ");
+  const rows = [
+    when && { icon: Calendar, label: "Quando", value: when },
+    address && { icon: MapPin, label: "Dove", value: address },
+    dress && { icon: Shirt, label: "Dress code", value: dress },
+    skills && { icon: ListChecks, label: "Mansioni", value: skills },
+    directions && { icon: Navigation, label: "Arrivo", value: directions },
+    notes && { icon: StickyNote, label: "Note", value: notes },
+  ].filter(Boolean) as { icon: typeof Calendar; label: string; value: string }[];
+
+  const confirm = async () => {
+    if (!userId || busy) return;
+    setBusy(true);
+    try {
+      const body = "Ho confermato di aver letto le istruzioni del servizio.";
+      const createdAt = new Date().toISOString();
+      const { error } = await supabase.from("messages").insert({
+        application_id: thread.id, sender_id: userId, receiver_id: thread.restaurantId, body,
+        created_at: createdAt, read_at: null, template_id: null,
+        message_type: "template", action_type: "instructions_acknowledged",
+      } as never);
+      if (error) { toast.error("Impossibile registrare la presa visione."); return; }
+      await supabase.from("applications").update({ last_message_preview: body, last_message_at: createdAt } as never).eq("id", thread.id);
+      try {
+        await supabase.from("notifications").insert({
+          user_id: thread.restaurantId, title: "Istruzioni confermate",
+          body: "Il lavoratore ha confermato la lettura delle istruzioni del servizio.",
+          link: `/messages/${thread.id}`,
+        } as never);
+      } catch (e) { console.error("[ack] notify restaurant failed", e); }
+      toast.success("Fatto! Il ristoratore sa che hai letto le istruzioni.");
+      onAck();
+    } finally { setBusy(false); }
+  };
+
+  if (thread.acknowledged) {
+    return (
+      <div className="mx-4 mb-3 flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs text-primary sm:mx-5">
+        <BadgeCheck className="h-4 w-4 shrink-0" /> Hai confermato di aver letto le istruzioni. Buon turno!
+      </div>
+    );
+  }
+  return (
+    <div className="mx-4 mb-4 rounded-2xl border-2 border-primary/60 bg-primary/5 p-4 sm:mx-5">
+      <div className="flex items-start gap-3">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="h-5 w-5" /></div>
+        <div className="min-w-0">
+          <div className="text-base font-semibold">Il tuo turno è stato confermato!</div>
+          <p className="text-sm text-muted-foreground">Leggi qui sotto le istruzioni e conferma al ristoratore di averle lette.</p>
+        </div>
+      </div>
+      {rows.length > 0 && (
+        <dl className="mt-3 divide-y divide-border/50 rounded-xl bg-card/70 px-3">
+          {rows.map((r) => (
+            <div key={r.label} className="grid grid-cols-[minmax(0,6.5rem)_minmax(0,1fr)] gap-3 py-2 text-sm">
+              <dt className="flex items-center gap-2 text-muted-foreground"><r.icon className="h-3.5 w-3.5 shrink-0 text-primary" />{r.label}</dt>
+              <dd className="min-w-0 break-words">{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Link to="/messages/$id" params={{ id: thread.id }} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+          Vedi referente, telefono e orario di ingresso
+        </Link>
+        <button type="button" onClick={confirm} disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          Ho letto tutto, confermo
+        </button>
+      </div>
+    </div>
+  );
+}
