@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, EyeOff, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Plus, Calendar, MapPin, Euro, Clock, RotateCw, Users, Star, CheckCircle2, FileText, Pencil, AlertTriangle, Briefcase, Languages, UserCheck, Copy, Trash2, Lock, MessageSquare, Send, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,8 +17,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "@tanstack/react-router";
-import { AnnouncementMap } from "@/components/AnnouncementMap";
-import { ApproximateAreaMap } from "@/components/ApproximateAreaMap";
 import { publicLocationLabel, PRECISE_ADDRESS_HINT } from "@/lib/public-location";
 import { formatTariff, formatTotalService, computeDurationHours, formatAnnouncementLocation } from "@/lib/format";
 import { geocodeAddress } from "@/lib/geocode";
@@ -53,80 +51,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
-function AnnouncementMapBlock({
-  annId, lat, lng, address, open, onToggle, showToggle = true,
-}: {
-  annId: string;
-  lat: number | null;
-  lng: number | null;
-  address: string | null | undefined;
-  open: boolean;
-  onToggle: () => void;
-  showToggle?: boolean;
-}) {
-  const hasCoords = lat != null && lng != null;
-  const hasAddress = !!(address && address.trim().length > 0);
-  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
-  const [geoLoading, setGeoLoading] = useState(false);
-  const [geoFailed, setGeoFailed] = useState(false);
-
-  useEffect(() => {
-    if (!open || hasCoords || !hasAddress || geo || geoLoading || geoFailed) return;
-    let cancelled = false;
-    setGeoLoading(true);
-    geocodeAddress(address as string).then((r) => {
-      if (cancelled) return;
-      if (r) setGeo(r); else setGeoFailed(true);
-      setGeoLoading(false);
-    }).catch(() => { if (!cancelled) { setGeoFailed(true); setGeoLoading(false); } });
-    return () => { cancelled = true; };
-  }, [open, hasCoords, hasAddress, address, geo, geoLoading, geoFailed]);
-
-  if (!hasCoords && !hasAddress) {
-    return <p className="text-xs text-muted-foreground italic">Indirizzo non disponibile</p>;
-  }
-
-  const effLat = hasCoords ? (lat as number) : geo?.lat;
-  const effLng = hasCoords ? (lng as number) : geo?.lng;
-
-  return (
-    <>
-      {showToggle && (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="gap-1"
-          onClick={onToggle}
-          aria-expanded={open}
-        >
-          {open ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>) : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
-        </Button>
-      )}
-      {open && (
-        <div className={`space-y-2 ${showToggle ? "mt-3" : ""}`}>
-          {effLat != null && effLng != null ? (
-            <div className="overflow-hidden rounded-xl">
-              <AnnouncementMap key={annId} lat={effLat} lng={effLng} address={address ?? undefined} height={280} />
-            </div>
-          ) : geoLoading ? (
-            <div className="h-[120px] rounded-xl bg-muted animate-pulse" />
-          ) : (
-            <div className="rounded-xl border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Mappa non disponibile{hasAddress ? ", ma indirizzo presente:" : "."}
-            </div>
-          )}
-          {hasAddress && (
-            <p className="text-xs text-foreground">
-              <MapPin className="inline h-3 w-3 mr-1 text-muted-foreground" />
-              {address}
-            </p>
-          )}
-        </div>
-      )}
-    </>
-  );
-}
 
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
@@ -438,7 +362,6 @@ function AnnouncementsPage() {
   // assigned/confirmed turn that has not yet been closed must not.
   const [completedCollabIds, setCompletedCollabIds] = useState<Set<string>>(() => new Set());
   const [selectedAnnId, setSelectedAnnId] = useState<string | null>(null);
-  const [openMaps, setOpenMaps] = useState<Record<string, boolean>>({});
   const [openCandidates, setOpenCandidates] = useState<Record<string, boolean>>({});
   const [republishOpen, setRepublishOpen] = useState(false);
   const [republishAnn, setRepublishAnn] = useState<Ann | null>(null);
@@ -842,49 +765,6 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {a.service_time?.slice(0,5) ?? "—"}</div>
         </div>
         )}
-        <div className="mt-3">
-          {canSeePrecise ? (
-            <AnnouncementMapBlock
-              annId={a.id}
-              lat={a.location_lat}
-              lng={a.location_lng}
-              address={a.location_address}
-              open={!!openMaps[a.id]}
-              onToggle={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
-              showToggle={role !== "restaurant"}
-            />
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-muted-foreground">Zona indicativa del turno</span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="gap-1"
-                  onClick={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
-                  aria-expanded={!!openMaps[a.id]}
-                >
-                  {openMaps[a.id]
-                    ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>)
-                    : (<><MapPin className="h-3.5 w-3.5" />Vedi zona</>)}
-                </Button>
-              </div>
-              {openMaps[a.id] && (
-                <>
-                  {a.location_lat != null && a.location_lng != null ? (
-                    <ApproximateAreaMap lat={a.location_lat} lng={a.location_lng} height={200} radiusM={1200} />
-                  ) : (
-                    <div className="h-[120px] rounded-2xl border bg-muted/40 flex items-center justify-center text-xs text-muted-foreground px-3 text-center">
-                      Zona non disponibile sulla mappa.
-                    </div>
-                  )}
-                  <p className="text-[11px] text-muted-foreground italic">{PRECISE_ADDRESS_HINT}</p>
-                </>
-              )}
-            </div>
-          )}
-        </div>
         </>
         );
         })()}
@@ -893,18 +773,6 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           <AnnouncementCostBox ann={a} />
           <div className="mt-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1"
-                onClick={() => setOpenMaps((prev) => ({ ...prev, [a.id]: !prev[a.id] }))}
-                aria-expanded={!!openMaps[a.id]}
-              >
-                {openMaps[a.id]
-                  ? (<><EyeOff className="h-3.5 w-3.5" />Nascondi mappa</>)
-                  : (<><MapPin className="h-3.5 w-3.5" />Vedi mappa</>)}
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -1654,11 +1522,6 @@ function AnnouncementDetailsDialog({
             <Section title="2. Luogo">
               <SummaryRow icon={Briefcase} label="Nome locale" value={venueName || "—"} />
               <SummaryRow icon={MapPin} label="Indirizzo" value={formatAnnouncementLocation(ann)} />
-              {(ann.location_lat != null && ann.location_lng != null) && (
-                <div className="overflow-hidden rounded-xl">
-                  <AnnouncementMap key={`det-${ann.id}`} lat={ann.location_lat} lng={ann.location_lng} address={ann.location_address ?? undefined} height={200} />
-                </div>
-              )}
             </Section>
 
             <Section title="3. Compenso">

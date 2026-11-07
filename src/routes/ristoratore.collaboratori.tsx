@@ -7,9 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Star, MessageSquare, Send, Heart, Search, Calendar, Users, CheckCircle2, Sparkles, Gift, Quote, ArrowRight, Trophy } from "lucide-react";
+import { Star, MessageSquare, Send, Heart, Search, Calendar, Users, Gift, Quote, ArrowRight, Trophy } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { sendShiftProposal } from "@/lib/shift-proposal";
@@ -295,27 +294,10 @@ function Page() {
       <BlockedContactDialog open={blockOpen} onClose={() => setBlockOpen(false)} shifts={actionShifts} />
 
       {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
-        <div className="rounded-2xl border bg-gradient-to-br from-primary/10 to-primary/5 p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5" /> Collaboratori
-          </div>
-          <div className="text-2xl font-bold tabular-nums mt-1">{stats.total}</div>
-        </div>
-        <div className="rounded-2xl border bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Gift className="h-3.5 w-3.5" /> Ricontatto gratis
-          </div>
-          <div className="text-2xl font-bold tabular-nums mt-1">{stats.free}</div>
-        </div>
-        <div className="rounded-2xl border bg-card p-4 col-span-2 sm:col-span-1">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-3.5 w-3.5" /> Ultima collaborazione
-          </div>
-          <div className="text-base font-semibold mt-1">
-            {stats.last ? new Date(stats.last).toLocaleDateString("it-IT", { day: "numeric", month: "long" }) : "—"}
-          </div>
-        </div>
+      <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-border/60 bg-card/50 px-4 py-3 text-sm">
+        <span className="inline-flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /> Collaboratori <strong className="tabular-nums text-foreground">{stats.total}</strong></span>
+        <span className="inline-flex items-center gap-2 text-muted-foreground"><Gift className="h-4 w-4" /> Ricontatto gratuito <strong className="tabular-nums text-foreground">{stats.free}</strong></span>
+        <span className="inline-flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> Ultima collaborazione <strong className="text-foreground">{stats.last ? new Date(stats.last).toLocaleDateString("it-IT", { day: "numeric", month: "long" }) : "—"}</strong></span>
       </div>
 
       {/* Search + filter */}
@@ -340,7 +322,7 @@ function Page() {
       </div>
 
       {/* Sort chips */}
-      <div className="flex flex-wrap gap-2 mb-5">
+      <div className="mb-5 flex gap-5 overflow-x-auto border-b border-border/60">
         {([
           { id: "recent", label: "Più recenti" },
           { id: "top_rated", label: "Miglior valutati" },
@@ -349,10 +331,12 @@ function Page() {
           <button
             key={opt.id}
             onClick={() => setSortMode(opt.id)}
-            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+            type="button"
+            aria-pressed={sortMode === opt.id}
+            className={`-mb-px whitespace-nowrap border-b-2 pb-2 text-sm transition-colors ${
               sortMode === opt.id
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card hover:bg-muted border-border text-foreground"
+                ? "border-primary font-semibold text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {opt.label}
@@ -400,7 +384,7 @@ function Page() {
                     navigate({ to: "/workers/$id", params: { id: r.worker_id } });
                   }
                 }}
-                className="group relative rounded-3xl border bg-card p-5 flex flex-col gap-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/30 transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="group relative rounded-2xl border border-border/60 bg-card/50 p-5 flex flex-col gap-4 hover:border-primary/40 transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 aria-label={`Apri profilo di ${r.full_name ?? "lavoratore"}`}
               >
                 <button
@@ -439,23 +423,9 @@ function Page() {
                 </div>
 
                 {/* Badges */}
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> Già lavorato con te
-                  </Badge>
-                  <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15 gap-1">
-                    <Gift className="h-3 w-3" /> Ricontatto gratuito
-                  </Badge>
-                  {isTop && (
-                    <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/15 gap-1">
-                      <Sparkles className="h-3 w-3" /> Top collaboratore
-                    </Badge>
-                  )}
-                  {recent && (
-                    <Badge variant="secondary" className="gap-1">
-                      <Calendar className="h-3 w-3" /> Collab. recente
-                    </Badge>
-                  )}
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span aria-hidden className="h-2 w-2 rounded-full bg-primary" />
+                  <span>Ricontatto gratuito{isTop ? " · Top collaboratore" : ""}{recent ? " · Recente" : ""}</span>
                 </div>
 
                 {/* Stats */}
@@ -488,7 +458,7 @@ function Page() {
                 <div className="flex flex-col gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
                   <Button
                     size="sm"
-                    className="w-full gap-1.5 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm"
+                    className="w-full gap-1.5"
                     onClick={(e) => { e.stopPropagation(); recontact(r); }}
                   >
                     <MessageSquare className="h-4 w-4" /> Ricontatta gratis
