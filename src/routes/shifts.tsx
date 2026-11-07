@@ -802,7 +802,7 @@ function ShiftsPage() {
         <Stat label="Completati" value={stats.completed} />
       </div>
 
-      <nav aria-label="Stato turni" className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+      <nav aria-label="Stato turni" className="mb-6 flex flex-wrap gap-x-1 border-b border-border">
         {((role === "worker"
           ? ["no_show", "assigned", "to-review", "completed"]
           : ["assigned", "upcoming", "completed", "to-review", "no_show", "past", "archived"]) as Array<typeof filter>).map(f => {
@@ -821,7 +821,7 @@ function ShiftsPage() {
               type="button"
               aria-pressed={isActive}
               onClick={() => { defaultTabAppliedRef.current = true; setFilter(f); }}
-              className={`relative -mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition select-none ${isActive ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              className={`relative -mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-2.5 py-2.5 text-sm sm:px-4 sm:py-3 font-medium transition select-none ${isActive ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             >
               <span>{label}</span>
               <span className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-semibold ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>

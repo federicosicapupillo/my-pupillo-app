@@ -572,7 +572,7 @@ function MessagesLayout() {
       )}
       {smart && (
         <div className={`${selectedId ? "hidden lg:block" : "block"} mb-3`} aria-label="Categorie comunicazioni">
-          <nav aria-label="Categorie messaggi" className="flex gap-1 overflow-x-auto border-b border-border">
+          <nav aria-label="Categorie messaggi" className="flex flex-wrap gap-x-1 border-b border-border">
             {([
               { k: "all", label: "Tutti", icon: Inbox, count: catCounts.all },
               { k: "unread", label: "Non letti", icon: MessageSquare, count: catCounts.unread },
@@ -587,7 +587,7 @@ function MessagesLayout() {
                   key={c.k}
                   type="button"
                   onClick={() => setCategory(c.k)}
-                  className={`relative -mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition select-none ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                  className={`relative -mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-2.5 py-2.5 text-sm sm:px-4 sm:py-3 font-medium transition select-none ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                   aria-pressed={active}
                 >
                   <Icon className="h-4 w-4" aria-hidden />

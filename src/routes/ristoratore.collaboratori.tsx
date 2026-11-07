@@ -322,7 +322,7 @@ function Page() {
       </div>
 
       {/* Sort chips */}
-      <div className="mb-5 flex gap-5 overflow-x-auto border-b border-border/60">
+      <div className="mb-5 flex flex-wrap gap-x-5 border-b border-border/60">
         {([
           { id: "recent", label: "Più recenti" },
           { id: "top_rated", label: "Miglior valutati" },

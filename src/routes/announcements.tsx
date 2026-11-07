@@ -1041,7 +1041,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         action={role === "restaurant" && (<Link to="/ristoratore/annunci/nuovo"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>)}
       />
       {role === "restaurant" && (
-        <nav aria-label="Stato annunci" className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+        <nav aria-label="Stato annunci" className="mb-6 flex flex-wrap gap-x-1 border-b border-border">
           {STATUS_TABS.map(({ key, label }) => {
             const isActive = statusFilter === key;
             const count = statusCounts[key] ?? 0;
@@ -1052,7 +1052,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                 aria-pressed={isActive}
                 onClick={() => setStatusFilter(key)}
                 className={cn(
-                  "relative -mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition select-none",
+                  "relative -mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-2.5 py-2.5 text-sm sm:px-4 sm:py-3 font-medium transition select-none",
                   isActive ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >

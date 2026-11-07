@@ -1605,7 +1605,7 @@ function WorkersPage() {
       {anns.length > 0 && (
         <div className="mb-4">
           <div className="text-xs text-muted-foreground mb-2">Clicca un annuncio per selezionarlo</div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex flex-wrap gap-2 pb-2">
             {anns.map(a => (
               <button
                 key={a.id}

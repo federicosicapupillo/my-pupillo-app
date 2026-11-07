@@ -530,7 +530,7 @@ function Jobs() {
       <div
         role="group"
         aria-label="Filtra offerte"
-        className="mt-6 flex gap-1 overflow-x-auto border-b border-border/70 [scrollbar-width:thin] lg:justify-between"
+        className="mt-6 flex flex-wrap gap-x-1 border-b border-border/70 lg:justify-between"
       >
         {TABS.map((t) => {
           const active = tab === t.key;
