@@ -8,7 +8,7 @@
  */
 export const BOLOGNA_LAUNCH_CAMPAIGN = {
   /** Titolo del banner */
-  title: "Pupillo arriva a Bologna! 🎉",
+  title: "Pupillo arriva a Torino! 🎉",
   /** Corpo del messaggio */
   body:
     "In occasione del lancio, la piattaforma rimane gratuita fino al 31 dicembre 2026. Puoi pubblicare annunci, ricevere candidature e trovare il personale di cui hai bisogno senza costi.",
