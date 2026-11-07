@@ -4225,6 +4225,12 @@ function ProposalCard(props: {
     try {
       await onAccept();
       setConfirmAccept(false);
+      if (isWorker) {
+        toast.success("Candidatura inviata!", {
+          description: "Il turno non è ancora tuo: attendi la conferma del ristoratore. Ti avviseremo appena arriva.",
+          duration: 8000,
+        });
+      }
     } finally {
       setBusy(null);
     }
