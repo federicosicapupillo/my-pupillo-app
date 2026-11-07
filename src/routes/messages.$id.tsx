@@ -4430,7 +4430,7 @@ function ProposalCard(props: {
               </div>
             </div>
           ) : (
-          <div className="px-4 py-3 border-t bg-secondary/30 flex gap-2">
+          <div className="px-4 py-3 border-t bg-secondary/30 flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               data-testid="proposal-accept"

@@ -19,7 +19,8 @@ import {
   Bell,
   Euro,
 } from "lucide-react";
-import pupilloLogo from "@/assets/pupillo-logo.png";
+import pupilloLogoAsset from "@/assets/pupillo_logo.png.asset.json";
+const pupilloLogo = pupilloLogoAsset.url;
 
 export const Route = createFileRoute("/ristoratori")({
   head: () => ({

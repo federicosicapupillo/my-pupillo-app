@@ -9,7 +9,8 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { createDebouncedReload } from "@/lib/inbox-realtime";
 import { countUnreadChats } from "@/lib/unread-chats";
-import pupilloLogo from "@/assets/pupillo-logo.png";
+import pupilloLogoAsset from "@/assets/pupillo_logo.png.asset.json";
+const pupilloLogo = pupilloLogoAsset.url;
 import { AssistantFab } from "@/components/assistant/AssistantFab";
 import { useMapEnabledForRole } from "@/lib/use-map-enabled";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -166,7 +167,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <img
               src={pupilloLogo}
               alt="Logo Pupillo"
-              className="h-10 w-auto object-contain md:h-12 drop-shadow-[0_0_12px_oklch(0.93_0.22_120/0.35)]"
+              className="h-12 w-auto object-contain md:h-14 drop-shadow-[0_0_12px_oklch(0.93_0.22_120/0.35)]"
             />
           </Link>
           <div className="hidden md:flex items-center gap-1">
