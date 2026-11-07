@@ -558,7 +558,7 @@ function MessagesLayout() {
       )}
       {role === "restaurant" && (
         <div className={`${selectedId ? "hidden lg:block" : "block"} mb-3`} aria-label="Categorie comunicazioni">
-          <div className="flex flex-wrap gap-2">
+          <nav aria-label="Categorie messaggi" className="flex gap-1 overflow-x-auto border-b border-border">
             {([
               { k: "all", label: "Tutti", icon: Inbox, count: catCounts.all },
               { k: "unread", label: "Non letti", icon: MessageSquare, count: catCounts.unread },
@@ -573,18 +573,18 @@ function MessagesLayout() {
                   key={c.k}
                   type="button"
                   onClick={() => setCategory(c.k)}
-                  className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition whitespace-nowrap ${active ? "bg-primary text-primary-foreground border-primary shadow-neon" : "bg-card text-foreground border-border hover:bg-accent"}`}
+                  className={`relative -mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition select-none ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                   aria-pressed={active}
                 >
                   <Icon className="h-4 w-4" aria-hidden />
                   {c.label}
-                  <span className={`inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-xs font-bold ${active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                  <span className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-semibold ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                     {c.count}
                   </span>
                 </button>
               );
             })}
-          </div>
+          </nav>
         </div>
       )}
       <div className={`${selectedId ? "hidden lg:block" : "block"} mb-4 ${role === "restaurant" ? "hidden" : ""}`} aria-label="Filtri conversazioni">
