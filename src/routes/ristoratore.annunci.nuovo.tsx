@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { AnnouncementMap } from "@/components/AnnouncementMap";
 import { geocodeAddressWithRetry, describeGeocodeError, type GeocodeError } from "@/lib/geocode";
 import { AlertCircle, CheckCircle2, Eye, Loader2, Save, Send, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -1023,17 +1022,6 @@ function NewRestaurantJobRequest() {
                 className="cursor-not-allowed opacity-80"
               />
             </Field>
-          </div>
-          <div className="relative isolate z-0 w-full mb-6 sm:mb-8">
-            {coords ? (
-              <div className="relative w-full overflow-hidden rounded-2xl">
-                <AnnouncementMap lat={coords.lat} lng={coords.lng} address={f.address} height={300} />
-              </div>
-            ) : (
-              <div className="w-full rounded-2xl border border-dashed border-white/15 bg-muted/30 flex items-center justify-center text-sm text-muted-foreground" style={{ minHeight: 280 }}>
-                Inserisci indirizzo, città e CAP per visualizzare la mappa
-              </div>
-            )}
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Anticipo richiesto all'ingresso" required name="accessChoice" error={errors.accessChoice || errors.accessMinutes || errors.accessReason}>
