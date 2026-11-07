@@ -2290,10 +2290,10 @@ function Thread() {
             </span>
           )}
         </div>
-        {role === "restaurant" && !paymentsEnabled && (
+        {role === "restaurant" && !paymentsEnabled && !compactRestaurantView && (
           <FreeLaunchBanner className="mb-4" />
         )}
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6 lg:items-start">
+        <div className={compactRestaurantView ? "" : "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6 lg:items-start"}>
         <div className="min-w-0">
         {!compactRestaurantView && (
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
@@ -2414,6 +2414,75 @@ function Thread() {
             ? s.levelLabel
             : (other?.phone_verified ? "Nuovo verificato" : "Nuovo");
           const showScore = hasRealReputation && s.showScore;
+          if (compactRestaurantView) {
+            const rpm = msgs.find((m) => m.template_id === PROPOSAL_TEMPLATE_ID && m.sender_id === app?.restaurant_id);
+            const waiting = !!rpm && proposalStatuses[rpm.id] !== "accepted" && app?.status === "pending";
+            const st = (ann?.service_time ?? "").slice(0, 5);
+            const dl = ann?.service_date && st ? new Date(`${ann.service_date}T${st}:00`) : null;
+            const dlText = dl && !isNaN(dl.getTime())
+              ? `scade il ${dl.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} alle ${dl.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`
+              : null;
+            const tags: { icon: typeof Calendar; text: string }[] = [];
+            if (ann?.service_date) tags.push({ icon: Calendar, text: new Date(`${ann.service_date}T00:00:00`).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" }) });
+            if (st) tags.push({ icon: Clock, text: `${st}${ann?.end_time ? `–${String(ann.end_time).slice(0, 5)}` : ""}` });
+            if (currentTariff != null) tags.push({ icon: Briefcase, text: `${currentTariff} €${ann?.tariff_type === "hourly" ? "/ora" : " a servizio"}` });
+            if (displayAddress) tags.push({ icon: MapPin, text: displayAddress });
+            return (
+              <div className="rounded-2xl border bg-card/80 p-5 mb-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                  <UserAvatar userId={identityVisible ? otherId : null} name={identityVisible ? displayOtherName : undefined} className="h-20 w-20 shrink-0" zoomable />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xl font-semibold truncate">{identityVisible ? (displayName || "Nuovo candidato") : "Nuovo candidato"}</span>
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${levelChipClass(displayLevel as any)}`}>
+                        <Award className="h-3 w-3" />{displayLevelLabel}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {ann?.professional_profile ? formatDisplayLabel(ann.professional_profile) : "Candidato"}
+                      {" · "}
+                      {verifiedReviewsCount > 0 && verifiedRating > 0
+                        ? <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{verifiedRating.toFixed(1)} ({verifiedReviewsCount})</span>
+                        : "Nessuna recensione"}
+                      {otherId && identityVisible && (
+                        <>{" · "}<Link to="/workers/$id" params={{ id: otherId }} className="text-primary hover:underline">Vedi profilo</Link></>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 md:shrink-0">
+                    <Button variant="outline" className="gap-2 flex-1 md:flex-none" onClick={() => setRejectOpen(true)} disabled={transitioning !== null}>
+                      {transitioning === "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                      {transitioning === "rejected" ? "Annullamento…" : "Annulla"}
+                    </Button>
+                    <Button className="gap-2 flex-1 md:flex-none" onClick={() => transition("accepted")} disabled={transitioning !== null || waiting} title={waiting ? "Attendi la risposta del lavoratore" : undefined}>
+                      {transitioning === "accepted" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      {transitioning === "accepted" ? "Conferma in corso…" : "Conferma lavoratore"}
+                    </Button>
+                  </div>
+                </div>
+                {tags.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {tags.map((t) => (
+                      <span key={t.text} className="inline-flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs">
+                        <t.icon className="h-3.5 w-3.5 text-muted-foreground" />{t.text}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {rpm && !waiting && counterofferEnabled && (
+                  <Button variant="ghost" size="sm" className="mt-3 gap-2 text-primary" onClick={() => setCounterofferOpen(true)} disabled={transitioning !== null}>
+                    <Handshake className="h-4 w-4" />Invia controfferta
+                  </Button>
+                )}
+                <div className="mt-4 border-t border-border/50 pt-3 text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <AlarmClock className="h-3.5 w-3.5 text-primary" />
+                  <span>{waiting ? `In attesa di ${identityVisible && displayName ? displayName : "risposta"}` : "Il lavoratore è interessato: puoi confermare"}</span>
+                  {dlText && <span>· {dlText}</span>}
+                  {!paymentsEnabled ? <span>· Gratis fino al 31/12/2026</span> : <span>· Paghi solo quando confermi</span>}
+                </div>
+              </div>
+            );
+          }
           return (
             <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card p-5 mb-4 shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.35)]">
               <div className="md:grid md:grid-cols-[15rem_minmax(0,1fr)] md:gap-6">
@@ -3340,7 +3409,7 @@ function Thread() {
 
         </div>
         <aside className="mt-4 space-y-4 lg:mt-0">
-          {ann && (
+          {ann && !compactRestaurantView && (
             <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-riepilogo">
               <h2 id="sec-riepilogo" className="text-sm font-semibold mb-2">Riepilogo turno</h2>
               <dl className="space-y-1.5 text-sm">
