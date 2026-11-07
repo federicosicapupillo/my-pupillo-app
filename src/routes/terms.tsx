@@ -12,7 +12,7 @@ function Terms() {
     <LegalPage title="Condizioni generali d'uso">
       <section>
         <h2>1. Gestore, natura e finalità della piattaforma</h2>
-        <p>Pupillo (pupillo.life) è gestita da {COMPANY.name}, P.IVA e C.F. {COMPANY.vat}, sede legale {COMPANY.address}, REA {COMPANY.rea}, {COMPANY.register}, PEC {COMPANY.pec} («Pupillo» o «Gestore»).</p>
+        <p>Pupillo (pupillo.life) è gestita da AD MAIORA S.R.L.</p>
         <p>Pupillo è una piattaforma digitale che consente a ristoranti, bar e altri locali del settore Ho.Re.Ca. («Ristoratori») di pubblicare annunci per turni e collaborazioni e a persone interessate («Lavoratori») di candidarsi. Pupillo non è parte dei rapporti tra Ristoratori e Lavoratori, non è datore di lavoro e non agisce come agenzia per il lavoro o somministratore. La scelta di collaborare, la forma contrattuale e i relativi adempimenti restano a carico delle parti.</p>
       </section>
       <section>
