@@ -449,6 +449,19 @@ function MessagesLayout() {
     return (b.lastAt ?? "").localeCompare(a.lastAt ?? "") || a.name.localeCompare(b.name);
   });
 
+  // Ristoratore: conversazioni raggruppate per annuncio, quelle da leggere in alto.
+  const annGroups = (() => {
+    const m = new Map<string, Thread[]>();
+    for (const x of visible) {
+      const arr = m.get(x.announcementId) ?? [];
+      arr.push(x);
+      m.set(x.announcementId, arr);
+    }
+    return [...m.entries()]
+      .map(([id, items]) => ({ id, items, lastAt: items[0]?.lastAt ?? "", unread: items.some((x) => x.unread > 0) }))
+      .sort((a, b) => Number(b.unread) - Number(a.unread) || (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
+  })();
+
   // Mark all messages in this conversation as read for the current user.
   const markThreadRead = async (applicationId: string) => {
     if (!user) return;
@@ -651,7 +664,7 @@ function MessagesLayout() {
               })}
         </div>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]">
+      <div className={role === "restaurant" && !selectedId ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]"}>
         <section className={`${selectedId ? "hidden lg:block" : "block"} min-w-0`} aria-label="Lista conversazioni">
           {withUser && (
             <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
@@ -699,7 +712,7 @@ function MessagesLayout() {
                 </p>
               )}
             </div>
-          ) : (withUser ? visible.length === 0 : sortedGroups.length === 0) ? (
+          ) : (withUser || role === "restaurant" ? visible.length === 0 : sortedGroups.length === 0) ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
               Nessuna conversazione corrisponde ai filtri selezionati.
             </div>
@@ -740,6 +753,85 @@ function MessagesLayout() {
                       </div>
                     </div>
                   </Link>
+                );
+              })}
+            </div>
+          ) : role === "restaurant" ? (
+            <div className="space-y-3">
+              {annGroups.map((ag) => {
+                const open = expandedGroups.has(`ann:${ag.id}`);
+                const unread = ag.items.reduce((n, x) => n + x.unread, 0);
+                const first = ag.items[0];
+                const time = formatServiceTime(first.annTime, first.annEndTime);
+                return (
+                  <div key={ag.id} className={`rounded-2xl border bg-card/60 transition ${open || unread > 0 ? "border-primary/40" : "border-border/60"}`}>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(`ann:${ag.id}`)}
+                      aria-expanded={open}
+                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5"
+                    >
+                      <div className="flex -space-x-2 shrink-0">
+                        {ag.items.slice(0, 3).map((x) => (
+                          <UserAvatar key={x.id} userId={x.workerId} name={x.other.name} className="h-9 w-9 ring-2 ring-card" />
+                        ))}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-base font-semibold text-foreground">
+                          {(first.annRole ? formatRoleLabel(first.annRole) : "Annuncio")}{first.annDate ? ` · ${fmtDate(first.annDate)}` : ""}
+                        </div>
+                        {time && <div className="truncate text-xs text-muted-foreground">{time}</div>}
+                      </div>
+                      {unread > 0 && (
+                        <span className="hidden shrink-0 items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary sm:inline-flex">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" /> {unread} {unread === 1 ? "nuovo" : "nuovi"}
+                        </span>
+                      )}
+                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                        {ag.items.length} {ag.items.length === 1 ? "candidato" : "candidati"}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground" aria-hidden>
+                        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </span>
+                    </button>
+                    {open && (
+                      <ul className="border-t border-border/60" role="list">
+                        {ag.items.map((x) => (
+                          <li key={x.id} className="flex flex-wrap items-center gap-3 border-b border-border/40 px-4 py-3 last:border-b-0 sm:px-5">
+                            <UserAvatar userId={x.workerId} name={x.other.name} className="h-11 w-11" zoomable />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`text-sm ${x.unread > 0 ? "font-semibold" : "font-medium"} text-foreground`}>{x.other.name}</span>
+                                <span className={`rounded-full px-2 py-0.5 text-[11px] ${isApplicationConfirmed(x.status) ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                                  {threadStatusLabel(x.status, x.closedReason)}
+                                </span>
+                                {x.unread > 0 && <span className="h-2 w-2 rounded-full bg-primary" aria-label="Non letto" />}
+                                {pendingReviewAppIds.has(x.id) && <span className="text-[11px] text-muted-foreground">· Recensione da inviare</span>}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {x.lastBody ? `«${x.lastBody}»` : "Nessun messaggio"}{x.lastAt ? ` · ${formatWhen(x.lastAt)}` : ""}
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap gap-2">
+                              {shiftByApp.get(x.id) && (
+                                <Link to="/ristoratore/turni/$shiftId" params={{ shiftId: shiftByApp.get(x.id)! }} className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-accent">
+                                  Turno
+                                </Link>
+                              )}
+                              <Link to="/messages/$id" params={{ id: x.id }} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+                                Apri
+                              </Link>
+                            </div>
+                          </li>
+                        ))}
+                        <li className="px-4 py-2.5 sm:px-5">
+                          <Link to="/announcements/$id" params={{ id: ag.id }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                            <ExternalLink className="h-3 w-3" aria-hidden /> Vedi annuncio
+                          </Link>
+                        </li>
+                      </ul>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -874,7 +966,7 @@ function MessagesLayout() {
                                 </div>
                               </div>
                             </Link>
-                            {role === "restaurant" && (
+                            {(role as string) === "restaurant" && (
                               <div className="mt-1 flex flex-wrap gap-1 px-1 pb-1">
                                 <Link
                                   to="/messages/$id"
@@ -924,7 +1016,7 @@ function MessagesLayout() {
           )}
         </section>
 
-        <section className={`${selectedId ? "block" : "hidden lg:block"} min-w-0`} aria-label="Chat conversazione">
+        <section className={`${selectedId ? "block" : role === "restaurant" ? "hidden" : "hidden lg:block"} min-w-0`} aria-label="Chat conversazione">
           {selectedId ? (
             <Outlet />
           ) : role === "restaurant" ? (
