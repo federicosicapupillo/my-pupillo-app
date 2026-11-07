@@ -4407,6 +4407,25 @@ function ProposalCard(props: {
                 : "Questo turno è stato annullato. Non è più possibile accettare o rifiutare la proposta."}
             </span>
           </div>
+        ) : decided && accepted && isWorker ? (
+          <div className="border-t border-primary/40 bg-primary/10 px-4 py-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Check className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <div className="text-base font-bold text-foreground">Candidatura inviata ✓</div>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Il turno <strong className="text-foreground">non è ancora tuo</strong>: ora il ristoratore deve confermarti. Ti avviseremo appena lo farà.
+                </p>
+                <ol className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium">
+                  <li className="rounded-full bg-primary px-2.5 py-1 text-primary-foreground">1 · Candidatura inviata</li>
+                  <li className="rounded-full border border-primary/50 px-2.5 py-1 text-foreground animate-pulse">2 · In attesa del ristoratore</li>
+                  <li className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">3 · Turno assegnato</li>
+                </ol>
+              </div>
+            </div>
+          </div>
         ) : decided ? (
           <div className={`px-4 py-3 border-t text-sm font-semibold flex items-center justify-center gap-2 ${
             accepted
