@@ -4280,6 +4280,18 @@ function ProposalCard(props: {
   const tasks = labelsOf(ann?.required_skills ?? [], SKILL_OPTIONS as any);
   if (tasks.length) recapRows.push({ label: "Mansioni", value: tasks.join(", ") });
 
+  // Total earnings for the shift (hourly × duration, or fixed per service).
+  const earnings = (() => {
+    const amt = Number(ann?.tariff_amount);
+    if (!Number.isFinite(amt) || amt <= 0) return null;
+    const hourly = ann?.tariff_type === "hourly" || ann?.tariff_type == null;
+    const hours = Number(ann?.duration_hours);
+    const total = hourly ? (Number.isFinite(hours) && hours > 0 ? amt * hours : null) : amt;
+    if (total == null) return null;
+    const fmt = (n: number) => n.toLocaleString("it-IT", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+    return { total: `${fmt(total)} €`, detail: hourly ? `${fmt(amt)} €/ora × ${fmt(hours)} h` : "Compenso a servizio" };
+  })();
+
   return (
     <>
     <div className={inline ? "border-t border-border/50 pt-3" : "flex justify-center my-2"}>
@@ -4486,6 +4498,15 @@ function ProposalCard(props: {
             Accettando questa proposta riceverai subito tutti i dettagli operativi: nome locale, indirizzo completo, referente, orario di ingresso, anticipo richiesto, dress code e istruzioni per il servizio.
           </p>
         </div>
+        {earnings && (
+          <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Guadagnerai per questo turno</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{earnings.detail} · lordo</div>
+            </div>
+            <div className="text-3xl font-extrabold text-primary whitespace-nowrap">{earnings.total}</div>
+          </div>
+        )}
         {recapRows.length > 0 && (
           <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-sm">
             {recapRows.map((r) => (
