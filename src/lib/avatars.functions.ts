@@ -6,7 +6,11 @@ const InputSchema = z.object({
   userIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
+import partnerLogo from "@/assets/partner_restaurant_logo.jpg.asset.json";
+
 function fallbackAvatarUrl(userId: string, name: string | null, isRestaurant: boolean) {
+  // Default logo for every partner restaurant without its own photo.
+  if (isRestaurant) return partnerLogo.url;
   const seed = encodeURIComponent(name?.trim() || userId);
   // DiceBear: deterministic, free, CDN-hosted. Different style for restaurants
   // so they're visually distinguishable from worker portraits.

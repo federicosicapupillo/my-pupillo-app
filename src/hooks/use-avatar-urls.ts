@@ -4,7 +4,7 @@ import { getAvatarUrls } from "@/lib/avatars.functions";
 
 // Signed URLs expire after 1h server-side; refresh cache after 50min.
 const TTL_MS = 50 * 60 * 1000;
-const STORAGE_KEY = "avatar-url-cache:v2";
+const STORAGE_KEY = "avatar-url-cache:v3";
 const AVATAR_UPDATED_EVENT = "pupillo:avatar-updated";
 type Entry = { url: string | null; name?: string | null; at: number };
 const cache = new Map<string, Entry>();
