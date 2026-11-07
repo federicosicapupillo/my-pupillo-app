@@ -2,8 +2,9 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Star } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UserAvatar } from "@/components/UserAvatar";
+import { separateMapMarkers } from '@/lib/map-marker-layout';
 
 export type WorkerMapPoint = {
   id: string;
@@ -114,7 +115,8 @@ export default function WorkersMapInner({
           focusNonce={focusNonce ?? 0}
           markerRefs={markerRefs}
         />
-        {points.map((p) => (
+        <SeparatedMarkers points={points}>
+        {displayPoints => displayPoints.map((p) => (
           <Marker
             key={p.id}
             position={[p.lat, p.lng]}
@@ -293,9 +295,33 @@ export default function WorkersMapInner({
             </Popup>
           </Marker>
         ))}
+        </SeparatedMarkers>
       </MapContainer>
     </div>
   );
+}
+
+function SeparatedMarkers({ points, children }: { points: WorkerMapPoint[]; children: (points: WorkerMapPoint[]) => React.ReactNode }) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(map.getZoom());
+  useEffect(() => {
+    const update = () => setZoom(map.getZoom());
+    map.on('zoomend', update);
+    return () => { map.off('zoomend', update); };
+  }, [map]);
+  useEffect(() => {
+    if (points.length === 0) return;
+    map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lng] as [number, number])), { padding: [70, 70], maxZoom: 14 });
+  }, [map, points.map(p => `${p.id}:${p.lat}:${p.lng}`).join('|')]);
+  const projected = points.map(p => {
+    const pixel = map.project([p.lat, p.lng], zoom);
+    return { ...p, x: pixel.x, y: pixel.y };
+  });
+  const separated = separateMapMarkers(projected).map(p => {
+    const position = map.unproject([p.x, p.y], zoom);
+    return { ...p, lat: position.lat, lng: position.lng };
+  });
+  return <>{children(separated)}</>;
 }
 
 function FocusController({

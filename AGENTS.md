@@ -1,5 +1,7 @@
 # Project rules
 
+- Separate worker map markers in screen space at each zoom using map-marker-layout; keep sanitized geographic coordinates unchanged to preserve privacy and make overlapping workers selectable.
+
 - Enable worker-photo enlargement through the optional UserAvatar zoomable prop; reuse the authorized avatar URL and leave other avatar uses unchanged.
 
 - Share the reputation-level explanation between worker badges and the dashboard through ReputationLevelsExplanation so eligibility descriptions stay consistent without changing scoring logic.
