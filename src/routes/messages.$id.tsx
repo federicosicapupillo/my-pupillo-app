@@ -2274,6 +2274,7 @@ function Thread() {
   }
 
   const compactWorkerView = role === "worker" && !!app;
+  const workerDecisionMerged = compactWorkerView && proposalMessages.length > 0 && app?.status !== "accepted";
   const compactRestaurantView = (role === "restaurant" && !!app && !!workerRep && shouldShowNewApplicationCard({ role: role as any, status: app.status as any, hasWorkerReputation: true }));
   return (
       <div className="max-w-6xl mx-auto">
@@ -2310,18 +2311,18 @@ function Thread() {
             : app.status === "expired" ? "Proposta scaduta"
             : "In attesa di una decisione";
           return (
-            <div className="rounded-2xl border bg-card/80 p-5 mb-4">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                <UserAvatar userId={otherId} name={displayOtherName} className="h-20 w-20 shrink-0" zoomable />
+            <div className={workerDecisionMerged ? "rounded-t-2xl border border-b-0 bg-card/80 p-4 sm:p-5 pb-0 sm:pb-0" : "rounded-2xl border bg-card/80 p-4 sm:p-5 mb-4"}>
+              <div className="flex flex-row items-center gap-4">
+                <UserAvatar userId={otherId} name={displayOtherName} className="h-14 w-14 sm:h-16 sm:w-16 shrink-0" zoomable />
                 <div className="min-w-0 flex-1">
-                  <div className="text-xl font-semibold truncate">{displayOtherName}</div>
+                  <div className="text-lg font-semibold truncate">{displayOtherName}</div>
                   <div className="mt-1 text-sm text-muted-foreground">
                     {ann?.professional_profile ? formatDisplayLabel(ann.professional_profile) : "Turno"}
                   </div>
                 </div>
               </div>
               {tags.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {tags.map((t) => (
                     <span key={t.text} className="inline-flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs">
                       <t.icon className="h-3.5 w-3.5 text-muted-foreground" />{t.text}
@@ -2329,9 +2330,11 @@ function Thread() {
                   ))}
                 </div>
               )}
+              {!workerDecisionMerged && (
               <div className="mt-4 border-t border-border/50 pt-3 text-xs text-muted-foreground flex items-center gap-2">
                 <AlarmClock className="h-3.5 w-3.5 text-primary" />{statusText}
               </div>
+              )}
             </div>
           );
         })()}
@@ -3033,8 +3036,8 @@ function Thread() {
           if (compactRestaurantView) return null;
           const hasPendingDecision = visibleProposals.some((m) => isPendingStatus(effStatusOf(m.id)));
           return (
-          <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-proposta">
-            <h2 id="sec-proposta" className="text-sm font-semibold mb-3">
+          <section className={workerDecisionMerged ? "mb-4 rounded-b-2xl border border-t-0 bg-card/80 px-4 sm:px-5 pb-4 sm:pb-5 pt-3" : "rounded-2xl border bg-card p-4"} aria-labelledby="sec-proposta">
+            <h2 id="sec-proposta" className={workerDecisionMerged ? "sr-only" : "text-sm font-semibold mb-3"}>
               {hasPendingDecision ? "Azioni disponibili" : "Esito della candidatura"}
             </h2>
             <div className="space-y-3">
@@ -3065,6 +3068,7 @@ function Thread() {
                   message={m}
                   ann={ann}
                   compact
+                  inline={workerDecisionMerged}
                   venueName={venueName}
                   displayAddress={displayAddress}
                   canSeePreciseInfo={canSeeAddress}
@@ -4140,11 +4144,13 @@ function ProposalCard(props: {
    * controls (deadline, actions, confirmation dialogs) without duplicating it.
    */
   compact?: boolean;
+  inline?: boolean;
   onAccept: () => Promise<void>;
   onReject: (reason?: string) => Promise<void>;
 }) {
   const { ann, venueName, displayAddress, canSeePreciseInfo, isWorker, status, onAccept, onReject } = props;
   const compact = props.compact ?? false;
+  const inline = props.inline ?? false;
   const lockReason = props.lockReason ?? null;
   const specialBlock = props.specialBlock ?? null;
   const incompatibleSpecial = !!specialBlock?.blocked;
@@ -4276,8 +4282,8 @@ function ProposalCard(props: {
 
   return (
     <>
-    <div className="flex justify-center my-2">
-      <div className="w-full max-w-md rounded-2xl border-2 border-primary/40 bg-card shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.45)] overflow-hidden">
+    <div className={inline ? "border-t border-border/50 pt-3" : "flex justify-center my-2"}>
+      <div className={inline ? "w-full flex flex-col gap-2 sm:flex-row sm:items-center [&>div]:!m-0 [&>div]:!border-0 [&>div]:!bg-transparent [&>div]:!p-0" : "w-full max-w-md rounded-2xl border-2 border-primary/40 bg-card shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.45)] overflow-hidden"}>
         {!compact && (
         <div className="bg-primary/10 px-4 py-3 border-b border-primary/30">
           <div className="flex items-center gap-2">
@@ -4430,7 +4436,7 @@ function ProposalCard(props: {
               </div>
             </div>
           ) : (
-          <div className="px-4 py-3 border-t bg-secondary/30 flex flex-col sm:flex-row gap-2">
+          <div className={`px-4 py-3 border-t bg-secondary/30 flex flex-col sm:flex-row gap-2 ${inline ? "sm:ml-auto sm:w-auto" : ""}`}>
             <Button
               type="button"
               data-testid="proposal-accept"
