@@ -660,28 +660,25 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
   const computedDuration = computeDurationHours(ann.service_time, ann.end_time);
   const finalDuration = computedDuration ?? durationHours;
   const totalDisplay = formatTotalService(ann.tariff_amount, ann.tariff_type, finalDuration, ann.service_time, ann.end_time);
-  if (!totalDisplay) {
-    return (
-      <div className="w-full sm:w-auto inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-muted px-4 py-3 ring-1 ring-border min-w-[120px]">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Costo servizio</span>
-        <span className="text-sm font-semibold text-muted-foreground">Costo non disponibile</span>
-        <span className="text-[10px] text-muted-foreground">{formatTariff(ann.tariff_amount, ann.tariff_type)}</span>
-      </div>
-    );
-  }
   const hourlyRate = ann.tariff_type === "hourly" ? ann.tariff_amount : null;
   return (
-    <div className="w-full sm:w-auto inline-flex flex-col items-center sm:items-end justify-center gap-0.5 rounded-2xl bg-primary/10 px-4 py-2.5 ring-1 ring-primary/30 max-w-full sm:max-w-[180px]">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">Costo servizio</span>
-      <div className="flex items-center gap-1">
-        <span className="text-xl font-extrabold tracking-tight text-primary tabular-nums">{totalDisplay}</span>
-      </div>
-      {hourlyRate != null && finalDuration != null && (
-        <span className="text-[10px] text-primary/70">
-          €{hourlyRate}/ora × {Number.isInteger(finalDuration) ? String(finalDuration) : finalDuration.toFixed(1).replace(/\.?0+$/, "")}h
+    <div className="mt-4 border-y border-border py-4">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-sm text-muted-foreground">Costo previsto</span>
+        {totalDisplay ? (
+          <span className="text-2xl font-bold tracking-tight text-primary tabular-nums">{totalDisplay}</span>
+        ) : (
+          <span className="text-sm font-semibold text-muted-foreground">Non disponibile</span>
+        )}
+        <span className="text-xs text-muted-foreground">
+          {hourlyRate != null && finalDuration != null
+            ? `${hourlyRate} €/ora × ${Number.isInteger(finalDuration) ? String(finalDuration) : finalDuration.toFixed(1).replace(/\.?0+$/, "")} h · da pagare al lavoratore`
+            : formatTariff(ann.tariff_amount, ann.tariff_type)}
         </span>
-      )}
-      <span className="text-[9px] text-primary/50 leading-tight">Importo previsto per il lavoratore</span>
+      </div>
+      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+        Importo indicativo. Contratto, inquadramento e pagamento del lavoratore sono a cura e responsabilità esclusiva del ristoratore: Pupillo mette in contatto le parti e non è parte del rapporto di lavoro.
+      </p>
     </div>
   );
 }
@@ -783,20 +780,19 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           </div>
           {(() => {
             const eff = computeEffectiveStatus(a, now);
-            return (
+            return role === "restaurant" ? (
+            <span className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs text-foreground whitespace-nowrap">
+              <span className={`h-2 w-2 rounded-full ${eff.kind === "active" || eff.kind === "soon" ? "bg-primary" : eff.kind === "cancelled" || eff.kind === "expired" ? "bg-destructive" : "bg-muted-foreground"}`} />
+              {STATUS_LABEL[eff.kind] ?? eff.kind}
+              {eff.countdown && (eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned") && (
+                <span className="text-muted-foreground">· {eff.countdown}</span>
+              )}
+            </span>
+          ) : (
           <div className="flex flex-col items-end gap-1">
             <Badge variant="outline" className={STATUS_CLS[eff.kind] ?? 'bg-muted text-muted-foreground'}>
               {STATUS_LABEL[eff.kind] ?? eff.kind}
             </Badge>
-            {role === "restaurant" && (
-              <span
-                className={`inline-flex items-center gap-1 text-[11px] rounded-full px-2 py-0.5 font-medium ${(counts[a.id] ?? 0) > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
-                title={`${counts[a.id] ?? 0} candidatur${(counts[a.id] ?? 0) === 1 ? 'a' : 'e'}`}
-              >
-                <Users className="h-3 w-3" />
-                {counts[a.id] ?? 0} candidat{(counts[a.id] ?? 0) === 1 ? 'o' : 'i'}
-              </span>
-            )}
             {eff.countdown && (eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned") && (
               <span
                 className={`text-[10px] rounded-full px-2 py-0.5 ${
@@ -816,7 +812,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
               </span>
             )}
           </div>
-            );
+          );
           })()}
         </div>
         {(() => {
@@ -824,6 +820,21 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         const zoneLabel = publicLocationLabel({ job_city: a.job_city });
         return (
         <>
+        {role === "restaurant" ? (
+          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {([
+              ["Quando", `${new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" })} · ${a.service_time?.slice(0,5) ?? "—"}${a.end_time ? `–${a.end_time.slice(0,5)}` : ""}`],
+              ["Dove", formatAnnouncementLocation(a)],
+              ["Paga", formatTariff(a.tariff_amount, a.tariff_type)],
+              ["Posti", (() => { const needed = workersNeededMap[a.id]; if (!needed) return "—"; const remaining = Math.max(0, needed - (acceptedMap[a.id] ?? 0)); return `${remaining} su ${needed} disponibil${remaining === 1 ? "e" : "i"}`; })()],
+            ] as const).map(([label, value]) => (
+              <div key={label} className="rounded-xl bg-muted/60 px-3 py-3 min-w-0">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+                <div className="mt-1 text-sm text-foreground break-words">{value}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
         <div className="mt-3 space-y-1 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
@@ -831,24 +842,8 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
           </div>
           <div className="flex items-center gap-2"><Euro className="h-4 w-4" />{formatTariff(a.tariff_amount, a.tariff_type)}</div>
           <div className="flex items-center gap-2"><Clock className="h-4 w-4" />Scade il {new Date(a.service_date + "T00:00:00").toLocaleDateString("it-IT")} alle {a.service_time?.slice(0,5) ?? "—"}</div>
-          {role === "restaurant" && (
-            <div className="flex items-center gap-2"><Users className="h-4 w-4" />{counts[a.id] ?? 0} candidatur{(counts[a.id] ?? 0) === 1 ? "a" : "e"}</div>
-          )}
-          {role === "restaurant" && (() => {
-            const needed = workersNeededMap[a.id];
-            if (!needed) return null;
-            const accepted = acceptedMap[a.id] ?? 0;
-            const remaining = Math.max(0, needed - accepted);
-            return (
-              <div className="flex items-center gap-2">
-                <UserCheck className="h-4 w-4" />
-                {needed} {needed === 1 ? "lavoratore richiesto" : "lavoratori richiesti"}
-                {" · "}
-                {remaining} {remaining === 1 ? "posizione ancora disponibile" : "posizioni ancora disponibili"}
-              </div>
-            );
-          })()}
         </div>
+        )}
         <div className="mt-3">
           {canSeePrecise ? (
             <AnnouncementMapBlock
@@ -896,8 +891,10 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         );
         })()}
         {role === "restaurant" && (
-          <div className="mt-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div className="flex flex-col gap-3 items-start">
+          <>
+          <AnnouncementCostBox ann={a} />
+          <div className="mt-4">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -957,7 +954,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                       disabled
                       aria-disabled="true"
                       title="Non puoi annullare un turno già iniziato."
-                      className="gap-2 text-destructive border-destructive/40 opacity-50 cursor-not-allowed"
+                      className="gap-2 sm:ml-auto text-destructive border-destructive/40 opacity-50 cursor-not-allowed"
                     >
                       <Trash2 className="h-3 w-3" /> Annulla turno
                     </Button>
@@ -967,7 +964,7 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/5"
+                    className="gap-2 sm:ml-auto text-destructive hover:text-destructive border-destructive/40 hover:bg-destructive/5"
                     onClick={() => setCancelTarget(a)}
                   >
                     <Trash2 className="h-3 w-3" /> Annulla turno
@@ -981,8 +978,8 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
                 </div>
               )}
             </div>
-            <AnnouncementCostBox ann={a} />
           </div>
+          </>
         )}
         <div className="mt-3">
           {role === "restaurant" ? (
