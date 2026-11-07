@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calendarAvailabilitySearchText, upcomingAvailabilityDates } from '../worker-calendar-availability';
+import { calendarAvailabilitySearchText, upcomingAvailabilityDates, todayAvailabilityEntries } from '../worker-calendar-availability';
 import type { AvailabilityExceptionRow, AvailabilityRow } from '../availability';
 
 const now = new Date('2026-11-07T12:00:00');
@@ -9,6 +9,13 @@ const exception = (date: string, time_slot: AvailabilityExceptionRow['time_slot'
 });
 
 describe('restaurant calendar availability', () => {
+  it('card shows only today, not past or future dates', () => {
+    const entries = [exception('2026-11-06','cena'), exception('2026-11-07','pranzo'), exception('2026-11-08','cena')];
+    expect(todayAvailabilityEntries(entries,now).map(e => e.date)).toEqual(['2026-11-07']);
+  });
+  it('card shows no today availability when today is explicitly unavailable', () => {
+    expect(todayAvailabilityEntries([exception('2026-11-07',null,false),exception('2026-11-08','pranzo')],now)).toEqual([]);
+  });
   it('retains every upcoming date, beyond the three-row card preview', () => {
     const entries = ['2026-11-07','2026-11-14','2026-11-21','2026-11-28'].map(d => exception(d,'pranzo'));
     expect(upcomingAvailabilityDates(entries,now).map(d => d.date)).toEqual(entries.map(e => e.date));

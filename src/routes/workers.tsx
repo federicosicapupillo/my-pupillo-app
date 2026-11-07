@@ -29,7 +29,7 @@ import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { CurriculumRating } from "@/components/CurriculumAssessment";
 import { WorkerAvailabilityList } from "@/components/PublicWorkerAvailability";
-import { calendarAvailabilitySearchText } from "@/lib/worker-calendar-availability";
+import { calendarAvailabilitySearchText, todayAvailabilityEntries } from "@/lib/worker-calendar-availability";
 import { toIso } from "@/lib/availability-calendar";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useProfileGate } from "@/components/ProfileGate";
@@ -2661,30 +2661,15 @@ function AvailabilityBlock({
   const hasReal = !!rows && rows.length > 0;
   const realSummary = summarizeWorkerAvailability(rows, new Date());
   const legacySummary = summarizeWeeklyAvailability(weekly, availableNowUntil, new Date());
-  const specials = specialForDate ?? [];
+  const specials = todayAvailabilityEntries(upcomingSpecials ?? specialForDate ?? []);
   const hasSpecial = specials.length > 0;
-  const specialDateLabel = specialDate
-    ? new Date(specialDate + "T00:00:00").toLocaleDateString("it-IT", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-      })
-    : "";
-  // Quando non c'è un annuncio selezionato, mostriamo le prossime
-  // disponibilità speciali (fino a 3) per non perdere informazione utile.
-  const upcoming = !specialDate
-    ? (upcomingSpecials ?? [])
-        .slice()
-        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-        .slice(0, 3)
-    : [];
-  const hasUpcoming = upcoming.length > 0;
+  const hasDates = (upcomingSpecials?.length ?? 0) > 0;
   return (
     <div className="mt-3 rounded-lg border bg-muted/30 px-3 py-2">
       {hasSpecial && (
         <div className="mb-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-            Disponibilità per data · {specialDateLabel}
+            Disponibile oggi
           </div>
           <div className="mt-1 space-y-0.5 text-xs text-foreground">
             {specials.map((e) => {
@@ -2709,52 +2694,10 @@ function AvailabilityBlock({
           </div>
         </div>
       )}
-      {!hasSpecial && hasUpcoming && (
-        <div className="mb-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-            Prossime disponibilità per data
-          </div>
-          <div className="mt-1 space-y-0.5 text-xs text-foreground">
-            {upcoming.map((e) => {
-              const dLabel = new Date(e.date + "T00:00:00").toLocaleDateString("it-IT", {
-                weekday: "short",
-                day: "2-digit",
-                month: "2-digit",
-              });
-              if (!e.is_available) {
-                return (
-                  <div key={e.id}>{dLabel} · Non disponibile</div>
-                );
-              }
-              const slot = e.time_slot ? SLOT_LABELS[e.time_slot] : null;
-              const hours = e.start_time && e.end_time
-                ? `${e.start_time.slice(0, 5)} - ${e.end_time.slice(0, 5)}`
-                : null;
-              const place = [e.city, e.district].filter(Boolean).join(" · ");
-              return (
-                <div key={e.id}>
-                  {[dLabel, slot, place, hours].filter(Boolean).join(" · ")}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {hasSpecial || hasUpcoming ? "Disponibilità abituale" : "Disponibilità"}
+          {hasSpecial ? "Disponibilità abituale" : "Disponibilità"}
         </div>
-        {(hasSpecial || hasUpcoming || hasReal) && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onDetails}
-            className="text-[11px] font-medium text-primary hover:underline"
-          >
-            Vedi tutte
-          </Button>
-        )}
       </div>
       <div className="mt-1 text-xs text-foreground">
         {hasReal && realSummary.kind === "lines" ? (
@@ -2813,6 +2756,12 @@ function AvailabilityBlock({
           </div>
         )}
       </div>
+      {(hasDates || hasSpecial || hasReal || legacySummary.kind !== "none") && (
+        <Button type="button" size="sm" onClick={onDetails} className="mt-3 w-full gap-2 whitespace-normal h-auto min-h-10 py-2 text-sm font-semibold">
+          <Clock className="h-4 w-4 shrink-0" />
+          Vedi tutte le disponibilità
+        </Button>
+      )}
     </div>
   );
 }

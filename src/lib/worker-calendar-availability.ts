@@ -1,6 +1,11 @@
 import { DAY_LABELS, SLOT_LABELS, type AvailabilityExceptionRow, type AvailabilityRow } from '@/lib/availability';
 import { dowOfIso, toIso } from '@/lib/availability-calendar';
 
+export function todayAvailabilityEntries(exceptions: AvailabilityExceptionRow[], now = new Date()) {
+  const entries = exceptions.filter(e => e.date === toIso(now));
+  return entries.some(e => !e.is_available) ? [] : entries;
+}
+
 export function upcomingAvailabilityDates(exceptions: AvailabilityExceptionRow[], now = new Date()) {
   const byDate = new Map<string, AvailabilityExceptionRow[]>();
   for (const row of exceptions) {
