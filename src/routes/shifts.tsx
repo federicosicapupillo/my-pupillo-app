@@ -802,25 +802,35 @@ function ShiftsPage() {
         <Stat label="Completati" value={stats.completed} />
       </div>
 
-      <div className="flex gap-2 mb-4 overflow-x-auto">
+      <nav aria-label="Stato turni" className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
         {((role === "worker"
           ? ["no_show", "assigned", "to-review", "completed"]
           : ["assigned", "upcoming", "completed", "to-review", "no_show", "past", "archived"]) as Array<typeof filter>).map(f => {
-          const label =
-            f === "assigned" ? `Assegnati (${counts.assigned})`
-            : f === "upcoming" ? `In attesa (${counts.pending})`
-            : f === "completed" ? `Conclusi (${counts.completed})`
-            : f === "past" ? `Scaduti / Annullati (${counts.past})`
-            : f === "archived" ? `Archiviati (${counts.archived})`
-            : f === "no_show" ? `No show / Segnalazioni (${counts.noShow})`
-            : `Da recensire (${counts.toReview})`;
+          const [label, count] =
+            f === "assigned" ? ["Assegnati", counts.assigned]
+            : f === "upcoming" ? ["In attesa", counts.pending]
+            : f === "completed" ? ["Conclusi", counts.completed]
+            : f === "past" ? ["Scaduti / Annullati", counts.past]
+            : f === "archived" ? ["Archiviati", counts.archived]
+            : f === "no_show" ? ["No show / Segnalazioni", counts.noShow]
+            : ["Da recensire", counts.toReview];
+          const isActive = filter === f;
           return (
-            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => { defaultTabAppliedRef.current = true; setFilter(f); }}>
-              {label}
-            </Button>
+            <button
+              key={f}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => { defaultTabAppliedRef.current = true; setFilter(f); }}
+              className={`relative -mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition select-none ${isActive ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <span>{label}</span>
+              <span className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-semibold ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                {count}
+              </span>
+            </button>
           );
         })}
-      </div>
+      </nav>
 
       {role === "worker" && !loading && initialFocusShift && !shifts.some(s => s.id === initialFocusShift) && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-sm">
@@ -930,9 +940,9 @@ function ShiftsPage() {
             </div>
           )}
           {displayShifts.length === 0 && !(role === "restaurant" && filter === "upcoming" && pendingApps.length > 0) ? (
-        <div className="rounded-2xl border bg-card p-8 text-center">
-          <CalendarClock className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-10 text-center">
+          <CalendarClock className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+          <p className="font-medium text-foreground">
             {filter === "assigned" ? "Non hai ancora turni assegnati." : "Nessun turno da mostrare."}
           </p>
         </div>
