@@ -597,11 +597,11 @@ function Thread() {
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const REJECT_REASONS = [
-    "Profilo non in linea con la richiesta",
-    "Esperienza non sufficiente",
+    "Un altro candidato ha confermato prima",
     "Posizione già coperta",
-    "Disponibilità non compatibile",
-    "Preferiamo un altro candidato",
+    "Il turno non è più necessario",
+    "Orari o data del turno cambiati",
+    "Profilo non in linea con la richiesta",
     "Altro motivo",
   ] as const;
   const [rejectReason, setRejectReason] = useState<string>(REJECT_REASONS[0]);
@@ -1797,7 +1797,7 @@ function Thread() {
       const body = [
         "Grazie per la tua candidatura.",
         "",
-        "Per questo turno il ristoratore ha scelto di procedere diversamente.",
+        "Il ristoratore ha annullato la richiesta per questo turno.",
         "",
         `Motivazione: ${reason}`,
         "",
@@ -1816,12 +1816,12 @@ function Thread() {
       } as never).select("*").single();
       if (msg) pushMessage(msg as Msg);
       await supabase.from("applications").update({
-        last_message_preview: "Candidatura rifiutata",
+        last_message_preview: "Richiesta annullata",
         last_message_at: createdAt,
       } as never).eq("id", app.id);
       await supabase.from("notifications").insert({
         user_id: app.worker_id,
-        title: "Candidatura non selezionata",
+        title: "Richiesta annullata dal ristoratore",
         body: `Motivazione: ${reason}`,
         link: `/messages/${app.id}`,
       } as never);
@@ -2634,13 +2634,13 @@ function Thread() {
                   </div>
                 )}
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   className="gap-2 w-full min-w-0 justify-center whitespace-normal h-auto py-2 text-center"
                   onClick={() => setRejectOpen(true)}
                   disabled={transitioning !== null}
                 >
                   {transitioning === "rejected" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <X className="h-4 w-4 shrink-0" />}
-                  {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
+                  {transitioning === "rejected" ? "Annullamento…" : "Annulla la richiesta"}
                 </Button>
                 <Button
                   className="gap-2 w-full min-w-0 justify-center whitespace-normal h-auto py-2 text-center "
@@ -3430,9 +3430,9 @@ function Thread() {
         <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Rifiuta candidatura</AlertDialogTitle>
+              <AlertDialogTitle>Annulla la richiesta</AlertDialogTitle>
               <AlertDialogDescription>
-                Seleziona una motivazione. Il lavoratore riceverà un messaggio automatico professionale e neutro.
+                Perché annulli la richiesta? Seleziona una motivazione. Il lavoratore riceverà un messaggio automatico professionale e neutro.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-2">
@@ -3446,13 +3446,13 @@ function Thread() {
               </RadioGroup>
             </div>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={transitioning === "rejected"}>Annulla</AlertDialogCancel>
+              <AlertDialogCancel disabled={transitioning === "rejected"}>Indietro</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => { e.preventDefault(); void submitReject(); }}
                 disabled={transitioning === "rejected"}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {transitioning === "rejected" ? "Rifiuto in corso…" : "Conferma rifiuto"}
+                {transitioning === "rejected" ? "Annullamento…" : "Conferma annullamento"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
