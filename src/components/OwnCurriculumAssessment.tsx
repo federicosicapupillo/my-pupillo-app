@@ -9,6 +9,7 @@ import { CV_CRITERIA, CV_STATUS, canPublishCurriculum } from '@/lib/curriculum-a
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { useCurriculumAnalysis } from '@/lib/use-curriculum-analysis';
+import { CurriculumStars } from '@/components/CurriculumStars';
 
 type Assessment = Database['public']['Tables']['worker_curriculum_assessments']['Row'];
 
@@ -66,7 +67,7 @@ export function OwnCurriculumAssessment({ workerId }: { workerId: string }) {
       {(analysisError || assessment.error_message) && <p role="alert" className="text-sm text-destructive">{analysisError || assessment.error_message}</p>}
       {assessment.status === 'error' && <Button type="button" variant="outline" disabled={analyzing} onClick={() => void run()}>Riprova analisi</Button>}
       {assessment.total !== null ? <>
-        <div className="flex flex-wrap items-baseline gap-2"><span className="text-3xl font-bold tabular-nums">{assessment.total}<span className="text-base font-normal text-muted-foreground">/100</span></span>{assessment.stars && <span className="text-sm text-primary">{assessment.stars}/5 stelle</span>}</div>
+        <div className="flex flex-wrap items-center gap-3"><span className="text-3xl font-bold tabular-nums">{assessment.total}<span className="text-base font-normal text-muted-foreground">/100</span></span>{assessment.stars && <CurriculumStars stars={assessment.stars} />}</div>
         <p className="text-xs text-muted-foreground">Punteggio calcolato automaticamente da Pupillo sui criteri indicati, senza verifica manuale delle esperienze dichiarate.</p>
         <dl className="space-y-1 text-xs">{CV_CRITERIA.map(c => {
           const value = scores && typeof scores === 'object' && !Array.isArray(scores) ? scores[c.key] : null;

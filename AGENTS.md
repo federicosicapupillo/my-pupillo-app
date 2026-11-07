@@ -1,5 +1,7 @@
 # Project rules
 
+- Use the shared CurriculumStars display for CV star ratings across owner and public views so dashboard and profile stay consistent.
+
 - Edit calendar availability as date overrides through an atomic owner-scoped RPC; keep weekly rows as a read fallback and copy only explicitly selected dates, so a later single-date edit cannot change other weekdays or months.
 
 - Keep CV assessments outside reviews/reputation; server-side AI completes consented assessments without manual approval, authorized only for the owner-worker or admin. New requests explicitly consent to automatic eligible publication; legacy private results require version-checked owner opt-in, so old analysis consent never becomes publication consent. Use approved for automatic completed results without claiming human review. Dashboard uses owner RLS and restaurant views sanitized reads; reset visibility and publication consent on replacement, new request or withdrawal to prevent stale publication.

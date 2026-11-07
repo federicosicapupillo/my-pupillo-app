@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Star } from 'lucide-react';
+import { CurriculumStars } from '@/components/CurriculumStars';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { CV_STATUS } from '@/lib/curriculum-assessment';
@@ -18,9 +18,7 @@ export function CurriculumRating({ workerId }: { workerId: string }) {
   return <section className="space-y-2 border-y py-4">
     <h3 className="font-semibold">Curriculum valutato da Pupillo</h3>
     <div className="flex flex-wrap items-center gap-2">
-      <span className="flex gap-1 text-primary" role="img" aria-label={`${rating.stars} stelle su 5`}>
-        {Array.from({ length: 5 }, (_, i) => <Star key={i} className={`h-5 w-5 ${i < rating.stars ? 'fill-current' : 'text-muted-foreground'}`} />)}
-      </span><span className="text-sm">{rating.stars}/5 · {rating.role_label}</span>
+      <CurriculumStars stars={rating.stars} /><span className="text-sm">{rating.role_label}</span>
     </div>
     <p className="text-xs text-muted-foreground">Valutazione automatica delle informazioni dichiarate nel curriculum, non delle prestazioni sul lavoro. Non costituisce verifica delle esperienze né recensione di un turno svolto.</p>
     <p className="text-xs text-muted-foreground">La valutazione è visibile ai ristoratori sul profilo del lavoratore ed è separata dal Reputation Score delle recensioni dei turni.</p>
@@ -45,7 +43,7 @@ export function CurriculumAssessmentRequest({ userId, curriculumPath }: { userId
     {loadError ? <p role="alert" className="text-sm text-destructive">Impossibile leggere la valutazione. <Button type="button" variant="outline" onClick={() => void load()}>Riprova</Button></p> : <>
       {active && assessment && <>
         <p className="text-sm">{analyzing ? 'Analisi in corso' : CV_STATUS[assessment.status] ?? 'In verifica'} · {assessment.role_label}</p>
-        {assessment.total != null && <p className="text-sm text-muted-foreground">Punteggio curriculum: {assessment.total}/100{assessment.stars ? ` · ${assessment.stars}/5` : ' · non pubblicabile'}.</p>}
+        {assessment.total != null && <div className="flex flex-wrap items-center gap-2"><p className="text-sm text-muted-foreground">Punteggio curriculum: {assessment.total}/100{assessment.stars ? '' : ' · non pubblicabile'}.</p>{assessment.stars && <CurriculumStars stars={assessment.stars} />}</div>}
         {(analysisError || assessment.error_message) && <p role="alert" className="text-sm text-destructive">{analysisError || assessment.error_message}</p>}
         {assessment.status === 'error' && <Button type="button" variant="outline" disabled={analyzing} onClick={() => void run()}>Riprova analisi</Button>}
         {assessment.status === 'approved' && !assessment.stars && <p className="text-sm text-muted-foreground">Il tuo curriculum non verrà pubblicato.</p>}
