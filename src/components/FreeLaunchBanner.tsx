@@ -18,7 +18,7 @@ export function FreeLaunchBanner({ className = "" }: { className?: string }) {
         </div>
         <div>
           <div className="font-semibold text-foreground">
-            Lancio Bologna — la piattaforma è gratuita fino al{" "}
+            Lancio Torino — la piattaforma è gratuita fino al{" "}
             {formatLaunchDate(LAUNCH_PRICING.freeUntil)}.
           </div>
           <p className="mt-0.5 text-muted-foreground">
