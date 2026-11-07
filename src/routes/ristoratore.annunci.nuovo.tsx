@@ -284,6 +284,41 @@ function NewRestaurantJobRequest() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.shift_date]);
+  // Bozza automatica: se la pagina si ricarica, i dati inseriti non vanno persi.
+  const draftKey = user?.id ? `pupillo:nuovo-annuncio:${user.id}` : null;
+  const draftReadyRef = useRef(false);
+  useEffect(() => {
+    if (!draftKey || draftReadyRef.current) return;
+    draftReadyRef.current = true;
+    if (reuse) return;
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (!d || typeof d !== "object" || !d.f) return;
+      setF(prev => ({ ...prev, ...d.f }));
+      if (Array.isArray(d.languageReqs)) setLanguageReqs(d.languageReqs);
+      if (Array.isArray(d.skills)) setSkills(d.skills);
+      if (Array.isArray(d.dressItems)) setDressItems(d.dressItems);
+      if (typeof d.accessChoice === "string") setAccessChoice(d.accessChoice);
+      if (typeof d.accessReason === "string") setAccessReason(d.accessReason);
+      if (typeof d.accessMinutes === "string") setAccessMinutes(d.accessMinutes);
+      toast.info("Abbiamo ripristinato l'annuncio che stavi compilando.", {
+        action: { label: "Ricomincia", onClick: () => { window.localStorage.removeItem(draftKey); window.location.reload(); } },
+      });
+    } catch { /* bozza non valida: ignorata */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+  useEffect(() => {
+    if (!draftKey || !draftReadyRef.current) return;
+    const t = setTimeout(() => {
+      try {
+        window.localStorage.setItem(draftKey, JSON.stringify({ f, languageReqs, skills, dressItems, accessChoice, accessReason, accessMinutes }));
+      } catch { /* spazio pieno: ignora */ }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [draftKey, f, languageReqs, skills, dressItems, accessChoice, accessReason, accessMinutes]);
+
   const toggleIn = (arr: string[], v: string, setter: (v: string[]) => void) => setter(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
 
   const defaultsToastShownRef = useRef(false);
@@ -779,6 +814,7 @@ function NewRestaurantJobRequest() {
       else toast.success("Annuncio salvato e impostazioni predefinite aggiornate.");
     }
 
+    if (draftKey) { try { window.localStorage.removeItem(draftKey); } catch { /* ignora */ } }
     nav({ to: "/announcements" });
   };
 
