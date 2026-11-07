@@ -783,6 +783,30 @@ function NewRestaurantJobRequest() {
     nav({ to: "/announcements" });
   };
 
+  // Con «Salva come predefinite» spuntato, l'anticipo all'ingresso viene salvato subito
+  // (non solo alla pubblicazione), così resta per i prossimi annunci anche se questo non viene pubblicato.
+  useEffect(() => {
+    if (!saveAsDefault || !user || !accessChoice) return;
+    let minutes: number;
+    let reason: string | null = null;
+    if (accessChoice === "15") minutes = 15;
+    else {
+      minutes = Math.round(Number(accessMinutes));
+      reason = accessReason.trim();
+      if (!Number.isFinite(minutes) || minutes <= 15 || minutes > 480 || reason.length < 10) return;
+    }
+    const t = setTimeout(() => {
+      void updateMyAnnouncementDefaults({
+        default_arrival_advance_minutes: minutes,
+        default_arrival_advance_reason: reason,
+        default_settings_updated_at: new Date().toISOString(),
+      }).then(({ error }) => {
+        if (error) console.error("[nuovo-annuncio] salvataggio anticipo predefinito", error);
+      });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [saveAsDefault, user, accessChoice, accessMinutes, accessReason]);
+
   const requestSave = (status: "bozza" | "pubblicato") => {
     if (!validate() || !user) return;
     if (saveAsDefault) {
