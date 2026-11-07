@@ -624,8 +624,8 @@ function AnnouncementsPage() {
         aria-pressed={isSelected}
         className={`group w-full text-left rounded-xl border p-3 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
           isSelected
-            ? "border-primary bg-primary/10 ring-1 ring-primary/40 shadow-[0_0_30px_-15px_oklch(var(--primary)/0.6)]"
-            : "border-border bg-card hover:border-primary/40 hover:bg-primary/[0.04]"
+            ? "border-primary bg-card/80"
+            : "border-border/60 bg-card/50 hover:border-primary/40"
         }`}
       >
         <div className="flex items-start justify-between gap-2">
@@ -638,18 +638,16 @@ function AnnouncementsPage() {
               <span className="truncate">{formatRange(a)}</span>
             </div>
           </div>
-          <Badge variant="outline" className={`shrink-0 ${STATUS_CLS[eff.kind] ?? "bg-muted text-muted-foreground"}`}>
-            {STATUS_LABEL[eff.kind] ?? eff.kind}
-          </Badge>
         </div>
-        <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${candCount > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-            <Users className="h-3 w-3" />
-            {candCount} candidat{candCount === 1 ? "o" : "i"}
+        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span
+            aria-hidden
+            className={`h-2 w-2 shrink-0 rounded-full ${eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned" ? "bg-primary" : "bg-muted-foreground/50"}`}
+          />
+          <span className="truncate">
+            <span className="font-medium text-foreground">{STATUS_LABEL[eff.kind] ?? eff.kind}</span>
+            {candCount > 0 && ` · ${candCount} candidat${candCount === 1 ? "o" : "i"}`}
           </span>
-          {eff.countdown && (eff.kind === "active" || eff.kind === "soon" || eff.kind === "assigned") && (
-            <span className="truncate text-muted-foreground">{eff.countdown}</span>
-          )}
         </div>
       </button>
     );
