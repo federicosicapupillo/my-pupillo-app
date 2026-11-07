@@ -20,6 +20,7 @@ import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as ChooseRoleRouteImport } from './routes/choose-role'
 import { Route as ClaudeVisualAuditRouteImport } from './routes/claude-visual-audit'
 import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
+import { Route as CookieRouteImport } from './routes/cookie'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DesignAuditRouteImport } from './routes/design-audit'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
@@ -29,8 +30,10 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RegistrationSuccessRouteImport } from './routes/registration-success'
+import { Route as RegolamentoRouteImport } from './routes/regolamento'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RistoratoriRouteImport } from './routes/ristoratori'
 import { Route as ShiftsRouteImport } from './routes/shifts'
@@ -112,6 +115,11 @@ const ComeFunzionaRoute = ComeFunzionaRouteImport.update({
   path: '/come-funziona',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CookieRoute = CookieRouteImport.update({
+  id: '/cookie',
+  path: '/cookie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -157,6 +165,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -165,6 +178,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const RegistrationSuccessRoute = RegistrationSuccessRouteImport.update({
   id: '/registration-success',
   path: '/registration-success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegolamentoRoute = RegolamentoRouteImport.update({
+  id: '/regolamento',
+  path: '/regolamento',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -311,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/choose-role': typeof ChooseRoleRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
+  '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
@@ -320,8 +339,10 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
+  '/regolamento': typeof RegolamentoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
@@ -360,6 +381,7 @@ export interface FileRoutesByTo {
   '/choose-role': typeof ChooseRoleRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
+  '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
@@ -369,8 +391,10 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
+  '/regolamento': typeof RegolamentoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
@@ -410,6 +434,7 @@ export interface FileRoutesById {
   '/choose-role': typeof ChooseRoleRoute
   '/claude-visual-audit': typeof ClaudeVisualAuditRoute
   '/come-funziona': typeof ComeFunzionaRoute
+  '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
@@ -419,8 +444,10 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/registration-success': typeof RegistrationSuccessRoute
+  '/regolamento': typeof RegolamentoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
@@ -461,6 +488,7 @@ export interface FileRouteTypes {
     | '/choose-role'
     | '/claude-visual-audit'
     | '/come-funziona'
+    | '/cookie'
     | '/dashboard'
     | '/design-audit'
     | '/forbidden'
@@ -470,8 +498,10 @@ export interface FileRouteTypes {
     | '/messages'
     | '/notifications'
     | '/onboarding'
+    | '/privacy'
     | '/profile'
     | '/registration-success'
+    | '/regolamento'
     | '/reset-password'
     | '/ristoratori'
     | '/shifts'
@@ -510,6 +540,7 @@ export interface FileRouteTypes {
     | '/choose-role'
     | '/claude-visual-audit'
     | '/come-funziona'
+    | '/cookie'
     | '/dashboard'
     | '/design-audit'
     | '/forbidden'
@@ -519,8 +550,10 @@ export interface FileRouteTypes {
     | '/messages'
     | '/notifications'
     | '/onboarding'
+    | '/privacy'
     | '/profile'
     | '/registration-success'
+    | '/regolamento'
     | '/reset-password'
     | '/ristoratori'
     | '/shifts'
@@ -559,6 +592,7 @@ export interface FileRouteTypes {
     | '/choose-role'
     | '/claude-visual-audit'
     | '/come-funziona'
+    | '/cookie'
     | '/dashboard'
     | '/design-audit'
     | '/forbidden'
@@ -568,8 +602,10 @@ export interface FileRouteTypes {
     | '/messages'
     | '/notifications'
     | '/onboarding'
+    | '/privacy'
     | '/profile'
     | '/registration-success'
+    | '/regolamento'
     | '/reset-password'
     | '/ristoratori'
     | '/shifts'
@@ -609,6 +645,7 @@ export interface RootRouteChildren {
   ChooseRoleRoute: typeof ChooseRoleRoute
   ClaudeVisualAuditRoute: typeof ClaudeVisualAuditRoute
   ComeFunzionaRoute: typeof ComeFunzionaRoute
+  CookieRoute: typeof CookieRoute
   DashboardRoute: typeof DashboardRoute
   DesignAuditRoute: typeof DesignAuditRoute
   ForbiddenRoute: typeof ForbiddenRoute
@@ -618,8 +655,10 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RegistrationSuccessRoute: typeof RegistrationSuccessRoute
+  RegolamentoRoute: typeof RegolamentoRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RistoratoriRoute: typeof RistoratoriRoute
   ShiftsRoute: typeof ShiftsRoute
@@ -721,6 +760,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComeFunzionaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cookie': {
+      id: '/cookie'
+      path: '/cookie'
+      fullPath: '/cookie'
+      preLoaderRoute: typeof CookieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -784,6 +830,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -796,6 +849,13 @@ declare module '@tanstack/react-router' {
       path: '/registration-success'
       fullPath: '/registration-success'
       preLoaderRoute: typeof RegistrationSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/regolamento': {
+      id: '/regolamento'
+      path: '/regolamento'
+      fullPath: '/regolamento'
+      preLoaderRoute: typeof RegolamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -1026,6 +1086,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChooseRoleRoute: ChooseRoleRoute,
   ClaudeVisualAuditRoute: ClaudeVisualAuditRoute,
   ComeFunzionaRoute: ComeFunzionaRoute,
+  CookieRoute: CookieRoute,
   DashboardRoute: DashboardRoute,
   DesignAuditRoute: DesignAuditRoute,
   ForbiddenRoute: ForbiddenRoute,
@@ -1035,8 +1096,10 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RegistrationSuccessRoute: RegistrationSuccessRoute,
+  RegolamentoRoute: RegolamentoRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RistoratoriRoute: RistoratoriRoute,
   ShiftsRoute: ShiftsRoute,

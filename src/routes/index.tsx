@@ -1,3 +1,4 @@
+import { LegalFooter } from "@/components/LegalFooter";
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
@@ -10,16 +11,16 @@ import { isBolognaLaunchActive } from "@/lib/launch-campaign";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Pupillo — Turni nella ristorazione a Bologna" },
+      { title: "Pupillo — Turni nella ristorazione a Torino" },
       {
         name: "description",
         content:
-          "Pupillo mette in contatto locali e lavoratori per i turni nella ristorazione: sala, cucina, bar e pizzeria. Bologna e provincia.",
+          "Pupillo mette in contatto locali e lavoratori per i turni nella ristorazione: sala, cucina, bar e pizzeria. Torino e provincia.",
       },
       { property: "og:title", content: "Pupillo — Il turno giusto. La persona giusta." },
       {
         property: "og:description",
-        content: "Locali e lavoratori per i turni nella ristorazione a Bologna e provincia.",
+        content: "Locali e lavoratori per i turni nella ristorazione a Torino e provincia.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -170,17 +171,14 @@ function Index() {
             <AccordionItem value="dove">
               <AccordionTrigger>Dove è disponibile?</AccordionTrigger>
               <AccordionContent className="text-muted-foreground">
-                Per ora Pupillo è attivo a Bologna e in tutta la Città metropolitana di Bologna.
+                Per ora Pupillo è attivo a Torino e in tutta la Città metropolitana di Torino.
               </AccordionContent>
             </AccordionItem>
           </Accordion>
         </section>
       </main>
 
-      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        © 2026 Pupillo. Marketplace per la ristorazione. ·{" "}
-        <Link to="/terms" className="underline-offset-4 hover:underline">Termini</Link>
-      </footer>
+      <LegalFooter />
     </div>
   );
 }

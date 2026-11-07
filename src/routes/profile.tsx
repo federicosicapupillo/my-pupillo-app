@@ -79,7 +79,7 @@ function Profile() {
 
       <div className="mt-6 rounded-2xl border bg-card p-6 space-y-4">
         <h2 className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4" />Documenti</h2>
-        <Link to="/terms" className="text-sm text-primary underline">Leggi le condizioni d'uso e la privacy policy</Link>
+        <Link to="/terms" className="text-sm text-primary underline">Condizioni d'uso</Link> · <Link to="/privacy" className="text-sm text-primary underline">Privacy</Link> · <Link to="/cookie" className="text-sm text-primary underline">Cookie</Link>
       </div>
 
       <div className="mt-6 rounded-2xl border bg-card p-6">

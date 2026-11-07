@@ -1208,6 +1208,8 @@ export type Database = {
           stripe_customer_id: string | null
           tax_code: string | null
           terms_accepted: boolean | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string
           vat_company_name: string | null
           vat_number: string | null
@@ -1382,6 +1384,8 @@ export type Database = {
           stripe_customer_id?: string | null
           tax_code?: string | null
           terms_accepted?: boolean | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
           vat_company_name?: string | null
           vat_number?: string | null
@@ -1556,6 +1560,8 @@ export type Database = {
           stripe_customer_id?: string | null
           tax_code?: string | null
           terms_accepted?: boolean | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
           vat_company_name?: string | null
           vat_number?: string | null
@@ -3226,6 +3232,8 @@ export type Database = {
           stripe_customer_id: string | null
           tax_code: string | null
           terms_accepted: boolean | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string
           vat_company_name: string | null
           vat_number: string | null

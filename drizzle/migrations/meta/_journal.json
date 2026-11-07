@@ -85,6 +85,13 @@
       "when": 1794049284790,
       "tag": "0011_read_calendar_availability_without_legacy_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794052559564,
+      "tag": "0012_profiles_terms_version",
+      "breakpoints": true
     }
   ]
 }

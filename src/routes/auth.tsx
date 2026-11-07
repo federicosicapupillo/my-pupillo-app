@@ -25,6 +25,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { MailCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { LegalFooter } from "@/components/LegalFooter";
+import { LEGAL_VERSION } from "@/lib/legal";
 import { rememberPendingSignupRole, clearPendingSignupRole, type SignupRole } from "@/lib/signup-role";
 import { isEffectivelyComplete } from "@/lib/profile-completion";
 import { rememberReferralCode, readReferralCode, normalizeReferralCode, clearReferralCode } from "@/lib/referral-capture";
@@ -58,6 +61,7 @@ function AuthPage() {
   const [role, setRole] = useState<SignupRole | null>(roleParam ?? null);
   const [repAge, setRepAge] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const justSignedUpRef = useRef(false);
   // Presenta un amico: salva il codice all'arrivo (sopravvive ai redirect).
   useEffect(() => {
@@ -218,6 +222,10 @@ function AuthPage() {
       toast.error("Le password non coincidono.");
       return;
     }
+    if (!termsAccepted) {
+      toast.error("Per registrarti devi accettare le Condizioni generali d'uso.");
+      return;
+    }
     console.info("[PUPILLO_EMAIL_CONFIRMATION_POPUP_DEBUG] validation ok");
     const fullName = `${firstNameTrim} ${lastNameTrim}`;
     setBusy(true);
@@ -234,6 +242,8 @@ function AuthPage() {
           role,
           representative_age: role === "restaurant" && repAge.trim() ? Number(repAge) : null,
           ...(referralCode ? { referral_code: referralCode } : {}),
+          terms_version: LEGAL_VERSION,
+          terms_accepted_at: new Date().toISOString(),
         },
       },
     });
@@ -657,6 +667,21 @@ function AuthPage() {
                     </p>
                   </div>
                 )}
+                <label className="flex items-start gap-2 text-sm">
+                  <Checkbox
+                    checked={termsAccepted}
+                    onCheckedChange={(v) => setTermsAccepted(!!v)}
+                    aria-label="Accetto le Condizioni generali d'uso"
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Ho letto e accetto le{" "}
+                    <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
+                      Condizioni generali d'uso
+                    </Link>{" "}
+                    (versione {LEGAL_VERSION}).
+                  </span>
+                </label>
                 <Button
                   type="submit"
                   className="w-full"
@@ -670,15 +695,16 @@ function AuthPage() {
                     !restaurantAgeOk ||
                     !passwordStrongEnough ||
                     !passwordsMatch ||
-                    passwordKnownWeak
+                    passwordKnownWeak ||
+                    !termsAccepted
                   }
                 >
                   {busy ? "Attendi..." : "Crea profilo"}
                 </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Accettando, confermi le{" "}
-                  <Link to="/terms" className="underline hover:text-foreground">
-                    condizioni d'uso e la privacy policy
+                <p className="text-xs text-muted-foreground">
+                  Proseguendo dichiari di aver preso visione dell'{" "}
+                  <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                    Informativa privacy
                   </Link>
                   .
                 </p>
@@ -721,6 +747,7 @@ function AuthPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <LegalFooter />
     </div>
   );
 }

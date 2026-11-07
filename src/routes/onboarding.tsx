@@ -1,3 +1,4 @@
+import { LEGAL_VERSION } from "@/lib/legal";
 import { isEffectivelyComplete } from "@/lib/profile-completion";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -1564,6 +1565,8 @@ function Onboarding() {
             phone_number: form.phone_number,
             phone_full: phoneFull,
             terms_accepted: true,
+            terms_version: LEGAL_VERSION,
+            terms_accepted_at: (profile as any)?.terms_version === LEGAL_VERSION && (profile as any)?.terms_accepted_at ? (profile as any).terms_accepted_at : new Date().toISOString(),
             profile_completed: true,
             business_name: form.business_name,
             vat_number: vatDigits,
@@ -1603,6 +1606,8 @@ function Onboarding() {
             phone_number: form.phone_number,
             phone_full: phoneFull,
             terms_accepted: true,
+            terms_version: LEGAL_VERSION,
+            terms_accepted_at: (profile as any)?.terms_version === LEGAL_VERSION && (profile as any)?.terms_accepted_at ? (profile as any).terms_accepted_at : new Date().toISOString(),
             profile_completed: true,
             languages: spokenLanguages.map((s) => s.language),
             spoken_languages: spokenLanguages,
@@ -3160,7 +3165,11 @@ function Onboarding() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              condizioni d'uso e la privacy policy
+              Condizioni generali d'uso
+            </Link>{" "}
+            (versione {LEGAL_VERSION}) e ho preso visione dell'{" "}
+            <Link to="/privacy" className="underline hover:text-primary" target="_blank" rel="noopener noreferrer">
+              Informativa privacy
             </Link>
             .
           </span>
