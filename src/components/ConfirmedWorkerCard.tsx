@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Award, MessageSquare, Star, ShieldCheck, BadgeCheck, Phone, FileCheck2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,10 @@ interface Props {
    * conversation itself (would be redundant navigation).
    */
   hideChatButton?: boolean;
+  /** Slim single-box layout (restaurant conversation page). */
+  compact?: boolean;
+  /** Extra content rendered at the bottom of the compact card. */
+  children?: ReactNode;
 }
 
 /**
@@ -48,7 +52,7 @@ interface Props {
  * shift). Does NOT expose phone, documents, IBAN or other non-operational
  * data. Internal Pupillo chat is the only contact channel.
  */
-export function ConfirmedWorkerCard({ worker, applicationId, lastReview, hideChatButton }: Props) {
+export function ConfirmedWorkerCard({ worker, applicationId, lastReview, hideChatButton, compact, children }: Props) {
   const fullName =
     worker.is_deleted ? "Utente eliminato" :
     worker.full_name ||
@@ -76,6 +80,66 @@ export function ConfirmedWorkerCard({ worker, applicationId, lastReview, hideCha
     })();
     return () => { cancelled = true; };
   }, [worker.id, worker.is_deleted]);
+
+  if (compact) {
+    const checks = [
+      worker.profile_completed && { icon: BadgeCheck, text: "Profilo verificato" },
+      worker.phone_verified && { icon: Phone, text: "Telefono verificato" },
+      worker.id_document_path && { icon: FileCheck2, text: "Documento verificato" },
+    ].filter(Boolean) as { icon: typeof Phone; text: string }[];
+    return (
+      <div className="rounded-2xl border bg-card/80 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <UserAvatar userId={worker.id} name={fullName} className="h-14 w-14 sm:h-16 sm:w-16 shrink-0" zoomable />
+            <div className="min-w-0 flex-1">
+              <div className="text-lg font-semibold truncate">{fullName}</div>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                {role && <span>{role}</span>}
+                <span aria-hidden>·</span>
+                <span>{completed} {completed === 1 ? "turno" : "turni"}</span>
+                <span aria-hidden>·</span>
+                {rating != null && rating > 0 ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />{rating.toFixed(1)} ({reviewsCount})
+                  </span>
+                ) : (
+                  <span>Nessuna recensione</span>
+                )}
+              </div>
+              {checks.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-primary">
+                  {checks.map((c) => (
+                    <span key={c.text} className="inline-flex items-center gap-1"><c.icon className="h-3 w-3" />{c.text}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
+            {phone ? (
+              <Button asChild size="sm" className="gap-1.5">
+                <a href={`tel:${phone}`}><Phone className="h-4 w-4" />Chiama {phone}</a>
+              </Button>
+            ) : (
+              <Button size="sm" disabled className="gap-1.5">
+                <Phone className="h-4 w-4" />{phone === undefined ? "Verifica…" : "Numero non inserito"}
+              </Button>
+            )}
+            <Button asChild size="sm" variant="outline">
+              <Link to="/workers/$id" params={{ id: worker.id }}>Vedi profilo</Link>
+            </Button>
+          </div>
+        </div>
+        {lastReview && lastReview.comment && (
+          <p className="mt-3 text-xs italic text-muted-foreground">
+            Ultima recensione: "{lastReview.comment.slice(0, 120)}{lastReview.comment.length > 120 ? "…" : ""}"
+          </p>
+        )}
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-5">

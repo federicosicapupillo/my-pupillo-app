@@ -2276,6 +2276,7 @@ function Thread() {
   const compactWorkerView = role === "worker" && !!app;
   const workerDecisionMerged = compactWorkerView && proposalMessages.length > 0 && app?.status !== "accepted";
   const compactRestaurantView = (role === "restaurant" && !!app && !!workerRep && shouldShowNewApplicationCard({ role: role as any, status: app.status as any, hasWorkerReputation: true }));
+  const compactRestaurantConfirmed = role === "restaurant" && app?.status === "accepted" && !!confirmedWorker;
   return (
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-4">
@@ -2292,10 +2293,10 @@ function Thread() {
             </span>
           )}
         </div>
-        {role === "restaurant" && !paymentsEnabled && !compactRestaurantView && (
+        {role === "restaurant" && !paymentsEnabled && !compactRestaurantView && !compactRestaurantConfirmed && (
           <FreeLaunchBanner className="mb-4" />
         )}
-        <div className={compactRestaurantView || compactWorkerView ? "" : "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6 lg:items-start"}>
+        <div className={compactRestaurantView || compactWorkerView || compactRestaurantConfirmed ? "" : "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6 lg:items-start"}>
         <div className="min-w-0">
         {compactWorkerView && app && (() => {
           const st = (ann?.service_time ?? "").slice(0, 5);
@@ -2338,7 +2339,7 @@ function Thread() {
             </div>
           );
         })()}
-        {!compactRestaurantView && !compactWorkerView && (
+        {!compactRestaurantView && !compactWorkerView && !compactRestaurantConfirmed && (
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <UserAvatar userId={otherId} name={displayOtherName} className="h-12 w-12 shrink-0" />
@@ -2377,15 +2378,39 @@ function Thread() {
 
         {role === "restaurant" && app?.status === "accepted" && confirmedWorker && (
           <div className="mb-4">
-            <div className="mb-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
-              Lavoratore confermato. Ora puoi visualizzare i dati operativi del lavoratore.
-            </div>
             <ConfirmedWorkerCard
               worker={confirmedWorker}
               applicationId={app.id}
               lastReview={confirmedWorkerLastReview}
               hideChatButton
-            />
+              compact
+            >
+              {(() => {
+                const st = (ann?.service_time ?? "").slice(0, 5);
+                const tags: { icon: typeof Calendar; text: string }[] = [];
+                if (ann?.service_date) tags.push({ icon: Calendar, text: new Date(`${ann.service_date}T00:00:00`).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" }) });
+                if (st) tags.push({ icon: Clock, text: `${st}${ann?.end_time ? `–${String(ann.end_time).slice(0, 5)}` : ""}` });
+                if (currentTariff != null) tags.push({ icon: Euro, text: `${currentTariff} €${ann?.tariff_type === "hourly" ? "/ora" : " a servizio"}` });
+                if (displayAddress) tags.push({ icon: MapPin, text: displayAddress });
+                return (
+                  <>
+                    {tags.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {tags.map((t) => (
+                          <span key={t.text} className="inline-flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs">
+                            <t.icon className="h-3.5 w-3.5 text-muted-foreground" />{t.text}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-4 flex items-center gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
+                      <BadgeCheck className="h-3.5 w-3.5 text-primary" />
+                      <span><span className="font-medium text-foreground">Turno confermato</span> · ora vedi i contatti e le istruzioni del turno</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </ConfirmedWorkerCard>
           </div>
         )}
 
@@ -2815,7 +2840,28 @@ function Thread() {
           </div>
         )}
 
-        {app && !compactRestaurantView && !compactWorkerView && (
+        {app && compactRestaurantConfirmed && historyEvents.length > 0 && (
+          <details className="group mb-4 rounded-2xl border bg-card/80 px-4 py-3">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm">
+              <span className="font-medium">Cronologia <span className="text-muted-foreground font-normal">· {historyEvents.length} {historyEvents.length === 1 ? "evento" : "eventi"}</span></span>
+              <span className="text-xs text-primary group-open:hidden">Mostra</span>
+              <span className="hidden text-xs text-primary group-open:inline">Nascondi</span>
+            </summary>
+            <ul className="mt-3 space-y-2 border-t border-border/50 pt-3">
+              {historyEvents.map((e: TimelineEvent, i: number) => (
+                <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${e.tone === "error" ? "bg-destructive" : e.tone === "success" ? "bg-primary" : "bg-muted-foreground"}`} />
+                    <span className="truncate">{e.label}</span>
+                  </span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">{formatTs(e.at)}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
+        {app && !compactRestaurantView && !compactWorkerView && !compactRestaurantConfirmed && (
           <div className="rounded-2xl border bg-card p-4 mb-4">
             <div className="text-xs font-medium text-muted-foreground mb-3">Stato della candidatura</div>
             {app.status === "expired" && app.closed_reason === "overlap" && (
@@ -3009,6 +3055,7 @@ function Thread() {
                 acknowledgedAt={ackMsg?.created_at ?? null}
                 arrivalAdvanceMinutes={restaurantArrivalAdvance}
                 onAcknowledge={acknowledgeInstructions}
+                compact={compactRestaurantConfirmed}
               />
             </div>
           );
@@ -3453,7 +3500,7 @@ function Thread() {
 
         </div>
         <aside className="mt-4 space-y-4 lg:mt-0">
-          {ann && !compactRestaurantView && !compactWorkerView && (
+          {ann && !compactRestaurantView && !compactWorkerView && !compactRestaurantConfirmed && (
             <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-riepilogo">
               <h2 id="sec-riepilogo" className="text-sm font-semibold mb-2">Riepilogo turno</h2>
               <dl className="space-y-1.5 text-sm">
@@ -4718,8 +4765,9 @@ function ConfirmationCard(props: {
   acknowledgedAt?: string | null;
   arrivalAdvanceMinutes?: number | null;
   onAcknowledge?: () => Promise<void> | void;
+  compact?: boolean;
 }) {
-  const { ann, venueName, applicationId, isWorker, acknowledged = false, acknowledgedAt = null, arrivalAdvanceMinutes, onAcknowledge } = props;
+  const { ann, venueName, applicationId, isWorker, acknowledged = false, acknowledgedAt = null, arrivalAdvanceMinutes, onAcknowledge, compact = false } = props;
   const [ackBusy, setAckBusy] = useState(false);
   const clean = (v: unknown): string => {
     if (v == null) return "";
@@ -4780,6 +4828,41 @@ function ConfirmationCard(props: {
   const entryValue = entryTime
     ? `${entryTime} (${advMinExplicit} min prima dell'inizio)`
     : arrivalText;
+
+  if (compact) {
+    const rows: { icon: typeof Send; label: string; value: string; muted?: boolean }[] = [
+      { icon: AlarmClock, label: "Ingresso", value: entryValue },
+      { icon: UserIcon, label: "Referente", value: [contactName, contactPhone].filter(Boolean).join(" · ") || CONFIRMATION_EMPTY_LABELS.contactPerson, muted: !contactName && !contactPhone },
+      { icon: Shirt, label: "Dress code", value: dressValue || CONFIRMATION_EMPTY_LABELS.dressCode, muted: !dressValue },
+      { icon: ListChecks, label: "Mansioni", value: skills.length > 0 ? skills.join(", ") : "Mansioni non specificate", muted: skills.length === 0 },
+    ];
+    if (notes) rows.push({ icon: StickyNote, label: "Note", value: notes });
+    if (directions) rows.push({ icon: Navigation, label: "Arrivo", value: directions });
+    return (
+      <section className="rounded-2xl border bg-card/80 p-4 sm:p-5">
+        <header className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-base font-semibold">Istruzioni per il lavoratore</h3>
+          <Button asChild size="sm" variant="ghost" className="h-8 gap-1.5 text-primary">
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer"><Navigation className="h-4 w-4" />Mappa</a>
+          </Button>
+        </header>
+        <dl className="divide-y divide-border/50">
+          {rows.map((r) => (
+            <div key={r.label} className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-3 py-2.5 text-sm">
+              <dt className="flex items-center gap-2 text-muted-foreground"><r.icon className="h-3.5 w-3.5 shrink-0 text-primary" />{r.label}</dt>
+              <dd className={`min-w-0 break-words ${r.muted ? "italic text-muted-foreground" : ""}`}>{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className={`mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${acknowledged ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground"}`}>
+          {acknowledged ? <BadgeCheck className="h-3.5 w-3.5 shrink-0" /> : <Clock className="h-3.5 w-3.5 shrink-0" />}
+          {acknowledged
+            ? `Il lavoratore ha letto le istruzioni${acknowledgedAt ? ` il ${formatDateIT(acknowledgedAt)} alle ${new Date(acknowledgedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}` : ""}`
+            : "In attesa che il lavoratore confermi di aver letto le istruzioni"}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="my-2 space-y-3">
