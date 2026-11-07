@@ -208,7 +208,7 @@ function WorkerDetailPage() {
 
       <div className="grid gap-4 md:grid-cols-[280px_1fr]">
         <div className="rounded-2xl border bg-card p-5 flex flex-col items-center text-center">
-          <UserAvatar userId={w.id} name={shownName} className="h-24 w-24 text-2xl mb-3" />
+          <UserAvatar zoomable userId={w.id} name={shownName} className="h-24 w-24 text-2xl mb-3" />
           <div className="font-semibold">{shownName}</div>
           {w.age != null && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
           <div className="mt-2">

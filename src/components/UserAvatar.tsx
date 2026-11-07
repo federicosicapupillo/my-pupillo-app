@@ -2,6 +2,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAvatarUrl, useUserName } from "@/hooks/use-avatar-urls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 function initials(name?: string | null) {
   if (!name) return "";
@@ -13,9 +15,10 @@ interface Props {
   userId: string | null | undefined;
   name?: string | null;
   className?: string;
+  zoomable?: boolean;
 }
 
-export function UserAvatar({ userId, name, className }: Props) {
+export function UserAvatar({ userId, name, className, zoomable = false }: Props) {
   const url = useAvatarUrl(userId);
   const fallbackName = useUserName(userId);
   const displayName = name ?? fallbackName ?? null;
@@ -24,7 +27,7 @@ export function UserAvatar({ userId, name, className }: Props) {
     return <Skeleton className={cn("h-10 w-10 rounded-full", className)} />;
   }
   const init = initials(displayName);
-  return (
+  const avatar = (
     <Avatar className={cn("h-10 w-10", className)}>
       {url ? <AvatarImage src={url} alt={displayName ?? "Avatar"} /> : null}
       <AvatarFallback
@@ -39,5 +42,21 @@ export function UserAvatar({ userId, name, className }: Props) {
         )}
       </AvatarFallback>
     </Avatar>
+  );
+  if (!zoomable || !url) return avatar;
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" className="h-auto shrink-0 rounded-full p-0 cursor-zoom-in" aria-label={`Ingrandisci foto di ${displayName ?? 'lavoratore'}`} title="Ingrandisci foto">
+          {avatar}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader className="pr-8">
+          <DialogTitle>Foto di {displayName ?? 'lavoratore'}</DialogTitle>
+        </DialogHeader>
+        <img src={url} alt={displayName ?? 'Foto del lavoratore'} className="block w-full max-h-[65vh] object-contain" />
+      </DialogContent>
+    </Dialog>
   );
 }

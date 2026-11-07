@@ -1,5 +1,7 @@
 # Project rules
 
+- Enable worker-photo enlargement through the optional UserAvatar zoomable prop; reuse the authorized avatar URL and leave other avatar uses unchanged.
+
 - Share the reputation-level explanation between worker badges and the dashboard through ReputationLevelsExplanation so eligibility descriptions stay consistent without changing scoring logic.
 
 - Use the shared CurriculumStars display for CV star ratings across owner and public views so dashboard and profile stay consistent.

@@ -1755,7 +1755,7 @@ function WorkersPage() {
                   return (
           <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
             <div className="flex items-center gap-3">
-              <UserAvatar userId={w.id} name={displayWorkerName(w, !!r?.workedWith)} className="h-12 w-12" />
+              <UserAvatar zoomable userId={w.id} name={displayWorkerName(w, !!r?.workedWith)} className="h-12 w-12" />
               <div>
                 <div className="font-semibold">{displayWorkerName(w, !!r?.workedWith)}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
@@ -2118,7 +2118,7 @@ function ContactedWorkerCard({
   return (
     <div className="rounded-2xl border bg-card p-5">
       <div className="flex items-center gap-3">
-        <UserAvatar userId={w.id} name={displayName} className="h-12 w-12" />
+        <UserAvatar zoomable userId={w.id} name={displayName} className="h-12 w-12" />
         <div className="min-w-0">
           <div className="truncate font-semibold">{displayName}</div>
           <div className="text-xs text-muted-foreground flex items-center gap-2">
