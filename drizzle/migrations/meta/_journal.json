@@ -78,6 +78,13 @@
       "when": 1793985054400,
       "tag": "0010_cv_explicit_automatic_publication",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794049284790,
+      "tag": "0011_read_calendar_availability_without_legacy_flag",
+      "breakpoints": true
     }
   ]
 }

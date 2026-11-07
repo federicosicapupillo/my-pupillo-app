@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Ricerca lavoratori lato ristoratore: stelle curriculum Pupillo in lista e profilo, tutte le 19 date salvate accessibili con «Vedi tutte» e sul profilo; lettura indipendente dal vecchio flag senza modificarlo. Verifica autenticata sul risultato reale a 4 stelle, 42 test passati, build OK; nessun dato o punteggio modificato, non pubblicato.
+
 - [x] Valutazione automatica al caricamento/sostituzione senza richiesta separata né scelta della mansione; consenso raccolto prima dell’upload. Verificato ricaricando lo stesso PDF reale: analisi completata a 73/100, 4 stelle, risultato persistente e visibile ai ristoratori; 39 test passati, build OK, mobile senza overflow. Non pubblicato.
 
 - [x] Curriculum nel profilo: Revoca consenso rimosso, sostituzione disponibile, nuove analisi con consenso esplicito alla pubblicazione automatica da quattro stelle; messaggio sotto soglia verificato sul punteggio reale 29/100, curriculum non sovrascritto. 36 test passati, build OK, desktop/mobile verificati; nessuna pubblicazione retroattiva. Verifica integrale di una nuova valutazione idonea resta bloccata dall'assenza di un curriculum reale idoneo, come indicato sotto.
@@ -15,7 +17,7 @@
 - [x] Mostrare la valutazione curriculum approvata nella sezione Reputation Score della dashboard, separata dalle recensioni, e chiarire la visibilità ai ristoratori nella richiesta e nel consenso.
 
 - [x] Valutazione curriculum Pupillo: richiesta e consenso, analisi per mansione, approvazione admin, stelle separate sul profilo; 11 test passati, chiamata IA su PDF fittizio riuscita, richiesta/persistenza/revoca verificate nell'onboarding autenticato; PDF di prova rimosso.
-- [ ] Verifica integrale scelta lavoratore → stelle visibili su profilo completo — approvazione manuale superata dal calcolo diretto; il curriculum disponibile è sotto soglia (29/100), serve un profilo completo con valutazione idonea per provare la pubblicazione senza alterare punteggi reali.
+- [x] Verifica stelle visibili ai ristoratori su profilo completo: risultato reale a 4 stelle verificato nella ricerca e nel profilo il 7 novembre 2026, senza alterare punteggi o consensi.
 
 - [x] Curriculum facoltativo privato in Esperienza e preferenze: PDF max 5 MB, apertura, sostituzione, rimozione; 4 test e flusso verificato in sessione su desktop/mobile, file di prova rimosso.
 

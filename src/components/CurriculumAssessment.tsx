@@ -6,7 +6,7 @@ import { CV_STATUS } from '@/lib/curriculum-assessment';
 import type { Database } from '@/integrations/supabase/types';
 import { useCurriculumAnalysis } from '@/lib/use-curriculum-analysis';
 
-export function CurriculumRating({ workerId }: { workerId: string }) {
+export function CurriculumRating({ workerId, compact = false }: { workerId: string; compact?: boolean }) {
   const [rating, setRating] = useState<{ stars: number; role_label: string; reviewed_at: string } | null>(null);
   useEffect(() => {
     let active = true;
@@ -15,6 +15,10 @@ export function CurriculumRating({ workerId }: { workerId: string }) {
     return () => { active = false; };
   }, [workerId]);
   if (!rating) return null;
+  if (compact) return <div className="mt-2 space-y-1">
+    <p className="text-xs font-medium">Curriculum valutato da Pupillo</p>
+    <div className="flex flex-wrap items-center gap-2"><CurriculumStars stars={rating.stars} /><span className="text-xs text-muted-foreground">{rating.role_label}</span></div>
+  </div>;
   return <section className="space-y-2 border-y py-4">
     <h3 className="font-semibold">Curriculum valutato da Pupillo</h3>
     <div className="flex flex-wrap items-center gap-2">

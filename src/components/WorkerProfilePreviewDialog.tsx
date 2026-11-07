@@ -11,6 +11,7 @@ import { formatWorkerLocation } from "@/lib/worker-location-summary";
 import { reliabilityDisplayValue } from "@/lib/worker-reliability";
 import { formatDisplayLabel } from "@/lib/format-label";
 import { CurriculumRating } from '@/components/CurriculumAssessment';
+import { PublicWorkerAvailability } from '@/components/PublicWorkerAvailability';
 
 type WorkerProfile = {
   id: string;
@@ -216,19 +217,10 @@ export function WorkerProfilePreviewDialog({
             )}
 
             {/* Availability */}
-            {(w.weekly_availability?.length || w.hourly_availability) && (
+            {(
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Disponibilità</h3>
-                <div className="rounded-lg border bg-card p-2.5 text-sm">
-                  {w.weekly_availability?.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {w.weekly_availability.map(d => (
-                        <span key={d} className="text-[11px] rounded-md bg-secondary px-1.5 py-0.5 capitalize">{d}</span>
-                      ))}
-                    </div>
-                  ) : null}
-                  {w.hourly_availability && <p className="mt-1.5 text-xs text-muted-foreground">{w.hourly_availability}</p>}
-                </div>
+                <PublicWorkerAvailability workerId={w.id} weekly={w.weekly_availability} />
               </section>
             )}
 

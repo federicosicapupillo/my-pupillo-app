@@ -18,6 +18,7 @@ import { formatWorkerAvailabilityCardLine } from "@/lib/worker-availability-summ
 import type { AvailabilityRow } from "@/lib/availability";
 import { reliabilityDisplayValue } from "@/lib/worker-reliability";
 import { CurriculumRating } from '@/components/CurriculumAssessment';
+import { PublicWorkerAvailability } from '@/components/PublicWorkerAvailability';
 
 export const Route = createFileRoute("/workers_/$id")({
   head: () => ({ meta: [{ title: "Profilo lavoratore — Pupillo" }, { name:'description',content:'Esperienza, curriculum valutato e recensioni dei turni del lavoratore su Pupillo.' }, { property:'og:title',content:'Profilo lavoratore — Pupillo' }, { property:'og:description',content:'Esperienza, curriculum valutato e recensioni dei turni del lavoratore su Pupillo.' }, { property:'og:type',content:'website' }, { name:'twitter:card',content:'summary' }] }),
@@ -242,12 +243,7 @@ function WorkerDetailPage() {
           </Card>
 
           <Card title="Disponibilità">
-            <Row label="Fascia oraria" value={hourlyLine} />
-            {w.weekly_availability && w.weekly_availability.length > 0 ? (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {w.weekly_availability.map((d) => <Badge key={d} variant="outline">{d}</Badge>)}
-              </div>
-            ) : null}
+            <PublicWorkerAvailability workerId={w.id} weekly={w.weekly_availability} />
           </Card>
 
           <Card title="Zona / Città">

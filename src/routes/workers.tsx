@@ -27,6 +27,10 @@ import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
+import { CurriculumRating } from "@/components/CurriculumAssessment";
+import { WorkerAvailabilityList } from "@/components/PublicWorkerAvailability";
+import { calendarAvailabilitySearchText } from "@/lib/worker-calendar-availability";
+import { toIso } from "@/lib/availability-calendar";
 import { sendShiftProposal } from "@/lib/shift-proposal";
 import { useProfileGate } from "@/components/ProfileGate";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
@@ -37,10 +41,9 @@ import { getRoleCompatibility, getRoleCompatibilityBadge } from "@/lib/role-comp
 import { JOB_ROLES, isSameRole } from "@/lib/job-roles";
 import { firstNameOf } from "@/lib/public-location";
 import { displayWorkerName, verifiedRoleLabel } from "@/lib/worker-display";
-import { summarizeWeeklyAvailability, formatAvailabilitySlotsForDay } from "@/lib/availability-summary";
+import { summarizeWeeklyAvailability } from "@/lib/availability-summary";
 import {
   summarizeWorkerAvailability,
-  formatWorkerAvailabilityByDay,
   availabilitySearchText,
 } from "@/lib/worker-availability-summary";
 import type { AvailabilityRow, AvailabilityExceptionRow, CompatibilityLevel } from "@/lib/availability";
@@ -61,7 +64,7 @@ import { loadRestaurantWorkerSearchResults, type WorkerSearchDebug } from "@/lib
 import { WorkerProfileModalProvider, useOpenWorkerProfile } from "@/components/WorkerProfileModalProvider";
 
 export const Route = createFileRoute("/workers")({
-  head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Cerca lavoratori — Pupillo" }, { name: "description", content: "Trova lavoratori a Torino: disponibilità per data, esperienza e valutazioni curriculum Pupillo." }, { property: "og:title", content: "Cerca lavoratori — Pupillo" }, { property: "og:description", content: "Confronta disponibilità, esperienza e valutazioni curriculum dei lavoratori su Pupillo." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: () => (
     <RequireAuth>
       <WorkerProfileModalProvider source="cerca_lavoratori">
@@ -670,7 +673,7 @@ function WorkersPage() {
       // e nella maggior parte dei casi non viene popolato dall'onboarding.
       const ids = list.map((w) => w.id);
       if (ids.length > 0) {
-        const todayIso = new Date().toISOString().slice(0, 10);
+        const todayIso = toIso(new Date());
         const [{ data: avRows, error: avErr }, { data: excRows, error: excErr }] = await Promise.all([
           supabase.rpc("search_worker_availability_public", { _worker_ids: ids }),
           supabase.rpc("search_worker_availability_exceptions_public", { _worker_ids: ids, _from_date: todayIso }),
@@ -769,7 +772,7 @@ function WorkersPage() {
     const ids = workers.map((w) => w.id);
     let cancelled = false;
     const refetch = async () => {
-      const todayIso = new Date().toISOString().slice(0, 10);
+      const todayIso = toIso(new Date());
       const [{ data, error }, { data: excData, error: excError }] = await Promise.all([
         supabase.rpc("search_worker_availability_public", { _worker_ids: ids }),
         supabase.rpc("search_worker_availability_exceptions_public", { _worker_ids: ids, _from_date: todayIso }),
@@ -1104,6 +1107,7 @@ function WorkersPage() {
       badge: (w.badge ?? "").toLowerCase(),
       availability: [
         availabilitySearchText(availByWorker[w.id]),
+        calendarAvailabilitySearchText(availByWorker[w.id] ?? [], excByWorker[w.id] ?? []),
         (w.weekly_availability ?? []).join(" ").toLowerCase(),
         w.available_now_until ? "oggi today disponibile ora" : "",
       ].filter(Boolean).join(" "),
@@ -1148,8 +1152,8 @@ function WorkersPage() {
         const map: Record<string, string[]> = {
           "disponibile oggi": ["oggi","today"],
           "disponibile domani": ["domani","tomorrow"],
-          "disponibile weekend": ["weekend","sabato","domenica","saturday","sunday"],
-          "disponibile sera": ["sera","evening","night"],
+          "disponibile weekend": ["weekend","sabato","domenica","saturday","sunday","sab","dom"],
+          "disponibile sera": ["sera","cena","evening","night"],
           "disponibile pranzo": ["pranzo","lunch"],
           "disponibile full-time": ["full","fulltime","full-time"],
           "disponibile extra": ["extra"],
@@ -1778,6 +1782,7 @@ function WorkersPage() {
                   {w.age && <span>· {w.age} anni</span>}
                 </div>
                 <div className="mt-1"><WorkerReputationBadge profile={w} /></div>
+                <CurriculumRating workerId={w.id} compact />
               </div>
               {near && <span className="ml-auto text-[10px] rounded-full bg-emerald-500/20 text-emerald-700 px-2 py-0.5 font-medium">In zona</span>}
             </div>
@@ -1984,6 +1989,7 @@ function WorkersPage() {
         onClose={() => setDetailsWorker(null)}
         workedTogether={detailsWorker ? !!rel[detailsWorker.id]?.workedWith : false}
         rows={detailsWorker ? (availByWorker[detailsWorker.id] ?? null) : null}
+        exceptions={detailsWorker ? (excByWorker[detailsWorker.id] ?? []) : []}
       />
       <Dialog open={missingAnnOpen} onOpenChange={setMissingAnnOpen}>
         <DialogContent>
@@ -2137,6 +2143,7 @@ function ContactedWorkerCard({
               reviewsCount={w.reviews_count ?? null}
             />
           </div>
+          <CurriculumRating workerId={w.id} compact />
         </div>
       </div>
       {statusLabel && (
@@ -2677,7 +2684,7 @@ function AvailabilityBlock({
       {hasSpecial && (
         <div className="mb-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-            Disponibilità speciale · {specialDateLabel}
+            Disponibilità per data · {specialDateLabel}
           </div>
           <div className="mt-1 space-y-0.5 text-xs text-foreground">
             {specials.map((e) => {
@@ -2705,7 +2712,7 @@ function AvailabilityBlock({
       {!hasSpecial && hasUpcoming && (
         <div className="mb-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-            Prossime disponibilità speciali
+            Prossime disponibilità per data
           </div>
           <div className="mt-1 space-y-0.5 text-xs text-foreground">
             {upcoming.map((e) => {
@@ -2737,14 +2744,16 @@ function AvailabilityBlock({
         <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {hasSpecial || hasUpcoming ? "Disponibilità abituale" : "Disponibilità"}
         </div>
-        {hasReal && realSummary.kind === "lines" && realSummary.truncated && (
-          <button
+        {(hasSpecial || hasUpcoming || hasReal) && (
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onDetails}
             className="text-[11px] font-medium text-primary hover:underline"
           >
-            Vedi dettagli
-          </button>
+            Vedi tutte
+          </Button>
         )}
       </div>
       <div className="mt-1 text-xs text-foreground">
@@ -2813,46 +2822,25 @@ function AvailabilityDetailsDialog({
   workedTogether,
   onClose,
   rows,
+  exceptions,
 }: {
   worker: W | null;
   workedTogether: boolean;
   onClose: () => void;
   rows: AvailabilityRow[] | null;
+  exceptions: AvailabilityExceptionRow[];
 }) {
   const open = !!worker;
-  // Prefer real availability rows; fall back to the legacy weekly_availability
-  // array on the profile if no rows exist for this worker.
-  const realDays = rows ? formatWorkerAvailabilityByDay(rows) : [];
-  const days = realDays.length > 0
-    ? realDays
-    : (worker ? formatAvailabilitySlotsForDay(worker.weekly_availability) : []);
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Disponibilità completa</DialogTitle>
           <DialogDescription>
             {worker ? displayWorkerName(worker, workedTogether) : ""}
           </DialogDescription>
         </DialogHeader>
-        {days.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Disponibilità non indicata.</p>
-        ) : (
-          <div className="space-y-2">
-            {days.map((d) => (
-              <div key={d.day} className="flex items-start gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                <div className="w-12 font-medium">{d.day}</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {d.slots.map((s) => (
-                    <span key={s.label} className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs">
-                      {s.label} · {s.hours}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <WorkerAvailabilityList rows={rows ?? []} exceptions={exceptions} weekly={worker?.weekly_availability ?? null} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Chiudi</Button>
         </DialogFooter>
