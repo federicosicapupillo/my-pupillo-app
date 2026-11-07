@@ -1178,35 +1178,37 @@ function AnnouncementCostBox({ ann }: { ann: Ann }) {
         action={role === "restaurant" && (<Link to="/ristoratore/annunci/nuovo"><Button className="gap-2"><Plus className="h-4 w-4" /> Nuovo annuncio</Button></Link>)}
       />
       {role === "restaurant" && (
-        <div className="flex gap-3 mb-6 overflow-x-auto pb-1">
-          {STATUS_TABS.map(({ key, label, activeClass, inactiveClass, badgeClass }) => {
+        <nav aria-label="Stato annunci" className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+          {STATUS_TABS.map(({ key, label }) => {
             const isActive = statusFilter === key;
             const count = statusCounts[key] ?? 0;
             return (
               <button
                 key={key}
                 type="button"
+                aria-pressed={isActive}
                 onClick={() => setStatusFilter(key)}
                 className={cn(
-                  "relative flex items-center gap-2.5 rounded-xl border px-5 py-3 text-sm font-semibold transition whitespace-nowrap select-none min-h-[48px]",
-                  isActive ? activeClass : inactiveClass
+                  "relative -mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition select-none",
+                  isActive ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
                 <span>{label}</span>
                 <span className={cn(
-                  "inline-flex items-center justify-center rounded-lg text-xs font-bold min-w-[24px] h-6 px-1.5",
-                  isActive ? badgeClass : "bg-white/10 text-current"
+                  "inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                  isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
                   {count}
                 </span>
               </button>
             );
           })}
-        </div>
+        </nav>
       )}
       {loading ? <p className="text-muted-foreground">Caricamento…</p> : filtered.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-12 text-center">
-          <p className="text-muted-foreground">Nessun annuncio in questa sezione.</p>
+        <div className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-10 text-center">
+          <p className="font-medium text-foreground">Nessun annuncio qui</p>
+          <p className="mt-1 text-sm text-muted-foreground">Quando un annuncio cambia stato, lo trovi in questa sezione.</p>
           {role === "restaurant" && items.length === 0 && <Link to="/ristoratore/annunci/nuovo"><Button className="mt-4">Crea il primo</Button></Link>}
         </div>
       ) : role === "restaurant" ? (
