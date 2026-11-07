@@ -329,7 +329,7 @@ function Billing() {
           </div>
           <div className="mt-4 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
             <strong className="text-foreground">{CREDITS_PER_HIRE} crediti = 1 lavoratore confermato.</strong><br />
-            Pubblicare annunci e contattare lavoratori è <strong className="text-foreground">gratis</strong>. Paghi solo quando trovi davvero una persona disponibile.
+            Pubblicare annunci e contattare lavoratori è <strong className="text-foreground">gratuito</strong>. Paghi solo quando trovi davvero una persona disponibile.
           </div>
           <TooltipProvider delayDuration={100}>
             <Tooltip>

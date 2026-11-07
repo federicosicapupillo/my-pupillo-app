@@ -51,7 +51,7 @@ export function LaunchPricingNotice({ className = "" }: { className?: string }) 
             <span className="rounded-md bg-primary/10 px-2.5 py-1 text-sm font-semibold text-primary">
               {c.priceBadge}
             </span>
-            <span className="text-xs text-muted-foreground">stima, non ancora attiva</span>
+            <span className="text-xs text-muted-foreground">{"\n"}</span>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">{c.priceDetail}</p>
         </div>

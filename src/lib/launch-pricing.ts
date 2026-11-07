@@ -18,7 +18,7 @@ export const LAUNCH_PRICING = {
   /** Primo giorno a pagamento, ISO. */
   paidFrom: "2027-01-01",
   /** Prezzo indicativo, non ancora definitivo. */
-  price: 29.9,
+  price: 27.9,
   currency: "EUR" as const,
   /** Tipologia di tariffazione. */
   unit: "per_completed_announcement" as PricingUnit,
@@ -27,12 +27,12 @@ export const LAUNCH_PRICING = {
   copy: {
     title: "Pupillo è gratuito fino al 31 dicembre 2026",
     freeBadge: "Gratuito fino al 31 dicembre 2026",
-    priceBadge: "Da 29,90 € per annuncio concluso",
+    priceBadge: "Da 27,90 € per annuncio concluso",
     intro:
-      "Durante la fase di lancio a Bologna e provincia puoi pubblicare annunci, cercare lavoratori e utilizzare Pupillo gratuitamente.",
+      "Durante la fase di lancio a Torino e provincia puoi pubblicare annunci, cercare lavoratori e utilizzare Pupillo gratuitamente.",
     switchDate: "Dal 1° gennaio 2027 il servizio diventerà a pagamento.",
     priceDetail:
-      "Il costo previsto partirà da 29,90 € per annuncio concluso. Pagherai soltanto quando avrai trovato e confermato il lavoratore attraverso Pupillo.",
+      "Il costo previsto partirà da 27,90 € per annuncio concluso. Pagherai soltanto quando avrai trovato e confermato il lavoratore attraverso Pupillo.",
     recontact:
       "Dopo aver trovato un lavoratore, potrai ricontattare e richiamare gratuitamente lo stesso professionista per future collaborazioni, senza pagare nuovamente il costo dell’annuncio.",
     disclaimer:
