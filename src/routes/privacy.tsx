@@ -13,7 +13,7 @@ function Privacy() {
       <p>Informativa ai sensi degli artt. 13 e 14 del Regolamento (UE) 2016/679 («GDPR») per gli utenti della piattaforma Pupillo.</p>
       <section>
         <h2>1. Titolare del trattamento</h2>
-        <p>{COMPANY.name}, P.IVA e C.F. {COMPANY.vat}, sede legale {COMPANY.address}. Contatto per richieste privacy: PEC <a href={`mailto:${COMPANY.pec}`}>{COMPANY.pec}</a>. Non è stato designato un responsabile della protezione dei dati (DPO).</p>
+        <p>AD MAIORA S.R.L. Non è stato designato un responsabile della protezione dei dati (DPO).</p>
       </section>
       <section>
         <h2>2. Dati trattati</h2>
