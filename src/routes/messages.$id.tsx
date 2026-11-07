@@ -2273,12 +2273,13 @@ function Thread() {
     );
   }
 
+  const compactWorkerView = role === "worker" && !!app;
   const compactRestaurantView = (role === "restaurant" && !!app && !!workerRep && shouldShowNewApplicationCard({ role: role as any, status: app.status as any, hasWorkerReputation: true }));
   return (
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <Link to="/messages" className={role === "restaurant" ? "" : "lg:hidden"}><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />{role === "restaurant" ? "Messaggi" : "Indietro"}</Button></Link>
-          {app && role !== "restaurant" && (
+          <Link to="/messages"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Messaggi</Button></Link>
+          {app && role !== "restaurant" && !compactWorkerView && (
             <span
               className={`text-xs rounded-full px-2 py-1 capitalize ${
                 app.status === "cancelled"
@@ -2293,9 +2294,48 @@ function Thread() {
         {role === "restaurant" && !paymentsEnabled && !compactRestaurantView && (
           <FreeLaunchBanner className="mb-4" />
         )}
-        <div className={compactRestaurantView ? "" : "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6 lg:items-start"}>
+        <div className={compactRestaurantView || compactWorkerView ? "" : "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6 lg:items-start"}>
         <div className="min-w-0">
-        {!compactRestaurantView && (
+        {compactWorkerView && app && (() => {
+          const st = (ann?.service_time ?? "").slice(0, 5);
+          const tags: { icon: typeof Calendar; text: string }[] = [];
+          if (ann?.service_date) tags.push({ icon: Calendar, text: new Date(`${ann.service_date}T00:00:00`).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" }) });
+          if (st) tags.push({ icon: Clock, text: `${st}${ann?.end_time ? `–${String(ann.end_time).slice(0, 5)}` : ""}` });
+          if (currentTariff != null) tags.push({ icon: Briefcase, text: `${currentTariff} €${ann?.tariff_type === "hourly" ? "/ora" : " a servizio"}` });
+          if (displayAddress) tags.push({ icon: MapPin, text: displayAddress });
+          const statusText =
+            app.status === "accepted" ? "Turno confermato"
+            : app.status === "rejected" ? "Richiesta annullata dal ristoratore"
+            : app.status === "cancelled" ? "Candidatura annullata"
+            : app.status === "expired" ? "Proposta scaduta"
+            : "In attesa di una decisione";
+          return (
+            <div className="rounded-2xl border bg-card/80 p-5 mb-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                <UserAvatar userId={otherId} name={displayOtherName} className="h-20 w-20 shrink-0" zoomable />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xl font-semibold truncate">{displayOtherName}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {ann?.professional_profile ? formatDisplayLabel(ann.professional_profile) : "Turno"}
+                  </div>
+                </div>
+              </div>
+              {tags.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {tags.map((t) => (
+                    <span key={t.text} className="inline-flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs">
+                      <t.icon className="h-3.5 w-3.5 text-muted-foreground" />{t.text}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="mt-4 border-t border-border/50 pt-3 text-xs text-muted-foreground flex items-center gap-2">
+                <AlarmClock className="h-3.5 w-3.5 text-primary" />{statusText}
+              </div>
+            </div>
+          );
+        })()}
+        {!compactRestaurantView && !compactWorkerView && (
         <div className="rounded-2xl border bg-card p-4 mb-4 flex items-center justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <UserAvatar userId={otherId} name={displayOtherName} className="h-12 w-12 shrink-0" />
@@ -2772,7 +2812,7 @@ function Thread() {
           </div>
         )}
 
-        {app && !compactRestaurantView && (
+        {app && !compactRestaurantView && !compactWorkerView && (
           <div className="rounded-2xl border bg-card p-4 mb-4">
             <div className="text-xs font-medium text-muted-foreground mb-3">Stato della candidatura</div>
             {app.status === "expired" && app.closed_reason === "overlap" && (
@@ -3409,7 +3449,7 @@ function Thread() {
 
         </div>
         <aside className="mt-4 space-y-4 lg:mt-0">
-          {ann && !compactRestaurantView && (
+          {ann && !compactRestaurantView && !compactWorkerView && (
             <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-riepilogo">
               <h2 id="sec-riepilogo" className="text-sm font-semibold mb-2">Riepilogo turno</h2>
               <dl className="space-y-1.5 text-sm">
@@ -3448,7 +3488,7 @@ function Thread() {
               </dl>
             </section>
           )}
-          {app && role !== "restaurant" && (
+          {app && role !== "restaurant" && !compactWorkerView && (
             <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-cronologia">
               <h2 id="sec-cronologia" className="text-sm font-semibold mb-3">Cronologia</h2>
               {historyEvents.length === 0 ? (

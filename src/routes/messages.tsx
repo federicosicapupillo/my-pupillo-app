@@ -402,6 +402,7 @@ function MessagesLayout() {
     return acc;
   }, {});
   // Restaurant operational categorization.
+  const smart = role === "restaurant" || role === "worker";
   const threadCategory = (t: Thread): "candidature" | "confermati" | "archiviati" => {
     if (t.status === "accepted") return "confermati";
     if (t.status === "rejected" || t.status === "expired") return "archiviati";
@@ -415,7 +416,7 @@ function MessagesLayout() {
     archiviati: threads.filter((t) => threadCategory(t) === "archiviati").length,
   };
   const passesCategory = (t: Thread) => {
-    if (role !== "restaurant") return true;
+    if (!smart) return true;
     if (category === "all") return true;
     if (category === "unread") return t.unread > 0;
     return threadCategory(t) === category;
@@ -569,7 +570,7 @@ function MessagesLayout() {
           </div>
         </div>
       )}
-      {role === "restaurant" && (
+      {smart && (
         <div className={`${selectedId ? "hidden lg:block" : "block"} mb-3`} aria-label="Categorie comunicazioni">
           <nav aria-label="Categorie messaggi" className="flex gap-1 overflow-x-auto border-b border-border">
             {([
@@ -600,7 +601,7 @@ function MessagesLayout() {
           </nav>
         </div>
       )}
-      <div className={`${role === "restaurant" ? "hidden" : selectedId ? "hidden lg:block" : "block"} mb-4`} aria-label="Filtri conversazioni">
+      <div className={`${smart ? "hidden" : selectedId ? "hidden lg:block" : "block"} mb-4`} aria-label="Filtri conversazioni">
         <div className="flex flex-wrap gap-2 pb-1">
               {/* Tutte */}
               <button
@@ -664,8 +665,8 @@ function MessagesLayout() {
               })}
         </div>
       </div>
-      <div className={role === "restaurant" ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]"}>
-        <section className={`${selectedId ? (role === "restaurant" ? "hidden" : "hidden lg:block") : "block"} min-w-0`} aria-label="Lista conversazioni">
+      <div className={smart ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]"}>
+        <section className={`${selectedId ? (smart ? "hidden" : "hidden lg:block") : "block"} min-w-0`} aria-label="Lista conversazioni">
           {withUser && (
             <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
               <span>
@@ -712,7 +713,7 @@ function MessagesLayout() {
                 </p>
               )}
             </div>
-          ) : (withUser || role === "restaurant" ? visible.length === 0 : sortedGroups.length === 0) ? (
+          ) : (withUser || smart ? visible.length === 0 : sortedGroups.length === 0) ? (
             <div className="rounded-2xl border bg-card p-12 text-center text-muted-foreground">
               Nessuna conversazione corrisponde ai filtri selezionati.
             </div>
@@ -756,7 +757,7 @@ function MessagesLayout() {
                 );
               })}
             </div>
-          ) : role === "restaurant" ? (
+          ) : smart ? (
             <div className="space-y-3">
               {annGroups.map((ag) => {
                 const open = expandedGroups.has(`ann:${ag.id}`);
@@ -773,7 +774,7 @@ function MessagesLayout() {
                     >
                       <div className="flex -space-x-2 shrink-0">
                         {ag.items.slice(0, 3).map((x) => (
-                          <UserAvatar key={x.id} userId={x.workerId} name={x.other.name} className="h-9 w-9 ring-2 ring-card" />
+                          <UserAvatar key={x.id} userId={role === "restaurant" ? x.workerId : x.other.id} name={x.other.name} className="h-9 w-9 ring-2 ring-card" />
                         ))}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -788,7 +789,9 @@ function MessagesLayout() {
                         </span>
                       )}
                       <span className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-                        {ag.items.length} {ag.items.length === 1 ? "candidato" : "candidati"}
+                        {role === "restaurant"
+                          ? `${ag.items.length} ${ag.items.length === 1 ? "candidato" : "candidati"}`
+                          : threadStatusLabel(first.status, first.closedReason)}
                       </span>
                       <span className="shrink-0 text-muted-foreground" aria-hidden>
                         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -798,10 +801,10 @@ function MessagesLayout() {
                       <ul className="border-t border-border/60" role="list">
                         {ag.items.map((x) => (
                           <li key={x.id} className="flex flex-wrap items-center gap-3 border-b border-border/40 px-4 py-3 last:border-b-0 sm:px-5">
-                            <UserAvatar userId={x.workerId} name={x.other.name} className="h-11 w-11" zoomable />
+                            <UserAvatar userId={role === "restaurant" ? x.workerId : x.other.id} name={x.other.name} className="h-11 w-11" zoomable />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className={`text-sm ${x.unread > 0 ? "font-semibold" : "font-medium"} text-foreground`}>{x.other.name}</span>
+                                <span className={`text-sm ${x.unread > 0 ? "font-semibold" : "font-medium"} text-foreground`}>{role === "worker" && !(isApplicationConfirmed(x.status) || x.hasWorkedTogether) ? PUBLIC_VENUE_NAME : x.other.name}</span>
                                 <span className={`rounded-full px-2 py-0.5 text-[11px] ${isApplicationConfirmed(x.status) ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                                   {threadStatusLabel(x.status, x.closedReason)}
                                 </span>
@@ -813,7 +816,7 @@ function MessagesLayout() {
                               </div>
                             </div>
                             <div className="flex shrink-0 flex-wrap gap-2">
-                              {shiftByApp.get(x.id) && (
+                              {role === "restaurant" && shiftByApp.get(x.id) && (
                                 <Link to="/ristoratore/turni/$shiftId" params={{ shiftId: shiftByApp.get(x.id)! }} className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-accent">
                                   Turno
                                 </Link>
@@ -824,11 +827,11 @@ function MessagesLayout() {
                             </div>
                           </li>
                         ))}
-                        <li className="px-4 py-2.5 sm:px-5">
+                        {role === "restaurant" && <li className="px-4 py-2.5 sm:px-5">
                           <Link to="/announcements/$id" params={{ id: ag.id }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                             <ExternalLink className="h-3 w-3" aria-hidden /> Vedi annuncio
                           </Link>
-                        </li>
+                        </li>}
                       </ul>
                     )}
                   </div>
@@ -849,7 +852,7 @@ function MessagesLayout() {
                 const revealItem = g.items.find(
                   (t) => isApplicationConfirmed(t.status) || t.hasWorkedTogether,
                 );
-                const groupDisplayName = revealItem ? revealItem.other.name : (role === "worker" ? PUBLIC_VENUE_NAME : g.name);
+                const groupDisplayName = revealItem ? revealItem.other.name : g.name;
                 return (
                   <div
                     key={g.id}
@@ -1016,7 +1019,7 @@ function MessagesLayout() {
           )}
         </section>
 
-        <section className={`${selectedId ? "block" : role === "restaurant" ? "hidden" : "hidden lg:block"} min-w-0`} aria-label="Chat conversazione">
+        <section className={`${selectedId ? "block" : smart ? "hidden" : "hidden lg:block"} min-w-0`} aria-label="Chat conversazione">
           {selectedId ? (
             <Outlet />
           ) : role === "restaurant" ? (
