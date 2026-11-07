@@ -600,7 +600,7 @@ function MessagesLayout() {
           </nav>
         </div>
       )}
-      <div className={`${selectedId ? "hidden lg:block" : "block"} mb-4 ${role === "restaurant" ? "hidden" : ""}`} aria-label="Filtri conversazioni">
+      <div className={`${role === "restaurant" ? "hidden" : selectedId ? "hidden lg:block" : "block"} mb-4`} aria-label="Filtri conversazioni">
         <div className="flex flex-wrap gap-2 pb-1">
               {/* Tutte */}
               <button
@@ -787,7 +787,7 @@ function MessagesLayout() {
                           <span className="h-1.5 w-1.5 rounded-full bg-primary" /> {unread} {unread === 1 ? "nuovo" : "nuovi"}
                         </span>
                       )}
-                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                      <span className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
                         {ag.items.length} {ag.items.length === 1 ? "candidato" : "candidati"}
                       </span>
                       <span className="shrink-0 text-muted-foreground" aria-hidden>

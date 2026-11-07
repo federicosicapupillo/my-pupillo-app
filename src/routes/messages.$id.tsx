@@ -1,4 +1,3 @@
-import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { formatDisplayLabel } from "@/lib/format-label";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -2324,28 +2323,6 @@ function Thread() {
                     })}
                   </Link>
                 </div>
-                {ann.professional_profile && (
-                  <div>
-                    <span className="text-foreground/80">Mansione:</span>{" "}
-                    {ann.professional_profile}
-                  </div>
-                )}
-                {displayAddress && (
-                  <div className="break-words">
-                    <span className="text-foreground/80">Luogo:</span> {displayAddress}
-                  </div>
-                )}
-                {currentTariff != null && (
-                  <div className="flex items-center gap-1">
-                    <span className="whitespace-nowrap">
-                      <span className="text-foreground/80">Tariffa:</span>{" "}
-                      {currentTariff} €{ann?.tariff_type === "hourly" ? "/ora" : " (a servizio)"}
-                    </span>
-                    {app?.proposed_tariff != null && (
-                      <span className="ml-1 text-primary">(controfferta)</span>
-                    )}
-                  </div>
-                )}
               </div>
             )}
             </div>
@@ -2550,9 +2527,7 @@ function Thread() {
                     )}
                   </div>
                   {workerReviews.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Questo lavoratore non ha ancora recensioni verificate. Puoi comunque valutare profilo, competenze e disponibilità.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Nessuna recensione ancora.</p>
                   ) : (
                     <>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-2">
@@ -2655,8 +2630,8 @@ function Thread() {
                   return (
                     <>
                 {waitingWorkerInterest && (
-                  <div className="sm:col-span-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
-                    Proposta inviata. In attesa della risposta del lavoratore. Potrai confermare il turno quando il lavoratore avrà mostrato interesse.
+                  <div className="sm:col-span-3 rounded-lg border border-border/60 bg-muted/40 p-2.5 text-xs text-muted-foreground">
+                    Proposta inviata: potrai confermare quando il lavoratore risponde.
                   </div>
                 )}
                 {workerInterested && (
@@ -2675,7 +2650,7 @@ function Thread() {
                   {transitioning === "rejected" ? "Rifiuto in corso…" : "Rifiuta"}
                 </Button>
                 <Button
-                  className="gap-2 w-full min-w-0 justify-center whitespace-normal h-auto py-2 text-center bg-lime-600 hover:bg-lime-600/90 text-white shadow-md"
+                  className="gap-2 w-full min-w-0 justify-center whitespace-normal h-auto py-2 text-center "
                   onClick={() => transition("accepted")}
                   disabled={transitioning !== null || waitingWorkerInterest}
                   title={waitingWorkerInterest ? "Attendi la risposta del lavoratore" : undefined}
@@ -2702,7 +2677,7 @@ function Thread() {
                   );
                 })()}
               </div>
-              <PayOnHireBox className="mt-3" compact />
+              <p className="mt-3 text-xs text-muted-foreground">Paghi solo quando confermi il lavoratore. <Link to="/billing" className="text-primary hover:underline">Come funzionano i crediti?</Link></p>
             </div>
           );
         })()}
@@ -3398,7 +3373,7 @@ function Thread() {
               </dl>
             </section>
           )}
-          {app && (
+          {app && role !== "restaurant" && (
             <section className="rounded-2xl border bg-card p-4" aria-labelledby="sec-cronologia">
               <h2 id="sec-cronologia" className="text-sm font-semibold mb-3">Cronologia</h2>
               {historyEvents.length === 0 ? (
