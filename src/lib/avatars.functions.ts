@@ -1,8 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { Database } from "@/integrations/supabase/types";
 
 const InputSchema = z.object({
   userIds: z.array(z.string().uuid()).min(1).max(100),
@@ -22,22 +20,21 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id, avatar_url, full_name, business_name")
       .in("id", data.userIds);
     if (error) throw new Response(error.message, { status: 500 });
 
-    const SUPABASE_URL = process.env.SUPABASE_URL!;
-    const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const admin = createClient<Database>(SUPABASE_URL, SERVICE_ROLE, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    // Read only visible public profiles as the viewer; privileged access is
+    // limited to signing validated owner paths in the private avatar bucket.
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
 
     const result: Record<string, string | null> = {};
     const names: Record<string, string | null> = {};
     // Strict path validator: <ownerUid>/avatar-<digits>.(jpg|jpeg|png|webp)
     const PATH_RE = /^([0-9a-f-]{36})\/avatar-\d+\.(jpe?g|png|webp)$/i;
     for (const row of rows ?? []) {
+      if (!row.id) continue;
       const r = row as any;
       const businessName = (r.business_name as string | null) || null;
       const fullName = (r.full_name as string | null) || null;

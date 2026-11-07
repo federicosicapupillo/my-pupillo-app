@@ -2,6 +2,8 @@
 
 - Use the shared CurriculumStars display for CV star ratings across owner and public views so dashboard and profile stay consistent.
 
+- Resolve cross-user avatar paths through public_profiles as the viewer, then sign only owner-validated private avatar paths server-side; owner-only profile reads otherwise silently omit restaurant-visible worker photos.
+
 - Restaurant availability views use sanitized calendar-override reads independent of the legacy special-availability flag; share the full dated list across search details and profiles so no saved dates are hidden by preview truncation.
 
 - Edit calendar availability as date overrides through an atomic owner-scoped RPC; keep weekly rows as a read fallback and copy only explicitly selected dates, so a later single-date edit cannot change other weekdays or months.
