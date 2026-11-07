@@ -664,8 +664,8 @@ function MessagesLayout() {
               })}
         </div>
       </div>
-      <div className={role === "restaurant" && !selectedId ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]"}>
-        <section className={`${selectedId ? "hidden lg:block" : "block"} min-w-0`} aria-label="Lista conversazioni">
+      <div className={role === "restaurant" ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]"}>
+        <section className={`${selectedId ? (role === "restaurant" ? "hidden" : "hidden lg:block") : "block"} min-w-0`} aria-label="Lista conversazioni">
           {withUser && (
             <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border bg-primary/5 px-3 py-2 text-sm">
               <span>
