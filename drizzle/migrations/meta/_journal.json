@@ -92,6 +92,13 @@
       "when": 1794052559564,
       "tag": "0012_profiles_terms_version",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794338929745,
+      "tag": "0013_allow_terms_version_self_update",
+      "breakpoints": true
     }
   ]
 }
