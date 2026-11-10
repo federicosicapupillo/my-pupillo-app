@@ -37,6 +37,9 @@ function sniffMime(b: Uint8Array): "application/pdf" | "image/jpeg" | "image/png
   return null;
 }
 
+/** Il titolare non raccoglie documenti d'identità: lasciare a false. */
+const ID_DOCUMENT_COLLECTION_ENABLED = false as boolean;
+
 type UploadResult =
   | { ok: true; path: string; name: string; mime: string; size: number }
   | { ok: false; error: string };
@@ -49,6 +52,10 @@ export const uploadWorkerIdDocument = createServerFn({ method: "POST" })
     return { file: file instanceof File ? file : null };
   })
   .handler(async ({ data, context }): Promise<UploadResult> => {
+    // Raccolta dei documenti d'identità disattivata per decisione del titolare.
+    if (!ID_DOCUMENT_COLLECTION_ENABLED) {
+      return { ok: false, error: "Pupillo non raccoglie più documenti d'identità." };
+    }
     const { file } = data;
     if (!file || file.size === 0) {
       return { ok: false, error: ID_DOC_MISSING_MESSAGE };

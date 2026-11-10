@@ -680,7 +680,11 @@ function AuthPage() {
                     <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
                       Condizioni generali d'uso
                     </Link>{" "}
-                    (versione {LEGAL_VERSION}).
+                    (versione {LEGAL_VERSION}), ho preso visione dell'{" "}
+                    <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
+                      Informativa privacy
+                    </Link>{" "}
+                    e dichiaro di avere almeno 18 anni.
                   </span>
                 </label>
                 <Button

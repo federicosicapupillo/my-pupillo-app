@@ -64,6 +64,13 @@ export const analyzeCvAssessment = createServerFn({ method: 'POST' }).middleware
       const publicVisible = shouldAutoPublishCurriculum({ scores, ...scoring, evaluable: output.evaluable, doubts, status, consent_at: assessment.consent_at }, true, assessment.auto_publication_consent);
       const { error, data: saved } = await save({ scores, evidence, ...scoring, evaluable: output.evaluable, doubts, status, reviewed_by: null, reviewed_at: new Date().toISOString(), review_note: 'Valutazione automatica Pupillo delle informazioni dichiarate nel curriculum.', error_message: null, public_visible: publicVisible });
       if (error || !saved?.length) return { ok: false, error: 'La richiesta è cambiata: valutazione non salvata.' };
+      // Result is saved: the PDF is no longer needed. Failures are retried by the scheduled sweep.
+      const { shouldPurgeCurriculum } = await import('@/lib/curriculum-purge');
+      if (shouldPurgeCurriculum(status, true)) {
+        const { purgeAnalyzedCurriculum } = await import('@/lib/curriculum-purge.server');
+        try { await purgeAnalyzedCurriculum(supabaseAdmin, data.userId, assessment.curriculum_path); }
+        catch (e) { console.error('[PUPILLO_CV_PURGE_UNEXPECTED]', e); }
+      }
       return { ok: true, error: '' };
     } catch (error) {
       const { CvGatewayError } = await import('@/lib/cv-ai/responses.server');
@@ -89,8 +96,9 @@ export const openAssessmentCurriculum = createServerFn({ method: 'POST' }).middl
     const { data: assessment } = await context.supabase.from('worker_curriculum_assessments').select('curriculum_path,consent_at,status').eq('user_id',data.userId).eq('version',data.version).maybeSingle();
     if (!assessment?.consent_at || assessment.status==='stale') return { url:null, error:'Consenso non disponibile.' };
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-    const { data: current } = await supabaseAdmin.from('worker_curricula').select('storage_path').eq('user_id',data.userId).maybeSingle();
+    const { data: current } = await supabaseAdmin.from('worker_curricula').select('storage_path,file_deleted_at').eq('user_id',data.userId).maybeSingle();
     if (current?.storage_path !== assessment.curriculum_path) return { url:null, error:'Il curriculum è cambiato.' };
+    if (current.file_deleted_at) return { url:null, error:'Il file è stato eliminato dopo l’analisi.' };
     const { data: signed, error } = await supabaseAdmin.storage.from(CURRICULUM_BUCKET).createSignedUrl(assessment.curriculum_path,60);
     if (error || !signed) return { url:null,error:'Impossibile aprire il documento.' };
     const browserUrl = import.meta.env['VITE_SUPABASE_URL'];

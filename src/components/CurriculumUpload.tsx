@@ -10,7 +10,7 @@ import { CurriculumAssessmentRequest } from '@/components/CurriculumAssessment';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
-type Curriculum = { storage_path: string; file_name: string };
+type Curriculum = { storage_path: string; file_name: string; file_deleted_at: string | null };
 
 export function CurriculumUpload({ userId }: { userId: string }) {
   const [curriculum, setCurriculum] = useState<Curriculum | null>(null);
@@ -22,7 +22,7 @@ export function CurriculumUpload({ userId }: { userId: string }) {
   const upload = useServerFn(uploadCurriculum);
 
   async function load() {
-    const { data, error } = await supabase.from("worker_curricula").select("storage_path,file_name").eq("user_id", userId).maybeSingle();
+    const { data, error } = await supabase.from("worker_curricula").select("storage_path,file_name,file_deleted_at").eq("user_id", userId).maybeSingle();
     setLoadError(!!error);
     if (!error) setCurriculum(data);
     setLoading(false);
@@ -46,7 +46,7 @@ export function CurriculumUpload({ userId }: { userId: string }) {
   }
 
   async function open() {
-    if (!curriculum) return;
+    if (!curriculum || curriculum.file_deleted_at) return;
     const tab = window.open("about:blank", "_blank");
     if (tab) tab.opener = null;
     const { data, error } = await supabase.storage.from(CURRICULUM_BUCKET).createSignedUrl(curriculum.storage_path, 60);
@@ -64,7 +64,7 @@ export function CurriculumUpload({ userId }: { userId: string }) {
       const { error: rowError } = await supabase.from("worker_curricula").delete().eq("user_id", userId);
       if (rowError) throw rowError;
       setCurriculum(null);
-      toast.success("Curriculum rimosso.");
+      toast.success("Curriculum e valutazione rimossi.");
     } catch { toast.error("Rimozione del curriculum non riuscita. Riprova."); }
     finally { setBusy(false); }
   }
@@ -73,7 +73,7 @@ export function CurriculumUpload({ userId }: { userId: string }) {
     <h4 className="font-medium">Curriculum <span className="text-sm font-normal text-muted-foreground">(facoltativo)</span></h4>
     <p className="text-xs text-muted-foreground">PDF · massimo 5 MB · documento privato</p>
     <p className="text-xs text-muted-foreground">Ogni nuovo curriculum viene valutato automaticamente. Il punteggio dipende dalle informazioni dichiarate.</p>
-    <div className="flex items-start gap-2"><Checkbox id={`upload-cv-consent-${userId}`} checked={consent} disabled={busy} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor={`upload-cv-consent-${userId}`} className="text-xs leading-relaxed">Acconsento all’analisi automatica del nuovo curriculum tramite IA e alla pubblicazione della valutazione sul mio profilo se raggiunge 4 o 5 stelle. Sotto soglia il punteggio resta visibile solo a me. Il documento rimane privato; le esperienze dichiarate non vengono verificate.</Label></div>
+    <div className="flex items-start gap-2"><Checkbox id={`upload-cv-consent-${userId}`} checked={consent} disabled={busy} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor={`upload-cv-consent-${userId}`} className="text-xs leading-relaxed">Acconsento all’analisi automatica del nuovo curriculum tramite IA e alla pubblicazione della valutazione sul mio profilo se raggiunge 4 o 5 stelle. Sotto soglia il punteggio resta visibile solo a me. Il PDF resta privato e viene eliminato automaticamente al termine dell’analisi; le esperienze dichiarate non vengono verificate.</Label></div>
     <input ref={input} type="file" accept="application/pdf,.pdf" className="hidden" aria-label="Carica curriculum" onChange={(e) => {
       const file = e.target.files?.[0];
       if (file) void select(file);
@@ -81,14 +81,14 @@ export function CurriculumUpload({ userId }: { userId: string }) {
     }} />
     {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Caricamento curriculum" /> : loadError ?
       <div className="flex flex-wrap items-center gap-2"><p role="alert" className="text-sm text-destructive">Impossibile leggere il curriculum.</p><Button type="button" variant="outline" onClick={() => void load()}>Riprova</Button></div> : <>
-        {curriculum && <p className="flex items-start gap-2 text-sm"><FileText className="h-4 w-4 shrink-0 mt-0.5" /><span className="break-all">{curriculum.file_name}</span></p>}
+        {curriculum && <p className="flex items-start gap-2 text-sm"><FileText className="h-4 w-4 shrink-0 mt-0.5" /><span className="break-all">{curriculum.file_name}{curriculum.file_deleted_at && <span className="block text-xs text-muted-foreground">File eliminato dopo l’analisi: resta solo la valutazione.</span>}</span></p>}
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" disabled={busy || !consent} onClick={() => input.current?.click()}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{curriculum ? "Sostituisci curriculum" : "Carica curriculum"}
           </Button>
           {curriculum && <>
-            <Button type="button" variant="outline" disabled={busy} onClick={() => void open()}><ExternalLink className="h-4 w-4" />Apri</Button>
-            <Button type="button" variant="ghost" size="icon" disabled={busy} aria-label="Rimuovi curriculum" title="Rimuovi curriculum" onClick={() => void remove()}><Trash2 className="h-4 w-4" /></Button>
+            {!curriculum.file_deleted_at && <Button type="button" variant="outline" disabled={busy} onClick={() => void open()}><ExternalLink className="h-4 w-4" />Apri</Button>}
+            <Button type="button" variant="ghost" size="icon" disabled={busy} aria-label="Rimuovi curriculum e valutazione" title="Rimuovi curriculum e valutazione" onClick={() => void remove()}><Trash2 className="h-4 w-4" /></Button>
           </>}
         </div>
         {curriculum && <CurriculumAssessmentRequest userId={userId} curriculumPath={curriculum.storage_path} />}

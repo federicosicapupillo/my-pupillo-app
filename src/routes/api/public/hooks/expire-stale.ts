@@ -282,6 +282,15 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
           logErr('review_reminders', e?.message ?? String(e))
         }
 
+        // Fase non fatale: ritenta l'eliminazione dei PDF di curriculum già analizzati.
+        let cvPurged = 0
+        try {
+          const { sweepAnalyzedCurricula } = await import('@/lib/curriculum-purge.server')
+          cvPurged = (await sweepAnalyzedCurricula(supabaseAdmin)).purged
+        } catch (e: any) {
+          logErr('cv_purge', e?.message ?? String(e), undefined, false)
+        }
+
         const ALL_PHASES = 5
         const allFailed = failedPhases.size >= ALL_PHASES
         return new Response(
@@ -290,6 +299,7 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
             announcements_expired: expiredAnn.length,
             applications_expired: expiredApps.length,
             review_reminders_created: reviewReminderInserted,
+            cv_files_purged: cvPurged,
             errors,
           }),
           { status: allFailed ? 500 : 200, headers: { 'Content-Type': 'application/json' } }

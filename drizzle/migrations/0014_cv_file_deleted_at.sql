@@ -1,0 +1,2 @@
+ALTER TABLE public.worker_curricula ADD COLUMN IF NOT EXISTS file_deleted_at timestamptz NULL;
+COMMENT ON COLUMN public.worker_curricula.file_deleted_at IS 'Set when the PDF was automatically removed from storage after a completed analysis; the row and storage_path are kept so the assessment stays linked.';

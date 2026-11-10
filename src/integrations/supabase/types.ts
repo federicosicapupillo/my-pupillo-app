@@ -2155,6 +2155,7 @@ export type Database = {
       }
       worker_curricula: {
         Row: {
+          file_deleted_at: string | null
           file_name: string
           file_size: number
           storage_path: string
@@ -2162,6 +2163,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          file_deleted_at?: string | null
           file_name: string
           file_size: number
           storage_path: string
@@ -2169,6 +2171,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          file_deleted_at?: string | null
           file_name?: string
           file_size?: number
           storage_path?: string
