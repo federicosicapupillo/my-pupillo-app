@@ -25,3 +25,4 @@
 - Homepage explainer videos are configured only in `src/lib/home-videos.ts` (null = honest "Video in arrivo" poster) — why: real sources can be added without touching the page and fake players are never shown.
 - Curriculum PDFs are deleted from storage after a saved approved/not_evaluable analysis (`curriculum-purge.server.ts`, retried by the expire-stale sweep); keep the `worker_curricula` row and `storage_path` and mark `file_deleted_at`, because publication checks match the assessment to that path.
 - ID document collection is disabled in code (onboarding section off, upload server fn refuses); keep the `require_id_document` flag off, historical documents are retained, not mass-deleted.
+- A new self-editable profile column must be added to BOTH `update_my_profile` allowlist and `profiles_guard_admin_columns` allowlist; verify with `scripts/e2e-onboarding-save.ts` (creates and deletes dedicated test users) — missing either silently breaks onboarding "Salva".

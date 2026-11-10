@@ -106,6 +106,20 @@
       "when": 1794340025497,
       "tag": "0014_cv_file_deleted_at",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794340336151,
+      "tag": "0015_id_document_never_required",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794340492544,
+      "tag": "0016_allow_terms_fields_in_profile_guard",
+      "breakpoints": true
     }
   ]
 }

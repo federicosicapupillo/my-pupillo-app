@@ -557,11 +557,11 @@ function Onboarding() {
    */
   const workerDateInvalid = (() => {
     if (role !== "worker") return false;
-    const fields = [
-      personal.birth_date,
-      personal.id_document_issued_at,
-      personal.id_document_expires_at,
-    ];
+    // Historical ID-document dates are ignored: documents are no longer
+    // collected and an expired historical document must not disable Salva.
+    const fields = requireIdDocument
+      ? [personal.birth_date, personal.id_document_issued_at, personal.id_document_expires_at]
+      : [personal.birth_date];
     for (const v of fields) {
       if (v && !isValidISODate(v)) return true;
     }
@@ -573,6 +573,7 @@ function Onboarding() {
       return true;
     }
     if (
+      requireIdDocument &&
       personal.id_document_issued_at &&
       personal.id_document_expires_at &&
       isValidISODate(personal.id_document_issued_at) &&
@@ -1689,7 +1690,11 @@ function Onboarding() {
           "Questa Partita IVA risulta già registrata. Accedi con l'account esistente oppure contatta l'assistenza.",
         );
       } else {
-        toast.error("Non siamo riusciti a salvare il profilo. Riprova.");
+        // Le validazioni del database sollevano messaggi in italiano pensati
+        // per l'utente: mostrali, così l'utente sa cosa correggere.
+        const raw = (error.message || "").trim();
+        const technical = !raw || /column|permission|relation|function|violates|syntax|jwt|null value/i.test(raw);
+        toast.error(technical ? "Non siamo riusciti a salvare il profilo. Riprova." : `Non siamo riusciti a salvare il profilo: ${raw}`);
       }
       return;
     }
