@@ -33,7 +33,17 @@ export function useWorkerAvailabilityStatus(userId: string | null | undefined, e
         .select("start_time, end_time, is_flexible, is_last_minute")
         .eq("worker_id", userId as string);
       if (error) throw error;
-      return ((data ?? []) as AvailabilityCheckRow[]).some(isValidAvailabilityRow);
+      if (((data ?? []) as AvailabilityCheckRow[]).some(isValidAvailabilityRow)) return true;
+      // La pagina disponibilità ora salva per data: conta le date future disponibili.
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
+      const { count, error: exErr } = await supabase
+        .from("worker_availability_exceptions")
+        .select("id", { count: "exact", head: true })
+        .eq("worker_id", userId as string)
+        .eq("is_available", true)
+        .gte("date", today);
+      if (exErr) throw exErr;
+      return (count ?? 0) > 0;
     },
   });
 

@@ -1723,7 +1723,17 @@ function Onboarding() {
           .from("worker_availability")
           .select("id", { count: "exact", head: true })
           .eq("worker_id", user.id);
-        const hasAvailability = !availErr && (count ?? 0) > 0;
+        let hasAvailability = !availErr && (count ?? 0) > 0;
+        if (!hasAvailability) {
+          const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
+          const { count: exCount, error: exErr } = await supabase
+            .from("worker_availability_exceptions")
+            .select("id", { count: "exact", head: true })
+            .eq("worker_id", user.id)
+            .eq("is_available", true)
+            .gte("date", today);
+          hasAvailability = !exErr && (exCount ?? 0) > 0;
+        }
         const promptDismissed = localStorage.getItem("pupillo_availability_prompt_dismissed") === "true";
         console.info("[PUPILLO_WORKER_AVAILABILITY_PROMPT_DEBUG]", {
           worker_user_id: user.id,
