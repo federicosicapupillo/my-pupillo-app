@@ -965,11 +965,40 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_email_preferences: {
+        Row: {
+          applications: boolean
+          messages: boolean
+          reviews: boolean
+          shifts: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applications?: boolean
+          messages?: boolean
+          reviews?: boolean
+          shifts?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          applications?: boolean
+          messages?: boolean
+          reviews?: boolean
+          shifts?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
           created_at: string
           dedupe_key: string | null
+          email_sent_at: string | null
+          email_status: string | null
           id: string
           is_demo: boolean
           link: string | null
@@ -984,6 +1013,8 @@ export type Database = {
           body?: string | null
           created_at?: string
           dedupe_key?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
           id?: string
           is_demo?: boolean
           link?: string | null
@@ -998,6 +1029,8 @@ export type Database = {
           body?: string | null
           created_at?: string
           dedupe_key?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
           id?: string
           is_demo?: boolean
           link?: string | null

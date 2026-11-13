@@ -41,6 +41,7 @@ import { AccountSecuritySection } from "@/components/AccountSecuritySection";
 import { useMyReputation } from "@/hooks/use-my-reputation";
 import { CurriculumRating } from '@/components/CurriculumAssessment';
 import { CurriculumUpload } from '@/components/CurriculumUpload';
+import { EmailPreferencesCard } from '@/components/EmailPreferencesCard';
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profilo — Pupillo" }, { name:'description',content:'Profilo personale, curriculum e reputazione su Pupillo.' }, { property:'og:title',content:'Profilo — Pupillo' }, { property:'og:description',content:'Profilo personale, curriculum e reputazione su Pupillo.' }, { property:'og:type',content:'website' }, { name:'twitter:card',content:'summary' }] }),
@@ -73,6 +74,10 @@ function Profile() {
 
       <div className="mt-6">
         <ReferralCard />
+      </div>
+
+      <div className="mt-6">
+        <EmailPreferencesCard />
       </div>
 
       <AccountSecuritySection email={user?.email ?? null} profile={profile as any} />

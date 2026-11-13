@@ -127,6 +127,13 @@
       "when": 1794583048187,
       "tag": "0017_tighten_reference_and_badge_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794583962787,
+      "tag": "0018_notification_emails",
+      "breakpoints": true
     }
   ]
 }

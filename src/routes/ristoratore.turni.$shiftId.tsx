@@ -1,3 +1,4 @@
+import { readEmailRating } from "@/lib/notification-email";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -876,6 +877,10 @@ function ReviewSection({
   onReportIncident: (kind: string, description: string) => Promise<void>;
 }) {
   const [criteria, setCriteria] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const r = readEmailRating(window.location.search);
+    if (r) setCriteria(Object.fromEntries(CRITERIA.map((c) => [c.key, r])));
+  }, []);
   const [wouldRehire, setWouldRehire] = useState<"yes" | "maybe" | "no" | null>(null);
   const [text, setText] = useState("");
   const [tags, setTags] = useState<string[]>([]);

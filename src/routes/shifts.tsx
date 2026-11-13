@@ -1,3 +1,4 @@
+import { readEmailRating } from "@/lib/notification-email";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -156,6 +157,13 @@ function ShiftsPage() {
   const [wouldRehire, setWouldRehire] = useState<WouldRehireValue>(null);
   const [reviewDialog, setReviewDialog] = useState<ActionShift | null>(null);
   const [dialogCriteria, setDialogCriteria] = useState({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+  useEffect(() => {
+    const r = readEmailRating(window.location.search);
+    if (r) {
+      const all = { punctuality: r, professionalism: r, competence: r, reliability: r, teamwork: r };
+      setCriteria(all); setDialogCriteria(all);
+    }
+  }, []);
   const [dialogComment, setDialogComment] = useState("");
   const [dialogPositive, setDialogPositive] = useState<string[]>([]);
   const [dialogNegative, setDialogNegative] = useState<string[]>([]);
@@ -276,7 +284,7 @@ function ShiftsPage() {
       const target = actionShifts.find((a) => a.shift_id === initialReviewShift);
       if (!target) return;
       reviewAutoOpenedRef.current = true;
-      setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+      { const r = readEmailRating(window.location.search) ?? 5; setDialogCriteria({ punctuality: r, professionalism: r, competence: r, reliability: r, teamwork: r }); }
       setDialogComment("");
       setDialogError(null);
       setDialogPositive([]);
@@ -864,7 +872,7 @@ function ShiftsPage() {
                   toast.error("Impossibile aprire la recensione. Turno o lavoratore non trovato.");
                   return;
                 }
-                setDialogCriteria({ punctuality: 5, professionalism: 5, competence: 5, reliability: 5, teamwork: 5 });
+                { const r = readEmailRating(window.location.search) ?? 5; setDialogCriteria({ punctuality: r, professionalism: r, competence: r, reliability: r, teamwork: r }); }
                 setDialogComment("");
                 setDialogError(null);
                 setDialogPositive([]);

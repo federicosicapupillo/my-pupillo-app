@@ -58,7 +58,9 @@ import { Route as ApiPublicJarvisKpiRouteImport } from './routes/api/public/jarv
 import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
 import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
 import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/public/hooks/expire-stale'
+import { Route as ApiPublicHooksNotificationEmailsRouteImport } from './routes/api/public/hooks/notification-emails'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -310,10 +312,22 @@ const ApiPublicHooksExpireStaleRoute =
     path: '/api/public/hooks/expire-stale',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksNotificationEmailsRoute =
+  ApiPublicHooksNotificationEmailsRouteImport.update({
+    id: '/api/public/hooks/notification-emails',
+    path: '/api/public/hooks/notification-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
     path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -367,7 +381,9 @@ export interface FileRoutesByFullPath {
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
+  '/api/public/hooks/notification-emails': typeof ApiPublicHooksNotificationEmailsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -419,7 +435,9 @@ export interface FileRoutesByTo {
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
+  '/api/public/hooks/notification-emails': typeof ApiPublicHooksNotificationEmailsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -472,7 +490,9 @@ export interface FileRoutesById {
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
+  '/api/public/hooks/notification-emails': typeof ApiPublicHooksNotificationEmailsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -526,7 +546,9 @@ export interface FileRouteTypes {
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
+    | '/api/public/hooks/notification-emails'
     | '/api/public/payments/webhook'
+    | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -578,7 +600,9 @@ export interface FileRouteTypes {
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
+    | '/api/public/hooks/notification-emails'
     | '/api/public/payments/webhook'
+    | '/lovable/email/transactional/preview'
   id:
     | '__root__'
     | '/'
@@ -630,7 +654,9 @@ export interface FileRouteTypes {
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
     | '/api/public/hooks/expire-stale'
+    | '/api/public/hooks/notification-emails'
     | '/api/public/payments/webhook'
+    | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -678,7 +704,9 @@ export interface RootRouteChildren {
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
   ApiPublicHooksExpireStaleRoute: typeof ApiPublicHooksExpireStaleRoute
+  ApiPublicHooksNotificationEmailsRoute: typeof ApiPublicHooksNotificationEmailsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1026,11 +1054,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksExpireStaleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/notification-emails': {
+      id: '/api/public/hooks/notification-emails'
+      path: '/api/public/hooks/notification-emails'
+      fullPath: '/api/public/hooks/notification-emails'
+      preLoaderRoute: typeof ApiPublicHooksNotificationEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
       fullPath: '/api/public/payments/webhook'
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1120,7 +1162,9 @@ const rootRouteChildren: RootRouteChildren = {
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
   ApiPublicHooksExpireStaleRoute: ApiPublicHooksExpireStaleRoute,
+  ApiPublicHooksNotificationEmailsRoute: ApiPublicHooksNotificationEmailsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

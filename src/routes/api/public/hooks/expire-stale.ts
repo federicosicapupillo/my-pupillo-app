@@ -291,6 +291,14 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
           logErr('cv_purge', e?.message ?? String(e), undefined, false)
         }
 
+        // Fase non fatale: email per le notifiche importanti (riserva se il cron dedicato manca).
+        try {
+          const { runNotificationEmailSweep } = await import('@/lib/notification-email-sweep.server')
+          await runNotificationEmailSweep()
+        } catch (e: any) {
+          logErr('notification_emails', e?.message ?? String(e), undefined, false)
+        }
+
         const ALL_PHASES = 5
         const allFailed = failedPhases.size >= ALL_PHASES
         return new Response(

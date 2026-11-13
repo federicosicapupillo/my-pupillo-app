@@ -1,3 +1,4 @@
+import { readEmailRating } from "@/lib/notification-email";
 import { formatDisplayLabel } from "@/lib/format-label";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -3968,8 +3969,9 @@ function ReviewDialog(props: {
   useEffect(() => {
     if (open) {
       // Default: 5 stelle su ogni criterio
-      setReliability(5); setPunctuality(5); setProfessionalism(5);
-      setServiceQuality(5); setTeamwork(5);
+      const r = (typeof window !== "undefined" ? readEmailRating(window.location.search) : null) ?? 5;
+      setReliability(r); setPunctuality(r); setProfessionalism(r);
+      setServiceQuality(r); setTeamwork(r);
       try {
         console.log("[PUPILLO_REVIEW_MODAL_OPENED]", {
           restaurant_id: restaurantId ?? null,
