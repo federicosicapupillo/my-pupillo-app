@@ -31,3 +31,15 @@ describe("links", () => {
     expect(readEmailRating("?rating=9")).toBeNull();
   });
 });
+
+import { describe as d2, it as i2, expect as e2 } from "vitest";
+import { tomorrowInRome } from "../shift-reminder";
+d2("promemoria turno del giorno dopo", () => {
+  i2("usa il tasto «Vedi il turno»", () => {
+    e2(planNotificationEmail("Promemoria: domani hai un turno", "/shifts?shift=1")?.cta).toBe("Vedi il turno");
+  });
+  i2("calcola domani in ora italiana", () => {
+    e2(tomorrowInRome(new Date("2026-11-13T23:30:00Z"))).toBe("2026-11-15");
+    e2(tomorrowInRome(new Date("2026-11-13T10:00:00Z"))).toBe("2026-11-14");
+  });
+});

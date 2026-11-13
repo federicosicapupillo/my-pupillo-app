@@ -291,6 +291,14 @@ export const Route = createFileRoute('/api/public/hooks/expire-stale')({
           logErr('cv_purge', e?.message ?? String(e), undefined, false)
         }
 
+        // Fase non fatale: promemoria al lavoratore il giorno prima del turno.
+        try {
+          const { createTomorrowShiftReminders } = await import('@/lib/shift-reminder.server')
+          await createTomorrowShiftReminders(supabaseAdmin)
+        } catch (e: any) {
+          logErr('shift_reminders', e?.message ?? String(e), undefined, false)
+        }
+
         // Fase non fatale: email per le notifiche importanti (riserva se il cron dedicato manca).
         try {
           const { runNotificationEmailSweep } = await import('@/lib/notification-email-sweep.server')

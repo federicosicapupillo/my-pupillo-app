@@ -31,7 +31,7 @@ export function planNotificationEmail(title: string, link: string | null): Notif
     return { category: "applications", cta: "Apri e conferma", stars: false };
   }
 
-  if (starts(t, ["Turno confermato", "Istruzioni confermate"])) {
+  if (starts(t, ["Turno confermato", "Istruzioni confermate", "Promemoria: domani hai un turno"])) {
     return { category: "shifts", cta: "Vedi il turno", stars: false };
   }
   if (starts(t, ["Turno annullato", "Il lavoratore ha annullato", "Annuncio annullato", "Segnalato no-show", "Ritardo segnalato", "Dettagli turno aggiornati"])) {
