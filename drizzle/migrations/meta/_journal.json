@@ -120,6 +120,13 @@
       "when": 1794340492544,
       "tag": "0016_allow_terms_fields_in_profile_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794583048187,
+      "tag": "0017_tighten_reference_and_badge_reads",
+      "breakpoints": true
     }
   ]
 }
