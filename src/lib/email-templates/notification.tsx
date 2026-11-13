@@ -1,5 +1,5 @@
 import React from 'react'
-import { Body, Button, Container, Head, Heading, Html, Link, Preview, Section, Text } from '@react-email/components'
+import { Body, Button, Container, Head, Heading, Html, Img, Link, Preview, Section, Text } from '@react-email/components'
 import type { TemplateEntry } from './registry'
 
 interface Props {
@@ -16,7 +16,7 @@ const NotificationEmail = ({ title, body, ctaLabel, ctaUrl, starUrls }: Props) =
     <Preview>{title || 'Hai una nuova notifica su Pupillo'}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Pupillo</Text>
+        <Img src={LOGO_URL} alt="Pupillo" width="160" height="108" style={logo} />
         <Heading style={h1}>{title || 'Nuova notifica'}</Heading>
         {body ? <Text style={text}>{body}</Text> : null}
         {starUrls && starUrls.length === 5 ? (
@@ -56,6 +56,8 @@ export const template = {
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, Helvetica, sans-serif' }
 const container = { padding: '28px 24px', maxWidth: '560px' }
+const LOGO_URL = 'https://pupillo.life/__l5e/assets-v1/4628e952-8afc-427b-9f23-249916e20032/pupillo_logo.png'
+const logo = { display: 'block', margin: '0 0 16px', height: 'auto' }
 const brand = { fontSize: '20px', fontWeight: 800, color: '#7c3aed', margin: '0 0 16px' }
 const h1 = { fontSize: '22px', color: '#111111', margin: '0 0 12px' }
 const text = { fontSize: '15px', lineHeight: '22px', color: '#333333' }
