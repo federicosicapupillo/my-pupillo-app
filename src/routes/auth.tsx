@@ -31,10 +31,18 @@ import { LegalFooter } from "@/components/LegalFooter";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { rememberPendingSignupRole, clearPendingSignupRole, type SignupRole } from "@/lib/signup-role";
 import { isEffectivelyComplete } from "@/lib/profile-completion";
+import { oauthReturnUrl } from "@/lib/oauth-return";
 import { rememberReferralCode, readReferralCode, normalizeReferralCode, clearReferralCode } from "@/lib/referral-capture";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Accedi — Pupillo" }] }),
+  head: () => ({ meta: [
+    { title: "Accedi e registrati — Pupillo" },
+    { name: "description", content: "Accedi a Pupillo o crea il tuo profilo per i turni nella ristorazione." },
+    { property: "og:title", content: "Accedi e registrati — Pupillo" },
+    { property: "og:description", content: "Accedi a Pupillo o crea il tuo profilo per i turni nella ristorazione." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (s: Record<string, unknown>): { role?: "worker" | "restaurant"; ref?: string; deleted?: "1"; redirect?: string } => ({
     role: s.role === "worker" || s.role === "restaurant" ? s.role : undefined,
     ref: typeof s.ref === "string" ? s.ref : undefined,
@@ -150,7 +158,7 @@ function AuthPage() {
     }
     // Profilo incompleto (flag DB oppure identità nome/cognome mancante)
     // → onboarding. Una sola route copre entrambi i ruoli.
-    if (profile && !isEffectivelyComplete(profile, finalRole)) {
+    if (!isEffectivelyComplete(profile, finalRole)) {
       navigate({ to: "/onboarding" });
       return;
     }
@@ -374,7 +382,7 @@ function AuthPage() {
     }
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
+      redirect_uri: oauthReturnUrl(window.location.origin, redirectParam),
       extraParams:
         provider === "google"
           ? { scope: "openid email profile", prompt: "select_account" }
@@ -386,7 +394,9 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/dashboard" });
+    // The session-aware effect above chooses onboarding or the correct
+    // role destination only after the profile and signup role are loaded.
+    setBusy(false);
   };
 
   const handleFacebook = async () => {

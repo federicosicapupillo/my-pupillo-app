@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Rientro Google su /auth anziché homepage; navigazione dopo caricamento ruolo/profilo, profili incompleti su onboarding. Verifica OAuth esterna completa richiede consenso Google dell'utente.
+
 - [x] OTP di completamento profilo via Cloud Auth/email dell’account; eliminato codice simulato, cellulare non verificato, controlli profilo aggiornati. 88 test passati, salvataggio entrambi ruoli e rifiuto codice errato verificati; account di prova rimosso.
 - [ ] Verifica ricezione email OTP brandizzata e inserimento codice reale: richiede pubblicazione dei modelli auth e codice ricevuto nella casella email; nessuna pubblicazione eseguita.
 
