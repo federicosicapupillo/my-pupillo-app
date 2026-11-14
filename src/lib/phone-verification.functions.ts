@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isContactPhoneLocked } from "@/lib/contact-verification";
 
 // Compatibility names retained for existing callers. Cloud Auth owns OTP generation,
 // expiry, throttling and one-time consumption. No test bypass or phone validation.
@@ -18,6 +19,9 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
     const { data: profile, error: profileError } = await context.supabase.rpc("get_my_profile");
     if (profileError || !profile || profile.is_deleted || profile.deleted_at) return { ok: false, error: "Profilo non disponibile." };
     const phoneFull = `${data.phoneCountryCode}${data.phoneNumber}`;
+    if (isContactPhoneLocked(profile) && phoneFull !== (profile.phone_full || profile.phone)) {
+      return { ok: false, error: "Il numero di cellulare non può essere modificato dopo la conferma del codice." };
+    }
     const { error: saveError } = await context.supabase.rpc("update_my_profile" as never, { _patch: {
       phone_country_code: data.phoneCountryCode, phone_number: data.phoneNumber, phone_full: phoneFull, phone: phoneFull,
     } } as never);
@@ -41,6 +45,7 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: saved, error: saveError } = await supabaseAdmin.from("profiles").update({
       email_otp_verified_at: new Date().toISOString(),
+      contact_phone_locked_at: new Date().toISOString(),
       email_otp_verified_address: user.email,
     }).eq("id", context.userId).eq("email", user.email).eq("is_deleted", false).is("deleted_at", null).select("id").maybeSingle();
     if (saveError || !saved) return { ok: false, error: "Non siamo riusciti a salvare la verifica. Richiedi un nuovo codice." };

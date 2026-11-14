@@ -60,6 +60,7 @@ type Profile = {
   phone_verified_at: string | null;
   email_otp_verified_at?: string | null;
   email_otp_verified_address?: string | null;
+  contact_phone_locked_at?: string | null;
   phone_full: string | null;
   phone_country_code: string | null;
   phone_number: string | null;

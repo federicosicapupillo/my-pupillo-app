@@ -33,3 +33,4 @@
 - Alias only the deep `entities/lib/*.js` paths to the hoisted v4 in vite.config.ts, never the bare `entities` package — why: htmlparser2 needs its nested v7 (`entities/decode`).
 
 - Profile completion uses Cloud Auth email OTP with server-only confirmation fields; never set phone_verified from email or accept fixed test codes, so contact completion cannot claim phone ownership. Preserve legacy phone completion and phone-based reputation/referral checks.
+- Persist contact phone immutability in a server-only timestamp and enforce it in the profile trigger and onboarding; keep it independent of email confirmation resets so changing email cannot unlock the contact number.

@@ -1,4 +1,4 @@
-import { hasVerifiedContact } from "@/lib/contact-verification";
+import { hasVerifiedContact, isContactPhoneLocked } from "@/lib/contact-verification";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { isEffectivelyComplete } from "@/lib/profile-completion";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -1878,7 +1878,7 @@ function Onboarding() {
                 setOtpSent(false);
                 setOtpError(null);
               }}
-              disabled={profile?.phone_verified === true}
+              disabled={isContactPhoneLocked(profile) || phoneVerifiedOptimistic || otpBusy}
             />
             {hasVerifiedContact(profile) || phoneVerifiedOptimistic ? (
               <div className="mt-1.5 space-y-1">
@@ -2019,6 +2019,7 @@ function Onboarding() {
                             otpJustVerifiedRef.current = true;
                             patchProfile({
                               email_otp_verified_at: new Date().toISOString(),
+                              contact_phone_locked_at: new Date().toISOString(),
                               email_otp_verified_address: res.email ?? user?.email,
                               email: res.email ?? user?.email ?? null,
                             });

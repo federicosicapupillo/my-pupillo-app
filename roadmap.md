@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Cellulare bloccato dopo OTP email: controllo immediato nell’onboarding, blocco persistente anche cambiando email, salvataggi invariati. 8 test unitari e 22 controlli sui due ruoli passati; campo disabilitato verificato dopo ricaricamento con account temporaneo e conferma email predisposta. Ricezione/inserimento OTP reale non ripetuti.
+
 - [x] Rientro Google su /auth anziché homepage; navigazione dopo caricamento ruolo/profilo, profili incompleti su onboarding. Verifica OAuth esterna completa richiede consenso Google dell'utente.
 
 - [x] OTP di completamento profilo via Cloud Auth/email dell’account; eliminato codice simulato, cellulare non verificato, controlli profilo aggiornati. 88 test passati, salvataggio entrambi ruoli e rifiuto codice errato verificati; account di prova rimosso.
