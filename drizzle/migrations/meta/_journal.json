@@ -162,6 +162,13 @@
       "when": 1794664653872,
       "tag": "0022_curriculum_recognition_rubric_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794665387447,
+      "tag": "0023_curriculum_experience_recognition_v3",
+      "breakpoints": true
     }
   ]
 }

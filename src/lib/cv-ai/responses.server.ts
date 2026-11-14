@@ -10,6 +10,7 @@ import {
 
 export const cvOutput = z.object({
   evaluable: z.boolean(), doubts: z.boolean(),
+  work_experiences: z.number().int().min(0), managed_business_or_team: z.boolean(),
   experience: z.number(), skills: z.number(), responsibility: z.number(), training: z.number(), clarity: z.number(),
   evidence: z.array(z.object({ criterion: z.string(), quote: z.string(), explanation: z.string() })),
 });
