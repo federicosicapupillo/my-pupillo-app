@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { CV_CRITERIA, CV_STATUS, canPublishCurriculum } from '@/lib/curriculum-assessment';
+import { CV_CRITERIA, CV_STATUS, CV_RECOGNITION_DESCRIPTION, canPublishCurriculum } from '@/lib/curriculum-assessment';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { useCurriculumAnalysis } from '@/lib/use-curriculum-analysis';
@@ -58,7 +58,7 @@ export function OwnCurriculumAssessment({ workerId }: { workerId: string }) {
       <h3 className="font-semibold">Valutazione curriculum Pupillo</h3>
       <Button type="button" variant="ghost" size="icon" title="Aggiorna valutazione" aria-label="Aggiorna valutazione" disabled={loading || busy} onClick={() => void load()}><RefreshCw className="h-4 w-4" /></Button>
     </div>
-    <p className="text-xs text-muted-foreground">Valutazione delle informazioni dichiarate per la mansione scelta, secondo criteri di esperienza, competenze, responsabilità, formazione e informazioni sufficienti. Non è una recensione di un turno e non modifica la media delle recensioni.</p>
+    <p className="text-xs text-muted-foreground">{CV_RECOGNITION_DESCRIPTION} Le stelle sono separate dalle recensioni dei turni; il punteggio privato indica le informazioni rilevate nel curriculum.</p>
     {loading ? <p className="text-sm text-muted-foreground">Caricamento valutazione…</p> : error ? <p role="alert" className="text-sm text-destructive">Impossibile leggere la valutazione. Riprova con il pulsante di aggiornamento.</p> : !active ? <div className="space-y-2">
       <p className="text-sm text-muted-foreground">Non hai una valutazione attiva del curriculum.</p>
       <Link to="/profile"><Button type="button" variant="outline" size="sm">Gestisci curriculum</Button></Link>
@@ -66,7 +66,7 @@ export function OwnCurriculumAssessment({ workerId }: { workerId: string }) {
       <p className="text-sm">{analyzing ? 'Analisi in corso' : CV_STATUS[assessment.status] ?? 'In verifica'} · {assessment.role_label}</p>
       {(analysisError || assessment.error_message) && <p role="alert" className="text-sm text-destructive">{analysisError || assessment.error_message}</p>}
       {assessment.status === 'error' && <Button type="button" variant="outline" disabled={analyzing} onClick={() => void run()}>Riprova analisi</Button>}
-      {assessment.total !== null ? <>
+      {assessment.evaluable && assessment.total !== null ? <>
         <div className="flex flex-wrap items-center gap-3"><span className="text-3xl font-bold tabular-nums">{assessment.total}<span className="text-base font-normal text-muted-foreground">/100</span></span>{assessment.stars && <CurriculumStars stars={assessment.stars} />}</div>
         <p className="text-xs text-muted-foreground">Punteggio calcolato automaticamente da Pupillo sui criteri indicati, senza verifica manuale delle esperienze dichiarate.</p>
         <dl className="space-y-1 text-xs">{CV_CRITERIA.map(c => {

@@ -34,3 +34,4 @@
 
 - Profile completion uses Cloud Auth email OTP with server-only confirmation fields; never set phone_verified from email or accept fixed test codes, so contact completion cannot claim phone ownership. Preserve legacy phone completion and phone-based reputation/referral checks.
 - Persist contact phone immutability in a server-only timestamp and enforce it in the profile trigger and onboarding; keep it independent of email confirmation resets so changing email cannot unlock the contact number.
+- Version curriculum recognition rules in rubric_version and enforce matching publication checks in TypeScript and SQL; retain legacy rubric behavior and never retroactively rewrite scores or consent. Sanitize account-role labels before selecting an assessment occupation.

@@ -8,10 +8,10 @@ describe('Mansione automatica senza richiesta separata', () => {
 describe('Valutazione curriculum', () => {
   it('assegna cinque stelle a 85 punti', () => expect(scoreCurriculum({ experience: 30, skills: 25, responsibility: 15, training: 5, clarity: 10 }, true, false)).toEqual({ total: 85, stars: 5 }));
   it('assegna quattro stelle a 70 punti', () => expect(scoreCurriculum({ experience: 25, skills: 20, responsibility: 10, training: 5, clarity: 10 }, true, false)).toEqual({ total: 70, stars: 4 }));
-  it('non pubblica sotto 70 punti', () => expect(scoreCurriculum({ experience: 24, skills: 20, responsibility: 10, training: 5, clarity: 10 }, true, false).stars).toBeNull());
+  it('riconosce quattro stelle anche sotto 70 punti', () => expect(scoreCurriculum({ experience: 24, skills: 20, responsibility: 10, training: 5, clarity: 10 }, true, false).stars).toBe(4));
   it('non valuta documenti illeggibili', () => expect(scoreCurriculum({ experience: 30, skills: 30, responsibility: 20, training: 10, clarity: 10 }, false, false).stars).toBeNull());
-  it('non pubblica dubbi irrisolti', () => expect(scoreCurriculum({ experience: 30, skills: 30, responsibility: 20, training: 10, clarity: 10 }, true, true).stars).toBeNull());
-  it('richiede informazioni sufficienti', () => expect(scoreCurriculum({ experience: 30, skills: 30, responsibility: 20, training: 10, clarity: 4 }, true, false).stars).toBeNull());
+  it('mantiene quattro stelle di base in presenza di dubbi', () => expect(scoreCurriculum({ experience: 30, skills: 30, responsibility: 20, training: 10, clarity: 10 }, true, true).stars).toBe(4));
+  it('non esclude un curriculum leggibile poco dettagliato', () => expect(scoreCurriculum({ experience: 30, skills: 30, responsibility: 20, training: 10, clarity: 4 }, true, false).stars).toBe(5));
   it('rifiuta valori fuori criterio', () => expect(() => scoreCurriculum({ experience: 31, skills: 20, responsibility: 10, training: 5, clarity: 10 }, true, false)).toThrow());
 });
 describe('Scelta pubblicazione curriculum', () => {
@@ -43,4 +43,11 @@ describe('Pubblicazione automatica con consenso esplicito', () => {
   it('non pubblica retroattivamente senza consenso alla pubblicazione', () => expect(shouldAutoPublishCurriculum(completed, true, false)).toBe(false));
   it('non pubblica dopo sostituzione del documento', () => expect(shouldAutoPublishCurriculum(completed, false, true)).toBe(false));
   it('non pubblica dopo rimozione del consenso', () => expect(shouldAutoPublishCurriculum({ ...completed, consent_at: null }, true, true)).toBe(false));
+});
+describe('Riconoscimento inclusivo versione 2', () => {
+  const zero = { experience: 0, skills: 0, responsibility: 0, training: 0, clarity: 0 };
+  it('garantisce quattro stelle senza gonfiare il punteggio', () => expect(scoreCurriculum(zero, true, true)).toEqual({ total: 0, stars: 4 }));
+  it('non assegna un falso zero a un PDF non valutabile', () => expect(scoreCurriculum(zero, false, true)).toEqual({ total: null, stars: null }));
+  it('pubblica quattro stelle di base con consenso anche a zero punti', () => expect(shouldAutoPublishCurriculum({ rubric_version: '2', status: 'approved', consent_at: '2026-11-14', evaluable: true, doubts: true, total: 0, stars: 4, scores: zero }, true, true)).toBe(true));
+  it('corregge worker con la mansione del profilo', () => expect(automaticCurriculumRole('worker', 'Cameriere')).toBe('Cameriere'));
 });

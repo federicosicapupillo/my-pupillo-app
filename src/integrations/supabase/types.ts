@@ -3024,6 +3024,12 @@ export type Database = {
         Args: { _amount: number; _reason: string; _reference_id?: string }
         Returns: boolean
       }
+      curriculum_rating_eligible: {
+        Args: {
+          a: Database["public"]["Tables"]["worker_curriculum_assessments"]["Row"]
+        }
+        Returns: boolean
+      }
       delete_my_account: {
         Args: { _custom_reason?: string; _reason?: string }
         Returns: Json

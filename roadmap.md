@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Riconoscimento curriculum: quattro stelle di base per documenti leggibili, cinque da 85 punti senza dubbi; mansione «worker» sanificata e falso zero eliminato. 42 test passati; PDF reale nell’onboarding temporaneo: 83/100, quattro stelle persistenti dopo ricaricamento, consenso salvato; account di prova eliminati, nessun risultato storico riscritto. Lettura pubblica non verificata perché i profili di prova non completavano gli ulteriori requisiti; nessuna pubblicazione eseguita.
+
 - [x] Cellulare bloccato dopo OTP email: controllo immediato nell’onboarding, blocco persistente anche cambiando email, salvataggi invariati. 8 test unitari e 22 controlli sui due ruoli passati; campo disabilitato verificato dopo ricaricamento con account temporaneo e conferma email predisposta. Ricezione/inserimento OTP reale non ripetuti.
 
 - [x] Rientro Google su /auth anziché homepage; navigazione dopo caricamento ruolo/profilo, profili incompleti su onboarding. Verifica OAuth esterna completa richiede consenso Google dell'utente.
