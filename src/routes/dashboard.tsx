@@ -444,12 +444,12 @@ function DashboardInner() {
       </AlertDialog>
 
       {role === "restaurant" && (
-        <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl border bg-card p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <div className="mt-6 grid min-w-0 gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Coins className="h-5 w-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-sm text-muted-foreground">Saldo crediti</div>
               <div className="text-2xl font-semibold">{profile?.credits ?? 0}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
@@ -457,7 +457,7 @@ function DashboardInner() {
               </div>
             </div>
           </div>
-          <Link to="/billing"><Button variant="outline" className="gap-2"><Plus className="h-4 w-4" />Acquista crediti</Button></Link>
+          <Link to="/billing" className="justify-self-start"><Button variant="outline" className="gap-2"><Plus className="h-4 w-4" />Acquista crediti</Button></Link>
         </div>
       )}
 

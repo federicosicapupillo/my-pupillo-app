@@ -46,10 +46,10 @@ export function WorkerReputationSummary({ workerId }: { workerId: string }) {
 
   return (
     <div className="rounded-2xl border bg-card p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-base font-semibold">
-            <Award className="h-4 w-4 text-primary" />
+            <Award className="h-4 w-4 shrink-0 text-primary" />
             Reputation Score
             <ReputationLevelsExplanation />
           </div>
@@ -57,7 +57,7 @@ export function WorkerReputationSummary({ workerId }: { workerId: string }) {
             Basato sulle recensioni ricevute dai ristoratori.
           </p>
         </div>
-        <Link to="/profile">
+        <Link to="/profile" className="justify-self-start sm:justify-self-end">
           <Button variant="ghost" size="sm" className="gap-1">
             Vedi recensioni <ArrowRight className="h-3.5 w-3.5" />
           </Button>

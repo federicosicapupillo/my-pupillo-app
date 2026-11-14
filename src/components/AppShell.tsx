@@ -152,11 +152,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-transparent">
       <PaymentTestModeBanner />
       <header className="sticky top-0 z-10 border-b border-white/10 bg-[oklch(0.13_0.02_280/0.65)] backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3 2xl:flex 2xl:justify-between">
           <Link
             to={homeTo as never}
             aria-label="Vai alla home page"
-            className="flex items-center cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow"
+            className="flex min-w-0 shrink-0 items-center cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-shadow"
             onKeyDown={(e) => {
               if (e.key === " " || e.code === "Space") {
                 e.preventDefault();
@@ -170,7 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="h-12 w-auto object-contain md:h-14 drop-shadow-[0_0_12px_oklch(0.93_0.22_120/0.35)]"
             />
           </Link>
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden 2xl:flex min-w-0 items-center gap-1">
             {visibleItems.map((i) => navLocked ? (
               <TooltipProvider key={i.to} delayDuration={150}>
                 <Tooltip>
@@ -197,12 +197,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Button
               ref={mobileToggleRef}
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="h-11 w-11 2xl:hidden"
               aria-label={mobileOpen ? "Chiudi menu" : "Apri menu"}
               aria-expanded={mobileOpen}
               aria-controls="mobile-nav"
@@ -216,7 +216,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {mobileOpen ? <PupilloClose size={22} /> : <PupilloMenu size={22} />}
             </Button>
-            <span className="hidden sm:block text-xs text-muted-foreground">{profile?.full_name || user?.email}</span>
+            <span className="hidden max-w-32 truncate text-xs text-muted-foreground sm:block 2xl:hidden">{profile?.full_name || user?.email}</span>
             {role && (
               <span className="hidden sm:inline-flex text-[10px] rounded-full bg-accent text-accent-foreground px-2 py-1 capitalize">{role}</span>
             )}
@@ -238,14 +238,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <PupilloAvatar name={profile?.full_name} email={user.email} />
               </Link>
             )}
-            <Button variant="ghost" size="icon" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" aria-label="Esci dall’account" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
           </div>
         </div>
         <nav
           ref={mobileNavRef}
           id="mobile-nav"
           hidden={!mobileOpen}
-          className="md:hidden border-t overflow-x-auto"
+          className="2xl:hidden max-h-[calc(100dvh-8rem)] overflow-y-auto border-t"
           aria-label="Menu di navigazione"
           onKeyDown={handleMobileNavKey}
         >
@@ -260,7 +260,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     title={ONBOARDING_LOCKED_MESSAGE}
                     className="block rounded-md cursor-not-allowed"
                   >
-                    <Button variant="ghost" size="sm" disabled tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap pointer-events-none opacity-50">
+                    <Button variant="ghost" size="sm" disabled tabIndex={-1} className="h-11 w-full justify-start gap-2 whitespace-nowrap pointer-events-none opacity-50">
                       <i.icon className="h-4 w-4" />{i.label}
                     </Button>
                   </span>
@@ -276,7 +276,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   onClick={() => setMobileOpen(false)}
                 >
-                  <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="w-full justify-start gap-2 whitespace-nowrap">
+                  <Button variant={isActive ? "secondary" : "ghost"} size="sm" tabIndex={-1} className="h-11 w-full justify-start gap-2 whitespace-nowrap">
                     <i.icon className="h-4 w-4" />{i.label}
                     {i.to === "/messages" && unreadMsgs > 0 && (
                       <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
@@ -318,7 +318,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       )}
-      <main className="mx-auto max-w-7xl px-3 sm:px-4 py-4 sm:py-8">{children}</main>
+      <main className="mx-auto min-w-0 max-w-7xl px-3 sm:px-4 py-4 sm:py-8">{children}</main>
       <AssistantFab />
     </div>
   );
@@ -326,12 +326,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+    <div className="mb-4 grid min-w-0 grid-cols-1 items-start gap-3 sm:mb-6 sm:flex sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight break-words">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="min-w-0 sm:shrink-0">{action}</div>}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Controllo mobile: 32 schermate pubbliche e 76 schermate dei due ruoli/onboarding verificate a 320, 375, 768 e 1280 px. Corretti menu tablet, schede dashboard, passi onboarding, barra salvataggio e ingombro nuovo annuncio; assistenza separata dal salvataggio, finestre adattate e campi anti-zoom iOS. Salvataggio data e rilettura, menu tablet e CTA ristoratore verificati; 22 test passati, build OK, tre account temporanei eliminati. Liste senza attività nella prova: dettagli di candidature/turni esistenti non verificati; nessuna modifica a dati reali né pubblicazione.
+
 - [x] Cinque stelle ad almeno due lavori dichiarati o gestione attività/team, quattro agli inizi; punteggi reali e rubriche precedenti invariati. 49 test passati; PDF allegato analizzato nell’onboarding temporaneo: 86/100 e cinque stelle, persistenti dopo ricaricamento; account rimosso. Lettura su profilo completo non ripetuta per requisiti anagrafici mancanti nella prova; nessuna pubblicazione né modifica del risultato dell’utente.
 
 - [x] Riconoscimento curriculum: quattro stelle di base per documenti leggibili, cinque da 85 punti senza dubbi; mansione «worker» sanificata e falso zero eliminato. 42 test passati; PDF reale nell’onboarding temporaneo: 83/100, quattro stelle persistenti dopo ricaricamento, consenso salvato; account di prova eliminati, nessun risultato storico riscritto. Lettura pubblica non verificata perché i profili di prova non completavano gli ulteriori requisiti; nessuna pubblicazione eseguita.

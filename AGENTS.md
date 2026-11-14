@@ -1,5 +1,7 @@
 # Project rules
 
+- Keep shared navigation collapsed below 2xl and use shrink-safe grids for mobile headers and action rows; size mobile dialogs with dynamic viewport units — why: both role menus exceed tablet widths and fixed save actions must remain fully visible.
+
 - Social OAuth returns to the public /auth page; its session-aware effect waits for role/profile hydration before navigating — why: returning to / leaves full-page Google signups stranded on the homepage.
 
 - Separate worker map markers in screen space at each zoom using map-marker-layout; keep sanitized geographic coordinates unchanged to preserve privacy and make overlapping workers selectable.

@@ -50,7 +50,14 @@ import {
 } from "@/lib/form-field-validation";
 
 export const Route = createFileRoute("/ristoratore/annunci/nuovo")({
-  head: () => ({ meta: [{ title: "Crea Nuovo Annuncio — Pupillo" }] }),
+  head: () => ({ meta: [
+    { title: "Crea nuovo annuncio — Pupillo" },
+    { name: "description", content: "Pubblica un turno su Pupillo con orari, compenso e requisiti del tuo locale." },
+    { property: "og:title", content: "Crea nuovo annuncio — Pupillo" },
+    { property: "og:description", content: "Pubblica un turno su Pupillo con orari, compenso e requisiti del tuo locale." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (s: Record<string, unknown>): { reuse?: string } => ({ reuse: typeof s.reuse === "string" ? s.reuse : undefined }),
   component: () => (
     <RequireAuth>
@@ -1218,7 +1225,7 @@ function NewRestaurantJobRequest() {
           </section>
         )}
 
-        <div className="sticky bottom-0 z-50 -mx-4 border-t bg-background/95 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="sticky bottom-0 z-50 -mx-3 border-t bg-background/95 px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-4 sm:px-4">
           {/* Mobile: primary + overflow menu */}
           <div className="mx-auto flex max-w-5xl items-center gap-2 sm:hidden">
             <Button type="button" className="flex-1 gap-2" disabled={busy} onClick={() => requestSave("pubblicato")}>

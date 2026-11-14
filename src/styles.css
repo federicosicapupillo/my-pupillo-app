@@ -155,6 +155,19 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (max-width: 639px) {
+    /* Keep form focus from zooming the entire page in mobile Safari. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select {
+      font-size: max(1rem, 1em);
+    }
+  }
+
   /* Pupillo neon atmosphere — only in dark mode */
   html:not(.light) body {
     background-image:

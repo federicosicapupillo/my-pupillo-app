@@ -711,8 +711,8 @@ function AvailabilityPage() {
       {/* ───────── HEADER ───────── */}
       <header className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-card/70 px-4 py-3.5 sm:px-5">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">Le mie disponibilità</h1>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
+          <h1 className="break-words text-xl font-bold tracking-tight sm:text-2xl">Le mie disponibilità</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
             Imposta quando sei disponibile a lavorare.
           </p>
         </div>
@@ -771,21 +771,21 @@ function AvailabilityPage() {
           {/* ── Disponibile ora ── */}
           {availableNowEnabled && (
             <Card className="border-primary/20">
-              <CardContent className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3.5">
+              <CardContent className="grid grid-cols-1 items-center gap-3 p-3.5 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
                     <Zap className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold">Disponibile ora</div>
-                    <div className="truncate text-xs text-muted-foreground">
+                    <div className="text-sm font-semibold">Disponibile ora</div>
+                    <div className="text-xs text-muted-foreground">
                       {availableNow && availableNowUntil
                         ? `Attivo fino alle ${new Date(availableNowUntil).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`
                         : "Ricevi proposte immediate, fuori calendario."}
                     </div>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-start">
                   <Select value={availableNowDuration} onValueChange={(v) => setAvailableNowDuration(v as "2h" | "today" | "tonight")}>
                     <SelectTrigger className="h-9 w-[140px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1579,14 +1579,14 @@ function AvailabilityPage() {
       {/* ───────── Sticky save bar (mobile) ───────── */}
       <div className="sm:hidden h-24" aria-hidden />
       <div className={cn(
-        "sm:hidden fixed bottom-0 inset-x-0 z-40 border-t p-4 transition-colors",
+        "sm:hidden fixed bottom-0 inset-x-0 z-40 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-colors",
         dirty
           ? "border-amber-500/30 bg-background/98 backdrop-blur supports-[backdrop-filter]:bg-background/90 shadow-[0_-8px_30px_-10px_rgba(0,0,0,0.3)]"
           : "border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
       )}>
-        <div className="flex items-center gap-3">
+        <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[auto_minmax(0,1fr)] min-[400px]:items-center">
           <span className={cn(
-            "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold shrink-0",
+            "inline-flex justify-self-start items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold shrink-0",
             SAVE_PILL.cls,
           )}>
             <SAVE_PILL.Icon className={cn("h-3 w-3", SAVE_PILL.spin && "animate-spin")} />
@@ -1595,7 +1595,7 @@ function AvailabilityPage() {
           <Button
             onClick={saveGated}
             disabled={saving || loading || !dirty}
-            className={cn("flex-1 gap-2 h-12 text-base font-semibold", gatedOpacity, dirty && "shadow-neon")}
+            className={cn("w-full min-w-0 gap-2 h-12 text-base font-semibold", gatedOpacity, dirty && "shadow-neon")}
           >
             <Save className="h-4 w-4" />
             {saving ? "Salvataggio..." : "Salva disponibilità"}

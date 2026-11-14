@@ -42,8 +42,8 @@ export function OnboardingStatusCard({
       }}
     >
       <div className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+          <div className="min-w-0">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-[oklch(0.93_0.22_120/0.4)] bg-[oklch(0.93_0.22_120/0.08)] px-2.5 py-1 text-[11px] font-semibold text-[oklch(0.93_0.22_120)]">
               <Sparkles className="h-3 w-3" />
               {role === "restaurant" ? "Ristoratore" : role === "worker" ? "Lavoratore" : "Profilo"}
@@ -55,7 +55,7 @@ export function OnboardingStatusCard({
               {allDone ? "Tutto in regola: puoi iniziare a usare Pupillo." : subtitle}
             </p>
           </div>
-          <div className="text-right">
+          <div className="shrink-0 text-right">
             <div className="text-3xl font-extrabold leading-none text-neon-gradient">{pct}%</div>
             <div className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
               {done}/{total} step
@@ -77,7 +77,7 @@ export function OnboardingStatusCard({
         </div>
 
         {/* Steps */}
-        <ol className="mt-5 grid gap-2">
+        <ol className="mt-5 grid min-w-0 grid-cols-1 gap-2">
           {steps.map((s, i) => (
             <StepRow key={s.id} index={i + 1} step={s} />
           ))}
@@ -138,7 +138,7 @@ function StepRow({ index, step }: { index: number; step: OnboardingStep }) {
   const inner: ReactNode = (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 transition-colors",
+        "grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto]",
         status !== "locked" && "hover:border-white/20 hover:bg-white/[0.06]",
       )}
     >
@@ -153,18 +153,18 @@ function StepRow({ index, step }: { index: number; step: OnboardingStep }) {
           <Icon className={cn("h-4 w-4 shrink-0", tone)} />
           <span
             className={cn(
-              "truncate text-sm font-medium",
+              "min-w-0 break-words text-sm font-medium",
               status === "locked" ? "text-muted-foreground" : "text-foreground",
             )}
           >
             {label}
           </span>
         </div>
-        {hint && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</p>}
+        {hint && <p className="mt-0.5 break-words text-[11px] text-muted-foreground">{hint}</p>}
       </div>
       <span
         className={cn(
-          "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+          "col-start-2 justify-self-start rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider sm:col-start-auto sm:shrink-0 sm:justify-self-end",
           badge.cls,
         )}
       >
