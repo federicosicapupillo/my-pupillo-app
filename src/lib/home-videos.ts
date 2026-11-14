@@ -5,8 +5,8 @@
  */
 import workerVideo from "@/assets/pupillo-lavoratori-finale.mp4.asset.json";
 import workerPoster from "@/assets/pupillo-lavoratori-finale-poster.jpg.asset.json";
-import restaurantVideo from "@/assets/pupillo-ristoratori-stream.mp4.asset.json";
-import restaurantPoster from "@/assets/pupillo-ristoratori-poster.jpg.asset.json";
+import restaurantVideo from "@/assets/pupillo-ristoratori-finale.mp4.asset.json";
+import restaurantPoster from "@/assets/pupillo-ristoratori-finale-poster.jpg.asset.json";
 
 export type HomeVideo = {
   src: string | null;
