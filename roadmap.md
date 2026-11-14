@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] OTP di completamento profilo via Cloud Auth/email dell’account; eliminato codice simulato, cellulare non verificato, controlli profilo aggiornati. 88 test passati, salvataggio entrambi ruoli e rifiuto codice errato verificati; account di prova rimosso.
+- [ ] Verifica ricezione email OTP brandizzata e inserimento codice reale: richiede pubblicazione dei modelli auth e codice ricevuto nella casella email; nessuna pubblicazione eseguita.
+
 - [x] Ricerca lavoratori lato ristoratore: stelle curriculum Pupillo in lista e profilo, tutte le 19 date salvate accessibili con «Vedi tutte» e sul profilo; lettura indipendente dal vecchio flag senza modificarlo. Verifica autenticata sul risultato reale a 4 stelle, 42 test passati, build OK; nessun dato o punteggio modificato, non pubblicato.
 
 - [x] Valutazione automatica al caricamento/sostituzione senza richiesta separata né scelta della mansione; consenso raccolto prima dell’upload. Verificato ricaricando lo stesso PDF reale: analisi completata a 73/100, 4 stelle, risultato persistente e visibile ai ristoratori; 39 test passati, build OK, mobile senza overflow. Non pubblicato.

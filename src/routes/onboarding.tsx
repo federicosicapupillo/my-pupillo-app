@@ -1,3 +1,4 @@
+import { hasVerifiedContact } from "@/lib/contact-verification";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { isEffectivelyComplete } from "@/lib/profile-completion";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -301,7 +302,7 @@ function Onboarding() {
   const lastNameEditableRef = useRef<boolean | null>(null);
   const [otpCooldown, setOtpCooldown] = useState(0);
   // Optimistic local override: set immediately after a successful OTP verify
-  // so the "Numero WhatsApp verificato" step flips to "done" and CTAs unlock
+  // so the "Email confermata e cellulare inserito" step flips to "done" and CTAs unlock
   // without waiting for the async refresh() of the auth context.
   const [phoneVerifiedOptimistic, setPhoneVerifiedOptimistic] = useState(false);
 
@@ -622,7 +623,7 @@ function Onboarding() {
     // Strict: step is "done" ONLY when the phone is stored on the profile
     // AND phone_verified=true. Either field missing → step remains "todo"
     // so the user must actually complete the OTP flow in this page.
-    const phoneVerifiedEffective = profile?.phone_verified === true || phoneVerifiedOptimistic;
+    const phoneVerifiedEffective = hasVerifiedContact(profile) || phoneVerifiedOptimistic;
     const phoneStored = !!profile?.phone || isValidPhone(form.phone_code, form.phone_number);
     const phoneDone = phoneStored && phoneVerifiedEffective;
     if (typeof window !== "undefined") {
@@ -657,7 +658,7 @@ function Onboarding() {
         { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
         {
           id: "phone",
-          label: "Numero WhatsApp verificato",
+          label: "Email confermata e cellulare inserito",
           status: phoneDone ? "done" : "todo",
           href: phoneDone ? undefined : "#sec-phone",
         },
@@ -709,7 +710,7 @@ function Onboarding() {
       { id: "account", label: "Account creato", status: accountDone ? "done" : "todo" },
       {
         id: "phone",
-        label: "Numero WhatsApp verificato",
+        label: "Email confermata e cellulare inserito",
         status: phoneDone ? "done" : "todo",
         href: phoneDone ? undefined : "#sec-phone",
       },
@@ -968,8 +969,8 @@ function Onboarding() {
       scrollToField("phone");
       return;
     }
-    if (role !== "admin" && !(profile?.phone_verified || phoneVerifiedOptimistic)) {
-      toast.error("Verifica il numero di cellulare prima di completare il profilo.");
+    if (role !== "admin" && !(hasVerifiedContact(profile) || phoneVerifiedOptimistic)) {
+      toast.error("Conferma il codice ricevuto via email prima di completare il profilo.");
       markErr("phone");
       scrollToField("phone");
       return;
@@ -1860,7 +1861,7 @@ function Onboarding() {
             <div>
               <Label className="text-base font-semibold">Numero di cellulare *</Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Per completare il profilo e usare Pupillo devi verificare il tuo numero di cellulare.
+                Inserisci il cellulare di contatto e conferma il codice che riceverai all’email del tuo account: {user?.email}. Il codice verifica l’email, non il cellulare.
               </p>
             </div>
             <PhoneInput
@@ -1871,31 +1872,17 @@ function Onboarding() {
                 setForm({ ...form, phone_code: c });
                 setOtpSent(false);
                 setOtpError(null);
-                if (!profile?.phone_verified) setPhoneVerifiedOptimistic(false);
               }}
               onNumberChange={(n) => {
                 setForm({ ...form, phone_number: n });
                 setOtpSent(false);
                 setOtpError(null);
-                if (!profile?.phone_verified) setPhoneVerifiedOptimistic(false);
               }}
-              disabled={!!profile?.phone_verified || phoneVerifiedOptimistic}
+              disabled={profile?.phone_verified === true}
             />
-            {profile?.phone_verified || phoneVerifiedOptimistic ? (
+            {hasVerifiedContact(profile) || phoneVerifiedOptimistic ? (
               <div className="mt-1.5 space-y-1">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  ✓ Numero verificato correttamente
-                </span>
-                <p className="text-xs text-muted-foreground">
-                  Per modificare il numero di cellulare verificato,{" "}
-                  <a
-                    href="mailto:supporto@pupillo.app?subject=Modifica%20numero%20di%20cellulare%20verificato"
-                    className="text-primary underline"
-                  >
-                    contatta il supporto clienti
-                  </a>
-                  .
-                </p>
+                <span className="text-sm font-medium text-primary">{profile?.phone_verified && !profile.email_otp_verified_at ? "✓ Verifica del contatto già completata" : "✓ Email confermata · cellulare di contatto inserito"}</span>
               </div>
             ) : (
               <div className="space-y-3 pt-1">
@@ -1933,7 +1920,7 @@ function Onboarding() {
                         }
                         setOtpSent(true);
                         setOtpCooldown(60);
-                        toast.success(res.simulated ? "Codice di test inviato (modalità preview)." : "Codice inviato via WhatsApp.");
+                        toast.success("Codice inviato all’email del tuo account.");
                       } finally {
                         setOtpBusy(false);
                         setOtpAction(null);
@@ -1949,19 +1936,19 @@ function Onboarding() {
                         Invio in corso…
                       </>
                     ) : (
-                      "Invia codice di verifica"
+                      "Invia OTP via email"
                     )}
                   </Button>
                 ) : (
                   <>
-                    <Label>Codice di verifica (6 cifre)</Label>
+                    <Label>Codice ricevuto via email</Label>
                     <Input
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      maxLength={6}
+                      maxLength={8}
                       value={otpCode}
                       onChange={(e) => {
-                        setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                        setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 8));
                         if (otpError) setOtpError(null);
                       }}
                       placeholder="000000"
@@ -1981,7 +1968,7 @@ function Onboarding() {
                         {otpError.kind === "expired"
                           ? "Codice scaduto. Richiedi un nuovo codice e riprova."
                           : otpError.kind === "invalid"
-                            ? "Codice non valido. Controlla le 6 cifre ricevute su WhatsApp."
+                            ? "Codice non valido. Controlla le cifre ricevute via email."
                             : otpError.message}
                       </p>
                     ) : null}
@@ -1990,8 +1977,8 @@ function Onboarding() {
                         type="button"
                         onClick={async () => {
                           if (otpInFlightRef.current) return;
-                          if (!/^\d{6}$/.test(otpCode)) {
-                            const msg = "Inserisci un codice di 6 cifre.";
+                          if (!/^\d{6,8}$/.test(otpCode)) {
+                            const msg = "Inserisci il codice ricevuto via email.";
                             toast.error(msg);
                             setOtpError({ kind: "invalid", message: msg });
                             return;
@@ -2019,20 +2006,21 @@ function Onboarding() {
                               setOtpError({ kind, message: raw });
                               return;
                             }
-                            toast.success("Numero verificato correttamente.");
+                            toast.success("Email confermata correttamente.");
                             setOtpCode("");
                             setOtpSent(false);
                             // Aggiorna lo step UI immediatamente — il refresh
                             // del contesto auth viene fatto in background.
                             setPhoneVerifiedOptimistic(true);
                             console.info(
-                              "[PUPILLO_PHONE_ONBOARDING_DEBUG] phone_verified=true (optimistic) applied to onboarding step",
+                              "[PUPILLO_ONBOARDING_DEBUG] email OTP confirmed",
                               { user_id: user?.id },
                             );
                             otpJustVerifiedRef.current = true;
                             patchProfile({
-                              phone_verified: true,
-                              phone_verified_at: new Date().toISOString(),
+                              email_otp_verified_at: new Date().toISOString(),
+                              email_otp_verified_address: res.email ?? user?.email,
+                              email: res.email ?? user?.email ?? null,
                             });
                           } finally {
                             setOtpBusy(false);
@@ -2040,7 +2028,7 @@ function Onboarding() {
                             otpInFlightRef.current = false;
                           }
                         }}
-                        disabled={otpBusy || otpCode.length !== 6}
+                        disabled={otpBusy || otpCode.length < 6}
                         aria-busy={otpAction === "verify"}
                       >
                         {otpAction === "verify" ? (

@@ -28,3 +28,5 @@
 - A new self-editable profile column must be added to BOTH `update_my_profile` allowlist and `profiles_guard_admin_columns` allowlist; verify with `scripts/e2e-onboarding-save.ts` (creates and deletes dedicated test users) — missing either silently breaks onboarding "Salva".
 - Notification emails are sent by a server sweep (`notification-email-sweep.server.ts`), never from the browser; `planNotificationEmail` decides which notifications are important, each notification is marked via `email_status`, and per-user opt-outs live in `notification_email_preferences` — why: notifications are created by DB triggers, so a single idempotent sweep covers every source.
 - Alias only the deep `entities/lib/*.js` paths to the hoisted v4 in vite.config.ts, never the bare `entities` package — why: htmlparser2 needs its nested v7 (`entities/decode`).
+
+- Profile completion uses Cloud Auth email OTP with server-only confirmation fields; never set phone_verified from email or accept fixed test codes, so contact completion cannot claim phone ownership. Preserve legacy phone completion and phone-based reputation/referral checks.

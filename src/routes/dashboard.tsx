@@ -1,3 +1,4 @@
+import { hasVerifiedContact } from "@/lib/contact-verification";
 import { formatDisplayLabel } from "@/lib/format-label";
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { BolognaLaunchBanner } from "@/components/BolognaLaunchBanner";
@@ -86,14 +87,14 @@ function DashboardInner() {
   // Promemoria: toast una volta per sessione (dedup centralizzato).
   useEffect(() => {
     if (!profile) return;
-    const phoneOk = !!profile.phone_verified;
+    const phoneOk = hasVerifiedContact(profile);
     const profileOk = !!profile.profile_completed;
     if (!phoneOk) {
-      toastOnce("Numero WhatsApp non verificato", {
+      toastOnce("Email da confermare", {
         key: "reminder:phone",
         variant: "warning",
-        guard: () => !profile.phone_verified,
-        description: "Verifica il numero dall'onboarding per attivare completamente l'account.",
+        guard: () => !hasVerifiedContact(profile),
+        description: "Conferma il codice via email durante il completamento del profilo.",
         action: { label: "Vai all'onboarding", onClick: () => nav({ to: "/onboarding" }) },
         duration: 8000,
       });
@@ -510,7 +511,7 @@ type WorkerHomeProps = {
 
 function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps) {
   const completedShifts = Number(profile?.completed_shifts ?? 0) || 0;
-  const phoneOk = !!profile?.phone_verified;
+  const phoneOk = hasVerifiedContact(profile);
   const profileOk = !!profile?.profile_completed;
   const reputationLevel = profile?.reputation_level ?? "new";
 
@@ -526,7 +527,7 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
   if (!phoneOk) {
     tasks.push({
       icon: ShieldCheck,
-      title: "Verifica il tuo numero",
+      title: "Conferma la tua email",
       desc: "Sblocca le candidature e la chat con i ristoratori.",
       to: { to: "/onboarding" },
       cta: "Verifica ora",

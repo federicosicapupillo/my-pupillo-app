@@ -16,6 +16,9 @@ export function PhoneVerificationGate({ children }: { children: ReactNode }) {
       profile: profile
         ? {
             phone_verified: profile.phone_verified ?? null,
+            email: profile.email,
+            email_otp_verified_at: profile.email_otp_verified_at,
+            email_otp_verified_address: profile.email_otp_verified_address,
             is_deleted: (profile as any).is_deleted ?? null,
             deleted_at: (profile as any).deleted_at ?? null,
           }

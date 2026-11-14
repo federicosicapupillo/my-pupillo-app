@@ -1,3 +1,4 @@
+import { hasVerifiedContact } from "./contact-verification";
 /**
  * Pure decision logic for the WhatsApp/phone verification gate that protects
  * operational routes (everything beyond auth/onboarding/profile/...).
@@ -36,6 +37,9 @@ export type PhoneGateInput = {
   profile:
     | {
         phone_verified: boolean | null;
+        email?: string | null;
+        email_otp_verified_at?: string | null;
+        email_otp_verified_address?: string | null;
         is_deleted?: boolean | null;
         deleted_at?: string | null;
       }
@@ -66,7 +70,7 @@ export function evaluatePhoneGate(input: PhoneGateInput): PhoneGateDecision {
   if (input.role === "admin") {
     return { action: "pass", reason: "admin-bypass" };
   }
-  if (input.profile && input.profile.phone_verified === false) {
+  if (input.profile && input.profile.phone_verified === false && !hasVerifiedContact(input.profile)) {
     return { action: "redirect", to: "/onboarding", reason: "phone-not-verified" };
   }
   return { action: "pass", reason: "ok" };

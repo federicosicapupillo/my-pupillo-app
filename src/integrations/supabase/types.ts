@@ -1136,6 +1136,8 @@ export type Database = {
           deletion_reason: string | null
           distinct_restaurants_count: number
           email: string | null
+          email_otp_verified_address: string | null
+          email_otp_verified_at: string | null
           email_summary_sent_at: string | null
           email_summary_status: string | null
           employees_count: number | null
@@ -1312,6 +1314,8 @@ export type Database = {
           deletion_reason?: string | null
           distinct_restaurants_count?: number
           email?: string | null
+          email_otp_verified_address?: string | null
+          email_otp_verified_at?: string | null
           email_summary_sent_at?: string | null
           email_summary_status?: string | null
           employees_count?: number | null
@@ -1488,6 +1492,8 @@ export type Database = {
           deletion_reason?: string | null
           distinct_restaurants_count?: number
           email?: string | null
+          email_otp_verified_address?: string | null
+          email_otp_verified_at?: string | null
           email_summary_sent_at?: string | null
           email_summary_status?: string | null
           employees_count?: number | null
@@ -3163,6 +3169,8 @@ export type Database = {
           deletion_reason: string | null
           distinct_restaurants_count: number
           email: string | null
+          email_otp_verified_address: string | null
+          email_otp_verified_at: string | null
           email_summary_sent_at: string | null
           email_summary_status: string | null
           employees_count: number | null

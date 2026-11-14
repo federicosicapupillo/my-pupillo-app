@@ -1,3 +1,4 @@
+import { hasVerifiedContact } from "@/lib/contact-verification";
 import { Link, useLocation } from "@tanstack/react-router";
 import { CheckCircle2, Circle, Phone, UserCircle2, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -9,7 +10,7 @@ export function ProfileStatusBanner() {
   const loc = useLocation();
   if (!profile) return null;
 
-  const phoneVerified = !!profile.phone_verified;
+  const phoneVerified = hasVerifiedContact(profile);
   const profileCompleted = !!profile.profile_completed;
   const allDone = phoneVerified && profileCompleted;
   const role = (profile as any).role as "restaurant" | "worker" | "admin" | undefined;
@@ -37,7 +38,7 @@ export function ProfileStatusBanner() {
     nextStep = {
       label: "Completa il profilo",
       to: "/onboarding",
-      description: "Verifica il numero WhatsApp e completa i dati richiesti.",
+      description: "Conferma il codice via email e completa i dati richiesti.",
     };
   } else if (!profileCompleted) {
     nextStep = {
@@ -76,7 +77,7 @@ export function ProfileStatusBanner() {
             {allDone ? "Profilo attivo e verificato" : "Stato del profilo"}
           </div>
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            <StatusItem ok={phoneVerified} icon={<Phone className="h-4 w-4" />} label="Telefono verificato" />
+            <StatusItem ok={phoneVerified} icon={<Phone className="h-4 w-4" />} label={profile.phone_verified ? "Telefono verificato" : "Email confermata"} />
             <StatusItem ok={profileCompleted} icon={<UserCircle2 className="h-4 w-4" />} label="Profilo completato" />
           </ul>
           {nextStep?.description && (

@@ -28,6 +28,18 @@ const PROFILE_UNVERIFIED = {
 };
 const PROFILE_VERIFIED = { ...PROFILE_UNVERIFIED, phone_verified: true };
 
+describe('OTP via email senza verifica del cellulare', () => {
+  it('sblocca il completamento tramite email confermata, lasciando phone_verified falso', () => {
+    const profile = { ...PROFILE_UNVERIFIED, email: 'owner@example.test', email_otp_verified_address: 'owner@example.test', email_otp_verified_at: '2026-11-14T00:00:00Z' };
+    expect(evaluatePhoneGate({ loading: false, extrasLoaded: true, user: USER, profile, role: 'worker', pathname: '/messages' }).action).toBe('pass');
+    expect(profile.phone_verified).toBe(false);
+  });
+  it('non sblocca con una verifica per una vecchia email', () => {
+    const profile = { ...PROFILE_UNVERIFIED, email: 'new@example.test', email_otp_verified_address: 'old@example.test', email_otp_verified_at: '2026-11-14T00:00:00Z' };
+    expect(evaluatePhoneGate({ loading: false, extrasLoaded: true, user: USER, profile, role: 'restaurant', pathname: '/dashboard' }).action).toBe('redirect');
+  });
+});
+
 const OPERATIONAL_PATHS = [
   "/dashboard",
   "/ristoratore/annunci",
