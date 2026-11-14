@@ -19,6 +19,7 @@
 - Store optional worker curricula separately from profile completion fields in private owner-only storage; validate PDF bytes server-side and keep upload independent of onboarding completion. Each consented upload requests assessment automatically using the previous assessment role, profile role or hospitality fallback, without a separate role/request form; obtain fresh analysis/publication consent before uploading to avoid silently reusing legacy consent.
 
 - Keep residence region/province selectors separate from operational-area configuration; onboarding start-city rules are narrower than job geography, so national residence choices never authorize a work area.
+- Restrict direct reads of launch-area configuration tables to admins; ordinary selectors use the shared catalogue and existing validation RPCs, so signup cannot expose administrative configuration.
 
 - External read-only KPI feed lives at `src/routes/api/public/jarvis-kpi.ts`, gated by the `X-Jarvis-Key` header vs the `JARVIS_KPI_KEY` secret and returning only aggregates — why: internal dashboard access without exposing PII or adding DB objects.
 - Referral linking happens in the database (`handle_new_user` reads `referral_code` from signup metadata; OAuth calls `register_referral` after role claim) via `_link_referral`, independent of the UI feature flag; only the credit award checks the flag — why: links must never depend on client sessions or UI visibility.

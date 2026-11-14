@@ -141,6 +141,13 @@
       "when": 1794617914244,
       "tag": "0019_onboarding_email_otp",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794662738919,
+      "tag": "0020_restrict_launch_configuration_reads_to_admin",
+      "breakpoints": true
     }
   ]
 }
