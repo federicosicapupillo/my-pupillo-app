@@ -31,7 +31,7 @@ export const MagicLinkEmail = ({
         <Img src="https://pupillo.life/__l5e/assets-v1/4628e952-8afc-427b-9f23-249916e20032/pupillo_logo.png" alt="Pupillo" width="160" style={{ height: "auto", marginBottom: "20px" }} />
         <Heading style={h1}>Il tuo codice Pupillo</Heading>
         <Text style={text}>Inserisci questo codice su Pupillo per confermare la tua email e proseguire.</Text>
-        {token ? <Text style={{ fontSize: '32px', fontFamily: 'Courier, monospace', fontWeight: 'bold', color: '#111111' }}>{token}</Text> : <Button style={button} href={confirmationUrl}>Accedi a Pupillo</Button>}
+        {token ? <Text style={{ fontSize: '40px', lineHeight: '48px', fontFamily: 'Courier, monospace', fontWeight: 700, color: '#111111', margin: '24px 0', textAlign: 'center' }}><strong>{token}</strong></Text> : <Button style={button} href={confirmationUrl}>Accedi a Pupillo</Button>}
         <Text style={footer}>
           Se non hai richiesto questo codice, ignora l’email. Non condividere il codice con altre persone.
         </Text>
