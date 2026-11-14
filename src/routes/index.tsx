@@ -125,7 +125,7 @@ function Index() {
                 Cerco personale
               </Link>
             }
-            note={promoActive ? "Gratis fino al 31/12/2026" : null}
+            note={promoActive ? "Nessun costo fino al 31/01/2027" : null}
             accent={VIOLET}
             video={<AudienceVideo video={HOME_VIDEOS.restaurant} accent={VIOLET} />}
             videoCaption="Per te che cerchi personale per il tuo locale."
