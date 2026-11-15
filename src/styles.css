@@ -473,3 +473,10 @@ html.light .leaflet-popup-tip {
   border: 1px solid oklch(0.85 0.01 270);
   box-shadow: 0 10px 30px -10px oklch(0.21 0.04 265 / 18%) !important;
 }
+
+/* Native dropdown lists: keep options readable on every browser */
+select option,
+select optgroup {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
