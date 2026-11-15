@@ -28,6 +28,7 @@ import {
 import { SpokenLanguagesEditor, normalizeSpokenLanguages, type SpokenLanguage } from "@/components/SpokenLanguages";
 import { VENUE_TYPES } from "@/lib/venue-types";
 import { PRICE_RANGE_OPTIONS } from "@/lib/price-range";
+import { RESTAURANT_ONBOARDING_COUNTRY } from "@/lib/restaurant-onboarding-navigation";
 import {
   ITALIAN_LOCATIONS,
   citiesForProvince,
@@ -809,7 +810,7 @@ function Onboarding() {
         city: pick((profile as any).city, f.city),
         province: pick((profile as any).province, f.province),
         postal_code: pick((profile as any).postal_code, f.postal_code),
-        country: pick((profile as any).country, f.country) || "Italia",
+        country: role === "restaurant" ? RESTAURANT_ONBOARDING_COUNTRY : pick((profile as any).country, f.country) || "Italia",
         contact_person_first_name: pick((profile as any).contact_person_first_name, f.contact_person_first_name),
         contact_person_last_name: pick((profile as any).contact_person_last_name, f.contact_person_last_name),
         contact_person_role: pick((profile as any).contact_person_role, f.contact_person_role),
@@ -1523,7 +1524,7 @@ function Onboarding() {
         [form.address, form.street_number].filter(Boolean).join(" "),
         form.city,
         form.postal_code,
-        form.country,
+        RESTAURANT_ONBOARDING_COUNTRY,
       ]
         .filter(Boolean)
         .join(", ");
@@ -1559,7 +1560,7 @@ function Onboarding() {
             province: form.province || null,
             province_code: provinceCode(form.province),
             postal_code: form.postal_code || null,
-            country: form.country || null,
+            country: RESTAURANT_ONBOARDING_COUNTRY,
             latitude: restCoords.latitude,
             longitude: restCoords.longitude,
             service_area_lat: serviceArea.service_area_lat,
@@ -2256,36 +2257,8 @@ function Onboarding() {
                 />
               </div>
               <div>
-                <Label>Paese</Label>
-                <Select
-                  value={form.country || "Italia"}
-                  onValueChange={(v) => setForm({ ...form, country: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleziona paese" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      "Italia",
-                      "Francia",
-                      "Spagna",
-                      "Germania",
-                      "Svizzera",
-                      "Austria",
-                      "Regno Unito",
-                      "Albania",
-                      "Romania",
-                      "Marocco",
-                      "Egitto",
-                      "Tunisia",
-                      "Altro",
-                    ].map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="restaurant-country">Paese</Label>
+                <Input id="restaurant-country" value={RESTAURANT_ONBOARDING_COUNTRY} readOnly />
               </div>
             </div>
 
