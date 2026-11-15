@@ -169,6 +169,13 @@
       "when": 1794665387447,
       "tag": "0023_curriculum_experience_recognition_v3",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794735915914,
+      "tag": "0024_reviews_author_select_direct",
+      "breakpoints": true
     }
   ]
 }
