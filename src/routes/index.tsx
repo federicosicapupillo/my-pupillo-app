@@ -166,7 +166,7 @@ function Index() {
               <AccordionTrigger>Pupillo è gratuito?</AccordionTrigger>
               <AccordionContent className="text-muted-foreground">
                 Per i lavoratori Pupillo è sempre gratuito.
-                {promoActive ? " Per ristoranti, bar e locali è gratuito fino al 31/12/2026, nel periodo di lancio." : ""}
+                {promoActive ? " Per ristoranti, bar e locali è gratuito fino al 31/01/2027, nel periodo di lancio." : ""}
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="dove">
