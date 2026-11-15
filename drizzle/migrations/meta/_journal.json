@@ -176,6 +176,13 @@
       "when": 1794735915914,
       "tag": "0024_reviews_author_select_direct",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794741181774,
+      "tag": "0025_preserve_worker_restaurant_review_rating",
+      "breakpoints": true
     }
   ]
 }
