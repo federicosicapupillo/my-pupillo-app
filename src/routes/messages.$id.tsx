@@ -670,6 +670,10 @@ function Thread() {
           supabase.from("public_profiles").select("full_name, first_name, last_name, business_name, city, neighborhood, reputation_score, reputation_level, completed_shifts, no_show_count, punctuality_pct, completion_pct, rehire_restaurants_count, rehire_yes_count, rehire_total_answers, distinct_restaurants_count, rating_avg, reviews_count, avatar_url, phone_verified, profile_completed, default_arrival_advance_minutes, primary_role, professional_profile, badge, is_deleted").eq("id", otherId).maybeSingle(),
           supabase.from("announcements").select("id, service_date, service_time, end_time, end_date, duration_hours, location_address, tariff_amount, tariff_type, job_city, job_province, restaurant_id, status, assigned_worker_id, notes, professional_profile, dress_code_items, dress_code_notes, required_skills, language_requirements, license_requirement, job_access_restrictions, job_additional_directions, job_location_notes, job_address").eq("id", a.announcement_id).maybeSingle(),
         ]);
+        // Restaurant-cancelled shift: keep showing it as cancelled, not confirmed.
+        if (a.status === "accepted" && (an as any)?.status === "cancelled") {
+          setApp({ ...(a as App), status: "cancelled" } as App);
+        }
         // Contact person is restricted at the DB level. Fetch via the
         // SECURITY DEFINER RPC: it returns the row only if the caller is
         // the owning restaurant or the assigned worker.
@@ -2309,7 +2313,7 @@ function Thread() {
           const statusText =
             app.status === "accepted" ? "Turno confermato"
             : app.status === "rejected" ? "Richiesta annullata dal ristoratore"
-            : app.status === "cancelled" ? "Candidatura annullata"
+            : app.status === "cancelled" ? (ann?.status === "cancelled" ? "Turno annullato dal ristoratore" : "Candidatura annullata")
             : app.status === "expired" ? "Proposta scaduta"
             : "In attesa di una decisione";
           return (

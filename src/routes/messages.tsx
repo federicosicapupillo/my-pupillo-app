@@ -63,6 +63,7 @@ const STATUS_LABELS: Record<string, string> = {
   accepted: "Confermato",
   rejected: "Rifiutato",
   expired: "Scaduto",
+  cancelled: "Turno annullato",
 };
 
 /**
@@ -87,6 +88,7 @@ const STATUS_CLS: Record<string, string> = {
   accepted: "bg-emerald-500/15 text-emerald-700",
   rejected: "bg-red-500/15 text-red-700",
   expired: "bg-muted text-muted-foreground",
+  cancelled: "bg-red-500/15 text-red-700",
 };
 
 const STATUS_BTN_ACTIVE: Record<string, string> = {
@@ -215,7 +217,7 @@ function MessagesLayout() {
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
       annIds.length
-        ? supabase.from("announcements").select("id, professional_profile, service_date, service_time, end_time, location_address, job_address, job_city, dress_code_items, dress_code_notes, required_skills, notes, job_additional_directions, job_location_notes").in("id", annIds)
+        ? supabase.from("announcements").select("id, status, professional_profile, service_date, service_time, end_time, location_address, job_address, job_city, dress_code_items, dress_code_notes, required_skills, notes, job_additional_directions, job_location_notes").in("id", annIds)
         : Promise.resolve({ data: [] as any[] }),
       // "Have I worked with them?" — any shift row (other than cancelled/no_show)
       // between me and any of these partners proves a confirmed past relationship.
@@ -265,7 +267,9 @@ function MessagesLayout() {
       });
       return {
         id: a.id,
-        status: a.status,
+        // A shift cancelled by the restaurant keeps the application "accepted"
+        // for history; show it as cancelled, never as confirmed.
+        status: a.status === "accepted" && ann?.status === "cancelled" ? "cancelled" : a.status,
         announcementId: a.announcement_id,
         restaurantId: a.restaurant_id,
         workerId: a.worker_id,
@@ -414,7 +418,7 @@ function MessagesLayout() {
   const smart = role === "restaurant" || role === "worker";
   const threadCategory = (t: Thread): "candidature" | "confermati" | "archiviati" => {
     if (t.status === "accepted") return "confermati";
-    if (t.status === "rejected" || t.status === "expired") return "archiviati";
+    if (t.status === "rejected" || t.status === "expired" || t.status === "cancelled") return "archiviati";
     return "candidature";
   };
   const catCounts = {
