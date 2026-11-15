@@ -598,7 +598,7 @@ function NewRestaurantJobRequest() {
     if (coords && !areCoordsInLaunchArea(coords.lat, coords.lng)) {
       errs.address = LAUNCH_AREA_ERROR_MESSAGE;
     }
-    if (!f.district || !f.district.trim()) errs.district = "Seleziona la zona/quartiere.";
+    if ((!f.district || !f.district.trim()) && f.city && zonesForCity(f.city).length > 0) errs.district = "Seleziona la zona/quartiere.";
     else if (f.city && zonesForCity(f.city).length > 0 && !isValidDistrictForCity(f.city, f.district)) errs.district = "Zona/quartiere non valida.";
     if (f.province && f.city && f.postal_code && !isValidCapForCity(f.province, f.city, f.postal_code)) errs.postal_code = "Il CAP non appartiene alla città selezionata.";
     else if (f.province && f.city && f.postal_code && f.district && !isValidCapForDistrict(f.province, f.city, f.district, f.postal_code)) errs.postal_code = "Il CAP non appartiene alla zona indicata.";
