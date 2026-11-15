@@ -656,7 +656,7 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
         <SectionHeader
           icon={CalendarDays}
           title="Le mie disponibilità"
-          subtitle="Riepilogo settimanale"
+          subtitle="Prossimi 7 giorni"
           action={
             <Link to="/availability">
               <Button variant="ghost" size="sm" className="gap-1">

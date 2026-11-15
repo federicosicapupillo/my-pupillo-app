@@ -57,6 +57,10 @@ function fmtDate(d: string): string {
   }
 }
 
+function localIso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function mode<T>(arr: T[]): T | undefined {
   if (arr.length === 0) return undefined;
   const counts = new Map<T, number>();
@@ -136,7 +140,7 @@ export function WorkerAvailabilitySummary({
     (async () => {
       setLoading(true);
       setError(null);
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localIso(new Date());
       const [rowsRes, excRes] = await Promise.all([
         supabase
           .from("worker_availability")
@@ -220,14 +224,39 @@ export function WorkerAvailabilitySummary({
     );
   }
 
-  // Build per-day segment map (all 7 days)
-  const segsByDay = new Map<number, Segment[]>();
-  for (let d = 0; d < 7; d++) {
-    const slots = byDay.get(d) ?? [];
+  // Next 7 days starting today: dated overrides win over the weekly pattern.
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
+    const iso = localIso(date);
+    const dow = (date.getDay() + 6) % 7;
+    const dated = exceptions.filter((e) => e.date === iso);
     const segs: Segment[] = [];
-    slots.forEach((r) => segs.push(...rowToSegments(r)));
-    segsByDay.set(d, segs);
-  }
+    if (dated.length > 0) {
+      dated
+        .filter((e) => e.is_available)
+        .forEach((e) =>
+          segs.push(
+            ...rowToSegments({
+              ...(e as unknown as AvailabilityRow),
+              time_slot: (e.time_slot ?? "personalizzato") as AvailabilityRow["time_slot"],
+              is_flexible: false,
+              is_last_minute: false,
+            }),
+          ),
+        );
+    } else {
+      (byDay.get(dow) ?? []).forEach((r) => segs.push(...rowToSegments(r)));
+    }
+    return { i, dow, date, segs };
+  });
+  const segsByDay = new Map<number, Segment[]>(days.map((x) => [x.i, x.segs]));
+  const activeCount = days.filter((x) => x.segs.length > 0).length;
+  const segCount = days.reduce((n, x) => n + x.segs.length, 0);
+  void activeDays;
+  void totalSlots;
 
   return (
     <div className="rounded-2xl border bg-card p-4 space-y-4">
@@ -235,12 +264,12 @@ export function WorkerAvailabilitySummary({
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary" className="gap-1 font-medium">
           <CalendarDays className="h-3 w-3" />
-          {activeDays.length}{" "}
-          {activeDays.length === 1 ? "giorno" : "giorni"} disponibili
+          {activeCount}{" "}
+          {activeCount === 1 ? "giorno" : "giorni"} disponibili
         </Badge>
         <Badge variant="secondary" className="gap-1 font-medium">
           <Sparkles className="h-3 w-3" />
-          {totalSlots} {totalSlots === 1 ? "fascia" : "fasce"}
+          {segCount} {segCount === 1 ? "fascia" : "fasce"}
         </Badge>
         {topSlot && (
           <Badge variant="outline" className="font-medium">
@@ -278,10 +307,10 @@ export function WorkerAvailabilitySummary({
 
         {/* Day rows */}
         <div className="mt-1 space-y-1.5">
-          {Array.from({ length: 7 }, (_, d) => {
+          {days.map(({ i: d, dow, date }) => {
             const segs = segsByDay.get(d) ?? [];
             const isActive = segs.length > 0;
-            const isToday = ((new Date().getDay() + 6) % 7) === d;
+            const isToday = d === 0;
             return (
               <div
                 key={d}
@@ -292,8 +321,8 @@ export function WorkerAvailabilitySummary({
                     isToday ? "text-primary" : isActive ? "text-foreground" : "text-muted-foreground"
                   }`}
                 >
-                  <span className="sm:hidden">{DAY_SHORT[d]}</span>
-                  <span className="hidden sm:inline">{DAY_LABELS[d]}</span>
+                  <span className="sm:hidden">{DAY_SHORT[dow]} {date.getDate()}</span>
+                  <span className="hidden sm:inline">{DAY_LABELS[dow]} {date.getDate()}</span>
                   {isToday && (
                     <span className="ml-1 text-[9px] uppercase tracking-wide text-primary/70">
                       oggi
