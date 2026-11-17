@@ -80,7 +80,7 @@ function Billing() {
     setDiscountBusy(true);
     // Validiamo con "premium": l'RPC accetta automaticamente anche i codici con applies_to='all',
     // così PUPILLO10 (all) e START20 (premium) funzionano entrambi.
-    const { data, error } = await supabase.rpc("validate_discount_code", { _code: code, _applies_to: "premium" });
+    const { data, error } = await supabase.rpc("validate_discount_code", { _code: code, _applies_to: "credits" });
     setDiscountBusy(false);
     if (error) { toast.error(error.message); return; }
     const res = data as any;
