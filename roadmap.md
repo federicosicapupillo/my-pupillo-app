@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Recensioni homepage: 10 lavoratori e 15 ristoratori, confermate reali e autorizzate; scorrimenti distinti, frecce, pausa e movimento automatico verificati desktop/mobile, nessun overflow o errore. Movimento ridotto rispettato; nessuna pubblicazione.
+
 - [x] Avviso e consenso al compenso superiore prima delle proposte da ricerca, annunci e collaboratori; compenso concordato sulla singola richiesta/chat, annuncio e crediti invariati. 47 test passati; consenso, blocco invio e annullamento verificati nel browser autenticato con letture simulate 8/10, desktop/mobile. Nessun invio reale (account senza annunci attivi), nessuna pubblicazione; regola di salvataggio applicata senza modificare dati esistenti.
 
 - [x] Compenso: bollino verde solo in linea, soglie e avvisi fuori fascia rimossi; nota approvata sul ruolo di Pupillo condivisa tra iscrizione e profilo. Solo presentazione, nessuna modifica ai salvataggi o pubblicazione.
