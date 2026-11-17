@@ -44,6 +44,7 @@ type Worker = {
   reliability_pct: number | null;
   completed_shifts: number | null;
   hourly_rate: number | null;
+  hourly_rate_reason?: string | null;
   hourly_availability: string | null;
   weekly_availability: string[] | null;
   age: number | null;
@@ -87,7 +88,7 @@ function WorkerDetailPage() {
       // Profilo pubblico del lavoratore: nessuna email, telefono, data di
       // nascita, indirizzo o documento. I contatti passano dalla chat / RPC.
       const { data } = await supabase.from("public_profiles")
-        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_availability,weekly_availability,age,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,is_deleted,service_area_city,service_area_district,selected_zones,all_zones")
+        .select("id,full_name,professional_profile,primary_role,secondary_roles,experience_years,experience_level,languages,spoken_languages,city,neighborhood,province,rating_avg,reviews_count,badge,reliability_pct,completed_shifts,hourly_rate,hourly_rate_reason,hourly_availability,weekly_availability,age,is_motorized,reputation_score,reputation_level,punctuality_pct,completion_pct,no_show_count,rehire_restaurants_count,rehire_yes_count,rehire_total_answers,distinct_restaurants_count,avatar_url,phone_verified,profile_completed,is_deleted,service_area_city,service_area_district,selected_zones,all_zones")
         .eq("id", id).maybeSingle();
       if (cancelled) return;
       const worker = data as Worker | null;
@@ -229,6 +230,7 @@ function WorkerDetailPage() {
             <Row label="Anni di esperienza" value={fmtExperienceYears(w.experience_years)} />
             <Row label="Livello" value={fmtExperienceLevel(w.experience_level)} />
             <Row label="Compenso orario netto desiderato" value={fmtHourlyRate(w.hourly_rate)} />
+            {w.hourly_rate_reason && <Row label="Motivazione del compenso" value={w.hourly_rate_reason} />}
             <Row label="Automunito" value={fmtMotorized(w.is_motorized)} />
           </Card>
 

@@ -35,6 +35,7 @@ type WorkerProfile = {
   avg_competence: number | null;
   completed_shifts: number | null;
   hourly_rate: number | null;
+  hourly_rate_reason?: string | null;
   weekly_availability: string[] | null;
   hourly_availability: string | null;
   reputation_level: string | null;
@@ -107,7 +108,7 @@ export function WorkerProfilePreviewDialog({
     (async () => {
       const [{ data: profile }, { data: revs }] = await Promise.all([
         supabase.from("public_profiles").select(
-          "id,full_name,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,selected_zones,all_zones,badge,rating_avg,reviews_count,reliability_pct,punctuality_pct,completion_pct,avg_professionalism,avg_competence,completed_shifts,hourly_rate,weekly_availability,hourly_availability,reputation_level,spoken_languages,languages,experience_level,experience_years,is_motorized"
+          "id,full_name,primary_role,secondary_roles,city,neighborhood,province,service_area_city,service_area_district,selected_zones,all_zones,badge,rating_avg,reviews_count,reliability_pct,punctuality_pct,completion_pct,avg_professionalism,avg_competence,completed_shifts,hourly_rate,hourly_rate_reason,weekly_availability,hourly_availability,reputation_level,spoken_languages,languages,experience_level,experience_years,is_motorized"
         ).eq("id", workerId).maybeSingle(),
         supabase.from("reviews").select(
           "id,rating,comment,created_at,punctuality,professionalism,competence,reliability,positive_tags,tags"
@@ -236,6 +237,7 @@ export function WorkerProfilePreviewDialog({
               <div><span className="text-muted-foreground">Livello: </span><span className="capitalize">{w.experience_level || "—"}</span></div>
               <div><span className="text-muted-foreground">Anni: </span>{fmtExperienceYears(w.experience_years) || "—"}</div>
               <div><span className="text-muted-foreground">Compenso orario netto desiderato: </span>{w.hourly_rate != null ? (Number(w.hourly_rate) >= 31 ? "oltre 30 €/h netti" : `€ ${Number(w.hourly_rate).toFixed(0)}/h netti`) : "—"}</div>
+              {w.hourly_rate_reason && <div><span className="text-muted-foreground">Motivazione del compenso: </span>{w.hourly_rate_reason}</div>}
               <div className="inline-flex items-center gap-1"><Car className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Automunito: </span>{w.is_motorized == null ? "Non specificato" : w.is_motorized ? "Sì" : "No"}</div>
             </section>
 

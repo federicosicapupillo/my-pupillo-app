@@ -218,6 +218,13 @@
       "when": 1794923897114,
       "tag": "0030_cv_rubric_v4_four_or_five_stars",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794924172302,
+      "tag": "0031_hourly_rate_reason",
+      "breakpoints": true
     }
   ]
 }

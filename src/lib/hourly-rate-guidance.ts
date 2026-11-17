@@ -72,3 +72,25 @@ export function rateForSave(years: string | null | undefined, rate: string | nul
 export function formatEuroRate(n: number): string {
   return n.toLocaleString("it-IT", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
 }
+
+export const RATE_REASON_MIN = 10;
+export const RATE_REASON_MAX = 300;
+
+/** Motivazione obbligatoria quando il compenso desiderato è fuori range. */
+export function rateReasonRequired(years: string | null | undefined, rate: string | null | undefined): boolean {
+  return rateGuidance(years, rate)?.status === "above";
+}
+
+/** Errore da mostrare, o null se la motivazione va bene. */
+export function rateReasonError(years: string | null | undefined, rate: string | null | undefined, reason: string | null | undefined): string | null {
+  if (!rateReasonRequired(years, rate)) return null;
+  const r = (reason ?? "").trim();
+  if (r.length < RATE_REASON_MIN) return `Spiega perché chiedi questo compenso (almeno ${RATE_REASON_MIN} caratteri).`;
+  if (r.length > RATE_REASON_MAX) return `La motivazione può avere al massimo ${RATE_REASON_MAX} caratteri.`;
+  return null;
+}
+
+/** Motivazione salvata solo quando serve; altrimenti viene cancellata. */
+export function rateReasonForSave(years: string | null | undefined, rate: string | null | undefined, reason: string | null | undefined): string | null {
+  return rateReasonRequired(years, rate) ? (reason ?? "").trim() || null : null;
+}

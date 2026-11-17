@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { YEARS_OPTIONS, LEGACY_YEARS_6_10, RATE_OPTIONS, rateForSave } from "@/lib/hourly-rate-guidance";
-import { HourlyRateGuidance, HourlyRateNote, RATE_LOCKED_HELPER } from "@/components/HourlyRateGuidance";
+import { YEARS_OPTIONS, LEGACY_YEARS_6_10, RATE_OPTIONS, rateForSave, rateReasonError, rateReasonForSave } from "@/lib/hourly-rate-guidance";
+import { HourlyRateGuidance, HourlyRateNote, HourlyRateReasonField, RATE_LOCKED_HELPER } from "@/components/HourlyRateGuidance";
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -518,6 +518,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
       : "",
   );
   const [motor, setMotor] = useState<"" | "yes" | "no">(initialMotor as any);
+  const [reason, setReason] = useState<string>(profile?.hourly_rate_reason ?? "");
   const [rateClearedNotice, setRateClearedNotice] = useState(false);
   const { saving, save } = useBoxSave(userId, onSaved);
 
@@ -530,6 +531,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
         : "",
     );
     setMotor(initialMotor as any);
+    setReason(profile?.hourly_rate_reason ?? "");
     setRateClearedNotice(false);
     setEditing(true);
   };
@@ -537,7 +539,10 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
   const onSave = async () => {
     // Tariffa salvata solo con anni indicati ("oltre_30" => 31).
     const rateNum = rateForSave(years, rate);
+    const reasonErr = rateReasonError(years, rate, reason);
+    if (reasonErr) { toast.error(reasonErr); return; }
     const ok = await save({
+      hourly_rate_reason: rateReasonForSave(years, rate, reason),
       experience_years: years.trim() || null,
       experience_level: level || null,
       hourly_rate: rateNum,
@@ -630,6 +635,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
                 {rateClearedNotice && <p className="text-xs text-muted-foreground mt-1" role="status">Hai tolto gli anni di esperienza: la tariffa è stata azzerata.</p>}
                 <HourlyRateNote />
                 <HourlyRateGuidance years={years} rate={rate} />
+                <HourlyRateReasonField id="pf-exp-rate-reason" years={years} rate={rate} value={reason} onChange={setReason} />
               </div>
             </div>
             <div>
@@ -661,6 +667,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
           <Row label="Anni di esperienza" value={yearsLabel(profile?.experience_years)} />
           <Row label="Livello" value={levelLabel(profile?.experience_level)} />
           <Row label="Tariffa oraria netta desiderata" value={rateLabel(profile?.hourly_rate)} />
+          {profile?.hourly_rate_reason && <Row label="Motivazione del compenso" value={profile.hourly_rate_reason} />}
           <Row label="Automunito" value={motorLabel} />
         </div>
       )}

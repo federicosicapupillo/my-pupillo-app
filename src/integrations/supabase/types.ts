@@ -1150,6 +1150,7 @@ export type Database = {
           full_name: string | null
           hourly_availability: string | null
           hourly_rate: number | null
+          hourly_rate_reason: string | null
           id: string
           id_document_back_path: string | null
           id_document_expires_at: string | null
@@ -1329,6 +1330,7 @@ export type Database = {
           full_name?: string | null
           hourly_availability?: string | null
           hourly_rate?: number | null
+          hourly_rate_reason?: string | null
           id: string
           id_document_back_path?: string | null
           id_document_expires_at?: string | null
@@ -1508,6 +1510,7 @@ export type Database = {
           full_name?: string | null
           hourly_availability?: string | null
           hourly_rate?: number | null
+          hourly_rate_reason?: string | null
           id?: string
           id_document_back_path?: string | null
           id_document_expires_at?: string | null
@@ -2764,6 +2767,7 @@ export type Database = {
           full_name: string | null
           hourly_availability: string | null
           hourly_rate: number | null
+          hourly_rate_reason: string | null
           id: string | null
           in_launch_area: boolean | null
           is_deleted: boolean | null
@@ -2835,6 +2839,7 @@ export type Database = {
           full_name?: string | null
           hourly_availability?: string | null
           hourly_rate?: number | null
+          hourly_rate_reason?: string | null
           id?: string | null
           in_launch_area?: never
           is_deleted?: boolean | null
@@ -2906,6 +2911,7 @@ export type Database = {
           full_name?: string | null
           hourly_availability?: string | null
           hourly_rate?: number | null
+          hourly_rate_reason?: string | null
           id?: string | null
           in_launch_area?: never
           is_deleted?: boolean | null
@@ -3233,6 +3239,7 @@ export type Database = {
           full_name: string | null
           hourly_availability: string | null
           hourly_rate: number | null
+          hourly_rate_reason: string | null
           id: string
           id_document_back_path: string | null
           id_document_expires_at: string | null

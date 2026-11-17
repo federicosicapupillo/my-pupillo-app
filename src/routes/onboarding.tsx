@@ -1,6 +1,6 @@
 import { hasVerifiedContact, isContactPhoneLocked } from "@/lib/contact-verification";
-import { YEARS_OPTIONS, LEGACY_YEARS_6_10, RATE_OPTIONS, rateForSave } from "@/lib/hourly-rate-guidance";
-import { HourlyRateGuidance, HourlyRateNote, RATE_LOCKED_HELPER } from "@/components/HourlyRateGuidance";
+import { YEARS_OPTIONS, LEGACY_YEARS_6_10, RATE_OPTIONS, rateForSave, rateReasonError, rateReasonForSave } from "@/lib/hourly-rate-guidance";
+import { HourlyRateGuidance, HourlyRateNote, HourlyRateReasonField, RATE_LOCKED_HELPER } from "@/components/HourlyRateGuidance";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { isEffectivelyComplete } from "@/lib/profile-completion";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -447,11 +447,13 @@ function Onboarding() {
     experience_years: string;
     experience_level: "" | "junior" | "intermediate" | "senior" | "esperto";
     hourly_rate: string;
+    hourly_rate_reason: string;
     is_motorized: "" | "yes" | "no";
   }>({
     experience_years: "",
     experience_level: "",
     hourly_rate: "",
+    hourly_rate_reason: "",
     is_motorized: "",
   });
   const [rateClearedNotice, setRateClearedNotice] = useState(false);
@@ -864,6 +866,7 @@ function Onboarding() {
           experience_years: pick(dbYears, s.experience_years),
           experience_level: pick(dbLevel, s.experience_level),
           hourly_rate: pick(dbRate, s.hourly_rate),
+          hourly_rate_reason: pick((p as any).hourly_rate_reason ?? "", s.hourly_rate_reason ?? ""),
           is_motorized: pick(dbMotor, s.is_motorized),
         };
       });
@@ -1479,6 +1482,12 @@ function Onboarding() {
     const allZonesSelected = selectedZones.includes(ALL_ZONES_OPTION);
     const normalizedSelectedZones = allZonesSelected ? [] : selectedZones;
     if (role === "worker") {
+      const reasonErr = rateReasonError(optExp.experience_years, optExp.hourly_rate, optExp.hourly_rate_reason);
+      if (reasonErr) {
+        setBusy(false); submittingRef.current = false;
+        toast.error(reasonErr);
+        return;
+      }
       if (!form.service_area_city.trim()) {
         setBusy(false); submittingRef.current = false;
         toast.error("Indica la città di partenza per la tua area di interesse.");
@@ -1647,6 +1656,7 @@ function Onboarding() {
             experience_level: optExp.experience_level || null,
             // La tariffa si salva solo se gli anni sono indicati ("oltre_30" => 31).
             hourly_rate: rateForSave(optExp.experience_years, optExp.hourly_rate),
+            hourly_rate_reason: rateReasonForSave(optExp.experience_years, optExp.hourly_rate, optExp.hourly_rate_reason),
             is_motorized: optExp.is_motorized === "yes" ? true : optExp.is_motorized === "no" ? false : null,
           };
     // Salva i campi del profilo. Aggiungiamo un timeout lato client per
@@ -2908,6 +2918,8 @@ function Onboarding() {
                     )}
                     <HourlyRateNote />
                     <HourlyRateGuidance years={optExp.experience_years} rate={optExp.hourly_rate} />
+                    <HourlyRateReasonField id="ob-exp-rate-reason" years={optExp.experience_years} rate={optExp.hourly_rate}
+                      value={optExp.hourly_rate_reason} onChange={(v) => setOptExp({ ...optExp, hourly_rate_reason: v })} />
                   </div>
                 </div>
                 <div>
