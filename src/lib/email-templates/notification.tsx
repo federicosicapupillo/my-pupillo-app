@@ -5,12 +5,13 @@ import type { TemplateEntry } from './registry'
 interface Props {
   title?: string
   body?: string
+  compensation?: string
   ctaLabel?: string
   ctaUrl?: string
   starUrls?: string[]
 }
 
-const NotificationEmail = ({ title, body, ctaLabel, ctaUrl, starUrls }: Props) => (
+const NotificationEmail = ({ title, body, compensation, ctaLabel, ctaUrl, starUrls }: Props) => (
   <Html lang="it" dir="ltr">
     <Head />
     <Preview>{title || 'Hai una nuova notifica su Pupillo'}</Preview>
@@ -19,6 +20,7 @@ const NotificationEmail = ({ title, body, ctaLabel, ctaUrl, starUrls }: Props) =
         <Img src={LOGO_URL} alt="Pupillo" width="160" height="108" style={logo} />
         <Heading style={h1}>{title || 'Nuova notifica'}</Heading>
         {body ? <Text style={text}>{body}</Text> : null}
+        {compensation ? <Text style={{ ...text, fontWeight: 700 }}>{compensation}</Text> : null}
         {starUrls && starUrls.length === 5 ? (
           <Section style={{ textAlign: 'center', margin: '24px 0 8px' }}>
             <Text style={small}>Quante stelle dai? Tocca una stella:</Text>

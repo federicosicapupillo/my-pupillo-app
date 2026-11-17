@@ -187,7 +187,7 @@ export function buildConfirmationBody(
   lines.push(formatArrivalInstruction(advMin, ann?.arrival_advance_reason ?? null));
   const amt = ann?.tariff_amount == null ? null : Number(ann.tariff_amount);
   if (amt != null && Number.isFinite(amt) && amt > 0) {
-    lines.push(`Compenso: ${formatTariff(ann?.tariff_amount ?? null, ann?.tariff_type ?? null)}`);
+    lines.push(`Compenso pattuito: ${formatTariff(ann?.tariff_amount ?? null, ann?.tariff_type ?? null)}`);
   }
   const ref = clean(ann?.job_contact_person_name);
   const phone = clean(ann?.job_contact_person_phone);

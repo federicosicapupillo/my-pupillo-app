@@ -144,7 +144,7 @@ function ShiftsPage() {
   const [pendingApps, setPendingApps] = useState<PendingApp[]>([]);
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
   const [announcementsMap, setAnnouncementsMap] = useState<Record<string, any>>({});
-  const [acceptedAppMap, setAcceptedAppMap] = useState<Record<string, { id: string; status: string }>>({});
+  const [acceptedAppMap, setAcceptedAppMap] = useState<Record<string, { id: string; status: string; proposed_tariff?: number | null }>>({});
   const [submittingReview, setSubmittingReview] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<Record<string, string>>({});
   const [viewReviewShiftId, setViewReviewShiftId] = useState<string | null>(null);
@@ -328,17 +328,17 @@ function ShiftsPage() {
     // Load announcement details and accepted applications for chat links
     const annIds = list.map(s => s.announcement_id).filter(Boolean) as string[];
     let annMap: Record<string, any> = {};
-    let accAppMap: Record<string, { id: string; status: string }> = {};
+    let accAppMap: Record<string, { id: string; status: string; proposed_tariff?: number | null }> = {};
     if (annIds.length) {
       const [{ data: annData }, { data: accApps }] = await Promise.all([
         supabase.from("announcements").select("id, service_date, service_time, end_time, location_address, tariff_amount, tariff_type, job_address, job_city, professional_profile, required_skills, dress_code_items, dress_code_notes, notes").in("id", annIds),
         // NB: `application_status` ammette solo pending/interested/not_interested/
         // counter_offer/accepted/rejected/expired/cancelled. I valori legacy
         // "confirmed"/"assigned" facevano fallire la query con 400 (22P02).
-        (supabase as any).from("applications").select("id, announcement_id, status").in("announcement_id", annIds).in("status", ["accepted"]).eq(col, user.id)
+        (supabase as any).from("applications").select("id, announcement_id, status, proposed_tariff").in("announcement_id", annIds).in("status", ["accepted"]).eq(col, user.id)
       ]);
       (annData ?? []).forEach((a: any) => { annMap[a.id] = a; });
-      (accApps ?? []).forEach((a: any) => { accAppMap[a.announcement_id] = { id: a.id, status: a.status }; });
+      (accApps ?? []).forEach((a: any) => { accAppMap[a.announcement_id] = { id: a.id, status: a.status, proposed_tariff: a.proposed_tariff ?? null }; });
     }
     setAnnouncementsMap(annMap);
     setAcceptedAppMap(accAppMap);
@@ -1052,9 +1052,12 @@ function ShiftsPage() {
                           )}
                         </div>
                       )}
-                      {ann.tariff_amount != null && (
-                        <div>€{Number(ann.tariff_amount).toFixed(2)} {ann.tariff_type === "hourly" ? "/ora" : "fisso"}</div>
-                      )}
+                      {(() => {
+                        const agreed = acceptedAppMap[s.announcement_id || ""]?.proposed_tariff ?? ann.tariff_amount;
+                        return agreed != null ? (
+                          <div>Compenso pattuito: €{Number(agreed).toFixed(2)} {ann.tariff_type === "hourly" ? "/ora" : "fisso"}</div>
+                        ) : null;
+                      })()}
                     </div>
                   ) : null;
                 })()}

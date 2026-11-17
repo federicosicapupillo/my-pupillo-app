@@ -2,7 +2,7 @@
 export async function runNotificationEmailSweep() {
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
     const { sendTemplateEmail } = await import('@/lib/email-templates/send-email')
-    const { planNotificationEmail, absoluteLink, starLink } = await import('@/lib/notification-email')
+    const { planNotificationEmail, absoluteLink, starLink, applicationIdFromLink, formatAgreedCompensation } = await import('@/lib/notification-email')
     const BASE = 'https://pupillo.life'
 
     const since = new Date(Date.now() - 6 * 3600_000).toISOString()
@@ -47,11 +47,20 @@ export async function runNotificationEmailSweep() {
           if ((count ?? 0) > 0) { await mark(n.id, 'grouped'); bump('grouped'); continue }
         }
 
+        let compensation: string | null = null
+        const appId = (plan.category === 'applications' || plan.category === 'shifts') ? applicationIdFromLink(n.link) : null
+        if (appId) {
+          const { data: app } = await supabaseAdmin.from('applications')
+            .select('proposed_tariff, announcements(tariff_amount, tariff_type)').eq('id', appId).maybeSingle()
+          const ann = (app as any)?.announcements
+          if (app && ann) compensation = formatAgreedCompensation((app as any).proposed_tariff, ann.tariff_amount, ann.tariff_type)
+        }
+
         const url = absoluteLink(BASE, n.link)
         const res = await sendTemplateEmail('notification', prof.email, {
           idempotencyKey: `notification-${n.id}`,
           templateData: {
-            title: n.title, body: n.body ?? '', ctaLabel: plan.cta, ctaUrl: url,
+            title: n.title, body: n.body ?? '', compensation: compensation ?? undefined, ctaLabel: plan.cta, ctaUrl: url,
             starUrls: plan.stars ? [1, 2, 3, 4, 5].map((r) => starLink(url, r)) : undefined,
           },
         })

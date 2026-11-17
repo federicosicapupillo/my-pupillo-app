@@ -55,3 +55,22 @@ export function readEmailRating(search: string): number | null {
   const v = Number(new URLSearchParams(search).get("rating"));
   return Number.isInteger(v) && v >= 1 && v <= 5 ? v : null;
 }
+
+/** Id candidatura da un link /messages/<uuid>, altrimenti null. */
+export function applicationIdFromLink(link: string | null): string | null {
+  const m = /^\/messages\/([0-9a-f-]{36})(?:[/?#]|$)/i.exec(link ?? "");
+  return m ? m[1] : null;
+}
+
+/** Riga «Compenso pattuito» per l'email: tariffa concordata o, se assente, quella dell'annuncio. */
+export function formatAgreedCompensation(
+  proposedTariff: number | string | null | undefined,
+  announcementTariff: number | string | null | undefined,
+  tariffType: string | null | undefined,
+): string | null {
+  const raw = proposedTariff ?? announcementTariff;
+  const n = raw == null ? NaN : Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const amount = n.toLocaleString("it-IT", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+  return `Compenso pattuito: ${amount} €${tariffType === "hourly" ? "/h netti" : " a servizio"}`;
+}

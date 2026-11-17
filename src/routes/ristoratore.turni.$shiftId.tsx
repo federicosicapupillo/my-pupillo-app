@@ -163,6 +163,7 @@ function ShiftDetailPage() {
   } | null>(null);
   const [jobReq, setJobReq] = useState<JobReq | null>(null);
   const [appId, setAppId] = useState<string | null>(null);
+  const [agreedTariff, setAgreedTariff] = useState<number | null>(null);
   const [appCount, setAppCount] = useState<number>(0);
   const [existingReview, setExistingReview] = useState<{ id: string; rating: number; comment: string | null; tags: string[] | null } | null>(null);
   const hasReview = !!existingReview;
@@ -238,7 +239,7 @@ function ShiftDetailPage() {
         .eq("id", s.worker_id).maybeSingle(),
       supabase.from("public_profiles").select("id, business_name, full_name").eq("id", s.restaurant_id).maybeSingle(),
       s.announcement_id
-        ? supabase.from("applications").select("id, worker_id, status").eq("announcement_id", s.announcement_id)
+        ? supabase.from("applications").select("id, worker_id, status, proposed_tariff").eq("announcement_id", s.announcement_id)
         : Promise.resolve({ data: [] as any[] }),
       user
         ? supabase.from("reviews").select("id, rating, comment, tags").eq("shift_id", s.id).eq("author_id", user.id).maybeSingle()
@@ -281,6 +282,7 @@ function ShiftDetailPage() {
     setAppCount(apps.length);
     const matchedApp = apps.find((a) => a.worker_id === s.worker_id) ?? null;
     setAppId(matchedApp?.id ?? null);
+    setAgreedTariff(matchedApp?.proposed_tariff != null ? Number(matchedApp.proposed_tariff) : null);
     setExistingReview((revsRes.data as any) ?? null);
     setRequiredReview((reqRes as any).data ?? null);
     if (user && s.worker_id) {
@@ -467,7 +469,7 @@ function ShiftDetailPage() {
     const total = h * 60 + m + Math.round(dur * 60);
     return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
   })();
-  const tariff = ann?.tariff_amount ?? null;
+  const tariff = agreedTariff ?? ann?.tariff_amount ?? null;
   const compenso = shift.amount ?? (tariff && dur ? Number(tariff) * Number(dur) : null);
 
   // Stato recensione
@@ -518,7 +520,7 @@ function ShiftDetailPage() {
           <Field icon={Calendar} label="Data turno" value={new Date(shift.shift_date).toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} />
           {startTime && <Field icon={Clock} label="Orario" value={`${startTime}${endTime ? ` - ${endTime}` : ""}`} />}
           <Field icon={Clock} label="Durata stimata" value={dur ? `${dur} ore` : "—"} />
-          {tariff != null && <Field icon={Euro} label={ann?.tariff_type === "hourly" ? "Tariffa oraria" : "Tariffa"} value={formatTariff(tariff, ann?.tariff_type)} />}
+          {tariff != null && <Field icon={Euro} label={ann?.tariff_type === "hourly" ? "Compenso orario pattuito" : "Compenso pattuito"} value={formatTariff(tariff, ann?.tariff_type)} />}
           {compenso != null && <Field icon={Euro} label="Compenso stimato" value={`€${Number(compenso).toFixed(2)}`} />}
           {ann?.location_address && <Field icon={MapPin} label="Luogo" value={formatShiftLocation(ann.location_address)} />}
         </div>

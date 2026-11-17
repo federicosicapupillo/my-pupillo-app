@@ -1674,7 +1674,7 @@ function Thread() {
             // No access yet: build with whatever we already have.
           }
         }
-        const body = buildConfirmationBody(annForBody, venueName, restaurantArrivalAdvance);
+        const body = buildConfirmationBody({ ...annForBody, tariff_amount: app.proposed_tariff ?? annForBody?.tariff_amount } as typeof ann, venueName, restaurantArrivalAdvance);
         const createdAt = new Date().toISOString();
         const receiverId = role === "restaurant" ? app.worker_id : app.restaurant_id;
         const { data: confMsg } = await supabase.from("messages").insert({
@@ -3053,7 +3053,7 @@ function Thread() {
           return (
             <div id="instructions-card" data-instructions-card>
               <ConfirmationCard
-                ann={ann}
+                ann={proposalAnn ?? ann}
                 venueName={venueNameForCard}
                 applicationId={id}
                 announcementId={app?.announcement_id ?? null}
