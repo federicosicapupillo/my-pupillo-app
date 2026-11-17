@@ -211,6 +211,13 @@
       "when": 1794922164406,
       "tag": "0029_restaurant_accept_worker_compensation",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794923897114,
+      "tag": "0030_cv_rubric_v4_four_or_five_stars",
+      "breakpoints": true
     }
   ]
 }

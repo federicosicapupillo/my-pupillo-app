@@ -7,12 +7,19 @@ export const CV_CRITERIA = [
 ] as const;
 export type CvCriterion = typeof CV_CRITERIA[number]['key'];
 export type CvScores = Record<CvCriterion, number>;
-export const CV_RUBRIC_VERSION = '3';
-export const CV_RECOGNITION_DESCRIPTION = '4 stelle: riconoscimento di base per chi è agli inizi e presenta un curriculum leggibile. 5 stelle: almeno due esperienze lavorative dichiarate oppure gestione di attività o team. Non è una garanzia di qualità né una verifica delle esperienze dichiarate.';
+export const CV_RUBRIC_VERSION = '4';
+/** Punteggio minimo (su 100) che, insieme a esperienze o gestione, dà cinque stelle. */
+export const CV_FIVE_STAR_MIN_TOTAL = 70;
+export const CV_RECOGNITION_DESCRIPTION = '4 stelle: riconoscimento di base per ogni curriculum caricato. 5 stelle: curriculum giudicato buono con almeno due esperienze lavorative dichiarate oppure gestione di attività o team. Non è una garanzia di qualità né una verifica delle esperienze dichiarate.';
 export type CvRecognition = { work_experiences: number; managed_business_or_team: boolean };
 export function recognitionStars(evaluable: boolean, recognition?: CvRecognition) {
   if (!evaluable) return null;
   return recognition && (recognition.work_experiences >= 2 || recognition.managed_business_or_team) ? 5 : 4;
+}
+/** Rubrica 4: ogni curriculum caricato ha 4 o 5 stelle; 5 solo se buono e con esperienze o gestione. */
+export function uploadedCurriculumStars(total: number, recognition?: CvRecognition): 4 | 5 {
+  const experienced = !!recognition && (recognition.work_experiences >= 2 || recognition.managed_business_or_team);
+  return experienced && total >= CV_FIVE_STAR_MIN_TOTAL ? 5 : 4;
 }
 export function automaticCurriculumRole(previousRole: string | null | undefined, primaryRole: string | null | undefined) {
   const usable = (role: string | null | undefined) => role?.trim() && !['worker', 'restaurant', 'admin'].includes(role.trim().toLowerCase()) ? role.trim() : null;
@@ -30,6 +37,12 @@ export type CvPublicationState = {
 };
 export function canPublishCurriculum(a: CvPublicationState, currentCurriculum: boolean) {
   if (a.rubric_version === CV_RUBRIC_VERSION) {
+    const facts = a.scores && typeof a.scores === 'object' ? a.scores as Partial<CvRecognition> : null;
+    if (!facts || !Number.isInteger(facts.work_experiences) || typeof facts.managed_business_or_team !== 'boolean' || a.total === null) return false;
+    return currentCurriculum && a.status === 'approved' && !!a.consent_at &&
+      a.stars === uploadedCurriculumStars(a.total, { work_experiences: facts.work_experiences ?? 0, managed_business_or_team: facts.managed_business_or_team });
+  }
+  if (a.rubric_version === '3') {
     const facts = a.scores && typeof a.scores === 'object' ? a.scores as Partial<CvRecognition> : null;
     if (!facts || !Number.isInteger(facts.work_experiences) || typeof facts.managed_business_or_team !== 'boolean') return false;
     return currentCurriculum && a.status === 'approved' && !!a.consent_at && a.evaluable && a.total !== null &&
@@ -51,7 +64,8 @@ export function scoreCurriculum(scores: CvScores, evaluable: boolean, doubts: bo
     throw new Error('Punteggio non valido');
   }
   const total = CV_CRITERIA.reduce((n, c) => n + scores[c.key], 0);
-  if (rubricVersion === CV_RUBRIC_VERSION) return { total: evaluable ? total : null, stars: recognitionStars(evaluable, recognition) };
+  if (rubricVersion === CV_RUBRIC_VERSION) return { total, stars: uploadedCurriculumStars(total, recognition) };
+  if (rubricVersion === '3') return { total: evaluable ? total : null, stars: recognitionStars(evaluable, recognition) };
   if (rubricVersion === '2') return { total: evaluable ? total : null, stars: evaluable ? (total >= 85 && !doubts ? 5 : 4) : null };
   const stars = evaluable && !doubts && scores.clarity >= 5 && total >= 70 ? (total >= 85 ? 5 : 4) : null;
   return { total, stars };

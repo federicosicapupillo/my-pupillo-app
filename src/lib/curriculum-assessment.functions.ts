@@ -47,7 +47,7 @@ export const analyzeCvAssessment = createServerFn({ method: 'POST' }).middleware
       const output = { evaluable };
       const status = output.evaluable ? 'approved' : 'not_evaluable';
       const publicVisible = shouldAutoPublishCurriculum({ scores, ...scoring, evaluable: output.evaluable, doubts, status, consent_at: assessment.consent_at, rubric_version: CV_RUBRIC_VERSION }, true, assessment.auto_publication_consent);
-      const { error, data: saved } = await save({ scores, evidence, ...scoring, rubric_version: CV_RUBRIC_VERSION, role_label: role, evaluable: output.evaluable, doubts, status, reviewed_by: null, reviewed_at: new Date().toISOString(), review_note: 'Riconoscimento automatico Pupillo: cinque stelle per almeno due lavori dichiarati o gestione di attività/team; quattro per chi è agli inizi. Dichiarazioni non verificate.', error_message: null, public_visible: publicVisible });
+      const { error, data: saved } = await save({ scores, evidence, ...scoring, rubric_version: CV_RUBRIC_VERSION, role_label: role, evaluable: output.evaluable, doubts, status, reviewed_by: null, reviewed_at: new Date().toISOString(), review_note: 'Riconoscimento automatico Pupillo: ogni curriculum riceve quattro stelle; cinque se buono e con almeno due lavori dichiarati o gestione di attività/team. Dichiarazioni non verificate.', error_message: null, public_visible: publicVisible });
       if (error || !saved?.length) return { ok: false, error: 'La richiesta è cambiata: valutazione non salvata.' };
       // Result is saved: the PDF is no longer needed. Failures are retried by the scheduled sweep.
       const { shouldPurgeCurriculum } = await import('@/lib/curriculum-purge');
