@@ -5,7 +5,7 @@ import { MapPin, Gift, Rocket, Users } from "lucide-react";
  *
  * Comunica in modo chiaro ed evidente:
  * - Disponibilità territoriale: solo Bologna e provincia.
- * - Gratuità del servizio: ristoratori gratis fino al 31/12/2026, lavoratori sempre gratis.
+ * - Servizio a pagamento dal lancio per i ristoratori, gratuito per i lavoratori.
  *
  * Posizionato in cima alla homepage, subito sotto l'header.
  * Design moderno, pulito e coerente con il resto della piattaforma.
@@ -46,7 +46,7 @@ export function HomepageLaunchBanner() {
               </div>
             </div>
 
-            {/* Blocco destro: gratuità — più in evidenza */}
+            {/* Blocco destro: condizioni del servizio */}
             <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 sm:px-5 sm:py-3.5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
@@ -57,7 +57,7 @@ export function HomepageLaunchBanner() {
                     Per i ristoratori
                   </div>
                   <div className="text-base font-extrabold text-primary sm:text-lg">
-                    Gratis fino al 31/12/2026
+                    A pagamento dal lancio
                   </div>
                 </div>
               </div>

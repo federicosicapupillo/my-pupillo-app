@@ -1,9 +1,9 @@
 import { CalendarClock, Gift, Repeat2, Tag } from "lucide-react";
-import { LAUNCH_PRICING, formatLaunchDate } from "@/lib/launch-pricing";
+import { LAUNCH_PRICING } from "@/lib/launch-pricing";
 
 /**
  * Comunicazione informativa (NON un avviso di pagamento attivo) sulle
- * condizioni economiche che entreranno in vigore dopo il lancio gratuito.
+ * condizioni economiche del servizio a pagamento dal lancio.
  * Tutti i valori arrivano da `src/lib/launch-pricing.ts`: nessun dato hardcoded.
  * Non mostra mai pulsanti di acquisto o checkout.
  */
@@ -15,7 +15,7 @@ export function LaunchPricingNotice({ className = "" }: { className?: string }) 
       className={`overflow-hidden rounded-2xl border bg-card ${className}`}
       aria-labelledby="launch-pricing-title"
     >
-      {/* Blocco 1 — periodo GRATUITO in corso */}
+      {/* Blocco 1 — condizioni del lancio */}
       <div className="border-b bg-emerald-500/5 p-5 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
@@ -33,14 +33,14 @@ export function LaunchPricingNotice({ className = "" }: { className?: string }) 
         </div>
       </div>
 
-      {/* Blocco 2 — tariffazione FUTURA, visivamente separata */}
+      {/* Blocco 2 — tariffazione, visivamente separata */}
       <div className="space-y-4 p-5 sm:p-6">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <CalendarClock className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-foreground">In futuro</div>
+            <div className="text-sm font-semibold text-foreground">Dal lancio</div>
             <p className="mt-0.5 text-sm text-muted-foreground">{c.switchDate}</p>
           </div>
         </div>
@@ -71,8 +71,7 @@ export function LaunchPricingNotice({ className = "" }: { className?: string }) 
         )}
 
         <p className="text-xs text-muted-foreground">
-          {c.disclaimer} Nessun importo verrà addebitato prima del{" "}
-          {formatLaunchDate(LAUNCH_PRICING.paidFrom)}.
+          {c.disclaimer}
         </p>
       </div>
     </section>

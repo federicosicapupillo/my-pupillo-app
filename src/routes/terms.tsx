@@ -42,7 +42,7 @@ function Terms() {
       </section>
       <section>
         <h2>7. Compensi e prezzi del servizio</h2>
-        <p>Il compenso per il lavoro è concordato e corrisposto direttamente tra Ristoratore e Lavoratore; Pupillo non incassa né gestisce tali somme. Per i Lavoratori Pupillo è gratuito. Per i Ristoratori, durante la fase di lancio, l'uso della piattaforma è gratuito fino al 31 dicembre 2026. Eventuali servizi a pagamento futuri saranno comunicati in anticipo con prezzi e condizioni, e non saranno addebitati senza accettazione espressa.</p>
+        <p>Il compenso per il lavoro è concordato e corrisposto direttamente tra Ristoratore e Lavoratore; Pupillo non incassa né gestisce tali somme. Per i Lavoratori Pupillo è gratuito. Per i Ristoratori il servizio parte a pagamento, senza un periodo di lancio gratuito. Prezzi e condizioni sono comunicati prima dell'acquisto e non saranno effettuati addebiti senza accettazione espressa.</p>
       </section>
       <section>
         <h2>8. Recensioni e reputazione</h2>

@@ -7,7 +7,6 @@ const pupilloLogo = pupilloLogoAsset.url;
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AudienceVideo } from "@/components/home/AudienceVideo";
 import { HOME_VIDEOS } from "@/lib/home-videos";
-import { isBolognaLaunchActive } from "@/lib/launch-campaign";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,7 +48,6 @@ const STEPS: Record<Audience, { title: string; text: string }[]> = {
 
 function Index() {
   const [audience, setAudience] = useState<Audience>("worker");
-  const promoActive = isBolognaLaunchActive();
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -125,7 +123,7 @@ function Index() {
                 Cerco personale
               </Link>
             }
-            note={promoActive ? "Nessun costo fino al 31/01/2027" : null}
+            note="A pagamento dal lancio"
             accent={VIOLET}
             video={<AudienceVideo video={HOME_VIDEOS.restaurant} accent={VIOLET} />}
             videoCaption="Per te che cerchi personale per il tuo locale."
@@ -166,7 +164,7 @@ function Index() {
               <AccordionTrigger>Pupillo è gratuito?</AccordionTrigger>
               <AccordionContent className="text-muted-foreground">
                 Per i lavoratori Pupillo è sempre gratuito.
-                {promoActive ? " Per ristoranti, bar e locali è gratuito fino al 31/01/2027, nel periodo di lancio." : ""}
+                {" Per ristoranti, bar e locali il servizio parte a pagamento, senza un periodo di lancio gratuito."}
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="dove">

@@ -2551,7 +2551,7 @@ function Thread() {
                   <AlarmClock className="h-3.5 w-3.5 text-primary" />
                   <span>{waiting ? `In attesa di ${identityVisible && displayName ? displayName : "risposta"}` : "Il lavoratore è interessato: puoi confermare"}</span>
                   {dlText && <span>· {dlText}</span>}
-                  {!paymentsEnabled ? <span>· Gratis fino al 31/12/2026</span> : <span>· Paghi solo quando confermi</span>}
+                  {paymentsEnabled && <span>· Paghi solo quando confermi</span>}
                 </div>
               </div>
             );

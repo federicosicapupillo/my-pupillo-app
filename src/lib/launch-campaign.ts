@@ -11,9 +11,9 @@ export const BOLOGNA_LAUNCH_CAMPAIGN = {
   title: "Pupillo arriva a Torino! 🎉",
   /** Corpo del messaggio */
   body:
-    "In occasione del lancio, la piattaforma rimane gratuita fino al 31 dicembre 2026. Puoi pubblicare annunci, ricevere candidature e trovare il personale di cui hai bisogno senza costi.",
-  /** Etichetta breve evidenziata (gratuità + scadenza) */
-  highlight: "Gratis fino al 31 dicembre 2026",
+    "Pupillo parte a pagamento per i ristoratori. Pubblica annunci, ricevi candidature e trova il personale di cui hai bisogno.",
+  /** Etichetta breve evidenziata */
+  highlight: "A pagamento dal lancio",
   /** Città del lancio */
   city: "Bologna",
   /**
