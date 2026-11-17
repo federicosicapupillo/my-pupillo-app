@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
+import AutoScroll from "embla-carousel-auto-scroll";
 import { ArrowLeft, ArrowRight, BriefcaseBusiness, Pause, Play, Star, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,11 +38,18 @@ const restaurantReviews: Review[] = [
 ];
 
 function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "restaurant" }) {
-  const [viewportRef, carousel] = useEmblaCarousel({ loop: true, align: "start" });
+  const worker = role === "worker";
+  const autoScroll = useMemo(() => AutoScroll({
+    speed: 0.45,
+    direction: worker ? "forward" : "backward",
+    startDelay: 0,
+    playOnInit: false,
+    stopOnInteraction: true,
+  }), [worker]);
+  const [viewportRef, carousel] = useEmblaCarousel({ loop: true, align: "start" }, [autoScroll]);
   const [paused, setPaused] = useState(false);
   const [interacting, setInteracting] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(true);
-  const worker = role === "worker";
   const label = worker ? "Lavoratori" : "Ristoratori";
   const Icon = worker ? BriefcaseBusiness : UtensilsCrossed;
 
@@ -54,12 +62,20 @@ function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "res
   }, []);
 
   useEffect(() => {
-    if (!carousel || paused || interacting || reducedMotion) return;
-    const timer = window.setInterval(() => {
-      if (!document.hidden) carousel.scrollNext();
-    }, 5500);
-    return () => window.clearInterval(timer);
-  }, [carousel, paused, interacting, reducedMotion]);
+    if (!carousel) return;
+    const update = () => {
+      if (paused || interacting || reducedMotion || document.hidden) autoScroll.stop();
+      else autoScroll.play();
+    };
+    update();
+    carousel.on("pointerUp", update);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      autoScroll.stop();
+      carousel.off("pointerUp", update);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, [carousel, autoScroll, paused, interacting, reducedMotion]);
 
   return (
     <div
@@ -72,8 +88,8 @@ function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "res
       onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setInteracting(false); }}
       className="min-w-0"
     >
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <h3 className={`flex min-w-0 items-center gap-2 text-xl font-bold ${worker ? "text-primary" : "text-accent"}`}>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className={`flex min-w-0 items-center gap-2 text-lg font-bold ${worker ? "text-primary" : "text-accent"}`}>
           <Icon className="size-5 shrink-0" aria-hidden="true" />{label}
         </h3>
         <div className="flex shrink-0 gap-1">
@@ -83,15 +99,15 @@ function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "res
         </div>
       </div>
       <div ref={viewportRef} className="overflow-hidden">
-        <div className="-ml-4 flex touch-pan-y">
+        <div className="-ml-3 flex touch-pan-y">
           {reviews.map((review, index) => (
-            <div key={review.text} role="group" aria-roledescription="diapositiva" aria-label={`${index + 1} di ${reviews.length}`} className="flex min-w-0 flex-[0_0_90%] pl-4 sm:flex-[0_0_48%] lg:flex-[0_0_33.333%]">
-              <figure className={`flex w-full flex-col rounded-lg border bg-card p-6 ${worker ? "border-primary/25" : "border-accent/30"}`}>
-                <div aria-label={`${review.stars} stelle su 5`} className={`mb-4 flex gap-1 ${worker ? "text-primary" : "text-accent"}`}>
-                  {Array.from({ length: 5 }, (_, star) => <Star key={star} aria-hidden="true" className={`size-4 ${star < review.stars ? "fill-current" : "text-muted-foreground/40"}`} />)}
+            <div key={review.text} role="group" aria-roledescription="diapositiva" aria-label={`${index + 1} di ${reviews.length}`} className="flex min-w-0 flex-[0_0_260px] pl-3 sm:flex-[0_0_280px]">
+              <figure className={`flex w-full flex-col rounded-lg border bg-card p-4 ${worker ? "border-primary/25" : "border-accent/30"}`}>
+                <div aria-label={`${review.stars} stelle su 5`} className={`mb-3 flex gap-1 ${worker ? "text-primary" : "text-accent"}`}>
+                  {Array.from({ length: 5 }, (_, star) => <Star key={star} aria-hidden="true" className={`size-3.5 ${star < review.stars ? "fill-current" : "text-muted-foreground/40"}`} />)}
                 </div>
-                <blockquote className="grow text-sm leading-6 text-card-foreground">{review.text}</blockquote>
-                <figcaption className="mt-5 border-t border-border pt-4 text-xs font-semibold text-muted-foreground">Recensione di un {worker ? "lavoratore" : "ristoratore"}</figcaption>
+                <blockquote className="grow text-xs leading-5 text-card-foreground">{review.text}</blockquote>
+                <figcaption className="mt-3 border-t border-border pt-3 text-xs font-semibold text-muted-foreground">Recensione di un {worker ? "lavoratore" : "ristoratore"}</figcaption>
               </figure>
             </div>
           ))}
@@ -104,10 +120,10 @@ function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "res
 export function HomeReviews() {
   return (
     <section aria-labelledby="home-reviews-title" className="border-t border-border pb-16 pt-12 md:pb-20 md:pt-16">
-      <div className="mb-10">
+      <div className="mb-6">
         <h2 id="home-reviews-title" className="text-3xl font-black md:text-4xl">Le vostre recensioni.</h2>
       </div>
-      <div className="space-y-10">
+      <div className="space-y-6">
         <ReviewRow reviews={workerReviews} role="worker" />
         <ReviewRow reviews={restaurantReviews} role="restaurant" />
       </div>
