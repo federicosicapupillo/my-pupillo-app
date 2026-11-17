@@ -3452,6 +3452,14 @@ export type Database = {
           user_roles_error: string
         }[]
       }
+      restaurant_already_acquired_worker: {
+        Args: {
+          _exclude_application: string
+          _restaurant: string
+          _worker: string
+        }
+        Returns: boolean
+      }
       restaurant_contact_worker: {
         Args: { _announcement_id: string; _origin?: string; _worker_id: string }
         Returns: string

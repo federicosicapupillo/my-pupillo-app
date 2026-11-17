@@ -1484,7 +1484,8 @@ function Thread() {
       // GATE `payments_enabled`: se il flag è OFF salta il check saldo — la
       // conferma è gratis (consume_credits lato DB scrive un audit delta=0
       // e ritorna true anche a saldo zero).
-      if (paymentsEnabled) {
+      // Il server decide: i richiami della stessa persona sono gratuiti.
+    if (false && paymentsEnabled) {
         const { data: prof } = await supabase
           .from("profiles")
           .select("credits")
