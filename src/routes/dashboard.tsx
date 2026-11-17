@@ -451,7 +451,7 @@ function DashboardInner() {
               <div className="text-sm text-muted-foreground">Saldo crediti</div>
               <div className="text-2xl font-semibold">{profile?.credits ?? 0}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                Pubblica annuncio: 1 credito · Urgente: 3 · Invita lavoratore: 2
+                Pubblica annuncio senza costi. PAGHI SOLO ALLA CONFERMA DEL TURNO : 7 crediti
               </div>
             </div>
           </div>
