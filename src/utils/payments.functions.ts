@@ -184,13 +184,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const session = await stripe.checkout.sessions.create({
       line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
       mode: "payment",
-      ui_mode: "embedded_page",
-      return_url: data.returnUrl,
-      // End-to-end compliance handling: Stripe handles VAT calc/collection/filing,
-      // fraud, disputes and customer support on supported countries.
-      // Cast: the param exists on API version 2026-03-25.dahlia but is not yet
-      // in the SDK type definitions.
-      ...({ managed_payments: { enabled: true } } as any),
+      // Pagina di pagamento ospitata da Stripe: non richiede una chiave
+      // pubblica abbinata all'account, quindi funziona con la chiave propria.
+      success_url: data.returnUrl,
+      cancel_url: data.returnUrl.split("?")[0],
       ...(discounts && { discounts }),
       ...(customerId && { customer: customerId }),
       ...(productDescription && {
@@ -206,7 +203,25 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       }),
     });
 
-    return session.client_secret;
+    if (!session.url) throw new Error("Stripe non ha restituito la pagina di pagamento");
+    return session.url;
+  });
+
+/**
+ * Al ritorno da Stripe: verifica la sessione lato server e accredita i crediti
+ * (idempotente, stesso riferimento del webhook). Serve quando l'account Stripe
+ * proprio non ha un webhook configurato verso Pupillo.
+ */
+export const confirmCheckoutSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { sessionId: string; environment: StripeEnv }) => {
+    if (!/^cs_[A-Za-z0-9_]+$/.test(data.sessionId)) throw new Error("Invalid sessionId");
+    if (data.environment !== "sandbox" && data.environment !== "live") throw new Error("Invalid environment");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    const { fulfillCheckoutSession } = await import("@/lib/checkout-fulfill.server");
+    return fulfillCheckoutSession(data.sessionId, data.environment, context.userId);
   });
 
 export const createPortalSession = createServerFn({ method: "POST" })

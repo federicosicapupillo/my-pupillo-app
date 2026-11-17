@@ -16,7 +16,7 @@ import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { createPortalSession } from "@/utils/payments.functions";
+import { createPortalSession, confirmCheckoutSession } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { Receipt } from "lucide-react";
 
@@ -143,6 +143,11 @@ function Billing() {
     };
 
     (async () => {
+      try {
+        await confirmCheckoutSession({ data: { sessionId: capturedSessionId, environment: getStripeEnvironment() } });
+      } catch (e) {
+        console.error("[billing] confirm session failed", e);
+      }
       while (!cancelled && attempts < maxAttempts) {
         attempts++;
         await new Promise((r) => setTimeout(r, 2000));

@@ -16,6 +16,14 @@ export function getConnectionApiKey(env: StripeEnv): string {
 }
 
 export function createStripeClient(env: StripeEnv): Stripe {
+  // Account Stripe del titolare (chiave propria): chiamate dirette a Stripe.
+  const ownKey = process.env["STRIPE_SECRET_KEY"];
+  if (ownKey) {
+    return new Stripe(ownKey, {
+      apiVersion: "2026-03-25.dahlia",
+      httpClient: Stripe.createFetchHttpClient(),
+    });
+  }
   const connectionApiKey = getConnectionApiKey(env);
   const lovableApiKey = getEnv("LOVABLE_API_KEY");
 
