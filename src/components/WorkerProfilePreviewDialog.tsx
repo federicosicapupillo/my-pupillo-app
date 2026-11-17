@@ -235,7 +235,7 @@ export function WorkerProfilePreviewDialog({
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Esperienza</h3>
               <div><span className="text-muted-foreground">Livello: </span><span className="capitalize">{w.experience_level || "—"}</span></div>
               <div><span className="text-muted-foreground">Anni: </span>{fmtExperienceYears(w.experience_years) || "—"}</div>
-              <div><span className="text-muted-foreground">Tariffa oraria desiderata: </span>{w.hourly_rate != null ? `€ ${Number(w.hourly_rate).toFixed(0)}/h` : "—"}</div>
+              <div><span className="text-muted-foreground">Compenso orario netto desiderato: </span>{w.hourly_rate != null ? (Number(w.hourly_rate) >= 31 ? "oltre 30 €/h netti" : `€ ${Number(w.hourly_rate).toFixed(0)}/h netti`) : "—"}</div>
               <div className="inline-flex items-center gap-1"><Car className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Automunito: </span>{w.is_motorized == null ? "Non specificato" : w.is_motorized ? "Sì" : "No"}</div>
             </section>
 

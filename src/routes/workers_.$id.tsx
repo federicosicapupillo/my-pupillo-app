@@ -228,7 +228,7 @@ function WorkerDetailPage() {
           <Card title="Esperienza">
             <Row label="Anni di esperienza" value={fmtExperienceYears(w.experience_years)} />
             <Row label="Livello" value={fmtExperienceLevel(w.experience_level)} />
-            <Row label="Tariffa oraria" value={fmtHourlyRate(w.hourly_rate)} />
+            <Row label="Compenso orario netto desiderato" value={fmtHourlyRate(w.hourly_rate)} />
             <Row label="Automunito" value={fmtMotorized(w.is_motorized)} />
           </Card>
 
