@@ -33,7 +33,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { isAnnouncementFull, positionsLabel } from "@/lib/announcement-positions";
 import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 import { CounterofferDialog } from "@/components/CounterofferDialog";
-import { CREDITS_PER_HIRE } from "@/lib/pricing";
+import { CREDITS_PER_HIRE, CLIENT_BALANCE_PRECHECK } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
 import { useCounterofferEnabled } from "@/lib/use-counteroffer-enabled";
 import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
@@ -560,7 +560,7 @@ function AnnouncementDetail() {
     // conferma è gratis (consume_credits lato DB scrive un audit delta=0
     // e ritorna true anche a saldo zero).
     // Il server decide: i richiami della stessa persona sono gratuiti.
-    if (false && paymentsEnabled) {
+    if (paymentsEnabled && CLIENT_BALANCE_PRECHECK) {
       try {
         const { data: prof } = await supabase
           .from("profiles")

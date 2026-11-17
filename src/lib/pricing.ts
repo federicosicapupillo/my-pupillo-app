@@ -41,3 +41,4 @@ export const CREDIT_COSTS = {
 
 // Soglia per il popup "Stai terminando i crediti" (< 2 conferme rimanenti).
 export const LOW_CREDITS_THRESHOLD = CREDITS_PER_HIRE * 2; // 14
+export const CLIENT_BALANCE_PRECHECK = false as boolean;
