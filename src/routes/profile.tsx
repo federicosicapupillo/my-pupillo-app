@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { YEARS_OPTIONS, LEGACY_YEARS_6_10, RATE_OPTIONS, rateForSave } from "@/lib/hourly-rate-guidance";
+import { HourlyRateGuidance, HourlyRateNote, RATE_LOCKED_HELPER } from "@/components/HourlyRateGuidance";
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -516,6 +518,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
       : "",
   );
   const [motor, setMotor] = useState<"" | "yes" | "no">(initialMotor as any);
+  const [rateClearedNotice, setRateClearedNotice] = useState(false);
   const { saving, save } = useBoxSave(userId, onSaved);
 
   const start = () => {
@@ -527,18 +530,13 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
         : "",
     );
     setMotor(initialMotor as any);
+    setRateClearedNotice(false);
     setEditing(true);
   };
 
   const onSave = async () => {
-    const rateVal = rate.trim();
-    const rateNum = (() => {
-      if (!rateVal) return null;
-      if (rateVal === "oltre_30") return 31;
-      const n = Number(rateVal.replace(",", "."));
-      if (!Number.isFinite(n) || n < 8) return null;
-      return n;
-    })();
+    // Tariffa salvata solo con anni indicati ("oltre_30" => 31).
+    const rateNum = rateForSave(years, rate);
     const ok = await save({
       experience_years: years.trim() || null,
       experience_level: level || null,
@@ -576,6 +574,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
       prima_esperienza: "Prima esperienza",
       meno_di_1: "Meno di 1 anno",
       oltre_10: "Oltre 10 anni",
+      "6_10": "6-10 anni",
     };
     return map[y] || y;
   };
@@ -585,19 +584,6 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
     return `€${r}/h`;
   };
 
-  const YEARS_OPTIONS = [
-    { value: "", label: "Non specificato" },
-    { value: "prima_esperienza", label: "Prima esperienza" },
-    { value: "meno_di_1", label: "Meno di 1 anno" },
-    { value: "1", label: "1 anno" },
-    { value: "2", label: "2 anni" },
-    { value: "3", label: "3 anni" },
-    { value: "4", label: "4 anni" },
-    { value: "5", label: "5 anni" },
-    { value: "6_10", label: "6-10 anni" },
-    { value: "oltre_10", label: "Oltre 10 anni" },
-  ];
-
   const LEVEL_OPTIONS = [
     { value: "", label: "Non specificato" },
     { value: "junior", label: "Basic" },
@@ -606,23 +592,6 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
     { value: "esperto", label: "Esperto" },
   ];
 
-  const RATE_OPTIONS = [
-    { value: "", label: "Non specificato" },
-    { value: "8", label: "8 €/h" },
-    { value: "9", label: "9 €/h" },
-    { value: "10", label: "10 €/h" },
-    { value: "11", label: "11 €/h" },
-    { value: "12", label: "12 €/h" },
-    { value: "13", label: "13 €/h" },
-    { value: "14", label: "14 €/h" },
-    { value: "15", label: "15 €/h" },
-    { value: "16", label: "16 €/h" },
-    { value: "18", label: "18 €/h" },
-    { value: "20", label: "20 €/h" },
-    { value: "25", label: "25 €/h" },
-    { value: "30", label: "30 €/h" },
-    { value: "oltre_30", label: "Oltre 30 €/h" },
-  ];
 
   return (
     <ProfileBox title="Esperienza e preferenze" editing={editing} saving={saving} onEdit={start} onCancel={() => setEditing(false)} onSave={onSave}>
@@ -630,15 +599,38 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
         <div className="space-y-3">
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <Label>Anni di esperienza</Label>
-              <Select value={years || "none"} onValueChange={(v) => setYears(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
+              <Label htmlFor="pf-exp-years">Anni di esperienza</Label>
+              <Select value={years || "none"} onValueChange={(v) => {
+                const y = v === "none" ? "" : v;
+                setRateClearedNotice(!y && !!rate);
+                setYears(y);
+                if (!y) setRate("");
+              }}>
+                <SelectTrigger id="pf-exp-years"><SelectValue placeholder="Seleziona" /></SelectTrigger>
                 <SelectContent>
-                  {YEARS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value || "none"} value={o.value || "none"}>{o.label}</SelectItem>
-                  ))}
+                  <SelectItem value="none">Non specificato</SelectItem>
+                  {YEARS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  {years === LEGACY_YEARS_6_10.value && <SelectItem value={LEGACY_YEARS_6_10.value}>{LEGACY_YEARS_6_10.label}</SelectItem>}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="pf-exp-rate">Tariffa oraria NETTA desiderata (€/h)</Label>
+              <Select value={rate || "none"} disabled={!years} onValueChange={(v) => { setRateClearedNotice(false); setRate(v === "none" ? "" : v); }}>
+                <SelectTrigger id="pf-exp-rate" aria-describedby="pf-exp-rate-help"><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non specificato</SelectItem>
+                  {RATE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  {rate && !RATE_OPTIONS.some((o) => o.value === rate) && <SelectItem value={rate}>{rate} €/h</SelectItem>}
+                </SelectContent>
+              </Select>
+              <div id="pf-exp-rate-help">
+                {!years && <p className="text-xs text-muted-foreground mt-1">{RATE_LOCKED_HELPER}</p>}
+                {!years && rate && <p className="text-xs text-muted-foreground mt-1">Tariffa già salvata: verrà rimossa al salvataggio se non indichi gli anni di esperienza.</p>}
+                {rateClearedNotice && <p className="text-xs text-muted-foreground mt-1" role="status">Hai tolto gli anni di esperienza: la tariffa è stata azzerata.</p>}
+                <HourlyRateNote />
+                <HourlyRateGuidance years={years} rate={rate} />
+              </div>
             </div>
             <div>
               <Label>Livello di esperienza</Label>
@@ -650,18 +642,6 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label>Tariffa oraria desiderata</Label>
-              <Select value={rate || "none"} onValueChange={(v) => setRate(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Seleziona" /></SelectTrigger>
-                <SelectContent>
-                  {RATE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value || "none"} value={o.value || "none"}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">La tariffa è indicativa. Il compenso finale dipende dal turno proposto dal ristoratore.</p>
             </div>
             <div>
               <Label>Sei automunito?</Label>
@@ -680,7 +660,7 @@ function ExperienceBox({ profile, userId, onSaved }: { profile: any; userId: str
         <div className="space-y-2 text-sm">
           <Row label="Anni di esperienza" value={yearsLabel(profile?.experience_years)} />
           <Row label="Livello" value={levelLabel(profile?.experience_level)} />
-          <Row label="Tariffa oraria desiderata" value={rateLabel(profile?.hourly_rate)} />
+          <Row label="Tariffa oraria netta desiderata" value={rateLabel(profile?.hourly_rate)} />
           <Row label="Automunito" value={motorLabel} />
         </div>
       )}

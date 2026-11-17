@@ -1,4 +1,6 @@
 import { hasVerifiedContact, isContactPhoneLocked } from "@/lib/contact-verification";
+import { YEARS_OPTIONS, LEGACY_YEARS_6_10, RATE_OPTIONS, rateForSave } from "@/lib/hourly-rate-guidance";
+import { HourlyRateGuidance, HourlyRateNote, RATE_LOCKED_HELPER } from "@/components/HourlyRateGuidance";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { isEffectivelyComplete } from "@/lib/profile-completion";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -452,6 +454,7 @@ function Onboarding() {
     hourly_rate: "",
     is_motorized: "",
   });
+  const [rateClearedNotice, setRateClearedNotice] = useState(false);
 
   const [serviceAreaPreview, setServiceAreaPreview] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsServiceArea, setGpsServiceArea] = useState<{ lat: number; lng: number } | null>(null);
@@ -1642,17 +1645,8 @@ function Onboarding() {
             // Campi facoltativi sezione "Esperienza e preferenze"
             experience_years: optExp.experience_years.trim() || null,
             experience_level: optExp.experience_level || null,
-            hourly_rate: (() => {
-              const raw = optExp.hourly_rate.trim();
-              if (!raw) return null;
-              // Sentinel: "Oltre 30 €/h" salvato come 31 per restare coerente
-              // col tipo numerico della colonna hourly_rate.
-              if (raw === "oltre_30") return 31;
-              const v = raw.replace(",", ".");
-              if (!v) return null;
-              const n = Number(v);
-              return Number.isFinite(n) && n >= 0 ? n : null;
-            })(),
+            // La tariffa si salva solo se gli anni sono indicati ("oltre_30" => 31).
+            hourly_rate: rateForSave(optExp.experience_years, optExp.hourly_rate),
             is_motorized: optExp.is_motorized === "yes" ? true : optExp.is_motorized === "no" ? false : null,
           };
     // Salva i campi del profilo. Aggiungiamo un timeout lato client per
@@ -1706,7 +1700,7 @@ function Onboarding() {
         worker_user_id: user.id,
         years_experience: optExp.experience_years || null,
         experience_level: optExp.experience_level || null,
-        desired_hourly_rate: optExp.hourly_rate || null,
+        desired_hourly_rate: rateForSave(optExp.experience_years, optExp.hourly_rate),
         has_vehicle: optExp.is_motorized || "non_specificato",
         dati_salvati_correttamente: true,
       });
@@ -2866,24 +2860,55 @@ function Onboarding() {
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <Label>Anni di esperienza</Label>
+                  <Label htmlFor="ob-exp-years">Anni di esperienza</Label>
                   <Select
                     value={optExp.experience_years || "none"}
-                    onValueChange={(v) => setOptExp({ ...optExp, experience_years: v === "none" ? "" : v })}
+                    onValueChange={(v) => {
+                      const years = v === "none" ? "" : v;
+                      const cleared = !years && !!optExp.hourly_rate;
+                      setOptExp({ ...optExp, experience_years: years, hourly_rate: years ? optExp.hourly_rate : "" });
+                      setRateClearedNotice(cleared);
+                    }}
                   >
-                    <SelectTrigger><SelectValue placeholder="Non specificato" /></SelectTrigger>
+                    <SelectTrigger id="ob-exp-years"><SelectValue placeholder="Non specificato" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Non specificato</SelectItem>
-                      <SelectItem value="meno_di_1">Meno di 1 anno</SelectItem>
-                      <SelectItem value="1">1 anno</SelectItem>
-                      <SelectItem value="2">2 anni</SelectItem>
-                      <SelectItem value="3">3 anni</SelectItem>
-                      <SelectItem value="4">4 anni</SelectItem>
-                      <SelectItem value="5">5 anni</SelectItem>
-                      <SelectItem value="6_10">6-10 anni</SelectItem>
-                      <SelectItem value="oltre_10">Oltre 10 anni</SelectItem>
+                      {YEARS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      {optExp.experience_years === LEGACY_YEARS_6_10.value && (
+                        <SelectItem value={LEGACY_YEARS_6_10.value}>{LEGACY_YEARS_6_10.label}</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="ob-exp-rate">Tariffa oraria NETTA desiderata (€/h)</Label>
+                  <Select
+                    value={optExp.hourly_rate || "none"}
+                    disabled={!optExp.experience_years}
+                    onValueChange={(v) => { setRateClearedNotice(false); setOptExp({ ...optExp, hourly_rate: v === "none" ? "" : v }); }}
+                  >
+                    <SelectTrigger id="ob-exp-rate" aria-describedby="ob-exp-rate-help"><SelectValue placeholder="Non specificato" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Non specificato</SelectItem>
+                      {RATE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      {optExp.hourly_rate && !RATE_OPTIONS.some((o) => o.value === optExp.hourly_rate) && (
+                        <SelectItem value={optExp.hourly_rate}>{optExp.hourly_rate} €/h</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <div id="ob-exp-rate-help">
+                    {!optExp.experience_years && (
+                      <p className="text-xs text-muted-foreground mt-1">{RATE_LOCKED_HELPER}</p>
+                    )}
+                    {!optExp.experience_years && optExp.hourly_rate && (
+                      <p className="text-xs text-muted-foreground mt-1">Tariffa già salvata: verrà rimossa al salvataggio se non indichi gli anni di esperienza.</p>
+                    )}
+                    {rateClearedNotice && (
+                      <p className="text-xs text-muted-foreground mt-1" role="status">Hai tolto gli anni di esperienza: la tariffa è stata azzerata.</p>
+                    )}
+                    <HourlyRateNote />
+                    <HourlyRateGuidance years={optExp.experience_years} rate={optExp.hourly_rate} />
+                  </div>
                 </div>
                 <div>
                   <Label>Livello di esperienza</Label>
@@ -2900,35 +2925,6 @@ function Onboarding() {
                       <SelectItem value="esperto">Esperto</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div>
-                  <Label>Tariffa oraria desiderata (€/h)</Label>
-                  <Select
-                    value={optExp.hourly_rate || "none"}
-                    onValueChange={(v) => setOptExp({ ...optExp, hourly_rate: v === "none" ? "" : v })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Non specificato" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Non specificato</SelectItem>
-                      <SelectItem value="8">8 €/h</SelectItem>
-                      <SelectItem value="9">9 €/h</SelectItem>
-                      <SelectItem value="10">10 €/h</SelectItem>
-                      <SelectItem value="11">11 €/h</SelectItem>
-                      <SelectItem value="12">12 €/h</SelectItem>
-                      <SelectItem value="13">13 €/h</SelectItem>
-                      <SelectItem value="14">14 €/h</SelectItem>
-                      <SelectItem value="15">15 €/h</SelectItem>
-                      <SelectItem value="16">16 €/h</SelectItem>
-                      <SelectItem value="18">18 €/h</SelectItem>
-                      <SelectItem value="20">20 €/h</SelectItem>
-                      <SelectItem value="25">25 €/h</SelectItem>
-                      <SelectItem value="30">30 €/h</SelectItem>
-                      <SelectItem value="oltre_30">Oltre 30 €/h</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    La tariffa è indicativa. Il compenso finale dipende dal turno proposto dal ristoratore.
-                  </p>
                 </div>
                 <div>
                   <Label>Sei automunito?</Label>
