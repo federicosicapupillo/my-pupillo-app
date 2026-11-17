@@ -32,6 +32,7 @@ import { WorkerAvailabilityList } from "@/components/PublicWorkerAvailability";
 import { calendarAvailabilitySearchText, todayAvailabilityEntries } from "@/lib/worker-calendar-availability";
 import { toIso } from "@/lib/availability-calendar";
 import { sendShiftProposal } from "@/lib/shift-proposal";
+import { ProposalCompensationNotice, useProposalCompensation } from "@/components/ProposalCompensationNotice";
 import { useProfileGate } from "@/components/ProfileGate";
 import { getLastAnnouncementId, setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
@@ -969,7 +970,7 @@ function WorkersPage() {
   };
 
   // Esegue l'invio della proposta dopo la conferma esplicita del ristoratore.
-  const sendProposal = async (workerId: string) => {
+  const sendProposal = async (workerId: string, acceptedHourlyRate?: number | null) => {
     if (!selected || !user) { toast.error("Seleziona prima un annuncio"); return; }
     setSendingProposal(true);
     try {
@@ -1054,6 +1055,7 @@ function WorkersPage() {
           announcementId: selected,
           restaurantId: user.id,
           workerId,
+          acceptedHourlyRate,
         });
       } catch (err: any) {
         if (err?.name === "WorkerBusyError" || err?.name === "AnnouncementExpiredError") {
@@ -1070,6 +1072,8 @@ function WorkersPage() {
       toast.success("Proposta inviata al lavoratore.");
       setProposalWorker(null);
       nav({ to: "/messages/$id", params: { id: applicationId } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Non è stato possibile inviare la proposta. Riprova.");
     } finally {
       setSendingProposal(false);
     }
@@ -1982,7 +1986,7 @@ function WorkersPage() {
         rel={proposalWorker ? rel[proposalWorker.id] : undefined}
         sending={sendingProposal}
         onCancel={() => setProposalWorker(null)}
-        onConfirm={() => proposalWorker && sendProposal(proposalWorker.id)}
+        onConfirm={(rate) => proposalWorker && sendProposal(proposalWorker.id, rate)}
       />
       <AvailabilityDetailsDialog
         worker={detailsWorker}
@@ -2369,9 +2373,10 @@ function ProposalConfirmDialog({
   rel: WorkerRel | undefined;
   sending: boolean;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (acceptedHourlyRate?: number | null) => void;
 }) {
   const open = !!worker;
+  const terms = useProposalCompensation(worker?.id, announcement?.id, announcement?.tariff_amount, announcement?.tariff_type);
   if (!worker) {
     return (
       <Dialog open={false} onOpenChange={(v) => { if (!v) onCancel(); }}>
@@ -2389,7 +2394,7 @@ function ProposalConfirmDialog({
   const end = ann?.end_time ? ann.end_time.slice(0, 5) : null;
   const durationRaw = ann?.shift_duration_hours ?? ann?.duration_hours ?? null;
   const duration = durationRaw != null ? Number(durationRaw) : null;
-  const tariff = ann?.tariff_amount != null ? Number(ann.tariff_amount) : null;
+  const tariff = terms.effective;
   const isHourly = ann?.tariff_type === "hourly";
   const totalEstimate = isHourly && tariff != null && Number.isFinite(tariff) && duration != null && Number.isFinite(duration)
     ? tariff * duration
@@ -2428,7 +2433,7 @@ function ProposalConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && !sending) onCancel(); }}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Invia proposta di lavoro</DialogTitle>
           <DialogDescription>
@@ -2436,6 +2441,7 @@ function ProposalConfirmDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 text-sm">
+          <ProposalCompensationNotice terms={terms} />
           <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
             <div><span className="text-muted-foreground">Lavoratore:</span> <span className="font-medium">{displayName}</span></div>
             <div><span className="text-muted-foreground">Ruolo:</span> <span className="font-medium">{role}</span></div>
@@ -2502,7 +2508,7 @@ function ProposalConfirmDialog({
         </div>
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={onCancel} disabled={sending}>Annulla</Button>
-          <Button onClick={onConfirm} disabled={sending}>{sending ? "Invio…" : "Invia proposta"}</Button>
+          <Button onClick={() => { if (terms.canSend) onConfirm(terms.needsAgreement ? terms.effective : undefined); }} disabled={sending || !terms.canSend} className="whitespace-normal">{sending ? "Invio…" : terms.needsAgreement ? "Accetta compenso e invia" : "Invia proposta"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

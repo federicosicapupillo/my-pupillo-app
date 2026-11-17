@@ -112,7 +112,7 @@ import {
 } from "@/lib/shift-conflict";
 
 export const Route = createFileRoute("/messages/$id")({
-  head: () => ({ meta: [{ title: "Dettagli turno e candidatura — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Dettagli turno e candidatura — Pupillo" }, { name: "description", content: "Consulta proposte, compensi concordati e dettagli del turno su Pupillo." }, { property: "og:title", content: "Dettagli turno e candidatura — Pupillo" }, { property: "og:description", content: "Consulta proposte, compensi concordati e dettagli del turno su Pupillo." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: () => <RequireAuth><Thread /></RequireAuth>,
   // Fallback friendly se il caricamento della conversazione fallisce
   // (link rotto, RLS, errore di rete). Niente più "This page didn't load":
@@ -2039,6 +2039,7 @@ function Thread() {
   }, [app, events, msgs]);
 
   const currentTariff = app?.proposed_tariff ?? ann?.tariff_amount;
+  const proposalAnn = ann ? { ...ann, tariff_amount: currentTariff ?? ann.tariff_amount } : null;
 
   const canSeeAddress = canSeePreciseAddress({
     isOwner: !!(user && app && app.restaurant_id === user.id),
@@ -3119,7 +3120,7 @@ function Thread() {
                 <div key={m.id} className="flex flex-col gap-2">
                 <ProposalCard
                   message={m}
-                  ann={ann}
+                  ann={proposalAnn}
                   compact
                   inline={workerDecisionMerged}
                   venueName={venueName}
@@ -3694,9 +3695,9 @@ function Thread() {
                 if (start) rows.push({ label: "Orario", value: end ? `${start} - ${end}` : start });
                 const zona = [ann.job_city, (ann as any).job_province].filter(Boolean).join(" · ");
                 if (zona) rows.push({ label: "Città/Zona", value: zona });
-                const amt = ann.tariff_amount == null ? null : Number(ann.tariff_amount);
+                const amt = currentTariff == null ? null : Number(currentTariff);
                 if (amt != null && Number.isFinite(amt) && amt > 0) {
-                  rows.push({ label: "Compenso", value: formatTariff(ann.tariff_amount ?? null, ann.tariff_type ?? null) });
+                  rows.push({ label: "Compenso", value: formatTariff(currentTariff ?? null, ann.tariff_type ?? null) });
                 }
                 const dress = labelsOf((ann as any).dress_code_items ?? [], DRESS_CODE_OPTIONS as any).filter(Boolean);
                 if (dress.length) rows.push({ label: "Dress code", value: dress.join(", ") });

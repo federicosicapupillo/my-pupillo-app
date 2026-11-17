@@ -12,6 +12,8 @@ import { Star, MessageSquare, Send, Heart, Search, Calendar, Users, Gift, Quote,
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { sendShiftProposal } from "@/lib/shift-proposal";
+import { ProposalCompensationNotice, useProposalCompensation } from "@/components/ProposalCompensationNotice";
+import { formatTariff } from "@/lib/format";
 import { setLastAnnouncementId } from "@/lib/last-announcement";
 import { getShiftStartDate } from "@/lib/announcement-time";
 import { useRequiredReviews } from "@/lib/required-reviews";
@@ -23,7 +25,7 @@ import { restaurantContactWorker } from "@/lib/restaurant-contact";
 import { mapShiftConflictError } from "@/lib/shift-conflict";
 
 export const Route = createFileRoute("/ristoratore/collaboratori")({
-  head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Collaboratori — Pupillo" }, { name: "description", content: "Ritrova i collaboratori e proponi nuovi turni su Pupillo." }, { property: "og:title", content: "Collaboratori — Pupillo" }, { property: "og:description", content: "Ritrova i collaboratori e proponi nuovi turni su Pupillo." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: () => <RequireAuth><Page /></RequireAuth>,
 });
 
@@ -44,7 +46,7 @@ type Row = {
   last_review_rating: number | null;
 };
 
-type AnnLite = { id: string; service_date: string; service_time: string; location_address: string };
+type AnnLite = { id: string; service_date: string; service_time: string; location_address: string; tariff_amount: number | null; tariff_type: string | null };
 
 function Page() {
   const { user, role } = useAuth();
@@ -57,6 +59,8 @@ function Page() {
   const [inviteFor, setInviteFor] = useState<Row | null>(null);
   const [openAnns, setOpenAnns] = useState<AnnLite[]>([]);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [selectedInviteAnn, setSelectedInviteAnn] = useState<AnnLite | null>(null);
+  const terms = useProposalCompensation(inviteFor?.worker_id, selectedInviteAnn?.id, selectedInviteAnn?.tariff_amount, selectedInviteAnn?.tariff_type);
   const { isBlocked, actionShifts } = useRequiredReviews();
   const [blockOpen, setBlockOpen] = useState(false);
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
@@ -207,7 +211,7 @@ function Page() {
     if (!user) return;
     if (isBlocked) { setBlockOpen(true); return; }
     const { data } = await supabase.from("announcements")
-      .select("id, service_date, service_time, location_address, status")
+      .select("id, service_date, service_time, location_address, status, tariff_amount, tariff_type")
       .eq("restaurant_id", user.id)
       .eq("status", "active")
       .order("service_date", { ascending: true });
@@ -218,10 +222,11 @@ function Page() {
     });
     setOpenAnns(filtered as any);
     setInviteFor(r);
+    setSelectedInviteAnn(null);
   };
 
   const sendInvite = async (annId: string) => {
-    if (!inviteFor || !user) return;
+    if (!inviteFor || !user || !terms.canSend || selectedInviteAnn?.id !== annId) return;
     setInviteSubmitting(true);
     try {
       // Blocca duplicati attivi; consenti "Invita di nuovo" se esiste solo
@@ -260,6 +265,7 @@ function Page() {
         announcementId: annId,
         restaurantId: user.id,
         workerId: inviteFor.worker_id,
+        acceptedHourlyRate: terms.needsAgreement ? terms.effective : undefined,
       });
       setLastAnnouncementId(user.id, annId);
       // Notify worker
@@ -481,7 +487,7 @@ function Page() {
       )}
 
       <Dialog open={!!inviteFor} onOpenChange={(o) => !o && setInviteFor(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Invita {inviteFor?.full_name ?? "il lavoratore"} a un nuovo turno</DialogTitle>
             <DialogDescription>
@@ -494,11 +500,11 @@ function Page() {
                 Nessun annuncio attivo. <Link to="/announcements/new" className="text-primary underline">Crea un annuncio</Link>.
               </div>
             ) : openAnns.map((a) => (
-              <button
+              <Button variant="outline"
                 key={a.id}
                 disabled={inviteSubmitting}
-                onClick={() => sendInvite(a.id)}
-                className="w-full text-left rounded-xl border p-3 hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
+                onClick={() => setSelectedInviteAnn(a)}
+                className="h-auto w-full flex-col items-start whitespace-normal p-3 text-left"
               >
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Calendar className="h-4 w-4 text-primary" />
@@ -508,11 +514,16 @@ function Page() {
                 {a.location_address && (
                   <div className="text-xs text-muted-foreground mt-1 truncate">{a.location_address}</div>
                 )}
-              </button>
+              </Button>
             ))}
           </div>
+          {selectedInviteAnn && <div className="space-y-3 text-sm">
+            <p>Compenso proposto: <strong>{formatTariff(terms.effective, selectedInviteAnn.tariff_type)}</strong></p>
+            <ProposalCompensationNotice terms={terms} />
+          </div>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteFor(null)}>Chiudi</Button>
+            {selectedInviteAnn && <Button disabled={inviteSubmitting || !terms.canSend} onClick={() => sendInvite(selectedInviteAnn.id)} className="whitespace-normal">{inviteSubmitting ? "Invio…" : terms.needsAgreement ? "Accetta compenso e invia" : "Invia proposta"}</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>

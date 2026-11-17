@@ -88,6 +88,7 @@ const WORKER_ID = "44444444-4444-4444-4444-444444444444";
 
 beforeEach(() => {
   calls.length = 0;
+  fixtures.public_profiles = { hourly_rate: 10 };
   fixtures.announcements = {
     id: ANN_ID,
     service_date: "2099-06-12",
@@ -107,6 +108,22 @@ beforeEach(() => {
 });
 
 describe("E2E — restaurant sends a shift proposal", () => {
+  it("saves an explicitly agreed 10 €/h for an 8 €/h announcement only on this application", async () => {
+    fixtures.announcements = { ...fixtures.announcements, tariff_amount: 8 };
+    await sendShiftProposal({ applicationId: APP_ID, announcementId: ANN_ID, restaurantId: REST_ID, workerId: WORKER_ID, acceptedHourlyRate: 10 });
+    const compensationWrite = calls.find((c) => c.table === "applications" && c.op === "update" && c.payload?.proposed_tariff === 10);
+    expect(compensationWrite?.filters).toEqual({ id: APP_ID });
+    expect(calls.some((c) => c.table === "announcements" && c.op === "update")).toBe(false);
+    expect(calls.some((c) => c.table === "messages" && c.op === "insert")).toBe(true);
+  });
+
+  it("rejects a changed worker rate before saving pay or sending a message", async () => {
+    fixtures.announcements = { ...fixtures.announcements, tariff_amount: 8 };
+    fixtures.public_profiles = { hourly_rate: 12 };
+    await expect(sendShiftProposal({ applicationId: APP_ID, announcementId: ANN_ID, restaurantId: REST_ID, workerId: WORKER_ID, acceptedHourlyRate: 10 })).rejects.toThrow();
+    expect(calls.filter((c) => c.op === "insert" || c.op === "update")).toEqual([]);
+  });
+
   it("delivers a real chat message to the worker with the correct template, sender and receiver", async () => {
     await sendShiftProposal({
       applicationId: APP_ID,

@@ -1,5 +1,7 @@
 # Project rules
 
+- Direct proposal compensation uses the shared proposal-compensation helper and consent notice; persist accepted hourly pay on applications.proposed_tariff, never alter the shared announcement — why: each worker can agree a different rate without changing other candidates' terms.
+
 - Keep shared navigation collapsed below 2xl and use shrink-safe grids for mobile headers and action rows; size mobile dialogs with dynamic viewport units — why: both role menus exceed tablet widths and fixed save actions must remain fully visible.
 
 - Social OAuth returns to the public /auth page; its session-aware effect waits for role/profile hydration before navigating — why: returning to / leaves full-page Google signups stranded on the homepage.

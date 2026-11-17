@@ -23,6 +23,7 @@ import { geocodeAddress } from "@/lib/geocode";
 import { formatCandidateName, loadCollaboratedWorkerIds, loadCompletedCollaboratorWorkerIds } from "@/lib/candidate-display";
 import { getShiftEndDate, getShiftStartDate, getExpiresAtDate } from "@/lib/announcement-time";
 import { sendShiftProposal } from "@/lib/shift-proposal";
+import { ProposalCompensationNotice, useProposalCompensation } from "@/components/ProposalCompensationNotice";
 import { useRequiredReviews } from "@/lib/required-reviews";
 import { CANCELLATION_REASONS, cancelAnnouncementWithNotifications, reasonLabel, type CancellationReasonValue } from "@/lib/announcement-cancel";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
@@ -53,7 +54,7 @@ import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/announcements")({
-  head: () => ({ meta: [{ title: "Annunci — Pupillo" }] }),
+  head: () => ({ meta: [{ title: "Annunci — Pupillo" }, { name: "description", content: "Gestisci i tuoi annunci, le candidature e le proposte di turno su Pupillo." }, { property: "og:title", content: "Annunci — Pupillo" }, { property: "og:description", content: "Gestisci i tuoi annunci, le candidature e le proposte di turno su Pupillo." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>): { status?: string } => ({
     status: typeof s.status === "string" ? s.status : undefined,
   }),
@@ -1759,6 +1760,7 @@ function ProposalConfirmDialog({
   const [sending, setSending] = useState(false);
   const [alreadyContactAppId, setAlreadyContactAppId] = useState<string | null>(null);
   const [workersNeeded, setWorkersNeeded] = useState<number | null>(null);
+  const terms = useProposalCompensation(target?.candidate.worker_id, target?.ann.id, target?.ann.tariff_amount, target?.ann.tariff_type);
 
   useEffect(() => {
     const annId = target?.ann?.id;
@@ -1789,6 +1791,7 @@ function ProposalConfirmDialog({
   const skillLabels = labelsOf(ann.required_skills ?? [], SKILL_OPTIONS as any);
 
   const handleSend = async () => {
+    if (!terms.canSend) return;
     if (!restaurantId) { toast.error("Sessione non valida"); return; }
     setSending(true);
     try {
@@ -1822,10 +1825,11 @@ function ProposalConfirmDialog({
       }
       const appId = (ins as any).id as string;
       await sendShiftProposal({
-        applicationId: appId!,
+        applicationId: appId,
         announcementId: ann.id,
         restaurantId,
         workerId: candidate.worker_id,
+        acceptedHourlyRate: terms.needsAgreement ? terms.effective : undefined,
       });
       // La notifica al lavoratore viene creata automaticamente dal trigger
       // `notify_new_message` con titolo "Nuova proposta di lavoro" sul
@@ -1833,7 +1837,7 @@ function ProposalConfirmDialog({
       // generare due notifiche allo stesso lavoratore.
       toast.success("Proposta inviata correttamente.");
       onClose();
-      navigate({ to: "/messages/$id", params: { id: appId! } });
+      navigate({ to: "/messages/$id", params: { id: appId } });
     } catch (e: any) {
       toast.error(e?.message ?? "Errore invio proposta");
     } finally {
@@ -1849,7 +1853,7 @@ function ProposalConfirmDialog({
       onClose={() => { setAlreadyContactAppId(null); onClose(); }}
     />
     <Dialog open={!!target} onOpenChange={(v) => { if (!v && !sending) onClose(); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Conferma invio proposta</DialogTitle>
           <DialogDescription>
@@ -1871,7 +1875,8 @@ function ProposalConfirmDialog({
           </Section>
 
           <Section title="3. Compenso">
-            <SummaryRow icon={Euro} label="Compenso" value={formatTariff(ann.tariff_amount, ann.tariff_type)} />
+            <ProposalCompensationNotice terms={terms} />
+            <SummaryRow icon={Euro} label="Compenso proposto" value={formatTariff(terms.effective, ann.tariff_type)} />
           </Section>
 
           <Section title="4. Dress code">
@@ -1904,8 +1909,8 @@ function ProposalConfirmDialog({
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose} disabled={sending}>Annulla</Button>
-          <Button onClick={handleSend} disabled={sending}>
-            {sending ? "Invio in corso…" : "Invia proposta"}
+          <Button onClick={handleSend} disabled={sending || !terms.canSend} className="whitespace-normal">
+            {sending ? "Invio in corso…" : terms.needsAgreement ? "Accetta compenso e invia" : "Invia proposta"}
           </Button>
         </DialogFooter>
       </DialogContent>

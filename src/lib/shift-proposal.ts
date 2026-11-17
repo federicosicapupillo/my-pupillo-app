@@ -7,6 +7,7 @@ import {
   CONFLICT_RESTAURANT_REQUEST_MESSAGE,
 } from "@/lib/shift-conflict";
 import { isAnnouncementExpired } from "@/lib/announcement-time";
+import { proposalCompensation } from "@/lib/proposal-compensation";
 
 export class WorkerBusyError extends Error {
   constructor(message = CONFLICT_RESTAURANT_REQUEST_MESSAGE) {
@@ -119,13 +120,25 @@ export async function sendShiftProposal(params: {
   announcementId: string;
   restaurantId: string;
   workerId: string;
+  acceptedHourlyRate?: number | null;
 }) {
-  const { applicationId, announcementId, restaurantId, workerId } = params;
-  const { data: ann } = await supabase
+  const { applicationId, announcementId, restaurantId, workerId, acceptedHourlyRate } = params;
+  const { data: ann, error: announcementError } = await supabase
     .from("announcements")
     .select("id, service_date, service_time, end_time, location_address, job_city, tariff_amount, tariff_type, notes, professional_profile")
     .eq("id", announcementId)
     .maybeSingle();
+  if (announcementError) throw announcementError;
+  let effectiveRate = ann?.tariff_amount;
+  if (acceptedHourlyRate != null) {
+    const { data: worker, error } = await supabase.from("public_profiles").select("hourly_rate").eq("id", workerId).maybeSingle();
+    if (error || !worker) throw new Error("Impossibile verificare il compenso del lavoratore. Riapri la proposta.");
+    const terms = proposalCompensation(ann?.tariff_amount, ann?.tariff_type, worker.hourly_rate);
+    if (terms.needsExactRate || terms.effective !== acceptedHourlyRate) throw new Error("Il compenso è cambiato. Riapri la proposta e verifica il nuovo importo prima di inviare.");
+    effectiveRate = acceptedHourlyRate;
+    const { error: rateError } = await supabase.from("applications").update({ proposed_tariff: acceptedHourlyRate }).eq("id", applicationId);
+    if (rateError) throw rateError;
+  }
   // PUPILLO: regola di OCCUPAZIONE — non inviare proposta a un lavoratore
   // gia' occupato in quella fascia oraria (con buffer 1h post-fine).
   if (ann) {
@@ -149,13 +162,14 @@ export async function sendShiftProposal(params: {
   const annSafe: ProposalAnnouncement = {
     ...((ann as ProposalAnnouncement) ?? { id: announcementId, service_date: null, service_time: null, location_address: null }),
     location_address: null,
+    tariff_amount: effectiveRate,
   };
   annSafe.job_city = publicLocationLabel({
     job_city: (ann as any)?.job_city ?? null,
   });
   const body = buildProposalBody(annSafe, PUBLIC_VENUE_NAME);
   const createdAt = new Date().toISOString();
-  await supabase.from("messages").insert({
+  const { error: messageError } = await supabase.from("messages").insert({
     application_id: applicationId,
     sender_id: restaurantId,
     receiver_id: workerId,
@@ -166,6 +180,7 @@ export async function sendShiftProposal(params: {
     message_type: "template",
     action_type: PROPOSAL_ACTION,
   } as never);
+  if (messageError) throw messageError;
   await supabase.from("applications").update({
     last_message_preview: buildProposalPreview((ann as ProposalAnnouncement) ?? { id: announcementId, service_date: null, service_time: null, location_address: null }),
     last_message_at: createdAt,

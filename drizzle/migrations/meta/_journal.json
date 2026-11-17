@@ -204,6 +204,13 @@
       "when": 1794918673431,
       "tag": "0028_cv_score_without_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794922164406,
+      "tag": "0029_restaurant_accept_worker_compensation",
+      "breakpoints": true
     }
   ]
 }
