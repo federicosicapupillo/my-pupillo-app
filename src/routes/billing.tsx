@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle, Zap } from "lucide-react";
-import { CREDIT_PACKS, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD } from "@/lib/pricing";
+import { CREDIT_PACKS, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD, SINGLE_PACK_KEY, UNLIMITED_RECALL_COPY } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
 import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
 import { LaunchPricingNotice } from "@/components/LaunchPricingNotice";
@@ -203,14 +203,14 @@ function Billing() {
 
   // "Acquista pacchetto" dal popup crediti insufficienti: apri subito il
   // checkout Stripe del pacchetto consigliato senza far passare il ristoratore
-  // dal billing. Mappiamo `checkout=basic` al pacchetto SMART (consigliato),
-  // il pack "Più scelto" configurato in Stripe via `pack_smart_49`.
+  // dal billing. Mappiamo `checkout=basic` all'unico pacchetto,
+  // configurato in Stripe via `pack_single_7`.
   useEffect(() => {
     if (!checkout) return;
     if (checkoutKey) return;
     const key =
       checkout === "basic"
-        ? "pack_smart_49"
+        ? SINGLE_PACK_KEY
         : (CREDIT_PACKS as any)[checkout]
         ? checkout
         : null;
@@ -241,8 +241,8 @@ function Billing() {
   const invoicesEnabled = paymentsEnabled;
   const isExhausted = credits < CREDITS_PER_HIRE;
   const isLow = !isExhausted && credits < LOW_CREDITS_THRESHOLD;
-  // Progress bar fills up to a "comfortable" reference of 70 crediti (SMART pack).
-  const progressRef = 70;
+  // Progress bar fills up to a "comfortable" reference of 3 conferme.
+  const progressRef = CREDITS_PER_HIRE * 3;
   const progressValue = Math.min(100, Math.round((credits / progressRef) * 100));
 
   if (checkoutKey) {
@@ -382,7 +382,7 @@ function Billing() {
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
             <div>
               <h3 className="font-semibold text-amber-900 dark:text-amber-200">Stai terminando i crediti</h3>
-              <p className="text-sm mt-1 text-amber-800/80 dark:text-amber-200/80">Evita interruzioni durante la ricerca del personale. SMART ti dà 7 conferme a un prezzo conveniente.</p>
+              <p className="text-sm mt-1 text-amber-800/80 dark:text-amber-200/80">Evita interruzioni durante la ricerca del personale. Con 29,70 € confermi un nuovo lavoratore e puoi richiamarlo in modo illimitato.</p>
             </div>
           </div>
         </div>
@@ -413,8 +413,8 @@ function Billing() {
             </p>
             <p className="text-muted-foreground">
               {discount.applies_to === "all"
-                ? "Valido su tutti i pacchetti crediti."
-                : "Valido solo sui pacchetti crediti."}
+                ? "Valido sul pacchetto."
+                : "Valido sul pacchetto."}
             </p>
           </div>
         )}
@@ -425,11 +425,11 @@ function Billing() {
       <>
       <div className="mb-3 flex items-end justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Pacchetti crediti</h2>
-          <p className="text-sm text-muted-foreground">{CREDITS_PER_HIRE} crediti per ogni lavoratore confermato.</p>
+          <h2 className="text-lg font-semibold">Il pacchetto Pupillo</h2>
+          <p className="text-sm text-muted-foreground">{UNLIMITED_RECALL_COPY}</p>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-10">
+      <div className="grid gap-4 max-w-sm mb-10">
         {Object.entries(CREDIT_PACKS).map(([key, p]) => {
           const applies = !!(discount && (discount.applies_to === "all" || discount.applies_to === "credits"));
           let final = p.priceEur;
@@ -438,8 +438,7 @@ function Billing() {
             else if (discount.type === "fixed_amount") final = Math.max(0, +(p.priceEur - discount.value).toFixed(2));
           }
           const isBest = p.highlight === "best";
-          const pricePerHire = (p.priceEur / p.hires).toFixed(2);
-          return (
+                    return (
             <div
               key={key}
               className={`relative rounded-2xl border p-5 flex flex-col transition-all hover:shadow-md ${
@@ -459,7 +458,7 @@ function Billing() {
                 <span className="text-3xl font-bold tabular-nums">{p.credits}</span>
                 <span className="text-sm text-muted-foreground">crediti</span>
               </div>
-              <div className="text-xs text-muted-foreground mb-4">≈ {p.hires} lavoratori confermati</div>
+              <div className="text-xs text-muted-foreground mb-4">1 lavoratore confermato · richiami illimitati della stessa persona</div>
               {applies && final !== p.priceEur ? (
                 <div className="mb-2">
                   <div className="text-sm text-muted-foreground line-through">€{p.priceEur}</div>
@@ -469,13 +468,13 @@ function Billing() {
               ) : (
                 <div className="text-3xl font-bold mb-2 tabular-nums">€{final}</div>
               )}
-              <div className="text-xs text-muted-foreground mb-4">€{pricePerHire} per conferma</div>
+              <div className="text-xs text-muted-foreground mb-4">Nessun costo per richiamare chi hai già confermato</div>
               <Button
                 className="mt-auto"
                 variant={isBest ? "default" : "outline"}
                 onClick={() => setCheckoutKey(key)}
               >
-                Acquista {p.label}
+                Acquista a €{final.toFixed(2).replace(".", ",")}
               </Button>
             </div>
           );

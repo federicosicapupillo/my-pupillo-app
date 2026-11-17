@@ -18,7 +18,7 @@ export const LAUNCH_PRICING = {
   /** Primo giorno a pagamento, ISO. */
   paidFrom: "2027-01-01",
   /** Prezzo indicativo, non ancora definitivo. */
-  price: 27.9,
+  price: 29.7,
   currency: "EUR" as const,
   /** Tipologia di tariffazione. */
   unit: "per_completed_announcement" as PricingUnit,
@@ -27,20 +27,20 @@ export const LAUNCH_PRICING = {
   copy: {
     title: "Pupillo parte a pagamento",
     freeBadge: "A pagamento dal lancio",
-    priceBadge: "Da 27,90 € per annuncio concluso",
+    priceBadge: "Da 29,70 € per annuncio concluso",
     intro:
       "A Torino e provincia puoi pubblicare annunci, cercare lavoratori e trovare il personale per il tuo locale.",
     switchDate: "Il servizio per i ristoratori è a pagamento dal lancio, senza un periodo gratuito.",
     priceDetail:
-      "Il costo previsto partirà da 27,90 € per annuncio concluso. Pagherai soltanto quando avrai trovato e confermato il lavoratore attraverso Pupillo.",
+      "Il costo previsto partirà da 29,70 € per annuncio concluso. Pagherai soltanto quando avrai trovato e confermato il lavoratore attraverso Pupillo.",
     recontact:
-      "Dopo aver trovato un lavoratore, potrai ricontattare e richiamare gratuitamente lo stesso professionista per future collaborazioni, senza pagare nuovamente il costo dell’annuncio.",
+      "Dopo aver trovato un lavoratore, potrai richiamare la stessa persona in modo illimitato e gratuito per tutte le collaborazioni future, senza pagare di nuovo.",
     disclaimer:
       "Prezzi e condizioni sono comunicati prima dell’acquisto. Nessun addebito senza accettazione espressa.",
   },
 } as const;
 
-/** Prezzo indicativo formattato (es. "29,90 €"). */
+/** Prezzo indicativo formattato (es. "29,70 €"). */
 export function formatLaunchPrice(): string {
   return new Intl.NumberFormat("it-IT", {
     style: "currency",

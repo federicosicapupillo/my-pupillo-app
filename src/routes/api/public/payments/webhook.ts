@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { type StripeEnv, verifyWebhook, createStripeClient } from "@/lib/stripe.server";
-import { CREDIT_PACKS } from "@/lib/pricing";
+import { CREDIT_PACKS, LEGACY_CREDIT_PACKS } from "@/lib/pricing";
 
 let _supabase: ReturnType<typeof createClient<Database>> | null = null;
 function getSupabase() {
@@ -42,7 +42,7 @@ async function handleCheckoutCompleted(session: any, env: StripeEnv) {
   const priceObj: any = line?.price;
   const lookupKey = priceObj?.metadata?.lovable_external_id || priceObj?.lookup_key || (priceObj?.id ? await resolvePriceLookupKey(priceObj.id, env) : null);
   if (!lookupKey) return;
-  const pack = CREDIT_PACKS[lookupKey];
+  const pack = CREDIT_PACKS[lookupKey] ?? LEGACY_CREDIT_PACKS[lookupKey];
   if (!pack) return;
   const totalCredits = pack.credits * (line?.quantity ?? 1);
   // Idempotency: dedupe by session.id

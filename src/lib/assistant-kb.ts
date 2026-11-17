@@ -227,7 +227,7 @@ export const RESTAURANT_FAQS: AssistantFaq[] = [
     id: "r-credits-topup",
     question: "Come ricarico i crediti?",
     answer:
-      "Vai in Crediti e scegli un pacchetto. Il pagamento avviene in modo sicuro e i crediti sono disponibili subito dopo la conferma.",
+      "Vai in Crediti e acquista il pacchetto da 29,70 € (1 lavoratore confermato, richiami illimitati della stessa persona). Il pagamento avviene in modo sicuro e i crediti sono disponibili subito dopo la conferma.",
     cta: { label: "Vai ai Crediti", to: "/billing" },
   },
   {

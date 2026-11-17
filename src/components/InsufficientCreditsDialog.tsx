@@ -30,8 +30,8 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
     if (buyingPack) return; // evita doppio click / doppio checkout
     setBuyingPack(true);
     try {
-      // Redirect al billing con `checkout=basic` — mappato al pacchetto SMART
-      // consigliato (pack_smart_49) che apre subito Stripe Checkout.
+      // Redirect al billing con `checkout=basic` — mappato all'unico pacchetto
+      // (pack_single_7) che apre subito Stripe Checkout.
       onOpenChange(false);
       await navigate({
         to: "/billing",
@@ -68,7 +68,7 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
           <DialogHeader className="text-center sm:text-center">
             <DialogTitle className="text-2xl font-bold text-center">Crediti insufficienti</DialogTitle>
             <DialogDescription className="text-center text-base">
-              Hai terminato i crediti disponibili. Per continuare puoi acquistare subito il pacchetto consigliato <strong className="text-foreground">SMART</strong> oppure confrontare tutti i pacchetti Pupillo.
+              Hai terminato i crediti disponibili. Per continuare puoi acquistare subito il pacchetto Pupillo.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -76,18 +76,18 @@ export function InsufficientCreditsDialog({ open, onOpenChange, currentCredits, 
         <div className="px-6 pb-2 space-y-3">
           <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-card p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-primary font-semibold">
-              <Sparkles className="h-3.5 w-3.5" />Pacchetto consigliato
+              <Sparkles className="h-3.5 w-3.5" />Il pacchetto Pupillo
             </div>
-            <div className="mt-1 text-lg font-bold">SMART · 49 crediti</div>
+            <div className="mt-1 text-lg font-bold">29,70 € · 1 lavoratore confermato</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Circa 7 conferme lavoratore. Ideale per continuare a usare Pupillo senza interruzioni.
+              Poi puoi richiamare la stessa persona in modo illimitato, senza costi aggiuntivi.
             </p>
           </div>
         </div>
 
         <DialogFooter className="p-6 pt-4 gap-2 sm:gap-2 flex-col-reverse sm:flex-row">
           <Button variant="outline" onClick={viewAllPacks} disabled={viewingPacks || buyingPack} className="sm:flex-1">
-            {viewingPacks ? <Loader2 className="h-4 w-4 animate-spin" /> : "Vedi tutti i pacchetti"}
+            {viewingPacks ? <Loader2 className="h-4 w-4 animate-spin" /> : "Vedi dettagli"}
           </Button>
           <Button onClick={buyRecommendedPack} disabled={buyingPack} className="sm:flex-1 gap-2 shadow-lg shadow-primary/30">
             {buyingPack ? (<><Loader2 className="h-4 w-4 animate-spin" />Apertura…</>) : "Acquista pacchetto"}
