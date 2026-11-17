@@ -33,6 +33,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-compensation-positive: var(--compensation-positive);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -62,6 +63,7 @@
 }
 
 :root {
+  --compensation-positive: oklch(0.75 0.2 145);
   --radius: 0.625rem;
   /* Pupillo — Dark Neon Urban
    * bg #07060B, lime #D8FF36, violet #8B5CF6, magenta #FF2EA8, cyan #22E0CF */
@@ -344,6 +346,7 @@ html:not(.light) .leaflet-control-attribution a { color: oklch(0.93 0.22 120) !i
  * Activated via `html.light`. Defaults to dark when class is absent.
  * ---------------------------------------------------------------------- */
 html.light {
+  --compensation-positive: oklch(0.55 0.17 145);
   --background: oklch(0.98 0.005 280);            /* #F7F8FC-ish */
   --foreground: oklch(0.21 0.04 265);             /* deep navy #111827 */
   --card: oklch(1 0 0);                           /* pure white */

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Compenso: bollino verde solo in linea, soglie e avvisi fuori fascia rimossi; nota approvata sul ruolo di Pupillo condivisa tra iscrizione e profilo. Solo presentazione, nessuna modifica ai salvataggi o pubblicazione.
+
 - [x] Rimuovere promesse di gratuità a scadenza da homepage, avvisi, messaggi e termini; prezzi, flag e pagamenti invariati.
 
 - [x] Controllo mobile: 32 schermate pubbliche e 76 schermate dei due ruoli/onboarding verificate a 320, 375, 768 e 1280 px. Corretti menu tablet, schede dashboard, passi onboarding, barra salvataggio e ingombro nuovo annuncio; assistenza separata dal salvataggio, finestre adattate e campi anti-zoom iOS. Salvataggio data e rilettura, menu tablet e CTA ristoratore verificati; 22 test passati, build OK, tre account temporanei eliminati. Liste senza attività nella prova: dettagli di candidature/turni esistenti non verificati; nessuna modifica a dati reali né pubblicazione.

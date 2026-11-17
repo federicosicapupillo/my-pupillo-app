@@ -1,26 +1,25 @@
-import { formatEuroRate, rateGuidance } from "@/lib/hourly-rate-guidance";
+import { rateGuidance } from "@/lib/hourly-rate-guidance";
 
 export const RATE_LOCKED_HELPER = "Seleziona prima gli anni di esperienza per scegliere la tariffa";
 
 export function HourlyRateNote() {
   return (
-    <p className="text-xs text-muted-foreground mt-1">
-      È il compenso NETTO che desideri, solo indicativo: non è il netto garantito dal contratto né il costo per il ristoratore. Il compenso finale dipende dal turno proposto.
-    </p>
+    <div className="mt-1 space-y-2 text-xs text-muted-foreground">
+      <p>Il compenso netto indicato è quello desiderato ed è orientativo. Il compenso effettivo viene concordato direttamente con il ristoratore.</p>
+      <p className="leading-relaxed text-foreground">
+        <strong>Pupillo mette in contatto lavoratori e ristoratori.</strong> Non è un’agenzia per il lavoro e non è parte del rapporto contrattuale tra loro. Accordi, compensi e adempimenti sono responsabilità delle parti: Pupillo non garantisce la conclusione né l’esecuzione del contratto.
+      </p>
+    </div>
   );
 }
 
 export function HourlyRateGuidance({ years, rate }: { years: string; rate: string }) {
   const g = rateGuidance(years, rate);
-  if (!g) return null;
+  if (g?.status !== "within") return null;
   return (
-    <div role="status" aria-live="polite" className="mt-2 rounded-md border bg-background/60 p-2 text-xs text-muted-foreground">
-      {g.status === "within" ? (
-        <p>La tua richiesta rientra nella fascia indicativa per l'esperienza dichiarata.</p>
-      ) : (
-        <p>La tariffa che hai indicato supera la fascia orientativa per la tua esperienza: potresti ricevere meno opportunità compatibili. Puoi comunque mantenere il valore.</p>
-      )}
-      <p className="mt-1">Soglia di riferimento {formatEuroRate(g.threshold)} €/h netti</p>
+    <div role="status" aria-live="polite" className="mt-2 flex items-center gap-2 text-xs text-foreground">
+      <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-compensation-positive" />
+      <span>Compenso in linea</span>
     </div>
   );
 }
