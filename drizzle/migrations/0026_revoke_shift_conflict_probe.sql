@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.assert_no_worker_shift_conflict(uuid, uuid, uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.assert_no_worker_shift_conflict(uuid, uuid, uuid, uuid) TO service_role;

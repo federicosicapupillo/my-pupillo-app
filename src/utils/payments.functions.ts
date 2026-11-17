@@ -101,6 +101,7 @@ async function resolveCouponForDiscountRow(
 }
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: {
     priceId: string;
     quantity?: number;
@@ -115,7 +116,11 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     if (data.discountCode && !/^[A-Za-z0-9_-]{2,32}$/.test(data.discountCode)) throw new Error("Invalid discountCode");
     return data;
   })
-  .handler(async ({ data }) => {
+  .handler(async ({ data: input, context }) => {
+    // Identità SOLO dalla sessione verificata: userId/email del client sono ignorati,
+    // così nessuno può collegare un cliente Stripe al profilo di un altro utente.
+    const claimEmail = typeof (context.claims as any)?.email === "string" ? (context.claims as any).email : undefined;
+    const data = { ...input, userId: context.userId, customerEmail: claimEmail };
     const stripe = createStripeClient(data.environment);
     const prices = await stripe.prices.list({ lookup_keys: [data.priceId], expand: ["data.product"] });
     if (!prices.data.length) throw new Error("Price not found");

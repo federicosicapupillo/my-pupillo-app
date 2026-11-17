@@ -1,14 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { authenticateCronRequest } from '@/integrations/supabase/cron-auth'
 import { supabaseAdmin } from '@/integrations/supabase/client.server'
 
 export const Route = createFileRoute('/api/public/hooks/expire-stale')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apikey = request.headers.get('apikey') || request.headers.get('x-api-key')
-        if (!apikey || apikey !== process.env.SUPABASE_PUBLISHABLE_KEY) {
-          return new Response('Unauthorized', { status: 401 })
-        }
+        // Solo il pianificatore gestito: la chiave pubblica non basta più.
+        const authFailure = await authenticateCronRequest(request)
+        if (authFailure) return authFailure
 
         const nowIso = new Date().toISOString()
         const now = new Date()
