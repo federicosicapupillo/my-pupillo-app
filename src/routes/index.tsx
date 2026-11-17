@@ -7,6 +7,7 @@ const pupilloLogo = pupilloLogoAsset.url;
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AudienceVideo } from "@/components/home/AudienceVideo";
 import { HomeReviews } from "@/components/home/HomeReviews";
+import { SuggestionInvitation } from "@/components/SuggestionInvitation";
 import { HOME_VIDEOS } from "@/lib/home-videos";
 
 export const Route = createFileRoute("/")({
@@ -176,6 +177,7 @@ function Index() {
             </AccordionItem>
           </Accordion>
         </section>
+        <SuggestionInvitation />
         <HomeReviews />
       </main>
 

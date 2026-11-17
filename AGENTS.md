@@ -1,5 +1,7 @@
 # Project rules
 
+- Suggestions use authenticated server submissions and admin-only RLS reads; reuse the invitation across home/dashboard — why: comments must reach a private, durable owner inbox.
+
 - Keep homepage testimonials in HomeReviews with independent, accessible role carousels; label unconfirmed testimonial provenance as examples — why: role distinction and motion controls must not imply verified endorsements.
 
 - Use Embla Auto Scroll for continuous testimonial motion with opposite role directions; keep pause, interaction stops and reduced-motion support — why: seamless loops must remain readable and controllable.

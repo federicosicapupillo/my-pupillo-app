@@ -48,6 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/messages", label: "Messaggi", icon: MessageSquare },
     role === "restaurant" && { to: "/billing", label: "Crediti", icon: Coins },
     { to: "/profile", label: "Profilo", icon: Settings },
+    (role === "worker" || role === "restaurant") && { to: "/suggerimenti", label: "Invia un suggerimento", icon: MessageSquare },
     role === "admin" && { to: "/admin", label: "Admin", icon: Shield },
   ].filter(Boolean) as { to: string; label: string; icon: typeof LayoutDashboard }[];
 

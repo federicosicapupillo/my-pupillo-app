@@ -225,6 +225,13 @@
       "when": 1794924172302,
       "tag": "0031_hourly_rate_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794934390476,
+      "tag": "0032_private_user_suggestions",
+      "breakpoints": true
     }
   ]
 }

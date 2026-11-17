@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Map as MapIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { AdminBackupsSection } from "@/components/AdminBackupsSection";
 import { AdminBackupSystemSection } from "@/components/AdminBackupSystemSection";
 import { AdminBackupRestoreSection } from "@/components/AdminBackupRestoreSection";
 import { AdminSupportTicketsSection } from "@/components/AdminSupportTicketsSection";
+import { AdminSuggestionsSection } from "@/components/AdminSuggestionsSection";
 import { AdminRoleRepairSection } from "@/components/AdminRoleRepairSection";
 import { AdminLaunchAreasSection } from "@/components/AdminLaunchAreasSection";
 import { AdminFeatureFlagsSection } from "@/components/AdminFeatureFlagsSection";
@@ -290,6 +291,7 @@ function Admin() {
           <TabsTrigger value="curricula">Curriculum</TabsTrigger>
           <TabsTrigger value="backups">Backup</TabsTrigger>
           <TabsTrigger value="support">Segnalazioni</TabsTrigger>
+          <TabsTrigger value="suggestions">Suggerimenti</TabsTrigger>
           <TabsTrigger value="features">Funzionalità</TabsTrigger>
           <TabsTrigger value="areas">Aree operative</TabsTrigger>
         </TabsList>
@@ -636,6 +638,7 @@ function Admin() {
         <TabsContent value="support" className="space-y-6">
           <AdminSupportTicketsSection />
         </TabsContent>
+        <TabsContent value="suggestions"><Suspense fallback={<p>Caricamento suggerimenti…</p>}><AdminSuggestionsSection /></Suspense></TabsContent>
         <TabsContent value="features" className="space-y-6">
           <AdminFeatureFlagsSection />
         </TabsContent>

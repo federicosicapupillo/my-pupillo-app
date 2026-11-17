@@ -6,6 +6,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
+import { SuggestionInvitation } from "@/components/SuggestionInvitation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -474,6 +475,7 @@ function DashboardInner() {
       )}
 
       {role !== "worker" && <RestaurantReferralSlot role={role} />}
+      <SuggestionInvitation />
     </AppShell>
   );
 }
