@@ -1,7 +1,6 @@
 import { hasVerifiedContact } from "@/lib/contact-verification";
 import { formatDisplayLabel } from "@/lib/format-label";
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
-import { BolognaLaunchBanner } from "@/components/BolognaLaunchBanner";
 import { AvailabilitySetupBanner } from "@/components/AvailabilitySetupBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
@@ -302,7 +301,6 @@ function DashboardInner() {
 
       {role === "worker" && <AvailabilitySetupBanner userId={user?.id} className="mb-6" />}
 
-      <BolognaLaunchBanner role={role} className="mb-6" />
 
       {role === "restaurant" && <PayOnHireBox className="mb-6" />}
 
