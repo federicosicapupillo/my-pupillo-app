@@ -37,6 +37,7 @@ import { Route as RegolamentoRouteImport } from './routes/regolamento'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RistoratoriRouteImport } from './routes/ristoratori'
 import { Route as ShiftsRouteImport } from './routes/shifts'
+import { Route as SuggerimentiRouteImport } from './routes/suggerimenti'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
 import { Route as WorkersRouteImport } from './routes/workers'
@@ -202,6 +203,11 @@ const RistoratoriRoute = RistoratoriRouteImport.update({
 const ShiftsRoute = ShiftsRouteImport.update({
   id: '/shifts',
   path: '/shifts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuggerimentiRoute = SuggerimentiRouteImport.update({
+  id: '/suggerimenti',
+  path: '/suggerimenti',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -372,6 +378,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
+  '/suggerimenti': typeof SuggerimentiRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
@@ -428,6 +435,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
+  '/suggerimenti': typeof SuggerimentiRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
@@ -485,6 +493,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/ristoratori': typeof RistoratoriRoute
   '/shifts': typeof ShiftsRoute
+  '/suggerimenti': typeof SuggerimentiRoute
   '/terms': typeof TermsRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/workers': typeof WorkersRoute
@@ -543,6 +552,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/ristoratori'
     | '/shifts'
+    | '/suggerimenti'
     | '/terms'
     | '/verify-phone'
     | '/workers'
@@ -599,6 +609,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/ristoratori'
     | '/shifts'
+    | '/suggerimenti'
     | '/terms'
     | '/verify-phone'
     | '/workers'
@@ -655,6 +666,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/ristoratori'
     | '/shifts'
+    | '/suggerimenti'
     | '/terms'
     | '/verify-phone'
     | '/workers'
@@ -712,6 +724,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   RistoratoriRoute: typeof RistoratoriRoute
   ShiftsRoute: typeof ShiftsRoute
+  SuggerimentiRoute: typeof SuggerimentiRoute
   TermsRoute: typeof TermsRoute
   VerifyPhoneRoute: typeof VerifyPhoneRoute
   WorkersRoute: typeof WorkersRoute
@@ -931,6 +944,13 @@ declare module '@tanstack/react-router' {
       path: '/shifts'
       fullPath: '/shifts'
       preLoaderRoute: typeof ShiftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/suggerimenti': {
+      id: '/suggerimenti'
+      path: '/suggerimenti'
+      fullPath: '/suggerimenti'
+      preLoaderRoute: typeof SuggerimentiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -1185,6 +1205,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   RistoratoriRoute: RistoratoriRoute,
   ShiftsRoute: ShiftsRoute,
+  SuggerimentiRoute: SuggerimentiRoute,
   TermsRoute: TermsRoute,
   VerifyPhoneRoute: VerifyPhoneRoute,
   WorkersRoute: WorkersRoute,
