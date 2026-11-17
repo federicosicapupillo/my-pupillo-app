@@ -27,7 +27,7 @@ export function OwnCurriculumAssessment({ workerId }: { workerId: string }) {
     setError(!!result.error || !!cv.error);
     if (!result.error && !cv.error) {
       setAssessment(result.data);
-      setCurrent(!!cv.data && result.data?.curriculum_path === cv.data.storage_path);
+      setCurrent(!!result.data?.curriculum_path.startsWith('memory:') || (!!cv.data && result.data?.curriculum_path === cv.data.storage_path));
     }
     setLoading(false);
   }, [workerId]);

@@ -2321,6 +2321,45 @@ export type Database = {
           },
         ]
       }
+      worker_cv_pending_scores: {
+        Row: {
+          created_at: string
+          doubts: boolean
+          evaluable: boolean
+          evidence: Json
+          role_label: string
+          rubric_version: string
+          scores: Json
+          stars: number | null
+          total: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          doubts: boolean
+          evaluable: boolean
+          evidence?: Json
+          role_label: string
+          rubric_version: string
+          scores: Json
+          stars?: number | null
+          total?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          doubts?: boolean
+          evaluable?: boolean
+          evidence?: Json
+          role_label?: string
+          rubric_version?: string
+          scores?: Json
+          stars?: number | null
+          total?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       worker_incidents: {
         Row: {
           actual_delay_minutes: number | null
@@ -2919,6 +2958,7 @@ export type Database = {
         Args: { _application_id: string }
         Returns: Json
       }
+      accept_pending_curriculum_score: { Args: never; Returns: undefined }
       admin_launch_area_stats: { Args: never; Returns: Json }
       admin_set_account_status: {
         Args: { _reason?: string; _status: string; _user_id: string }
@@ -3034,6 +3074,7 @@ export type Database = {
         Args: { _custom_reason?: string; _reason?: string }
         Returns: Json
       }
+      discard_pending_curriculum_score: { Args: never; Returns: undefined }
       generate_referral_code: { Args: never; Returns: string }
       get_announcement_contact: {
         Args: { _announcement_id: string }
@@ -3393,6 +3434,7 @@ export type Database = {
         Returns: string
       }
       mark_overdue_required_reviews: { Args: never; Returns: number }
+      my_cv_upload_allowed: { Args: never; Returns: boolean }
       my_signup_method: { Args: never; Returns: string }
       norm_place_name: { Args: { _v: string }; Returns: string }
       normalize_vat: { Args: { _v: string }; Returns: string }
@@ -3563,6 +3605,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      worker_received_review: { Args: { _worker_id: string }; Returns: boolean }
       worker_shift_buffer_conflict: {
         Args: {
           _end: string
