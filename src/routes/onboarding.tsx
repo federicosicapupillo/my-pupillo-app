@@ -79,7 +79,9 @@ import { WORKER_ONBOARDING_CITY, isWorkerOnboardingCity, zonesForCity, ALL_ZONES
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { NATIONALITIES } from "@/lib/nationalities";
 import { ZonesMultiSelect } from "@/components/ZonesMultiSelect";
-import { AvatarUpload } from "@/components/AvatarUpload";
+import { FacePhotoCapture } from "@/components/FacePhotoCapture";
+import { isModeratedAvatarPath } from "@/lib/avatar-moderation/decision";
+import { setMyAvatar } from "@/lib/profile-self-update";
 import { CurriculumUpload } from "@/components/CurriculumUpload";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { validateWorkerDocumentDates } from "@/lib/worker-profile.functions";
@@ -418,6 +420,9 @@ function Onboarding() {
   const [workerRoles, setWorkerRoles] = useState<string[]>([...WORKER_ROLES]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // Percorso della foto viso approvata dal server per questo lavoratore.
+  const [approvedAvatarPath, setApprovedAvatarPath] = useState<string | null>(null);
+  const [avatarChecking, setAvatarChecking] = useState(false);
   // Ref-mirror di avatarFile/avatarUrl per poter decidere, dentro il
   // useEffect [profile], se un refetch del profilo deve rigenerare la
   // signed URL o preservare l'anteprima locale appena scelta.
@@ -896,7 +901,21 @@ function Onboarding() {
       setIdDocBackPath(p);
       setIdDocBackName(p.split("/").pop() ?? p);
     }
-    if (profile && (profile as any).avatar_url) {
+    if (profile && user?.id && role === "worker" && !approvedAvatarPath) {
+      const uid = user.id;
+      const stored = ((profile as any).avatar_url as string | null) ?? null;
+      void (async () => {
+        let q = supabase.from("worker_avatar_moderations").select("path").eq("user_id", uid).eq("status", "approved");
+        q = isModeratedAvatarPath(uid, stored) ? q.eq("path", stored as string) : q.order("created_at", { ascending: false });
+        const { data: rows } = await q.limit(1);
+        const path = rows?.[0]?.path ?? null;
+        if (!path) return;
+        const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60);
+        setApprovedAvatarPath(path);
+        if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+      })();
+    }
+    if (profile && (profile as any).avatar_url && !(role === "worker" && approvedAvatarPath)) {
       const stored = (profile as any).avatar_url as string;
       // Preserve any locally-picked avatar (file staged for upload, or a blob:
       // preview URL not yet persisted) so a profile refetch does not overwrite
@@ -1370,9 +1389,17 @@ function Onboarding() {
           id_document_expires_at: null,
         });
       }
-      if (!avatarFile && !avatarUrl) {
+      const legacyCompletedAvatar = profile?.profile_completed ? ((profile as any)?.avatar_url as string | null) ?? null : null;
+      uploadedAvatarUrl = approvedAvatarPath ?? legacyCompletedAvatar;
+      if (avatarChecking) {
         setBusy(false); submittingRef.current = false;
-        toast.error("Carica una foto profilo per completare il profilo.");
+        toast.error("Attendi la fine del controllo della foto.");
+        scrollToField("avatar");
+        return;
+      }
+      if (!uploadedAvatarUrl) {
+        setBusy(false); submittingRef.current = false;
+        toast.error("Serve una foto del viso approvata per completare il profilo.");
         markErr("avatar");
         scrollToField("avatar");
         return;
@@ -2363,19 +2390,25 @@ function Onboarding() {
                 hasErr("avatar") && errorFieldClass,
               )}
             >
-              <Label className="font-semibold">Foto profilo *</Label>
+              <Label className="font-semibold">Foto del viso *</Label>
               <p className="text-xs text-muted-foreground">
                 La foto verrà mostrata sulla tua scheda, nelle candidature e in chat.
               </p>
-              <AvatarUpload
+              <FacePhotoCapture
                 value={avatarUrl}
-                onPickFile={(f, p) => {
-                  setAvatarFile(f);
-                  if (p) setAvatarUrl(p);
+                approved={!!approvedAvatarPath || !!profile?.profile_completed}
+                invalid={hasErr("avatar")}
+                onBusyChange={setAvatarChecking}
+                onApproved={async (path, url) => {
+                  setAvatarFile(null);
+                  setApprovedAvatarPath(path);
+                  setAvatarUrl(url);
+                  // Salva subito la foto approvata: resta anche dopo un refresh.
+                  await setMyAvatar(path).catch(() => null);
                 }}
               />
-              {!avatarFile && !avatarUrl && (
-                <p className="text-xs text-destructive">Carica una foto profilo per completare il profilo.</p>
+              {!approvedAvatarPath && !profile?.profile_completed && (
+                <p className="text-xs text-destructive">Serve una foto del viso approvata per completare il profilo.</p>
               )}
             </div>
             <div id="sec-anagrafica" className="rounded-xl border bg-muted/30 p-4 space-y-3 scroll-mt-24">

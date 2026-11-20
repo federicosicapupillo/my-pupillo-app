@@ -30,7 +30,7 @@ import { ReferralCard } from "@/components/ReferralCard";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerMyReviews } from "@/components/WorkerMyReviews";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
-import { AvatarUpload } from "@/components/AvatarUpload";
+import { FacePhotoCapture } from "@/components/FacePhotoCapture";
 import { uploadAvatar } from "@/lib/avatar-upload.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { updateAvatarUrlCache, useAvatarUrl } from "@/hooks/use-avatar-urls";
@@ -265,7 +265,20 @@ function AvatarBox({ profile, userId, onSaved }: { profile: any; userId: string 
   return (
     <ProfileBox title="Foto profilo" editing={editing} saving={saving} onEdit={() => setEditing(true)} onCancel={cancel} onSave={save}>
       {editing ? (
-        <AvatarUpload value={displayUrl} onPickFile={(f, p) => { setFile(f); setPreview(p); }} />
+        <FacePhotoCapture
+          value={displayUrl}
+          approved={!!currentAvatarUrl}
+          onBusyChange={setSaving}
+          onApproved={async (path, url) => {
+            // La vecchia foto resta finché la nuova non è approvata e salvata.
+            const { error } = await setMyAvatar(path);
+            if (error) { toast.error("Non è stato possibile aggiornare la foto. La foto precedente resta attiva."); return; }
+            if (userId) updateAvatarUrlCache(userId, url, profile?.full_name ?? null);
+            toast.success("Foto approvata e aggiornata.");
+            setFile(null); setPreview(null); setEditing(false);
+            await onSaved();
+          }}
+        />
       ) : (
         <div className="flex items-center gap-4">
           <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border bg-muted flex items-center justify-center">

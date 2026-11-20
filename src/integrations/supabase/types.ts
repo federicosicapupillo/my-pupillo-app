@@ -2192,6 +2192,39 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_avatar_moderations: {
+        Row: {
+          created_at: string
+          id: string
+          model: string | null
+          path: string | null
+          reason_code: string | null
+          sha256: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          model?: string | null
+          path?: string | null
+          reason_code?: string | null
+          sha256: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          model?: string | null
+          path?: string | null
+          reason_code?: string | null
+          sha256?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       worker_badges: {
         Row: {
           awarded_at: string
@@ -3426,6 +3459,10 @@ export type Database = {
       }
       has_worker_restaurant_relationship: {
         Args: { _restaurant: string; _worker: string }
+        Returns: boolean
+      }
+      is_approved_worker_avatar: {
+        Args: { _path: string; _user_id: string }
         Returns: boolean
       }
       is_confirmed_delay: { Args: { _status: string }; Returns: boolean }

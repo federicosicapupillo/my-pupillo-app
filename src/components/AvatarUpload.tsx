@@ -14,7 +14,7 @@ type Props = {
 };
 
 /** Center-crops the image into a square, resizes to OUT_DIM, returns JPEG File. */
-async function processImage(file: File): Promise<{ file: File; preview: string }> {
+export async function processImage(file: File): Promise<{ file: File; preview: string }> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result));

@@ -232,6 +232,13 @@
       "when": 1794934390476,
       "tag": "0032_private_user_suggestions",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795186535340,
+      "tag": "0033_worker_avatar_moderation",
+      "breakpoints": true
     }
   ]
 }
