@@ -1,4 +1,5 @@
 import { PayOnHireBox } from "@/components/PayOnHireInfo";
+import { CreditPackCard } from "@/components/CreditPackCard";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
@@ -6,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle, Zap } from "lucide-react";
+import { Coins, Check, Sparkles, ArrowLeft, AlertTriangle } from "lucide-react";
 import { CREDIT_PACKS, CREDITS_PER_HIRE, LOW_CREDITS_THRESHOLD, SINGLE_PACK_KEY, UNLIMITED_RECALL_COPY } from "@/lib/pricing";
 import { usePaymentsEnabled } from "@/lib/use-payments-enabled";
 import { FreeLaunchBanner } from "@/components/FreeLaunchBanner";
@@ -21,7 +22,14 @@ import { getStripeEnvironment } from "@/lib/stripe";
 import { Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/billing")({
-  head: () => ({ meta: [{ title: "Crediti — Pupillo" }] }),
+  head: () => ({ meta: [
+    { title: "Pacchetto e crediti — Pupillo" },
+    { name: "description", content: "Il pacchetto Pupillo da 29,70 €: conferma un nuovo lavoratore e richiama la stessa persona senza altri costi." },
+    { property: "og:title", content: "Pacchetto e crediti — Pupillo" },
+    { property: "og:description", content: "Un acquisto per un nuovo lavoratore, richiami illimitati della stessa persona." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (search: Record<string, unknown>): { returnTo?: string; action?: string; session_id?: string; checkout?: string } => ({
     returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
     action: typeof search.action === "string" ? search.action : undefined,
@@ -430,11 +438,11 @@ function Billing() {
       <>
       <div className="mb-3 flex items-end justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Il pacchetto Pupillo</h2>
-          <p className="text-sm text-muted-foreground">{UNLIMITED_RECALL_COPY}</p>
+          <h2 className="text-2xl font-bold text-accent">Il pacchetto Pupillo</h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{UNLIMITED_RECALL_COPY}</p>
         </div>
       </div>
-      <div className="grid gap-4 max-w-sm mb-10">
+      <div className="grid gap-4 max-w-lg mb-10">
         {Object.entries(CREDIT_PACKS).map(([key, p]) => {
           const applies = !!(discount && (discount.applies_to === "all" || discount.applies_to === "credits"));
           let final = p.priceEur;
@@ -442,46 +450,15 @@ function Billing() {
             if (discount.type === "percentage") final = +(p.priceEur * (1 - discount.value / 100)).toFixed(2);
             else if (discount.type === "fixed_amount") final = Math.max(0, +(p.priceEur - discount.value).toFixed(2));
           }
-          const isBest = p.highlight === "best";
-                    return (
-            <div
+          return (
+            <CreditPackCard
               key={key}
-              className={`relative rounded-2xl border p-5 flex flex-col transition-all hover:shadow-md ${
-                isBest
-                  ? "border-primary/60 bg-gradient-to-b from-primary/10 via-card to-card shadow-lg ring-1 ring-primary/30 md:scale-[1.02]"
-                  : "bg-card"
-              }`}
-            >
-              {isBest && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm flex items-center gap-1">
-                  <Zap className="h-3 w-3" />{p.badge ?? "Più conveniente"}
-                </div>
-              )}
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{p.label}</div>
-              {p.tagline && <div className="text-xs text-muted-foreground/80 mb-3">{p.tagline}</div>}
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-bold tabular-nums">{p.credits}</span>
-                <span className="text-sm text-muted-foreground">crediti</span>
-              </div>
-              <div className="text-xs text-muted-foreground mb-4">1 lavoratore confermato · richiami illimitati della stessa persona</div>
-              {applies && final !== p.priceEur ? (
-                <div className="mb-2">
-                  <div className="text-sm text-muted-foreground line-through">€{p.priceEur}</div>
-                  <div className="text-3xl font-bold text-emerald-600 tabular-nums">€{final}</div>
-                  <div className="text-xs text-emerald-700">Sconto {discount!.code}</div>
-                </div>
-              ) : (
-                <div className="text-3xl font-bold mb-2 tabular-nums">€{final}</div>
-              )}
-              <div className="text-xs text-muted-foreground mb-4">Nessun costo per richiamare chi hai già confermato</div>
-              <Button
-                className="mt-auto"
-                variant={isBest ? "default" : "outline"}
-                onClick={() => setCheckoutKey(key)}
-              >
-                Acquista a €{final.toFixed(2).replace(".", ",")}
-              </Button>
-            </div>
+              credits={p.credits}
+              price={final}
+              originalPrice={p.priceEur}
+              {...(applies && discount ? { discountCode: discount.code } : {})}
+              onPurchase={() => setCheckoutKey(key)}
+            />
           );
         })}
       </div>

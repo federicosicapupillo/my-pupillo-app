@@ -33,6 +33,13 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-pack: var(--pack);
+  --color-pack-foreground: var(--pack-foreground);
+  --color-pack-muted: var(--pack-muted);
+  --color-pack-highlight: var(--pack-highlight);
+  --color-pack-highlight-foreground: var(--pack-highlight-foreground);
+  --color-pack-border: var(--pack-border);
+  --shadow-pack: var(--pack-shadow);
   --color-compensation-positive: var(--compensation-positive);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -63,6 +70,13 @@
 }
 
 :root {
+  --pack: oklch(0.3 0.15 305);
+  --pack-foreground: oklch(0.99 0 0);
+  --pack-muted: oklch(0.9 0.025 305);
+  --pack-highlight: oklch(0.87 0.17 90);
+  --pack-highlight-foreground: oklch(0.2 0.025 280);
+  --pack-border: oklch(0.8 0.07 305 / 30%);
+  --pack-shadow: 0 16px 36px -20px oklch(0.3 0.15 305 / 45%);
   --compensation-positive: oklch(0.75 0.2 145);
   --radius: 0.625rem;
   /* Pupillo — Dark Neon Urban

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Pacchetto Pupillo valorizzato con viola deciso, prezzo 29,70 € giallo e richiami illimitati evidenti; prezzi e pagamenti invariati. Verifica visiva isolata PC/mobile e tema scuro, pulsante verificato senza acquisti reali; build OK, nessuna pubblicazione.
+
 - [x] Giallo caldo più scuro senza contorni neri, titolo/stelle verificati e mobile senza overflow. Riquadro crediti condiviso viola tenue con testo scuro e collegamento viola; aspetto e apertura spiegazione verificati in anteprima isolata perché l’account admin non mostra il riquadro ristoratore. Build OK, nessuna pubblicazione.
 
 - [x] Contorno nero sottile negli stili condivisi di scritte e icone gialle di tutte le pagine, incluse stelle e lampadina suggerimenti. Titolo, recensioni e lampadina verificati nella home e lampadina nella dashboard reale; mobile senza overflow, build OK. Altre pagine non controllate singolarmente; nessuna pubblicazione.
