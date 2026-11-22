@@ -494,3 +494,30 @@ html.light .neon-glow-lime,
 html.light .neon-glow-violet,
 html.light .neon-glow-magenta { box-shadow: var(--shadow-neon); }
 html.light .neon-card { border-color: var(--border); box-shadow: var(--shadow-neon); }
+
+/* Shared across every page: outline bright brand text and icons, not dark
+   labels on yellow buttons or neutral unfilled rating stars. */
+:root {
+  --yellow-outline: oklch(0 0 0);
+  --yellow-icon-outline:
+    drop-shadow(0.5px 0 0 var(--yellow-outline))
+    drop-shadow(-0.5px 0 0 var(--yellow-outline))
+    drop-shadow(0 0.5px 0 var(--yellow-outline))
+    drop-shadow(0 -0.5px 0 var(--yellow-outline));
+}
+:is(.text-primary, .text-yellow-300, .text-yellow-400, .text-yellow-500,
+    .text-lime-300, .text-lime-400, .text-lime-500,
+    .text-amber-300, .text-amber-400,
+    [style*="color: var(--neon-lime)"], [style*="color: var(--primary)"],
+    [style*="color: var(--brand-yellow)"]) {
+  -webkit-text-stroke: 0.55px var(--yellow-outline);
+  paint-order: stroke fill;
+}
+:is(.text-primary, .text-yellow-300, .text-yellow-400, .text-yellow-500,
+    .text-lime-300, .text-lime-400, .text-lime-500,
+    .text-amber-300, .text-amber-400) svg:not([class*="text-muted"]),
+svg:is(.text-primary, .text-yellow-300, .text-yellow-400, .text-yellow-500,
+    .text-lime-300, .text-lime-400, .text-lime-500,
+    .text-amber-300, .text-amber-400) {
+  filter: var(--yellow-icon-outline);
+}
