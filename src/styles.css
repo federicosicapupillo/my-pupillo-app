@@ -343,9 +343,9 @@ html:not(.light) .leaflet-control-attribution a { color: oklch(0.93 0.22 120) !i
  * ---------------------------------------------------------------------- */
 html.light {
   color-scheme: light;
-  --brand-yellow: oklch(0.89 0.183 95.3); /* sampled logo yellow */
-  --brand-yellow-ink: oklch(0.49 0.1 95.3); /* readable yellow-gold on white */
-  --neon-lime: var(--brand-yellow);
+  --brand-yellow: oklch(0.78 0.16 85); /* deeper warm yellow for controls */
+  --brand-yellow-ink: oklch(0.55 0.12 80); /* warm yellow-gold, not olive */
+  --neon-lime: var(--brand-yellow-ink);
   --neon-violet: oklch(0.48 0.22 310);
   --neon-magenta: oklch(0.48 0.2 350);
   --neon-cyan: oklch(0.46 0.09 195);
@@ -424,7 +424,7 @@ html.light .card {
   /* Lime / yellow text on white -> deep green */
   html.light .text-lime-300, html.light .text-lime-400, html.light .text-lime-500,
   html.light .text-yellow-300, html.light .text-yellow-400 {
-    color: var(--brand-yellow) !important;
+    color: var(--brand-yellow-ink) !important;
   }
 
   /* Bright lime backgrounds -> readable green with white text */
@@ -445,7 +445,7 @@ html.light .card {
   }
 
   /* Primary chip text on white should always read */
-  html.light .text-primary { color: var(--brand-yellow) !important; }
+  html.light .text-primary { color: var(--brand-yellow-ink) !important; }
   html.light .border-primary { border-color: var(--brand-yellow-ink) !important; }
 }
 
@@ -495,29 +495,6 @@ html.light .neon-glow-violet,
 html.light .neon-glow-magenta { box-shadow: var(--shadow-neon); }
 html.light .neon-card { border-color: var(--border); box-shadow: var(--shadow-neon); }
 
-/* Shared across every page: outline bright brand text and icons, not dark
-   labels on yellow buttons or neutral unfilled rating stars. */
-:root {
-  --yellow-outline: oklch(0 0 0);
-  --yellow-icon-outline:
-    drop-shadow(0.5px 0 0 var(--yellow-outline))
-    drop-shadow(-0.5px 0 0 var(--yellow-outline))
-    drop-shadow(0 0.5px 0 var(--yellow-outline))
-    drop-shadow(0 -0.5px 0 var(--yellow-outline));
-}
-:is(.text-primary, .text-yellow-300, .text-yellow-400, .text-yellow-500,
-    .text-lime-300, .text-lime-400, .text-lime-500,
-    .text-amber-300, .text-amber-400,
-    [style*="color: var(--neon-lime)"], [style*="color: var(--primary)"],
-    [style*="color: var(--brand-yellow)"]) {
-  -webkit-text-stroke: 0.55px var(--yellow-outline);
-  paint-order: stroke fill;
-}
-:is(.text-primary, .text-yellow-300, .text-yellow-400, .text-yellow-500,
-    .text-lime-300, .text-lime-400, .text-lime-500,
-    .text-amber-300, .text-amber-400) svg:not([class*="text-muted"]),
-svg:is(.text-primary, .text-yellow-300, .text-yellow-400, .text-yellow-500,
-    .text-lime-300, .text-lime-400, .text-lime-500,
-    .text-amber-300, .text-amber-400) {
-  filter: var(--yellow-icon-outline);
+html.light :is(.text-yellow-500, .text-amber-300, .text-amber-400) {
+  color: var(--brand-yellow-ink);
 }

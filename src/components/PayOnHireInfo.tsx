@@ -1,6 +1,7 @@
 import { ShieldCheck, Coins } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 /**
  * Comunicazione trasparente: il ristoratore paga solo quando conferma un lavoratore.
@@ -11,21 +12,17 @@ export function PayOnHireBox({ className, compact = false }: { className?: strin
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border-2 border-lime-400/30",
-        "bg-gradient-to-br from-lime-500/[0.10] via-lime-400/[0.04] to-transparent",
+        "relative overflow-hidden rounded-2xl border border-accent/30 bg-accent/5",
         compact ? "p-4 sm:p-5" : "p-5 sm:p-6",
         className,
       )}
       role="note"
       aria-label="Come funzionano i crediti su Pupillo"
     >
-      {/* Sottile alone decorativo in alto a destra */}
-      <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-lime-400/[0.06] blur-2xl" />
-
       <div className="relative flex items-start gap-4">
         <div
           className={cn(
-            "shrink-0 rounded-2xl bg-lime-400/15 text-lime-300 flex items-center justify-center ring-1 ring-lime-400/25",
+            "shrink-0 rounded-2xl bg-accent/10 text-accent flex items-center justify-center ring-1 ring-accent/25",
             compact ? "h-12 w-12" : "h-14 w-14",
           )}
         >
@@ -36,7 +33,7 @@ export function PayOnHireBox({ className, compact = false }: { className?: strin
             <div className={cn("font-bold text-foreground leading-tight", compact ? "text-lg" : "text-xl")}>
               Paghi solo quando confermi
             </div>
-            <span className="inline-flex items-center rounded-full bg-lime-400/15 px-2.5 py-1 text-xs font-semibold text-lime-300 border border-lime-400/25">
+            <span className="inline-flex items-center rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent border border-accent/25">
               Nessun costo per pubblicare
             </span>
           </div>
@@ -46,7 +43,7 @@ export function PayOnHireBox({ className, compact = false }: { className?: strin
           </p>
 
           {!compact && (
-            <p className="mt-1.5 text-xs text-lime-300/70">
+            <p className="mt-1.5 text-xs text-foreground">
               Così paghi solo quando Pupillo ti aiuta davvero a coprire un servizio.
             </p>
           )}
@@ -64,10 +61,11 @@ export function HowCreditsWorkPopover({ className, compact = false }: { classNam
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button
+        <Button
+          variant="link"
           type="button"
           className={cn(
-            "inline-flex items-center gap-1.5 font-medium text-lime-300",
+            "h-auto p-0 inline-flex items-center gap-1.5 font-medium text-accent",
             "underline-offset-4 hover:underline focus-visible:underline outline-none",
             compact ? "text-xs" : "text-sm",
             className,
@@ -75,7 +73,7 @@ export function HowCreditsWorkPopover({ className, compact = false }: { classNam
         >
           <Coins className={cn(compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
           Come funzionano i crediti?
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[320px] text-sm leading-relaxed">
         <div className="font-semibold text-foreground mb-2">Come funzionano i crediti</div>
