@@ -2,7 +2,7 @@ import { LegalFooter } from "@/components/LegalFooter";
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
-import pupilloLogoAsset from "@/assets/pupillo_logo.png.asset.json";
+import pupilloLogoAsset from "@/assets/pupillo-logo-completo.png.asset.json";
 const pupilloLogo = pupilloLogoAsset.url;
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AudienceVideo } from "@/components/home/AudienceVideo";
@@ -57,7 +57,7 @@ function Index() {
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <header className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-4">
         <Link to="/" aria-label="Home Pupillo" className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <img src={pupilloLogo} alt="Pupillo" className="h-9 w-auto md:h-11" />
+          <img src={pupilloLogo} alt="Pupillo" className="h-12 w-auto sm:h-16" />
         </Link>
         <nav aria-label="Principale" className="flex min-w-0 items-center gap-1 text-sm sm:gap-4">
           <a href="#come-funziona" className="hidden rounded-md px-2 py-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline">Come funziona</a>
@@ -69,7 +69,8 @@ function Index() {
       </header>
 
       <main className="mx-auto max-w-[1200px] px-4">
-        <section className="pb-8 pt-6 text-center md:pt-14">
+        <section className="pb-8 pt-3 text-center md:pt-5">
+          <img src={pupilloLogo} alt="Pupillo" width={1041} height={649} className="mx-auto mb-5 w-64 max-w-full object-contain sm:w-80 md:w-96" />
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" aria-hidden /> Torino e provincia
           </span>
@@ -94,7 +95,7 @@ function Index() {
               onClick={() => setAudience(a)}
               className="rounded-full px-3 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
               variant="ghost"
-              style={audience === a ? { background: a === "worker" ? LIME : VIOLET, color: a === "worker" ? "var(--primary-foreground)" : "var(--accent-foreground)" } : undefined}
+              style={audience === a ? { background: a === "worker" ? "var(--primary)" : VIOLET, color: a === "worker" ? "var(--primary-foreground)" : "var(--accent-foreground)" } : undefined}
             >
               {a === "worker" ? "Cerco turni" : "Cerco personale"}
             </Button>
@@ -109,7 +110,7 @@ function Index() {
             title="Cerchi un turno extra?"
             text="Scopri i turni, consulta orari e compensi e invia la tua candidatura."
             cta={
-              <Link to="/auth" search={{ role: "worker" } as never} className="inline-flex w-full items-center justify-center rounded-2xl px-6 py-3.5 font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto" style={{ background: LIME, color: "var(--primary-foreground)" }}>
+              <Link to="/auth" search={{ role: "worker" } as never} className="inline-flex w-full items-center justify-center rounded-2xl px-6 py-3.5 font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto" style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}>
                 Cerco turni
               </Link>
             }
