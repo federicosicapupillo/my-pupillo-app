@@ -75,7 +75,7 @@ function Index() {
             <MapPin className="h-3.5 w-3.5" aria-hidden /> Torino e provincia
           </span>
           <h1 className="mx-auto mt-5 max-w-4xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl md:text-7xl">
-            Il turno giusto. <span style={{ color: LIME }}>La persona giusta.</span>
+            Il turno giusto. <span className="pupillo-headline-yellow block">La persona giusta.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg">
             Pupillo mette in contatto locali e lavoratori per i turni nella ristorazione.

@@ -72,6 +72,8 @@
 }
 
 :root {
+  --headline-yellow: oklch(0.89 0.183 95.3);
+  --headline-outline: oklch(0.16 0.005 280);
   --rating-gold: oklch(0.81 0.17 85);
   --rating-gold-edge: oklch(0.58 0.12 80);
   --pack: oklch(0.3 0.15 305);
@@ -532,4 +534,14 @@ html.light .neon-card { border-color: var(--border); box-shadow: var(--shadow-ne
 
 html.light :is(.text-yellow-500, .text-amber-300, .text-amber-400) {
   color: var(--brand-yellow-ink);
+}
+
+/* Logo-yellow lettering, scoped to the homepage headline only. */
+.pupillo-headline-yellow {
+  color: var(--headline-yellow);
+  font-style: italic;
+  -webkit-text-stroke: 1.4px var(--headline-outline);
+  paint-order: stroke fill;
+  text-shadow: 1px 2px 0 var(--headline-outline);
+  padding-inline: 0.1em;
 }

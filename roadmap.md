@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Titolo home «La persona giusta» nel giallo originale Pupillo con bordo scuro sottile e corsivo; altri colori invariati. Titolo verificato PC/mobile e tema scuro, nessun overflow né errore, build OK, nessuna pubblicazione.
+
 - [x] Schede lavoratori più sobrie e curate, stelle CV/recensioni in oro luminoso senza cambiare valutazioni; schede reali e stelle verificate PC/mobile, nessun overflow né errore, build OK, nessuna pubblicazione.
 
 - [x] Viola del pacchetto esteso ai titoli condivisi delle pagine, inviti ai suggerimenti e informazioni crediti; logica invariata. Dashboard, crediti, profilo, messaggi, notifiche, suggerimenti e ricerca lavoratori verificati con sessione reale, PC/mobile senza overflow né errori; invito home verificato. Build OK, nessuna pubblicazione.
