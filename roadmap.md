@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Viola del pacchetto esteso ai titoli condivisi delle pagine, inviti ai suggerimenti e informazioni crediti; logica invariata. Dashboard, crediti, profilo, messaggi, notifiche, suggerimenti e ricerca lavoratori verificati con sessione reale, PC/mobile senza overflow né errori; invito home verificato. Build OK, nessuna pubblicazione.
+
 - [x] Coccarda decorativa Pupillo nei riquadri Reputation Score di entrambe le dashboard; punteggi e livelli invariati. Dashboard ristoratore reale e coccarda isolata mobile verificati, 12 test superati, build OK; dashboard lavoratore non verificata a schermo, nessuna pubblicazione.
 
 - [x] Pacchetto Pupillo valorizzato con viola deciso, prezzo 29,70 € giallo e richiami illimitati evidenti; prezzi e pagamenti invariati. Verifica visiva isolata PC/mobile e tema scuro, pulsante verificato senza acquisti reali; build OK, nessuna pubblicazione.

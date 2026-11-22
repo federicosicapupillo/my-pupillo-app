@@ -329,7 +329,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-4 grid min-w-0 grid-cols-1 items-start gap-3 sm:mb-6 sm:flex sm:justify-between sm:gap-4">
+    <div className="pupillo-highlight mb-4 grid min-w-0 grid-cols-1 items-start gap-3 border-l-4 border-pack-highlight px-5 py-6 sm:mb-6 sm:flex sm:justify-between sm:gap-4 sm:px-6">
       <div className="min-w-0">
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight break-words">{title}</h1>
         {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}

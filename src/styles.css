@@ -509,6 +509,23 @@ html.light .neon-glow-violet,
 html.light .neon-glow-magenta { box-shadow: var(--shadow-neon); }
 html.light .neon-card { border-color: var(--border); box-shadow: var(--shadow-neon); }
 
+/* Shared brand emphasis: restrained full-width bands, not floating cards. */
+.pupillo-highlight {
+  --foreground: var(--pack-foreground);
+  --muted-foreground: var(--pack-muted);
+  --primary: var(--pack-highlight);
+  --primary-foreground: var(--pack-highlight-foreground);
+  background: var(--pack);
+  color: var(--pack-foreground);
+  border-color: var(--pack-border);
+}
+.pupillo-highlight .text-muted-foreground { color: var(--pack-muted); }
+.pupillo-highlight .text-primary { color: var(--pack-highlight); }
+.pupillo-highlight .bg-primary {
+  background: var(--pack-highlight);
+  color: var(--pack-highlight-foreground);
+}
+
 html.light :is(.text-yellow-500, .text-amber-300, .text-amber-400) {
   color: var(--brand-yellow-ink);
 }

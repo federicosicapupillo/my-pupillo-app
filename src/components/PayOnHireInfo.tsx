@@ -12,7 +12,7 @@ export function PayOnHireBox({ className, compact = false }: { className?: strin
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-accent/30 bg-accent/5",
+        "relative overflow-hidden rounded-lg border border-pack-border bg-pack text-pack-foreground",
         compact ? "p-4 sm:p-5" : "p-5 sm:p-6",
         className,
       )}
@@ -22,7 +22,7 @@ export function PayOnHireBox({ className, compact = false }: { className?: strin
       <div className="relative flex items-start gap-4">
         <div
           className={cn(
-            "shrink-0 rounded-2xl bg-accent/10 text-accent flex items-center justify-center ring-1 ring-accent/25",
+            "shrink-0 rounded-lg bg-pack-highlight/10 text-pack-highlight flex items-center justify-center ring-1 ring-pack-highlight/25",
             compact ? "h-12 w-12" : "h-14 w-14",
           )}
         >
@@ -30,26 +30,26 @@ export function PayOnHireBox({ className, compact = false }: { className?: strin
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <div className={cn("font-bold text-foreground leading-tight", compact ? "text-lg" : "text-xl")}>
+            <div className={cn("font-bold text-pack-foreground leading-tight", compact ? "text-lg" : "text-xl")}>
               Paghi solo quando confermi
             </div>
-            <span className="inline-flex items-center rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent border border-accent/25">
+            <span className="inline-flex items-center rounded-full bg-pack-highlight px-2.5 py-1 text-xs font-semibold text-pack-highlight-foreground">
               Nessun costo per pubblicare
             </span>
           </div>
 
-          <p className={cn("mt-2 leading-relaxed", compact ? "text-sm text-muted-foreground" : "text-sm text-foreground/80")}>
+          <p className="mt-2 text-sm leading-relaxed text-pack-muted">
             Puoi pubblicare offerte, ricevere candidature e chattare gratuitamente. I crediti vengono scalati solo quando confermi un lavoratore per un turno.
           </p>
 
           {!compact && (
-            <p className="mt-1.5 text-xs text-foreground">
+            <p className="mt-1.5 text-xs text-pack-muted">
               Così paghi solo quando Pupillo ti aiuta davvero a coprire un servizio.
             </p>
           )}
 
           <div className="mt-3">
-            <HowCreditsWorkPopover compact={compact} />
+            <HowCreditsWorkPopover compact={compact} className="text-pack-highlight" />
           </div>
         </div>
       </div>
