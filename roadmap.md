@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Coccarda decorativa Pupillo nei riquadri Reputation Score di entrambe le dashboard; punteggi e livelli invariati. Dashboard ristoratore reale e coccarda isolata mobile verificati, 12 test superati, build OK; dashboard lavoratore non verificata a schermo, nessuna pubblicazione.
+
 - [x] Pacchetto Pupillo valorizzato con viola deciso, prezzo 29,70 € giallo e richiami illimitati evidenti; prezzi e pagamenti invariati. Verifica visiva isolata PC/mobile e tema scuro, pulsante verificato senza acquisti reali; build OK, nessuna pubblicazione.
 
 - [x] Giallo caldo più scuro senza contorni neri, titolo/stelle verificati e mobile senza overflow. Riquadro crediti condiviso viola tenue con testo scuro e collegamento viola; aspetto e apertura spiegazione verificati in anteprima isolata perché l’account admin non mostra il riquadro ristoratore. Build OK, nessuna pubblicazione.

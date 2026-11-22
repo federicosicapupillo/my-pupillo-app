@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Award, Star, ArrowRight } from "lucide-react";
+import { Star, ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { OwnCurriculumAssessment } from "@/components/OwnCurriculumAssessment";
 import { ReputationLevelsExplanation } from '@/components/ReputationLevelsExplanation';
+import { ReputationRosette } from "@/components/ReputationRosette";
 
 /**
  * Worker dashboard "Reputation Score" box.
@@ -47,15 +48,17 @@ export function WorkerReputationSummary({ workerId }: { workerId: string }) {
   return (
     <div className="rounded-2xl border bg-card p-5">
       <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-base font-semibold">
-            <Award className="h-4 w-4 shrink-0 text-primary" />
+        <div className="flex min-w-0 items-start gap-3">
+          <ReputationRosette />
+          <div className="min-w-0 pt-2">
+          <div className="flex flex-wrap items-center gap-2 text-base font-semibold">
             Reputation Score
             <ReputationLevelsExplanation />
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Basato sulle recensioni ricevute dai ristoratori.
           </p>
+          </div>
         </div>
         <Link to="/profile" className="justify-self-start sm:justify-self-end">
           <Button variant="ghost" size="sm" className="gap-1">

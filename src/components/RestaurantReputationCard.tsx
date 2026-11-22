@@ -15,6 +15,7 @@ import {
 } from "@/lib/restaurant-reputation";
 import { useRestaurantDashboardStats } from "@/hooks/use-restaurant-dashboard-stats";
 import { receivedReviewsLabel } from "@/lib/restaurant-dashboard-stats";
+import { ReputationRosette } from "@/components/ReputationRosette";
 
 /**
  * Dashboard summary block for the restaurant: Reputation Score + last
@@ -71,10 +72,10 @@ export function RestaurantReputationCard({ restaurantId }: { restaurantId: strin
 
   return (
     <div className="rounded-2xl border bg-card p-5 space-y-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-start gap-3">
+        <ReputationRosette />
+        <div className="min-w-0 flex-1 basis-40 pt-2">
           <div className="text-base font-semibold flex items-center gap-2">
-            <Award className="h-4 w-4 text-primary" />
             Reputation Score
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -82,7 +83,7 @@ export function RestaurantReputationCard({ restaurantId }: { restaurantId: strin
           </p>
         </div>
         <span
-          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold sm:mt-2 ${
             isInConstruction
               ? "bg-muted text-muted-foreground border-border"
               : result.badgeClass
