@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Schede lavoratori più sobrie e curate, stelle CV/recensioni in oro luminoso senza cambiare valutazioni; schede reali e stelle verificate PC/mobile, nessun overflow né errore, build OK, nessuna pubblicazione.
+
 - [x] Viola del pacchetto esteso ai titoli condivisi delle pagine, inviti ai suggerimenti e informazioni crediti; logica invariata. Dashboard, crediti, profilo, messaggi, notifiche, suggerimenti e ricerca lavoratori verificati con sessione reale, PC/mobile senza overflow né errori; invito home verificato. Build OK, nessuna pubblicazione.
 
 - [x] Coccarda decorativa Pupillo nei riquadri Reputation Score di entrambe le dashboard; punteggi e livelli invariati. Dashboard ristoratore reale e coccarda isolata mobile verificati, 12 test superati, build OK; dashboard lavoratore non verificata a schermo, nessuna pubblicazione.

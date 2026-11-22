@@ -74,9 +74,10 @@ export function WorkerRatingSummary({
       <Star
         className={cn(
           size === "md" ? "h-4 w-4" : "h-3 w-3",
-          "fill-yellow-400 text-yellow-400",
+          "fill-rating-gold text-rating-gold-edge",
         )}
         aria-hidden
+        strokeWidth={1.25}
       />
       <span className="tabular-nums font-medium text-foreground">
         {formatRatingIT(rating!)}

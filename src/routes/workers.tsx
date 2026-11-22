@@ -1757,12 +1757,12 @@ function WorkersPage() {
                     });
                   }
                   return (
-          <div key={w.id} className={`rounded-2xl border p-5 ${near ? "border-emerald-500/50 bg-emerald-500/5" : "bg-card"}`}>
-            <div className="flex items-center gap-3">
+          <div key={w.id} className={`rounded-lg border p-5 transition-shadow hover:border-accent/40 hover:shadow-sm ${near ? "border-emerald-500/50 bg-emerald-500/5" : "border-border bg-card"}`}>
+            <div className="flex items-start gap-3">
               <UserAvatar zoomable userId={w.id} name={displayWorkerName(w, !!r?.workedWith)} className="h-12 w-12" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="font-semibold">{displayWorkerName(w, !!r?.workedWith)}</div>
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-2">
                   {(() => {
                     const allRoles = workerCardRoles(w);
                     const hasContext = !!(activeRoleContext && activeRoleContext.trim());
@@ -1866,7 +1866,7 @@ function WorkersPage() {
                     {[1,2,3,4,5].map(i => (
                       <Star
                         key={i}
-                        className={`h-3 w-3 ${i <= Math.round(r.lastReviewRating!) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
+                        className={`h-3 w-3 ${i <= Math.round(r.lastReviewRating ?? 0) ? "fill-rating-gold text-rating-gold-edge" : "text-muted-foreground/30"}`}
                       />
                     ))}
                     <span className="ml-1 tabular-nums font-medium text-foreground">{r.lastReviewRating.toFixed(1)}</span>
@@ -2236,7 +2236,7 @@ function ContactedWorkerCard({
                       key={i}
                       className={`h-3.5 w-3.5 ${
                         reviewRating != null && i <= Math.round(reviewRating)
-                          ? "fill-yellow-400 text-yellow-400"
+                          ? "fill-rating-gold text-rating-gold-edge"
                           : "text-muted-foreground/30"
                       }`}
                     />
