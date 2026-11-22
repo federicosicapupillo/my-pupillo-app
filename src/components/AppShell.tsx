@@ -15,6 +15,7 @@ import { AssistantFab } from "@/components/assistant/AssistantFab";
 import { useMapEnabledForRole } from "@/lib/use-map-enabled";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { isOnboardingLocked, ONBOARDING_LOCKED_MESSAGE } from "@/lib/onboarding-gate";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -199,6 +200,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <ThemeToggle />
             <Button
               ref={mobileToggleRef}
               variant="ghost"
@@ -292,7 +294,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
       {(showBreadcrumbs || homeIndicator) && (
-        <div className="border-b border-white/5 bg-[oklch(0.13_0.02_280/0.4)] backdrop-blur-md">
+        <div className="border-b border-border bg-background/40 backdrop-blur-md">
           <nav aria-label="Breadcrumb" className="mx-auto max-w-7xl px-4 py-2 text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
             <Link
               to={homeTo as never}

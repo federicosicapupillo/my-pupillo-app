@@ -17,6 +17,7 @@ import { ProfileGateProvider } from "@/components/ProfileGate";
 import { StalePreviewOverlay } from "@/components/StalePreviewOverlay";
 import { installServerFnAuthFetch } from "@/lib/server-fn-auth";
 import { DevLoopMonitor } from "@/lib/dev-loop-monitor";
+import { ThemeProvider } from "@/components/ThemeToggle";
 
 installServerFnAuthFetch();
 
@@ -95,18 +96,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
+      { title: "Pupillo — Lavoratori e ristoratori" },
       { name: "description", content: "Ricerca personale extra mondo della ristorazione" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
+      { property: "og:title", content: "Pupillo — Lavoratori e ristoratori" },
       { property: "og:description", content: "Ricerca personale extra mondo della ristorazione" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Lovable App" },
+      { name: "twitter:title", content: "Pupillo — Lavoratori e ristoratori" },
       { name: "twitter:description", content: "Ricerca personale extra mondo della ristorazione" },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d9816446-7506-4922-acc2-0720cca747ab/id-preview-0b1c71c7--81341205-eede-4204-8584-66229ea985c7.lovable.app-1778140506695.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d9816446-7506-4922-acc2-0720cca747ab/id-preview-0b1c71c7--81341205-eede-4204-8584-66229ea985c7.lovable.app-1778140506695.png" },
     ],
     links: [
       {
@@ -129,7 +128,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var c=document.documentElement.classList;c.add('dark');c.remove('light');try{localStorage.removeItem('pupillo-theme');Object.keys(localStorage).forEach(function(k){if(k.indexOf('pupillo-theme:user:')===0)localStorage.removeItem(k);});}catch(e){}})();`,
+            __html: `(function(){var t='dark';try{if(localStorage.getItem('pupillo-theme')==='light')t='light';}catch(e){}var c=document.documentElement.classList;c.toggle('light',t==='light');c.toggle('dark',t==='dark');})();`,
           }}
         />
       </head>
@@ -172,6 +171,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
       <AuthProvider>
         <AccountAccessGate>
           <PhoneVerificationGate>
@@ -184,6 +184,7 @@ function RootComponent() {
         <StalePreviewOverlay />
         {import.meta.env.DEV ? <DevLoopMonitor /> : null}
       </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

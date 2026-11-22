@@ -179,13 +179,9 @@
     background-attachment: fixed;
   }
 
-  /* Light mode: soft Pupillo daylight gradient (subtle accents, high contrast) */
+  /* White version: no tinted page backdrop. */
   html.light body {
-    background-image:
-      radial-gradient(1000px 500px at 85% -10%, oklch(0.65 0.25 310 / 8%), transparent 60%),
-      radial-gradient(800px 500px at -10% 20%, oklch(0.82 0.16 195 / 8%), transparent 60%),
-      radial-gradient(900px 600px at 50% 110%, oklch(0.93 0.22 120 / 10%), transparent 60%);
-    background-attachment: fixed;
+    background-image: none;
   }
 
   /* Subtle neon focus ring across all interactive elements */
@@ -346,20 +342,27 @@ html:not(.light) .leaflet-control-attribution a { color: oklch(0.93 0.22 120) !i
  * Activated via `html.light`. Defaults to dark when class is absent.
  * ---------------------------------------------------------------------- */
 html.light {
+  color-scheme: light;
+  --neon-lime: oklch(0.46 0.13 130);
+  --neon-violet: oklch(0.48 0.22 310);
+  --neon-magenta: oklch(0.48 0.2 350);
+  --neon-cyan: oklch(0.46 0.09 195);
+  --neon-orange: oklch(0.48 0.13 50);
+  --shadow-neon: 0 6px 20px -10px oklch(0.46 0.13 130 / 20%);
   --compensation-positive: oklch(0.55 0.17 145);
-  --background: oklch(0.98 0.005 280);            /* #F7F8FC-ish */
+  --background: oklch(1 0 0);                    /* white */
   --foreground: oklch(0.21 0.04 265);             /* deep navy #111827 */
   --card: oklch(1 0 0);                           /* pure white */
   --card-foreground: oklch(0.21 0.04 265);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.21 0.04 265);
-  --primary: oklch(0.62 0.17 145);                /* readable green ~#16A34A */
+  --primary: var(--neon-lime);
   --primary-foreground: oklch(0.99 0 0);          /* white text on green */
   --secondary: oklch(0.96 0.01 280);              /* very light surface */
   --secondary-foreground: oklch(0.21 0.04 265);
   --muted: oklch(0.95 0.01 280);
   --muted-foreground: oklch(0.45 0.02 265);       /* #4B5563 */
-  --accent: oklch(0.55 0.25 310);                 /* electric violet */
+  --accent: var(--neon-violet);
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.55 0.24 25);
   --destructive-foreground: oklch(0.99 0 0);
@@ -373,7 +376,7 @@ html.light {
   --chart-5: oklch(0.7 0.18 50);
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.21 0.04 265);
-  --sidebar-primary: oklch(0.62 0.17 145);
+  --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.96 0.01 280);
   --sidebar-accent-foreground: oklch(0.21 0.04 265);
@@ -419,12 +422,12 @@ html.light .card {
   /* Lime / yellow text on white -> deep green */
   html.light .text-lime-300, html.light .text-lime-400, html.light .text-lime-500,
   html.light .text-yellow-300, html.light .text-yellow-400 {
-    color: oklch(0.55 0.17 145) !important; /* ~#15803D */
+    color: var(--primary) !important;
   }
 
   /* Bright lime backgrounds -> readable green with white text */
   html.light .bg-lime-300, html.light .bg-lime-400, html.light .bg-lime-500 {
-    background-color: oklch(0.62 0.17 145) !important; /* ~#16A34A */
+    background-color: var(--primary) !important;
     color: oklch(0.99 0 0) !important;
   }
 
@@ -440,7 +443,7 @@ html.light .card {
   }
 
   /* Primary chip text on white should always read */
-  html.light .text-primary { color: oklch(0.55 0.17 145) !important; }
+  html.light .text-primary { color: var(--primary) !important; }
   html.light .border-primary { border-color: oklch(0.62 0.17 145) !important; }
 }
 
@@ -483,3 +486,13 @@ select optgroup {
   background-color: var(--popover);
   color: var(--popover-foreground);
 }
+
+html.dark { color-scheme: dark; }
+html.light img[alt="Pupillo"],
+html.light img[alt="Logo Pupillo"] {
+  filter: brightness(0.4) saturate(1.25);
+}
+html.light .neon-glow-lime,
+html.light .neon-glow-violet,
+html.light .neon-glow-magenta { box-shadow: var(--shadow-neon); }
+html.light .neon-card { border-color: var(--border); box-shadow: var(--shadow-neon); }

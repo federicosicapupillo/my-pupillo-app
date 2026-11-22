@@ -9,6 +9,8 @@ import { AudienceVideo } from "@/components/home/AudienceVideo";
 import { HomeReviews } from "@/components/home/HomeReviews";
 import { SuggestionInvitation } from "@/components/SuggestionInvitation";
 import { HOME_VIDEOS } from "@/lib/home-videos";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -62,6 +64,7 @@ function Index() {
           <a href="#per-lavoratori" className="hidden rounded-md px-2 py-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline">Per chi cerca turni</a>
           <a href="#per-locali" className="hidden rounded-md px-2 py-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline">Per i locali</a>
           <Link to="/auth" className="rounded-full border border-border px-4 py-1.5 font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Accedi</Link>
+          <ThemeToggle />
         </nav>
       </header>
 
@@ -83,17 +86,18 @@ function Index() {
         {/* Selettore mobile */}
         <div role="group" aria-label="Scegli il tuo profilo" className="mx-auto mb-5 grid max-w-md grid-cols-2 gap-2 rounded-full border border-border p-1 md:hidden">
           {(["worker", "restaurant"] as const).map((a) => (
-            <button
+            <Button
               key={a}
               type="button"
               aria-pressed={audience === a}
               aria-controls={a === "worker" ? "per-lavoratori" : "per-locali"}
               onClick={() => setAudience(a)}
               className="rounded-full px-3 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
-              style={audience === a ? { background: a === "worker" ? LIME : VIOLET, color: a === "worker" ? "var(--background)" : "var(--foreground)" } : undefined}
+              variant="ghost"
+              style={audience === a ? { background: a === "worker" ? LIME : VIOLET, color: a === "worker" ? "var(--primary-foreground)" : "var(--accent-foreground)" } : undefined}
             >
               {a === "worker" ? "Cerco turni" : "Cerco personale"}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -105,7 +109,7 @@ function Index() {
             title="Cerchi un turno extra?"
             text="Scopri i turni, consulta orari e compensi e invia la tua candidatura."
             cta={
-              <Link to="/auth" search={{ role: "worker" } as never} className="inline-flex w-full items-center justify-center rounded-2xl px-6 py-3.5 font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto" style={{ background: LIME, color: "var(--background)" }}>
+              <Link to="/auth" search={{ role: "worker" } as never} className="inline-flex w-full items-center justify-center rounded-2xl px-6 py-3.5 font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto" style={{ background: LIME, color: "var(--primary-foreground)" }}>
                 Cerco turni
               </Link>
             }
@@ -121,7 +125,7 @@ function Index() {
             title="Ti serve personale?"
             text="Pubblica un turno e ricevi le candidature delle persone interessate."
             cta={
-              <Link to="/auth" search={{ role: "restaurant" } as never} className="inline-flex w-full items-center justify-center rounded-2xl px-6 py-3.5 font-extrabold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto" style={{ background: VIOLET }}>
+              <Link to="/auth" search={{ role: "restaurant" } as never} className="inline-flex w-full items-center justify-center rounded-2xl px-6 py-3.5 font-extrabold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto" style={{ background: VIOLET }}>
                 Cerco personale
               </Link>
             }

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Versione bianca selezionabile da home e menu condiviso; fluo adattato a colori più scuri e sfondo bianco puro. Cambio e persistenza dopo refresh verificati, home e dashboard admin reali controllate desktop/mobile senza overflow né errori. Altre pagine dei ruoli non verificate singolarmente; nessuna pubblicazione.
+
 - [x] Suggerimenti privati: invito nella home e dashboard, collegamento nel menu dei due ruoli, raccolta Admin «Suggerimenti». Invio reale, conferma, rilettura amministrativa e salvataggio verificati; prova eliminata, mobile senza overflow, 3 test passati, nessuna pubblicazione.
 - [x] Avviso email dei suggerimenti a federico.sica@gmail.com: invio di prova confermato nei registri. La raccolta resta salvata anche se l’email fallisce.
 
