@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Scritte prima oro/verdone e stelle di entrambi i gruppi di recensioni homepage nel giallo brillante del logo; colore verificato a schermo, mobile senza overflow, build OK, nessuna pubblicazione.
+
 - [x] Logo completo originale grande nella homepage e sostituito nella navigazione; icona del sito aggiornata. Verde di marca sostituito con giallo sui pulsanti e oro scuro leggibile sui testi della versione bianca. Home e dashboard admin verificate desktop/mobile, nessun overflow né errore; build OK, nessuna pubblicazione.
 
 - [x] Versione bianca selezionabile da home e menu condiviso; fluo adattato a colori più scuri e sfondo bianco puro. Cambio e persistenza dopo refresh verificati, home e dashboard admin reali controllate desktop/mobile senza overflow né errori. Altre pagine dei ruoli non verificate singolarmente; nessuna pubblicazione.

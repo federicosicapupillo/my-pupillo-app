@@ -345,7 +345,7 @@ html.light {
   color-scheme: light;
   --brand-yellow: oklch(0.89 0.183 95.3); /* sampled logo yellow */
   --brand-yellow-ink: oklch(0.49 0.1 95.3); /* readable yellow-gold on white */
-  --neon-lime: var(--brand-yellow-ink);
+  --neon-lime: var(--brand-yellow);
   --neon-violet: oklch(0.48 0.22 310);
   --neon-magenta: oklch(0.48 0.2 350);
   --neon-cyan: oklch(0.46 0.09 195);
@@ -424,7 +424,7 @@ html.light .card {
   /* Lime / yellow text on white -> deep green */
   html.light .text-lime-300, html.light .text-lime-400, html.light .text-lime-500,
   html.light .text-yellow-300, html.light .text-yellow-400 {
-    color: var(--brand-yellow-ink) !important;
+    color: var(--brand-yellow) !important;
   }
 
   /* Bright lime backgrounds -> readable green with white text */
@@ -445,7 +445,7 @@ html.light .card {
   }
 
   /* Primary chip text on white should always read */
-  html.light .text-primary { color: var(--brand-yellow-ink) !important; }
+  html.light .text-primary { color: var(--brand-yellow) !important; }
   html.light .border-primary { border-color: var(--brand-yellow-ink) !important; }
 }
 
