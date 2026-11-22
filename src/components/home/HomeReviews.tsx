@@ -103,8 +103,8 @@ function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "res
           {reviews.map((review, index) => (
             <div key={review.text} role="group" aria-roledescription="diapositiva" aria-label={`${index + 1} di ${reviews.length}`} className="flex min-w-0 flex-[0_0_260px] pl-3 sm:flex-[0_0_280px]">
               <figure className={`flex w-full flex-col rounded-lg border bg-card p-4 ${worker ? "border-primary/25" : "border-accent/30"}`}>
-                <div aria-label={`${review.stars} stelle su 5`} className="mb-3 flex gap-1 text-primary">
-                  {Array.from({ length: 5 }, (_, star) => <Star key={star} aria-hidden="true" className={`size-3.5 ${star < review.stars ? "fill-current" : "text-muted-foreground/40"}`} />)}
+                <div aria-label={`${review.stars} stelle su 5`} className="mb-3 flex gap-1">
+                  {Array.from({ length: 5 }, (_, star) => <Star key={star} aria-hidden="true" strokeWidth={1.25} className={`size-4 ${star < review.stars ? "fill-rating-gold text-rating-gold-edge" : "text-muted-foreground/40"}`} />)}
                 </div>
                 <blockquote className="grow text-xs leading-5 text-card-foreground">{review.text}</blockquote>
                 <figcaption className="mt-3 border-t border-border pt-3 text-xs font-semibold text-muted-foreground">Recensione di un {worker ? "lavoratore" : "ristoratore"}</figcaption>
