@@ -51,3 +51,4 @@
 - Free recall: accept_application_atomic charges 7 credits only for the first paid confirmation of a restaurant–worker pair (restaurant_already_acquired_worker), writing a delta-0 audit row for recalls; the server decides, never the browser balance check — why: the business model promises unlimited free recalls.
 - Worker face photos: FaceSelfieDialog capture, then moderateWorkerFacePhoto; enforce_worker_avatar needs an approved row — why: only server-approved files.
 
+- Home #come-funziona guide lives only in src/components/home/HomeStepsGuide (pure guidePose from scroll, measured bubble stops, reserved right lane, bubbles always in flow); never import /demo-pupillo director into the home — why: simple reversible guide without collisions or layout jumps.
