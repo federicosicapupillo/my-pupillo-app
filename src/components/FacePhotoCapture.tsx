@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Camera, CheckCircle2, Loader2, RotateCcw, UserRound } from "lucide-react";
 import { FaceSelfieDialog, type PortraitShot } from "@/components/FaceSelfieDialog";
 import { Button } from "@/components/ui/button";
-import { moderateWorkerFacePhoto } from "@/lib/avatar-moderation.functions";
+import { moderateWorkerFacePhoto, type FacePhotoResult } from "@/lib/avatar-moderation.functions";
 
 type Props = {
   /** URL visualizzabile della foto già approvata (se presente). */
@@ -13,12 +13,15 @@ type Props = {
   onApproved: (path: string, displayUrl: string) => void | Promise<void>;
   onBusyChange?: (busy: boolean) => void;
   invalid?: boolean;
+  /** Solo per test: sostituisce la chiamata al controllo server. */
+  moderateOverride?: (fd: FormData) => Promise<FacePhotoResult>;
 };
 
 
 /** Foto viso del lavoratore: solo scatto dal vivo, sfondo albicocca, controllo server prima dell'uso. */
-export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, invalid }: Props) {
-  const moderate = useServerFn(moderateWorkerFacePhoto);
+export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, invalid, moderateOverride }: Props) {
+  const serverModerate = useServerFn(moderateWorkerFacePhoto);
+  const inFlight = React.useRef(false);
   const [cameraOpen, setCameraOpen] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -34,13 +37,15 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
 
   const submit = async (shot: PortraitShot) => {
     const preview = shot.preview;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
       const fd = new FormData();
       fd.append("original", shot.original);
       fd.append("file", shot.final);
-      const res = await moderate({ data: fd });
+      const res = moderateOverride ? await moderateOverride(fd) : await serverModerate({ data: fd });
       if (res.ok) {
         setRejectedPreview(null);
         setLastShot(null);
@@ -60,6 +65,7 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
         ? "Connessione assente o instabile. Riprova quando sei online."
         : "Controllo della foto non riuscito. Riprova.");
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };

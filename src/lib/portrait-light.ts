@@ -55,3 +55,11 @@ export function maskCoverage(alpha: ArrayLike<number>): number {
   for (let p = 0; p < alpha.length; p++) if ((alpha[p] ?? 0) >= 0.5) s++;
   return alpha.length ? s / alpha.length : 0;
 }
+
+/** Rende netta la maschera: sotto 0,35 è sfondo pieno, sopra 0,65 persona piena, in mezzo bordo morbido. */
+export function refineAlpha(alpha: Float32Array, lo = 0.35, hi = 0.65): void {
+  for (let p = 0; p < alpha.length; p++) {
+    const t = clamp(((alpha[p] ?? 0) - lo) / (hi - lo), 0, 1);
+    alpha[p] = t * t * (3 - 2 * t);
+  }
+}

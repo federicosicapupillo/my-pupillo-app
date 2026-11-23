@@ -41,3 +41,13 @@ describe("Luce ritratto", () => {
   });
   it("copertura maschera", () => { expect(maskCoverage([1, 0, 0.6, 0.2])).toBe(0.5); });
 });
+
+import { refineAlpha } from "./portrait-light";
+describe("maschera", () => {
+  it("le zone incerte di sfondo diventano sfondo pieno", () => {
+    const a = new Float32Array([0.2, 0.3, 0.5, 0.8]);
+    refineAlpha(a);
+    expect([a[0], a[1], a[3]]).toEqual([0, 0, 1]);
+    expect(a[2]).toBeCloseTo(0.5);
+  });
+});

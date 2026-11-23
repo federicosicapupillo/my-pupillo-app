@@ -2,7 +2,7 @@ import * as React from "react";
 import { Camera, Check, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { applyPortraitLight, compositeOnPortraitBackground, maskCoverage } from "@/lib/portrait-light";
+import { applyPortraitLight, compositeOnPortraitBackground, maskCoverage, refineAlpha } from "@/lib/portrait-light";
 import { evaluateFaceGuide, GUIDE, GUIDE_MESSAGES, type FaceBox, type GuideStatus } from "@/lib/face-guide";
 
 export type PortraitShot = { original: File; final: File; preview: string };
@@ -74,6 +74,7 @@ async function buildPortrait(frame: HTMLCanvasElement): Promise<HTMLCanvasElemen
     const ad = uctx.getImageData(0, 0, out, out).data;
     const alpha = new Float32Array(out * out);
     for (let p = 0; p < alpha.length; p++) alpha[p] = (ad[p * 4 + 3] ?? 0) / 255;
+    refineAlpha(alpha);
     if (maskCoverage(alpha) < 0.08) throw new Error("coverage");
     const final = document.createElement("canvas"); final.width = out; final.height = out;
     const fctx = final.getContext("2d")!;
@@ -94,7 +95,14 @@ export function FaceSelfieDialog({ open, onOpenChange, onConfirm }: Props) {
   const [noDetector, setNoDetector] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [shot, setShot] = React.useState<PortraitShot | null>(null);
-  React.useEffect(() => { if (!open) setShot(null); }, [open]);
+  // Ogni apertura/chiusura è una sessione nuova: i risultati di scatti vecchi vengono ignorati.
+  const sessionRef = React.useRef(0);
+  const shotRef = React.useRef<PortraitShot | null>(null);
+  shotRef.current = shot;
+  React.useEffect(() => {
+    sessionRef.current += 1;
+    if (!open && shotRef.current) { URL.revokeObjectURL(shotRef.current.preview); setShot(null); }
+  }, [open]);
   React.useEffect(() => { if (open) loadSegmenter().catch(() => {}); }, [open]);
 
   React.useEffect(() => {
@@ -138,6 +146,8 @@ export function FaceSelfieDialog({ open, onOpenChange, onConfirm }: Props) {
   const capture = async () => {
     const v = videoRef.current;
     if (!v || !v.videoWidth || busy) return;
+    const sid = sessionRef.current;
+    const live = () => sessionRef.current === sid;
     setBusy(true); setError(null);
     try {
       const side = Math.min(v.videoWidth, v.videoHeight);
@@ -147,14 +157,15 @@ export function FaceSelfieDialog({ open, onOpenChange, onConfirm }: Props) {
       frame.getContext("2d")!.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, out, out);
       let final: HTMLCanvasElement;
       try { final = await buildPortrait(frame); } catch {
-        setError("Non riesco a preparare lo sfondo della foto: il servizio di elaborazione non è disponibile. Controlla la connessione e riprova lo scatto.");
+        if (live()) setError("Non riesco a preparare lo sfondo della foto: il servizio di elaborazione non è disponibile. Controlla la connessione e riprova lo scatto.");
         return;
       }
       const [ob, fb] = await Promise.all([toBlob(frame), toBlob(final)]);
+      if (!live()) return;
       setShot({ original: new File([ob], "originale.jpg", { type: "image/jpeg" }), final: new File([fb], "ritratto.jpg", { type: "image/jpeg" }), preview: URL.createObjectURL(fb) });
     } catch {
-      setError("Scatto non riuscito. Riprova.");
-    } finally { setBusy(false); }
+      if (live()) setError("Scatto non riuscito. Riprova.");
+    } finally { if (live()) setBusy(false); }
   };
 
   const ok = status === "ok";
