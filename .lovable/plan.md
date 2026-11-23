@@ -1,53 +1,57 @@
-# Pupillo Academy — parere lato marketplace (solo brainstorming, nessuna modifica)
+# Pupillo Academy — Round 2, parere lato marketplace (solo consulenza)
 
-## Fatti verificati in questo turno
-- Nessuna cartella `.workspace/skills`, `.agents/skills`, `.claude/skills` né skill attive del workspace. `docs/MARKETING_CONTEXT.md` non esiste (in `docs/` ci sono solo documenti tecnici). Nessun documento in Files `marketing/`.
-- Unica guida di comunicazione letta: la skill di sistema "marketing-memory" (regole su dove salvare i documenti di marketing). Non contiene contenuti di copy: non la applico al testo. Nessuna persona contattata.
-- Nel codice del marketplace oggi non compare la parola "Academy": nessun collegamento esiste.
-- `src/lib/pricing.ts`: pacchetto unico "1 lavoratore confermato a 29,70 €" e testo "Paghi una sola volta per lavoratore: poi puoi richiamare la stessa persona in modo illimitato, senza costi aggiuntivi."
-- Regola di progetto registrata (migrazione 0027): i 7 crediti si scalano solo alla prima conferma della coppia ristorante–lavoratore; i richiami successivi hanno costo zero. Il modello "nuovo contatto pagato una volta, stesso lavoratore senza nuovo costo" è confermato. Non va cambiato.
-- Memoria di progetto: Pupillo solo mette in contatto, non è agenzia; nessuna promessa di gratuità a tempo (vale per i ristoratori, non contraddice un'Academy sempre gratuita).
+Nessuna modifica a sito, dati, prezzi o impostazioni. Il documento non autorizza la costruzione.
 
-## A) Cosa confermo e cosa cambio
-Confermo: niente Academy dentro l'iscrizione; visibilità dopo; tono "facoltativa/consigliata"; pubblicazione solo per scelta del lavoratore.
-Cambio, accogliendo le critiche:
-- Tolgo "fatti notare": oggi non c'è nessuna visibilità collegata.
-- Tolgo "2 corsi su 5" e il bollino accanto alle stelle: i progressi restano nel browser e non sono collegati a una persona.
-- Tolgo il filtro "ha completato l'Academy".
-- "Completa" va bene dentro l'Academy; nel marketplace evito solo frasi che la legano al ricevere lavoro.
-- "Gratuita per chi è iscritto": oggi l'accesso è libero. Uso "gratuita" senza condizione, oppure "gratuita per i lavoratori Pupillo" (vero, perché anche loro accedono gratis), senza dire che serve l'iscrizione.
+## (a) Convergenze
+- Gratuita, facoltativa, fuori dagli step necessari dell'iscrizione.
+- Oggi niente "fatti notare", niente conteggi, niente bollino accanto alle stelle, niente filtro.
+- Progresso solo nel browser: oggi nessun dato Academy nella scheda del lavoratore.
+- Si distingue lo stato attuale (anteprima libera) dalla versione finale (gratuita per iscritti, stesso account Pupillo, nessuna seconda registrazione).
+- "Non è un requisito per usare Pupillo" è meglio di "non serve per trovare turni". Accetto la correzione.
+- Bocciato "primo turno preparato in pochi minuti". Tempi solo indicativi.
+- Il PDF è un "attestato di riconoscimento", mai una "certificazione".
+- Fatti già verificati nel primo parere e ancora validi: modello prezzo confermato da pricing.ts e dalla regola crediti 0027 (pagamento alla prima conferma, richiamo dello stesso lavoratore gratuito); nessuna skill marketing nel progetto; nessun MARKETING_CONTEXT.md.
 
-## B) Dove metterla
-Oggi (solo descrizione + link esterno):
-1. Dashboard lavoratore: un riquadro viola, il punto principale, chiudibile.
-2. Homepage, sezione lavoratori: una riga sotto i vantaggi, non nella parte alta.
-3. Fine iscrizione lavoratore: messaggio dopo "Profilo completato", con "Più tardi" in evidenza e "Scopri" secondario.
-4. Profilo lavoratore: niente per ora.
-5. Lato ristoratori: niente per ora (non c'è nulla da mostrare).
-Futuro (solo dopo il collegamento degli account):
-- Profilo: sezione "Formazione Pupillo Academy" con interruttore "Mostra ai ristoratori", spento all'inizio.
-- Scheda lavoratore: sezione separata "Formazione", lontana da stelle e recensioni, con dicitura "Non è una qualifica ufficiale".
-- Homepage ristoratori: frase sulla formazione pubblicata dal lavoratore.
-- Filtro: da valutare più avanti, e solo se non penalizza gli esperti.
+## (b) Divergenze residue
+1. Ristoratori oggi: accetto il blocco secondario/FAQ, perché è vero già oggi. Limiti: in fondo alla homepage ristoratori o nelle FAQ, mai nella dashboard ristoratore, nella ricerca o nella scheda candidato. Toglierei "conoscere il progetto dedicato alla crescita dei lavoratori": può far pensare che chi lo segue sia più preparato. Il ristoratore non ha un'azione utile da fare sull'Academy, quindi il pulsante è un link testuale, non un pulsante giallo.
+2. Gerarchia dei pulsanti: accetto la parità. A fine iscrizione "Scopri l'Academy" è il pulsante normale e "Più tardi" è un link ben visibile accanto. Nessuna finestra sopra la pagina. In dashboard il riquadro sta sotto le azioni di lavoro (disponibilità, offerte, profilo) e non usa il viola pieno del pacchetto crediti, per non competere con le azioni principali. Va bene una cornice viola leggera.
+3. "Prova l'anteprima gratuita" va bene nel riquadro grande. Nel riquadro compatto meglio "Scopri l'Academy".
+4. Uscita dal sito: d'accordo. Link chiaro con la scritta "sito Pupillo Academy" e, se si apre una nuova scheda, avviso "(si apre in una nuova scheda)".
+5. Titolo "Impara, ripassa, mettiti alla prova.": va bene. Per un esperto suona meglio "Ripassa le basi della sala, quando vuoi." Lo propongo come alternativa, non come obbligo.
 
-## C) Testi per oggi
-Lavoratori (dashboard/homepage):
-"Pupillo Academy è gratuita e facoltativa. Lezioni brevi e quiz sul lavoro di sala, da fare quando vuoi. Per ogni modulo superato puoi scaricare un attestato di riconoscimento. Non è richiesta per ricevere proposte su Pupillo."
-Nota piccola: "L'attestato non è una qualifica ufficiale né una certificazione."
-Fine iscrizione: "Profilo completato. Se ti va, dai un'occhiata alla Pupillo Academy: è gratuita e non serve per trovare turni."
-Ristoratori: per ora nessun testo. In futuro: "Alcuni lavoratori scelgono di mostrare la formazione fatta con la Pupillo Academy. È un'informazione in più, non sostituisce esperienza e recensioni."
-Pulsanti: "Scopri l'Academy" (apre il sito Academy in una nuova scheda) e "Più tardi".
+## (c) Testi finali consigliati (oggi)
+1. Homepage, parte lavoratori (riga sotto i vantaggi)
+   Etichetta: Pupillo Academy · Gratuita e facoltativa
+   Titolo: Impara, ripassa, mettiti alla prova.
+   Testo: Un percorso sulle basi del servizio di sala, per chi comincia e per chi vuole ripassare. Lezioni e quiz, quando vuoi. Per ogni modulo superato puoi scaricare un attestato di riconoscimento in PDF.
+   Pulsante: Prova l'anteprima gratuita
+   Nota: L'Academy è facoltativa: non è un requisito per usare Pupillo.
 
-## D) Tre rischi e come evitarli
-1. Sembra obbligatoria → frase esplicita "non è richiesta per ricevere proposte", pulsante "Più tardi" in evidenza, niente nell'iscrizione.
-2. Si promette più del vero (visibilità, mansioni nuove, valore dell'attestato) → nessun "fatti notare" e nessun "diventi cameriere"; "più mansioni" detto come "conosci anche altri ruoli"; nota "non è una qualifica".
-3. Confusione con reputazione e prezzo → mai accanto alle stelle o al Reputation Score; nessun legame col pacchetto da 29,70 €; Academy sempre "gratuita" senza date.
+2. Fine iscrizione (testo nella pagina, dopo "Profilo completato")
+   Testo: Il tuo profilo è pronto. Se ti va, puoi provare la Pupillo Academy: è gratuita e puoi ricevere proposte anche senza seguirla.
+   Pulsante: Scopri l'Academy · Link: Più tardi
 
-## E) Skill
-Vedi fatti: nessuna skill di marketing o comunicazione nel progetto. Ho applicato solo le regole di progetto già salvate (ruolo di Pupillo, lancio a pagamento, pacchetto unico, viola nei punti chiave).
+3. Dashboard lavoratore (riquadro compatto sotto le azioni di lavoro, chiudibile)
+   Etichetta: Pupillo Academy · Gratuita e facoltativa
+   Testo: Ripassa le basi della sala con lezioni e quiz. Oggi sono disponibili due moduli in anteprima.
+   Pulsante: Scopri l'Academy (si apre in una nuova scheda)
 
-## F) Modello prezzo
-Confermato sia nei testi (pricing.ts) sia nella regola dei crediti: si paga solo al primo contatto confermato, il richiamo dello stesso lavoratore è gratuito. MARKETING_CONTEXT.md non esiste, quindi non può confermarlo.
+4. Ristoratori (in fondo alla homepage ristoratori o nelle FAQ)
+   Titolo: Un percorso gratuito per ripassare le basi della sala.
+   Testo: Pupillo Academy è in anteprima: lezioni e quiz sulle basi del servizio di sala, a disposizione dei lavoratori. Puoi esplorare i contenuti.
+   Link: Scopri i contenuti dell'Academy
 
-## Se approvato in futuro (non ora)
-Riquadro dashboard + riga homepage + messaggio di fine iscrizione con link esterno; nessuna modifica a database, prezzi o schede ristoratore.
+Pagina di spiegazione nell'Academy: d'accordo con il vostro testo (due moduli in bozza, progressi nel browser, non collegati al profilo, attestato non certificato e non qualifica). Solo M1/M2, soglia 8/10, Scudetto e Gagliardetto.
+
+## (d) Requisiti minimi prima della promessa futura
+1. Accesso con lo stesso account Pupillo, senza seconda registrazione.
+2. Risultati salvati dal server e legati alla persona. Nessun risultato importato dal browser come se fosse vero.
+3. Condivisione scelta dal lavoratore: spenta all'inizio, revocabile, e quando la spegne sparisce subito dalla scheda.
+4. Sezione "Formazione Pupillo Academy" separata da stelle, recensioni, Reputation Score e valutazione del curriculum, con la nota "Non certifica capacità pratica o affidabilità".
+5. Nessun effetto su ricerca, ordine dei risultati, prezzo o crediti. Il pacchetto da 29,70 € e il richiamo gratuito restano uguali.
+6. Il quiz non sblocca mansioni né lavoro. In dashboard "Continua" e il progresso compaiono solo con dati reali.
+7. Aggiornamento di informativa privacy e testi legali per i dati di formazione condivisi, verificato da chi segue le questioni legali.
+8. Solo dopo questi punti: "Conosci anche il percorso formativo di chi chiami."
+
+## (e) Cosa ho fatto
+Solo analisi e aggiornamento di questo documento di piano. Ho riletto il contesto già verificato nel primo parere. Nessuna nuova ricerca, nessuna prova software, nessuna modifica a codice, dati, prezzi, impostazioni o pubblicazione. Nessuna persona contattata.
