@@ -35,16 +35,12 @@ export function OnboardingStatusCard({
   return (
     <section
       aria-label="Stato registrazione"
-      className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-card text-card-foreground shadow-[inset_0_1px_0_oklch(0.97_0.01_100/0.05),0_24px_60px_-25px_oklch(0.65_0.25_310/0.45)]"
-      style={{
-        backgroundImage:
-          "radial-gradient(600px 200px at 100% 0%, oklch(0.65 0.25 310 / 18%), transparent 60%), radial-gradient(500px 180px at 0% 100%, oklch(0.93 0.22 120 / 12%), transparent 60%)",
-      }}
+      className="mb-6 overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm"
     >
       <div className="p-5 sm:p-6">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[oklch(0.93_0.22_120/0.4)] bg-[oklch(0.93_0.22_120/0.08)] px-2.5 py-1 text-[11px] font-semibold text-[oklch(0.93_0.22_120)]">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-pack px-2.5 py-1 text-[11px] font-semibold text-pack-foreground">
               <Sparkles className="h-3 w-3" />
               {role === "restaurant" ? "Ristoratore" : role === "worker" ? "Lavoratore" : "Profilo"}
             </div>
@@ -56,7 +52,7 @@ export function OnboardingStatusCard({
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <div className="text-3xl font-extrabold leading-none text-neon-gradient">{pct}%</div>
+            <div className="text-3xl font-extrabold leading-none text-pack">{pct}%</div>
             <div className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
               {done}/{total} step
             </div>
@@ -64,14 +60,12 @@ export function OnboardingStatusCard({
         </div>
 
         {/* Progress */}
-        <div className="mt-4 h-2 w-full overflow-hidden rounded-full border border-white/10 bg-[oklch(0.18_0.025_280)]">
+        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full transition-[width] duration-500"
             style={{
               width: `${pct}%`,
-              background:
-                "linear-gradient(90deg, oklch(0.93 0.22 120), oklch(0.82 0.16 195), oklch(0.7 0.27 350))",
-              boxShadow: "0 0 18px oklch(0.93 0.22 120 / 60%)",
+              background: "var(--pack)",
             }}
           />
         </div>
@@ -115,36 +109,36 @@ function StepRow({ index, step }: { index: number; step: OnboardingStep }) {
     status === "done" ? CheckCircle2 : status === "locked" ? Lock : Circle;
   const tone =
     status === "done"
-      ? "text-[oklch(0.82_0.16_195)]"
+      ? "text-pack"
       : status === "locked"
         ? "text-muted-foreground/70"
-        : "text-[oklch(0.93_0.22_120)]";
+        : "text-brand-yellow-ink";
   const badge: { label: string; cls: string } =
     status === "done"
       ? {
           label: "Completato",
-          cls: "border-[oklch(0.82_0.16_195/0.4)] bg-[oklch(0.82_0.16_195/0.1)] text-[oklch(0.82_0.16_195)]",
+          cls: "border-pack bg-pack text-pack-foreground",
         }
       : status === "locked"
         ? {
             label: "Bloccato",
-            cls: "border-white/10 bg-white/[0.04] text-muted-foreground",
+            cls: "border-border bg-muted text-muted-foreground",
           }
         : {
             label: "Da completare",
-            cls: "border-[oklch(0.93_0.22_120/0.4)] bg-[oklch(0.93_0.22_120/0.08)] text-[oklch(0.93_0.22_120)]",
+            cls: "border-brand-yellow-ink bg-background text-brand-yellow-ink",
           };
 
   const inner: ReactNode = (
     <div
       className={cn(
-        "grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto]",
-        status !== "locked" && "hover:border-white/20 hover:bg-white/[0.06]",
+        "grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 rounded-xl border border-border bg-background px-3 py-2.5 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto]",
+        status !== "locked" && "hover:border-pack/40 hover:bg-muted/60",
       )}
     >
       <span
         aria-hidden
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[oklch(0.18_0.025_280)] text-xs font-bold text-muted-foreground"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold text-foreground"
       >
         {status === "done" ? <CheckCircle2 className={cn("h-4 w-4", tone)} /> : index}
       </span>

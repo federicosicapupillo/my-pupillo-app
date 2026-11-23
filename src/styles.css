@@ -36,6 +36,7 @@
   --color-rating-gold: var(--rating-gold);
   --color-rating-gold-edge: var(--rating-gold-edge);
   --color-pack: var(--pack);
+  --color-brand-yellow-ink: var(--brand-yellow-ink);
   --color-pack-foreground: var(--pack-foreground);
   --color-pack-muted: var(--pack-muted);
   --color-pack-highlight: var(--pack-highlight);
@@ -119,6 +120,7 @@
   --sidebar-accent-foreground: oklch(0.97 0.01 100);
   --sidebar-border: oklch(0.97 0.01 100 / 12%);
   --sidebar-ring: oklch(0.93 0.22 120);
+  --brand-yellow-ink: oklch(0.85 0.16 90);
   /* Brand neon palette (utility) */
   --neon-lime: oklch(0.89 0.183 95.3);
   --neon-violet: oklch(0.65 0.25 310);
