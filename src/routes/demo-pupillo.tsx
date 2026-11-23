@@ -67,7 +67,8 @@ function DemoPupillo() {
         ))}
       </div>
 
-      <main key={regia} className="mx-auto max-w-[1200px] px-4">
+      {/* Solo demo: corsie laterali riservate a Pupillo (destra da md, entrambe da lg). */}
+      <main key={regia} className="mx-auto max-w-[1200px] px-4 md:pr-[156px] lg:px-[156px]">
         <div data-hat-runway={regia === "cappello" ? RUNWAY : undefined}>
         <section className={`pb-4 pt-6 text-center md:pt-8 ${regia === "cappello" ? "sticky top-0 z-20 motion-reduce:static" : ""}`}>
           <div data-hat-logo className="relative mx-auto mb-5 w-64 max-w-full sm:w-80 md:w-96">
@@ -165,6 +166,7 @@ function DemoPupillo() {
 
         <PupilloStop id="arrivo" side="right" sideMd="left">Qui sotto trovi alcuni esempi di recensioni. Grazie per aver scorso con me!</PupilloStop>
         <HomeReviews />
+        <div data-tail-spacer aria-hidden />
         <div className="h-24" />
       </main>
       <PupilloDirector key={regia} regia={regia} rootRef={rootRef} />
