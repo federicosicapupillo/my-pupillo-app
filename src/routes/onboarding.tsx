@@ -1,4 +1,5 @@
 import { markAcademyInvitePending } from "@/lib/academy";
+import { AcademyLink, academyButtonClass } from "@/components/academy/AcademyLink";
 import { hasVerifiedContact, isContactPhoneLocked } from "@/lib/contact-verification";
 import { YEARS_OPTIONS, LEGACY_YEARS_6_10, RATE_OPTIONS, rateForSave, rateReasonError, rateReasonForSave } from "@/lib/hourly-rate-guidance";
 import { HourlyRateGuidance, HourlyRateNote, HourlyRateReasonField, RATE_LOCKED_HELPER } from "@/components/HourlyRateGuidance";
@@ -3197,11 +3198,16 @@ function Onboarding() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Vuoi impostare subito le tue disponibilità?</DialogTitle>
+            <DialogTitle>Profilo salvato! Ora scegli i tuoi prossimi passi</DialogTitle>
             <DialogDescription>
-              Profilo salvato correttamente. Imposta ora i giorni e gli orari in cui sei disponibile per iniziare subito a ricevere richieste di lavoro.
+              Imposta i giorni e gli orari in cui puoi lavorare, così i locali sanno quando sei disponibile.
             </DialogDescription>
           </DialogHeader>
+          <div className="pupillo-highlight space-y-3 rounded-lg p-4">
+            <h3 className="text-xl font-bold">Pupillo Academy</h3>
+            <p className="text-sm text-muted-foreground">Inizia il percorso gratuito di lezioni e quiz sulle basi della sala. È facoltativo: puoi usare Pupillo anche senza seguirlo.</p>
+            <AcademyLink className={`${academyButtonClass} bg-pack-highlight text-pack-highlight-foreground hover:bg-pack-highlight/90`}>Inizia l’Academy gratuita</AcademyLink>
+          </div>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
@@ -3223,7 +3229,7 @@ function Onboarding() {
                 nav({ to: "/availability" });
               }}
             >
-              Imposta disponibilità
+              Imposta giorni e orari
             </Button>
           </DialogFooter>
         </DialogContent>

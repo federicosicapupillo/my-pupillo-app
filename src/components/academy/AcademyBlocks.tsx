@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { GraduationCap } from "lucide-react";
-import { AcademyLabel, AcademyLink, academyButtonClass, academyCardStyle } from "./AcademyLink";
+import { CalendarDays, GraduationCap } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { AcademyLink, academyButtonClass, academyCardStyle } from "./AcademyLink";
 import { dismissAcademyInvite, isAcademyInvitePending } from "@/lib/academy";
 
 export const ACADEMY_WORKER_TEXT =
@@ -11,12 +13,13 @@ export const ACADEMY_PREVIEW_NOTE = "Oggi sono disponibili due moduli in antepri
 /** Homepage, solo area lavoratori. */
 export function AcademyHomeWorker() {
   return (
-    <section aria-labelledby="academy-worker-title" className="mt-2 flex flex-col gap-3 rounded-2xl border bg-card p-5" style={academyCardStyle}>
-      <AcademyLabel />
-      <h3 id="academy-worker-title" className="text-xl font-black">Impara, ripassa, mettiti alla prova.</h3>
+    <section aria-labelledby="academy-worker-title" className="pupillo-highlight mt-2 flex min-w-0 flex-col gap-3 rounded-lg border p-5">
+      <div className="flex items-center gap-3"><GraduationCap className="size-8 shrink-0 text-pack-highlight" aria-hidden="true" /><h3 id="academy-worker-title" className="text-2xl font-black">Pupillo Academy</h3></div>
+      <p className="font-bold text-pack-highlight">Gratuita e facoltativa, per gli utenti Pupillo</p>
+      <p className="text-lg font-bold">Impara, ripassa, mettiti alla prova.</p>
       <p className="text-muted-foreground">{ACADEMY_WORKER_TEXT}</p>
       <p className="text-sm text-muted-foreground">{ACADEMY_CERT_NOTE}</p>
-      <div><AcademyLink className={academyButtonClass}>Scopri l’Academy gratuita</AcademyLink></div>
+      <div><AcademyLink className={`${academyButtonClass} bg-pack-highlight text-pack-highlight-foreground hover:bg-pack-highlight/90`}>Inizia Pupillo Academy</AcademyLink></div>
       <p className="text-sm font-semibold text-foreground/80">{ACADEMY_PREVIEW_NOTE}</p>
     </section>
   );
@@ -37,29 +40,39 @@ export function AcademyRestaurantNote({ mobileHidden }: { mobileHidden: boolean 
 /** Scheda compatta della dashboard lavoratore. */
 function AcademyDashboardCard() {
   return (
-    <section aria-label="Pupillo Academy" className="flex min-w-0 flex-col gap-3 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between" style={academyCardStyle}>
+    <section aria-label="Pupillo Academy" className="pupillo-highlight flex min-w-0 flex-col gap-4 rounded-lg border p-5 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 gap-3">
-        <GraduationCap className="mt-0.5 size-6 shrink-0 text-accent" aria-hidden="true" />
+        <GraduationCap className="mt-0.5 size-9 shrink-0 text-pack-highlight" aria-hidden="true" />
         <div className="min-w-0 space-y-1.5">
-          <AcademyLabel />
-          <p className="text-sm text-foreground">Ripassa le basi della sala con lezioni e quiz. Due moduli disponibili in anteprima, da seguire al tuo ritmo.</p>
+          <h2 className="text-2xl font-black">Pupillo Academy</h2>
+          <p className="font-bold text-pack-highlight">La tua formazione, gratuita e facoltativa</p>
+          <p className="text-sm text-muted-foreground">Ripassa le basi della sala con lezioni e quiz. Due moduli disponibili in anteprima, da seguire al tuo ritmo.</p>
         </div>
       </div>
-      <AcademyLink className={`${academyButtonClass} shrink-0 self-start sm:self-center`}>Scopri l’Academy</AcademyLink>
+      <AcademyLink className={`${academyButtonClass} shrink-0 self-start bg-pack-highlight text-pack-highlight-foreground hover:bg-pack-highlight/90 lg:self-center`}>Inizia Pupillo Academy</AcademyLink>
     </section>
   );
 }
 
 function AcademyCompletionInvite({ onClose }: { onClose: () => void }) {
   return (
-    <section aria-labelledby="academy-invite-title" className="rounded-2xl border bg-card p-5" style={academyCardStyle}>
-      <h2 id="academy-invite-title" className="text-lg font-bold">Il tuo profilo è pronto.</h2>
-      <p className="mt-1 text-sm text-foreground">Vuoi dedicare un momento alla tua formazione? Scopri Pupillo Academy: è gratuita e facoltativa.</p>
-      <p className="mt-1 text-sm text-muted-foreground">Puoi ricevere proposte su Pupillo anche senza seguirla.</p>
-      <div className="mt-3 flex flex-wrap items-center gap-4">
-        <AcademyLink className={academyButtonClass} onClick={onClose}>Scopri l’Academy</AcademyLink>
-        <button type="button" onClick={onClose} className="text-sm font-semibold text-foreground underline underline-offset-4">Più tardi</button>
+    <section aria-labelledby="academy-invite-title" className="pupillo-highlight min-w-0 rounded-lg border p-5">
+      <h2 id="academy-invite-title" className="text-2xl font-black">Profilo salvato! I tuoi prossimi passi</h2>
+      <div className="mt-5 grid gap-6 sm:grid-cols-2">
+        <div className="min-w-0 space-y-3">
+          <GraduationCap className="size-8 text-pack-highlight" aria-hidden="true" />
+          <h3 className="text-xl font-bold">Inizia Pupillo Academy</h3>
+          <p className="text-sm text-muted-foreground">Segui le lezioni e mettiti alla prova con i quiz sulle basi della sala. È gratuita e facoltativa: puoi usare Pupillo anche senza seguirla.</p>
+          <AcademyLink className={`${academyButtonClass} bg-pack-highlight text-pack-highlight-foreground hover:bg-pack-highlight/90`} onClick={onClose}>Inizia l’Academy gratuita</AcademyLink>
+        </div>
+        <div className="min-w-0 space-y-3">
+          <CalendarDays className="size-8 text-pack-highlight" aria-hidden="true" />
+          <h3 className="text-xl font-bold">Imposta le tue disponibilità</h3>
+          <p className="text-sm text-muted-foreground">Scegli i giorni e gli orari in cui puoi lavorare, così i locali sanno quando sei disponibile.</p>
+          <Button asChild className="h-auto whitespace-normal bg-pack-highlight text-pack-highlight-foreground hover:bg-pack-highlight/90"><Link to="/availability">Imposta giorni e orari</Link></Button>
+        </div>
       </div>
+      <Button type="button" variant="ghost" onClick={onClose} className="mt-4 text-pack-foreground hover:bg-pack-foreground/10 hover:text-pack-foreground">Più tardi</Button>
     </section>
   );
 }

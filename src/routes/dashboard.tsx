@@ -570,6 +570,7 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
 
   return (
     <div className="mt-6 space-y-8">
+      <AcademyWorkerSlot userId={userId} profileCompleted={profileOk} />
       {/* 2. KPI OPERATIVI */}
       {(() => {
         const tiles: ReactNode[] = [];
@@ -668,9 +669,6 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
         />
         <WorkerAvailabilitySummary workerId={userId} collapsible />
       </section>
-
-      {/* Pupillo Academy: scheda compatta, sotto le azioni principali */}
-      <AcademyWorkerSlot userId={userId} profileCompleted={profileOk} />
 
       {/* 5. REPUTATION SCORE */}
       <section>
