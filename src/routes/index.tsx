@@ -6,7 +6,6 @@ import pupilloLogoAsset from "@/assets/pupillo-logo-completo.png.asset.json";
 const pupilloLogo = pupilloLogoAsset.url;
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AudienceVideo } from "@/components/home/AudienceVideo";
-import { HomeStepsGuide } from "@/components/home/HomeStepsGuide";
 import { HomeReviews } from "@/components/home/HomeReviews";
 import { SuggestionInvitation } from "@/components/SuggestionInvitation";
 import { AcademyHomeWorker, AcademyRestaurantNote } from "@/components/academy/AcademyBlocks";
@@ -38,6 +37,19 @@ export const Route = createFileRoute("/")({
 const LIME = "var(--neon-lime)";
 const VIOLET = "var(--neon-violet)";
 type Audience = "worker" | "restaurant";
+
+const STEPS: Record<Audience, { title: string; text: string }[]> = {
+  worker: [
+    { title: "Crea il tuo profilo", text: "Indica mansioni, esperienza e disponibilità." },
+    { title: "Candidati ai turni", text: "Scegli i turni che ti interessano e invia la candidatura." },
+    { title: "Ricevi la conferma del locale", text: "Il turno è tuo quando il locale accetta la candidatura." },
+  ],
+  restaurant: [
+    { title: "Registra il tuo locale", text: "Inserisci i dati del locale e del referente." },
+    { title: "Pubblica il turno", text: "Indica mansione, orario e compenso." },
+    { title: "Scegli tra le candidature", text: "Valuta i profili e conferma la persona giusta." },
+  ],
+};
 
 function Index() {
   const [audience, setAudience] = useState<Audience>("worker");
@@ -129,7 +141,26 @@ function Index() {
 
         <section id="come-funziona" className="scroll-mt-6 py-16 md:py-24">
           <h2 className="text-center text-3xl font-black md:text-5xl">Come funziona, in pratica.</h2>
-          <HomeStepsGuide audience={audience} setAudience={setAudience} />
+          <div className="mt-10 grid gap-8 md:grid-cols-2">
+            {(["worker", "restaurant"] as const).map((a) => (
+              <div key={a} className={audience !== a ? "hidden md:block" : ""}>
+                <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: a === "worker" ? LIME : VIOLET }}>
+                  {a === "worker" ? "Per chi cerca turni" : "Per i locali"}
+                </h3>
+                <ol className="mt-4 space-y-3">
+                  {STEPS[a].map((s, i) => (
+                    <li key={s.title} className="flex gap-4 rounded-2xl border border-border p-4">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black" style={{ borderColor: a === "worker" ? LIME : VIOLET }}>{i + 1}</span>
+                      <div className="min-w-0">
+                        <div className="font-bold">{s.title}</div>
+                        <p className="text-sm text-muted-foreground">{s.text}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
           <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-muted-foreground">
             La candidatura non è una conferma: il turno è assegnato solo quando il locale la accetta.
           </p>
