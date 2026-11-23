@@ -3,17 +3,17 @@
 Nessuna modifica alla homepage pubblica, nessuna pubblicazione. La prova vive in una pagina interna separata, accanto a /demo-home, che resta com'è.
 
 ## 1. Ancoraggi reali della homepage (src/routes/index.tsx)
-- **Partenza:** il cappello del logo grande nella hero (`img` sopra il titolo, 1041x649). Il cappello è dentro il PNG: serve un punto di uscita misurato in percentuale sull'immagine (es. x 0,5 / y 0,1 da confermare sul file finale), ricalcolato al ridimensionamento.
+- **Partenza:** il cappello del logo grande nella hero (`img` sopra il titolo, 1041x649). Il cappello è decentrato nel logo: il punto di uscita va misurato sull'immagine autentica (coordinate in pixel del bordo del cappello, convertite in percentuale), senza valori presunti, e ricalcolato al ridimensionamento.
 - **Sosta 1 — Per i lavoratori:** card `#per-lavoratori` (lato sinistro desktop), fumetto su candidatura e Academy facoltativa.
-- **Sosta 2 — Per i locali:** card `#per-locali` (lato destro desktop), fumetto su «paghi solo alla conferma».
+- **Sosta 2 — Per i locali:** card `#per-locali` (lato destro desktop), fumetto neutro sul trovare personale, oppure la formula esatta: «Paghi una sola volta per sbloccare un nuovo contatto; poi puoi ricontattarlo senza costi aggiuntivi.» Mai «per candidatura», «per turno» o «paghi solo alla conferma».
 - **Sosta 3 — Come funziona:** `#come-funziona`, titolo «Come funziona, in pratica.»
 - **Sosta 4 — Domande frequenti:** `#faq` (eventualmente blocco Academy ristoratori).
 - **Arrivo:** inizio di HomeReviews, dove Pupillo saluta e si ferma.
 - **Mobile:** le card sono una sola alla volta (selettore «Cerco turni / Cerco personale»), quindi le soste 1-2 diventano una sola sulla card visibile; Pupillo si appoggia al bordo alto delle sezioni, non ai lati.
 
 ## 2. Cosa manca
-Oggi esistono solo il logo completo (PNG pesante, circa 1,1 MB) e una mascotte PNG da circa 2 MB; il GLB non ha scheletro né animazioni.
-- **Modello:** GLB con rig, ottimizzato (meno di 2-3 MB, texture compresse), con un punto «bocca» per agganciare la coda del fumetto.
+Esistono il logo completo (PNG circa 1,1 MB), una mascotte PNG (circa 2 MB) e il GLB base (circa 2,85 MB, 28.722 triangoli) senza rig né clip; questi dati descrivono solo il modello base, non un obiettivo di peso.
+- **Modello:** rig sul GLB base, con un punto «bocca» per agganciare la coda del fumetto; peso finale da definire dopo le prove sui dispositivi.
 - **Animazioni:** `idle_read` (in loop, fermo durante la lettura), `emerge_from_hat`, `jump_anticipation`, `jump_air` (arco), `land`, `settle`, `turn_left` e `turn_right`, `wave`, oltre a una posa statica per il movimento ridotto.
 - **Logo diviso in livelli:** il cappello separato dal resto (bordo davanti e dietro), così Pupillo esce «da dentro». Questo non esiste ancora.
 - **Immagini di riserva:** sequenze PNG o WebP (o pose fisse) per i dispositivi lenti, per il movimento ridotto e finché il GLB non è pronto.
