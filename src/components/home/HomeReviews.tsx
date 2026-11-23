@@ -4,37 +4,37 @@ import AutoScroll from "embla-carousel-auto-scroll";
 import { ArrowLeft, ArrowRight, BriefcaseBusiness, Pause, Play, Star, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type Review = { stars: number; text: string };
+type Review = { author: string; stars: number; text: string };
 
 const workerReviews: Review[] = [
-  { stars: 5, text: "Finalmente un'app pensata per chi lavora nella ristorazione! Posso cercare turni extra senza dover mandare curriculum a decine di locali. Semplice e intuitiva." },
-  { stars: 5, text: "L'idea è davvero comoda. Vedo le opportunità disponibili e posso candidarmi direttamente dal telefono. Per chi cerca qualche turno in più è un bel vantaggio." },
-  { stars: 5, text: "Lavoro già in un ristorante, ma nei giorni liberi mi piace fare qualche extra. Pupillo mi permette di organizzarmi meglio e cercare opportunità quando sono disponibile." },
-  { stars: 4, text: "App molto facile da utilizzare, anche per chi non è particolarmente tecnologico. Mi piacerebbe avere ancora più locali disponibili nella mia zona." },
-  { stars: 5, text: "Mi piace soprattutto poter indicare quanto voglio guadagnare all'ora e scegliere le opportunità più adatte alle mie esigenze." },
-  { stars: 5, text: "Un sistema molto più pratico rispetto ai soliti gruppi Facebook dove devi continuamente controllare gli annunci. Qui è tutto organizzato per il lavoro nella ristorazione." },
-  { stars: 4, text: "La registrazione è abbastanza veloce e il funzionamento si capisce subito. Sarebbe utile trovare ancora più offerte per chi lavora in cucina." },
-  { stars: 5, text: "Per chi studia e vuole lavorare qualche sera o nel weekend è un'ottima idea. Puoi cercare turni compatibili con i tuoi impegni senza cercare un lavoro fisso." },
-  { stars: 5, text: "Quello che apprezzo di Pupillo è la possibilità di farmi conoscere da nuovi ristoranti. Un turno extra può diventare anche l'inizio di una collaborazione continuativa." },
-  { stars: 5, text: "Era ora che qualcuno pensasse anche a noi lavoratori extra! Un'unica piattaforma per trovare locali che cercano personale, senza mille telefonate e messaggi." },
+  { author: "Marco R.", stars: 5, text: "Finalmente un'app pensata per chi lavora nella ristorazione! Posso cercare turni extra senza dover mandare curriculum a decine di locali. Semplice e intuitiva." },
+  { author: "Giulia B.", stars: 5, text: "L'idea è davvero comoda. Vedo le opportunità disponibili e posso candidarmi direttamente dal telefono. Per chi cerca qualche turno in più è un bel vantaggio." },
+  { author: "Alessandro C.", stars: 5, text: "Lavoro già in un ristorante, ma nei giorni liberi mi piace fare qualche extra. Pupillo mi permette di organizzarmi meglio e cercare opportunità quando sono disponibile." },
+  { author: "Sara M.", stars: 4, text: "App molto facile da utilizzare, anche per chi non è particolarmente tecnologico. Mi piacerebbe avere ancora più locali disponibili nella mia zona." },
+  { author: "Luca F.", stars: 5, text: "Mi piace soprattutto poter indicare quanto voglio guadagnare all'ora e scegliere le opportunità più adatte alle mie esigenze." },
+  { author: "Elena P.", stars: 5, text: "Un sistema molto più pratico rispetto ai soliti gruppi Facebook dove devi continuamente controllare gli annunci. Qui è tutto organizzato per il lavoro nella ristorazione." },
+  { author: "Davide G.", stars: 4, text: "La registrazione è abbastanza veloce e il funzionamento si capisce subito. Sarebbe utile trovare ancora più offerte per chi lavora in cucina." },
+  { author: "Chiara S.", stars: 5, text: "Per chi studia e vuole lavorare qualche sera o nel weekend è un'ottima idea. Puoi cercare turni compatibili con i tuoi impegni senza cercare un lavoro fisso." },
+  { author: "Matteo D.", stars: 5, text: "Quello che apprezzo di Pupillo è la possibilità di farmi conoscere da nuovi ristoranti. Un turno extra può diventare anche l'inizio di una collaborazione continuativa." },
+  { author: "Francesca L.", stars: 5, text: "Era ora che qualcuno pensasse anche a noi lavoratori extra! Un'unica piattaforma per trovare locali che cercano personale, senza mille telefonate e messaggi." },
 ];
 
 const restaurantReviews: Review[] = [
-  { stars: 5, text: "Chi gestisce un ristorante sa quanto sia difficile trovare personale all'ultimo momento. Pupillo è una soluzione interessante perché permette di cercare collaboratori in modo semplice e veloce." },
-  { stars: 5, text: "La cosa che mi piace di più è che pago per acquisire un nuovo contatto e, se mi trovo bene, posso richiamare lo stesso collaboratore senza dover pagare nuovamente. Un bel vantaggio." },
-  { stars: 5, text: "Finalmente una piattaforma pensata per le esigenze reali della ristorazione. Poter cercare personale per un singolo servizio è esattamente quello di cui abbiamo bisogno." },
-  { stars: 4, text: "Interfaccia intuitiva e sistema di ricerca pratico. Sarebbe ancora più utile con un numero maggiore di collaboratori disponibili nelle zone meno centrali." },
-  { stars: 5, text: "Per chi gestisce un locale stagionale, trovare personale per i momenti di maggiore lavoro è sempre complicato. Pupillo offre un modo più organizzato per affrontare il problema." },
-  { stars: 5, text: "Molto interessante la possibilità di creare una propria rete di collaboratori. Una volta trovato qualcuno di affidabile, poterlo ricontattare gratuitamente fa davvero la differenza." },
-  { stars: 5, text: "Prima di conoscere Pupillo, per cercare un extra bisognava telefonare a conoscenti e colleghi o pubblicare annunci. Avere uno strumento dedicato rende tutto molto più pratico." },
-  { stars: 4, text: "Bella piattaforma, soprattutto per chi ha esigenze di personale che cambiano continuamente. Mi piacerebbe vedere più profili con esperienza specifica in cucina." },
-  { stars: 5, text: "La gestione del personale extra è una delle cose più stressanti del nostro lavoro. Un servizio come Pupillo può far risparmiare parecchio tempo nella ricerca." },
-  { stars: 5, text: "Mi piace il fatto di poter individuare collaboratori in base alle competenze e all'esperienza. Non è la solita piattaforma generica per cercare dipendenti." },
-  { stars: 5, text: "Per il nostro tipo di attività è molto più utile trovare persone disponibili per singoli turni piuttosto che pubblicare continuamente annunci di lavoro. Ottima idea." },
-  { stars: 4, text: "Servizio interessante e abbastanza immediato da utilizzare. Sarebbe utile avere sempre più collaboratori disponibili anche nei weekend e nei periodi festivi." },
-  { stars: 5, text: "Il vero punto di forza è poter costruire nel tempo una lista di persone da richiamare. Per un ristoratore questa possibilità ha un valore enorme." },
-  { stars: 5, text: "Gestisco un locale con picchi di lavoro nel fine settimana. Pupillo è proprio il tipo di strumento che cercavo per organizzare meglio le esigenze di personale extra." },
-  { stars: 5, text: "Mi convince soprattutto il modello di pagamento: non devo acquistare continuamente lo stesso contatto. Se un collaboratore lavora bene, posso continuare a coinvolgerlo nei servizi successivi senza ulteriori costi di sblocco." },
+  { author: "Trattoria del Girasole", stars: 5, text: "Chi gestisce un ristorante sa quanto sia difficile trovare personale all'ultimo momento. Pupillo è una soluzione interessante perché permette di cercare collaboratori in modo semplice e veloce." },
+  { author: "Osteria Due Mestoli", stars: 5, text: "La cosa che mi piace di più è che pago per acquisire un nuovo contatto e, se mi trovo bene, posso richiamare lo stesso collaboratore senza dover pagare nuovamente. Un bel vantaggio." },
+  { author: "Bistrot della Lanterna", stars: 5, text: "Finalmente una piattaforma pensata per le esigenze reali della ristorazione. Poter cercare personale per un singolo servizio è esattamente quello di cui abbiamo bisogno." },
+  { author: "Ristorante Il Melograno", stars: 4, text: "Interfaccia intuitiva e sistema di ricerca pratico. Sarebbe ancora più utile con un numero maggiore di collaboratori disponibili nelle zone meno centrali." },
+  { author: "Terrazza delle Vele", stars: 5, text: "Per chi gestisce un locale stagionale, trovare personale per i momenti di maggiore lavoro è sempre complicato. Pupillo offre un modo più organizzato per affrontare il problema." },
+  { author: "Osteria del Cortile", stars: 5, text: "Molto interessante la possibilità di creare una propria rete di collaboratori. Una volta trovato qualcuno di affidabile, poterlo ricontattare gratuitamente fa davvero la differenza." },
+  { author: "Trattoria Tre Forchette", stars: 5, text: "Prima di conoscere Pupillo, per cercare un extra bisognava telefonare a conoscenti e colleghi o pubblicare annunci. Avere uno strumento dedicato rende tutto molto più pratico." },
+  { author: "Ristorante La Spiga Allegra", stars: 4, text: "Bella piattaforma, soprattutto per chi ha esigenze di personale che cambiano continuamente. Mi piacerebbe vedere più profili con esperienza specifica in cucina." },
+  { author: "Bistrot Sette Tavoli", stars: 5, text: "La gestione del personale extra è una delle cose più stressanti del nostro lavoro. Un servizio come Pupillo può far risparmiare parecchio tempo nella ricerca." },
+  { author: "Osteria del Basilico", stars: 5, text: "Mi piace il fatto di poter individuare collaboratori in base alle competenze e all'esperienza. Non è la solita piattaforma generica per cercare dipendenti." },
+  { author: "Ristorante Le Due Olivaie", stars: 5, text: "Per il nostro tipo di attività è molto più utile trovare persone disponibili per singoli turni piuttosto che pubblicare continuamente annunci di lavoro. Ottima idea." },
+  { author: "Trattoria della Piazzetta", stars: 4, text: "Servizio interessante e abbastanza immediato da utilizzare. Sarebbe utile avere sempre più collaboratori disponibili anche nei weekend e nei periodi festivi." },
+  { author: "Osteria Il Grappolo Dorato", stars: 5, text: "Il vero punto di forza è poter costruire nel tempo una lista di persone da richiamare. Per un ristoratore questa possibilità ha un valore enorme." },
+  { author: "Bistrot del Portico", stars: 5, text: "Gestisco un locale con picchi di lavoro nel fine settimana. Pupillo è proprio il tipo di strumento che cercavo per organizzare meglio le esigenze di personale extra." },
+  { author: "Ristorante La Tavola Fiorita", stars: 5, text: "Mi convince soprattutto il modello di pagamento: non devo acquistare continuamente lo stesso contatto. Se un collaboratore lavora bene, posso continuare a coinvolgerlo nei servizi successivi senza ulteriori costi di sblocco." },
 ];
 
 function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "restaurant" }) {
@@ -107,7 +107,7 @@ function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "res
                   {Array.from({ length: 5 }, (_, star) => <Star key={star} aria-hidden="true" strokeWidth={1.25} className={`size-4 ${star < review.stars ? "fill-rating-gold text-rating-gold-edge" : "text-muted-foreground/40"}`} />)}
                 </div>
                 <blockquote className="grow text-xs leading-5 text-card-foreground">{review.text}</blockquote>
-                <figcaption className="mt-3 border-t border-border pt-3 text-xs font-semibold text-muted-foreground">Recensione di un {worker ? "lavoratore" : "ristoratore"}</figcaption>
+                <figcaption className="mt-3 border-t border-border pt-3 text-xs font-semibold text-muted-foreground">{review.author}</figcaption>
               </figure>
             </div>
           ))}
@@ -122,6 +122,7 @@ export function HomeReviews() {
     <section aria-labelledby="home-reviews-title" className="border-t border-border pb-16 pt-12 md:pb-20 md:pt-16">
       <div className="mb-6">
         <h2 id="home-reviews-title" className="text-3xl font-black md:text-4xl">Le vostre recensioni.</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Recensioni di esempio con nomi di fantasia.</p>
       </div>
       <div className="space-y-6">
         <ReviewRow reviews={workerReviews} role="worker" />
