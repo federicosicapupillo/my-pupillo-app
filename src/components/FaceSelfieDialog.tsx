@@ -178,6 +178,7 @@ export function FaceSelfieDialog({ open, onOpenChange, onConfirm }: Props) {
           <DialogTitle>Scatta la foto del viso</DialogTitle>
           <DialogDescription>Metti la testa dentro il cerchio. Quando diventa verde, premi «Scatta».</DialogDescription>
         </DialogHeader>
+        <p className="rounded-md bg-primary/15 px-3 py-2 text-center text-sm font-semibold text-foreground">😊 Sorridi! La foto va fatta sorridendo: un bel sorriso fa la differenza con i ristoratori. Senza sorriso la foto non va bene.</p>
         <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-lg bg-muted">
           <video ref={videoRef} playsInline muted className="h-full w-full object-cover -scale-x-100" />
           <div aria-hidden
