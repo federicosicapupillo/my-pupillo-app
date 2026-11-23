@@ -153,8 +153,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-transparent">
       <PaymentTestModeBanner />
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-[oklch(0.13_0.02_280/0.65)] backdrop-blur-xl">
-        <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3 2xl:flex 2xl:justify-between">
+      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-xl">
+        <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3">
           <Link
             to={homeTo as never}
             aria-label="Vai alla home page"
@@ -172,7 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="h-12 max-w-full w-auto object-contain md:h-14"
             />
           </Link>
-          <div className="hidden 2xl:flex min-w-0 items-center gap-1">
+          <nav aria-label="Navigazione principale" className="hidden min-w-0 flex-wrap items-center gap-1 border-t border-border pt-2 2xl:col-span-2 2xl:row-start-2 2xl:flex">
             {visibleItems.map((i) => navLocked ? (
               <TooltipProvider key={i.to} delayDuration={150}>
                 <Tooltip>
@@ -198,8 +198,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Button>
               </Link>
             ))}
-          </div>
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          </nav>
+          <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-1 sm:gap-2">
             <ThemeToggle />
             <Button
               ref={mobileToggleRef}
