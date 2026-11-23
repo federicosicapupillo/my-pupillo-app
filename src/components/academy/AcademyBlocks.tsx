@@ -34,8 +34,8 @@ export function AcademyRestaurantNote({ mobileHidden }: { mobileHidden: boolean 
   );
 }
 
-/** Dashboard lavoratore: scheda compatta sotto le azioni principali. */
-export function AcademyDashboardCard() {
+/** Scheda compatta della dashboard lavoratore. */
+function AcademyDashboardCard() {
   return (
     <section aria-label="Pupillo Academy" className="flex min-w-0 flex-col gap-3 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between" style={academyCardStyle}>
       <div className="flex min-w-0 gap-3">
@@ -50,21 +50,32 @@ export function AcademyDashboardCard() {
   );
 }
 
-/** Invito inline mostrato una sola volta dopo il completamento reale del profilo. */
-export function AcademyCompletionInvite() {
-  const [show, setShow] = useState(false);
-  useEffect(() => { setShow(isAcademyInvitePending()); }, []);
-  if (!show) return null;
-  const close = () => { dismissAcademyInvite(); setShow(false); };
+function AcademyCompletionInvite({ onClose }: { onClose: () => void }) {
   return (
     <section aria-labelledby="academy-invite-title" className="rounded-2xl border bg-card p-5" style={academyCardStyle}>
       <h2 id="academy-invite-title" className="text-lg font-bold">Il tuo profilo è pronto.</h2>
       <p className="mt-1 text-sm text-foreground">Vuoi dedicare un momento alla tua formazione? Scopri Pupillo Academy: è gratuita e facoltativa.</p>
       <p className="mt-1 text-sm text-muted-foreground">Puoi ricevere proposte su Pupillo anche senza seguirla.</p>
       <div className="mt-3 flex flex-wrap items-center gap-4">
-        <AcademyLink className={academyButtonClass} onClick={dismissAcademyInvite}>Scopri l’Academy</AcademyLink>
-        <button type="button" onClick={close} className="text-sm font-semibold text-foreground underline underline-offset-4">Più tardi</button>
+        <AcademyLink className={academyButtonClass} onClick={onClose}>Scopri l’Academy</AcademyLink>
+        <button type="button" onClick={onClose} className="text-sm font-semibold text-foreground underline underline-offset-4">Più tardi</button>
       </div>
     </section>
   );
+}
+
+/**
+ * Unico blocco Academy della dashboard lavoratore: invito una tantum dopo il
+ * completamento reale del profilo, altrimenti la scheda compatta.
+ */
+export function AcademyWorkerSlot({ userId, profileCompleted }: { userId: string; profileCompleted: boolean }) {
+  const [pending, setPending] = useState(false);
+  useEffect(() => {
+    setPending(profileCompleted && isAcademyInvitePending(userId));
+  }, [userId, profileCompleted]);
+  if (!profileCompleted) return null;
+  if (pending) {
+    return <AcademyCompletionInvite onClose={() => { dismissAcademyInvite(userId); setPending(false); }} />;
+  }
+  return <AcademyDashboardCard />;
 }

@@ -20,6 +20,8 @@
 - Ristoratori: «Un percorso gratuito sulle basi della sala.» / «Scopri i contenuti dell’Academy».
 
 ## Resoconto implementazione (23/11/2026)
-- File: src/lib/academy.ts (link centralizzato e invito una tantum), src/components/academy/*, src/routes/academy.tsx (pagina informativa locale), src/routes/index.tsx, src/routes/dashboard.tsx, src/routes/onboarding.tsx (solo segnale di primo completamento, nessun cambio a salvataggio o reindirizzamenti).
-- Link esterno Academy: non impostato. L'anteprima del progetto Academy ha risposto 401 a una verifica anonima; finché non c'è un indirizzo pubblico verificato, i pulsanti aprono /academy. Da completare: impostare ACADEMY_EXTERNAL_URL.
-- Nessuna modifica a database, prezzi, crediti, reputazione, CV, foto o autenticazione.
+- Link Academy: https://accademy.pupillo.life/ (confermato dal titolare in navigazione anonima), definito solo in src/lib/academy.ts. Tutti i pulsanti aprono il sito in una nuova scheda (noopener noreferrer, avviso per lettori di schermo). /academy resta pagina informativa con «Vai alle lezioni».
+- Dashboard lavoratore: un solo blocco (AcademyWorkerSlot) sotto disponibilità, che mostra l'invito una tantum oppure la scheda compatta, mai entrambi. Solo per lavoratori con profilo completato.
+- Invito: segnale salvato nel browser per singolo utente (chiave con userId), impostato solo dopo il salvataggio riuscito del primo completamento; i rami di errore escono prima. «Scopri» e «Più tardi» chiudono subito l'invito e non ricompare. Il vecchio segnale globale non viene letto.
+- File: src/lib/academy.ts, src/components/academy/*, src/routes/academy.tsx, index.tsx, dashboard.tsx, onboarding.tsx (una riga). Nessuna modifica a database, prezzi, crediti, reputazione, CV, foto o autenticazione.
+- Verifiche e limiti: vedi resoconto nel messaggio di consegna; la parte con accesso è verificata con test automatici sulla logica, non con un account reale.

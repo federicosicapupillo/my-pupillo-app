@@ -1753,7 +1753,7 @@ function Onboarding() {
     // invita a configurarle subito.
     if (role === "worker") {
       // Invito Academy solo al primo completamento reale del profilo.
-      if (!profile?.profile_completed) markAcademyInvitePending();
+      if (!profile?.profile_completed) markAcademyInvitePending(user.id);
       try {
         const { count, error: availErr } = await supabase
           .from("worker_availability")

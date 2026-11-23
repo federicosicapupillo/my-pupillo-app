@@ -1,33 +1,41 @@
 /**
  * Pupillo Academy — unico punto in cui è definita la destinazione dei link.
- * Oggi non esiste un indirizzo pubblico verificato dell'Academy: tutti gli
- * inviti portano alla pagina informativa locale /academy. Quando l'indirizzo
- * pubblico sarà confermato, impostarlo qui (senza dati personali o token).
+ * Indirizzo pubblico confermato dal titolare il 23/11/2026.
  */
-export const ACADEMY_EXTERNAL_URL: string | null = null;
+export const ACADEMY_EXTERNAL_URL: string | null = "https://accademy.pupillo.life/";
 export const ACADEMY_INFO_PATH = "/academy" as const;
 
-const INVITE_PENDING_KEY = "pupillo_academy_invite_pending";
-const INVITE_DISMISSED_KEY = "pupillo_academy_invite_dismissed";
+type KV = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-/** Segna che il lavoratore ha appena completato davvero il profilo. */
-export function markAcademyInvitePending(): void {
+const pendingKey = (userId: string) => `pupillo_academy_invite_pending:${userId}`;
+const dismissedKey = (userId: string) => `pupillo_academy_invite_dismissed:${userId}`;
+
+function store(s?: KV): KV | null {
+  if (s) return s;
+  try { return typeof window === "undefined" ? null : window.localStorage; } catch { return null; }
+}
+
+/** Il lavoratore `userId` ha appena completato davvero il profilo. */
+export function markAcademyInvitePending(userId: string, s?: KV): void {
+  const st = store(s); if (!st || !userId) return;
   try {
-    if (localStorage.getItem(INVITE_DISMISSED_KEY) === "true") return;
-    localStorage.setItem(INVITE_PENDING_KEY, "true");
+    if (st.getItem(dismissedKey(userId)) === "true") return;
+    st.setItem(pendingKey(userId), "true");
   } catch { /* storage non disponibile: nessun invito */ }
 }
 
-export function isAcademyInvitePending(): boolean {
+export function isAcademyInvitePending(userId: string, s?: KV): boolean {
+  const st = store(s); if (!st || !userId) return false;
   try {
-    return localStorage.getItem(INVITE_PENDING_KEY) === "true" && localStorage.getItem(INVITE_DISMISSED_KEY) !== "true";
+    return st.getItem(pendingKey(userId)) === "true" && st.getItem(dismissedKey(userId)) !== "true";
   } catch { return false; }
 }
 
-/** «Più tardi» o «Scopri»: l'invito non viene più riproposto. */
-export function dismissAcademyInvite(): void {
+/** «Scopri» o «Più tardi»: l'invito non viene più riproposto a questo utente. */
+export function dismissAcademyInvite(userId: string, s?: KV): void {
+  const st = store(s); if (!st || !userId) return;
   try {
-    localStorage.removeItem(INVITE_PENDING_KEY);
-    localStorage.setItem(INVITE_DISMISSED_KEY, "true");
+    st.removeItem(pendingKey(userId));
+    st.setItem(dismissedKey(userId), "true");
   } catch { /* ignore */ }
 }

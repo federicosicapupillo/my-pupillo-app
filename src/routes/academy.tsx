@@ -41,9 +41,6 @@ function AcademyPage() {
           <p className="text-sm text-muted-foreground">I progressi restano nel browser utilizzato e non sono collegati al profilo Pupillo. Nessun risultato dell’Academy compare sul profilo visto dai ristoratori.</p>
           <p className="text-sm text-muted-foreground">L’Academy è facoltativa: puoi ricevere proposte su Pupillo anche senza seguirla.</p>
         </section>
-        {!ACADEMY_EXTERNAL_URL && (
-          <p className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">Il collegamento alle lezioni non è ancora disponibile da questa pagina.</p>
-        )}
         {ACADEMY_EXTERNAL_URL && (
           <a href={ACADEMY_EXTERNAL_URL} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground">
             Vai alle lezioni<span className="sr-only"> (si apre in una nuova scheda)</span>
