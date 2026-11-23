@@ -28,13 +28,15 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 export function guidePose(anchor: number, stops: number[], band: number): { y: number; tilt: number; stop: number } {
   const n = stops.length;
   if (!n) return { y: 0, tilt: 0, stop: -1 };
-  const first = stops[0]!;
-  const last = stops[n - 1]!;
+  const first = stops[0];
+  const last = stops[n - 1];
+  if (first === undefined || last === undefined) return { y: 0, tilt: 0, stop: -1 };
   if (anchor <= first + band) return { y: first, tilt: 0, stop: anchor >= first - band ? 0 : -1 };
   if (anchor >= last - band) return { y: last, tilt: 0, stop: anchor <= last + band ? n - 1 : -1 };
   for (let i = 0; i < n - 1; i++) {
-    const a = stops[i]!;
-    const b = stops[i + 1]!;
+    const a = stops[i];
+    const b = stops[i + 1];
+    if (a === undefined || b === undefined) continue;
     if (anchor <= a + band) return { y: a, tilt: 0, stop: i };
     if (anchor < b - band) {
       const u = (anchor - (a + band)) / (b - a - 2 * band);
@@ -69,6 +71,11 @@ export function HomeStepsGuide({ audience, setAudience }: { audience: Audience; 
     let figH = 0;
     let raf = 0;
     let last = -2;
+    let displayed = 0;
+    let previousTime = 0;
+    let alive = true;
+
+    const target = () => window.scrollY + window.innerHeight * 0.55 - rootTop;
 
     const measure = () => {
       const r = root.getBoundingClientRect();
@@ -80,23 +87,51 @@ export function HomeStepsGuide({ audience, setAudience }: { audience: Audience; 
         return br.top - r.top + br.height / 2;
       });
     };
-    const render = () => {
-      raf = 0;
+    const paint = () => {
       if (reduced) {
         fig.style.transform = `translate3d(0, ${(stops[0] ?? 0) - figH * MOUTH_Y}px, 0)`;
         return;
       }
-      const anchor = window.scrollY + window.innerHeight * 0.55 - rootTop;
       const band = Math.min(70, window.innerHeight * 0.09);
-      const p = guidePose(anchor, stops, band);
+      const p = guidePose(displayed, stops, band);
       fig.style.transform = `translate3d(0, ${p.y - figH * MOUTH_Y}px, 0) rotate(${p.tilt.toFixed(2)}deg)`;
       if (p.stop !== last) {
         last = p.stop;
         setActive(p.stop);
       }
     };
-    const schedule = () => { if (!raf) raf = requestAnimationFrame(render); };
-    const remeasure = () => { measure(); schedule(); };
+    const render = (time: number) => {
+      raf = 0;
+      if (!alive || document.hidden) return;
+      const destination = target();
+      const dt = Math.max(0, time - previousTime);
+      previousTime = time;
+      // Smorzamento esponenziale: indipendente dal frame rate, senza overshoot.
+      displayed += (destination - displayed) * (1 - Math.exp(-dt / 90));
+      const settled = Math.abs(destination - displayed) < 0.1;
+      if (settled) displayed = destination;
+      paint();
+      if (!settled) raf = requestAnimationFrame(render);
+    };
+    const schedule = () => {
+      if (!alive || reduced || document.hidden || raf) return;
+      previousTime = performance.now();
+      raf = requestAnimationFrame(render);
+    };
+    const remeasure = () => {
+      if (!alive) return;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      measure();
+      displayed = target();
+      paint();
+    };
+    const visibility = () => {
+      if (document.hidden) {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+      } else remeasure();
+    };
 
     remeasure();
     const ro = new ResizeObserver(remeasure);
@@ -104,7 +139,7 @@ export function HomeStepsGuide({ audience, setAudience }: { audience: Audience; 
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", remeasure);
     window.addEventListener("load", remeasure);
-    let alive = true;
+    document.addEventListener("visibilitychange", visibility);
     document.fonts?.ready.then(() => { if (alive) remeasure(); });
     return () => {
       alive = false;
@@ -113,6 +148,7 @@ export function HomeStepsGuide({ audience, setAudience }: { audience: Audience; 
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", remeasure);
       window.removeEventListener("load", remeasure);
+      document.removeEventListener("visibilitychange", visibility);
     };
   }, [audience, reduced]);
 
@@ -155,8 +191,8 @@ export function HomeStepsGuide({ audience, setAudience }: { audience: Audience; 
                 </div>
                 <div
                   ref={(el) => { bubbleRefs.current[i] = el; }}
-                  className="relative mt-3 rounded-2xl border-2 bg-card px-4 py-3 text-base leading-snug text-card-foreground shadow-sm transition-[opacity,transform] duration-300 motion-reduce:transition-none"
-                  style={{ borderColor: accent, opacity: shown ? 1 : 0, transform: shown ? "none" : "translateY(4px)" }}
+                  className="relative mt-3 rounded-2xl border-2 bg-card px-4 py-3 text-base leading-snug text-card-foreground shadow-sm transition-opacity motion-reduce:transition-none"
+                  style={{ borderColor: accent, opacity: shown ? 1 : 0, transitionDuration: shown ? "150ms" : "0ms" }}
                 >
                   {s.bubble}
                   <span aria-hidden className="absolute -right-[9px] top-1/2 h-4 w-4 -translate-y-1/2 rotate-45 border-r-2 border-t-2 bg-card" style={{ borderColor: accent }} />
