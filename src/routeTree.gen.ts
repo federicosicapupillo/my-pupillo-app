@@ -23,6 +23,7 @@ import { Route as ClaudeVisualAuditRouteImport } from './routes/claude-visual-au
 import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
 import { Route as CookieRouteImport } from './routes/cookie'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DemoHomeRouteImport } from './routes/demo-home'
 import { Route as DesignAuditRouteImport } from './routes/design-audit'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as JobsRouteImport } from './routes/jobs'
@@ -134,6 +135,11 @@ const CookieRoute = CookieRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoHomeRoute = DemoHomeRouteImport.update({
+  id: '/demo-home',
+  path: '/demo-home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesignAuditRoute = DesignAuditRouteImport.update({
@@ -370,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/come-funziona': typeof ComeFunzionaRoute
   '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
+  '/demo-home': typeof DemoHomeRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -428,6 +435,7 @@ export interface FileRoutesByTo {
   '/come-funziona': typeof ComeFunzionaRoute
   '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
+  '/demo-home': typeof DemoHomeRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -487,6 +495,7 @@ export interface FileRoutesById {
   '/come-funziona': typeof ComeFunzionaRoute
   '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
+  '/demo-home': typeof DemoHomeRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -547,6 +556,7 @@ export interface FileRouteTypes {
     | '/come-funziona'
     | '/cookie'
     | '/dashboard'
+    | '/demo-home'
     | '/design-audit'
     | '/forbidden'
     | '/jobs'
@@ -605,6 +615,7 @@ export interface FileRouteTypes {
     | '/come-funziona'
     | '/cookie'
     | '/dashboard'
+    | '/demo-home'
     | '/design-audit'
     | '/forbidden'
     | '/jobs'
@@ -663,6 +674,7 @@ export interface FileRouteTypes {
     | '/come-funziona'
     | '/cookie'
     | '/dashboard'
+    | '/demo-home'
     | '/design-audit'
     | '/forbidden'
     | '/jobs'
@@ -722,6 +734,7 @@ export interface RootRouteChildren {
   ComeFunzionaRoute: typeof ComeFunzionaRoute
   CookieRoute: typeof CookieRoute
   DashboardRoute: typeof DashboardRoute
+  DemoHomeRoute: typeof DemoHomeRoute
   DesignAuditRoute: typeof DesignAuditRoute
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
@@ -859,6 +872,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo-home': {
+      id: '/demo-home'
+      path: '/demo-home'
+      fullPath: '/demo-home'
+      preLoaderRoute: typeof DemoHomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/design-audit': {
@@ -1211,6 +1231,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComeFunzionaRoute: ComeFunzionaRoute,
   CookieRoute: CookieRoute,
   DashboardRoute: DashboardRoute,
+  DemoHomeRoute: DemoHomeRoute,
   DesignAuditRoute: DesignAuditRoute,
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
