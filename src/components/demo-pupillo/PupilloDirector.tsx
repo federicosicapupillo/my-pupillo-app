@@ -191,13 +191,13 @@ export function PupilloStop({ id, side, sideMd, children, className = "" }: { id
   const mdR = "md:-right-[9px] md:left-auto md:border-l-0 md:border-b-0 md:border-r-2 md:border-t-2";
   const tail = `${side === "right" ? R : L} ${md === "right" ? mdR : mdL}`;
   return (
-    <div data-stop-row className={`mx-auto my-6 flex max-w-3xl items-start gap-3 [--pw:72px] sm:[--pw:88px] md:gap-5 md:[--pw:112px] ${dir} ${className}`}>
+    <div data-stop-row className={`mx-auto my-6 flex max-w-3xl items-start gap-3 [--pw:50px] sm:[--pw:88px] md:gap-5 md:[--pw:112px] ${dir} ${className}`}>
       <div data-perch={id} className="relative w-[var(--pw)] shrink-0" style={{ aspectRatio: `${MASCOT.w} / ${MASCOT.h}` }}>
         <img src={mascot.url} alt="" aria-hidden width={MASCOT.w} height={MASCOT.h} className="h-full w-full object-contain group-data-[motion=on]:invisible" />
       </div>
       <p
         data-bubble={id}
-        className="relative min-w-0 flex-1 rounded-2xl border-2 bg-card px-4 py-3 text-sm font-semibold leading-snug text-card-foreground shadow-sm md:text-base"
+        className="relative min-w-0 flex-1 rounded-2xl border-2 bg-card px-3 py-2.5 text-sm sm:px-4 sm:py-3 font-semibold leading-snug text-card-foreground shadow-sm md:text-base"
         style={{ borderColor: "var(--neon-violet)", marginTop: `calc(var(--pw) * ${MOUTH_Y} - 28px)`, minHeight: "48px" }}
       >
         <span aria-hidden className={`absolute h-4 w-4 rotate-45 bg-card ${tail}`} style={{ borderColor: "var(--neon-violet)", top: "18px" }} />

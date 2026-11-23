@@ -212,7 +212,7 @@ export function computePose(opts: {
           pose = { ...b, fx: lerp(edge.x, f.x, e), fy: lerp(edge.y, f.y, e), rot, phase: "presa" };
         } else if (p < 0.88) {
           // Appeso: rotazione e allungamento variano, il pivot compensa → mano ferma sul grip.
-          const u = seg(p, 0.68, 0.88), w = Math.sin(Math.PI * u);
+          const u = seg(p, 0.68, 0.88), w = Math.sin(Math.PI * u) ** 2; // derivata nulla ai capi
           const rot = -6 - 5 * w, sy = 1 + 0.07 * w;
           const f = pinHand(h.grip, s, 1, sy, rot, figW, figH);
           pose = { ...b, fx: f.x, fy: f.y, sy, rot, phase: "appeso" };

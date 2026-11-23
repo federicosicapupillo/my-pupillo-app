@@ -67,8 +67,8 @@ function DemoPupillo() {
         ))}
       </div>
 
-      {/* Solo demo: corsie laterali riservate a Pupillo (destra da md, entrambe da lg). */}
-      <main key={regia} className="mx-auto max-w-[1200px] px-4 md:pr-[156px] lg:px-[156px]">
+      {/* Solo demo: corsie riservate a Pupillo (destra ~80px su telefono, più larghe da sm/md, entrambe da lg). */}
+      <main key={regia} className="mx-auto max-w-[1200px] pl-3 pr-[80px] sm:pl-4 sm:pr-[128px] md:pr-[156px] lg:px-[156px]">
         <div data-hat-runway={regia === "cappello" ? RUNWAY : undefined}>
         <section className={`pb-4 pt-6 text-center md:pt-8 ${regia === "cappello" ? "sticky top-0 z-20 motion-reduce:static" : ""}`}>
           <div data-hat-logo className="relative mx-auto mb-5 w-64 max-w-full sm:w-80 md:w-96">
@@ -81,7 +81,7 @@ function DemoPupillo() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" aria-hidden /> Torino e provincia
           </span>
-          <h1 className="mx-auto mt-5 max-w-4xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl md:text-7xl">
+          <h1 className="mx-auto mt-5 max-w-4xl text-[1.9rem] font-black leading-[1.05] tracking-tight sm:text-5xl md:text-7xl">
             Il turno giusto. <span className="pupillo-headline-yellow block">La persona giusta.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg">
@@ -100,7 +100,7 @@ function DemoPupillo() {
         <div role="group" aria-label="Scegli il tuo profilo" className="mx-auto mb-2 grid max-w-md grid-cols-2 gap-2 rounded-full border border-border p-1 md:hidden">
           {(["worker", "restaurant"] as const).map((a) => (
             <Button key={a} type="button" variant="ghost" aria-pressed={audience === a} aria-controls={a === "worker" ? "per-lavoratori" : "per-locali"} onClick={() => setAudience(a)}
-              className="rounded-full px-3 py-2 text-sm font-bold"
+              className="h-auto whitespace-normal rounded-full px-2 py-2 text-sm font-bold leading-tight"
               style={audience === a ? { background: a === "worker" ? "var(--primary)" : VIOLET, color: a === "worker" ? "var(--primary-foreground)" : "var(--accent-foreground)" } : undefined}>
               {a === "worker" ? "Cerco turni" : "Cerco personale"}
             </Button>
@@ -176,7 +176,7 @@ function DemoPupillo() {
 
 function AudienceCard(props: { id: string; hidden: boolean; label: string; title: string; text: string; cta: React.ReactNode; note: string | null; accent: string; video: React.ReactNode; videoCaption: string; extra?: React.ReactNode }) {
   return (
-    <article id={props.id} aria-labelledby={`${props.id}-title`} className={`flex-col gap-4 rounded-3xl border bg-card/40 p-6 md:flex md:p-8 ${props.hidden ? "hidden" : "flex"}`} style={{ borderColor: "color-mix(in oklab, var(--neon-violet) 35%, transparent)" }}>
+    <article id={props.id} aria-labelledby={`${props.id}-title`} className={`flex-col gap-4 rounded-3xl border bg-card/40 p-4 sm:p-6 md:flex md:p-8 ${props.hidden ? "hidden" : "flex"}`} style={{ borderColor: "color-mix(in oklab, var(--neon-violet) 35%, transparent)" }}>
       <span className="self-start rounded-full border px-3 py-1 text-sm font-extrabold uppercase tracking-wider" style={{ color: props.accent, borderColor: props.accent, background: `color-mix(in oklab, ${props.accent} 12%, transparent)` }}>{props.label}</span>
       <h2 id={`${props.id}-title`} className="text-2xl font-black md:text-3xl">{props.title}</h2>
       <p className="text-muted-foreground">{props.text}</p>
