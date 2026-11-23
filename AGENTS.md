@@ -50,3 +50,5 @@
 - Stripe checkout requires requireSupabaseAuth and takes userId/email only from the verified session — why: client-supplied ids let anyone relink another profile's billing customer.
 - Free recall: accept_application_atomic charges 7 credits only for the first paid confirmation of a restaurant–worker pair (restaurant_already_acquired_worker), writing a delta-0 audit row for recalls; the server decides, never the browser balance check — why: the business model promises unlimited free recalls.
 - Worker face photos: moderateWorkerFacePhoto only; enforce_worker_avatar needs an approved worker_avatar_moderations row — why: publish only server-approved files.
+
+- Worker face photos are taken only via FaceSelfieDialog (live camera + face-guide oval, no gallery upload); server moderation still approves the file — why: guided capture avoids rejected group/far shots while publication stays server-gated.

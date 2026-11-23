@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Camera, CheckCircle2, ImageIcon, Loader2, RotateCcw, UserRound } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, RotateCcw, UserRound } from "lucide-react";
+import { FaceSelfieDialog } from "@/components/FaceSelfieDialog";
 import { Button } from "@/components/ui/button";
 import { processImage } from "@/components/AvatarUpload";
 import { moderateWorkerFacePhoto } from "@/lib/avatar-moderation.functions";
@@ -20,8 +21,7 @@ const ACCEPT = "image/jpeg,image/png,image/webp";
 /** Foto viso del lavoratore: scatto frontale o galleria, controllo server prima dell'uso. */
 export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, invalid }: Props) {
   const moderate = useServerFn(moderateWorkerFacePhoto);
-  const cameraRef = React.useRef<HTMLInputElement>(null);
-  const galleryRef = React.useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [rejectedPreview, setRejectedPreview] = React.useState<string | null>(null);
@@ -65,8 +65,6 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
   };
 
   const handleFile = async (f: File | undefined | null) => {
-    if (cameraRef.current) cameraRef.current.value = "";
-    if (galleryRef.current) galleryRef.current.value = "";
     if (!f) return;
     if (!ACCEPT.split(",").includes(f.type)) { setError("Formato non supportato. Usa una foto JPG, PNG o WEBP."); return; }
     if (f.size > 15 * 1024 * 1024) { setError("La foto è troppo grande."); return; }
@@ -104,13 +102,8 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
           <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
             <Button type="button" variant="outline" size="sm" disabled={checking}
               aria-invalid={invalid || !!error} aria-describedby={error ? errorId : undefined}
-              onClick={() => cameraRef.current?.click()}>
+              onClick={() => setCameraOpen(true)}>
               <Camera className="h-4 w-4 mr-1" aria-hidden /> {value ? "Scatta una nuova foto" : "Scatta una foto"}
-            </Button>
-            <Button type="button" variant="outline" size="sm" disabled={checking}
-              aria-invalid={invalid || !!error} aria-describedby={error ? errorId : undefined}
-              onClick={() => galleryRef.current?.click()}>
-              <ImageIcon className="h-4 w-4 mr-1" aria-hidden /> {value ? "Sostituisci dalla galleria" : "Scegli dalla galleria"}
             </Button>
             {lastFile && lastKind === "service" && !checking && rejectedPreview && (
               <Button type="button" variant="ghost" size="sm" onClick={() => submit(lastFile, rejectedPreview)}>
@@ -119,7 +112,7 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Serve una foto frontale e nitida con solo il tuo viso. Viene controllata automaticamente prima di essere usata.
+            Inquadra il viso nel cerchio: quando diventa verde puoi scattare. La foto viene controllata automaticamente prima di essere usata.
           </p>
           <p id={statusId} role="status" aria-live="polite" className="text-xs font-medium flex items-center gap-1">
             {statusText === "Foto approvata" && <CheckCircle2 className="h-4 w-4 text-compensation-positive" aria-hidden />}
@@ -132,10 +125,7 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
           )}
         </div>
       </div>
-      <input ref={cameraRef} type="file" accept={ACCEPT} capture="user" className="sr-only" tabIndex={-1} aria-hidden
-        onChange={(e) => handleFile(e.target.files?.[0])} />
-      <input ref={galleryRef} type="file" accept={ACCEPT} className="sr-only" tabIndex={-1} aria-hidden
-        onChange={(e) => handleFile(e.target.files?.[0])} />
+      <FaceSelfieDialog open={cameraOpen} onOpenChange={setCameraOpen} onCapture={(f) => { setCameraOpen(false); void handleFile(f); }} />
     </div>
   );
 }
