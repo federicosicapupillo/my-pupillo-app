@@ -1,10 +1,12 @@
 import * as React from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Check, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { applyPortraitLight, compositeOnPortraitBackground, maskCoverage } from "@/lib/portrait-light";
 import { evaluateFaceGuide, GUIDE, GUIDE_MESSAGES, type FaceBox, type GuideStatus } from "@/lib/face-guide";
 
-type Props = { open: boolean; onOpenChange: (o: boolean) => void; onCapture: (file: File) => void };
+export type PortraitShot = { original: File; final: File; preview: string };
+type Props = { open: boolean; onOpenChange: (o: boolean) => void; onConfirm: (shot: PortraitShot) => void };
 
 type Detector = { detectForVideo: (v: HTMLVideoElement, t: number) => { detections: { boundingBox?: { originX: number; originY: number; width: number; height: number } }[] }; close: () => void };
 
@@ -23,40 +25,76 @@ function loadDetector(): Promise<Detector> {
   return detectorPromise;
 }
 
-type Segmenter = { segment: (img: HTMLCanvasElement) => { confidenceMasks?: { getAsFloat32Array: () => Float32Array; width: number; height: number }[]; close: () => void }; close: () => void };
-let segmenterPromise: Promise<Segmenter> | null = null;
-function loadSegmenter(): Promise<Segmenter> {
+type Mask = { getAsFloat32Array: () => Float32Array; width: number; height: number };
+type Segmenter = { segment: (img: HTMLCanvasElement) => { confidenceMasks?: Mask[]; close: () => void }; close: () => void };
+type LoadedSegmenter = { seg: Segmenter; multiclass: boolean };
+const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
+let segmenterPromise: Promise<LoadedSegmenter> | null = null;
+/** Segmentazione multiclasse (capelli, pelle, vestiti, accessori); ripiego sul selfie classico. */
+function loadSegmenter(): Promise<LoadedSegmenter> {
   segmenterPromise ??= (async () => {
     const { ImageSegmenter, FilesetResolver } = await import("@mediapipe/tasks-vision");
-    const files = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
-    return (await ImageSegmenter.createFromOptions(files, {
-      baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite" },
-      runningMode: "IMAGE",
-      outputConfidenceMasks: true,
-      outputCategoryMask: false,
-    })) as unknown as Segmenter;
+    const files = await FilesetResolver.forVisionTasks(WASM);
+    const make = (url: string) => ImageSegmenter.createFromOptions(files, {
+      baseOptions: { modelAssetPath: url }, runningMode: "IMAGE", outputConfidenceMasks: true, outputCategoryMask: false,
+    }) as unknown as Promise<Segmenter>;
+    try {
+      return { seg: await make("https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite"), multiclass: true };
+    } catch {
+      return { seg: await make("https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite"), multiclass: false };
+    }
   })();
   segmenterPromise.catch(() => { segmenterPromise = null; });
   return segmenterPromise;
 }
 
-/** Sfondo grigio uniforme per tutte le foto dei lavoratori. */
-const BACKGROUND_GREY = "#bfc1c4";
-type Beauty = "off" | "medio" | "alto";
-const BEAUTY: Record<Beauty, { label: string; blur: number; alpha: number; bright: number }> = {
-  off: { label: "Nessuno", blur: 0, alpha: 0, bright: 1 },
-  medio: { label: "Bellezza medio", blur: 3, alpha: 0.45, bright: 1.04 },
-  alto: { label: "Bellezza alto", blur: 5, alpha: 0.7, bright: 1.08 },
-};
+const toBlob = (c: HTMLCanvasElement) => new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("blob"))), "image/jpeg", 0.92));
+
+/** Scontorna la persona, applica «Luce ritratto» e mette lo sfondo albicocca. */
+async function buildPortrait(frame: HTMLCanvasElement): Promise<HTMLCanvasElement> {
+  const { seg, multiclass } = await loadSegmenter();
+  const res = seg.segment(frame);
+  try {
+    const m = res.confidenceMasks?.[0];
+    if (!m) throw new Error("mask");
+    const data = m.getAsFloat32Array();
+    const mc = document.createElement("canvas"); mc.width = m.width; mc.height = m.height;
+    const mctx = mc.getContext("2d")!;
+    const im = mctx.createImageData(m.width, m.height);
+    for (let i = 0; i < data.length; i++) {
+      const v = Math.min(1, Math.max(0, data[i] ?? 0));
+      im.data[i * 4 + 3] = Math.round((multiclass ? 1 - v : v) * 255); // multiclasse: indice 0 = sfondo
+    }
+    mctx.putImageData(im, 0, 0);
+    const out = frame.width;
+    const up = document.createElement("canvas"); up.width = out; up.height = out;
+    const uctx = up.getContext("2d")!;
+    uctx.imageSmoothingQuality = "high";
+    uctx.filter = "blur(1.5px)"; uctx.drawImage(mc, 0, 0, out, out); uctx.filter = "none";
+    const ad = uctx.getImageData(0, 0, out, out).data;
+    const alpha = new Float32Array(out * out);
+    for (let p = 0; p < alpha.length; p++) alpha[p] = (ad[p * 4 + 3] ?? 0) / 255;
+    if (maskCoverage(alpha) < 0.08) throw new Error("coverage");
+    const final = document.createElement("canvas"); final.width = out; final.height = out;
+    const fctx = final.getContext("2d")!;
+    fctx.drawImage(frame, 0, 0);
+    const img = fctx.getImageData(0, 0, out, out);
+    applyPortraitLight(img.data, alpha);
+    compositeOnPortraitBackground(img.data, alpha);
+    fctx.putImageData(img, 0, 0);
+    return final;
+  } finally { res.close?.(); }
+}
 
 /** Selfie guidato: cerchio che diventa verde quando c'è un solo viso centrato. */
-export function FaceSelfieDialog({ open, onOpenChange, onCapture }: Props) {
+export function FaceSelfieDialog({ open, onOpenChange, onConfirm }: Props) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const [status, setStatus] = React.useState<GuideStatus | "loading">("loading");
   const [error, setError] = React.useState<string | null>(null);
   const [noDetector, setNoDetector] = React.useState(false);
-  const [beauty, setBeauty] = React.useState<Beauty>("off");
   const [busy, setBusy] = React.useState(false);
+  const [shot, setShot] = React.useState<PortraitShot | null>(null);
+  React.useEffect(() => { if (!open) setShot(null); }, [open]);
   React.useEffect(() => { if (open) loadSegmenter().catch(() => {}); }, [open]);
 
   React.useEffect(() => {
@@ -100,58 +138,27 @@ export function FaceSelfieDialog({ open, onOpenChange, onCapture }: Props) {
   const capture = async () => {
     const v = videoRef.current;
     if (!v || !v.videoWidth || busy) return;
-    setBusy(true);
+    setBusy(true); setError(null);
     try {
       const side = Math.min(v.videoWidth, v.videoHeight);
       const out = Math.min(side, 1024);
       const frame = document.createElement("canvas");
       frame.width = out; frame.height = out;
-      const fx = frame.getContext("2d")!;
-      fx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, out, out);
-      const b = BEAUTY[beauty];
-      if (b.alpha > 0) {
-        const copy = document.createElement("canvas"); copy.width = out; copy.height = out;
-        copy.getContext("2d")!.drawImage(frame, 0, 0);
-        fx.globalAlpha = b.alpha;
-        fx.filter = `blur(${b.blur}px) brightness(${b.bright})`;
-        fx.drawImage(copy, 0, 0);
-        fx.globalAlpha = 1; fx.filter = "none";
-      }
-      // Persona su sfondo grigio uniforme.
-      const final = document.createElement("canvas"); final.width = out; final.height = out;
-      const ctx = final.getContext("2d")!;
-      ctx.fillStyle = BACKGROUND_GREY; ctx.fillRect(0, 0, out, out);
-      let composed = false;
-      try {
-        const seg = await loadSegmenter();
-        const res = seg.segment(frame);
-        const m = res.confidenceMasks?.[0];
-        if (m) {
-          const data = m.getAsFloat32Array();
-          const mc = document.createElement("canvas"); mc.width = m.width; mc.height = m.height;
-          const mctx = mc.getContext("2d")!;
-          const img = mctx.createImageData(m.width, m.height);
-          for (let i = 0; i < data.length; i++) { img.data[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, data[i] ?? 0)) * 255); }
-          mctx.putImageData(img, 0, 0);
-          const person = document.createElement("canvas"); person.width = out; person.height = out;
-          const pctx = person.getContext("2d")!;
-          pctx.filter = "blur(2px)"; pctx.drawImage(mc, 0, 0, out, out); pctx.filter = "none";
-          pctx.globalCompositeOperation = "source-in"; pctx.drawImage(frame, 0, 0);
-          ctx.drawImage(person, 0, 0);
-          composed = true;
-        }
-        res.close?.();
-      } catch { /* segmentazione non disponibile */ }
-      if (!composed) {
-        setError("Non riesco a preparare lo sfondo grigio. Controlla la connessione e riprova.");
+      frame.getContext("2d")!.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, out, out);
+      let final: HTMLCanvasElement;
+      try { final = await buildPortrait(frame); } catch {
+        setError("Non riesco a preparare lo sfondo della foto: il servizio di elaborazione non è disponibile. Controlla la connessione e riprova lo scatto.");
         return;
       }
-      await new Promise<void>((resolve) => final.toBlob((blob) => { if (blob) onCapture(new File([blob], "selfie.jpg", { type: "image/jpeg" })); resolve(); }, "image/jpeg", 0.92));
+      const [ob, fb] = await Promise.all([toBlob(frame), toBlob(final)]);
+      setShot({ original: new File([ob], "originale.jpg", { type: "image/jpeg" }), final: new File([fb], "ritratto.jpg", { type: "image/jpeg" }), preview: URL.createObjectURL(fb) });
+    } catch {
+      setError("Scatto non riuscito. Riprova.");
     } finally { setBusy(false); }
   };
 
   const ok = status === "ok";
-  const message = error ?? (status === "loading" ? "Avvio della fotocamera…" : noDetector ? "Inquadra il viso nel cerchio e scatta." : GUIDE_MESSAGES[status]);
+  const message = error ?? (shot ? "Controlla l'anteprima: se ti piace premi «Usa questa foto», altrimenti «Riscatta»." : status === "loading" ? "Avvio della fotocamera…" : noDetector ? "Inquadra il viso nel cerchio e scatta." : GUIDE_MESSAGES[status]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -165,23 +172,25 @@ export function FaceSelfieDialog({ open, onOpenChange, onCapture }: Props) {
           <div aria-hidden
             className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-4 transition-colors shadow-[0_0_0_9999px_color-mix(in_oklab,var(--background)_55%,transparent)] ${ok ? "border-compensation-positive" : "border-destructive"}`}
             style={{ width: `${GUIDE.widthRatio * 100}%`, height: `${GUIDE.widthRatio * GUIDE.aspect * 100}%` }} />
+          {shot && <img src={shot.preview} alt="Anteprima della foto con sfondo albicocca e Luce ritratto" className="absolute inset-0 h-full w-full object-cover" />}
           {status === "loading" && !error && <Loader2 className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 animate-spin" aria-hidden />}
         </div>
         <p role="status" aria-live="polite" className={`text-center text-sm font-medium ${error ? "text-destructive" : ok ? "text-compensation-positive" : "text-foreground"}`}>{message}</p>
-        <fieldset className="space-y-1">
-          <legend className="text-sm font-medium">Filtro bellezza</legend>
-          <div className="grid grid-cols-3 gap-2">
-            {(Object.keys(BEAUTY) as Beauty[]).map((k) => (
-              <Button key={k} type="button" size="sm" variant={beauty === k ? "default" : "outline"} aria-pressed={beauty === k} onClick={() => setBeauty(k)}>
-                {k === "off" ? "Nessuno" : k === "medio" ? "Medio" : "Alto"}
-              </Button>
-            ))}
+        <p className="text-xs text-muted-foreground">Lo sfondo diventa albicocca, uguale per tutti, e la luce viene corretta in modo leggero («Luce ritratto»).</p>
+        {shot ? (
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant="outline" onClick={() => { URL.revokeObjectURL(shot.preview); setShot(null); }}>
+              <RotateCcw className="h-4 w-4 mr-1" aria-hidden /> Riscatta
+            </Button>
+            <Button type="button" onClick={() => { const s2 = shot; setShot(null); onConfirm(s2); }}>
+              <Check className="h-4 w-4 mr-1" aria-hidden /> Usa questa foto
+            </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Lo sfondo viene sostituito con un grigio uniforme, uguale per tutti.</p>
-        </fieldset>
-        <Button type="button" disabled={!ok || !!error || busy} onClick={capture} className="w-full">
-          {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" aria-hidden /> : <Camera className="h-4 w-4 mr-1" aria-hidden />} Scatta
-        </Button>
+        ) : (
+          <Button type="button" disabled={!ok || busy} onClick={capture} className="w-full">
+            {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" aria-hidden /> : <Camera className="h-4 w-4 mr-1" aria-hidden />} {busy ? "Preparo la foto…" : "Scatta"}
+          </Button>
+        )}
       </DialogContent>
     </Dialog>
   );

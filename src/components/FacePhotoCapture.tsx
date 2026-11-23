@@ -1,9 +1,8 @@
 import * as React from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Camera, CheckCircle2, Loader2, RotateCcw, UserRound } from "lucide-react";
-import { FaceSelfieDialog } from "@/components/FaceSelfieDialog";
+import { FaceSelfieDialog, type PortraitShot } from "@/components/FaceSelfieDialog";
 import { Button } from "@/components/ui/button";
-import { processImage } from "@/components/AvatarUpload";
 import { moderateWorkerFacePhoto } from "@/lib/avatar-moderation.functions";
 
 type Props = {
@@ -16,16 +15,15 @@ type Props = {
   invalid?: boolean;
 };
 
-const ACCEPT = "image/jpeg,image/png,image/webp";
 
-/** Foto viso del lavoratore: scatto frontale o galleria, controllo server prima dell'uso. */
+/** Foto viso del lavoratore: solo scatto dal vivo, sfondo albicocca, controllo server prima dell'uso. */
 export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, invalid }: Props) {
   const moderate = useServerFn(moderateWorkerFacePhoto);
   const [cameraOpen, setCameraOpen] = React.useState(false);
   const [checking, setChecking] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [rejectedPreview, setRejectedPreview] = React.useState<string | null>(null);
-  const [lastFile, setLastFile] = React.useState<File | null>(null);
+  const [lastShot, setLastShot] = React.useState<PortraitShot | null>(null);
   const [lastKind, setLastKind] = React.useState<string | null>(null);
   const errorId = React.useId();
   const statusId = React.useId();
@@ -34,45 +32,35 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
 
   const setBusy = (b: boolean) => { setChecking(b); onBusyChange?.(b); };
 
-  const submit = async (file: File, preview: string) => {
+  const submit = async (shot: PortraitShot) => {
+    const preview = shot.preview;
     setBusy(true);
     setError(null);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("original", shot.original);
+      fd.append("file", shot.final);
       const res = await moderate({ data: fd });
       if (res.ok) {
         setRejectedPreview(null);
-        setLastFile(null);
+        setLastShot(null);
         await onApproved(res.path, res.signedUrl ?? preview);
       } else {
         setRejectedPreview(preview);
         setLastKind(res.kind);
-        setLastFile(res.kind === "service" ? file : null);
+        setLastShot(res.kind === "service" ? shot : null);
         setError(res.error);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message.toLowerCase() : "";
       setRejectedPreview(preview);
       setLastKind("service");
-      setLastFile(file);
+      setLastShot(shot);
       setError(msg.includes("fetch") || msg.includes("network")
         ? "Connessione assente o instabile. Riprova quando sei online."
         : "Controllo della foto non riuscito. Riprova.");
     } finally {
       setBusy(false);
-    }
-  };
-
-  const handleFile = async (f: File | undefined | null) => {
-    if (!f) return;
-    if (!ACCEPT.split(",").includes(f.type)) { setError("Formato non supportato. Usa una foto JPG, PNG o WEBP."); return; }
-    if (f.size > 15 * 1024 * 1024) { setError("La foto è troppo grande."); return; }
-    try {
-      const { file, preview } = await processImage(f);
-      await submit(file, preview);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Immagine non valida.");
     }
   };
 
@@ -105,8 +93,8 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
               onClick={() => setCameraOpen(true)}>
               <Camera className="h-4 w-4 mr-1" aria-hidden /> {value ? "Scatta una nuova foto" : "Scatta una foto"}
             </Button>
-            {lastFile && lastKind === "service" && !checking && rejectedPreview && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => submit(lastFile, rejectedPreview)}>
+            {lastShot && lastKind === "service" && !checking && rejectedPreview && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => submit(lastShot)}>
                 <RotateCcw className="h-4 w-4 mr-1" aria-hidden /> Riprova il controllo
               </Button>
             )}
@@ -125,7 +113,7 @@ export function FacePhotoCapture({ value, approved, onApproved, onBusyChange, in
           )}
         </div>
       </div>
-      <FaceSelfieDialog open={cameraOpen} onOpenChange={setCameraOpen} onCapture={(f) => { setCameraOpen(false); void handleFile(f); }} />
+      <FaceSelfieDialog open={cameraOpen} onOpenChange={setCameraOpen} onConfirm={(shot) => { setCameraOpen(false); void submit(shot); }} />
     </div>
   );
 }

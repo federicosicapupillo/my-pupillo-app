@@ -21,12 +21,13 @@ export const moderateWorkerFacePhoto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => {
     const file = data instanceof FormData ? data.get("file") : null;
-    return { file: file instanceof File ? file : null };
+    const original = data instanceof FormData ? data.get("original") : null;
+    return { file: file instanceof File ? file : null, original: original instanceof File ? original : null };
   })
   .handler(async ({ data, context }): Promise<FacePhotoResult> => {
-    const { file } = data;
-    if (!file || file.size === 0) return { ok: false, kind: "invalid", error: "Nessuna foto ricevuta." };
-    if (file.size > MAX_BYTES) return { ok: false, kind: "invalid", error: "La foto supera il limite massimo di 5 MB." };
+    const { file, original } = data;
+    if (!file || file.size === 0 || !original || original.size === 0) return { ok: false, kind: "invalid", error: "Nessuna foto ricevuta. Scatta di nuovo la foto." };
+    if (file.size > MAX_BYTES || original.size > MAX_BYTES) return { ok: false, kind: "invalid", error: "La foto supera il limite massimo di 5 MB." };
 
     const { data: isWorker } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "worker" });
     if (!isWorker) return { ok: false, kind: "invalid", error: "Solo i lavoratori possono usare questo controllo." };
@@ -40,7 +41,11 @@ export const moderateWorkerFacePhoto = createServerFn({ method: "POST" })
       return { ok: false, kind: "invalid", error: "La foto deve essere almeno 500x500 px." };
     }
 
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    const origBytes = new Uint8Array(await original.arrayBuffer());
+    const origMime = sniffImageMime(origBytes);
+    if (!origMime) return { ok: false, kind: "invalid", error: "Scatto originale non valido. Riprova." };
+    // L'associazione registrata è proprietario + scatto originale; il file salvato è la foto finale.
+    const digest = await crypto.subtle.digest("SHA-256", origBytes);
     const sha256 = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -62,7 +67,11 @@ export const moderateWorkerFacePhoto = createServerFn({ method: "POST" })
     }
     let output;
     try {
-      output = await analyzeAvatarImage(getRequest(), key, bytes, mime);
+      // 1) scatto originale: un solo volto, contenuti e gesti; 2) foto finale: stesso controllo, così ciò che diventa attivo è verificato.
+      const req = getRequest();
+      output = await analyzeAvatarImage(req, key, origBytes, origMime);
+      const first = decideAvatarModeration(output);
+      if (first.approved) output = await analyzeAvatarImage(req, key, bytes, mime);
     } catch (e) {
       console.error("[PUPILLO_AVATAR_MODERATION]", e);
       await record("error", "service_failure");
