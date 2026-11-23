@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { AudienceVideo } from "@/components/home/AudienceVideo";
 import { HomeReviews } from "@/components/home/HomeReviews";
 import { SuggestionInvitation } from "@/components/SuggestionInvitation";
+import { AcademyHomeWorker, AcademyRestaurantNote } from "@/components/academy/AcademyBlocks";
 import { HOME_VIDEOS } from "@/lib/home-videos";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,7 @@ function Index() {
             accent={LIME}
             video={<AudienceVideo video={HOME_VIDEOS.worker} accent={LIME} />}
             videoCaption="Per te che cerchi lavoro."
+            extra={<AcademyHomeWorker />}
           />
           <AudienceCard
             id="per-locali"
@@ -182,6 +184,7 @@ function Index() {
             </AccordionItem>
           </Accordion>
         </section>
+        <AcademyRestaurantNote mobileHidden={audience !== "restaurant"} />
         <SuggestionInvitation />
         <HomeReviews />
       </main>
@@ -202,6 +205,7 @@ function AudienceCard(props: {
   accent: string;
   video: React.ReactNode;
   videoCaption: string;
+  extra?: React.ReactNode;
 }) {
   return (
     <article
@@ -229,6 +233,7 @@ function AudienceCard(props: {
         </div>
         {props.video}
       </div>
+      {props.extra}
     </article>
   );
 }

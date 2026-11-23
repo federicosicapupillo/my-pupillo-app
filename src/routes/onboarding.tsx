@@ -1,3 +1,4 @@
+import { markAcademyInvitePending } from "@/lib/academy";
 import { hasVerifiedContact, isContactPhoneLocked } from "@/lib/contact-verification";
 import { YEARS_OPTIONS, LEGACY_YEARS_6_10, RATE_OPTIONS, rateForSave, rateReasonError, rateReasonForSave } from "@/lib/hourly-rate-guidance";
 import { HourlyRateGuidance, HourlyRateNote, HourlyRateReasonField, RATE_LOCKED_HELPER } from "@/components/HourlyRateGuidance";
@@ -1751,6 +1752,8 @@ function Onboarding() {
     // impostato disponibilità attive, mostra il popup motivazionale che lo
     // invita a configurarle subito.
     if (role === "worker") {
+      // Invito Academy solo al primo completamento reale del profilo.
+      if (!profile?.profile_completed) markAcademyInvitePending();
       try {
         const { count, error: availErr } = await supabase
           .from("worker_availability")

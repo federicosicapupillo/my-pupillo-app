@@ -7,6 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { SuggestionInvitation } from "@/components/SuggestionInvitation";
+import { AcademyCompletionInvite, AcademyDashboardCard } from "@/components/academy/AcademyBlocks";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -569,6 +570,7 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
 
   return (
     <div className="mt-6 space-y-8">
+      <AcademyCompletionInvite />
       {/* 2. KPI OPERATIVI */}
       {(() => {
         const tiles: ReactNode[] = [];
@@ -667,6 +669,9 @@ function WorkerHome({ userId, profile, applications, messages }: WorkerHomeProps
         />
         <WorkerAvailabilitySummary workerId={userId} collapsible />
       </section>
+
+      {/* Pupillo Academy: scheda compatta, sotto le azioni principali */}
+      <AcademyDashboardCard />
 
       {/* 5. REPUTATION SCORE */}
       <section>
