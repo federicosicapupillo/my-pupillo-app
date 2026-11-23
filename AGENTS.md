@@ -51,3 +51,4 @@
 - Free recall: accept_application_atomic charges 7 credits only for the first paid confirmation of a restaurant–worker pair (restaurant_already_acquired_worker), writing a delta-0 audit row for recalls; the server decides, never the browser balance check — why: the business model promises unlimited free recalls.
 - Worker face photos: FaceSelfieDialog capture, then moderateWorkerFacePhoto; enforce_worker_avatar needs an approved row — why: only server-approved files.
 
+- The /demo-pupillo scroll mascot is a pure function of scroll in src/lib/pupillo-path.ts with hat coordinates measured on the real logo and DOM perches as reserved stops — why: identical pose forward/backward and no overlap with page content.

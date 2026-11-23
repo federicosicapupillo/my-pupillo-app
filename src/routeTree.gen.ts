@@ -24,6 +24,7 @@ import { Route as ComeFunzionaRouteImport } from './routes/come-funziona'
 import { Route as CookieRouteImport } from './routes/cookie'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoHomeRouteImport } from './routes/demo-home'
+import { Route as DemoPupilloRouteImport } from './routes/demo-pupillo'
 import { Route as DesignAuditRouteImport } from './routes/design-audit'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as JobsRouteImport } from './routes/jobs'
@@ -140,6 +141,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const DemoHomeRoute = DemoHomeRouteImport.update({
   id: '/demo-home',
   path: '/demo-home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoPupilloRoute = DemoPupilloRouteImport.update({
+  id: '/demo-pupillo',
+  path: '/demo-pupillo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesignAuditRoute = DesignAuditRouteImport.update({
@@ -377,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
   '/demo-home': typeof DemoHomeRoute
+  '/demo-pupillo': typeof DemoPupilloRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -436,6 +443,7 @@ export interface FileRoutesByTo {
   '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
   '/demo-home': typeof DemoHomeRoute
+  '/demo-pupillo': typeof DemoPupilloRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -496,6 +504,7 @@ export interface FileRoutesById {
   '/cookie': typeof CookieRoute
   '/dashboard': typeof DashboardRoute
   '/demo-home': typeof DemoHomeRoute
+  '/demo-pupillo': typeof DemoPupilloRoute
   '/design-audit': typeof DesignAuditRoute
   '/forbidden': typeof ForbiddenRoute
   '/jobs': typeof JobsRoute
@@ -557,6 +566,7 @@ export interface FileRouteTypes {
     | '/cookie'
     | '/dashboard'
     | '/demo-home'
+    | '/demo-pupillo'
     | '/design-audit'
     | '/forbidden'
     | '/jobs'
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/cookie'
     | '/dashboard'
     | '/demo-home'
+    | '/demo-pupillo'
     | '/design-audit'
     | '/forbidden'
     | '/jobs'
@@ -675,6 +686,7 @@ export interface FileRouteTypes {
     | '/cookie'
     | '/dashboard'
     | '/demo-home'
+    | '/demo-pupillo'
     | '/design-audit'
     | '/forbidden'
     | '/jobs'
@@ -735,6 +747,7 @@ export interface RootRouteChildren {
   CookieRoute: typeof CookieRoute
   DashboardRoute: typeof DashboardRoute
   DemoHomeRoute: typeof DemoHomeRoute
+  DemoPupilloRoute: typeof DemoPupilloRoute
   DesignAuditRoute: typeof DesignAuditRoute
   ForbiddenRoute: typeof ForbiddenRoute
   JobsRoute: typeof JobsRoute
@@ -879,6 +892,13 @@ declare module '@tanstack/react-router' {
       path: '/demo-home'
       fullPath: '/demo-home'
       preLoaderRoute: typeof DemoHomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo-pupillo': {
+      id: '/demo-pupillo'
+      path: '/demo-pupillo'
+      fullPath: '/demo-pupillo'
+      preLoaderRoute: typeof DemoPupilloRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/design-audit': {
@@ -1232,6 +1252,7 @@ const rootRouteChildren: RootRouteChildren = {
   CookieRoute: CookieRoute,
   DashboardRoute: DashboardRoute,
   DemoHomeRoute: DemoHomeRoute,
+  DemoPupilloRoute: DemoPupilloRoute,
   DesignAuditRoute: DesignAuditRoute,
   ForbiddenRoute: ForbiddenRoute,
   JobsRoute: JobsRoute,
