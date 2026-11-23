@@ -1871,7 +1871,7 @@ function Onboarding() {
               </div>
               {role === "restaurant" ? (
                 <div>
-                  <Label>Nome locale</Label>
+                  <Label>Nome locale *</Label>
                   <Input
                     required
                     value={form.business_name}
@@ -2265,6 +2265,7 @@ function Onboarding() {
               <div data-field="district" className="scroll-mt-24">
                  <Label>
                    Zona / quartiere
+                   {form.city && districtZonesForCity(form.city).length > 0 && " *"}
                    {form.city && districtZonesForCity(form.city).length === 0 && (
                      <span className="ml-1 text-xs font-normal text-muted-foreground">(facoltativo)</span>
                    )}
@@ -2278,7 +2279,7 @@ function Onboarding() {
                  />
               </div>
               <div data-field="postal_code" className="scroll-mt-24">
-                <Label>CAP</Label>
+                <Label>CAP *</Label>
                 <CapField
                   province={form.province}
                   city={form.city}
@@ -2300,7 +2301,7 @@ function Onboarding() {
               </p>
               <div className="grid gap-3 md:grid-cols-2">
                   <div>
-                    <Label className="text-xs">Nome</Label>
+                    <Label className="text-xs">Nome *</Label>
                     <Input
                       value={form.contact_person_first_name}
                       onChange={(e) => setForm({ ...form, contact_person_first_name: e.target.value })}
@@ -2308,7 +2309,7 @@ function Onboarding() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Cognome</Label>
+                    <Label className="text-xs">Cognome *</Label>
                     <Input
                       value={form.contact_person_last_name}
                       onChange={(e) => setForm({ ...form, contact_person_last_name: e.target.value })}
@@ -2316,7 +2317,7 @@ function Onboarding() {
                     />
                   </div>
                   <div data-field="contact_person_role" className="scroll-mt-24">
-                    <Label className="text-xs">Ruolo</Label>
+                    <Label className="text-xs">Ruolo *</Label>
                     <Select
                       value={form.contact_person_role}
                       onValueChange={(v) => setForm({ ...form, contact_person_role: v })}
@@ -2343,7 +2344,7 @@ function Onboarding() {
                     )}
                   </div>
                   <div data-field="contact_person_phone" className="scroll-mt-24">
-                    <Label className="text-xs">Telefono</Label>
+                    <Label className="text-xs">Telefono *</Label>
                     <PhoneInput
                       code={form.contact_person_phone_code}
                       number={form.contact_person_phone_number}
@@ -2352,7 +2353,7 @@ function Onboarding() {
                     />
                   </div>
                   <div className="md:col-span-2" data-field="contact_person_email">
-                    <Label className="text-xs">Email</Label>
+                    <Label className="text-xs">Email *</Label>
                     <Input
                       type="email"
                       placeholder="esempio@email.com"
