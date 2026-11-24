@@ -51,3 +51,4 @@
 - Free recall: accept_application_atomic charges 7 credits only for the first paid confirmation of a restaurant–worker pair (restaurant_already_acquired_worker), writing a delta-0 audit row for recalls; the server decides, never the browser balance check — why: the business model promises unlimited free recalls.
 - Worker face photos: FaceSelfieDialog capture, then moderateWorkerFacePhoto; enforce_worker_avatar needs an approved row — why: only server-approved files.
 
+- Academy recognitions are read server-side from the Academy recognitions endpoint with the shared PUPILLO_RECOGNITIONS_TOKEN, keyed by Pupillo user id, and rendered only via AcademyRecognitions — why: only verified, worker-published modules may appear and the token must never reach the browser.
