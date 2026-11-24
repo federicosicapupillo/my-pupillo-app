@@ -35,7 +35,7 @@
 
 - Read-only KPI feed `src/routes/api/public/jarvis-kpi.ts`: `X-Jarvis-Key` vs `JARVIS_KPI_KEY`, aggregates only — why: no PII exposure.
 - Referral linking happens in the database (`handle_new_user` reads `referral_code` from signup metadata; OAuth calls `register_referral` after role claim) via `_link_referral`, independent of the UI feature flag; only the credit award checks the flag — why: links must never depend on client sessions or UI visibility.
-- Homepage explainer videos are configured only in `src/lib/home-videos.ts` (null = honest "Video in arrivo" poster) — why: real sources can be added without touching the page and fake players are never shown.
+- Homepage videos are set only in `src/lib/home-videos.ts` (null = "Video in arrivo" poster) — why: no fake players.
 - CV scoring is allowed only while worker_received_review is false; the first restaurant_to_worker review stales the CV assessment via trigger and get_worker_curriculum_rating hides it — why: real review stars replace the Pupillo CV score. Legacy stored PDFs keep the old purge path.
 - ID document collection is disabled in code (onboarding section off, upload server fn refuses); keep the `require_id_document` flag off, historical documents are retained, not mass-deleted.
 - A new self-editable profile column must be added to BOTH `update_my_profile` allowlist and `profiles_guard_admin_columns` allowlist; verify with `scripts/e2e-onboarding-save.ts` (creates and deletes dedicated test users) — missing either silently breaks onboarding "Salva".
