@@ -12,6 +12,7 @@ import { reliabilityDisplayValue } from "@/lib/worker-reliability";
 import { formatDisplayLabel } from "@/lib/format-label";
 import { CurriculumRating } from '@/components/CurriculumAssessment';
 import { PublicWorkerAvailability } from '@/components/PublicWorkerAvailability';
+import { AcademyRecognitions } from '@/components/AcademyRecognitions';
 
 type WorkerProfile = {
   id: string;
@@ -198,6 +199,7 @@ export function WorkerProfilePreviewDialog({
           <div className="px-4 sm:px-5 pb-5 space-y-4 min-w-0">
             {/* Stats grid */}
             <CurriculumRating workerId={w.id} />
+            <AcademyRecognitions workerId={w.id} compact />
             <div className="grid grid-cols-2 gap-2">
               <StatBox icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Turni completati" value={`${w.completed_shifts ?? 0}`} />
               <StatBox icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Affidabilità" value={reliabilityDisplayValue(w.reliability_pct, w.completed_shifts)} />
