@@ -2,7 +2,8 @@ import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Shield, Search, Plus, CalendarClock, Compass, Coins, Map as MapIcon, Home, ChevronRight, Users, CalendarDays } from "lucide-react";
-import { PupilloMenu, PupilloClose, PupilloAvatar } from "@/components/PupilloIcons";
+import { PupilloMenu, PupilloClose } from "@/components/PupilloIcons";
+import { UserAvatar } from "@/components/UserAvatar";
 import { ReactNode, useRef, useState, useEffect, KeyboardEvent } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
@@ -238,7 +239,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 aria-label="Vai al profilo"
                 className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                <PupilloAvatar name={profile?.full_name} email={user.email} />
+                <UserAvatar userId={user.id} name={profile?.full_name || user.email} className="h-9 w-9 shrink-0 ring-2 ring-primary/20" />
               </Link>
             )}
             <Button variant="ghost" size="icon" aria-label="Esci dall’account" onClick={async () => { await signOut(); nav({ to: "/" }); }}><LogOut className="h-4 w-4" /></Button>
