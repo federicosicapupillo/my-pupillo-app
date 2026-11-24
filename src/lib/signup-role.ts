@@ -13,7 +13,7 @@
  */
 
 export type SignupRole = "restaurant" | "worker";
-export type SignupProvider = "google" | "apple" | "facebook" | "email";
+export type SignupProvider = "google" | "apple" | "facebook" | "oidc" | "email";
 
 export const PENDING_SIGNUP_ROLE_KEY = "pupillo-pending-signup-role";
 export const PENDING_SIGNUP_ROLE_VERSION = 1;
@@ -59,7 +59,7 @@ export function parsePendingSignupRole(raw: unknown, now: number = Date.now()): 
   const p = value as Partial<PendingSignupRole>;
   if (p.v !== PENDING_SIGNUP_ROLE_VERSION) return null;
   if (p.role !== "restaurant" && p.role !== "worker") return null;
-  if (p.provider !== "google" && p.provider !== "apple" && p.provider !== "facebook" && p.provider !== "email") {
+  if (p.provider !== "google" && p.provider !== "apple" && p.provider !== "facebook" && p.provider !== "oidc" && p.provider !== "email") {
     return null;
   }
   if (typeof p.createdAt !== "number" || !Number.isFinite(p.createdAt)) return null;

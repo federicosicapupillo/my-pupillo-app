@@ -420,6 +420,27 @@ function AuthPage() {
     }
   };
 
+  const handleOidc = async () => {
+    if (tab === "signup") {
+      if (!role) {
+        toast.error("Scegli se registrarti come Ristoratore o come Lavoratore.");
+        return;
+      }
+      rememberPendingSignupRole(role, "oidc");
+    } else {
+      clearPendingSignupRole();
+    }
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "custom:app-oidc" as never,
+      options: { redirectTo: window.location.origin + "/auth" },
+    });
+    if (error) {
+      setBusy(false);
+      toast.error("Accesso con account aziendale non disponibile al momento.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="border-b">
@@ -497,6 +518,15 @@ function AuthPage() {
                 onClick={handleFacebook}
               >
                 <FacebookIcon /> Continua con Facebook
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={busy || (tab === "signup" && !roleChosen)}
+                onClick={handleOidc}
+              >
+                Continua con account aziendale (SSO)
               </Button>
               <div className="flex items-center gap-2 py-1">
                 <div className="h-px flex-1 bg-border" />
