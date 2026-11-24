@@ -35,8 +35,8 @@ export const getAvatarUrls = createServerFn({ method: "POST" })
 
     const result: Record<string, string | null> = {};
     const names: Record<string, string | null> = {};
-    // Strict path validator: <ownerUid>/avatar-<digits>.(jpg|jpeg|png|webp)
-    const PATH_RE = /^([0-9a-f-]{36})\/avatar-\d+\.(jpe?g|png|webp)$/i;
+    // Strict path validator: <ownerUid>/avatar-<digits>.ext or <ownerUid>/moderated/<uuid>.ext
+    const PATH_RE = /^([0-9a-f-]{36})\/(?:avatar-\d+|moderated\/[0-9a-f-]{36})\.(jpe?g|png|webp)$/i;
     for (const row of rows ?? []) {
       if (!row.id) continue;
       const r = row as any;
