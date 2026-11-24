@@ -82,6 +82,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { NATIONALITIES } from "@/lib/nationalities";
 import { ZonesMultiSelect } from "@/components/ZonesMultiSelect";
 import { FacePhotoCapture } from "@/components/FacePhotoCapture";
+import { updateAvatarUrlCache } from "@/hooks/use-avatar-urls";
 import { isModeratedAvatarPath } from "@/lib/avatar-moderation/decision";
 import { setMyAvatar } from "@/lib/profile-self-update";
 import { CurriculumUpload } from "@/components/CurriculumUpload";
@@ -2409,7 +2410,8 @@ function Onboarding() {
                   setApprovedAvatarPath(path);
                   setAvatarUrl(url);
                   // Salva subito la foto approvata: resta anche dopo un refresh.
-                  await setMyAvatar(path).catch(() => null);
+                  const saved = await setMyAvatar(path).then(() => true).catch(() => false);
+                  if (saved && user?.id) updateAvatarUrlCache(user.id, url, profile?.full_name ?? null);
                 }}
               />
               {!approvedAvatarPath && !profile?.profile_completed && (
