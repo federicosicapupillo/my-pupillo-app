@@ -13,14 +13,9 @@ export const ACADEMY_PREVIEW_NOTE = "Oggi sono disponibili due moduli in antepri
 /** Homepage, solo area lavoratori. */
 export function AcademyHomeWorker() {
   return (
-    <section aria-labelledby="academy-worker-title" className="pupillo-highlight mt-2 flex min-w-0 flex-col gap-3 rounded-lg border p-5">
-      <div className="flex items-center gap-3"><GraduationCap className="size-8 shrink-0 text-pack-highlight" aria-hidden="true" /><h3 id="academy-worker-title" className="text-2xl font-black">Pupillo Academy</h3></div>
-      <p className="font-bold text-pack-highlight">Gratuita e facoltativa, per gli utenti Pupillo</p>
-      <p className="text-lg font-bold">Impara, ripassa, mettiti alla prova.</p>
-      <p className="text-muted-foreground">{ACADEMY_WORKER_TEXT}</p>
-      <p className="text-sm text-muted-foreground">{ACADEMY_CERT_NOTE}</p>
-      <div><AcademyLink className={`${academyButtonClass} bg-pack-highlight text-pack-highlight-foreground hover:bg-pack-highlight/90`}>Inizia Pupillo Academy</AcademyLink></div>
-      <p className="text-sm font-semibold text-foreground/80">{ACADEMY_PREVIEW_NOTE}</p>
+    <section aria-label="Pupillo Academy" className="pupillo-highlight mt-2 flex min-w-0 items-center gap-3 rounded-lg border p-5">
+      <GraduationCap className="size-8 shrink-0 text-pack-highlight" aria-hidden="true" />
+      <p className="text-lg font-bold">Registrati su Pupillo e potrai partecipare alla Pupillo Academy</p>
     </section>
   );
 }
