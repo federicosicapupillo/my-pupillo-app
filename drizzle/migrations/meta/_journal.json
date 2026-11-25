@@ -239,6 +239,13 @@
       "when": 1795186535340,
       "tag": "0033_worker_avatar_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795604904674,
+      "tag": "0034_sync_profile_name_to_auth_metadata",
+      "breakpoints": true
     }
   ]
 }
