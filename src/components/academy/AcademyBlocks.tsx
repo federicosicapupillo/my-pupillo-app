@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CalendarDays, GraduationCap } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { badgeForModuleId, type AcademyBadge } from "@/lib/academy-badges";
 import { getMyAcademyProgress, type AcademyProgress } from "@/lib/academy-progress.functions";
 import { Button } from "@/components/ui/button";
 import { AcademyLink, academyButtonClass, academyCardStyle } from "./AcademyLink";
@@ -49,6 +50,7 @@ function AcademyDashboardCard() {
   const started = progress?.started === true;
   const done = started && progress.total_lessons > 0 && progress.completed_lessons >= progress.total_lessons;
   const pct = started ? progress.percentuale : 0;
+  const badges = [...new Map((progress?.completed_modules ?? []).map(badgeForModuleId).filter((b): b is AcademyBadge => !!b).map((b) => [b.key, b])).values()].sort((a, b) => b.rank - a.rank);
   return (
     <section aria-label="Pupillo Academy" className="pupillo-highlight flex min-w-0 flex-col gap-4 rounded-lg border p-5 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 flex-1 gap-3">
@@ -66,6 +68,16 @@ function AcademyDashboardCard() {
                 <div className="h-full rounded-full bg-pack-highlight" style={{ width: `${pct}%` }} />
               </div>
               <p className="text-xs text-muted-foreground">{pct}% completato</p>
+              {badges.length > 0 && (
+                <ul className="flex flex-wrap gap-3 pt-2" aria-label="Stemmi ottenuti">
+                  {badges.map((b) => (
+                    <li key={b.key} className="flex items-center gap-2 rounded-full border border-pack-highlight/40 bg-background/10 py-1 pl-1 pr-3">
+                      <img src={b.image} alt="" className="size-10 object-contain" loading="lazy" />
+                      <span className="text-sm font-semibold">{b.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </>
           ) : (
             <>

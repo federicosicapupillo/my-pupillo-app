@@ -11,3 +11,12 @@ describe("academy badges", () => {
   });
   it("Sala Base level ranks above modules", () => { expect(earnedBadges([r("m4", "Accoglienza"), r("level", "Livello Sala Base")])[0]?.badge.key).toBe("base"); });
 });
+
+import { badgeForModuleId } from "./academy-badges";
+describe("badgeForModuleId", () => {
+  it("maps Academy module ids to badges", () => {
+    expect(badgeForModuleId("L1-M1")?.key).toBe("m1");
+    expect(badgeForModuleId("L1-M2")?.name).toBe("Gagliardetto");
+    expect(badgeForModuleId("S1")).toBeNull();
+  });
+});

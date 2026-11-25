@@ -37,3 +37,9 @@ export function earnedBadges(items: AcademyRecognition[]): { badge: AcademyBadge
   for (const r of items) { const b = badgeFor(r); if (b && !map.has(b.key)) map.set(b.key, { badge: b, passed_at: r.passed_at }); }
   return [...map.values()].sort((a, b) => b.badge.rank - a.badge.rank);
 }
+
+/** Distintivo per codice modulo dell'Academy (es. "L1-M2" → Gagliardetto). */
+export function badgeForModuleId(id: string): AcademyBadge | null {
+  const n = /-M(\d+)$/i.exec(id.trim())?.[1];
+  return n ? ACADEMY_BADGES.find((b) => b.key === `m${Number(n)}`) ?? null : null;
+}
