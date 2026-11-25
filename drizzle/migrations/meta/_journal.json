@@ -246,6 +246,13 @@
       "when": 1795604904674,
       "tag": "0034_sync_profile_name_to_auth_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1795607292039,
+      "tag": "0035_sync_profile_avatar_to_auth_metadata",
+      "breakpoints": true
     }
   ]
 }

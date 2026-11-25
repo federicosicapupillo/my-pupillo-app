@@ -61,6 +61,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as ApiPublicJarvisKpiRouteImport } from './routes/api/public/jarvis-kpi'
 import { Route as RistoratoreAnnunciNuovoRouteImport } from './routes/ristoratore.annunci.nuovo'
 import { Route as RistoratoreTurniShiftIdRouteImport } from './routes/ristoratore.turni.$shiftId'
+import { Route as ApiPublicAvatarUserIdRouteImport } from './routes/api/public/avatar.$userId'
 import { Route as ApiPublicHooksExpireStaleRouteImport } from './routes/api/public/hooks/expire-stale'
 import { Route as ApiPublicHooksNotificationEmailsRouteImport } from './routes/api/public/hooks/notification-emails'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -332,6 +333,11 @@ const RistoratoreTurniShiftIdRoute = RistoratoreTurniShiftIdRouteImport.update({
   path: '/ristoratore/turni/$shiftId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAvatarUserIdRoute = ApiPublicAvatarUserIdRouteImport.update({
+  id: '/api/public/avatar/$userId',
+  path: '/api/public/avatar/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksExpireStaleRoute =
   ApiPublicHooksExpireStaleRouteImport.update({
     id: '/api/public/hooks/expire-stale',
@@ -420,6 +426,7 @@ export interface FileRoutesByFullPath {
   '/api/public/jarvis-kpi': typeof ApiPublicJarvisKpiRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
+  '/api/public/avatar/$userId': typeof ApiPublicAvatarUserIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/hooks/notification-emails': typeof ApiPublicHooksNotificationEmailsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -480,6 +487,7 @@ export interface FileRoutesByTo {
   '/api/public/jarvis-kpi': typeof ApiPublicJarvisKpiRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
+  '/api/public/avatar/$userId': typeof ApiPublicAvatarUserIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/hooks/notification-emails': typeof ApiPublicHooksNotificationEmailsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -541,6 +549,7 @@ export interface FileRoutesById {
   '/api/public/jarvis-kpi': typeof ApiPublicJarvisKpiRoute
   '/ristoratore/annunci/nuovo': typeof RistoratoreAnnunciNuovoRoute
   '/ristoratore/turni/$shiftId': typeof RistoratoreTurniShiftIdRoute
+  '/api/public/avatar/$userId': typeof ApiPublicAvatarUserIdRoute
   '/api/public/hooks/expire-stale': typeof ApiPublicHooksExpireStaleRoute
   '/api/public/hooks/notification-emails': typeof ApiPublicHooksNotificationEmailsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -603,6 +612,7 @@ export interface FileRouteTypes {
     | '/api/public/jarvis-kpi'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
+    | '/api/public/avatar/$userId'
     | '/api/public/hooks/expire-stale'
     | '/api/public/hooks/notification-emails'
     | '/api/public/payments/webhook'
@@ -663,6 +673,7 @@ export interface FileRouteTypes {
     | '/api/public/jarvis-kpi'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
+    | '/api/public/avatar/$userId'
     | '/api/public/hooks/expire-stale'
     | '/api/public/hooks/notification-emails'
     | '/api/public/payments/webhook'
@@ -723,6 +734,7 @@ export interface FileRouteTypes {
     | '/api/public/jarvis-kpi'
     | '/ristoratore/annunci/nuovo'
     | '/ristoratore/turni/$shiftId'
+    | '/api/public/avatar/$userId'
     | '/api/public/hooks/expire-stale'
     | '/api/public/hooks/notification-emails'
     | '/api/public/payments/webhook'
@@ -779,6 +791,7 @@ export interface RootRouteChildren {
   ApiPublicJarvisKpiRoute: typeof ApiPublicJarvisKpiRoute
   RistoratoreAnnunciNuovoRoute: typeof RistoratoreAnnunciNuovoRoute
   RistoratoreTurniShiftIdRoute: typeof RistoratoreTurniShiftIdRoute
+  ApiPublicAvatarUserIdRoute: typeof ApiPublicAvatarUserIdRoute
   ApiPublicHooksExpireStaleRoute: typeof ApiPublicHooksExpireStaleRoute
   ApiPublicHooksNotificationEmailsRoute: typeof ApiPublicHooksNotificationEmailsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -1153,6 +1166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RistoratoreTurniShiftIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/avatar/$userId': {
+      id: '/api/public/avatar/$userId'
+      path: '/api/public/avatar/$userId'
+      fullPath: '/api/public/avatar/$userId'
+      preLoaderRoute: typeof ApiPublicAvatarUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/expire-stale': {
       id: '/api/public/hooks/expire-stale'
       path: '/api/public/hooks/expire-stale'
@@ -1285,6 +1305,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicJarvisKpiRoute: ApiPublicJarvisKpiRoute,
   RistoratoreAnnunciNuovoRoute: RistoratoreAnnunciNuovoRoute,
   RistoratoreTurniShiftIdRoute: RistoratoreTurniShiftIdRoute,
+  ApiPublicAvatarUserIdRoute: ApiPublicAvatarUserIdRoute,
   ApiPublicHooksExpireStaleRoute: ApiPublicHooksExpireStaleRoute,
   ApiPublicHooksNotificationEmailsRoute: ApiPublicHooksNotificationEmailsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
