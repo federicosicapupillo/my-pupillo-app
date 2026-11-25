@@ -7,7 +7,7 @@ describe("pickRecognitions", () => {
       { pupillo_subject: "other", modules: [{ module: "m1", title: "X", award: "A", passed_at: "2026-11-20T10:00:00Z" }] },
       { pupillo_subject: id, modules: [{ module: "m1", title: "Squadra di Sala", award: "Scudetto", passed_at: "2026-11-20T10:00:00Z" }, { module: "bad", title: "Y" }] },
     ] };
-    expect(pickRecognitions(body, id)).toEqual([{ module: "m1", title: "Squadra di Sala", award: "Scudetto", passed_at: "2026-11-20T10:00:00Z" }]);
+    expect(pickRecognitions(body, id)).toEqual([{ module: "m1", title: "Squadra di Sala", award: "Scudetto", passed_at: "2026-11-20T10:00:00Z", badge_url: "" }]);
   });
   it("shows nothing when the worker did not choose to show them", () => {
     expect(pickRecognitions({ workers: [] }, id)).toEqual([]);

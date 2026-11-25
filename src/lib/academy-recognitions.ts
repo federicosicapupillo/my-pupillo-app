@@ -1,5 +1,5 @@
 /** Riconoscimenti Pupillo Academy: solo moduli superati che il lavoratore ha scelto di mostrare. */
-export interface AcademyRecognition { module: string; title: string; award: string; passed_at: string }
+export interface AcademyRecognition { module: string; title: string; award: string; passed_at: string; badge_url: string }
 
 const str = (v: unknown, max = 120) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
@@ -14,7 +14,9 @@ export function pickRecognitions(body: unknown, workerId: string): AcademyRecogn
     const r = m as Record<string, unknown>;
     const module = str(r["module"]); const title = str(r["title"]); const passed_at = str(r["passed_at"], 40);
     if (!module || !title || !passed_at || Number.isNaN(Date.parse(passed_at))) continue;
-    out.push({ module, title, award: str(r["award"]) ?? "", passed_at });
+    const badge = str(r["badge_url"], 500) ?? str(r["badge_image_url"], 500);
+    const badge_url = badge && /^https:\/\/[^\s"'<>]+$/i.test(badge) ? badge : "";
+    out.push({ module, title, award: str(r["award"]) ?? "", passed_at, badge_url });
   }
   return out;
 }
