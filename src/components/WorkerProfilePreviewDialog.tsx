@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
+import { AcademyAvatarBadge } from "@/components/AcademyRecognitions";
 import { Star, Award, Clock, ShieldCheck, MapPin, Briefcase, CheckCircle2, Car } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { displayWorkerName } from "@/lib/worker-display";
@@ -164,7 +165,7 @@ export function WorkerProfilePreviewDialog({
         {/* Header */}
         <div className="relative p-4 sm:p-5 pb-4 bg-gradient-to-b from-primary/10 to-transparent pr-12">
           <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-            <UserAvatar zoomable userId={workerId ?? undefined} name={displayName} className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 ring-2 ring-background shadow-md" />
+            <AcademyAvatarBadge workerId={workerId} size="md"><UserAvatar zoomable userId={workerId ?? undefined} name={displayName} className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 ring-2 ring-background shadow-md" /></AcademyAvatarBadge>
             <div className="min-w-0 flex-1 pt-1">
               <h2 className="text-lg sm:text-xl font-bold leading-tight break-words">{displayName}</h2>
               {roleLine && <p className="text-sm text-muted-foreground capitalize mt-0.5 break-words">{roleLine}</p>}

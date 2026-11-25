@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Award, Briefcase, Clock, Mail, MapPin, Shield, Star, Users } from "lucide-react";
 import { SpokenLanguagesView, normalizeSpokenLanguages } from "@/components/SpokenLanguages";
 import { UserAvatar } from "@/components/UserAvatar";
+import { AcademyAvatarBadge } from "@/components/AcademyRecognitions";
 import { WorkerReputationCard } from "@/components/WorkerReputationCard";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 import { WorkerContactCard } from "@/components/WorkerContactCard";
@@ -210,7 +211,7 @@ function WorkerDetailPage() {
 
       <div className="grid gap-4 md:grid-cols-[280px_1fr]">
         <div className="rounded-2xl border bg-card p-5 flex flex-col items-center text-center">
-          <UserAvatar zoomable userId={w.id} name={shownName} className="h-24 w-24 text-2xl mb-3" />
+          <div className="mb-3"><AcademyAvatarBadge workerId={w.id} size="lg"><UserAvatar zoomable userId={w.id} name={shownName} className="h-24 w-24 text-2xl" /></AcademyAvatarBadge></div>
           <div className="font-semibold">{shownName}</div>
           {w.age != null && <div className="text-xs text-muted-foreground">{w.age} anni</div>}
           <div className="mt-2">

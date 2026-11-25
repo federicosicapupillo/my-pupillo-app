@@ -25,6 +25,7 @@ import { RequiredReviewsBanner } from "@/components/RequiredReviewsBanner";
 import { formatDisplayLabel, formatDisplayLabels } from "@/lib/format-label";
 import { BlockedContactDialog } from "@/components/BlockedContactDialog";
 import { UserAvatar } from "@/components/UserAvatar";
+import { AcademyAvatarBadge } from "@/components/AcademyRecognitions";
 import { WorkerReputationBadge } from "@/components/WorkerReputationBadge";
 import { WorkerRatingSummary } from "@/components/WorkerRatingSummary";
 import { CurriculumRating } from "@/components/CurriculumAssessment";
@@ -1759,7 +1760,7 @@ function WorkersPage() {
                   return (
           <div key={w.id} className={`rounded-lg border p-5 transition-shadow hover:border-accent/40 hover:shadow-sm ${near ? "border-emerald-500/50 bg-emerald-500/5" : "border-border bg-card"}`}>
             <div className="flex items-start gap-3">
-              <UserAvatar zoomable userId={w.id} name={displayWorkerName(w, !!r?.workedWith)} className="h-12 w-12" />
+              <AcademyAvatarBadge workerId={w.id} size="sm"><UserAvatar zoomable userId={w.id} name={displayWorkerName(w, !!r?.workedWith)} className="h-12 w-12" /></AcademyAvatarBadge>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold">{displayWorkerName(w, !!r?.workedWith)}</div>
                 <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-2">
@@ -2122,7 +2123,7 @@ function ContactedWorkerCard({
   return (
     <div className="rounded-2xl border bg-card p-5">
       <div className="flex items-center gap-3">
-        <UserAvatar zoomable userId={w.id} name={displayName} className="h-12 w-12" />
+        <AcademyAvatarBadge workerId={w.id} size="sm"><UserAvatar zoomable userId={w.id} name={displayName} className="h-12 w-12" /></AcademyAvatarBadge>
         <div className="min-w-0">
           <div className="truncate font-semibold">{displayName}</div>
           <div className="text-xs text-muted-foreground flex items-center gap-2">
