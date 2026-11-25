@@ -2,7 +2,7 @@ import * as React from "react";
 import { Camera, Check, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { applyPortraitLight, compositeOnPortraitBackground, maskCoverage, refineAlpha } from "@/lib/portrait-light";
+import { applyPortraitLight, compositeOnStudioBackground, decontaminateEdges, guidedRefineAlpha, maskCoverage, refineAlpha, softenSkin } from "@/lib/portrait-light";
 import { evaluateFaceGuide, GUIDE, GUIDE_MESSAGES, type FaceBox, type GuideStatus } from "@/lib/face-guide";
 
 export type PortraitShot = { original: File; final: File; preview: string };
@@ -72,16 +72,20 @@ async function buildPortrait(frame: HTMLCanvasElement): Promise<HTMLCanvasElemen
     uctx.imageSmoothingQuality = "high";
     uctx.filter = "blur(1.5px)"; uctx.drawImage(mc, 0, 0, out, out); uctx.filter = "none";
     const ad = uctx.getImageData(0, 0, out, out).data;
-    const alpha = new Float32Array(out * out);
-    for (let p = 0; p < alpha.length; p++) alpha[p] = (ad[p * 4 + 3] ?? 0) / 255;
-    refineAlpha(alpha);
-    if (maskCoverage(alpha) < 0.08) throw new Error("coverage");
+    const coarse = new Float32Array(out * out);
+    for (let p = 0; p < coarse.length; p++) coarse[p] = (ad[p * 4 + 3] ?? 0) / 255;
     const final = document.createElement("canvas"); final.width = out; final.height = out;
     const fctx = final.getContext("2d")!;
     fctx.drawImage(frame, 0, 0);
     const img = fctx.getImageData(0, 0, out, out);
+    // Bordi agganciati ai contorni reali della foto, poi resi netti con una sfumatura sottile.
+    const alpha = guidedRefineAlpha(img.data, coarse, out, out, Math.max(4, Math.round(out / 90)), 1e-4);
+    refineAlpha(alpha, 0.2, 0.8);
+    if (maskCoverage(alpha) < 0.08) throw new Error("coverage");
+    decontaminateEdges(img.data, alpha, out, out);
+    softenSkin(img.data, alpha, out, out);
     applyPortraitLight(img.data, alpha);
-    compositeOnPortraitBackground(img.data, alpha);
+    compositeOnStudioBackground(img.data, alpha, out, out);
     fctx.putImageData(img, 0, 0);
     return final;
   } finally { res.close?.(); }
