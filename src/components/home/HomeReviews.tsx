@@ -4,7 +4,9 @@ import AutoScroll from "embla-carousel-auto-scroll";
 import { ArrowLeft, ArrowRight, BriefcaseBusiness, Pause, Play, Star, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type Review = { author: string; stars: number; text: string };
+const restaurantFaces = Object.values(import.meta.glob<string>("@/assets/reviews/r*.jpg", { eager: true, import: "default" }));
+
+type Review = { author: string; stars: number; text: string; photo?: string };
 
 const workerReviews: Review[] = [
   { author: "Marco R.", stars: 5, text: "Finalmente un'app pensata per chi lavora nella ristorazione! Posso cercare turni extra senza dover mandare curriculum a decine di locali. Semplice e intuitiva." },
@@ -35,7 +37,7 @@ const restaurantReviews: Review[] = [
   { author: "Osteria Il Grappolo Dorato", stars: 5, text: "Il vero punto di forza è poter costruire nel tempo una lista di persone da richiamare. Per un ristoratore questa possibilità ha un valore enorme." },
   { author: "Bistrot del Portico", stars: 5, text: "Gestisco un locale con picchi di lavoro nel fine settimana. Pupillo è proprio il tipo di strumento che cercavo per organizzare meglio le esigenze di personale extra." },
   { author: "Ristorante La Tavola Fiorita", stars: 5, text: "Mi convince soprattutto il modello di pagamento: non devo acquistare continuamente lo stesso contatto. Se un collaboratore lavora bene, posso continuare a coinvolgerlo nei servizi successivi senza ulteriori costi di sblocco." },
-];
+].map((review, index) => ({ ...review, photo: restaurantFaces[index] }));
 
 function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "restaurant" }) {
   const worker = role === "worker";
@@ -107,7 +109,7 @@ function ReviewRow({ reviews, role }: { reviews: Review[]; role: "worker" | "res
                   {Array.from({ length: 5 }, (_, star) => <Star key={star} aria-hidden="true" strokeWidth={1.25} className={`size-4 ${star < review.stars ? "fill-rating-gold text-rating-gold-edge" : "text-muted-foreground/40"}`} />)}
                 </div>
                 <blockquote className="grow text-xs leading-5 text-card-foreground">{review.text}</blockquote>
-                <figcaption className="mt-3 border-t border-border pt-3 text-xs font-semibold text-muted-foreground">{review.author}</figcaption>
+                <figcaption className="mt-3 flex items-center gap-2 border-t border-border pt-3 text-xs font-semibold text-muted-foreground">{review.photo && <img src={review.photo} alt="" width={32} height={32} loading="lazy" className="size-8 shrink-0 rounded-full object-cover" />}<span className="min-w-0">{review.author}</span></figcaption>
               </figure>
             </div>
           ))}
