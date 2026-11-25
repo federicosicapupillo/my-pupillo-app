@@ -182,8 +182,8 @@ export function FaceSelfieDialog({ open, onOpenChange, onConfirm }: Props) {
           <DialogTitle>Scatta la foto del viso</DialogTitle>
           <DialogDescription>Metti la testa dentro il cerchio. Quando diventa verde, premi «Scatta».</DialogDescription>
         </DialogHeader>
-        <div role="note" className="rounded-lg border-2 border-primary bg-primary/20 px-4 py-3 text-center text-foreground"><p className="text-2xl font-extrabold">😊 SORRIDI!</p><p className="mt-1 text-base font-semibold">La foto va fatta sorridendo: un bel sorriso fa la differenza con i ristoratori.</p><p className="mt-1 text-base font-bold text-destructive">Senza sorriso la foto non va bene.</p></div>
-        <div className="relative isolate mx-auto aspect-square w-full shrink-0 overflow-hidden rounded-lg bg-muted [clip-path:inset(0_round_0.5rem)]">
+        <div role="note" className="rounded-lg border-2 border-primary bg-primary/20 px-3 py-2 text-center text-foreground"><p className="text-xl font-extrabold">😊 SORRIDI!</p><p className="text-sm font-semibold">La foto va fatta sorridendo: un bel sorriso fa la differenza con i ristoratori.</p><p className="text-sm font-bold text-destructive">Senza sorriso la foto non va bene.</p></div>
+        <div className="relative isolate mx-auto aspect-square w-full max-w-[min(100%,42dvh)] shrink-0 overflow-hidden rounded-lg bg-muted [clip-path:inset(0_round_0.5rem)]">
           <video ref={videoRef} playsInline muted className="h-full w-full object-cover -scale-x-100" />
           <div aria-hidden
             className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-4 transition-colors shadow-[0_0_0_9999px_color-mix(in_oklab,var(--background)_55%,transparent)] ${ok ? "border-compensation-positive" : "border-destructive"}`}
@@ -193,7 +193,7 @@ export function FaceSelfieDialog({ open, onOpenChange, onConfirm }: Props) {
         </div>
         <p role="status" aria-live="polite" className={`text-center text-sm font-medium ${error ? "text-destructive" : ok ? "text-compensation-positive" : "text-foreground"}`}>{message}</p>
         <p className="text-xs text-muted-foreground">Lo sfondo diventa albicocca, uguale per tutti, e la luce viene corretta in modo leggero («Luce ritratto»).</p>
-        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 border-t border-border bg-background px-6 pb-6 pt-3">
+        <div>
         {shot ? (
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" variant="outline" onClick={() => { URL.revokeObjectURL(shot.preview); setShot(null); }}>
