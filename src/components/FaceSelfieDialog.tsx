@@ -70,7 +70,7 @@ async function buildPortrait(frame: HTMLCanvasElement): Promise<HTMLCanvasElemen
     const up = document.createElement("canvas"); up.width = out; up.height = out;
     const uctx = up.getContext("2d")!;
     uctx.imageSmoothingQuality = "high";
-    uctx.filter = "blur(1.5px)"; uctx.drawImage(mc, 0, 0, out, out); uctx.filter = "none";
+    uctx.drawImage(mc, 0, 0, out, out);
     const ad = uctx.getImageData(0, 0, out, out).data;
     const coarse = new Float32Array(out * out);
     for (let p = 0; p < coarse.length; p++) coarse[p] = (ad[p * 4 + 3] ?? 0) / 255;
@@ -79,8 +79,8 @@ async function buildPortrait(frame: HTMLCanvasElement): Promise<HTMLCanvasElemen
     fctx.drawImage(frame, 0, 0);
     const img = fctx.getImageData(0, 0, out, out);
     // Bordi agganciati ai contorni reali della foto, poi resi netti con una sfumatura sottile.
-    const alpha = guidedRefineAlpha(img.data, coarse, out, out, Math.max(4, Math.round(out / 90)), 1e-4);
-    refineAlpha(alpha, 0.2, 0.8);
+    const alpha = guidedRefineAlpha(img.data, coarse, out, out, Math.max(2, Math.round(out / 200)), 1e-5);
+    refineAlpha(alpha, 0.42, 0.58);
     if (maskCoverage(alpha) < 0.08) throw new Error("coverage");
     decontaminateEdges(img.data, alpha, out, out);
     softenSkin(img.data, alpha, out, out);
@@ -182,7 +182,7 @@ export function FaceSelfieDialog({ open, onOpenChange, onConfirm }: Props) {
           <DialogTitle>Scatta la foto del viso</DialogTitle>
           <DialogDescription>Metti la testa dentro il cerchio. Quando diventa verde, premi «Scatta».</DialogDescription>
         </DialogHeader>
-        <p className="rounded-md bg-primary/15 px-3 py-2 text-center text-sm font-semibold text-foreground">😊 Sorridi! La foto va fatta sorridendo: un bel sorriso fa la differenza con i ristoratori. Senza sorriso la foto non va bene.</p>
+        <div role="note" className="rounded-lg border-2 border-primary bg-primary/20 px-4 py-3 text-center text-foreground"><p className="text-2xl font-extrabold">😊 SORRIDI!</p><p className="mt-1 text-base font-semibold">La foto va fatta sorridendo: un bel sorriso fa la differenza con i ristoratori.</p><p className="mt-1 text-base font-bold text-destructive">Senza sorriso la foto non va bene.</p></div>
         <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-lg bg-muted">
           <video ref={videoRef} playsInline muted className="h-full w-full object-cover -scale-x-100" />
           <div aria-hidden
