@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, BriefcaseBusiness, Pause, Play, Star, UtensilsCr
 import { Button } from "@/components/ui/button";
 
 const restaurantFaces = Object.values(import.meta.glob<string>("@/assets/reviews/r*.jpg", { eager: true, import: "default" }));
+const workerFaces = Object.values(import.meta.glob<string>("@/assets/reviews/w*.jpg", { eager: true, import: "default" }));
 
 type Review = { author: string; stars: number; text: string; photo?: string };
 
@@ -19,7 +20,7 @@ const workerReviews: Review[] = [
   { author: "Chiara S.", stars: 5, text: "Per chi studia e vuole lavorare qualche sera o nel weekend è un'ottima idea. Puoi cercare turni compatibili con i tuoi impegni senza cercare un lavoro fisso." },
   { author: "Matteo D.", stars: 5, text: "Quello che apprezzo di Pupillo è la possibilità di farmi conoscere da nuovi ristoranti. Un turno extra può diventare anche l'inizio di una collaborazione continuativa." },
   { author: "Francesca L.", stars: 5, text: "Era ora che qualcuno pensasse anche a noi lavoratori extra! Un'unica piattaforma per trovare locali che cercano personale, senza mille telefonate e messaggi." },
-];
+].map((review, index) => ({ ...review, photo: workerFaces[index] }));
 
 const restaurantReviews: Review[] = [
   { author: "Trattoria del Girasole", stars: 5, text: "Chi gestisce un ristorante sa quanto sia difficile trovare personale all'ultimo momento. Pupillo è una soluzione interessante perché permette di cercare collaboratori in modo semplice e veloce." },
