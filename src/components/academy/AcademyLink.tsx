@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ACADEMY_EXTERNAL_URL, ACADEMY_INFO_PATH } from "@/lib/academy";
+import { ACADEMY_ENTRY_URL, ACADEMY_EXTERNAL_URL, ACADEMY_INFO_PATH } from "@/lib/academy";
 
 export function AcademyLink({ className, children, onClick }: { className?: string; children: ReactNode; onClick?: () => void }) {
   if (ACADEMY_EXTERNAL_URL) {
     return (
-      <a href={ACADEMY_EXTERNAL_URL} target="_blank" rel="noopener noreferrer" className={className} onClick={onClick}>
+      <a href={ACADEMY_ENTRY_URL} target="_blank" rel="noopener noreferrer" className={className} onClick={onClick}>
         {children}
         <span className="sr-only"> (si apre in una nuova scheda)</span>
       </a>

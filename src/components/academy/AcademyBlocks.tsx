@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, GraduationCap } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { getMyAcademyProgress, type AcademyProgress } from "@/lib/academy-progress.functions";
 import { Button } from "@/components/ui/button";
 import { AcademyLink, academyButtonClass, academyCardStyle } from "./AcademyLink";
 import { dismissAcademyInvite, isAcademyInvitePending } from "@/lib/academy";
@@ -35,19 +37,45 @@ export function AcademyRestaurantNote({ mobileHidden }: { mobileHidden: boolean 
   );
 }
 
-/** Scheda compatta della dashboard lavoratore. */
+/** Scheda compatta della dashboard lavoratore, con l'avanzamento salvato nell'Academy. */
 function AcademyDashboardCard() {
+  const fetchProgress = useServerFn(getMyAcademyProgress);
+  const [progress, setProgress] = useState<AcademyProgress | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchProgress().then((p) => { if (alive) setProgress(p); }).catch(() => {});
+    return () => { alive = false; };
+  }, [fetchProgress]);
+  const started = progress?.started === true;
+  const done = started && progress.total_lessons > 0 && progress.completed_lessons >= progress.total_lessons;
+  const pct = started ? progress.percentuale : 0;
   return (
     <section aria-label="Pupillo Academy" className="pupillo-highlight flex min-w-0 flex-col gap-4 rounded-lg border p-5 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex min-w-0 gap-3">
+      <div className="flex min-w-0 flex-1 gap-3">
         <GraduationCap className="mt-0.5 size-9 shrink-0 text-pack-highlight" aria-hidden="true" />
-        <div className="min-w-0 space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <h2 className="text-2xl font-black">Pupillo Academy</h2>
-          <p className="font-bold text-pack-highlight">La tua formazione, gratuita e facoltativa</p>
-          <p className="text-sm text-muted-foreground">Ripassa le basi della sala con lezioni e quiz. Due moduli disponibili in anteprima, da seguire al tuo ritmo.</p>
+          {started ? (
+            <>
+              <p className="font-bold text-pack-highlight">{done ? "Percorso completato" : "Il tuo percorso è in corso"}</p>
+              <p className="text-sm text-muted-foreground">
+                {progress.completed_lessons} lezioni su {progress.total_lessons} completate
+                {progress.completed_modules.length > 0 ? ` · ${progress.completed_modules.length} ${progress.completed_modules.length === 1 ? "modulo superato" : "moduli superati"}` : ""}
+              </p>
+              <div className="h-2 w-full max-w-md overflow-hidden rounded-full bg-background/30" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label="Avanzamento Academy">
+                <div className="h-full rounded-full bg-pack-highlight" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground">{pct}% completato</p>
+            </>
+          ) : (
+            <>
+              <p className="font-bold text-pack-highlight">La tua formazione, gratuita e facoltativa</p>
+              <p className="text-sm text-muted-foreground">Ripassa le basi della sala con lezioni e quiz. Due moduli disponibili in anteprima, da seguire al tuo ritmo.</p>
+            </>
+          )}
         </div>
       </div>
-      <AcademyLink className={`${academyButtonClass} shrink-0 self-start bg-pack-highlight text-pack-highlight-foreground hover:bg-pack-highlight/90 lg:self-center`}>Inizia Pupillo Academy</AcademyLink>
+      <AcademyLink className={`${academyButtonClass} shrink-0 self-start bg-pack-highlight text-pack-highlight-foreground hover:bg-pack-highlight/90 lg:self-center`}>{started ? (done ? "Rivedi Pupillo Academy" : "Continua Pupillo Academy") : "Inizia Pupillo Academy"}</AcademyLink>
     </section>
   );
 }

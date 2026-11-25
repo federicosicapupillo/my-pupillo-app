@@ -26,6 +26,15 @@ function oauthNS() {
   return (supabase.auth as unknown as { oauth: OAuthNS }).oauth;
 }
 
+const ACADEMY_CLIENT_ID = "26176f21-41c5-439a-bf3e-6cc2870f5293";
+/** Pupillo Academy è un servizio Pupillo: accesso diretto senza schermata di consenso. */
+function isTrustedAcademyClient(data: unknown): boolean {
+  const d = data as { client?: { id?: string; client_id?: string } | null; redirect_uri?: string } | null;
+  const id = d?.client?.id ?? d?.client?.client_id;
+  if (id !== ACADEMY_CLIENT_ID) return false;
+  try { return !d?.redirect_uri || new URL(d.redirect_uri).hostname.endsWith("supabase.co") || new URL(d.redirect_uri).hostname === "accademy.pupillo.life"; } catch { return false; }
+}
+
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
   validateSearch: (s: Record<string, unknown>) => ({
@@ -45,6 +54,11 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     if (error) throw new Error(error.message);
     const immediate = data?.redirect_url ?? data?.redirect_to;
     if (immediate && !data?.client) throw redirect({ href: immediate });
+    if (isTrustedAcademyClient(data)) {
+      const approved = await oauthNS().approveAuthorization(authorizationId);
+      const target = approved.data?.redirect_url ?? approved.data?.redirect_to;
+      if (!approved.error && target) throw redirect({ href: target });
+    }
     return data;
   },
   component: Consent,

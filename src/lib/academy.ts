@@ -3,6 +3,8 @@
  * Indirizzo pubblico confermato dal titolare il 23/11/2026.
  */
 export const ACADEMY_EXTERNAL_URL: string | null = "https://accademy.pupillo.life/";
+/** Link con accesso automatico: l'Academy avvia da sola il login Pupillo. */
+export const ACADEMY_ENTRY_URL = "https://accademy.pupillo.life/?from=pupillo";
 export const ACADEMY_INFO_PATH = "/academy" as const;
 
 type KV = Pick<Storage, "getItem" | "setItem" | "removeItem">;
