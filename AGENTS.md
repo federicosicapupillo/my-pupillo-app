@@ -52,4 +52,4 @@
 - Worker face photos: FaceSelfieDialog capture, then moderateWorkerFacePhoto; enforce_worker_avatar needs an approved row — why: only server-approved files.
 
 - Academy badges: read server-side with PUPILLO_RECOGNITIONS_TOKEN by Pupillo user id, shown only via AcademyRecognitions — why: token stays off the browser.
-- Auth metadata name/full_name/picture/avatar_url is synced from profiles by the profiles_sync_name_to_auth trigger; picture points to the stable /api/public/avatar/$userId redirect (short signed URL, approved path only) — why: external apps like Academy need a non-expiring photo URL.
+- Auth metadata name/picture sync via profiles trigger; picture = stable /api/public/avatar/$userId redirect — why: Academy needs a non-expiring photo URL.
