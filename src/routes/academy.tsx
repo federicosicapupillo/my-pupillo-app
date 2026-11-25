@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { LegalFooter } from "@/components/LegalFooter";
 import { AcademyLabel, academyCardStyle } from "@/components/academy/AcademyLink";
 import { ACADEMY_CERT_NOTE, ACADEMY_PREVIEW_NOTE, ACADEMY_WORKER_TEXT } from "@/components/academy/AcademyBlocks";
-import { ACADEMY_EXTERNAL_URL } from "@/lib/academy";
+import { ACADEMY_ENTRY_URL, ACADEMY_EXTERNAL_URL } from "@/lib/academy";
 
 export const Route = createFileRoute("/academy")({
   head: () => ({
@@ -42,7 +42,7 @@ function AcademyPage() {
           <p className="text-sm text-muted-foreground">L’Academy è facoltativa: puoi ricevere proposte su Pupillo anche senza seguirla.</p>
         </section>
         {ACADEMY_EXTERNAL_URL && (
-          <a href={ACADEMY_EXTERNAL_URL} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground">
+          <a href={ACADEMY_ENTRY_URL} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground">
             Vai alle lezioni<span className="sr-only"> (si apre in una nuova scheda)</span>
           </a>
         )}
