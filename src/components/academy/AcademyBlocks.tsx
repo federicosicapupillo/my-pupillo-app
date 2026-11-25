@@ -15,7 +15,10 @@ export function AcademyHomeWorker() {
   return (
     <section aria-label="Pupillo Academy" className="pupillo-highlight mt-2 flex min-w-0 items-center gap-3 rounded-lg border p-5">
       <GraduationCap className="size-8 shrink-0 text-pack-highlight" aria-hidden="true" />
-      <p className="text-lg font-bold">Registrati su Pupillo e potrai partecipare alla Pupillo Academy</p>
+      <div className="min-w-0">
+        <p className="text-lg font-bold">Registrati su Pupillo e potrai partecipare alla Pupillo Academy</p>
+        <p className="mt-1 text-sm opacity-90">Completando i corsi ottieni un riconoscimento Pupillo: se scegli di mostrarlo, comparirà sul tuo profilo e sarà visibile ai ristoratori.</p>
+      </div>
     </section>
   );
 }
